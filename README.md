@@ -1,7 +1,7 @@
 # Zeus
 A mobile Bitcoin app for Lightning Network Daemon (lnd) node operators ⚡️
 
-![Zeus](https://user-images.githubusercontent.com/1878621/52906010-644b4c80-3211-11e9-9b05-4642e5263cf1.jpg)
+![Zeus screenshot](https://user-images.githubusercontent.com/47701173/52906403-29e5ad80-3219-11e9-9d79-e73e812a0d30.png)
 
 Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 
