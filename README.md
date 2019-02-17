@@ -7,6 +7,13 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 
 *Disclaimer*: Zeus and Lightning in general are software projects in their early development stages. Please be wary when using Lightning and do not fund your node with more money than you are willing to lose.
 
+### Get in touch with us
+* Come chat with us on
+[Telegram](https://t.me/zeusLN)
+* Keep up with us on
+[Twitter](https://twitter.com/ZeusLN)
+
+
 ## Connecting to your node
 
 Currently, to use Zeus, you must have a Bitcoin Lightning node running 
