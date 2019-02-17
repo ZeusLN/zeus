@@ -52,7 +52,7 @@ export default class SettingsStore {
     public getNewAddress = () => {
         const { host, port, macaroonHex } = this.settings;
 
-        axios.request({
+        return axios.request({
             method: 'get',
             url: `https://${host}:${port}/v1/newaddress`,
             headers: {
