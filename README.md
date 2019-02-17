@@ -49,7 +49,7 @@ If you are running lnd on the same machine you're running your iOS simulator (fo
 
 Insert the following snippet right below the line `#pragma mark - NSURLSession delegate` in the file `node_modules/react-native/Libraries/Network/RCTHTTPRequestHandler.mm`.
 
-```js
+```objectivec++
 - (void)URLSession:(NSURLSession *)session didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition disposition, NSURLCredential *credential))completionHandler
 {
   completionHandler(NSURLSessionAuthChallengeUseCredential, [NSURLCredential credentialForTrust:challenge.protectionSpace.serverTrust]);
