@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { ActivityIndicator, Clipboard, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
 import UrlUtils from './../utils/UrlUtils';
+import CopyButton from './../components/CopyButton';
 
 import NodeInfoStore from './../stores/NodeInfoStore';
 import TransactionsStore from './../stores/TransactionsStore';
@@ -60,55 +61,51 @@ export default class SendingOnChain extends React.Component<SendingOnChainProps,
                             {`TXID: ${txid}`}
                         </Text>
                     </TouchableOpacity>}
-                    {txid && <Button
-                        title=""
-                        icon={{
-                            name: "check",
-                            size: 125,
-                            color: "white"
-                        }}
-                        backgroundColor="transparent"
-                        style={{ padding: 20 }}
-                        onPress={() => void(0)}
-                    />}
-                    {error && <Button
-                        title=""
-                        icon={{
-                            name: "error",
-                            size: 125,
-                            color: "white"
-                        }}
-                        backgroundColor="transparent"
-                        style={{ padding: 20 }}
-                        onPress={() => void(0)}
-                    />}
-                    {txid && <Button
-                        title="Copy TXID to Clipboard"
-                        icon={{
-                            name: "content-copy",
-                            size: 25,
-                            color: "green"
-                        }}
-                        color="green"
-                        backgroundColor="#fff"
-                        onPress={() => Clipboard.setString(txid)}
-                        style={styles.button}
-                        borderRadius={30}
-                    />}
+                    {txid && <View style={styles.button}>
+                        <Button
+                            title=""
+                            icon={{
+                                name: "check",
+                                size: 125,
+                                color: "white"
+                            }}
+                            backgroundColor="transparent"
+                            onPress={() => void(0)}
+                        />
+                    </View>}
+                    {error && <View style={styles.button}>
+                        <Button
+                            title=""
+                            icon={{
+                                name: "error",
+                                size: 125,
+                                color: "white"
+                            }}
+                            backgroundColor="transparent"
+                            onPress={() => void(0)}
+                        />
+                    </View>}
+                    {txid && <View style={styles.button}>
+                        <CopyButton
+                            title="Copy TXID to Clipboard"
+                            copyValue={txid}
+                        />
+                    </View>}
 
-                    {txid && <Button
-                        title="Go to Wallet"
-                        icon={{
-                            name: "list",
-                            size: 25,
-                            color: "green"
-                        }}
-                        color="green"
-                        backgroundColor="#fff"
-                        onPress={() => navigation.navigate('Wallet')}
-                        style={styles.button}
-                        borderRadius={30}
-                    />}
+                    {txid && <View style={styles.button}>
+                        <Button
+                            title="Go to Wallet"
+                            icon={{
+                                name: "list",
+                                size: 25,
+                                color: "green"
+                            }}
+                            color="green"
+                            backgroundColor="#fff"
+                            onPress={() => navigation.navigate('Wallet')}
+                            borderRadius={30}
+                        />
+                    </View>}
                 </View>
             </View>
         );
@@ -125,7 +122,7 @@ const styles = StyleSheet.create({
         paddingTop: 40
     },
     button: {
-        paddingTop: 10,
-        paddingBottom: 10
+        paddingTop: 15,
+        paddingBottom: 15
     }
 });
