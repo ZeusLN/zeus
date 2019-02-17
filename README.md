@@ -1,7 +1,7 @@
 # Zeus
 A mobile Bitcoin app for Lightning Network Daemon (lnd) node operators ⚡️
 
-![Zeus screenshot](https://user-images.githubusercontent.com/47701173/52906403-29e5ad80-3219-11e9-9d79-e73e812a0d30.png)
+<p align="center"><img src="https://user-images.githubusercontent.com/47701173/52906403-29e5ad80-3219-11e9-9d79-e73e812a0d30.png"></p>
 
 Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 
@@ -9,25 +9,33 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 
 ## Connecting to your node
 
-Currently, to use Zeus, you must have a Bitcoin Lightning node running [Lightning Network Daemon (lnd)](https://github.com/LightningNetwork/lnd).
+Currently, to use Zeus, you must have a Bitcoin Lightning node running 
+[Lightning Network Daemon (lnd)](https://github.com/LightningNetwork/lnd).
 
-You must provide Zeus with your node's hostname, port number, and the lnd macaroon you choose to use in **hex format**. If you need help converting your macaroon to hex format we wrote up a Node.js script that can use [here](https://github.com/ZeusLN/lnd-hex-macaroon-generator/).
+You must provide Zeus with your node's hostname, port number, and the lnd macaroon you choose to use in **hex format**. If you need help converting your macaroon to hex format we wrote up a Node.js script that can use 
+[here](https://github.com/ZeusLN/lnd-hex-macaroon-generator/).
 
 If you would like to learn more about running your own guide we suggest checking out the following guides:
-* If you're looking to run a full node on existing hardware running Windows or macOS, check out Pierre Rochard's [Lightning Power Node Launcher](https://github.com/PierreRochard/node-launcher). We recommend reading [this guide](https://medium.com/lightning-power-users/windows-macos-lightning-network-284bd5034340).
-* If you're looking to run a full node on a dedicated piece of hardware like a Raspberry Pi, check out Stadicus' [Raspibolt Tutorial](https://github.com/Stadicus/guides/tree/master/raspibolt).
+* If you're looking to run a full node on existing hardware running Windows or macOS, check out Pierre Rochard's 
+[Lightning Power Node Launcher](https://github.com/PierreRochard/node-launcher). 
+We recommend reading 
+[this guide](https://medium.com/lightning-power-users/windows-macos-lightning-network-284bd5034340).
+* If you're looking to run a full node on a dedicated piece of hardware like a Raspberry Pi, check out Stadicus' 
+[Raspibolt Tutorial](https://github.com/Stadicus/guides/tree/master/raspibolt).
 
 ### Using a self-signed lnd cert with iOS
 
 If you are using a self-signed lnd cert (as is the default in lnd), you must create a provisioning profile for your device or simulator in able to connect to your node.
 
-Check out [this guide](https://www.howtogeek.com/253325/how-to-create-an-ios-configuration-profile-and-alter-hidden-settings/) for setting up a configuration profile. You want to add your LND cert to the section marked `Certificates` before associating the profile to your device.
+Check out 
+[this guide](https://www.howtogeek.com/253325/how-to-create-an-ios-configuration-profile-and-alter-hidden-settings/) 
+for setting up a configuration profile. You want to add your LND cert to the section marked `Certificates` before associating the profile to your device.
 
 ## Building Zeus from source
 
 **Don't trust, verify** the code with your own two eyes. Then when ready proceed to the steps below based on your platform.
 
-### Android:
+### Android
 1. install dependencies with `npm i`
 2. open up your Android simulator or connect your phone and run `react-native run-android`
 
@@ -41,7 +49,7 @@ If you are running lnd on the same machine you're running your iOS simulator (fo
 
 Insert the following snippet right below the line `#pragma mark - NSURLSession delegate` in the file `node_modules/react-native/Libraries/Network/RCTHTTPRequestHandler.mm`.
 
-```
+```objectivec++
 - (void)URLSession:(NSURLSession *)session didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition disposition, NSURLCredential *credential))completionHandler
 {
   completionHandler(NSURLSessionAuthChallengeUseCredential, [NSURLCredential credentialForTrust:challenge.protectionSpace.serverTrust]);
@@ -58,10 +66,11 @@ If you are making cosmetic changes please test on both Android and iOS as things
 
 ## Donations
 
-If you'd like to help us with the cost of running Zeus project (iOS developer account, Google Play developer account, hosting) you can send a payment to [3Lbz4vdt15Fsa4wVD3Yk8uGf6ugKKY4zSc](https://blockstream.info/address/3Lbz4vdt15Fsa4wVD3Yk8uGf6ugKKY4zSc).
+If you'd like to help us with the cost of running Zeus project (iOS developer account, Google Play developer account, hosting) you can send a payment to 
+[3Lbz4vdt15Fsa4wVD3Yk8uGf6ugKKY4zSc](https://blockstream.info/address/3Lbz4vdt15Fsa4wVD3Yk8uGf6ugKKY4zSc).
 
 Thank you.
 
 ## License
 
-Distributed under the GNU Affero General Public License (AGPL v3). See [LICENSE file](LICENSE)
+Distributed under the GNU Affero General Public License (AGPL v3). See [LICENSE file](LICENSE).
