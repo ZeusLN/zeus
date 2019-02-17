@@ -58,99 +58,6 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
 
         const buttons = [{ element: onChainButton }, { element: lightningButton }];
 
-        const OnChain = () => (
-            <React.Fragment>
-                {(!onChainAndress && !loading) && <Text>No on-chain address available. Generate one by pressing the button below.</Text>}
-                {loading && <ActivityIndicator size="large" color="#0000ff" />}
-                {onChainAndress && <Text style={{ padding: 10 }}>{onChainAndress}</Text>}
-                {onChainAndress && <QRCode
-                    value={onChainAndress}
-                    size={200}
-                    fgColor='white'
-                />}
-                {onChainAndress && <View style={styles.button}>
-                    <Button
-                        title="Copy to Clipboard"
-                        icon={{
-                            name: "content-copy",
-                            size: 25,
-                            color: "white"
-                        }}
-                        backgroundColor="black"
-                        onPress={() => Clipboard.setString(onChainAndress)}
-                        borderRadius={30}
-                    />
-                </View>}
-                <View style={styles.button}>
-                    <Button
-                        title="Get New Address"
-                        icon={{
-                            name: "fiber-new",
-                            size: 25,
-                            color: "white"
-                        }}
-                        onPress={() => this.getNewAddress()}
-                        backgroundColor="orange"
-                        borderRadius={30}
-                    />
-                </View>
-            </React.Fragment>
-        );
-
-        let Lightning = () => (
-            <React.Fragment>
-                {payment_request && <Text style={{ color: 'green', padding: 20 }}>Successfully created invoice</Text>}
-                {creatingInvoiceError && <Text style={{ color: 'red', padding: 20 }}>Error creating invoice</Text>}
-                {error_msg && <Text style={{ padding: 20 }}>{error_msg}</Text>}
-                {creatingInvoice && <ActivityIndicator size="large" color="#0000ff" />}
-                {payment_request && <Text style={{ padding: 20 }}>{payment_request}</Text>}
-                {payment_request && <Button
-                    title="Copy to Clipboard"
-                    icon={{
-                        name: "content-copy",
-                        size: 25,
-                        color: "white"
-                    }}
-                    backgroundColor="black"
-                    onPress={() => Clipboard.setString(payment_request)}
-                    style={{ padding: 10 }}
-                    borderRadius={30}
-                />}
-
-                <Text>Memo</Text>
-                <TextInput
-                    value={memo}
-                    onChangeText={(text: string) => this.setState({ memo: text })}
-                    numberOfLines={1}
-                    style={{ fontSize: 20, padding: 20 }}
-                    editable={true}
-                />
-
-                <Text>Amount (in Satoshis)</Text>
-                <TextInput
-                    value={value}
-                    onChangeText={(text: string) => this.setState({ value: text })}
-                    numberOfLines={1}
-                    style={{ fontSize: 20, padding: 20 }}
-                    editable={true}
-                />
-
-                <View style={styles.button}>
-                    <Button
-                        title="Create Invoice"
-                        icon={{
-                            name: "create",
-                            size: 25,
-                            color: "white"
-                        }}
-                        onPress={() => createInvoice(memo, value)}
-                        backgroundColor="orange"
-                        borderRadius={30}
-                    />
-                </View>
-            </React.Fragment>
-        );
-
         const BackButton = () => (
             <Icon
                 name="arrow-back"
@@ -175,8 +82,93 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
                 />
 
                 <View style={styles.content}>
-                    {selectedIndex === 0 && <OnChain />}
-                    {selectedIndex === 1 && <Lightning />}
+                    {selectedIndex === 0 && <React.Fragment>
+                        {(!onChainAndress && !loading) && <Text>No on-chain address available. Generate one by pressing the button below.</Text>}
+                        {loading && <ActivityIndicator size="large" color="#0000ff" />}
+                        {onChainAndress && <Text style={{ padding: 10 }}>{onChainAndress}</Text>}
+                        {onChainAndress && <QRCode
+                            value={onChainAndress}
+                            size={200}
+                            fgColor='white'
+                        />}
+                        {onChainAndress && <View style={styles.button}>
+                            <Button
+                                title="Copy to Clipboard"
+                                icon={{
+                                    name: "content-copy",
+                                    size: 25,
+                                    color: "white"
+                                }}
+                                backgroundColor="black"
+                                onPress={() => Clipboard.setString(onChainAndress)}
+                                borderRadius={30}
+                            />
+                        </View>}
+                        <View style={styles.button}>
+                            <Button
+                                title="Get New Address"
+                                icon={{
+                                    name: "fiber-new",
+                                    size: 25,
+                                    color: "white"
+                                }}
+                                onPress={() => this.getNewAddress()}
+                                backgroundColor="orange"
+                                borderRadius={30}
+                            />
+                        </View>
+                    </React.Fragment>}
+                    {selectedIndex === 1 && <View>
+                        {payment_request && <Text style={{ color: 'green', padding: 20 }}>Successfully created invoice</Text>}
+                        {creatingInvoiceError && <Text style={{ color: 'red', padding: 20 }}>Error creating invoice</Text>}
+                        {error_msg && <Text style={{ padding: 20 }}>{error_msg}</Text>}
+                        {creatingInvoice && <ActivityIndicator size="large" color="#0000ff" />}
+                        {payment_request && <Text style={{ padding: 20 }}>{payment_request}</Text>}
+                        {payment_request && <Button
+                            title="Copy to Clipboard"
+                            icon={{
+                                name: "content-copy",
+                                size: 25,
+                                color: "white"
+                            }}
+                            backgroundColor="black"
+                            onPress={() => Clipboard.setString(payment_request)}
+                            style={{ padding: 10 }}
+                            borderRadius={30}
+                        />}
+
+                        <Text>Memo</Text>
+                        <TextInput
+                            value={memo}
+                            onChangeText={(text: string) => this.setState({ memo: text })}
+                            numberOfLines={1}
+                            style={{ fontSize: 20, padding: 20 }}
+                            editable={true}
+                        />
+
+                        <Text>Amount (in Satoshis)</Text>
+                        <TextInput
+                            value={value}
+                            onChangeText={(text: string) => this.setState({ value: text })}
+                            numberOfLines={1}
+                            style={{ fontSize: 20, padding: 20 }}
+                            editable={true}
+                        />
+
+                        <View style={styles.button}>
+                            <Button
+                                title="Create Invoice"
+                                icon={{
+                                    name: "create",
+                                    size: 25,
+                                    color: "white"
+                                }}
+                                onPress={() => createInvoice(memo, value)}
+                                backgroundColor="orange"
+                                borderRadius={30}
+                            />
+                        </View>
+                    </View>}
                 </View>
             </View>
         );
