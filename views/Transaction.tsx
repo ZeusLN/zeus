@@ -23,7 +23,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
         const { changeUnits, getAmount, units } = UnitsStore;
         const transaction: Transaction = navigation.getParam('transaction', null);
         const { testnet } = NodeInfoStore;
-        const { amount, tx_hash, block_hash, block_height, num_confirmations, time_stamp, dest_addresses } = transaction;
+        const { amount, tx_hash, block_hash, block_height, num_confirmations, time_stamp, dest_addresses, total_fees } = transaction;
         const date = new Date(Number(time_stamp) * 1000);
         const addresses: Array<any> = [];
 
@@ -58,14 +58,25 @@ export default class TransactionView extends React.Component<TransactionProps> {
                 </View>
 
                 <View style={styles.content}>
+                    <Text style={styles.label}>Total Fees:</Text>
+                    <TouchableOpacity onPress={() => changeUnits()}>
+                        <Text style={styles.value}>{units && getAmount(total_fees || 0)}</Text>
+                    </TouchableOpacity>
+
                     <Text style={styles.label}>Transaction Hash:</Text>
-                    <TouchableOpacity onPress={() => UrlUtils.goToBlockExplorerTXID(tx_hash, testnet)}><Text style={styles.valueWithLink}>{tx_hash}</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={() => UrlUtils.goToBlockExplorerTXID(tx_hash, testnet)}>
+                        <Text style={styles.valueWithLink}>{tx_hash}</Text>
+                    </TouchableOpacity>
 
                     {block_hash && <Text style={styles.label}>Block Hash:</Text>}
-                    {block_hash && <TouchableOpacity onPress={() => UrlUtils.goToBlockExplorerBlockHash(block_hash, testnet)}><Text style={styles.valueWithLink}>{block_hash}</Text></TouchableOpacity>}
+                    {block_hash && <TouchableOpacity onPress={() => UrlUtils.goToBlockExplorerBlockHash(block_hash, testnet)}>
+                        <Text style={styles.valueWithLink}>{block_hash}</Text>
+                    </TouchableOpacity>}
 
                     {block_height && <Text style={styles.label}>Block Height:</Text>}
-                    {block_height && <TouchableOpacity onPress={() => UrlUtils.goToBlockExplorerBlockHeight(block_height, testnet)}><Text style={styles.valueWithLink}>{block_height}</Text></TouchableOpacity>}
+                    {block_height && <TouchableOpacity onPress={() => UrlUtils.goToBlockExplorerBlockHeight(block_height, testnet)}>
+                        <Text style={styles.valueWithLink}>{block_height}</Text>
+                    </TouchableOpacity>}
 
                     <Text style={styles.label}>Number of Confirmations:</Text>
                     <Text style={{ ...styles.value, color: num_confirmations > 0 ? 'black' : 'red' }}>{num_confirmations || 0}</Text>

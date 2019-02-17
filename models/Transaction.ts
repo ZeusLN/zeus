@@ -6,4 +6,5 @@ export default interface Transaction {
     num_confirmations: number;
     time_stamp: string;
     tx_hash: string;
+    total_fees: string;
 }
