@@ -1,7 +1,8 @@
 import * as React from 'react';
-import { ActivityIndicator, Clipboard, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, ButtonGroup, Header, Icon } from 'react-native-elements';
 import QRCode from 'react-native-qrcode';
+import CopyButton from './../components/CopyButton';
 import { inject, observer } from 'mobx-react';
 
 import InvoicesStore from './../stores/InvoicesStore';
@@ -95,16 +96,8 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
                             fgColor='white'
                         />}
                         {onChainAndress && <View style={styles.button}>
-                            <Button
-                                title="Copy to Clipboard"
-                                icon={{
-                                    name: "content-copy",
-                                    size: 25,
-                                    color: "white"
-                                }}
-                                backgroundColor="black"
-                                onPress={() => Clipboard.setString(onChainAndress)}
-                                borderRadius={30}
+                            <CopyButton
+                                copyValue={onChainAndress}
                             />
                         </View>}
                         <View style={styles.button}>
@@ -127,19 +120,11 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
                         {error_msg && <Text style={{ padding: 20 }}>{error_msg}</Text>}
                         {creatingInvoice && <ActivityIndicator size="large" color="#0000ff" />}
                         {payment_request && <Text style={{ padding: 20 }}>{payment_request}</Text>}
-                        {payment_request && <Button
-                            title="Copy to Clipboard"
-                            icon={{
-                                name: "content-copy",
-                                size: 25,
-                                color: "white"
-                            }}
-                            backgroundColor="black"
-                            onPress={() => Clipboard.setString(payment_request)}
-                            style={{ padding: 10 }}
-                            borderRadius={30}
-                        />}
-
+                        {payment_request && <View style={styles.button}>
+                            <CopyButton
+                                copyValue={payment_request}
+                            />
+                        </View>}
                         <Text>Memo</Text>
                         <TextInput
                             value={memo}
