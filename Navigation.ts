@@ -7,7 +7,8 @@ import Wallet from './views/Wallet/Wallet';
 import Send from './views/Send';
 import Receive from './views/Receive';
 import InvoiceLookup from './views/Invoice';
-import QRScanner from './views/QRScanner';
+import AddressQRScanner from './views/AddressQRScanner';
+import NodeQRScanner from './views/NodeQRScanner';
 import OpenChannel from './views/OpenChannel';
 import SendingOnChain from './views/SendingOnChain';
 import SendingLightning from './views/SendingLightning';
@@ -19,8 +20,11 @@ const AppScenes = {
     Wallet: {
         screen: Wallet
     },
-    QRCodeScanner : {
-        screen: QRScanner
+    AddressQRCodeScanner : {
+        screen: AddressQRScanner
+    },
+    NodeQRCodeScanner : {
+        screen: NodeQRScanner
     },
     Settings: {
         screen: Settings
