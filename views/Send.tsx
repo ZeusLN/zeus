@@ -48,8 +48,8 @@ export default class Send extends React.Component<SendProps, SendState> {
         const transactionType = navigation.getParam('transactionType', null);
 
         this.setState({
-            transactionType: transactionType,
-            destination: destination,
+            transactionType,
+            destination,
             isValid: true
         });
     }
@@ -167,7 +167,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 size: 25,
                                 color: "white"
                             }}
-                            onPress={() => navigation.navigate('QRCodeScanner')}
+                            onPress={() => navigation.navigate('AddressQRCodeScanner')}
                             backgroundColor="rgba(92, 99,216, 1)"
                             borderRadius={30}
                         />

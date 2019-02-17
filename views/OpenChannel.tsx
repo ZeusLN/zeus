@@ -29,6 +29,17 @@ export default class OpenChannel extends React.Component<OpenChannelProps, OpenC
         host: ''
     }
 
+    componentWillReceiveProps(nextProps: any) {
+        const { navigation } = nextProps;
+        const node_pubkey_string = navigation.getParam('node_pubkey_string', null);
+        const host = navigation.getParam('host', null);
+
+        this.setState({
+            node_pubkey_string,
+            host
+        });
+    }
+
     render() {
         const { ChannelsStore, navigation } = this.props;
         const { node_pubkey_string, local_funding_amount, min_confs, host } = this.state;
@@ -105,18 +116,33 @@ export default class OpenChannel extends React.Component<OpenChannelProps, OpenC
                         onPress={() => this.setState({ private: !privateChannel })}
                     />
 
-                    <Button
-                        title="Open Channel"
-                        icon={{
-                            name: "swap-horiz",
-                            size: 25,
-                            color: "white"
-                        }}
-                        backgroundColor="rgba(92, 99,216, 1)"
-                        onPress={() => connectPeer(this.state)}
-                        style={{ padding: 10 }}
-                        borderRadius={30}
-                    />
+                    <View style={styles.button}>
+                        <Button
+                            title="Open Channel"
+                            icon={{
+                                name: "swap-horiz",
+                                size: 25,
+                                color: "white"
+                            }}
+                            backgroundColor="rgba(92, 99,216, 1)"
+                            onPress={() => connectPeer(this.state)}
+                            style={{ padding: 10 }}
+                            borderRadius={30}
+                        />
+                    </View>
+                    <View style={styles.button}>
+                        <Button
+                            title="Scan"
+                            icon={{
+                                name: "crop-free",
+                                size: 25,
+                                color: "white"
+                            }}
+                            onPress={() => navigation.navigate('NodeQRCodeScanner')}
+                            backgroundColor="rgba(92, 99,216, 1)"
+                            borderRadius={30}
+                        />
+                    </View>
                 </View>
             </View>
         );
@@ -131,5 +157,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingTop: 20,
         paddingBottom: 20
+    },
+    button: {
+        paddingTop: 15,
+        paddingBottom: 15
     }
 });
