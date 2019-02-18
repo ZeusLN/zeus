@@ -1,26 +1,38 @@
 import * as React from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Header, Icon } from 'react-native-elements';
+import { Button, Header, Icon } from 'react-native-elements';
 import Channel from './../models/Channel';
 import Identicon from 'identicon.js';
 import { inject, observer } from 'mobx-react';
 const hash = require('object-hash');
 
+import ChannelsStore from './../stores/ChannelsStore';
 import UnitsStore from './../stores/UnitsStore';
 
 interface ChannelProps {
     navigation: any;
+    ChannelsStore: ChannelsStore;
     UnitsStore: UnitsStore;
 }
 
-@inject('UnitsStore')
+@inject('ChannelsStore', 'UnitsStore')
 @observer
 export default class ChannelView extends React.Component<ChannelProps> {
+    closeChannel = (channelPoint: string) => {
+        const { ChannelsStore, navigation } = this.props;
+        const funding_txid_str = channelPoint.split(':')[0];
+        const output_index = channelPoint.split(':')[1];
+
+        ChannelsStore.closeChannel({ funding_txid_str, output_index });
+        navigation.navigate('Wallet');
+    };
+
     render() {
         const { navigation, UnitsStore } = this.props;
         const { changeUnits, getAmount, units } = UnitsStore;
         const channel: Channel = navigation.getParam('channel', null);
         const {
+            channel_point,
             commit_weight,
             local_balance,
             commit_fee,
@@ -99,6 +111,20 @@ export default class ChannelView extends React.Component<ChannelProps> {
 
                     <Text style={styles.label}>Fee per kilo-weight:</Text>
                     <Text style={styles.value}>{fee_per_kw}</Text>
+
+                    <View style={styles.button}>
+                        <Button
+                            title="Close Channel"
+                            icon={{
+                                name: "delete",
+                                size: 25,
+                                color: "#fff"
+                            }}
+                            backgroundColor="red"
+                            onPress={() => this.closeChannel(channel_point)}
+                            borderRadius={30}
+                        />
+                    </View>
                 </View>
             </ScrollView>
         );
@@ -129,5 +155,9 @@ const styles = StyleSheet.create({
     valueWithLink: {
         paddingBottom: 5,
         color: 'rgba(92, 99,216, 1)'
+    },
+    button: {
+        paddingTop: 15,
+        paddingBottom: 15
     }
 });
