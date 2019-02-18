@@ -39,10 +39,23 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         }
     }
 
+    componentWillReceiveProps(nextProps: any) {
+        const { navigation } = nextProps;
+        const host = navigation.getParam('host', null);
+        const port = navigation.getParam('port', null);
+        const macaroonHex = navigation.getParam('macaroonHex', null);
+
+        this.setState({
+            host,
+            port,
+            macaroonHex
+        });
+    }
+
     render() {
         const { navigation, SettingsStore } = this.props;
         const { host, port, macaroonHex } = this.state;
-        const { setSettings, loading, settings } = SettingsStore;
+        const { setSettings, loading, settings, btcPayError } = SettingsStore;
 
         const BackButton = () => (
             <Icon
@@ -62,6 +75,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                 />
 
                 <View style={styles.form}>
+                    {btcPayError && <Text style={styles.error}>{btcPayError}</Text>}
                     <Text>LND Host</Text>
                     <TextInput
                         placeholder={'localhost'}
@@ -74,7 +88,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
                     <Text>LND Port</Text>
                     <TextInput
-                        placeholder={'8080'}
+                        placeholder={'443/8080'}
                         value={port}
                         onChangeText={(text: string) => this.setState({ port: text })}
                         numberOfLines={1}
@@ -93,18 +107,34 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     />
                 </View>
 
-                <Button
-                    title="Save Settings"
-                    icon={{
-                        name: "save",
-                        size: 25,
-                        color: "white"
-                    }}
-                    backgroundColor="rgba(92, 99,216, 1)"
-                    onPress={() => setSettings(JSON.stringify({ ...this.state, onChainAndress: settings.onChainAndress }))}
-                    style={styles.button}
-                    borderRadius={30}
-                />
+                <View style={styles.button}>
+                    <Button
+                        title="Save Settings"
+                        icon={{
+                            name: "save",
+                            size: 25,
+                            color: "white"
+                        }}
+                        backgroundColor="rgba(92, 99,216, 1)"
+                        onPress={() => setSettings(JSON.stringify({ ...this.state, onChainAndress: settings.onChainAndress }))}
+                        style={styles.button}
+                        borderRadius={30}
+                    />
+                </View>
+
+                <View style={styles.button}>
+                    <Button
+                        title="Scan BTCPay Config"
+                        icon={{
+                            name: "crop-free",
+                            size: 25,
+                            color: "white"
+                        }}
+                        onPress={() => navigation.navigate('BTCPayConfigQRScanner')}
+                        backgroundColor="rgba(5, 146, 35, 1)"
+                        borderRadius={30}
+                    />
+                </View>
             </View>
         );
     }
@@ -113,6 +143,9 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 const styles = StyleSheet.create({
     container: {
         backgroundColor: '#fff'
+    },
+    error: {
+        color: 'red'
     },
     form: {
         alignSelf: 'center',

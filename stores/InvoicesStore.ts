@@ -8,9 +8,10 @@ export default class InvoicesStore {
     @observable loading: boolean = false;
     @observable error: boolean = false;
     @observable error_msg: string | null;
+    @observable getPayReqError: boolean = false;
     @observable invoices: Array<Invoice> = [];
     @observable invoice: Invoice;
-    @observable pay_req: Invoice;
+    @observable pay_req: Invoice | null;
     @observable payment_request: string | null;
     @observable creatingInvoice: boolean = false;
     @observable creatingInvoiceError: boolean = false;
@@ -28,7 +29,7 @@ export default class InvoicesStore {
         this.loading = true;
         axios.request({
             method: 'get',
-            url: `https://${host}:${port}/v1/invoices`,
+            url: `https://${host}${port ? ':' + port : ''}/v1/invoices`,
             headers: {
                 'Grpc-Metadata-macaroon': macaroonHex
             }
@@ -52,7 +53,7 @@ export default class InvoicesStore {
 
         axios.request({
             method: 'get',
-            url: `https://${host}:${port}/v1/invoice/${lightningInvoice}`,
+            url: `https://${host}${port ? ':' + port : ''}/v1/invoice/${lightningInvoice}`,
             headers: {
                 'Grpc-Metadata-macaroon': macaroonHex
             }
@@ -80,7 +81,7 @@ export default class InvoicesStore {
 
         axios.request({
             method: 'post',
-            url: `https://${host}:${port}/v1/invoices`,
+            url: `https://${host}${port ? ':' + port : ''}/v1/invoices`,
             headers: {
                 'Grpc-Metadata-macaroon': macaroonHex
             },
@@ -111,7 +112,7 @@ export default class InvoicesStore {
         this.loading = true;
         axios.request({
             method: 'get',
-            url: `https://${host}:${port}/v1/payreq/${paymentRequest}`,
+            url: `https://${host}${port ? ':' + port : ''}/v1/payreq/${paymentRequest}`,
             headers: {
                 'Grpc-Metadata-macaroon': macaroonHex
             }
@@ -120,10 +121,13 @@ export default class InvoicesStore {
             const data = response.data;
             this.pay_req = data;
             this.loading = false;
+            this.getPayReqError = false;
         })
         .catch(() => {
             // handle error
             this.loading = false;
+            this.getPayReqError = true;
+            this.pay_req = null;
         });
     }
 }
