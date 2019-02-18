@@ -53,7 +53,8 @@ You only need the Command line tools to use `adb` with your phone.
 4. open up your Android simulator or connect your phone and run `react-native run-android`
 
 ### iOS
-1. if using a self-signed lnd cert with iOS, please read the section above titled [Using a self-signed lnd cert with iOS](#using-a-self-signed-lnd-cert-with-ios)
+1. if using a self-signed lnd cert with iOS, please read the section above titled
+[Using a self-signed lnd cert with iOS](#using-a-self-signed-lnd-cert-with-ios)
 2. install dependencies with `npm i`
 3. open `ios/zeus.xcodeproj` in Xcode and hit Run
 
