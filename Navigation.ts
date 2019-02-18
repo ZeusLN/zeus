@@ -6,7 +6,7 @@ import Settings from './views/Settings';
 import Wallet from './views/Wallet/Wallet';
 import Send from './views/Send';
 import Receive from './views/Receive';
-import InvoiceLookup from './views/Invoice';
+import InvoiceLookup from './views/InvoiceLookup';
 import AddressQRScanner from './views/AddressQRScanner';
 import NodeQRScanner from './views/NodeQRScanner';
 import OpenChannel from './views/OpenChannel';
