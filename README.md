@@ -46,7 +46,8 @@ for setting up a configuration profile. You want to add your LND cert to the sec
 1. download the
 [Android Studio SDK package](https://developer.android.com/studio/#downloads).
 You only need the Command line tools to use `adb` with your phone.
-2. install and setup react-native and it's related dependencies for **"Building Projects with Native Code"** [(Android SDK, JDK)](https://facebook.github.io/react-native/docs/getting-started.html) 
+2. install and setup react-native and its related dependencies under **"Building Projects with Native Code"** on
+[react-native's Getting Started page](https://facebook.github.io/react-native/docs/getting-started.html) 
 3. if using your phone,
 [enable Developer mode and USB Debugging](https://developer.android.com/studio/debug/dev-options)
 , then make sure it is connected to your computer by running `adb devices`
@@ -56,8 +57,10 @@ You only need the Command line tools to use `adb` with your phone.
 ### iOS
 1. if using a self-signed lnd cert with iOS, please read the section above titled
 [Using a self-signed lnd cert with iOS](#using-a-self-signed-lnd-cert-with-ios)
-2. install dependencies with `npm i`
-3. open `ios/zeus.xcodeproj` in Xcode and hit Run
+2. install and setup react-native and its related dependencies under **"Building Projects with Native Code"** on
+[react-native's Getting Started page](https://facebook.github.io/react-native/docs/getting-started.html) 
+3. install node dependencies with `npm i`
+4. open `ios/zeus.xcodeproj` in Xcode and hit Run
 
 #### Using a local lnd node with iOS
 
