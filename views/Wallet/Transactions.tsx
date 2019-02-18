@@ -54,7 +54,7 @@ export default class Transactions extends React.Component<TransactionsProps> {
 
         return (
             <View>
-                {!!transactions && transactions.length > 0 ? <List>
+                {(!!transactions && transactions.length > 0) || loading ? <List>
                         <FlatList
                             data={transactions}
                             renderItem={({ item }: any) => {

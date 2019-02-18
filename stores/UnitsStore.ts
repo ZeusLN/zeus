@@ -28,9 +28,9 @@ export default class UnitsStore {
                 return `- ₿ ${Number(processedValue) / satoshisPerBTC}`;
             }
 
-            return `₿ ${Number(value) / satoshisPerBTC}`;
+            return `₿ ${Number(value || 0) / satoshisPerBTC}`;
         }
 
-        return `${value} ${Number(value) > 1 ? 'sats' : 'sat'}`;
+        return `${value || 0} ${Number(value) > 1 ? 'sats' : 'sat'}`;
     }
 }

@@ -2,6 +2,7 @@ import { action, observable, reaction } from 'mobx';
 import axios from 'axios';
 import Channel from './../models/Channel';
 import OpenChannelRequest from './../models/OpenChannelRequest';
+import CloseChannelRequest from './../models/CloseChannelRequest';
 import SettingsStore from './SettingsStore';
 
 export default class ChannelsStore {
@@ -19,6 +20,7 @@ export default class ChannelsStore {
     @observable public peerSuccess: boolean = false;
     @observable public channelSuccess: boolean = false;
     @observable channelRequest: any;
+    closeChannelSuccess: boolean;
 
     settingsStore: SettingsStore
 
@@ -58,6 +60,36 @@ export default class ChannelsStore {
             // handle success
             const data = response.data;
             this.channels = data.channels;
+            this.error = false;
+            this.loading = false;
+        })
+        .catch(() => {
+            // handle error
+            this.channels = [];
+            this.error = true;
+            this.loading = false;
+        });
+    }
+
+    @action
+    public closeChannel = (request: CloseChannelRequest) => {
+        const { settings } = this.settingsStore;
+        const { host, port, macaroonHex } = settings;
+
+        const { funding_txid_str, output_index } = request;
+
+        this.loading = true;
+        axios.request({
+            method: 'delete',
+            url: `https://${host}:${port}/v1/channels/${funding_txid_str}/${output_index}`,
+            headers: {
+                'Grpc-Metadata-macaroon': macaroonHex
+            }
+        }).then((response: any) => {
+            // handle success
+            const data = response.data;
+            const { chan_close } = data;
+            this.closeChannelSuccess = chan_close.success;
             this.error = false;
             this.loading = false;
         })
