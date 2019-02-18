@@ -46,9 +46,9 @@ export default class BalanceStore {
         }).then((response: any) => {
             // handle success
             const data = response.data;
-            this.unconfirmedBlockchainBalance = Number(data.unconfirmed_balance);
-            this.confirmedBlockchainBalance = Number(data.confirmed_balance);
-            this.totalBlockchainBalance = Number(data.total_balance);
+            this.unconfirmedBlockchainBalance = Number(data.unconfirmed_balance) || 0;
+            this.confirmedBlockchainBalance = Number(data.confirmed_balance || 0);
+            this.totalBlockchainBalance = Number(data.total_balance || 0);
             this.loading = false;
         })
         .catch((error: Error) => {
@@ -70,7 +70,7 @@ export default class BalanceStore {
         this.loading = true;
         axios.request({
             method: 'get',
-            url: `https://${host}:${port}/v1/balance/channels`,
+            url: `https://${host}${port ? ':' + port : ''}/v1/balance/channels`,
             headers: {
                 'Grpc-Metadata-macaroon': macaroonHex
             },
@@ -78,8 +78,8 @@ export default class BalanceStore {
         }).then((response: any) => {
             // handle success
             const data = response.data;
-            this.pendingOpenBalance = Number(data.pending_open_balance);
-            this.lightningBalance = Number(data.balance);
+            this.pendingOpenBalance = Number(data.pending_open_balance || 0);
+            this.lightningBalance = Number(data.balance || 0);
             this.loading = false;
         })
         .catch(() => {

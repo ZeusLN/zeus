@@ -29,7 +29,7 @@ export default class NodeInfoStore {
         this.loading = true;
         axios.request({
             method: 'get',
-            url: `https://${host}:${port}/v1/getinfo`,
+            url: `https://${host}${port ? ':' + port : ''}/v1/getinfo`,
             headers: {
                 'Grpc-Metadata-macaroon': macaroonHex
             }

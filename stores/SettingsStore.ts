@@ -18,6 +18,38 @@ interface Settings {
 export default class SettingsStore {
     @observable settings: Settings = {};
     @observable loading: boolean = false;
+    @observable btcPayError: string | null;
+
+    @action
+    public fetchBTCPayConfig = (data: string) => {
+        const configRoute = data.split('config=')[1];
+        this.btcPayError = null;
+
+        return axios.request({
+            method: 'get',
+            url: configRoute
+        }).then((response: any) => {
+            // handle success
+            const data = response.data;
+            const configuration = data.configurations[0];
+            const { adminMacaroon, type, uri } = configuration;
+
+            if (type !== 'lnd-rest') {
+                this.btcPayError = "Sorry, we only currently support BTCPay instances using lnd";
+            } else {
+                const config = {
+                    host: uri.split('https://')[1],
+                    macaroonHex: adminMacaroon
+                }
+
+                return config;
+            }
+        })
+        .catch(() => {
+            // handle error
+            this.btcPayError = "Error getting BTCPay configuration";
+        });
+    }
 
     @action
     public async getSettings() {
@@ -54,7 +86,7 @@ export default class SettingsStore {
 
         return axios.request({
             method: 'get',
-            url: `https://${host}:${port}/v1/newaddress`,
+            url: `https://${host}${port ? ':' + port : ''}/v1/newaddress`,
             headers: {
                 'Grpc-Metadata-macaroon': macaroonHex
             }
@@ -68,11 +100,6 @@ export default class SettingsStore {
             };
 
             this.setSettings(JSON.stringify(newSettings));
-        })
-        .catch((error: Error) => {
-            // handle error
-            console.log('errrrrr - newaddress');
-            console.log(error);
         });
     }
 }
