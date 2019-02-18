@@ -40,7 +40,7 @@ export default class TransactionsStore {
 
         axios.request({
             method: 'get',
-            url: `https://${host}:${port}/v1/newaddress`,
+            url: `https://${host}${port ? ':' + port : ''}/v1/newaddress`,
             headers: {
                 'Grpc-Metadata-macaroon': macaroonHex
             }
@@ -64,7 +64,7 @@ export default class TransactionsStore {
         this.loading = true;
         axios.request({
             method: 'get',
-            url: `https://${host}:${port}/v1/transactions`,
+            url: `https://${host}${port ? ':' + port : ''}/v1/transactions`,
             headers: {
                 'Grpc-Metadata-macaroon': macaroonHex
             }
@@ -93,7 +93,7 @@ export default class TransactionsStore {
 
         axios.request({
             method: 'post',
-            url: `https://${host}:${port}/v1/transactions`,
+            url: `https://${host}${port ? ':' + port : ''}/v1/transactions`,
             headers: {
                 'Grpc-Metadata-macaroon': macaroonHex
             },
@@ -129,7 +129,7 @@ export default class TransactionsStore {
 
         axios.request({
             method: 'post',
-            url: `https://${host}:${port}/v1/channels/transactions`,
+            url: `https://${host}${port ? ':' + port : ''}/v1/channels/transactions`,
             headers: {
                 'Grpc-Metadata-macaroon': macaroonHex
             },

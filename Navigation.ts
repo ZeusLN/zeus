@@ -6,7 +6,7 @@ import Settings from './views/Settings';
 import Wallet from './views/Wallet/Wallet';
 import Send from './views/Send';
 import Receive from './views/Receive';
-import InvoiceLookup from './views/Invoice';
+import InvoiceLookup from './views/InvoiceLookup';
 import AddressQRScanner from './views/AddressQRScanner';
 import NodeQRScanner from './views/NodeQRScanner';
 import OpenChannel from './views/OpenChannel';
@@ -15,6 +15,7 @@ import SendingLightning from './views/SendingLightning';
 import Channel from './views/Channel';
 import Payment from './views/Payment';
 import Invoice from './views/Invoice';
+import BTCPayConfigQRScanner from './views/BTCPayConfigQRScanner';
 
 const AppScenes = {
     Wallet: {
@@ -58,6 +59,9 @@ const AppScenes = {
     },
     SendingLightning: {
         screen: SendingLightning
+    },
+    BTCPayConfigQRScanner: {
+        screen: BTCPayConfigQRScanner
     }
 }
 
