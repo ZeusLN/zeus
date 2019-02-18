@@ -15,6 +15,7 @@ import SendingLightning from './views/SendingLightning';
 import Channel from './views/Channel';
 import Payment from './views/Payment';
 import Invoice from './views/Invoice';
+import BTCPayConfigQRScanner from './views/BTCPayConfigQRScanner';
 
 const AppScenes = {
     Wallet: {
@@ -58,6 +59,9 @@ const AppScenes = {
     },
     SendingLightning: {
         screen: SendingLightning
+    },
+    BTCPayConfigQRScanner: {
+        screen: BTCPayConfigQRScanner
     }
 }
 

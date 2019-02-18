@@ -22,7 +22,7 @@ export default class PaymentsStore {
         this.loading = true;
         axios.request({
             method: 'get',
-            url: `https://${host}:${port}/v1/payments`,
+            url: `https://${host}${port ? ':' + port : ''}/v1/payments`,
             headers: {
                 'Grpc-Metadata-macaroon': macaroonHex
             }

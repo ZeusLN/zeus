@@ -52,7 +52,7 @@ export default class ChannelsStore {
         this.loading = true;
         axios.request({
             method: 'get',
-            url: `https://${host}:${port}/v1/channels`,
+            url: `https://${host}${port ? ':' + port : ''}/v1/channels`,
             headers: {
                 'Grpc-Metadata-macaroon': macaroonHex
             }
@@ -81,7 +81,7 @@ export default class ChannelsStore {
         this.loading = true;
         axios.request({
             method: 'delete',
-            url: `https://${host}:${port}/v1/channels/${funding_txid_str}/${output_index}`,
+            url: `https://${host}${port ? ':' + port : ''}/v1/channels/${funding_txid_str}/${output_index}`,
             headers: {
                 'Grpc-Metadata-macaroon': macaroonHex
             }
@@ -109,7 +109,7 @@ export default class ChannelsStore {
         this.connectingToPeer = true;
         axios.request({
             method: 'post',
-            url: `https://${host}:${port}/v1/peers`,
+            url: `https://${host}${port ? ':' + port : ''}/v1/peers`,
             headers: {
                 'Grpc-Metadata-macaroon': macaroonHex
             },
@@ -149,7 +149,7 @@ export default class ChannelsStore {
         this.openingChannel = true;
         axios.request({
             method: 'post',
-            url: `https://${host}:${port}/v1/channels`,
+            url: `https://${host}${port ? ':' + port : ''}/v1/channels`,
             headers: {
                 'Grpc-Metadata-macaroon': macaroonHex
             },
