@@ -40,7 +40,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                     style={{ paddingTop: 10, width: 250, alignSelf: 'center' }}
                     borderRadius={30}
                 />
-                {!!channels && channels.length > 0 ? <List>
+                {(!!channels && channels.length > 0) || loading  ? <List>
                         <FlatList
                             data={channels}
                             renderItem={({ item }) => {

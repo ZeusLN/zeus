@@ -28,7 +28,7 @@ export default class PaymentsView extends React.Component<PaymentsProps, {}> {
         const { loading } = PaymentsStore;
         return (
             <View>
-                {!!payments && payments.length > 0 ? <List>
+                {(!!payments && payments.length > 0) || loading  ? <List>
                         <FlatList
                             data={payments}
                             renderItem={({ item }: any) => {

@@ -166,28 +166,28 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     containerStyle={{ height: 50 }}
                 />
 
-                {selectedIndex == 0 && transactions.length > 0 && <Transactions
+                {selectedIndex == 0 && <Transactions
                     transactions={transactions}
                     navigation={navigation}
                     refresh={this.refresh}
                     TransactionsStore={TransactionsStore}
                     UnitsStore={UnitsStore}
                 />}
-                {selectedIndex == 1 && invoices.length > 0 && <Payments
+                {selectedIndex == 1 && <Payments
                     payments={payments}
                     navigation={navigation}
                     refresh={this.refresh}
                     PaymentsStore={PaymentsStore}
                     UnitsStore={UnitsStore}
                 />}
-                {selectedIndex == 2 && invoices.length > 0 && <Invoices
+                {selectedIndex == 2 && <Invoices
                     invoices={invoices}
                     navigation={navigation}
                     refresh={this.refresh}
                     InvoicesStore={InvoicesStore}
                     UnitsStore={UnitsStore}
                 />}
-                {selectedIndex == 3 && channels.length > 0 && <Channels
+                {selectedIndex == 3 && <Channels
                     channels={channels}
                     navigation={navigation}
                     refresh={this.refresh}
