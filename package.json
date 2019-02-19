@@ -20,6 +20,7 @@
     "react-native-elements": "0.19.1",
     "react-native-gesture-handler": "1.0.15",
     "react-native-keychain": "3.0.0",
+    "react-native-linear-gradient": "2.5.3",
     "react-native-permissions": "1.1.1",
     "react-native-qrcode": "0.2.7",
     "react-native-vector-icons": "6.2.0",
