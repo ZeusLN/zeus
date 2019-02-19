@@ -13,7 +13,7 @@ interface OpenChannelProps {
 interface OpenChannelState {
     node_pubkey_string: string;
     local_funding_amount: string;
-    min_confs: string;
+    min_confs: number;
     private: boolean;
     host: string;
 }
@@ -24,7 +24,7 @@ export default class OpenChannel extends React.Component<OpenChannelProps, OpenC
     state = {
         node_pubkey_string: '',
         local_funding_amount: '',
-        min_confs: '1',
+        min_confs: 1,
         private: false,
         host: ''
     }
@@ -103,8 +103,8 @@ export default class OpenChannel extends React.Component<OpenChannelProps, OpenC
                     <FormLabel>Number of Confirmations</FormLabel>
                     <TextInput
                         placeholder={'1'}
-                        value={min_confs}
-                        onChangeText={(text: string) => this.setState({ min_confs: text })}
+                        value={min_confs.toString()}
+                        onChangeText={(text: string) => this.setState({ min_confs: Number(text) || 1 })}
                         numberOfLines={1}
                         style={{ fontSize: 20, marginBottom: 10 }}
                         editable={!openingChannel}

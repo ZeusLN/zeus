@@ -1,5 +1,5 @@
 export default interface OpenChannelRequest {
-    min_confs?: string;
+    min_confs?: number;
     spend_unconfirmed?: boolean;
     remote_csv_delay?: number;
     node_pubkey_string: string;
