@@ -47,6 +47,10 @@ export default class Send extends React.Component<SendProps, SendState> {
         const destination = navigation.getParam('destination', null);
         const transactionType = navigation.getParam('transactionType', null);
 
+        if (transactionType === 'Lightning') {
+            this.props.InvoicesStore.getPayReq(destination);
+        }
+
         this.setState({
             transactionType,
             destination,
@@ -55,18 +59,18 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     validateAddress = (text: string) => {
-          const { InvoicesStore, NodeInfoStore } = this.props;
+          const { NodeInfoStore, InvoicesStore } = this.props;
           const { testnet } = NodeInfoStore;
 
           if (AddressUtils.isValidBitcoinAddress(text, testnet)) {
               this.setState({
-                  transactionType: 'On-chain Transaction',
+                  transactionType: 'On-chain',
                   isValid: true,
                   destination: text
               });
-          } else if (AddressUtils.isValidLightningInvoice(text)) {
+          } else if (AddressUtils.isValidLightningPaymentRequest(text)) {
               this.setState({
-                  transactionType: 'Lightning Transaction',
+                  transactionType: 'Lightning',
                   isValid: true,
                   destination: text
               });
@@ -109,21 +113,21 @@ export default class Send extends React.Component<SendProps, SendState> {
                     backgroundColor='grey'
                 />
                 <View style={styles.content}>
-                    <FormLabel>Bitcoin address or Lightning invoice</FormLabel>
+                    <FormLabel>Bitcoin address or Lightning payment request</FormLabel>
                     <FormInput
                         value={destination}
                         onChangeText={(text: string) => this.validateAddress(text)}
                     />
-                    {(!isValid && !!destination) && <FormValidationMessage>Must be a valid Bitcoin address or Lightning invoice</FormValidationMessage>}
-                    {transactionType && <Text style={{ paddingTop: 10 }}>{transactionType}</Text>}
-                    {transactionType === 'On-chain Transaction' && <React.Fragment>
+                    {(!isValid && !!destination) && <FormValidationMessage>Must be a valid Bitcoin address or Lightning payment request</FormValidationMessage>}
+                    {transactionType && <Text style={{ paddingTop: 10 }}>{`${transactionType} Transaction`}</Text>}
+                    {transactionType === 'On-chain' && <React.Fragment>
                         <FormLabel>Amount (in satoshis)</FormLabel>
                         <FormInput
                             value={amount}
                             onChangeText={(text: string) => this.setState({ amount: text })}
                         />
                     </React.Fragment>}
-                    {transactionType === 'On-chain Transaction' && <React.Fragment>
+                    {transactionType === 'On-chain' && <React.Fragment>
                         <FormLabel>Fee (satoshis per byte)</FormLabel>
                         <FormInput
                             placeholder="2"
@@ -131,21 +135,21 @@ export default class Send extends React.Component<SendProps, SendState> {
                             onChangeText={(text: string) => this.setState({ fee: text })}
                         />
                     </React.Fragment>}
-                    {transactionType === 'Lightning Transaction' && <View style={styles.button}>
+                    {transactionType === 'Lightning' && <View style={styles.button}>
                         <Button
-                            title="Look Up Invoice"
+                            title="Look Up Payment Request"
                             icon={{
                                 name: "send",
                                 size: 25,
                                 color: "white"
                             }}
-                            onPress={() => navigation.navigate('InvoiceLookup')}
+                            onPress={() => navigation.navigate('PaymentRequest')}
                             backgroundColor="orange"
                             style={styles.button}
                             borderRadius={30}
                         />
                     </View>}
-                    {transactionType === 'On-chain Transaction' && <View style={styles.button}>
+                    {transactionType === 'On-chain' && <View style={styles.button}>
                         <Button
                             title="Send Coins"
                             icon={{
