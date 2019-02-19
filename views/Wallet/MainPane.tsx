@@ -2,6 +2,7 @@ import * as React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Badge, Button } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import LinearGradient from 'react-native-linear-gradient';
 
 import NodeInfoStore from './../../stores/NodeInfoStore';
 import UnitsStore from './../../stores/UnitsStore';
@@ -25,10 +26,18 @@ export default class MainPane extends React.Component<MainPaneProps, {}> {
 
         const BalanceView = () => (
             <React.Fragment>
-                <Text style={{ fontSize: 40, color: 'white' }}>{units && getAmount(lightningBalance)} ⚡</Text>
-                {pendingOpenBalance > 0 ? <Text style={{ fontSize: 20, color: 'white' }}>{units && getAmount(pendingOpenBalance)} pending open</Text> : null}
-                <Text style={{ fontSize: 30, color: 'white' }}>{units && getAmount(totalBlockchainBalance)} ⛓️</Text>
-                {unconfirmedBlockchainBalance ? <Text style={{ fontSize: 20, color: 'white' }}>{units && getAmount(unconfirmedBlockchainBalance)} pending</Text> : null}
+                <Text style={styles.lightningBalance}>
+                    {units && getAmount(lightningBalance)} ⚡
+                </Text>
+                {pendingOpenBalance > 0 ? <Text style={styles.pendingBalance}>
+                    {units && getAmount(pendingOpenBalance)} pending open
+                </Text> : null}
+                <Text style={styles.blockchainBalance}>
+                    {units && getAmount(totalBlockchainBalance)} ⛓️
+                </Text>
+                {unconfirmedBlockchainBalance ? <Text style={styles.pendingBalance}>
+                    {units && getAmount(unconfirmedBlockchainBalance)} pending
+                </Text> : null}
             </React.Fragment>
         );
 
@@ -39,7 +48,7 @@ export default class MainPane extends React.Component<MainPaneProps, {}> {
                     icon={{
                         name: "settings",
                         size: 25,
-                        color: "white"
+                        color: "#fff"
                     }}
                     backgroundColor="transparent"
                     onPress={() => navigation.navigate('Settings')}
@@ -63,50 +72,57 @@ export default class MainPane extends React.Component<MainPaneProps, {}> {
                 </View>
             );
         } else if (!NodeInfoStore.error) {
+           // colors={['#4c669f', '#3b5998', '#192f6a']}
            mainPane = (
-               <View style={styles.container}>
-                   {NodeInfoStore.nodeInfo && NodeInfoStore.testnet && <View style={styles.testnet}>
-                       <Badge value='Testnet' />
-                   </View>}
-                   <SettingsButton />
-                   <TouchableOpacity onPress={() => changeUnits()}>
-                       <BalanceView />
-                   </TouchableOpacity>
-                   <View style={styles.buttons}>
-                       <Button
-                           title="Send"
-                           icon={{
-                               name: "send",
-                               size: 25,
-                               color: "white"
-                           }}
-                           backgroundColor="rgba(92, 99,216, 1)"
-                           onPress={() => navigation.navigate('Send')}
-                           borderRadius={30}
-                       />
-                       <Button
-                           title="Receive"
-                           icon={{
-                               name: "account-balance-wallet",
-                               size: 25,
-                               color: "white"
-                           }}
-                           backgroundColor="rgba(92, 99,216, 1)"
-                           onPress={() => navigation.navigate('Receive')}
-                           borderRadius={30}
-                       />
-                   </View>
+               <View>
+                    <LinearGradient colors={['#FAB57F', 'orange', '#ee7600']} style={styles.container}>
+                        {NodeInfoStore.nodeInfo && NodeInfoStore.testnet && <View style={styles.testnet}>
+                            <Badge value='Testnet' />
+                        </View>}
+                        <SettingsButton />
+                        <TouchableOpacity onPress={() => changeUnits()}>
+                            <BalanceView />
+                        </TouchableOpacity>
+                        <View style={styles.buttons}>
+                            <Button
+                                title="Send"
+                                icon={{
+                                    name: "arrow-forward",
+                                    size: 25,
+                                    color: "red"
+                                }}
+                                buttonStyle={{ backgroundColor: '#fff' }}
+                                color="black"
+                                onPress={() => navigation.navigate('Send')}
+                                borderRadius={30}
+                                raised
+                            />
+                            <Button
+                                title="Receive"
+                                icon={{
+                                    name: "arrow-downward",
+                                    size: 25,
+                                    color: "green"
+                                }}
+                                buttonStyle={{ backgroundColor: '#fff' }}
+                                color="black"
+                                onPress={() => navigation.navigate('Receive')}
+                                borderRadius={30}
+                                raised
+                            />
+                        </View>
+                    </LinearGradient>
                </View>
            );
         } else {
             mainPane = (
                 <View style={styles.errorContainer}>
-                    <Text style={{ color: 'white', fontSize: 20, marginTop: 20, marginBottom: 25 }}>Error connecting to your node. Please check your settings and try again.</Text>
+                    <Text style={{ color: '#fff', fontSize: 20, marginTop: 20, marginBottom: 25 }}>Error connecting to your node. Please check your settings and try again.</Text>
                     <Button
                         icon={{
                             name: "settings",
                             size: 25,
-                            color: "white"
+                            color: "#fff"
                         }}
                         title="Go to Settings"
                         backgroundColor="gray"
@@ -127,7 +143,6 @@ export default class MainPane extends React.Component<MainPaneProps, {}> {
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: 'rgba(253, 164, 40, 1)', // orange
         paddingTop: 25,
         paddingBottom: 50,
         paddingLeft: 10
@@ -143,6 +158,18 @@ const styles = StyleSheet.create({
         paddingTop: 25,
         paddingBottom: 50,
         paddingLeft: 10
+    },
+    lightningBalance: {
+        fontSize: 40,
+        color: '#fff'
+    },
+    blockchainBalance: {
+        fontSize: 30,
+        color: '#fff'
+    },
+    pendingBalance: {
+        fontSize: 20,
+        color: '#fff'
     },
     testnet: {
         alignItems: 'flex-start',

@@ -3,6 +3,7 @@ package com.zeus;
 import android.app.Application;
 
 import com.facebook.react.ReactApplication;
+import com.BV.LinearGradient.LinearGradientPackage;
 import com.oblador.keychain.KeychainPackage;
 import com.facebook.react.modules.network.OkHttpClientProvider;
 import org.reactnative.camera.RNCameraPackage;
@@ -29,6 +30,7 @@ public class MainApplication extends Application implements ReactApplication {
     protected List<ReactPackage> getPackages() {
       return Arrays.<ReactPackage>asList(
           new MainReactPackage(),
+            new LinearGradientPackage(),
             new KeychainPackage(),
             new RNCameraPackage(),
             new RNGestureHandlerPackage(),
