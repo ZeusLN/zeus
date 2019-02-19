@@ -14,12 +14,12 @@ describe('AddressUtils', () => {
         });
     });
 
-    describe('isValidLightningInvoice', () => {
-        it('validates Lightning invoices properly', () => {
-            expect(AddressUtils.isValidLightningInvoice('b')).toBeFalsy();
-            expect(AddressUtils.isValidLightningInvoice('lnbcrt421fs1mmv3982skms')).toBeTruthy();
-            expect(AddressUtils.isValidLightningInvoice('lntb4fe03rfsd41fefw')).toBeTruthy();
-            expect(AddressUtils.isValidLightningInvoice('lnbc5fasdfa')).toBeTruthy();
+    describe('isValidLightningPaymentRequest', () => {
+        it('validates Lightning payment requests properly', () => {
+            expect(AddressUtils.isValidLightningPaymentRequest('b')).toBeFalsy();
+            expect(AddressUtils.isValidLightningPaymentRequest('lnbcrt421fs1mmv3982skms')).toBeTruthy();
+            expect(AddressUtils.isValidLightningPaymentRequest('lntb4fe03rfsd41fefw')).toBeTruthy();
+            expect(AddressUtils.isValidLightningPaymentRequest('lnbc5fasdfa')).toBeTruthy();
         });
     });
 });
