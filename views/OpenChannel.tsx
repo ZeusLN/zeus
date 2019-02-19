@@ -104,7 +104,7 @@ export default class OpenChannel extends React.Component<OpenChannelProps, OpenC
                     <TextInput
                         placeholder={'1'}
                         value={min_confs.toString()}
-                        onChangeText={(text: string) => this.setState({ min_confs: Number(text) || 1 })}
+                        onChangeText={(text: string) => this.setState({ min_confs: Number(text) || min_confs })}
                         numberOfLines={1}
                         style={{ fontSize: 20, marginBottom: 10 }}
                         editable={!openingChannel}
