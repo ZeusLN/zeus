@@ -28,18 +28,20 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
         const { loading } = ChannelsStore;
         return (
             <View>
-                <Button
-                    title="Open Channel"
-                    icon={{
-                        name: "swap-horiz",
-                        size: 25,
-                        color: "white"
-                    }}
-                    backgroundColor="rgba(92, 99,216, 1)"
-                    onPress={() => navigation.navigate('OpenChannel')}
-                    style={{ paddingTop: 10, width: 250, alignSelf: 'center' }}
-                    borderRadius={30}
-                />
+                <View style={styles.button}>
+                    <Button
+                        title="Open Channel"
+                        icon={{
+                            name: "swap-horiz",
+                            size: 25,
+                            color: "white"
+                        }}
+                        backgroundColor="rgba(92, 99,216, 1)"
+                        onPress={() => navigation.navigate('OpenChannel')}
+                        style={{ paddingTop: 10, width: 250, alignSelf: 'center' }}
+                        borderRadius={30}
+                    />
+                </View>
                 {(!!channels && channels.length > 0) || loading  ? <List>
                         <FlatList
                             data={channels}
@@ -85,5 +87,9 @@ const styles = StyleSheet.create({
         width: "86%",
         backgroundColor: "#CED0CE",
         marginLeft: "14%"
+    },
+    button: {
+        paddingTop: 15,
+        paddingBottom: 15
     }
 });
