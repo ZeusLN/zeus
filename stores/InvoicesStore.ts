@@ -1,6 +1,7 @@
 import { action, observable } from 'mobx';
 import axios from 'axios';
 import Invoice from './../models/Invoice';
+import PaymentRequest from './../models/PaymentRequest';
 import SettingsStore from './SettingsStore';
 
 export default class InvoicesStore {
@@ -11,7 +12,7 @@ export default class InvoicesStore {
     @observable getPayReqError: boolean = false;
     @observable invoices: Array<Invoice> = [];
     @observable invoice: Invoice;
-    @observable pay_req: Invoice | null;
+    @observable pay_req: PaymentRequest | null;
     @observable payment_request: string | null;
     @observable creatingInvoice: boolean = false;
     @observable creatingInvoiceError: boolean = false;
@@ -104,12 +105,14 @@ export default class InvoicesStore {
         });
     }
 
-    getPayReq = (paymentRequest: string) => {
+    @action
+    public getPayReq = (paymentRequest: string) => {
         const { settings } = this.settingsStore;
         const { host, port, macaroonHex } = settings;
 
         this.paymentRequest = paymentRequest;
         this.loading = true;
+
         axios.request({
             method: 'get',
             url: `https://${host}${port ? ':' + port : ''}/v1/payreq/${paymentRequest}`,
