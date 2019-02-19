@@ -15,7 +15,7 @@ class AddressUtils {
         return btcNonBech.test(input) || btcBech.test(input);
     };
 
-    isValidLightningInvoice = (input: string) => lnInvoice.test(input);
+    isValidLightningPaymentRequest = (input: string) => lnInvoice.test(input);
 };
 
 const addressUtils = new AddressUtils();
