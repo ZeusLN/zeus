@@ -34,11 +34,14 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
                         <FlatList
                             data={invoices}
                             renderItem={({ item }) => {
+                                const settleDate = new Date(Number(item.settle_date) * 1000).toString();
+                                const creationDate = new Date(Number(item.creation_date) * 1000).toString();
+                                const { settled } = item;
                                 return (
                                     <ListItem
                                         key={item.r_hash}
                                         title={item.memo}
-                                        subtitle={`${item.settled ? 'Paid' : 'Unpaid'}: ${units && getAmount(item.value)}`}
+                                        subtitle={`${settled ? 'Paid' : 'Unpaid'}: ${units && getAmount(item.value)} | ${settled ? settleDate : creationDate}`}
                                         containerStyle={{ borderBottomWidth: 0 }}
                                         avatar={item.settled ? AddBalance : AddBalancePending}
                                         onPress={() => navigation.navigate('Invoice', { invoice: item })}
