@@ -15,13 +15,13 @@ interface MainPaneProps {
     BalanceStore: BalanceStore;
 }
 
-interface MainPaneProps {
+interface MainPaneState {
     combinedBalance: boolean;
 }
 
 @inject('UnitsStore')
 @observer
-export default class MainPane extends React.Component<MainPaneProps, MainPaneProps> {
+export default class MainPane extends React.Component<MainPaneProps, MainPaneState> {
     state = {
         combinedBalance: false
     }
