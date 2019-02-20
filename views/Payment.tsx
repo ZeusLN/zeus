@@ -18,7 +18,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
         const { navigation, UnitsStore } = this.props;
         const { changeUnits, getAmount, units } = UnitsStore;
         const payment: Payment = navigation.getParam('payment', null);
-        const { creation_date, fee, payment_hash, value_sat, payment_preimage, path } = payment;
+        const { creation_date, fee, payment_hash, value, payment_preimage, path } = payment;
         const date = new Date(Number(creation_date) * 1000).toString();
 
         const BackButton = () => (
@@ -39,7 +39,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                 />
                 <View style={styles.center}>
                     <TouchableOpacity onPress={() => changeUnits()}>
-                        <Text style={{ color: 'red', fontSize: 30, fontWeight: 'bold' }}>{getAmount(value_sat)}</Text>
+                        <Text style={{ color: 'red', fontSize: 30, fontWeight: 'bold' }}>{getAmount(value)}</Text>
                     </TouchableOpacity>
                 </View>
 
