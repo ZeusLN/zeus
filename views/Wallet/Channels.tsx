@@ -92,6 +92,6 @@ const styles = StyleSheet.create({
     },
     button: {
         paddingTop: 15,
-        paddingBottom: 15
+        paddingBottom: 10
     }
 });
