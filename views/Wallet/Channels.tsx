@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, View, FlatList } from 'react-native';
+import { ScrollView, StyleSheet, View, FlatList } from 'react-native';
 import { Button, List, ListItem } from 'react-native-elements';
 import Channel from './../../models/Channel';
 import Identicon from 'identicon.js';
@@ -29,7 +29,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
         const { getAmount, units } = UnitsStore;
         const { loading } = ChannelsStore;
         return (
-            <View>
+            <ScrollView>
                 {!NodeInfoStore.error && <View style={styles.button}>
                     <Button
                         title="Open Channel"
@@ -78,7 +78,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                     onPress={() => refresh()}
                     borderRadius={30}
                 />}
-            </View>
+            </ScrollView>
         );
     }
 }
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
         marginLeft: "14%"
     },
     button: {
-        paddingTop: 15,
-        paddingBottom: 10
+        paddingTop: 20,
+        paddingBottom: 5
     }
 });
