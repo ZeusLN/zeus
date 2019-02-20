@@ -15,11 +15,20 @@ interface MainPaneProps {
     BalanceStore: BalanceStore;
 }
 
+interface MainPaneProps {
+    combinedBalance: boolean;
+}
+
 @inject('UnitsStore')
 @observer
-export default class MainPane extends React.Component<MainPaneProps, {}> {
+export default class MainPane extends React.Component<MainPaneProps, MainPaneProps> {
+    state = {
+        combinedBalance: false
+    }
+
     render() {
         const { NodeInfoStore, UnitsStore, BalanceStore, navigation } = this.props;
+        const { combinedBalance } = this.state;
         const {changeUnits, getAmount, units } = UnitsStore;
         const { totalBlockchainBalance, unconfirmedBlockchainBalance, lightningBalance, pendingOpenBalance } = BalanceStore;
         const loading = NodeInfoStore.loading || BalanceStore.loading;
@@ -39,6 +48,17 @@ export default class MainPane extends React.Component<MainPaneProps, {}> {
                     {units && getAmount(unconfirmedBlockchainBalance)} pending
                 </Text> : null}
             </React.Fragment>
+        );
+
+        const BalanceViewCombined = () => (
+          <React.Fragment>
+              <Text style={styles.lightningBalance}>
+                  {units && getAmount(Number(totalBlockchainBalance) + Number(lightningBalance))}
+              </Text>
+              {unconfirmedBlockchainBalance || pendingOpenBalance ? <Text style={styles.pendingBalance}>
+                  {units && getAmount(Number(pendingOpenBalance) + Number(unconfirmedBlockchainBalance))} pending
+              </Text> : null}
+          </React.Fragment>
         );
 
         const SettingsButton = () => (
@@ -79,8 +99,11 @@ export default class MainPane extends React.Component<MainPaneProps, {}> {
                             <Badge value='Testnet' />
                         </View>}
                         <SettingsButton />
-                        <TouchableOpacity onPress={() => changeUnits()}>
-                            <BalanceView />
+                        <TouchableOpacity
+                            onPress={() => changeUnits()}
+                            onLongPress={() => this.setState({ combinedBalance: !combinedBalance })}
+                        >
+                            {combinedBalance ? <BalanceViewCombined /> :<BalanceView />}
                         </TouchableOpacity>
                         <View style={styles.buttons}>
                             <Button
