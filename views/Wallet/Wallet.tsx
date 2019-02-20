@@ -192,6 +192,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     navigation={navigation}
                     refresh={this.refresh}
                     ChannelsStore={ChannelsStore}
+                    NodeInfoStore={NodeInfoStore}
                     UnitsStore={UnitsStore}
                 />}
             </React.Fragment>

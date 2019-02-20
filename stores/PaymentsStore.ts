@@ -29,7 +29,7 @@ export default class PaymentsStore {
         }).then((response: any) => {
             // handle success
             const data = response.data;
-            this.payments = data.payments;
+            this.payments = data.payments.reverse();
             this.loading = false;
         })
         .catch(() => {

@@ -36,7 +36,7 @@ export default class PaymentsView extends React.Component<PaymentsProps, {}> {
                                     <ListItem
                                         key={item.payment_hash}
                                         title={item.payment_hash}
-                                        subtitle={units && getAmount(item.value_sat)}
+                                        subtitle={units && getAmount(item.value)}
                                         containerStyle={{ borderBottomWidth: 0 }}
                                         avatar={RemoveBalance}
                                         onPress={() => navigation.navigate('Payment', { payment: item })}
