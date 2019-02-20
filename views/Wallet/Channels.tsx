@@ -7,6 +7,7 @@ import { inject, observer } from 'mobx-react';
 const hash = require('object-hash');
 
 import ChannelsStore from './../../stores/ChannelsStore';
+import NodeInfoStore from './../../stores/NodeInfoStore';
 import UnitsStore from './../../stores/UnitsStore';
 
 interface ChannelsProps {
@@ -14,21 +15,22 @@ interface ChannelsProps {
     navigation: any;
     refresh: any;
     ChannelsStore: ChannelsStore;
+    NodeInfoStore: NodeInfoStore;
     UnitsStore: UnitsStore;
 }
 
-@inject('UnitsStore')
+@inject('NodeInfoStore', 'UnitsStore')
 @observer
 export default class Channels extends React.Component<ChannelsProps, {}> {
     renderSeparator = () => <View style={styles.separator} />;
 
     render() {
-        const { channels, navigation, refresh, ChannelsStore, UnitsStore } = this.props;
+        const { channels, navigation, refresh, ChannelsStore, NodeInfoStore, UnitsStore } = this.props;
         const { getAmount, units } = UnitsStore;
         const { loading } = ChannelsStore;
         return (
             <View>
-                <View style={styles.button}>
+                {!NodeInfoStore.error && <View style={styles.button}>
                     <Button
                         title="Open Channel"
                         icon={{
