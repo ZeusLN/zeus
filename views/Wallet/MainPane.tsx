@@ -72,7 +72,6 @@ export default class MainPane extends React.Component<MainPaneProps, {}> {
                 </View>
             );
         } else if (!NodeInfoStore.error) {
-           // colors={['#4c669f', '#3b5998', '#192f6a']}
            mainPane = (
                <View>
                     <LinearGradient colors={['#FAB57F', 'orange', '#ee7600']} style={styles.container}>
