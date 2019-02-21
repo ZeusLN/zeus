@@ -12,7 +12,7 @@ export default class InvoicesStore {
     @observable getPayReqError: boolean = false;
     @observable invoices: Array<Invoice> = [];
     @observable invoice: Invoice;
-    @observable pay_req: PaymentRequest | null;
+    @observable pay_req: PaymentRequest;
     @observable payment_request: string | null;
     @observable creatingInvoice: boolean = false;
     @observable creatingInvoiceError: boolean = false;
@@ -37,7 +37,7 @@ export default class InvoicesStore {
         }).then((response: any) => {
             // handle success
             const data = response.data;
-            this.invoices = data.invoices;
+            this.invoices = data.invoices.reverse();
             this.loading = false;
         })
         .catch(() => {
@@ -130,7 +130,6 @@ export default class InvoicesStore {
             // handle error
             this.loading = false;
             this.getPayReqError = true;
-            this.pay_req = null;
         });
     }
 }

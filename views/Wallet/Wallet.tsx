@@ -163,7 +163,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     onPress={this.updateIndex}
                     selectedIndex={selectedIndex}
                     buttons={buttons}
-                    containerStyle={{ height: 50 }}
+                    containerStyle={{
+                        height: 50,
+                        marginTop: 0,
+                        marginLeft: 0,
+                        marginRight: 0
+                    }}
                 />
 
                 {selectedIndex == 0 && <Transactions
@@ -192,6 +197,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     navigation={navigation}
                     refresh={this.refresh}
                     ChannelsStore={ChannelsStore}
+                    NodeInfoStore={NodeInfoStore}
                     UnitsStore={UnitsStore}
                 />}
             </React.Fragment>
