@@ -32,11 +32,12 @@ export default class PaymentsView extends React.Component<PaymentsProps, {}> {
                         <FlatList
                             data={payments}
                             renderItem={({ item }: any) => {
+                                const date = new Date(Number(item.creation_date) * 1000).toString();
                                 return (
                                     <ListItem
                                         key={item.payment_hash}
-                                        title={item.payment_hash}
-                                        subtitle={units && getAmount(item.value)}
+                                        title={units && getAmount(item.value)}
+                                        subtitle={date}
                                         containerStyle={{ borderBottomWidth: 0 }}
                                         avatar={RemoveBalance}
                                         onPress={() => navigation.navigate('Payment', { payment: item })}

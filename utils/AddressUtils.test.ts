@@ -20,6 +20,7 @@ describe('AddressUtils', () => {
             expect(AddressUtils.isValidLightningPaymentRequest('lnbcrt421fs1mmv3982skms')).toBeTruthy();
             expect(AddressUtils.isValidLightningPaymentRequest('lntb4fe03rfsd41fefw')).toBeTruthy();
             expect(AddressUtils.isValidLightningPaymentRequest('lnbc5fasdfa')).toBeTruthy();
+            expect(AddressUtils.isValidLightningPaymentRequest('lnbc1pwxmpg5pp5pfc6hq9cn2059n8q6n0qhlxlyk6y38f7yxsg0cdq0s3s8xryaj6qdph235hqurfdcsyuet9wfsk5j6pyq58g6tswp5kutndv55jsaf5x5mrs2gcqzysxqyz5vq54gltey50ra8utdya5xj5yr9d30s4p627ftz4fjp78ky2slka2gskvp096jjefq3d5ujhnqwrrh70espxyh09kdmq8q64n3jaj8ldegq5m4ddp')).toBeTruthy();
         });
     });
 });
