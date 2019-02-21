@@ -115,7 +115,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                 <View style={styles.content}>
                     <FormLabel>Bitcoin address or Lightning payment request</FormLabel>
                     <FormInput
-                        placeholder={'...'}
+                        placeholder={'lnbc1...'}
                         value={destination}
                         onChangeText={(text: string) => this.validateAddress(text)}
                     />

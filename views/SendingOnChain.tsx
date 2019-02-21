@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Button, Header, Icon } from 'react-native-elements';
+import { Button } from 'react-native-elements';
 import UrlUtils from './../utils/UrlUtils';
 import CopyButton from './../components/CopyButton';
 
@@ -35,27 +35,13 @@ export default class SendingOnChain extends React.Component<SendingOnChainProps,
         const { loading, error, error_msg, txid } = TransactionsStore;
         const { testnet } = NodeInfoStore;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.navigate('Send')}
-                color="#fff"
-                underlayColor="transparent"
-            />
-        );
-
         return (
             <View style={{ ...styles.container, backgroundColor: this.getBackgroundColor() }}>
-              <Header
-                  leftComponent={<BackButton />}
-                  centerComponent={{ text: 'Sending On-chain Transaction', style: { color: '#fff' } }}
-                  backgroundColor="transparent"
-              />
                 <View style={styles.content}>
                     {loading && <ActivityIndicator size="large" color="#0000ff" />}
                     {loading && <Text>Broadcasting Transaction</Text>}
-                    {error && <Text style={{ color: 'white', padding: 20, fontSize: 40 }}>{error_msg}</Text>}
-                    {txid && <Text style={{ color: 'white', padding: 20, fontSize: 40 }}>Transaction successfully sent</Text>}
+                    {error && <Text style={{ color: 'white', padding: 20, fontSize: 30 , alignSelf: 'center' }}>{error_msg}</Text>}
+                    {txid && <Text style={{ color: 'white', padding: 20, fontSize: 30, alignSelf: 'center' }}>Transaction successfully sent</Text>}
                     {txid && <TouchableOpacity onPress={() => UrlUtils.goToBlockExplorerTXID(txid, testnet)}>
                         <Text style={{ color: 'white', padding: 20, fontSize: 15 }}>
                             {`TXID: ${txid}`}

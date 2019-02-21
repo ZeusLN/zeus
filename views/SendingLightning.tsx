@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Button, Header, Icon } from 'react-native-elements';
+import { Button } from 'react-native-elements';
 
 import TransactionsStore from './../stores/TransactionsStore';
 
@@ -30,22 +30,8 @@ export default class SendingLightning extends React.Component<SendingLightningPr
         const { TransactionsStore, navigation } = this.props;
         const { loading, error, error_msg, payment_hash, payment_route, payment_error } = TransactionsStore;
 
-        const BackButton = () => (
-            <Icon
-                name="arrow-back"
-                onPress={() => navigation.navigate('Send')}
-                color="#fff"
-                underlayColor="transparent"
-            />
-        );
-
         return (
             <View style={{ ...styles.container, backgroundColor: this.getBackgroundColor() }}>
-              <Header
-                  leftComponent={<BackButton />}
-                  centerComponent={{ text: 'Sending Lightning Transaction', style: { color: '#fff' } }}
-                  backgroundColor="transparent"
-              />
                 <View style={styles.content}>
                     {loading && <ActivityIndicator size="large" color="#0000ff" />}
                     {loading && <Text>Sending Transaction</Text>}

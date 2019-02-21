@@ -37,7 +37,7 @@ export default class InvoicesStore {
         }).then((response: any) => {
             // handle success
             const data = response.data;
-            this.invoices = data.invoices;
+            this.invoices = data.invoices.reverse();
             this.loading = false;
         })
         .catch(() => {

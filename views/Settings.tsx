@@ -14,6 +14,7 @@ interface SettingsState {
     host: string;
     port: string | number;
     macaroonHex: string;
+    saved: boolean;
 }
 
 @inject('SettingsStore')
@@ -22,7 +23,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     state = {
           host: '',
           port: '',
-          macaroonHex: ''
+          macaroonHex: '',
+          saved: false
     }
 
     async componentDidMount() {
@@ -52,10 +54,32 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         });
     }
 
+    saveSettings = () => {
+        const { SettingsStore } = this.props;
+        const { host, port, macaroonHex } = this.state;
+        const { setSettings, settings } = SettingsStore;
+        setSettings(JSON.stringify({
+            host,
+            port,
+            macaroonHex,
+            onChainAndress: settings.onChainAndress
+        }));
+
+        this.setState({
+            saved: true
+        });
+
+        setTimeout(() => {
+          this.setState({
+              saved: false
+          });
+        }, 5000);
+    }
+
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { host, port, macaroonHex } = this.state;
-        const { setSettings, loading, settings, btcPayError } = SettingsStore;
+        const { host, port, macaroonHex, saved } = this.state;
+        const { loading, btcPayError } = SettingsStore;
 
         const BackButton = () => (
             <Icon
@@ -109,14 +133,15 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
                 <View style={styles.button}>
                     <Button
-                        title="Save Settings"
+                        title={saved ? "Settings Saved!" : "Save Settings"}
                         icon={{
                             name: "save",
                             size: 25,
-                            color: "white"
+                            color: saved ? "black" : "white"
                         }}
-                        backgroundColor="rgba(92, 99,216, 1)"
-                        onPress={() => setSettings(JSON.stringify({ ...this.state, onChainAndress: settings.onChainAndress }))}
+                        backgroundColor={saved ? "#fff" : "rgba(92, 99,216, 1)"}
+                        color={saved ? "black" : "white"}
+                        onPress={() => this.saveSettings()}
                         style={styles.button}
                         borderRadius={30}
                     />
