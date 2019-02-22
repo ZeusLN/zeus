@@ -62,7 +62,6 @@ export default class Transactions extends React.Component<TransactionsProps> {
                                 const subtitle = item.block_height ? `${item.block_height} | ${date}` : date.toString();
                                 return (
                                     <ListItem
-                                        key={item.tx_hash}
                                         title={units && getAmount(item.amount)}
                                         subtitle={subtitle}
                                         containerStyle={{ borderBottomWidth: 0 }}
@@ -71,7 +70,7 @@ export default class Transactions extends React.Component<TransactionsProps> {
                                     />
                                 );
                             }}
-                            keyExtractor={item => item.tx_hash}
+                            keyExtractor={(item, index) => `${item.tx_hash}-${index}`}
                             ItemSeparatorComponent={this.renderSeparator}
                             onEndReachedThreshold={50}
                             refreshing={loading}
