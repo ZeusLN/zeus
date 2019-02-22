@@ -167,7 +167,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         height: 50,
                         marginTop: 0,
                         marginLeft: 0,
-                        marginRight: 0
+                        marginRight: 0,
+                        marginBottom: -20
                     }}
                 />
 
