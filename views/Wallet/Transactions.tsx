@@ -53,7 +53,7 @@ export default class Transactions extends React.Component<TransactionsProps> {
         }
 
         return (
-            <View>
+            <View style={{ flex: 1 }}>
                 {(!!transactions && transactions.length > 0) || loading ? <List>
                         <FlatList
                             data={transactions}

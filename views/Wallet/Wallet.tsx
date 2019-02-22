@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 import { ButtonGroup } from 'react-native-elements';
 import Transactions from './Transactions';
 import Payments from './Payments';
@@ -151,7 +151,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         ];
 
         return (
-            <React.Fragment>
+            <View style={{ flex: 1 }}>
                 <MainPane
                     navigation={navigation}
                     NodeInfoStore={NodeInfoStore}
@@ -200,7 +200,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     NodeInfoStore={NodeInfoStore}
                     UnitsStore={UnitsStore}
                 />}
-            </React.Fragment>
+            </View>
         );
     }
 }
