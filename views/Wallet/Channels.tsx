@@ -29,7 +29,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
         const { getAmount, units } = UnitsStore;
         const { loading } = ChannelsStore;
         return (
-            <ScrollView>
+            <ScrollView style={{ flex: 1 }}>
                 {!NodeInfoStore.error && <View style={styles.button}>
                     <Button
                         title="Open Channel"
