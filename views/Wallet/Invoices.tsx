@@ -40,7 +40,7 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
                                 return (
                                     <ListItem
                                         key={item.r_hash}
-                                        title={item.memo}
+                                        title={item.memo || "No memo"}
                                         subtitle={`${settled ? 'Paid' : 'Unpaid'}: ${units && getAmount(item.value)} | ${settled ? settleDate : creationDate}`}
                                         containerStyle={{ borderBottomWidth: 0 }}
                                         avatar={item.settled ? AddBalance : AddBalancePending}

@@ -34,28 +34,6 @@ export default class TransactionsStore {
         );
     }
 
-    getNewAddress = () => {
-        const { settings } = this.settingsStore;
-        const { host, port, macaroonHex } = settings;
-
-        axios.request({
-            method: 'get',
-            url: `https://${host}${port ? ':' + port : ''}/v1/newaddress`,
-            headers: {
-                'Grpc-Metadata-macaroon': macaroonHex
-            }
-        }).then((response: any) => {
-            // handle success
-            const data = response.data;
-            this.onchain_address = data.address;
-        })
-        .catch((error: Error) => {
-            // handle error
-            console.log('errrrrr -getNewAddress');
-            console.log(error);
-        });
-    }
-
     @action
     public getTransactions = () => {
         const { settings } = this.settingsStore;
