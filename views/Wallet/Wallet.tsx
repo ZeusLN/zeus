@@ -112,7 +112,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         const { transactions } = TransactionsStore;
         const { payments } = PaymentsStore;
-        const { invoices } = InvoicesStore;
+        const { invoices, invoicesCount } = InvoicesStore;
         const { channels } = ChannelsStore;
 
         const transactionsButton = () => (
@@ -131,7 +131,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         const invoicesButton = () => (
             <React.Fragment>
-                <Text>{invoices && invoices.length || 0}</Text>
+                <Text>{invoicesCount || 0}</Text>
                 <Text>Invoices</Text>
             </React.Fragment>
         );
