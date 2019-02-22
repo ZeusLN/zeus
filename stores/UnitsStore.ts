@@ -22,7 +22,7 @@ export default class UnitsStore {
     public getAmount = (value: string | number) => {
         if (this.units === 'btc') {
             // handle negative values
-            const valueToProcess = value.toString();
+            const valueToProcess = value && value.toString() || "0";
             if (valueToProcess.includes('-')) {
                 let processedValue = valueToProcess.split('-')[1];
                 return `- ₿ ${Number(processedValue) / satoshisPerBTC}`;
