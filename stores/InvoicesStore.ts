@@ -16,6 +16,7 @@ export default class InvoicesStore {
     @observable payment_request: string | null;
     @observable creatingInvoice: boolean = false;
     @observable creatingInvoiceError: boolean = false;
+    @observable invoicesCount: number;
     settingsStore: SettingsStore
 
     constructor(settingsStore: SettingsStore) {
@@ -30,7 +31,7 @@ export default class InvoicesStore {
         this.loading = true;
         axios.request({
             method: 'get',
-            url: `https://${host}${port ? ':' + port : ''}/v1/invoices`,
+            url: `https://${host}${port ? ':' + port : ''}/v1/invoices?reversed=true&num_max_invoices=100`,
             headers: {
                 'Grpc-Metadata-macaroon': macaroonHex
             }
@@ -38,6 +39,7 @@ export default class InvoicesStore {
             // handle success
             const data = response.data;
             this.invoices = data.invoices.reverse();
+            this.invoicesCount = data.last_index_offset;
             this.loading = false;
         })
         .catch(() => {
@@ -62,11 +64,6 @@ export default class InvoicesStore {
             // handle success
             const data = response.data;
             this.invoice = data;
-        })
-        .catch((error: any) => {
-            // handle error
-            console.log('errrrrr -getInvoice');
-            console.log(error);
         });
     }
 

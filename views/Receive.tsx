@@ -127,6 +127,7 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
                         </View>}
                         <Text>Memo</Text>
                         <TextInput
+                            placeholder="Sent a few satoshis"
                             value={memo}
                             onChangeText={(text: string) => this.setState({ memo: text })}
                             numberOfLines={1}
@@ -136,6 +137,7 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
 
                         <Text>Amount (in Satoshis)</Text>
                         <TextInput
+                            placeholder={"100"}
                             value={value}
                             onChangeText={(text: string) => this.setState({ value: text })}
                             numberOfLines={1}
