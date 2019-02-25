@@ -29,7 +29,7 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
         const { loading } = InvoicesStore;
 
         return (
-            <View>
+            <View style={{ flex: 1 }}>
                 {(!!invoices && invoices.length > 0) || loading  ? <List>
                         <FlatList
                             data={invoices}
