@@ -19,6 +19,7 @@ interface ReceiveState {
     selectedIndex: number;
     memo: string;
     value: string;
+    expiry: string;
 }
 
 @inject('InvoicesStore', 'SettingsStore')
@@ -27,7 +28,8 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
     state = {
         selectedIndex: 0,
         memo: '',
-        value: ''
+        value: '',
+        expiry: '3600'
     }
 
     getNewAddress = () => {
@@ -43,7 +45,7 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
 
     render() {
         const { InvoicesStore, SettingsStore, navigation } = this.props;
-        const { selectedIndex, memo, value } = this.state;
+        const { selectedIndex, memo, value, expiry } = this.state;
         const { createInvoice, payment_request, creatingInvoice, creatingInvoiceError, error_msg } = InvoicesStore;
         const { settings, loading } = SettingsStore;
         const { onChainAndress } = settings;
@@ -145,6 +147,16 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
                             editable={true}
                         />
 
+                        <Text>Expiration (in seconds)</Text>
+                        <TextInput
+                            placeholder={"3600 (one hour)"}
+                            value={expiry}
+                            onChangeText={(text: string) => this.setState({ expiry: text })}
+                            numberOfLines={1}
+                            style={{ fontSize: 20, padding: 20 }}
+                            editable={true}
+                        />
+
                         <View style={styles.button}>
                             <Button
                                 title="Create Invoice"
@@ -153,7 +165,7 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
                                     size: 25,
                                     color: "white"
                                 }}
-                                onPress={() => createInvoice(memo, value)}
+                                onPress={() => createInvoice(memo, value, expiry)}
                                 backgroundColor="orange"
                                 borderRadius={30}
                             />
