@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
-import { Badge, Button } from 'react-native-elements';
+import { Badge, Button, Header } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import LinearGradient from 'react-native-linear-gradient';
 
@@ -72,8 +72,13 @@ export default class MainPane extends React.Component<MainPaneProps, MainPaneSta
                     }}
                     backgroundColor="transparent"
                     onPress={() => navigation.navigate('Settings')}
-                    borderRadius={30}
                 />
+            </View>
+        );
+
+        const NodeInfoBadge = () => (
+            <View style={styles.nodeInfo}>
+                <Badge onPress={() => navigation.navigate('NodeInfo')} value={NodeInfoStore.testnet ? 'Testnet' : 'ⓘ'} />
             </View>
         );
 
@@ -82,7 +87,11 @@ export default class MainPane extends React.Component<MainPaneProps, MainPaneSta
         if (loading) {
             mainPane = (
                 <View style={styles.loadingContainer}>
-                    <SettingsButton />
+                    <Header
+                        rightComponent={<SettingsButton />}
+                        backgroundColor='transparent'
+                        outerContainerStyles={{ borderBottomWidth: 0 }}
+                    />
                     <Button
                         title=""
                         loading
@@ -95,10 +104,12 @@ export default class MainPane extends React.Component<MainPaneProps, MainPaneSta
            mainPane = (
                <View>
                     <LinearGradient colors={['#FAB57F', 'orange', '#ee7600']} style={styles.container}>
-                        {NodeInfoStore.nodeInfo && NodeInfoStore.testnet && <View style={styles.testnet}>
-                            <Badge value='Testnet' />
-                        </View>}
-                        <SettingsButton />
+                        <Header
+                            leftComponent={<NodeInfoBadge />}
+                            rightComponent={<SettingsButton />}
+                            backgroundColor='transparent'
+                            outerContainerStyles={{ borderBottomWidth: 0 }}
+                        />
                         <TouchableOpacity
                             onPress={() => changeUnits()}
                             onLongPress={() => this.setState({ combinedBalance: !combinedBalance })}
@@ -165,13 +176,13 @@ export default class MainPane extends React.Component<MainPaneProps, MainPaneSta
 
 const styles = StyleSheet.create({
     container: {
-        paddingTop: 25,
+        paddingTop: 10,
         paddingBottom: 50,
         paddingLeft: 10
     },
     loadingContainer: {
         backgroundColor: 'rgba(253, 164, 40, 0.5)',
-        paddingTop: 25,
+        paddingTop: 10,
         paddingBottom: 50,
         paddingLeft: 10
     },
@@ -193,14 +204,14 @@ const styles = StyleSheet.create({
         fontSize: 20,
         color: '#fff'
     },
-    testnet: {
-        alignItems: 'flex-start',
-        marginTop: 20,
-        marginBottom: -40
-    },
     settings: {
         alignItems: 'flex-end',
-        marginRight: -20
+        marginRight: -40,
+        marginBottom: -15
+    },
+    nodeInfo: {
+        alignItems: 'flex-start',
+        marginLeft: -15
     },
     buttons: {
         flexDirection: 'row',
