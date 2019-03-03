@@ -68,7 +68,7 @@ export default class InvoicesStore {
     }
 
     @action
-    public createInvoice = (memo: string, value: string) => {
+    public createInvoice = (memo: string, value: string, expiry: string = "3600") => {
         const { settings } = this.settingsStore;
         const { host, port, macaroonHex } = settings;
 
@@ -85,7 +85,8 @@ export default class InvoicesStore {
             },
             data: {
                 memo,
-                value
+                value,
+                expiry
             }
         }).then((response: any) => {
             // handle success
