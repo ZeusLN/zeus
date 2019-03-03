@@ -150,7 +150,7 @@ export default class MainPane extends React.Component<MainPaneProps, MainPaneSta
         } else {
             mainPane = (
                 <View style={styles.errorContainer}>
-                    <Text style={{ color: '#fff', fontSize: 20, marginTop: 20, marginBottom: 25 }}>Error connecting to your node. Please check your settings and try again.</Text>
+                    <Text style={{ color: '#fff', fontSize: 20, marginTop: 20, marginBottom: 25 }}>{NodeInfoStore.errorMsg ? NodeInfoStore.errorMsg : 'Error connecting to your node. Please check your settings and try again.'}</Text>
                     <Button
                         icon={{
                             name: "settings",

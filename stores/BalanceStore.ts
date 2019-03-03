@@ -51,14 +51,12 @@ export default class BalanceStore {
             this.totalBlockchainBalance = Number(data.total_balance || 0);
             this.loading = false;
         })
-        .catch((error: Error) => {
+        .catch(() => {
             // handle error
             this.unconfirmedBlockchainBalance = 0;
             this.confirmedBlockchainBalance = 0;
             this.totalBlockchainBalance = 0;
             this.loading = false;
-            console.log('errrrrr');
-            console.log(error);
         });
     }
 
