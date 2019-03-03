@@ -6,6 +6,7 @@ import SettingsStore from './SettingsStore';
 export default class NodeInfoStore {
     @observable public loading: boolean = false;
     @observable public error: boolean = false;
+    @observable public errorMsg: string;
     @observable public nodeInfo: NodeInfo = {};
     @observable public testnet: boolean;
     settingsStore: SettingsStore
@@ -26,6 +27,7 @@ export default class NodeInfoStore {
         const { settings } = this.settingsStore;
         const { host, port, macaroonHex } = settings;
 
+        this.errorMsg = '';
         this.loading = true;
         axios.request({
             method: 'get',
@@ -41,9 +43,13 @@ export default class NodeInfoStore {
             this.loading = false;
             this.error = false;
         })
-        .catch(() => {
+        .catch((error: any) => {
             // handle error
+            const data = error.response && error.response.data;
             this.error = true;
+            if (data && data.error) {
+                this.errorMsg = data.error;
+            }
             this.loading = false;
             this.nodeInfo = {};
         });

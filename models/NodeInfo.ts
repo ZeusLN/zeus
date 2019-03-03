@@ -7,7 +7,7 @@ export default interface NodeInfo {
     version?: string;
     identity_pubkey?: string;
     num_peers?: number;
-    synched_to_chain?: boolean;
+    synced_to_chain?: boolean;
     testnet?: boolean;
     block_hash?: string;
     block_height?: number;
