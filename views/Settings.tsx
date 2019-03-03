@@ -149,7 +149,21 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
                 <View style={styles.button}>
                     <Button
-                        title="Scan BTCPay Config"
+                        title="Scan lndconnect config"
+                        icon={{
+                            name: "crop-free",
+                            size: 25,
+                            color: "white"
+                        }}
+                        onPress={() => navigation.navigate('LNDConnectConfigQRScanner')}
+                        backgroundColor="black"
+                        borderRadius={30}
+                    />
+                </View>
+
+                <View style={styles.button}>
+                    <Button
+                        title="Scan BTCPay config"
                         icon={{
                             name: "crop-free",
                             size: 25,
