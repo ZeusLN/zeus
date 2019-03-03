@@ -16,6 +16,8 @@ import Channel from './views/Channel';
 import Payment from './views/Payment';
 import Invoice from './views/Invoice';
 import BTCPayConfigQRScanner from './views/BTCPayConfigQRScanner';
+import LNDConnectConfigQRScanner from './views/LNDConnectConfigQRScanner';
+import NodeInfo from './views/NodeInfo';
 
 const AppScenes = {
     Wallet: {
@@ -62,6 +64,12 @@ const AppScenes = {
     },
     BTCPayConfigQRScanner: {
         screen: BTCPayConfigQRScanner
+    },
+    LNDConnectConfigQRScanner: {
+        screen: LNDConnectConfigQRScanner
+    },
+    NodeInfo: {
+        screen: NodeInfo
     }
 }
 
