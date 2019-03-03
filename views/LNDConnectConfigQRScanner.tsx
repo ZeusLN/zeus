@@ -14,7 +14,8 @@ export default class LNDConnectConfigQRScanner extends React.Component<LNDConnec
 
         const host = data.split('lndconnect://')[1].split(':')[0];
         const port = data.split('lndconnect://')[1].split(':')[1].split('?')[0];
-        const macaroonHex = data.split('&macaroon=')[1] && MacaroonUtils.asciiToHex(data.split('&macaroon=')[1]);
+        const macaroonHex = data.split('&macaroon=')[1] && MacaroonUtils.base64UrlToHex(data.split('&macaroon=')[1]);
+
 
         if (host && port && macaroonHex) {
             navigation.navigate('Settings', { host, port, macaroonHex });
