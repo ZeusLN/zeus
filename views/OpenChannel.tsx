@@ -14,6 +14,7 @@ interface OpenChannelState {
     node_pubkey_string: string;
     local_funding_amount: string;
     min_confs: number;
+    sat_per_byte: string;
     private: boolean;
     host: string;
 }
@@ -25,6 +26,7 @@ export default class OpenChannel extends React.Component<OpenChannelProps, OpenC
         node_pubkey_string: '',
         local_funding_amount: '',
         min_confs: 1,
+        sat_per_byte: '2',
         private: false,
         host: ''
     }
@@ -42,7 +44,7 @@ export default class OpenChannel extends React.Component<OpenChannelProps, OpenC
 
     render() {
         const { ChannelsStore, navigation } = this.props;
-        const { node_pubkey_string, local_funding_amount, min_confs, host } = this.state;
+        const { node_pubkey_string, local_funding_amount, min_confs, host, sat_per_byte } = this.state;
         const privateChannel = this.state.private;
 
         const { connectingToPeer, openingChannel, connectPeer, errorMsgChannel, errorMsgPeer, peerSuccess, channelSuccess } = ChannelsStore;
@@ -105,6 +107,16 @@ export default class OpenChannel extends React.Component<OpenChannelProps, OpenC
                         placeholder={'1'}
                         value={min_confs.toString()}
                         onChangeText={(text: string) => this.setState({ min_confs: Number(text) || min_confs })}
+                        numberOfLines={1}
+                        style={{ fontSize: 20, marginBottom: 10 }}
+                        editable={!openingChannel}
+                    />
+
+                    <FormLabel>Satoshis per byte</FormLabel>
+                    <TextInput
+                        placeholder={'2'}
+                        value={sat_per_byte}
+                        onChangeText={(text: string) => this.setState({ sat_per_byte: text })}
                         numberOfLines={1}
                         style={{ fontSize: 20, marginBottom: 10 }}
                         editable={!openingChannel}
