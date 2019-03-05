@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { Button, List, ListItem } from 'react-native-elements';
+import { Button, ListItem } from 'react-native-elements';
 import Channel from './../../models/Channel';
 import Identicon from 'identicon.js';
 import { inject, observer } from 'mobx-react';
@@ -44,29 +44,27 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                         borderRadius={30}
                     />
                 </View>}
-                {(!!channels && channels.length > 0) || loading  ? <List>
-                        <FlatList
-                            data={channels}
-                            renderItem={({ item }) => {
-                                const data = new Identicon(hash.sha1(item.remote_pubkey), 420).toString();
-                                return (
-                                    <ListItem
-                                        key={item.remote_pubkey}
-                                        title={item.remote_pubkey}
-                                        avatar={`data:image/png;base64,${data}`}
-                                        subtitle={`Local: ${units && getAmount(item.local_balance || 0)} | Remote: ${units && getAmount(item.remote_balance || 0)}`}
-                                        containerStyle={{ borderBottomWidth: 0 }}
-                                        onPress={() => navigation.navigate('Channel', { channel: item })}
-                                    />
-                                );
-                            }}
-                            keyExtractor={item => item.chan_id}
-                            ItemSeparatorComponent={this.renderSeparator}
-                            onEndReachedThreshold={50}
-                            refreshing={loading}
-                            onRefresh={() => refresh()}
-                        />
-                </List> : <Button
+                {(!!channels && channels.length > 0) || loading  ? <FlatList
+                    data={channels}
+                    renderItem={({ item }) => {
+                        const data = new Identicon(hash.sha1(item.remote_pubkey), 420).toString();
+                        return (
+                            <ListItem
+                                key={item.remote_pubkey}
+                                title={item.remote_pubkey}
+                                avatar={`data:image/png;base64,${data}`}
+                                subtitle={`Local: ${units && getAmount(item.local_balance || 0)} | Remote: ${units && getAmount(item.remote_balance || 0)}`}
+                                containerStyle={{ borderBottomWidth: 0 }}
+                                onPress={() => navigation.navigate('Channel', { channel: item })}
+                            />
+                        );
+                    }}
+                    keyExtractor={item => item.chan_id}
+                    ItemSeparatorComponent={this.renderSeparator}
+                    onEndReachedThreshold={50}
+                    refreshing={loading}
+                    onRefresh={() => refresh()}
+                /> : <Button
                     title="No Channels"
                     icon={{
                         name: "error-outline",
@@ -91,6 +89,7 @@ const styles = StyleSheet.create({
         marginLeft: "14%"
     },
     button: {
-        paddingTop: 25
+        paddingTop: 10,
+        paddingBottom: 10
     }
 });
