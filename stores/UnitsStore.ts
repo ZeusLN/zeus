@@ -18,6 +18,8 @@ export default class UnitsStore {
         this.units = this.units == 'sats' ? 'btc' : 'sats';
     }
 
+    numberWithCommas = (x: string | number) => x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
     @action
     public getAmount = (value: string | number) => {
         if (this.units === 'btc') {
@@ -31,6 +33,7 @@ export default class UnitsStore {
             return `₿ ${Number(value || 0) / satoshisPerBTC}`;
         }
 
-        return `${value || 0} ${Number(value) > 1 ? 'sats' : 'sat'}`;
+        const sats = `${value || 0} ${(Number(value) === 1 || Number(value) === -1) ? 'sat' : 'sats'}`;
+        return this.numberWithCommas(sats);
     }
 }
