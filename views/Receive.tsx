@@ -40,7 +40,19 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
     }
 
     updateIndex = (selectedIndex: number) => {
-        this.setState({selectedIndex});
+        const { InvoicesStore } = this.props;
+
+        this.setState({
+            selectedIndex,
+            // reset LN invoice values so old invoices don't linger
+            memo: '',
+            value: '',
+            expiry: '3600'
+        });
+
+        if (InvoicesStore.payment_request) {
+            InvoicesStore.resetPaymentReq();
+        }
     }
 
     render() {
@@ -117,12 +129,12 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
                         </View>
                     </React.Fragment>}
                     {selectedIndex === 1 && <View>
-                        {payment_request && <Text style={{ color: 'green', padding: 20 }}>Successfully created invoice</Text>}
+                        {!!payment_request && <Text style={{ color: 'green', padding: 20 }}>Successfully created invoice</Text>}
                         {creatingInvoiceError && <Text style={{ color: 'red', padding: 20 }}>Error creating invoice</Text>}
                         {error_msg && <Text style={{ padding: 20 }}>{error_msg}</Text>}
                         {creatingInvoice && <ActivityIndicator size="large" color="#0000ff" />}
-                        {payment_request && <Text style={{ padding: 20 }}>{payment_request}</Text>}
-                        {payment_request && <View style={styles.button}>
+                        {!!payment_request && <Text style={{ padding: 20 }}>{payment_request}</Text>}
+                        {!!payment_request && <View style={styles.button}>
                             <CopyButton
                                 copyValue={payment_request}
                             />
