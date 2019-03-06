@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { StyleSheet, View, FlatList } from 'react-native';
-import { Button, List, ListItem } from 'react-native-elements';
+import { Button, ListItem } from 'react-native-elements';
 import Payment from './../../models/Payment';
 import { inject, observer } from 'mobx-react';
 
@@ -28,29 +28,27 @@ export default class PaymentsView extends React.Component<PaymentsProps, {}> {
         const { loading } = PaymentsStore;
         return (
             <View style={{ flex: 1 }}>
-                {(!!payments && payments.length > 0) || loading  ? <List>
-                        <FlatList
-                            data={payments}
-                            renderItem={({ item }: any) => {
-                                const date = new Date(Number(item.creation_date) * 1000).toString();
-                                return (
-                                    <ListItem
-                                        key={item.payment_hash}
-                                        title={units && getAmount(item.value)}
-                                        subtitle={date}
-                                        containerStyle={{ borderBottomWidth: 0 }}
-                                        avatar={RemoveBalance}
-                                        onPress={() => navigation.navigate('Payment', { payment: item })}
-                                    />
-                                );
-                            }}
-                            keyExtractor={item => item.payment_hash}
-                            ItemSeparatorComponent={this.renderSeparator}
-                            onEndReachedThreshold={50}
-                            refreshing={loading}
-                            onRefresh={() => refresh()}
-                        />
-                </List> : <Button
+                {(!!payments && payments.length > 0) || loading  ? <FlatList
+                    data={payments}
+                    renderItem={({ item }: any) => {
+                        const date = new Date(Number(item.creation_date) * 1000).toString();
+                        return (
+                            <ListItem
+                                key={item.payment_hash}
+                                title={units && getAmount(item.value)}
+                                subtitle={date}
+                                containerStyle={{ borderBottomWidth: 0 }}
+                                avatar={RemoveBalance}
+                                onPress={() => navigation.navigate('Payment', { payment: item })}
+                            />
+                        );
+                    }}
+                    keyExtractor={item => item.payment_hash}
+                    ItemSeparatorComponent={this.renderSeparator}
+                    onEndReachedThreshold={50}
+                    refreshing={loading}
+                    onRefresh={() => refresh()}
+                /> : <Button
                     title="No Payments"
                     icon={{
                         name: "error-outline",
