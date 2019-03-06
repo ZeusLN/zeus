@@ -24,6 +24,11 @@ export default class InvoicesStore {
     }
 
     @action
+    public resetPaymentReq = () => {
+        this.payment_request = '';
+    }
+
+    @action
     public getInvoices = () => {
         const { settings } = this.settingsStore;
         const { host, port, macaroonHex } = settings;
