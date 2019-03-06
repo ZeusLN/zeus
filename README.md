@@ -30,7 +30,8 @@ If you would like to learn more about running your own guide we suggest checking
 We recommend reading
 [this guide](https://medium.com/lightning-power-users/windows-macos-lightning-network-284bd5034340).
 * If you're looking to run a full node on a dedicated piece of hardware like a Raspberry Pi, check out Stadicus'
-[Raspibolt Tutorial](https://github.com/Stadicus/guides/tree/master/raspibolt).
+[Raspibolt Tutorial](https://github.com/Stadicus/guides/tree/master/raspibolt) or
+[RaspiBlitz](https://github.com/rootzoll/raspiblitz/).
 
 ## Building Zeus from source
 
