@@ -12,8 +12,11 @@ export default class LNDConnectConfigQRScanner extends React.Component<LNDConnec
     handleLNDConnectConfigInvoiceScanned = ({ data }: any) => {
         const { navigation } = this.props;
 
-        const host = data.split('lndconnect://')[1].split(':')[0];
-        const port = data.split('lndconnect://')[1].split(':')[1].split('?')[0];
+        const host = data.split('lndconnect://')[1] &&
+            data.split('lndconnect://')[1].split(':')[0];
+        const port = data.split('lndconnect://')[1] &&
+            data.split('lndconnect://')[1].split(':')[1] &&
+            data.split('lndconnect://')[1].split(':')[1].split('?')[0];
         const macaroonHex = data.split('&macaroon=')[1] && MacaroonUtils.base64UrlToHex(data.split('&macaroon=')[1]);
 
 
