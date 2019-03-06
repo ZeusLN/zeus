@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { StyleSheet, View, FlatList } from 'react-native';
-import { Button, List, ListItem } from 'react-native-elements';
+import { Button, ListItem } from 'react-native-elements';
 import Transaction from './../../models/Transaction';
 import { inject, observer } from 'mobx-react';
 
@@ -54,29 +54,27 @@ export default class Transactions extends React.Component<TransactionsProps> {
 
         return (
             <View style={{ flex: 1 }}>
-                {(!!transactions && transactions.length > 0) || loading ? <List>
-                        <FlatList
-                            data={transactions}
-                            renderItem={({ item }: any) => {
-                                const date = new Date(item.time_stamp * 1000);
-                                const subtitle = item.block_height ? `${item.block_height} | ${date}` : date.toString();
-                                return (
-                                    <ListItem
-                                        title={units && getAmount(item.amount)}
-                                        subtitle={subtitle}
-                                        containerStyle={{ borderBottomWidth: 0 }}
-                                        avatar={Balance(item)}
-                                        onPress={() => this.viewTransaction(item)}
-                                    />
-                                );
-                            }}
-                            keyExtractor={(item, index) => `${item.tx_hash}-${index}`}
-                            ItemSeparatorComponent={this.renderSeparator}
-                            onEndReachedThreshold={50}
-                            refreshing={loading}
-                            onRefresh={() => refresh()}
-                        />
-                </List> : <Button
+                {(!!transactions && transactions.length > 0) || loading ? <FlatList
+                    data={transactions}
+                    renderItem={({ item }: any) => {
+                        const date = new Date(item.time_stamp * 1000);
+                        const subtitle = item.block_height ? `${item.block_height} | ${date}` : date.toString();
+                        return (
+                            <ListItem
+                                title={units && getAmount(item.amount)}
+                                subtitle={subtitle}
+                                containerStyle={{ borderBottomWidth: 0 }}
+                                avatar={Balance(item)}
+                                onPress={() => this.viewTransaction(item)}
+                            />
+                        );
+                    }}
+                    keyExtractor={(item, index) => `${item.tx_hash}-${index}`}
+                    ItemSeparatorComponent={this.renderSeparator}
+                    onEndReachedThreshold={50}
+                    refreshing={loading}
+                    onRefresh={() => refresh()}
+                /> : <Button
                     title="No Transactions"
                     icon={{
                         name: "error-outline",
