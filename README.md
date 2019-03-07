@@ -22,7 +22,7 @@ Currently, to use Zeus, you must have a Bitcoin Lightning node running
 [Lightning Network Daemon (lnd)](https://github.com/LightningNetwork/lnd).
 
 You must provide Zeus with your node's hostname, port number, and the lnd macaroon you choose to use in **hex format**. If you need help converting your macaroon to hex format we wrote up a Node.js script that can use
-[here](https://github.com/ZeusLN/lnd-hex-macaroon-generator/).
+[here](https://github.com/ZeusLN/lnd-hex-macaroon-generator/). Alternatively, if you're running a Unix-based operating system (eg. macOS, Linux) you can run `xxd -ps -u -c 1000 /path/to/admin.macaroon` to generate your macaroon in hex format.
 
 If you would like to learn more about running your own guide we suggest checking out the following guides:
 * If you're looking to run a full node on existing hardware running Windows or macOS, check out Pierre Rochard's
