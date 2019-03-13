@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Header } from 'react-native-elements';
-import Camera from 'react-native-camera';
+import { CameraKitCameraScreen } from 'react-native-camera-kit';
 import Permissions from 'react-native-permissions';
 
 interface QRProps {
@@ -46,13 +46,17 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                     backgroundColor='grey'
                 />
                 <View style={styles.content}>
-                    <Camera onBarCodeRead={(ret: any) => handleQRScanned(ret)}>
-                        <TouchableOpacity
-                            style={{ marginTop: 600, width: 300 }}
-                        ></TouchableOpacity>
-                    </Camera>
                     <Text>{text}</Text>
                 </View>
+                <CameraKitCameraScreen
+                    laserColor={"orange"}
+                    frameColor={"yellow"}
+                    scanBarcode={true}
+                    onReadCode={(event: any) => handleQRScanned(event.nativeEvent.codeStringValue)}
+                    hideControls={false}
+                    showFrame={true}
+                    heightForScannerFrame={300}
+                />
             </View>
         );
     }
@@ -62,6 +66,8 @@ const styles = StyleSheet.create({
     content: {
         alignItems: 'center',
         paddingLeft: 20,
-        paddingRight: 20
+        paddingRight: 20,
+        paddingBottom: 10,
+        paddingTop: 5
     }
 });

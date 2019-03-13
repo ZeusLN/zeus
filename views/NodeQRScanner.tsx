@@ -8,7 +8,7 @@ interface NodeQRProps {
 }
 
 export default class NodeQRScanner extends React.Component<NodeQRProps, {}> {
-    handleNodeScanned = ({ data }: any) => {
+    handleNodeScanned = (data: string) => {
         const { navigation } = this.props;
 
         if (data.includes('@') && data.includes(':')) {
