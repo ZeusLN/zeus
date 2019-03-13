@@ -9,7 +9,7 @@ interface LNDConnectConfigQRProps {
 }
 
 export default class LNDConnectConfigQRScanner extends React.Component<LNDConnectConfigQRProps, {}> {
-    handleLNDConnectConfigInvoiceScanned = ({ data }: any) => {
+    handleLNDConnectConfigInvoiceScanned = (data: string) => {
         const { navigation } = this.props;
 
         const host = data.split('lndconnect://')[1] &&
