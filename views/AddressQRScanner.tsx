@@ -15,7 +15,7 @@ interface AddressQRProps {
 @inject('NodeInfoStore')
 @observer
 export default class AddressQRScanner extends React.Component<AddressQRProps, {}> {
-    handleAddressInvoiceScanned = ({ data }: any) => {
+    handleAddressInvoiceScanned = (data: string) => {
         const { NodeInfoStore, navigation } = this.props;
         const { testnet } = NodeInfoStore;
         let processedValue;
