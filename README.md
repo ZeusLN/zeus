@@ -14,6 +14,8 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 [Telegram](https://t.me/zeusLN)
 * Keep up with us on
 [Twitter](https://twitter.com/ZeusLN)
+* Open a channel with 
+[our node](https://1ml.com/node/03b053229a315d4071520d7466f50b91be0edad375122c15932ba3334539a72a6c)
 
 
 ## Connecting to your node
@@ -22,7 +24,7 @@ Currently, to use Zeus, you must have a Bitcoin Lightning node running
 [Lightning Network Daemon (lnd)](https://github.com/LightningNetwork/lnd).
 
 You must provide Zeus with your node's hostname, port number, and the lnd macaroon you choose to use in **hex format**. If you need help converting your macaroon to hex format we wrote up a Node.js script that can use
-[here](https://github.com/ZeusLN/lnd-hex-macaroon-generator/).
+[here](https://github.com/ZeusLN/lnd-hex-macaroon-generator/). Alternatively, if you're running a Unix-based operating system (eg. macOS, Linux) you can run `xxd -ps -u -c 1000 /path/to/admin.macaroon` to generate your macaroon in hex format.
 
 If you would like to learn more about running your own guide we suggest checking out the following guides:
 * If you're looking to run a full node on existing hardware running Windows or macOS, check out Pierre Rochard's
@@ -30,7 +32,8 @@ If you would like to learn more about running your own guide we suggest checking
 We recommend reading
 [this guide](https://medium.com/lightning-power-users/windows-macos-lightning-network-284bd5034340).
 * If you're looking to run a full node on a dedicated piece of hardware like a Raspberry Pi, check out Stadicus'
-[Raspibolt Tutorial](https://github.com/Stadicus/guides/tree/master/raspibolt).
+[Raspibolt Tutorial](https://github.com/Stadicus/guides/tree/master/raspibolt) or
+[RaspiBlitz](https://github.com/rootzoll/raspiblitz/).
 
 ## Building Zeus from source
 
