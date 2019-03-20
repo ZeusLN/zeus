@@ -1,8 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Header } from 'react-native-elements';
-import { CameraKitCameraScreen } from 'react-native-camera-kit';
-import Permissions from 'react-native-permissions';
+import { CameraKitCamera, CameraKitCameraScreen } from 'react-native-camera-kit';
 
 interface QRProps {
     title: string;
@@ -21,9 +20,11 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
     }
 
     async componentDidMount() {
-        await Permissions.request('camera').then((response: any) => {
-            this.setState({ hasCameraPermission: response === 'authorized' });
-        });
+        const isCameraAuthorized = await CameraKitCamera.checkDeviceCameraAuthorizationStatus();
+
+        if (isCameraAuthorized) {
+            this.setState({ hasCameraPermission: 'authorized' });
+        }
     }
 
     render() {
