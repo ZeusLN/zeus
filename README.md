@@ -11,6 +11,7 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 
 ### App Store links
 * [Google Play](https://play.google.com/store/apps/details?id=com.zeusln.zeus)
+* [Apple TestFlight](https://testflight.apple.com/join/gpVFzEHN)
 
 ### Get in touch with us
 * Come chat with us on
