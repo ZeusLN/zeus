@@ -49,7 +49,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
         }
 
         return (
-            <View>
+            <React.Fragment>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{ text: title, style: { color: '#fff' } }}
@@ -65,9 +65,12 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                     onReadCode={(event: any) => handleQRScanned(event.nativeEvent.codeStringValue)}
                     hideControls={false}
                     showFrame={true}
-                    heightForScannerFrame={300}
+                    heightForScannerFrame={250}
+                    style={{
+                        flex: 1
+                    }}
                 />
-            </View>
+            </React.Fragment>
         );
     }
 }
