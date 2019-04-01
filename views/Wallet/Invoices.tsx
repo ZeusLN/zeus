@@ -6,9 +6,13 @@ import { inject, observer } from 'mobx-react';
 
 import InvoicesStore from './../../stores/InvoicesStore';
 import UnitsStore from './../../stores/UnitsStore';
+import SettingsStore from './../../stores/SettingsStore';
 
 const AddBalance = require('./../../images/lightning-green.png');
 const AddBalancePending = require('./../../images/lightning-green-pending.png');
+
+const AddBalanceDark = require('./../../images/lightning-green-transparent.png');
+const AddBalancePendingDark = require('./../../images/lightning-green-pending-transparent.png');
 
 interface InvoicesProps {
     invoices: Array<Invoice>;
@@ -16,20 +20,46 @@ interface InvoicesProps {
     refresh: any;
     InvoicesStore: InvoicesStore;
     UnitsStore: UnitsStore;
+    SettingsStore: SettingsStore;
 }
 
-@inject('UnitsStore')
+@inject('UnitsStore', 'SettingsStore')
 @observer
 export default class InvoicesView extends React.Component<InvoicesProps, {}> {
-    renderSeparator = () => <View style={styles.separator} />;
-
-    render() {
-        const { invoices, navigation, refresh, InvoicesStore, UnitsStore } = this.props;
-        const { getAmount, units } = UnitsStore;
-        const { loading } = InvoicesStore;
+    renderSeparator = () => {
+        const { SettingsStore } = this.props;
+        const { settings } = SettingsStore;
+        const { theme } = settings;
 
         return (
-            <View style={{ flex: 1 }}>
+            <View style={theme === 'dark' ? styles.darkSeparator : styles.lightSeparator} />
+        )
+    }
+
+    renderAvatar = (settled: boolean) => {
+        const { SettingsStore } = this.props;
+        const { settings } = SettingsStore;
+        const { theme } = settings;
+
+        let avatar;
+        if (settled) {
+            avatar = theme === 'dark' ? AddBalanceDark : AddBalance;
+        } else {
+            avatar = theme === 'dark' ? AddBalancePendingDark : AddBalancePending;
+        }
+
+        return avatar;
+    }
+
+    render() {
+        const { invoices, navigation, refresh, InvoicesStore, UnitsStore, SettingsStore } = this.props;
+        const { getAmount, units } = UnitsStore;
+        const { loading } = InvoicesStore;
+        const { settings } = SettingsStore;
+        const { theme } = settings;
+
+        return (
+            <View style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
                 {(!!invoices && invoices.length > 0) || loading  ? <FlatList
                     data={invoices}
                     renderItem={({ item }) => {
@@ -42,8 +72,10 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
                                 title={item.memo || "No memo"}
                                 subtitle={`${settled ? 'Paid' : 'Unpaid'}: ${units && getAmount(item.value)} | ${settled ? settleDate : creationDate}`}
                                 containerStyle={{ borderBottomWidth: 0 }}
-                                avatar={item.settled ? AddBalance : AddBalancePending}
+                                avatar={this.renderAvatar(item.settled)}
                                 onPress={() => navigation.navigate('Invoice', { invoice: item })}
+                                titleStyle={{ color: theme === 'dark' ? 'white' : 'black' }}
+                                subtitleStyle={{ color: theme === 'dark' ? 'gray' : '#8a8999' }}
                             />
                         );
                     }}
@@ -57,10 +89,10 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
                     icon={{
                         name: "error-outline",
                         size: 25,
-                        color: "black"
+                        color: theme === 'dark' ? 'white' : 'black'
                     }}
                     backgroundColor="transparent"
-                    color="black"
+                    color={theme === 'dark' ? 'white' : 'black'}
                     onPress={() => refresh()}
                     borderRadius={30}
                 />}
@@ -70,10 +102,24 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
 }
 
 const styles = StyleSheet.create({
-    separator: {
+    lightThemeStyle: {
+        flex: 1
+    },
+    darkThemeStyle: {
+        flex: 1,
+        backgroundColor: 'black',
+        color: 'white'
+    },
+    lightSeparator: {
         height: 1,
         width: "86%",
         backgroundColor: "#CED0CE",
+        marginLeft: "14%"
+    },
+    darkSeparator: {
+        height: 1,
+        width: "86%",
+        backgroundColor: "darkgray",
         marginLeft: "14%"
     }
 });

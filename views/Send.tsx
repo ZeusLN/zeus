@@ -1,12 +1,13 @@
 import * as React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Button, FormLabel, FormInput, FormValidationMessage, Header, Icon } from 'react-native-elements';
+import { Button, FormValidationMessage, Header, Icon } from 'react-native-elements';
 import AddressUtils from './../utils/AddressUtils';
 
 import InvoicesStore from './../stores/InvoicesStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
 import TransactionsStore from './../stores/TransactionsStore';
+import SettingsStore from './../stores/SettingsStore';
 
 interface SendProps {
     exitSetup: any;
@@ -14,6 +15,7 @@ interface SendProps {
     InvoicesStore: InvoicesStore;
     NodeInfoStore: NodeInfoStore;
     TransactionsStore: TransactionsStore;
+    SettingsStore: SettingsStore;
 }
 
 interface SendState {
@@ -24,7 +26,7 @@ interface SendState {
     fee: string;
 }
 
-@inject('InvoicesStore', 'NodeInfoStore', 'TransactionsStore')
+@inject('InvoicesStore', 'NodeInfoStore', 'TransactionsStore', 'SettingsStore')
 @observer
 export default class Send extends React.Component<SendProps, SendState> {
     constructor(props: any) {
@@ -93,8 +95,10 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     render() {
-        const { navigation } = this.props;
+        const { SettingsStore, navigation } = this.props;
         const { isValid, transactionType, destination, amount, fee } = this.state;
+        const { settings } = SettingsStore;
+        const { theme } = settings;
 
         const BackButton = () => (
             <Icon
@@ -106,34 +110,40 @@ export default class Send extends React.Component<SendProps, SendState> {
         );
 
         return (
-            <View>
+            <View style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{ text: 'Send', style: { color: '#fff' } }}
                     backgroundColor='grey'
                 />
                 <View style={styles.content}>
-                    <FormLabel>Bitcoin address or Lightning payment request</FormLabel>
-                    <FormInput
+                    <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Bitcoin address or Lightning payment request</Text>
+                    <TextInput
                         placeholder={'lnbc1...'}
                         value={destination}
                         onChangeText={(text: string) => this.validateAddress(text)}
+                        style={theme === 'dark' ? styles.textInputDark : styles.textInput}
+                        placeholderTextColor='gray'
                     />
                     {(!isValid && !!destination) && <FormValidationMessage>Must be a valid Bitcoin address or Lightning payment request</FormValidationMessage>}
                     {transactionType && <Text style={{ paddingTop: 10 }}>{`${transactionType} Transaction`}</Text>}
                     {transactionType === 'On-chain' && <React.Fragment>
-                        <FormLabel>Amount (in satoshis)</FormLabel>
-                        <FormInput
+                        <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Amount (in satoshis)</Text>
+                        <TextInput
                             value={amount}
                             onChangeText={(text: string) => this.setState({ amount: text })}
+                            style={theme === 'dark' ? styles.textInputDark : styles.textInput}
+                            placeholderTextColor='gray'
                         />
                     </React.Fragment>}
                     {transactionType === 'On-chain' && <React.Fragment>
-                        <FormLabel>Fee (satoshis per byte)</FormLabel>
-                        <FormInput
+                        <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Fee (satoshis per byte)</Text>
+                        <TextInput
                             placeholder="2"
                             value={fee}
                             onChangeText={(text: string) => this.setState({ fee: text })}
+                            style={theme === 'dark' ? styles.textInputDark : styles.textInput}
+                            placeholderTextColor='gray'
                         />
                     </React.Fragment>}
                     {transactionType === 'Lightning' && <View style={styles.button}>
@@ -173,7 +183,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 color: "white"
                             }}
                             onPress={() => navigation.navigate('AddressQRCodeScanner')}
-                            backgroundColor="rgba(92, 99,216, 1)"
+                            backgroundColor={theme === "dark" ? "#261339" : "rgba(92, 99,216, 1)"}
                             borderRadius={30}
                         />
                     </View>
@@ -184,6 +194,22 @@ export default class Send extends React.Component<SendProps, SendState> {
 }
 
 const styles = StyleSheet.create({
+    lightThemeStyle: {
+        flex: 1
+    },
+    darkThemeStyle: {
+        flex: 1,
+        backgroundColor: 'black',
+        color: 'white'
+    },
+    textInput: {
+        fontSize: 20,
+        color: 'black'
+    },
+    textInputDark: {
+        fontSize: 20,
+        color: 'white'
+    },
     content: {
         paddingLeft: 20,
         paddingRight: 20

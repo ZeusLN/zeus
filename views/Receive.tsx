@@ -60,7 +60,7 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
         const { selectedIndex, memo, value, expiry } = this.state;
         const { createInvoice, payment_request, creatingInvoice, creatingInvoiceError, error_msg } = InvoicesStore;
         const { settings, loading } = SettingsStore;
-        const { onChainAndress } = settings;
+        const { onChainAndress, theme } = settings;
 
         const onChainButton = () => (
             <React.Fragment>
@@ -86,12 +86,13 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
         );
 
         return (
-            <View>
+            <View style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{ text: 'Receive', style: { color: '#fff' } }}
                     backgroundColor='grey'
                 />
+
                 <ButtonGroup
                     onPress={this.updateIndex}
                     selectedIndex={selectedIndex}
@@ -101,14 +102,16 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
 
                 <View style={styles.content}>
                     {selectedIndex === 0 && <React.Fragment>
-                        {(!onChainAndress && !loading) && <Text>No on-chain address available. Generate one by pressing the button below.</Text>}
+                        {(!onChainAndress && !loading) && <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>No on-chain address available. Generate one by pressing the button below.</Text>}
                         {loading && <ActivityIndicator size="large" color="#0000ff" />}
-                        {onChainAndress && <Text style={{ padding: 10 }}>{onChainAndress}</Text>}
-                        {onChainAndress && <QRCode
-                            value={onChainAndress}
-                            size={200}
-                            fgColor='white'
-                        />}
+                        {onChainAndress && <Text style={{ color: theme === 'dark' ? 'white' : 'black', padding: 10 }}>{onChainAndress}</Text>}
+                        {onChainAndress && <View style={{ width: 250, height: 250, backgroundColor: 'white', alignItems: 'center', paddingTop: 25 }}>
+                            <QRCode
+                              value={onChainAndress}
+                              size={200}
+                              fgColor='white'
+                            />
+                        </View>}
                         {onChainAndress && <View style={styles.button}>
                             <CopyButton
                                 copyValue={onChainAndress}
@@ -131,42 +134,45 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
                     {selectedIndex === 1 && <View>
                         {!!payment_request && <Text style={{ color: 'green', padding: 20 }}>Successfully created invoice</Text>}
                         {creatingInvoiceError && <Text style={{ color: 'red', padding: 20 }}>Error creating invoice</Text>}
-                        {error_msg && <Text style={{ padding: 20 }}>{error_msg}</Text>}
+                        {error_msg && <Text style={{ color: theme === 'dark' ? 'white' : 'black', padding: 20 }}>{error_msg}</Text>}
                         {creatingInvoice && <ActivityIndicator size="large" color="#0000ff" />}
-                        {!!payment_request && <Text style={{ padding: 20 }}>{payment_request}</Text>}
+                        {!!payment_request && <Text style={{ color: theme === 'dark' ? 'white' : 'black', padding: 20 }}>{payment_request}</Text>}
                         {!!payment_request && <View style={styles.button}>
                             <CopyButton
                                 copyValue={payment_request}
                             />
                         </View>}
-                        <Text>Memo</Text>
+                        <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Memo</Text>
                         <TextInput
                             placeholder="Sent a few satoshis"
                             value={memo}
                             onChangeText={(text: string) => this.setState({ memo: text })}
                             numberOfLines={1}
-                            style={{ fontSize: 20, padding: 20 }}
                             editable={true}
+                            style={theme === 'dark' ? styles.textInputDark : styles.textInput}
+                            placeholderTextColor='gray'
                         />
 
-                        <Text>Amount (in Satoshis)</Text>
+                        <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Amount (in Satoshis)</Text>
                         <TextInput
                             placeholder={"100"}
                             value={value}
                             onChangeText={(text: string) => this.setState({ value: text })}
                             numberOfLines={1}
-                            style={{ fontSize: 20, padding: 20 }}
                             editable={true}
+                            style={theme === 'dark' ? styles.textInputDark : styles.textInput}
+                            placeholderTextColor='gray'
                         />
 
-                        <Text>Expiration (in seconds)</Text>
+                        <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Expiration (in seconds)</Text>
                         <TextInput
                             placeholder={"3600 (one hour)"}
                             value={expiry}
                             onChangeText={(text: string) => this.setState({ expiry: text })}
                             numberOfLines={1}
-                            style={{ fontSize: 20, padding: 20 }}
                             editable={true}
+                            style={theme === 'dark' ? styles.textInputDark : styles.textInput}
+                            placeholderTextColor='gray'
                         />
 
                         <View style={styles.button}>
@@ -190,6 +196,14 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
 }
 
 const styles = StyleSheet.create({
+    lightThemeStyle: {
+        flex: 1
+    },
+    darkThemeStyle: {
+        flex: 1,
+        backgroundColor: 'black',
+        color: 'white'
+    },
     content: {
         paddingLeft: 20,
         paddingRight: 20,
@@ -198,5 +212,13 @@ const styles = StyleSheet.create({
     button: {
         paddingTop: 15,
         paddingBottom: 15
+    },
+    textInput: {
+        fontSize: 20,
+        color: 'black'
+    },
+    textInputDark: {
+        fontSize: 20,
+        color: 'white'
     }
 });

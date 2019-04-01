@@ -5,18 +5,23 @@ import Invoice from './../models/Invoice';
 import { inject, observer } from 'mobx-react';
 
 import UnitsStore from './../stores/UnitsStore';
+import SettingsStore from './../stores/SettingsStore';
 
 interface InvoiceProps {
     navigation: any;
     UnitsStore: UnitsStore;
+    SettingsStore: SettingsStore;
 }
 
-@inject('UnitsStore')
+@inject('UnitsStore', 'SettingsStore')
 @observer
 export default class InvoiceView extends React.Component<InvoiceProps> {
     render() {
-        const { navigation, UnitsStore } = this.props;
+        const { navigation, UnitsStore, SettingsStore } = this.props;
         const { changeUnits, getAmount, units } = UnitsStore;
+        const { settings } = SettingsStore;
+        const { theme } = settings;
+
         const invoice: Invoice = navigation.getParam('invoice', null);
         const {
             fallback_addr,
@@ -46,51 +51,51 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
         );
 
         return (
-            <ScrollView style={styles.container}>
+            <ScrollView style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{ text: 'Invoice', style: { color: '#fff' } }}
-                    backgroundColor='orange'
+                    backgroundColor={theme === 'dark' ? '#261339' : 'orange'}
                 />
                 <View style={styles.center}>
                     <TouchableOpacity onPress={() => changeUnits()}>
-                        <Text style={styles.amount}>{`${settled ? 'Paid' : 'Unpaid'}: ${units && getAmount(value)}`}</Text>
+                        <Text style={theme === 'dark' ? styles.amountDark : styles.amount}>{`${settled ? 'Paid' : 'Unpaid'}: ${units && getAmount(value)}`}</Text>
                     </TouchableOpacity>
                 </View>
 
                 <View style={styles.content}>
-                    {memo && <Text style={styles.label}>Memo:</Text>}
-                    {memo && <Text style={styles.value}>{memo}</Text>}
+                    {memo && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Memo:</Text>}
+                    {memo && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{memo}</Text>}
 
-                    {receipt && <Text style={styles.label}>Receipt:</Text>}
-                    {receipt && <Text style={styles.value}>{receipt}</Text>}
+                    {receipt && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Receipt:</Text>}
+                    {receipt && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{receipt}</Text>}
 
-                    {settle_date && <Text style={styles.label}>Settle Date:</Text>}
-                    {settle_date && <Text style={styles.value}>{settleDate}</Text>}
+                    {settle_date && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Settle Date:</Text>}
+                    {settle_date && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{settleDate}</Text>}
 
-                    {creation_date && <Text style={styles.label}>Creation Date:</Text>}
-                    {creation_date && <Text style={styles.value}>{creationDate}</Text>}
+                    {creation_date && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Creation Date:</Text>}
+                    {creation_date && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{creationDate}</Text>}
 
-                    {expiry && <Text style={styles.label}>Expiry:</Text>}
-                    {expiry && <Text style={styles.value}>{expiry}</Text>}
+                    {expiry && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Expiry:</Text>}
+                    {expiry && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{expiry}</Text>}
 
-                    {privateInvoice && <Text style={styles.label}>Private:</Text>}
-                    {privateInvoice && <Text style={styles.value}>{privateInvoice}</Text>}
+                    {privateInvoice && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Private:</Text>}
+                    {privateInvoice && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{privateInvoice}</Text>}
 
-                    {fallback_addr && <Text style={styles.label}>Fallback Address:</Text>}
-                    {fallback_addr && <Text style={styles.value}>{fallback_addr}</Text>}
+                    {fallback_addr && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Fallback Address:</Text>}
+                    {fallback_addr && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{fallback_addr}</Text>}
 
-                    {cltv_expiry && <Text style={styles.label}>CLTV Expiry:</Text>}
-                    {cltv_expiry && <Text style={styles.value}>{cltv_expiry}</Text>}
+                    {cltv_expiry && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>CLTV Expiry:</Text>}
+                    {cltv_expiry && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{cltv_expiry}</Text>}
 
-                    {r_hash && <Text style={styles.label}>R Hash:</Text>}
-                    {r_hash && <Text style={styles.value}>{r_hash}</Text>}
+                    {r_hash && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>R Hash:</Text>}
+                    {r_hash && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{r_hash}</Text>}
 
-                    {r_preimage && <Text style={styles.label}>R Pre-Image:</Text>}
-                    {r_preimage && <Text style={styles.value}>{r_preimage}</Text>}
+                    {r_preimage && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>R Pre-Image:</Text>}
+                    {r_preimage && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{r_preimage}</Text>}
 
-                    {description_hash && <Text style={styles.label}>Description Hash:</Text>}
-                    {description_hash && <Text style={styles.value}>{description_hash}</Text>}
+                    {description_hash && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Description Hash:</Text>}
+                    {description_hash && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{description_hash}</Text>}
                 </View>
             </ScrollView>
         );
@@ -98,12 +103,22 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
 }
 
 const styles = StyleSheet.create({
-    container: {
+    lightThemeStyle: {
+        flex: 1
+    },
+    darkThemeStyle: {
         flex: 1,
+        backgroundColor: 'black',
+        color: 'white'
     },
     amount: {
         fontSize: 25,
         fontWeight: 'bold'
+    },
+    amountDark: {
+        fontSize: 25,
+        fontWeight: 'bold',
+        color: 'white'
     },
     content: {
         paddingLeft: 20,
@@ -119,5 +134,13 @@ const styles = StyleSheet.create({
     },
     value: {
         paddingBottom: 5
+    },
+    labelDark: {
+        paddingTop: 5,
+        color: 'white'
+    },
+    valueDark: {
+        paddingBottom: 5,
+        color: 'white'
     }
 });
