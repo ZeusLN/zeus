@@ -6,6 +6,7 @@ import { Button, Header, Icon } from 'react-native-elements';
 import InvoicesStore from './../stores/InvoicesStore';
 import TransactionsStore from './../stores/TransactionsStore';
 import UnitsStore from './../stores/UnitsStore';
+import SettingsStore from './../stores/SettingsStore';
 
 interface InvoiceProps {
     exitSetup: any;
@@ -13,13 +14,14 @@ interface InvoiceProps {
     InvoicesStore: InvoicesStore;
     TransactionsStore: TransactionsStore;
     UnitsStore: UnitsStore;
+    SettingsStore: SettingsStore;
 }
 
-@inject('InvoicesStore', 'TransactionsStore', 'UnitsStore')
+@inject('InvoicesStore', 'TransactionsStore', 'UnitsStore', 'SettingsStore')
 @observer
 export default class PaymentRequest extends React.Component<InvoiceProps, {}> {
     render() {
-        const { TransactionsStore, InvoicesStore, UnitsStore, navigation } = this.props;
+        const { TransactionsStore, InvoicesStore, UnitsStore, SettingsStore, navigation } = this.props;
         const { pay_req, paymentRequest, getPayReqError, loading } = InvoicesStore;
         const { units, changeUnits, getAmount } = UnitsStore;
         const {
@@ -33,6 +35,9 @@ export default class PaymentRequest extends React.Component<InvoiceProps, {}> {
         } = pay_req;
         const date = new Date(Number(timestamp) * 1000).toString();
 
+        const { settings } = SettingsStore;
+        const { theme } = settings;
+
         const BackButton = () => (
             <Icon
                 name="arrow-back"
@@ -43,42 +48,43 @@ export default class PaymentRequest extends React.Component<InvoiceProps, {}> {
         );
 
         return (
-            <View style={styles.container}>
+            <View style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{ text: 'Lightning Invoice', style: { color: '#fff' } }}
+                    backgroundColor={theme === "dark" ? "#261339" : "rgba(92, 99,216, 1)"}
                 />
 
                 {loading && <ActivityIndicator size="large" color="#0000ff" />}
 
                 {!!getPayReqError && <View style={styles.content}>
-                    <Text style={styles.label}>Error loading invoice</Text>
+                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Error loading invoice</Text>
                 </View>}
 
                 {pay_req && <View style={styles.content}>
                     <View style={styles.center}>
                         <TouchableOpacity onPress={() => changeUnits()}>
-                            <Text style={styles.amount}>{units && getAmount(num_satoshis)}</Text>
+                            <Text style={theme === 'dark' ? styles.amountDark : styles.amount}>{units && getAmount(num_satoshis)}</Text>
                         </TouchableOpacity>
                     </View>
 
-                    {description && <Text style={styles.label}>Description:</Text>}
-                    {description && <Text style={styles.value}>{description}</Text>}
+                    {description && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Description:</Text>}
+                    {description && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{description}</Text>}
 
-                    {timestamp && <Text style={styles.label}>Timestamp:</Text>}
-                    {timestamp && <Text style={styles.value}>{date}</Text>}
+                    {timestamp && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Timestamp:</Text>}
+                    {timestamp && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{date}</Text>}
 
-                    {expiry && <Text style={styles.label}>Expiry:</Text>}
-                    {expiry && <Text style={styles.value}>{expiry}</Text>}
+                    {expiry && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Expiry:</Text>}
+                    {expiry && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{expiry}</Text>}
 
-                    {cltv_expiry && <Text style={styles.label}>CLTV Expiry:</Text>}
-                    {cltv_expiry && <Text style={styles.value}>{cltv_expiry}</Text>}
+                    {cltv_expiry && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>CLTV Expiry:</Text>}
+                    {cltv_expiry && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{cltv_expiry}</Text>}
 
-                    {destination && <Text style={styles.label}>Destination:</Text>}
-                    {destination && <Text style={styles.value}>{destination}</Text>}
+                    {destination && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Destination:</Text>}
+                    {destination && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{destination}</Text>}
 
-                    {payment_hash && <Text style={styles.label}>Payment Hash:</Text>}
-                    {payment_hash && <Text style={styles.value}>{payment_hash}</Text>}
+                    {payment_hash && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Payment Hash:</Text>}
+                    {payment_hash && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{payment_hash}</Text>}
                 </View>}
 
                 {pay_req && <Button
@@ -102,11 +108,15 @@ export default class PaymentRequest extends React.Component<InvoiceProps, {}> {
 }
 
 const styles = StyleSheet.create({
-    container: {
+    lightThemeStyle: {
         flex: 1
     },
+    darkThemeStyle: {
+        flex: 1,
+        backgroundColor: 'black',
+        color: 'white'
+    },
     content: {
-        backgroundColor: '#fff',
         padding: 20
     },
     label: {
@@ -115,6 +125,14 @@ const styles = StyleSheet.create({
     value: {
         paddingBottom: 5
     },
+    labelDark: {
+        paddingTop: 5,
+        color: 'white'
+    },
+    valueDark: {
+        paddingBottom: 5,
+        color: 'white'
+    },
     button: {
         paddingTop: 5,
         paddingBottom: 5
@@ -122,6 +140,11 @@ const styles = StyleSheet.create({
     amount: {
         fontSize: 25,
         fontWeight: 'bold'
+    },
+    amountDark: {
+        fontSize: 25,
+        fontWeight: 'bold',
+        color: 'white'
     },
     center: {
         alignItems: 'center',

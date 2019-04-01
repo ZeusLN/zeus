@@ -12,8 +12,18 @@ interface CopyButtonState {
 }
 
 export default class CopyButton extends React.Component<CopyButtonProps, CopyButtonState> {
+    isComponentMounted: boolean = false;
+
     state = {
         copied: false
+    }
+
+    componentDidMount() {
+        this.isComponentMounted = true;
+    }
+
+    componentWillUnmount() {
+        this.isComponentMounted = false;
     }
 
     copyToClipboard = () => {
@@ -25,9 +35,11 @@ export default class CopyButton extends React.Component<CopyButtonProps, CopyBut
         Clipboard.setString(copyValue);
 
         setTimeout(() => {
-            this.setState({
-                copied: false
-            });
+            if (this.isComponentMounted) {
+                this.setState({
+                    copied: false
+                });
+            }
         }, 5000);
     }
 
