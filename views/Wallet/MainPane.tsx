@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { Image, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Badge, Button, Header } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import LinearGradient from 'react-native-linear-gradient';
@@ -8,6 +8,8 @@ import NodeInfoStore from './../../stores/NodeInfoStore';
 import UnitsStore from './../../stores/UnitsStore';
 import BalanceStore from './../../stores/BalanceStore';
 import SettingsStore from './../../stores/SettingsStore';
+
+const TorIcon = require('./../../images/tor.png');
 
 interface MainPaneProps {
     navigation: any;
@@ -34,7 +36,7 @@ export default class MainPane extends React.Component<MainPaneProps, MainPaneSta
         const {changeUnits, getAmount, units } = UnitsStore;
         const { totalBlockchainBalance, unconfirmedBlockchainBalance, lightningBalance, pendingOpenBalance } = BalanceStore;
         const { settings } = SettingsStore;
-        const { theme } = settings;
+        const { host, theme } = settings;
         const loading = NodeInfoStore.loading || BalanceStore.loading;
 
         const BalanceView = () => (
@@ -82,7 +84,8 @@ export default class MainPane extends React.Component<MainPaneProps, MainPaneSta
 
         const NodeInfoBadge = () => (
             <View style={styles.nodeInfo}>
-                <Badge onPress={() => navigation.navigate('NodeInfo')} value={NodeInfoStore.testnet ? 'Testnet' : 'ⓘ'} />
+                {host && host.includes('.onion') && <TouchableOpacity onPress={() => navigation.navigate('NodeInfo')}><Image style={{ width: 25, height: 25 }} source={TorIcon} /></TouchableOpacity>}
+                {host && !host.includes('.onion') && <Badge onPress={() => navigation.navigate('NodeInfo')} value={NodeInfoStore.testnet ? 'Testnet' : 'ⓘ'} />}
             </View>
         );
 
