@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Platform, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Header } from 'react-native-elements';
 import { CameraKitCamera, CameraKitCameraScreen } from 'react-native-camera-kit';
 import Permissions from 'react-native-permissions';
@@ -25,7 +25,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
             const isCameraAuthorized = await CameraKitCamera.checkDeviceCameraAuthorizationStatus();
 
             if (isCameraAuthorized) {
-                this.setState({ hasCameraPermission: 'authorized' });
+                this.setState({ hasCameraPermission: true });
             }
         } else {
             // CameraKitCamera permissions don't work on Android at the moment

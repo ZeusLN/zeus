@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text, View, TextInput } from 'react-native';
+import { Picker, StyleSheet, Text, View, TextInput } from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -14,16 +14,20 @@ interface SettingsState {
     host: string;
     port: string | number;
     macaroonHex: string;
+    theme: string;
     saved: boolean;
 }
 
 @inject('SettingsStore')
 @observer
 export default class Settings extends React.Component<SettingsProps, SettingsState> {
+    isComponentMounted: boolean = false;
+
     state = {
           host: '',
           port: '',
           macaroonHex: '',
+          theme: 'light',
           saved: false
     }
 
@@ -32,13 +36,20 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         const { getSettings, settings } = SettingsStore;
         await getSettings();
 
+        this.isComponentMounted = true;
+
         if (settings) {
             this.setState({
                 host: settings.host || '',
                 port: settings.port || '',
-                macaroonHex: settings.macaroonHex || ''
+                macaroonHex: settings.macaroonHex || '',
+                theme: settings.theme || ''
             });
         }
+    }
+
+    componentWillUnmount() {
+        this.isComponentMounted = false;
     }
 
     componentWillReceiveProps(nextProps: any) {
@@ -56,12 +67,14 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
     saveSettings = () => {
         const { SettingsStore } = this.props;
-        const { host, port, macaroonHex } = this.state;
+        const { host, port, macaroonHex, theme } = this.state;
         const { setSettings, settings } = SettingsStore;
+
         setSettings(JSON.stringify({
             host,
             port,
             macaroonHex,
+            theme,
             onChainAndress: settings.onChainAndress
         }));
 
@@ -70,16 +83,19 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         });
 
         setTimeout(() => {
-          this.setState({
-              saved: false
-          });
+            if (this.isComponentMounted) {
+                this.setState({
+                    saved: false
+                });
+            }
         }, 5000);
     }
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { host, port, macaroonHex, saved } = this.state;
-        const { loading, btcPayError } = SettingsStore;
+        const { host, port, macaroonHex, saved, theme } = this.state;
+        const { loading, btcPayError, settings } = SettingsStore;
+        const savedTheme = settings.theme;
 
         const BackButton = () => (
             <Icon
@@ -91,44 +107,59 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         );
 
         return (
-            <View style={styles.container}>
+            <View style={savedTheme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{ text: 'Settings', style: { color: '#fff' } }}
-                    backgroundColor="rgba(92, 99,216, 1)"
+                    backgroundColor={savedTheme === 'dark' ? '#261339' : 'rgba(92, 99,216, 1)'}
                 />
 
                 <View style={styles.form}>
                     {btcPayError && <Text style={styles.error}>{btcPayError}</Text>}
-                    <Text>LND Host</Text>
+                    <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>LND Host</Text>
                     <TextInput
                         placeholder={'localhost'}
                         value={host}
                         onChangeText={(text: string) => this.setState({ host: text })}
                         numberOfLines={1}
-                        style={{ fontSize: 20 }}
+                        style={savedTheme === 'dark' ? styles.textInputDark : styles.textInput}
                         editable={!loading}
+                        placeholderTextColor='gray'
                     />
 
-                    <Text>LND Port</Text>
+                    <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>LND Port</Text>
                     <TextInput
                         placeholder={'443/8080'}
                         value={port}
                         onChangeText={(text: string) => this.setState({ port: text })}
                         numberOfLines={1}
-                        style={{ fontSize: 20 }}
+                        style={savedTheme === 'dark' ? styles.textInputDark : styles.textInput}
                         editable={!loading}
+                        placeholderTextColor='gray'
                     />
 
-                    <Text>LND Macaroon (Hex format)</Text>
+                    <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>LND Macaroon (Hex format)</Text>
                     <TextInput
                         placeholder={'0A...'}
                         value={macaroonHex}
                         onChangeText={(text: string) => this.setState({ macaroonHex: text })}
                         numberOfLines={1}
-                        style={{ fontSize: 20, marginBottom: 30 }}
+                        style={savedTheme === 'dark' ? styles.textInputDark : styles.textInput}
                         editable={!loading}
+                        placeholderTextColor='gray'
                     />
+                </View>
+
+                <View style={styles.pickerWrapper}>
+                    <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>Theme</Text>
+                    <Picker
+                        selectedValue={theme}
+                        onValueChange={(itemValue: string) => this.setState({ theme: itemValue })}
+                        style={savedTheme === 'dark' ? styles.pickerDark : styles.picker}
+                    >
+                        <Picker.Item label='Light' value='light' />
+                        <Picker.Item label='Dark' value='dark' />
+                    </Picker>
                 </View>
 
                 <View style={styles.button}>
@@ -139,7 +170,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                             size: 25,
                             color: saved ? "black" : "white"
                         }}
-                        backgroundColor={saved ? "#fff" : "rgba(92, 99,216, 1)"}
+                        backgroundColor={saved ? "#fff" : savedTheme === 'dark' ? '#261339' : 'rgba(92, 99,216, 1)'}
                         color={saved ? "black" : "white"}
                         onPress={() => this.saveSettings()}
                         style={styles.button}
@@ -153,11 +184,12 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         icon={{
                             name: "crop-free",
                             size: 25,
-                            color: "white"
+                            color: savedTheme === 'dark' ? 'black' : 'white'
                         }}
                         onPress={() => navigation.navigate('LNDConnectConfigQRScanner')}
-                        backgroundColor="black"
+                        backgroundColor={savedTheme === 'dark' ? 'white' : 'black'}
                         borderRadius={30}
+                        color={savedTheme === 'dark' ? 'black' : 'white'}
                     />
                 </View>
 
@@ -180,19 +212,42 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 }
 
 const styles = StyleSheet.create({
-    container: {
-        backgroundColor: '#fff'
+    lightThemeStyle: {
+        flex: 1
+    },
+    darkThemeStyle: {
+        flex: 1,
+        backgroundColor: 'black',
+        color: 'white'
+    },
+    textInput: {
+        fontSize: 20,
+        color: 'black'
+    },
+    textInputDark: {
+        fontSize: 20,
+        color: 'white'
     },
     error: {
         color: 'red'
     },
     form: {
-        alignSelf: 'center',
-        alignItems: 'center',
         paddingTop: 20,
-        paddingBottom: 20,
         paddingLeft: 5,
         paddingRight: 5
+    },
+    pickerWrapper: {
+        paddingLeft: 5,
+        paddingRight: 5
+    },
+    picker: {
+        height: 50,
+        width: 100
+    },
+    pickerDark: {
+        height: 50,
+        width: 100,
+        color: 'white'
     },
     button: {
         paddingTop: 10,

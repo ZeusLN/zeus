@@ -106,6 +106,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             TransactionsStore,
             UnitsStore,
             BalanceStore,
+            SettingsStore,
             navigation
         } = this.props;
         const { selectedIndex } = this.state;
@@ -114,32 +115,34 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { payments } = PaymentsStore;
         const { invoices, invoicesCount } = InvoicesStore;
         const { channels } = ChannelsStore;
+        const { settings } = SettingsStore;
+        const { theme } = settings;
 
         const transactionsButton = () => (
             <React.Fragment>
-                <Text>{transactions && transactions.length || 0}</Text>
-                <Text>Transactions</Text>
+                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>{transactions && transactions.length || 0}</Text>
+                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Transactions</Text>
             </React.Fragment>
         );
 
         const paymentsButton = () => (
             <React.Fragment>
-                <Text>{payments && payments.length || 0}</Text>
-                <Text>LN Payments</Text>
+                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>{payments && payments.length || 0}</Text>
+                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>LN Payments</Text>
             </React.Fragment>
         );
 
         const invoicesButton = () => (
             <React.Fragment>
-                <Text>{invoicesCount || 0}</Text>
-                <Text>Invoices</Text>
+                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>{invoicesCount || 0}</Text>
+                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Invoices</Text>
             </React.Fragment>
         );
 
         const channelsButton = () => (
             <React.Fragment>
-                <Text>{channels && channels.length || 0}</Text>
-                <Text>Channels</Text>
+                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>{channels && channels.length || 0}</Text>
+                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Channels</Text>
             </React.Fragment>
         );
 
@@ -157,9 +160,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     NodeInfoStore={NodeInfoStore}
                     UnitsStore={UnitsStore}
                     BalanceStore={BalanceStore}
+                    SettingsStore={SettingsStore}
                 />
 
-                <ButtonGroup
+                {theme !== 'dark' && <ButtonGroup
                     onPress={this.updateIndex}
                     selectedIndex={selectedIndex}
                     buttons={buttons}
@@ -170,7 +174,35 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         marginRight: 0,
                         marginBottom: 0
                     }}
-                />
+                />}
+
+                {theme === 'dark' && <ButtonGroup
+                    onPress={this.updateIndex}
+                    selectedIndex={selectedIndex}
+                    buttons={buttons}
+                    containerStyle={{
+                        height: 50,
+                        marginTop: 0,
+                        marginLeft: 0,
+                        marginRight: 0,
+                        marginBottom: 0,
+                        backgroundColor: 'black',
+                        borderTopWidth: 0,
+                        borderLeftWidth: 0,
+                        borderRightWidth: 0,
+                        borderBottomWidth: 1,
+                        borderRadius: 0
+                    }}
+                    selectedButtonStyle={{
+                        backgroundColor: '#261339'
+                    }}
+                    selectedTextStyle={{
+                        color: 'white'
+                    }}
+                    innerBorderStyle={{
+                        color: 'black'
+                    }}
+                />}
 
                 {selectedIndex == 0 && <Transactions
                     transactions={transactions}
@@ -178,6 +210,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     refresh={this.refresh}
                     TransactionsStore={TransactionsStore}
                     UnitsStore={UnitsStore}
+                    SettingsStore={SettingsStore}
                 />}
                 {selectedIndex == 1 && <Payments
                     payments={payments}
@@ -185,6 +218,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     refresh={this.refresh}
                     PaymentsStore={PaymentsStore}
                     UnitsStore={UnitsStore}
+                    SettingsStore={SettingsStore}
                 />}
                 {selectedIndex == 2 && <Invoices
                     invoices={invoices}
@@ -192,6 +226,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     refresh={this.refresh}
                     InvoicesStore={InvoicesStore}
                     UnitsStore={UnitsStore}
+                    SettingsStore={SettingsStore}
                 />}
                 {selectedIndex == 3 && <Channels
                     channels={channels}
@@ -200,6 +235,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     ChannelsStore={ChannelsStore}
                     NodeInfoStore={NodeInfoStore}
                     UnitsStore={UnitsStore}
+                    SettingsStore={SettingsStore}
                 />}
             </View>
         );

@@ -5,18 +5,23 @@ import Payment from './../models/Payment';
 import { inject, observer } from 'mobx-react';
 
 import UnitsStore from './../stores/UnitsStore';
+import SettingsStore from './../stores/SettingsStore';
 
 interface PaymentProps {
     navigation: any;
     UnitsStore: UnitsStore;
+    SettingsStore: SettingsStore;
 }
 
-@inject('UnitsStore')
+@inject('UnitsStore', 'SettingsStore')
 @observer
 export default class PaymentView extends React.Component<PaymentProps> {
     render() {
-        const { navigation, UnitsStore } = this.props;
+        const { navigation, UnitsStore, SettingsStore } = this.props;
         const { changeUnits, getAmount, units } = UnitsStore;
+        const { settings } = SettingsStore;
+        const { theme } = settings;
+
         const payment: Payment = navigation.getParam('payment', null);
         const { creation_date, fee, payment_hash, value, payment_preimage, path } = payment;
         const date = new Date(Number(creation_date) * 1000).toString();
@@ -31,11 +36,11 @@ export default class PaymentView extends React.Component<PaymentProps> {
         );
 
         return (
-            <ScrollView style={styles.container}>
+            <ScrollView style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{ text: 'Payment', style: { color: '#fff' } }}
-                    backgroundColor='black'
+                    backgroundColor={theme === 'dark' ? '#261339' : 'black'}
                 />
                 <View style={styles.center}>
                     <TouchableOpacity onPress={() => changeUnits()}>
@@ -44,22 +49,22 @@ export default class PaymentView extends React.Component<PaymentProps> {
                 </View>
 
                 <View style={styles.content}>
-                    <Text style={styles.label}>Fee:</Text>
+                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Fee:</Text>
                     <TouchableOpacity onPress={() => changeUnits()}>
-                        <Text style={styles.value}>{units && getAmount(fee)}</Text>
+                        <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{units && getAmount(fee)}</Text>
                     </TouchableOpacity>
 
-                    <Text style={styles.label}>Payment Hash</Text>
-                    <Text style={styles.value}>{payment_hash}</Text>
+                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Payment Hash</Text>
+                    <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{payment_hash}</Text>
 
-                    <Text style={styles.label}>Payment Pre-Image</Text>
-                    <Text style={styles.value}>{payment_preimage}</Text>
+                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Payment Pre-Image</Text>
+                    <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{payment_preimage}</Text>
 
-                    <Text style={styles.label}>Creation Date:</Text>
-                    <Text style={styles.value}>{date}</Text>
+                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Creation Date:</Text>
+                    <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{date}</Text>
 
-                    {path && <Text style={styles.label}>{path.length > 1 ? 'Paths:' : 'Path:'}</Text>}
-                    {path && <Text>{path.join(', ')}</Text>}
+                    {path && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>{path.length > 1 ? 'Paths:' : 'Path:'}</Text>}
+                    {path && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{path.join(', ')}</Text>}
                 </View>
             </ScrollView>
         );
@@ -67,8 +72,13 @@ export default class PaymentView extends React.Component<PaymentProps> {
 }
 
 const styles = StyleSheet.create({
-    container: {
+    lightThemeStyle: {
+        flex: 1
+    },
+    darkThemeStyle: {
         flex: 1,
+        backgroundColor: 'black',
+        color: 'white'
     },
     content: {
         paddingLeft: 20,
@@ -84,6 +94,14 @@ const styles = StyleSheet.create({
     },
     value: {
         paddingBottom: 5
+    },
+    labelDark: {
+        paddingTop: 5,
+        color: 'white'
+    },
+    valueDark: {
+        paddingBottom: 5,
+        color: 'white'
     },
     valueWithLink: {
         paddingBottom: 5,
