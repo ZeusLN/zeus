@@ -1,7 +1,7 @@
 import * as React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Header } from 'react-native-elements';
-import { CameraKitCameraScreen } from 'react-native-camera-kit';
+import { CameraKitCamera, CameraKitCameraScreen } from 'react-native-camera-kit';
 import Permissions from 'react-native-permissions';
 
 interface QRProps {
@@ -21,9 +21,19 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
     }
 
     async componentDidMount() {
-        await Permissions.request('camera').then((response: any) => {
-            this.setState({ hasCameraPermission: response === 'authorized' });
-        });
+        if (Platform.OS === 'ios') {
+            const isCameraAuthorized = await CameraKitCamera.checkDeviceCameraAuthorizationStatus();
+
+            if (isCameraAuthorized) {
+                this.setState({ hasCameraPermission: true });
+            }
+        } else {
+            // CameraKitCamera permissions don't work on Android at the moment
+            // use react-native-permissions
+            await Permissions.request('camera').then((response: any) => {
+                this.setState({ hasCameraPermission: response === 'authorized' });
+            });
+        }
     }
 
     render() {
@@ -39,7 +49,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
         }
 
         return (
-            <View>
+            <React.Fragment>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{ text: title, style: { color: '#fff' } }}
@@ -55,9 +65,12 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                     onReadCode={(event: any) => handleQRScanned(event.nativeEvent.codeStringValue)}
                     hideControls={false}
                     showFrame={true}
-                    heightForScannerFrame={300}
+                    heightForScannerFrame={250}
+                    style={{
+                        flex: 1
+                    }}
                 />
-            </View>
+            </React.Fragment>
         );
     }
 }

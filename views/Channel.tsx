@@ -8,14 +8,16 @@ const hash = require('object-hash');
 
 import ChannelsStore from './../stores/ChannelsStore';
 import UnitsStore from './../stores/UnitsStore';
+import SettingsStore from './../stores/SettingsStore';
 
 interface ChannelProps {
     navigation: any;
     ChannelsStore: ChannelsStore;
     UnitsStore: UnitsStore;
+    SettingsStore: SettingsStore;
 }
 
-@inject('ChannelsStore', 'UnitsStore')
+@inject('ChannelsStore', 'UnitsStore', 'SettingsStore')
 @observer
 export default class ChannelView extends React.Component<ChannelProps> {
     closeChannel = (channelPoint: string) => {
@@ -28,8 +30,11 @@ export default class ChannelView extends React.Component<ChannelProps> {
     };
 
     render() {
-        const { navigation, UnitsStore } = this.props;
+        const { navigation, UnitsStore, SettingsStore } = this.props;
         const { changeUnits, getAmount, units } = UnitsStore;
+        const { settings } = SettingsStore;
+        const { theme } = settings;
+
         const channel: Channel = navigation.getParam('channel', null);
         const {
             channel_point,
@@ -59,58 +64,58 @@ export default class ChannelView extends React.Component<ChannelProps> {
         );
 
         return (
-            <ScrollView style={styles.container}>
+            <ScrollView style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{ text: 'Channel', style: { color: '#fff' } }}
-                    backgroundColor='#000'
+                    backgroundColor={theme === 'dark' ? '#261339' : 'black'}
                 />
                 <View style={styles.content}>
                     <View style={styles.center}>
-                        <Text style={{ paddingTop: 10, paddingBottom: 30 }}>{remote_pubkey}</Text>
+                        <Text style={theme === 'dark' ? styles.pubkeyDark : styles.pubkey }>{remote_pubkey}</Text>
                         <Image source={{ uri: `data:image/png;base64,${data}` }} style={{ width: 200, height: 200 }} />
 
                         <View style={styles.balances}>
                             <TouchableOpacity onPress={() => changeUnits()}>
-                                <Text style={{ fontSize: 20, fontWeight: 'bold' }}>{`Local balance: ${units && getAmount(local_balance || 0)}`}</Text>
-                                <Text style={{ fontSize: 20, fontWeight: 'bold' }}>{`Remote balance: ${units && getAmount(remote_balance || 0)}`}</Text>
-                                {unsettled_balance && <Text style={{ fontSize: 20, fontWeight: 'bold' }}>{`Unsettled balance: ${units && getAmount(unsettled_balance)}`}</Text>}
+                                <Text style={theme === 'dark' ? styles.balanceDark : styles.balance}>{`Local balance: ${units && getAmount(local_balance || 0)}`}</Text>
+                                <Text style={theme === 'dark' ? styles.balanceDark : styles.balance}>{`Remote balance: ${units && getAmount(remote_balance || 0)}`}</Text>
+                                {unsettled_balance && <Text style={theme === 'dark' ? styles.balanceDark : styles.balance}>{`Unsettled balance: ${units && getAmount(unsettled_balance)}`}</Text>}
                             </TouchableOpacity>
                         </View>
                     </View>
 
-                    <Text style={styles.label}>Status:</Text>
+                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Status:</Text>
                     <Text style={{ ...styles.value, color: active ? 'green' : 'red' }}>{active ? 'Active' : 'Inactive'}</Text>
 
-                    <Text style={styles.label}>Private:</Text>
+                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Private:</Text>
                     <Text style={{ ...styles.value, color: privateChannel ? 'green' : '#808000' }}>{privateChannel ? 'True' : 'False'}</Text>
 
-                    <Text style={styles.label}>Total Received:</Text>
+                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Total Received:</Text>
                     <TouchableOpacity onPress={() => changeUnits()}>
-                        <Text style={styles.value}>{units && getAmount(total_satoshis_received || 0)}</Text>
+                        <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{units && getAmount(total_satoshis_received || 0)}</Text>
                     </TouchableOpacity>
 
-                    <Text style={styles.label}>Total Sent:</Text>
+                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Total Sent:</Text>
                     <TouchableOpacity onPress={() => changeUnits()}>
-                        <Text style={styles.value}>{units && getAmount(total_satoshis_sent || 0)}</Text>
+                        <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{units && getAmount(total_satoshis_sent || 0)}</Text>
                     </TouchableOpacity>
 
-                    <Text style={styles.label}>Capacity:</Text>
+                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Capacity:</Text>
                     <TouchableOpacity onPress={() => changeUnits()}>
-                        <Text style={styles.value}>{units && getAmount(capacity)}</Text>
+                        <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{units && getAmount(capacity)}</Text>
                     </TouchableOpacity>
 
-                    <Text style={styles.label}>Commit Weight:</Text>
-                    <Text style={styles.value}>{commit_weight}</Text>
+                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Commit Weight:</Text>
+                    <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{commit_weight}</Text>
 
-                    <Text style={styles.label}>Commit Fee:</Text>
-                    <Text style={styles.value}>{commit_fee}</Text>
+                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Commit Fee:</Text>
+                    <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{commit_fee}</Text>
 
-                    <Text style={styles.label}>CSV Delay:</Text>
-                    <Text style={styles.value}>{csv_delay}</Text>
+                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>CSV Delay:</Text>
+                    <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{csv_delay}</Text>
 
-                    <Text style={styles.label}>Fee per kilo-weight:</Text>
-                    <Text style={styles.value}>{fee_per_kw}</Text>
+                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Fee per kilo-weight:</Text>
+                    <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{fee_per_kw}</Text>
 
                     <View style={styles.button}>
                         <Button
@@ -132,8 +137,13 @@ export default class ChannelView extends React.Component<ChannelProps> {
 }
 
 const styles = StyleSheet.create({
-    container: {
+    lightThemeStyle: {
         flex: 1
+    },
+    darkThemeStyle: {
+        flex: 1,
+        backgroundColor: 'black',
+        color: 'white'
     },
     content: {
         paddingLeft: 20,
@@ -141,6 +151,24 @@ const styles = StyleSheet.create({
     },
     center: {
         alignItems: 'center'
+    },
+    pubkey: {
+        paddingTop: 10,
+        paddingBottom: 30
+    },
+    pubkeyDark: {
+        paddingTop: 10,
+        paddingBottom: 30,
+        color: 'white'
+    },
+    balance: {
+        fontSize: 20,
+        fontWeight: 'bold'
+    },
+    balanceDark: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: 'white'
     },
     balances: {
         paddingTop: 20,
@@ -151,6 +179,14 @@ const styles = StyleSheet.create({
     },
     value: {
         paddingBottom: 5
+    },
+    labelDark: {
+        paddingTop: 5,
+        color: 'white'
+    },
+    valueDark: {
+        paddingBottom: 5,
+        color: 'white'
     },
     valueWithLink: {
         paddingBottom: 5,
