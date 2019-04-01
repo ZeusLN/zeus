@@ -6,11 +6,17 @@ import { inject, observer } from 'mobx-react';
 
 import TransactionsStore from './../../stores/TransactionsStore';
 import UnitsStore from './../../stores/UnitsStore';
+import SettingsStore from './../../stores/SettingsStore';
 
 const AddBalance = require('./../../images/onchain-green.png');
 const RemoveBalance = require('./../../images/onchain-red.png');
 const AddBalancePending = require('./../../images/onchain-green-pending.png');
 const RemoveBalancePending = require('./../../images/onchain-red-pending.png');
+
+const AddBalanceDark = require('./../../images/onchain-green-transparent.png');
+const RemoveBalanceDark = require('./../../images/onchain-red-transparent.png');
+const AddBalancePendingDark = require('./../../images/onchain-green-pending-transparent.png');
+const RemoveBalancePendingDark = require('./../../images/onchain-red-pending-transparent.png');
 
 interface TransactionsProps {
     navigation: any;
@@ -18,12 +24,21 @@ interface TransactionsProps {
     transactions: Array<Transaction>;
     TransactionsStore: TransactionsStore;
     UnitsStore: UnitsStore;
+    SettingsStore: SettingsStore;
 }
 
-@inject('UnitsStore')
+@inject('UnitsStore', 'SettingsStore')
 @observer
 export default class Transactions extends React.Component<TransactionsProps> {
-    renderSeparator = () => <View style={styles.separator} />;
+    renderSeparator = () => {
+        const { SettingsStore } = this.props;
+        const { settings } = SettingsStore;
+        const { theme } = settings;
+
+        return (
+            <View style={theme === 'dark' ? styles.darkSeparator : styles.lightSeparator} />
+        )
+    }
 
     viewTransaction = (transaction: Transaction) => {
           const { navigation } = this.props;
@@ -31,29 +46,31 @@ export default class Transactions extends React.Component<TransactionsProps> {
     }
 
     render() {
-        const { refresh, transactions, TransactionsStore, UnitsStore } = this.props;
+        const { refresh, transactions, TransactionsStore, UnitsStore, SettingsStore } = this.props;
         const { loading } = TransactionsStore;
         const { getAmount, units } = UnitsStore;
+        const { settings } = SettingsStore;
+        const { theme } = settings;
 
         const Balance = (item: Transaction) => {
             const { amount, num_confirmations } = item;
             if (num_confirmations && num_confirmations > 0) {
                 if (amount > 0) {
-                    return AddBalance;
+                    return theme === 'dark' ? AddBalanceDark : AddBalance;
                 }
 
-                return RemoveBalance;
+                return theme === 'dark' ? RemoveBalanceDark : RemoveBalance;
             }
 
             if (amount > 0) {
-                return AddBalancePending;
+                return theme === 'dark' ? AddBalancePendingDark : AddBalancePending;
             }
 
-            return RemoveBalancePending;
+            return theme === 'dark' ? RemoveBalancePendingDark : RemoveBalancePending;
         }
 
         return (
-            <View style={{ flex: 1 }}>
+            <View style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
                 {(!!transactions && transactions.length > 0) || loading ? <FlatList
                     data={transactions}
                     renderItem={({ item }: any) => {
@@ -66,6 +83,8 @@ export default class Transactions extends React.Component<TransactionsProps> {
                                 containerStyle={{ borderBottomWidth: 0 }}
                                 avatar={Balance(item)}
                                 onPress={() => this.viewTransaction(item)}
+                                titleStyle={{ color: theme === 'dark' ? 'white' : 'black' }}
+                                subtitleStyle={{ color: theme === 'dark' ? 'gray' : '#8a8999' }}
                             />
                         );
                     }}
@@ -79,10 +98,10 @@ export default class Transactions extends React.Component<TransactionsProps> {
                     icon={{
                         name: "error-outline",
                         size: 25,
-                        color: "black"
+                        color: theme === 'dark' ? 'white' : 'black'
                     }}
                     backgroundColor="transparent"
-                    color="black"
+                    color={theme === 'dark' ? 'white' : 'black'}
                     onPress={() => refresh()}
                     borderRadius={30}
                 />}
@@ -92,10 +111,24 @@ export default class Transactions extends React.Component<TransactionsProps> {
 }
 
 const styles = StyleSheet.create({
-    separator: {
+    lightThemeStyle: {
+        flex: 1
+    },
+    darkThemeStyle: {
+        flex: 1,
+        backgroundColor: 'black',
+        color: 'white'
+    },
+    lightSeparator: {
         height: 1,
         width: "86%",
         backgroundColor: "#CED0CE",
+        marginLeft: "14%"
+    },
+    darkSeparator: {
+        height: 1,
+        width: "86%",
+        backgroundColor: "darkgray",
         marginLeft: "14%"
     }
 });

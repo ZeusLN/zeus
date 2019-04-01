@@ -6,18 +6,22 @@ import QRCode from 'react-native-qrcode';
 import CopyButton from './../components/CopyButton';
 
 import NodeInfoStore from './../stores/NodeInfoStore';
+import SettingsStore from './../stores/SettingsStore';
 
 interface InvoiceProps {
     navigation: any;
     NodeInfoStore: NodeInfoStore;
+    SettingsStore: SettingsStore;
 }
 
-@inject('NodeInfoStore')
+@inject('NodeInfoStore', 'SettingsStore')
 @observer
 export default class NodeInfo extends React.Component<InvoiceProps> {
     render() {
-        const { navigation, NodeInfoStore } = this.props;
+        const { navigation, NodeInfoStore, SettingsStore } = this.props;
         const { nodeInfo } = NodeInfoStore;
+        const { settings } = SettingsStore;
+        const { theme } = settings;
 
         const BackButton = () => (
             <Icon
@@ -34,14 +38,14 @@ export default class NodeInfo extends React.Component<InvoiceProps> {
             props. uris.forEach((uri, key) => {
                 items.push(
                     <React.Fragment key={key}>
-                        <View style={styles.center}>
+                        <View style={styles.qrPadding}>
                             <QRCode
                                 value={uri}
                                 size={200}
                                 fgColor='white'
                             />
                         </View>
-                        <Text style={styles.value}>{uri}</Text>
+                        <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{uri}</Text>
                         <CopyButton
                             copyValue={uri}
                             title="Copy URI"
@@ -54,29 +58,29 @@ export default class NodeInfo extends React.Component<InvoiceProps> {
         }
 
         return (
-            <ScrollView style={styles.container}>
+            <ScrollView style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{ text: 'Node Info', style: { color: '#fff' } }}
                     backgroundColor='black'
                 />
                 <View style={styles.content}>
-                    <Text style={styles.label}>Alias:</Text>
-                    <Text style={styles.value}>{nodeInfo.alias}</Text>
+                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Alias:</Text>
+                    <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{nodeInfo.alias}</Text>
 
-                    <Text style={styles.label}>Version:</Text>
-                    <Text style={styles.value}>{nodeInfo.version}</Text>
+                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Version:</Text>
+                    <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{nodeInfo.version}</Text>
 
-                    <Text style={styles.label}>Synced to Chain:</Text>
+                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Synced to Chain:</Text>
                     <Text style={{ ...styles.value, color: nodeInfo.synced_to_chain ? 'green' : 'red' }}>{nodeInfo.synced_to_chain ? 'True' : 'False'}</Text>
 
-                    <Text style={styles.label}>Block Height</Text>
-                    <Text style={styles.value}>{nodeInfo.block_height}</Text>
+                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Block Height</Text>
+                    <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{nodeInfo.block_height}</Text>
 
-                    <Text style={styles.label}>Block Hash</Text>
-                    <Text style={styles.value}>{nodeInfo.block_hash}</Text>
+                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Block Hash</Text>
+                    <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{nodeInfo.block_hash}</Text>
 
-                    <Text style={styles.label}>URIs:</Text>
+                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>URIs:</Text>
                     {nodeInfo.uris && nodeInfo.uris.length > 0 ? <URIs uris={nodeInfo.uris} /> : <Text style={{ ...styles.value, color: 'red' }}>No URIs available</Text>}
                 </View>
             </ScrollView>
@@ -85,22 +89,38 @@ export default class NodeInfo extends React.Component<InvoiceProps> {
 }
 
 const styles = StyleSheet.create({
-    container: {
+    lightThemeStyle: {
+        flex: 1
+    },
+    darkThemeStyle: {
         flex: 1,
+        backgroundColor: 'black',
+        color: 'white'
     },
     content: {
         paddingLeft: 20,
         paddingRight: 20
     },
-    center: {
-        alignItems: 'center',
-        paddingTop: 10,
-        paddingBottom: 10
-    },
     label: {
         paddingTop: 5
     },
+    qrPadding: {
+        width: 250,
+        height: 250,
+        backgroundColor: 'white',
+        alignItems: 'center',
+        paddingTop: 25,
+        marginBottom: 10
+    },
     value: {
         paddingBottom: 5
+    },
+    labelDark: {
+        paddingTop: 5,
+        color: 'white'
+    },
+    valueDark: {
+        paddingBottom: 5,
+        color: 'white'
     }
 });
