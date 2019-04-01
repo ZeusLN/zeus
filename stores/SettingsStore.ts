@@ -2,17 +2,12 @@ import * as Keychain from 'react-native-keychain';
 import { action, observable } from 'mobx';
 import axios from 'axios';
 
-interface Credentials {
-    service: string;
-    username: string;
-    password: string;
-};
-
 interface Settings {
     host?: string;
     port?: string;
     macaroonHex?: string;
     onChainAndress?: string;
+    theme?: string;
 }
 
 export default class SettingsStore {
@@ -57,7 +52,7 @@ export default class SettingsStore {
 
         try {
             // Retrieve the credentials
-            const credentials: Credentials | any = await Keychain.getGenericPassword();
+            const credentials: any = await Keychain.getGenericPassword();
             this.loading = false;
             if (credentials) {
                 this.settings = JSON.parse(credentials.password);
