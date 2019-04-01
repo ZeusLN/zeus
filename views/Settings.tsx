@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Picker, StyleSheet, Text, View, TextInput } from 'react-native';
+import { ActionSheetIOS, Platform, StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -17,6 +17,11 @@ interface SettingsState {
     theme: string;
     saved: boolean;
 }
+
+const themes = {
+    light: 'Light Theme',
+    dark: 'Dark Theme'
+};
 
 @inject('SettingsStore')
 @observer
@@ -150,7 +155,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     />
                 </View>
 
-                <View style={styles.pickerWrapper}>
+                {Platform.OS !== 'ios' && <View style={styles.pickerWrapper}>
                     <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>Theme</Text>
                     <Picker
                         selectedValue={theme}
@@ -160,7 +165,24 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         <Picker.Item label='Light' value='light' />
                         <Picker.Item label='Dark' value='dark' />
                     </Picker>
-                </View>
+                </View>}
+
+                {Platform.OS === 'ios' && <View style={styles.pickerWrapper}>
+                    <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>Theme</Text>
+                    <TouchableOpacity onPress={() => ActionSheetIOS.showActionSheetWithOptions(
+                      {
+                        options: ['Cancel', 'Light Theme', 'Dark Theme'],
+                        cancelButtonIndex: 0,
+                      },
+                      (buttonIndex) => {
+                        if (buttonIndex === 1) {
+                            this.setState({ theme: 'light' })
+                        } else if (buttonIndex === 2) {
+                            this.setState({ theme: 'dark' })
+                        }
+                      },
+                    )}><Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>{themes[theme]}</Text></TouchableOpacity>
+                </View>}
 
                 <View style={styles.button}>
                     <Button
