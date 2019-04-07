@@ -94,13 +94,15 @@ export default class PaymentRequest extends React.Component<InvoiceProps, {}> {
                         size: 25,
                         color: "white"
                     }}
-                    backgroundColor="orange"
                     onPress={() => {
                         TransactionsStore.sendPayment(paymentRequest);
                         navigation.navigate('SendingLightning');
                     }}
                     style={styles.button}
-                    borderRadius={30}
+                    buttonStyle={{
+                        backgroundColor: "orange",
+                        borderRadius: 30
+                    }}
                 />}
             </View>
         );
@@ -135,7 +137,9 @@ const styles = StyleSheet.create({
     },
     button: {
         paddingTop: 5,
-        paddingBottom: 5
+        paddingBottom: 5,
+        paddingLeft: 20,
+        paddingRight: 20
     },
     amount: {
         fontSize: 25,

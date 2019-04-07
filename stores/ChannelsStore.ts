@@ -11,6 +11,7 @@ export default class ChannelsStore {
     @observable public errorPeerConnect: boolean = false;
     @observable public errorMsgChannel: string | null;
     @observable public errorMsgPeer: string | null;
+    @observable public nodes: any = {};
     @observable public channels: Array<Channel> = [];
     @observable public output_index: number | null;
     @observable public funding_txid_str: string | null;
@@ -42,6 +43,39 @@ export default class ChannelsStore {
                 }
             }
         );
+
+        reaction(
+            () => this.channels,
+            () => {
+                if (this.channels) {
+                    this.nodes = {};
+                    this.channels.forEach((channel: Channel) => {
+                        this.getNodeInfo(channel.remote_pubkey).then(nodeInfo => {
+                            this.nodes[channel.remote_pubkey] = nodeInfo;
+                        });
+                    });
+                }
+            }
+        );
+    }
+
+    @action
+    getNodeInfo = (pubkey: string) => {
+        const { settings } = this.settingsStore;
+        const { host, port, macaroonHex } = settings;
+
+        this.loading = true;
+        return axios.request({
+            method: 'get',
+            url: `https://${host}${port ? ':' + port : ''}/v1/graph/node/${pubkey}`,
+            headers: {
+                'Grpc-Metadata-macaroon': macaroonHex
+            }
+        }).then((response: any) => {
+            // handle success
+            const data = response.data;
+            return data.node;
+        });
     }
 
     @action
@@ -49,6 +83,7 @@ export default class ChannelsStore {
         const { settings } = this.settingsStore;
         const { host, port, macaroonHex } = settings;
 
+        this.channels = [];
         this.loading = true;
         axios.request({
             method: 'get',
