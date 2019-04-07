@@ -97,7 +97,12 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
                     onPress={this.updateIndex}
                     selectedIndex={selectedIndex}
                     buttons={buttons}
-                    containerStyle={{ height: 50 }}
+                    selectedButtonStyle={{
+                        backgroundColor: 'white'
+                    }}
+                    containerStyle={{
+                        backgroundColor: '#f2f2f2'
+                    }}
                 />
 
                 <View style={styles.content}>
@@ -126,8 +131,10 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
                                     color: "white"
                                 }}
                                 onPress={() => this.getNewAddress()}
-                                backgroundColor="orange"
-                                borderRadius={30}
+                                buttonStyle={{
+                                    backgroundColor: "orange",
+                                    borderRadius: 30
+                                }}
                             />
                         </View>
                     </React.Fragment>}
@@ -184,8 +191,10 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
                                     color: "white"
                                 }}
                                 onPress={() => createInvoice(memo, value, expiry)}
-                                backgroundColor="orange"
-                                borderRadius={30}
+                                buttonStyle={{
+                                    backgroundColor: "orange",
+                                    borderRadius: 30
+                                }}
                             />
                         </View>
                     </View>}
@@ -215,10 +224,14 @@ const styles = StyleSheet.create({
     },
     textInput: {
         fontSize: 20,
-        color: 'black'
+        color: 'black',
+        paddingTop: 10,
+        paddingBottom: 10
     },
     textInputDark: {
         fontSize: 20,
-        color: 'white'
+        color: 'white',
+        paddingTop: 10,
+        paddingBottom: 10
     }
 });

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ActionSheetIOS, Platform, StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-native';
+import { ActionSheetIOS, Picker, Platform, StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -18,7 +18,7 @@ interface SettingsState {
     saved: boolean;
 }
 
-const themes = {
+const themes: any = {
     light: 'Light Theme',
     dark: 'Dark Theme'
 };
@@ -192,11 +192,15 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                             size: 25,
                             color: saved ? "black" : "white"
                         }}
-                        backgroundColor={saved ? "#fff" : savedTheme === 'dark' ? '#261339' : 'rgba(92, 99,216, 1)'}
-                        color={saved ? "black" : "white"}
                         onPress={() => this.saveSettings()}
                         style={styles.button}
-                        borderRadius={30}
+                        buttonStyle={{
+                            backgroundColor: saved ? "#fff" : savedTheme === 'dark' ? '#261339' : 'rgba(92, 99,216, 1)',
+                            borderRadius: 30
+                        }}
+                        titleStyle={{
+                            color: saved ? "black" : "white"
+                        }}
                     />
                 </View>
 
@@ -209,9 +213,13 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                             color: savedTheme === 'dark' ? 'black' : 'white'
                         }}
                         onPress={() => navigation.navigate('LNDConnectConfigQRScanner')}
-                        backgroundColor={savedTheme === 'dark' ? 'white' : 'black'}
-                        borderRadius={30}
-                        color={savedTheme === 'dark' ? 'black' : 'white'}
+                        buttonStyle={{
+                            backgroundColor: savedTheme === 'dark' ? 'white' : 'black',
+                            borderRadius: 30
+                        }}
+                        titleStyle={{
+                            color: savedTheme === 'dark' ? 'black' : 'white'
+                        }}
                     />
                 </View>
 
@@ -224,8 +232,10 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                             color: "white"
                         }}
                         onPress={() => navigation.navigate('BTCPayConfigQRScanner')}
-                        backgroundColor="rgba(5, 146, 35, 1)"
-                        borderRadius={30}
+                        buttonStyle={{
+                            backgroundColor: "rgba(5, 146, 35, 1)",
+                            borderRadius: 30
+                        }}
                     />
                 </View>
             </View>
@@ -273,6 +283,8 @@ const styles = StyleSheet.create({
     },
     button: {
         paddingTop: 10,
-        paddingBottom: 10
+        paddingBottom: 10,
+        width: 350,
+        alignSelf: 'center'
     }
 });
