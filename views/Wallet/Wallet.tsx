@@ -172,7 +172,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         marginTop: 0,
                         marginLeft: 0,
                         marginRight: 0,
-                        marginBottom: 0
+                        marginBottom: 0,
+                        backgroundColor: '#f2f2f2'
+                    }}
+                    selectedButtonStyle={{
+                        backgroundColor: 'white'
                     }}
                 />}
 

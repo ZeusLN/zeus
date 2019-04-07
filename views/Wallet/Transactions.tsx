@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { StyleSheet, View, FlatList } from 'react-native';
-import { Button, ListItem } from 'react-native-elements';
+import { Avatar, Button, ListItem } from 'react-native-elements';
 import Transaction from './../../models/Transaction';
+import DateTimeUtils from './../../utils/DateTimeUtils';
 import { inject, observer } from 'mobx-react';
 
 import TransactionsStore from './../../stores/TransactionsStore';
@@ -52,8 +53,9 @@ export default class Transactions extends React.Component<TransactionsProps> {
         const { settings } = SettingsStore;
         const { theme } = settings;
 
-        const Balance = (item: Transaction) => {
+        const BalanceImage = (item: Transaction) => {
             const { amount, num_confirmations } = item;
+
             if (num_confirmations && num_confirmations > 0) {
                 if (amount > 0) {
                     return theme === 'dark' ? AddBalanceDark : AddBalance;
@@ -69,19 +71,24 @@ export default class Transactions extends React.Component<TransactionsProps> {
             return theme === 'dark' ? RemoveBalancePendingDark : RemoveBalancePending;
         }
 
+        const Balance = (item: Transaction) => (
+            <Avatar
+                source={BalanceImage(item)}
+            />
+        );
+
         return (
             <View style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
                 {(!!transactions && transactions.length > 0) || loading ? <FlatList
                     data={transactions}
                     renderItem={({ item }: any) => {
-                        const date = new Date(item.time_stamp * 1000);
-                        const subtitle = item.block_height ? `${item.block_height} | ${date}` : date.toString();
+                        const subtitle = item.block_height ? `${item.block_height} | ${DateTimeUtils.listFormattedDate(item.time_stamp)}` : DateTimeUtils.listFormattedDate(item.time_stamp);
                         return (
                             <ListItem
                                 title={units && getAmount(item.amount)}
                                 subtitle={subtitle}
                                 containerStyle={{ borderBottomWidth: 0 }}
-                                avatar={Balance(item)}
+                                leftElement={Balance(item)}
                                 onPress={() => this.viewTransaction(item)}
                                 titleStyle={{ color: theme === 'dark' ? 'white' : 'black' }}
                                 subtitleStyle={{ color: theme === 'dark' ? 'gray' : '#8a8999' }}
@@ -100,10 +107,14 @@ export default class Transactions extends React.Component<TransactionsProps> {
                         size: 25,
                         color: theme === 'dark' ? 'white' : 'black'
                     }}
-                    backgroundColor="transparent"
-                    color={theme === 'dark' ? 'white' : 'black'}
                     onPress={() => refresh()}
-                    borderRadius={30}
+                    buttonStyle={{
+                        backgroundColor: "transparent",
+                        borderRadius: 30
+                    }}
+                    titleStyle={{
+                        color: theme === 'dark' ? 'white' : 'black'
+                    }}
                 />}
             </View>
         );
