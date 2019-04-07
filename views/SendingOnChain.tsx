@@ -55,8 +55,10 @@ export default class SendingOnChain extends React.Component<SendingOnChainProps,
                                 size: 125,
                                 color: "white"
                             }}
-                            backgroundColor="transparent"
                             onPress={() => void(0)}
+                            buttonStyle={{
+                                backgroundColor: "transparent"
+                            }}
                         />
                     </View>}
                     {error && <View style={styles.button}>
@@ -67,7 +69,10 @@ export default class SendingOnChain extends React.Component<SendingOnChainProps,
                                 size: 125,
                                 color: "white"
                             }}
-                            backgroundColor="transparent"
+                            buttonStyle={{
+                                backgroundColor: "transparent",
+                                borderRadius: 30
+                            }}
                             onPress={() => void(0)}
                         />
                     </View>}
@@ -86,10 +91,14 @@ export default class SendingOnChain extends React.Component<SendingOnChainProps,
                                 size: 25,
                                 color: "green"
                             }}
-                            color="green"
-                            backgroundColor="#fff"
+                            buttonStyle={{
+                                backgroundColor: "#fff",
+                                borderRadius: 30
+                            }}
+                            titleStyle={{
+                                color: "green"
+                            }}
                             onPress={() => navigation.navigate('Wallet')}
-                            borderRadius={30}
                         />
                     </View>}
                 </View>
