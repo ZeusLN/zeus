@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ActionSheetIOS, Picker, Platform, StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-native';
+import { Picker, StyleSheet, Text, View, TextInput } from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -17,11 +17,6 @@ interface SettingsState {
     theme: string;
     saved: boolean;
 }
-
-const themes: any = {
-    light: 'Light Theme',
-    dark: 'Dark Theme'
-};
 
 @inject('SettingsStore')
 @observer
@@ -155,7 +150,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     />
                 </View>
 
-                {Platform.OS !== 'ios' && <View style={styles.pickerWrapper}>
+                <View style={styles.pickerWrapper}>
                     <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>Theme</Text>
                     <Picker
                         selectedValue={theme}
@@ -165,24 +160,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         <Picker.Item label='Light' value='light' />
                         <Picker.Item label='Dark' value='dark' />
                     </Picker>
-                </View>}
-
-                {Platform.OS === 'ios' && <View style={styles.pickerWrapper}>
-                    <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>Theme</Text>
-                    <TouchableOpacity onPress={() => ActionSheetIOS.showActionSheetWithOptions(
-                      {
-                        options: ['Cancel', 'Light Theme', 'Dark Theme'],
-                        cancelButtonIndex: 0,
-                      },
-                      (buttonIndex) => {
-                        if (buttonIndex === 1) {
-                            this.setState({ theme: 'light' })
-                        } else if (buttonIndex === 2) {
-                            this.setState({ theme: 'dark' })
-                        }
-                      },
-                    )}><Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>{themes[theme]}</Text></TouchableOpacity>
-                </View>}
+                </View>
 
                 <View style={styles.button}>
                     <Button
@@ -192,15 +170,11 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                             size: 25,
                             color: saved ? "black" : "white"
                         }}
+                        backgroundColor={saved ? "#fff" : savedTheme === 'dark' ? '#261339' : 'rgba(92, 99,216, 1)'}
+                        color={saved ? "black" : "white"}
                         onPress={() => this.saveSettings()}
                         style={styles.button}
-                        buttonStyle={{
-                            backgroundColor: saved ? "#fff" : savedTheme === 'dark' ? '#261339' : 'rgba(92, 99,216, 1)',
-                            borderRadius: 30
-                        }}
-                        titleStyle={{
-                            color: saved ? "black" : "white"
-                        }}
+                        borderRadius={30}
                     />
                 </View>
 
@@ -213,13 +187,9 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                             color: savedTheme === 'dark' ? 'black' : 'white'
                         }}
                         onPress={() => navigation.navigate('LNDConnectConfigQRScanner')}
-                        buttonStyle={{
-                            backgroundColor: savedTheme === 'dark' ? 'white' : 'black',
-                            borderRadius: 30
-                        }}
-                        titleStyle={{
-                            color: savedTheme === 'dark' ? 'black' : 'white'
-                        }}
+                        backgroundColor={savedTheme === 'dark' ? 'white' : 'black'}
+                        borderRadius={30}
+                        color={savedTheme === 'dark' ? 'black' : 'white'}
                     />
                 </View>
 
@@ -232,10 +202,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                             color: "white"
                         }}
                         onPress={() => navigation.navigate('BTCPayConfigQRScanner')}
-                        buttonStyle={{
-                            backgroundColor: "rgba(5, 146, 35, 1)",
-                            borderRadius: 30
-                        }}
+                        backgroundColor="rgba(5, 146, 35, 1)"
+                        borderRadius={30}
                     />
                 </View>
             </View>
@@ -283,8 +251,6 @@ const styles = StyleSheet.create({
     },
     button: {
         paddingTop: 10,
-        paddingBottom: 10,
-        width: 350,
-        alignSelf: 'center'
+        paddingBottom: 10
     }
 });
