@@ -12,8 +12,8 @@ import SettingsStore from './../../stores/SettingsStore';
 const AddBalance = require('./../../images/lightning-green.png');
 const AddBalancePending = require('./../../images/lightning-green-pending.png');
 
-const AddBalanceDark = require('./../../images/lightning-green-transparent.png');
-const AddBalancePendingDark = require('./../../images/lightning-green-pending-transparent.png');
+const AddBalanceDark = require('./../../images/lightning-green-black.png');
+const AddBalancePendingDark = require('./../../images/lightning-green-pending-black.png');
 
 interface InvoicesProps {
     invoices: Array<Invoice>;
@@ -76,7 +76,10 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
                                 key={item.r_hash}
                                 title={item.memo || "No memo"}
                                 subtitle={`${settled ? 'Paid' : 'Unpaid'}: ${units && getAmount(item.value)} | ${settled ? DateTimeUtils.listFormattedDate(item.settle_date) : DateTimeUtils.listFormattedDate(item.creation_date)}`}
-                                containerStyle={{ borderBottomWidth: 0 }}
+                                containerStyle={{
+                                    borderBottomWidth: 0,
+                                    backgroundColor: theme === 'dark' ? 'black' : 'white'
+                                }}
                                 leftElement={Invoice(item.settled)}
                                 onPress={() => navigation.navigate('Invoice', { invoice: item })}
                                 titleStyle={{ color: theme === 'dark' ? 'white' : 'black' }}
