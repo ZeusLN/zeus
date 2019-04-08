@@ -15,7 +15,7 @@ export default class BalanceSlider extends React.Component<BalanceSliderProps, {
 
         const totalBalance = Number(localBalance || 0) + Number(remoteBalance || 0);
 
-        const ratio = Number(localBalance) / Number(totalBalance);
+        const ratio = Number(localBalance) / Number(totalBalance) || 0;
 
         return (
             <View style={list ? styles.sliderList : styles.slider}>
