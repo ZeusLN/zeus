@@ -1,8 +1,7 @@
 import * as React from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { Avatar, Button, ListItem } from 'react-native-elements';
+import { Button, ListItem } from 'react-native-elements';
 import Channel from './../../models/Channel';
-import BalanceSlider from './../../components/BalanceSlider';
 import Identicon from 'identicon.js';
 import { inject, observer } from 'mobx-react';
 const hash = require('object-hash');
@@ -38,17 +37,9 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
     render() {
         const { channels, navigation, refresh, ChannelsStore, NodeInfoStore, UnitsStore, SettingsStore } = this.props;
         const { getAmount, units } = UnitsStore;
-        const { nodes, loading } = ChannelsStore;
+        const { loading } = ChannelsStore;
         const { settings } = SettingsStore;
         const { theme } = settings;
-
-        const Channel = (balanceImage: string) => (
-            <Avatar
-                source={{
-                    uri: balanceImage
-                }}
-            />
-        );
 
         return (
             <View style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
@@ -60,16 +51,10 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                             size: 25,
                             color: "white"
                         }}
-                        containerStyle={{
-                            marginLeft: 20,
-                            marginRight: 20
-                        }}
-                        buttonStyle={{
-                            backgroundColor: theme === "dark" ? "#261339" : "rgba(92, 99,216, 1)",
-                            borderRadius: 30
-                        }}
+                        backgroundColor={theme === "dark" ? "#261339" : "rgba(92, 99,216, 1)"}
                         onPress={() => navigation.navigate('OpenChannel')}
                         style={{ paddingTop: 10, width: 250, alignSelf: 'center' }}
+                        borderRadius={30}
                     />
                 </View>}
                 {(!!channels && channels.length > 0) || loading  ? <FlatList
@@ -77,24 +62,19 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                     renderItem={({ item }) => {
                         const data = new Identicon(hash.sha1(item.remote_pubkey), 420).toString();
                         return (
-                            <React.Fragment>
-                                <ListItem
-                                    title={nodes[item.remote_pubkey] && nodes[item.remote_pubkey].alias || item.remote_pubkey}
-                                    leftElement={Channel(`data:image/png;base64,${data}`)}
-                                    subtitle={`Local: ${units && getAmount(item.local_balance || 0)} | Remote: ${units && getAmount(item.remote_balance || 0)}`}
-                                    containerStyle={{
-                                        borderBottomWidth: 0,
-                                        backgroundColor: theme === 'dark' ? 'black' : 'white'
-                                    }}
-                                    onPress={() => navigation.navigate('Channel', { channel: item })}
-                                    titleStyle={{ color: theme === 'dark' ? 'white' : 'black' }}
-                                    subtitleStyle={{ color: theme === 'dark' ? 'gray' : '#8a8999' }}
-                                />
-                                <BalanceSlider localBalance={item.local_balance} remoteBalance={item.remote_balance} theme={theme} list />
-                            </React.Fragment>
+                            <ListItem
+                                key={item.remote_pubkey}
+                                title={item.remote_pubkey}
+                                avatar={`data:image/png;base64,${data}`}
+                                subtitle={`Local: ${units && getAmount(item.local_balance || 0)} | Remote: ${units && getAmount(item.remote_balance || 0)}`}
+                                containerStyle={{ borderBottomWidth: 0 }}
+                                onPress={() => navigation.navigate('Channel', { channel: item })}
+                                titleStyle={{ color: theme === 'dark' ? 'white' : 'black' }}
+                                subtitleStyle={{ color: theme === 'dark' ? 'gray' : '#8a8999' }}
+                            />
                         );
                     }}
-                    keyExtractor={(item, index) => `${item.remote_pubkey}-${index}`}
+                    keyExtractor={item => item.chan_id}
                     ItemSeparatorComponent={this.renderSeparator}
                     onEndReachedThreshold={50}
                     refreshing={loading}
@@ -106,14 +86,10 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                         size: 25,
                         color: theme === 'dark' ? 'white' : 'black'
                     }}
+                    backgroundColor="transparent"
+                    color={theme === 'dark' ? 'white' : 'black'}
                     onPress={() => refresh()}
-                    buttonStyle={{
-                        backgroundColor: "transparent",
-                        borderRadius: 30
-                    }}
-                    titleStyle={{
-                        color: theme === 'dark' ? 'white' : 'black'
-                    }}
+                    borderRadius={30}
                 />}
             </View>
         );
