@@ -125,7 +125,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         style={theme === 'dark' ? styles.textInputDark : styles.textInput}
                         placeholderTextColor='gray'
                     />
-                    {(!isValid && !!destination) && <Text>Must be a valid Bitcoin address or Lightning payment request</Text>}
+                    {(!isValid && !!destination) && <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Must be a valid Bitcoin address or Lightning payment request</Text>}
                     {transactionType && <Text style={{ paddingTop: 10 }}>{`${transactionType} Transaction`}</Text>}
                     {transactionType === 'On-chain' && <React.Fragment>
                         <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Amount (in satoshis)</Text>

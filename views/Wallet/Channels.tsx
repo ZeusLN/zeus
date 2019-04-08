@@ -60,6 +60,10 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                             size: 25,
                             color: "white"
                         }}
+                        containerStyle={{
+                            marginLeft: 20,
+                            marginRight: 20
+                        }}
                         buttonStyle={{
                             backgroundColor: theme === "dark" ? "#261339" : "rgba(92, 99,216, 1)",
                             borderRadius: 30

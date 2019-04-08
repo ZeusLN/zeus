@@ -68,8 +68,7 @@ export default class CollapsedQR extends React.Component<CollapsedQRProps, Colla
 
 const styles = StyleSheet.create({
     value: {
-        marginBottom: 15,
-        color: 'red'
+        marginBottom: 15
     },
     valueDark: {
         marginBottom: 15,
