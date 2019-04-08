@@ -1,8 +1,8 @@
 const dateFormat = require('dateformat');
 
 class DateTimeUtils {
-    listFormattedDate = (timestamp: nu,ber) => {
-        const date = new Date(timestamp * 1000);
+    listFormattedDate = (timestamp: number | string) => {
+        const date = new Date(Number(timestamp) * 1000);
         return dateFormat(date, "ddd, mmm d 'yy, HH:MM:ss Z");
     };
 };
