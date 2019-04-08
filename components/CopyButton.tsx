@@ -57,6 +57,9 @@ export default class CopyButton extends React.Component<CopyButtonProps, CopyBut
                     size: 25,
                     color: copied ? "black" : "white"
                 }}
+                containerStyle={{
+                    marginBottom: 20
+                }}
                 buttonStyle={{
                     backgroundColor: copied ? "white" : "black",
                     borderRadius: 30
