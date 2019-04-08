@@ -20,10 +20,11 @@ export default class BalanceSlider extends React.Component<BalanceSliderProps, {
         return (
             <View style={list ? styles.sliderList : styles.slider}>
                 <Slider
-                  value={ratio}
-                  minimumTrackTintColor={theme === "dark" ? "#2b74b4" : "rgba(92, 99,216, 1)"}
-                  trackStyle={styles.trackStyle}
-                  thumbStyle={styles.thumbStyle}
+                    value={ratio}
+                    maximumTrackTintColor={"orange"}
+                    minimumTrackTintColor={theme === "dark" ? "#2b74b4" : "rgba(92, 99,216, 1)"}
+                    trackStyle={styles.trackStyle}
+                    thumbStyle={styles.thumbStyle}
                 />
             </View>
         );

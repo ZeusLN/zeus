@@ -78,7 +78,10 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                     title={nodes[item.remote_pubkey] && nodes[item.remote_pubkey].alias || item.remote_pubkey}
                                     leftElement={Channel(`data:image/png;base64,${data}`)}
                                     subtitle={`Local: ${units && getAmount(item.local_balance || 0)} | Remote: ${units && getAmount(item.remote_balance || 0)}`}
-                                    containerStyle={{ borderBottomWidth: 0 }}
+                                    containerStyle={{
+                                        borderBottomWidth: 0,
+                                        backgroundColor: theme === 'dark' ? 'black' : 'white'
+                                    }}
                                     onPress={() => navigation.navigate('Channel', { channel: item })}
                                     titleStyle={{ color: theme === 'dark' ? 'white' : 'black' }}
                                     subtitleStyle={{ color: theme === 'dark' ? 'gray' : '#8a8999' }}
