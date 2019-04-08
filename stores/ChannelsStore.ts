@@ -49,9 +49,11 @@ export default class ChannelsStore {
             () => {
                 if (this.channels) {
                     this.nodes = {};
+                    const nodes: any = {};
                     this.channels.forEach((channel: Channel) => {
                         this.getNodeInfo(channel.remote_pubkey).then(nodeInfo => {
-                            this.nodes[channel.remote_pubkey] = nodeInfo;
+                            nodes[channel.remote_pubkey] = nodeInfo;
+                            this.nodes = nodes;
                         });
                     });
                 }
