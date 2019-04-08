@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, ButtonGroup, Header, Icon } from 'react-native-elements';
-import CollapsedQR from './../components/CollapsedQR';
+import QRCode from 'react-native-qrcode';
+import CopyButton from './../components/CopyButton';
 import { inject, observer } from 'mobx-react';
 
 import InvoicesStore from './../stores/InvoicesStore';
@@ -96,19 +97,26 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
                     onPress={this.updateIndex}
                     selectedIndex={selectedIndex}
                     buttons={buttons}
-                    selectedButtonStyle={{
-                        backgroundColor: 'white'
-                    }}
-                    containerStyle={{
-                        backgroundColor: '#f2f2f2'
-                    }}
+                    containerStyle={{ height: 50 }}
                 />
 
                 <View style={styles.content}>
                     {selectedIndex === 0 && <React.Fragment>
                         {(!onChainAndress && !loading) && <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>No on-chain address available. Generate one by pressing the button below.</Text>}
                         {loading && <ActivityIndicator size="large" color="#0000ff" />}
-                        {onChainAndress && <CollapsedQR value={onChainAndress} copyText="Copy Address" theme={theme} />}
+                        {onChainAndress && <Text style={{ color: theme === 'dark' ? 'white' : 'black', padding: 10 }}>{onChainAndress}</Text>}
+                        {onChainAndress && <View style={{ width: 250, height: 250, backgroundColor: 'white', alignItems: 'center', paddingTop: 25 }}>
+                            <QRCode
+                              value={onChainAndress}
+                              size={200}
+                              fgColor='white'
+                            />
+                        </View>}
+                        {onChainAndress && <View style={styles.button}>
+                            <CopyButton
+                                copyValue={onChainAndress}
+                            />
+                        </View>}
                         <View style={styles.button}>
                             <Button
                                 title="Get New Address"
@@ -118,10 +126,8 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
                                     color: "white"
                                 }}
                                 onPress={() => this.getNewAddress()}
-                                buttonStyle={{
-                                    backgroundColor: "orange",
-                                    borderRadius: 30
-                                }}
+                                backgroundColor="orange"
+                                borderRadius={30}
                             />
                         </View>
                     </React.Fragment>}
@@ -130,7 +136,12 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
                         {creatingInvoiceError && <Text style={{ color: 'red', padding: 20 }}>Error creating invoice</Text>}
                         {error_msg && <Text style={{ color: theme === 'dark' ? 'white' : 'black', padding: 20 }}>{error_msg}</Text>}
                         {creatingInvoice && <ActivityIndicator size="large" color="#0000ff" />}
-                        {!!payment_request && <CollapsedQR value={payment_request} copyText="Copy Invoice" theme={theme} />}
+                        {!!payment_request && <Text style={{ color: theme === 'dark' ? 'white' : 'black', padding: 20 }}>{payment_request}</Text>}
+                        {!!payment_request && <View style={styles.button}>
+                            <CopyButton
+                                copyValue={payment_request}
+                            />
+                        </View>}
                         <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Memo</Text>
                         <TextInput
                             placeholder="Sent a few satoshis"
@@ -173,10 +184,8 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
                                     color: "white"
                                 }}
                                 onPress={() => createInvoice(memo, value, expiry)}
-                                buttonStyle={{
-                                    backgroundColor: "orange",
-                                    borderRadius: 30
-                                }}
+                                backgroundColor="orange"
+                                borderRadius={30}
                             />
                         </View>
                     </View>}
@@ -206,14 +215,10 @@ const styles = StyleSheet.create({
     },
     textInput: {
         fontSize: 20,
-        color: 'black',
-        paddingTop: 10,
-        paddingBottom: 10
+        color: 'black'
     },
     textInputDark: {
         fontSize: 20,
-        color: 'white',
-        paddingTop: 10,
-        paddingBottom: 10
+        color: 'white'
     }
 });

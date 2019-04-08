@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { StyleSheet, View, FlatList } from 'react-native';
-import { Avatar, Button, ListItem } from 'react-native-elements';
-import DateTimeUtils from './../../utils/DateTimeUtils';
+import { Button, ListItem } from 'react-native-elements';
 import Invoice from './../../models/Invoice';
 import { inject, observer } from 'mobx-react';
 
@@ -12,8 +11,8 @@ import SettingsStore from './../../stores/SettingsStore';
 const AddBalance = require('./../../images/lightning-green.png');
 const AddBalancePending = require('./../../images/lightning-green-pending.png');
 
-const AddBalanceDark = require('./../../images/lightning-green-black.png');
-const AddBalancePendingDark = require('./../../images/lightning-green-pending-black.png');
+const AddBalanceDark = require('./../../images/lightning-green-transparent.png');
+const AddBalancePendingDark = require('./../../images/lightning-green-pending-transparent.png');
 
 interface InvoicesProps {
     invoices: Array<Invoice>;
@@ -37,6 +36,21 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
         )
     }
 
+    renderAvatar = (settled: boolean) => {
+        const { SettingsStore } = this.props;
+        const { settings } = SettingsStore;
+        const { theme } = settings;
+
+        let avatar;
+        if (settled) {
+            avatar = theme === 'dark' ? AddBalanceDark : AddBalance;
+        } else {
+            avatar = theme === 'dark' ? AddBalancePendingDark : AddBalancePending;
+        }
+
+        return avatar;
+    }
+
     render() {
         const { invoices, navigation, refresh, InvoicesStore, UnitsStore, SettingsStore } = this.props;
         const { getAmount, units } = UnitsStore;
@@ -44,43 +58,21 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
         const { settings } = SettingsStore;
         const { theme } = settings;
 
-        const InvoiceImage = (settled: boolean) => {
-            const { SettingsStore } = this.props;
-            const { settings } = SettingsStore;
-            const { theme } = settings;
-
-            let avatar;
-            if (settled) {
-                avatar = theme === 'dark' ? AddBalanceDark : AddBalance;
-            } else {
-                avatar = theme === 'dark' ? AddBalancePendingDark : AddBalancePending;
-            }
-
-            return avatar;
-        }
-
-        const Invoice = (settled: boolean) => (
-            <Avatar
-                source={InvoiceImage(settled)}
-            />
-        );
-
         return (
             <View style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
                 {(!!invoices && invoices.length > 0) || loading  ? <FlatList
                     data={invoices}
                     renderItem={({ item }) => {
+                        const settleDate = new Date(Number(item.settle_date) * 1000).toString();
+                        const creationDate = new Date(Number(item.creation_date) * 1000).toString();
                         const { settled } = item;
                         return (
                             <ListItem
                                 key={item.r_hash}
                                 title={item.memo || "No memo"}
-                                subtitle={`${settled ? 'Paid' : 'Unpaid'}: ${units && getAmount(item.value)} | ${settled ? DateTimeUtils.listFormattedDate(item.settle_date) : DateTimeUtils.listFormattedDate(item.creation_date)}`}
-                                containerStyle={{
-                                    borderBottomWidth: 0,
-                                    backgroundColor: theme === 'dark' ? 'black' : 'white'
-                                }}
-                                leftElement={Invoice(item.settled)}
+                                subtitle={`${settled ? 'Paid' : 'Unpaid'}: ${units && getAmount(item.value)} | ${settled ? settleDate : creationDate}`}
+                                containerStyle={{ borderBottomWidth: 0 }}
+                                avatar={this.renderAvatar(item.settled)}
                                 onPress={() => navigation.navigate('Invoice', { invoice: item })}
                                 titleStyle={{ color: theme === 'dark' ? 'white' : 'black' }}
                                 subtitleStyle={{ color: theme === 'dark' ? 'gray' : '#8a8999' }}
@@ -99,14 +91,10 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
                         size: 25,
                         color: theme === 'dark' ? 'white' : 'black'
                     }}
+                    backgroundColor="transparent"
+                    color={theme === 'dark' ? 'white' : 'black'}
                     onPress={() => refresh()}
-                    buttonStyle={{
-                        backgroundColor: "transparent",
-                        borderRadius: 30
-                    }}
-                    titleStyle={{
-                        color: theme === 'dark' ? 'white' : 'black'
-                    }}
+                    borderRadius={30}
                 />}
             </View>
         );
