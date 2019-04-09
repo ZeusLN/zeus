@@ -5,6 +5,7 @@
   "scripts": {
     "start": "node node_modules/react-native/local-cli/cli.js start",
     "patch": "git apply patches/RCTHTTPRequestHandler.mm.patch",
+    "patch-android-release": "git apply patches/rnck-build.gradle.patch",
     "test": "jest",
     "tsc": "tsc"
   },
@@ -60,7 +61,10 @@
       "^.+\\.(js)$": "<rootDir>/node_modules/babel-jest",
       "\\.(ts|tsx)$": "<rootDir>/node_modules/ts-jest/preprocessor.js"
     },
-    "testMatch": [ "**/_tests_/**/*.[jt]s?(x)", "**/?(*.)+(spec|test).[jt]s?(x)" ],
+    "testMatch": [
+      "**/_tests_/**/*.[jt]s?(x)",
+      "**/?(*.)+(spec|test).[jt]s?(x)"
+    ],
     "testPathIgnorePatterns": [
       "\\.snap$",
       "<rootDir>/node_modules/"
