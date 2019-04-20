@@ -1,16 +1,19 @@
 import * as React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View, TextInput } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View, TextInput } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
+import FeeTable from './../components/FeeTable';
 
 import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
+import FeeStore from './../stores/FeeStore';
 
 interface OpenChannelProps {
     exitSetup: any;
     navigation: any;
     ChannelsStore: ChannelsStore;
     SettingsStore: SettingsStore;
+    FeeStore: FeeStore;
 }
 
 interface OpenChannelState {
@@ -22,7 +25,7 @@ interface OpenChannelState {
     host: string;
 }
 
-@inject('ChannelsStore', 'SettingsStore')
+@inject('ChannelsStore', 'SettingsStore', 'FeeStore')
 @observer
 export default class OpenChannel extends React.Component<OpenChannelProps, OpenChannelState> {
     state = {
@@ -45,8 +48,12 @@ export default class OpenChannel extends React.Component<OpenChannelProps, OpenC
         });
     }
 
+    setFee = (text: string) => {
+        this.setState({ sat_per_byte: text });
+    }
+
     render() {
-        const { ChannelsStore, SettingsStore, navigation } = this.props;
+        const { ChannelsStore, SettingsStore, FeeStore, navigation } = this.props;
         const { node_pubkey_string, local_funding_amount, min_confs, host, sat_per_byte } = this.state;
         const privateChannel = this.state.private;
 
@@ -64,7 +71,7 @@ export default class OpenChannel extends React.Component<OpenChannelProps, OpenC
         );
 
         return (
-            <View style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
+            <ScrollView style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{ text: 'Open Channel', style: { color: '#fff' } }}
@@ -125,7 +132,7 @@ export default class OpenChannel extends React.Component<OpenChannelProps, OpenC
                     <TextInput
                         placeholder={'2'}
                         value={sat_per_byte}
-                        onChangeText={(text: string) => this.setState({ sat_per_byte: text })}
+                        onChangeText={(text: string) => this.setFee(text)}
                         numberOfLines={1}
                         style={theme === 'dark' ? styles.textInputDark : styles.textInput}
                         placeholderTextColor='gray'
@@ -169,8 +176,16 @@ export default class OpenChannel extends React.Component<OpenChannelProps, OpenC
                             }}
                         />
                     </View>
+                    <View style={styles.button}>
+                        <FeeTable
+                            feeStore={FeeStore}
+                            loading={FeeStore.loading}
+                            dataFrame={FeeStore.dataFrame}
+                            setFee={this.setFee}
+                        />
+                    </View>
                 </View>
-            </View>
+            </ScrollView>
         );
     }
 }
