@@ -1,3 +1,9 @@
+/*
+ * Original gcolor code by Felix Weis - WhatTheFee.io
+ * https://whatthefee.io/static/js/wtfutil.js
+ *
+ * Converted to TypeScript by Evan Kaloudis for Zeus
+ */
 class FeeUtils {
     gcolor = (n: number) => {
         const bases = [
