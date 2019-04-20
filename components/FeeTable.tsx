@@ -1,3 +1,9 @@
+/*
+ * Original FeeTable code by Felix Weis - WhatTheFee.io
+ * https://whatthefee.io/static/js/FeeTable.js
+ *
+ * Converted to ReactNative + TypeScript by Evan Kaloudis for Zeus
+ */
 import * as React from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { Button } from 'react-native-elements';
