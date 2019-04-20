@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
         paddingBottom: 20
     },
     button: {
-        paddingTop: 15,
-        paddingBottom: 15
+        paddingTop: 10,
+        paddingBottom: 10
     }
 });
