@@ -33,8 +33,9 @@ export default class FeeTable extends React.Component<FeeTableProps, FeeTableSta
         if(x == null || typeof x === 'string') {
             return {
                 "backgroundColor": "white",
+                "alignItems": "center",
                 "height": 53,
-                "minWidth": 53
+                "width": 53
             }
         };
 
@@ -44,11 +45,11 @@ export default class FeeTable extends React.Component<FeeTableProps, FeeTableSta
             "backgroundColor": `hsl(${c[0]}, ${c[1]*100}%, ${c[2]*100}%)`,
             "alignItems": "center",
             "height": 53,
-            "minWidth": 53
+            "width": 53
         };
     }
 
-    repr = (x: number) => Math.exp(x/100).toFixed(1);
+    repr = (x: number) => Math.exp(x / 100).toFixed(1);
 
     reprColumn = (x: number) => (x * 100).toFixed(0) + '%';
 
@@ -94,7 +95,7 @@ export default class FeeTable extends React.Component<FeeTableProps, FeeTableSta
 
                 return (
                     <Row key={`row-${i}`}>
-                        <Cell style={this.styler(indexText)}><Text style={{ color: 'black' }}>{indexText}</Text></Cell>
+                        <Cell style={this.styler(indexText)}><Text style={{ color: 'black', width: 100 }}>{indexText}</Text></Cell>
                         {cells}
                     </Row>
                 );
@@ -102,7 +103,7 @@ export default class FeeTable extends React.Component<FeeTableProps, FeeTableSta
         }
 
         return (
-            <React.Fragment>
+            <View style={{ flex: 1 }}>
                 <Button
                     title={collapsed ? "What the Fee?" : "Hide Fee Table"}
                     icon={{
@@ -122,13 +123,13 @@ export default class FeeTable extends React.Component<FeeTableProps, FeeTableSta
                     onPress={() => collapsed ? this.openTable() : this.closeTable()}
                 />
                 {!collapsed && loading && <ActivityIndicator size="large" color="#0000ff" />}
-                {!collapsed && !loading && headers && <View style={{ marginLeft: -53 }}>
-                    <Header style={{ backgroundColor: 'white', paddingLeft: 66 }} textStyle={{ alignItems: 'center' }}>
+                {!collapsed && !loading && headers && <View style={{ left: 25 }}>
+                    <Header style={{ backgroundColor: 'white' }} textStyle={{ alignItems: 'center' }}>
                         {headers}
                     </Header>
                     {rows}
                 </View>}
-            </React.Fragment>
+            </View>
         );
     }
 }
