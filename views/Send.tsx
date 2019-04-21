@@ -104,7 +104,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     render() {
-        const { FeeStore, SettingsStore, navigation } = this.props;
+        const { SettingsStore, FeeStore, navigation } = this.props;
         const { isValid, transactionType, destination, amount, fee } = this.state;
         const { settings } = SettingsStore;
         const { theme } = settings;
@@ -192,10 +192,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                     </View>}
                     {transactionType === 'On-chain' && <View style={styles.button}>
                         <FeeTable
-                            feeStore={FeeStore}
-                            loading={FeeStore.loading}
-                            dataFrame={FeeStore.dataFrame}
                             setFee={this.setFee}
+                            SettingsStore={SettingsStore}
+                            FeeStore={FeeStore}
                         />
                     </View>}
                     <View style={styles.button}>

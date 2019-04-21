@@ -8,15 +8,16 @@ import * as React from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { Button } from 'react-native-elements';
 import FeeUtils from './../utils/FeeUtils';
-import FeeStore from './../stores/FeeStore';
 import { Cell, Header, Row } from 'react-native-data-table';
 import { isEmpty } from 'lodash';
+import { inject, observer } from 'mobx-react';
+
+import FeeStore from './../stores/FeeStore';
+import SettingsStore from './../stores/SettingsStore';
 
 interface FeeTableProps {
-    feeStore: FeeStore;
-    dataFrame: any;
-    copyText?: string;
-    loading: boolean;
+    SettingsStore: SettingsStore;
+    FeeStore: FeeStore;
     setFee: (value: string) => void;
 }
 
@@ -24,6 +25,8 @@ interface FeeTableState {
     collapsed: boolean;
 }
 
+@inject('SettingsStore', 'FeeStore')
+@observer
 export default class FeeTable extends React.Component<FeeTableProps, FeeTableState> {
     state = {
         collapsed: true
@@ -49,15 +52,15 @@ export default class FeeTable extends React.Component<FeeTableProps, FeeTableSta
         };
     }
 
-    repr = (x: number) => Math.exp(x / 100).toFixed(1);
+    // lnd only accepts whole numbers for fees at the moment
+    repr = (x: number) => Math.exp(x / 100).toFixed(0);
 
     reprColumn = (x: number) => (x * 100).toFixed(0) + '%';
 
     reprIndex = (x: number) => x / 6 + 'h';
 
     openTable = () => {
-        const { feeStore } = this.props;
-        feeStore.getFees();
+        this.props.FeeStore.getFees();
 
         this.setState({
             collapsed: false
@@ -72,7 +75,10 @@ export default class FeeTable extends React.Component<FeeTableProps, FeeTableSta
 
     render() {
         const { collapsed } = this.state;
-        const { dataFrame, loading, setFee } = this.props;
+        const { FeeStore, SettingsStore, setFee } = this.props;
+        const { dataFrame, loading } = FeeStore;
+        const { settings } = SettingsStore;
+        const { theme } = settings;
 
         const df = dataFrame;
         let headers: any;
@@ -80,7 +86,7 @@ export default class FeeTable extends React.Component<FeeTableProps, FeeTableSta
 
         if (!isEmpty(df) && !loading) {
             headers = df.columns && df.columns.map((columnName: number, index: number) =>
-                <Cell style={{ backgroundColor: 'white', minWidth: 53, height: 53 }} textStyle={{ color: 'black' }} key={`item-${index}`}>{this.reprColumn(columnName)}</Cell>
+                <Cell style={{ backgroundColor: theme === 'dark' ? 'black' : 'white', minWidth: 53, height: 53 }} textStyle={{ color: theme === 'dark' ? 'white' : 'black' }} key={`item-${index}`}>{this.reprColumn(columnName)}</Cell>
             );
 
             rows = df.index.map((index: number, i: number) => {
@@ -95,7 +101,7 @@ export default class FeeTable extends React.Component<FeeTableProps, FeeTableSta
 
                 return (
                     <Row key={`row-${i}`}>
-                        <Cell style={this.styler(indexText)}><Text style={{ color: 'black', width: 100 }}>{indexText}</Text></Cell>
+                        <Cell style={this.styler(indexText)}><Text style={{ backgroundColor: theme === 'dark' ? 'black' : 'white', color: theme === 'dark' ? 'white' : 'black', width: 100 }}>{indexText}</Text></Cell>
                         {cells}
                     </Row>
                 );
@@ -109,7 +115,7 @@ export default class FeeTable extends React.Component<FeeTableProps, FeeTableSta
                     icon={{
                         name: "view-module",
                         size: 25,
-                        color: "white"
+                        color: theme === 'dark' ? 'black' : 'white'
                     }}
                     containerStyle={{
                         marginBottom: 20,
@@ -117,8 +123,11 @@ export default class FeeTable extends React.Component<FeeTableProps, FeeTableSta
                         alignSelf: "center"
                     }}
                     buttonStyle={{
-                        backgroundColor: "black",
+                        backgroundColor: theme === 'dark' ? 'white' : 'black',
                         borderRadius: 30
+                    }}
+                    titleStyle={{
+                        color: theme === 'dark' ? 'black' : 'white'
                     }}
                     onPress={() => collapsed ? this.openTable() : this.closeTable()}
                 />
