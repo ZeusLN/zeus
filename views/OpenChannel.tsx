@@ -178,10 +178,9 @@ export default class OpenChannel extends React.Component<OpenChannelProps, OpenC
                     </View>
                     <View style={styles.button}>
                         <FeeTable
-                            feeStore={FeeStore}
-                            loading={FeeStore.loading}
-                            dataFrame={FeeStore.dataFrame}
                             setFee={this.setFee}
+                            SettingsStore={SettingsStore}
+                            FeeStore={FeeStore}
                         />
                     </View>
                 </View>
