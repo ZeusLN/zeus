@@ -133,7 +133,7 @@ export default class FeeTable extends React.Component<FeeTableProps, FeeTableSta
                 />
                 {!collapsed && loading && <ActivityIndicator size="large" color="#0000ff" />}
                 {!collapsed && !loading && headers && <View style={{ left: 25 }}>
-                    <Header style={{ backgroundColor: 'white' }} textStyle={{ alignItems: 'center' }}>
+                    <Header style={{ backgroundColor: 'white', left: 15 }} textStyle={{ alignItems: 'center' }}>
                         {headers}
                     </Header>
                     {rows}
