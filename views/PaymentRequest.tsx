@@ -184,10 +184,10 @@ const styles = StyleSheet.create({
         color: 'white'
     },
     button: {
-      paddingTop: 15,
-      paddingBottom: 15,
-      paddingLeft: 10,
-      paddingRight: 10
+        paddingTop: 15,
+        paddingBottom: 15,
+        paddingLeft: 10,
+        paddingRight: 10
     },
     amount: {
         fontSize: 25,
