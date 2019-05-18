@@ -5,6 +5,16 @@
  * Converted to TypeScript by Evan Kaloudis for Zeus
  */
 class FeeUtils {
+    roundFee = (text: string) => {
+        const split = text.split('.');
+
+        if (Number(split[1]) >= 5) {
+            const value = Number(split[0]) + 1;
+            return value.toString();
+        }
+
+        return split[0];
+    };
     gcolor = (n: number) => {
         const bases = [
             [[240,.35,.35],[240,.65,.60],[240,.35,.75]],

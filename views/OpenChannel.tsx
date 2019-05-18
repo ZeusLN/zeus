@@ -3,6 +3,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View, TextInput } from
 import { inject, observer } from 'mobx-react';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import FeeTable from './../components/FeeTable';
+import FeeUtils from './../utils/FeeUtils';
 
 import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
@@ -49,7 +50,7 @@ export default class OpenChannel extends React.Component<OpenChannelProps, OpenC
     }
 
     setFee = (text: string) => {
-        this.setState({ sat_per_byte: text });
+        this.setState({ sat_per_byte: FeeUtils.roundFee(text) });
     }
 
     render() {
