@@ -97,7 +97,7 @@ export default class PaymentRequest extends React.Component<InvoiceProps, Invoic
                     {payment_hash && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Payment Hash:</Text>}
                     {payment_hash && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{payment_hash}</Text>}
 
-                    {setCustomAmount && <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Custom Amount</Text>}
+                    {setCustomAmount && <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Custom Amount (in satoshis)</Text>}
                     {setCustomAmount && <TextInput
                         placeholder={'100'}
                         value={customAmount}
