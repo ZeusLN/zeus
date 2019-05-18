@@ -8,7 +8,7 @@ describe('ErrorUtils', () => {
         });
 
         it('Returns error codes with no match', () => {
-            expect(ErrorUtils.errorToUserFriendly('15')).toEqual('15');
+            expect(ErrorUtils.errorToUserFriendly('15')).toEqual(false);
         });
     });
 });
