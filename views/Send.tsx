@@ -4,6 +4,7 @@ import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
 import AddressUtils from './../utils/AddressUtils';
 import FeeTable from './../components/FeeTable';
+import FeeUtils from './../utils/FeeUtils';
 
 import InvoicesStore from './../stores/InvoicesStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
@@ -99,7 +100,7 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     setFee = (value: string) => {
         this.setState({
-            fee: value
+            fee: FeeUtils.roundFee(value)
         });
     }
 
