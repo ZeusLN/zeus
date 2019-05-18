@@ -52,8 +52,7 @@ export default class FeeTable extends React.Component<FeeTableProps, FeeTableSta
         };
     }
 
-    // lnd only accepts whole numbers for fees at the moment
-    repr = (x: number) => Math.exp(x / 100).toFixed(0);
+    repr = (x: number) => Math.exp(x / 100).toFixed(1);
 
     reprColumn = (x: number) => (x * 100).toFixed(0) + '%';
 
