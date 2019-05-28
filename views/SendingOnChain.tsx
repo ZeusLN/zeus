@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
         paddingTop: 40
     },
     button: {
-        paddingTop: 15,
-        paddingBottom: 15
+        paddingTop: 10,
+        paddingBottom: 10
     }
 });
