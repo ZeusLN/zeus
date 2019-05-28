@@ -114,7 +114,7 @@ export default class PaymentRequest extends React.Component<InvoiceProps, Invoic
                         icon={{
                             name: "edit",
                             size: 25,
-                            color: theme === 'dark' ? "black" : "white"
+                            color: theme === 'dark' ? 'black' : 'white'
                         }}
                         onPress={() => {
                             this.setState({
@@ -122,8 +122,11 @@ export default class PaymentRequest extends React.Component<InvoiceProps, Invoic
                             });
                         }}
                         style={styles.button}
+                        titleStyle={{
+                            color: theme === 'dark' ? 'black' : 'white'
+                        }}
                         buttonStyle={{
-                            backgroundColor: theme === 'dark' ? "white" : "black",
+                            backgroundColor: theme === 'dark' ? 'white' : 'black',
                             borderRadius: 30
                         }}
                     />
