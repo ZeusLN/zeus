@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
 
@@ -17,11 +17,22 @@ interface InvoiceProps {
     SettingsStore: SettingsStore;
 }
 
+interface InvoiceState {
+    setCustomAmount: boolean;
+    customAmount: string;
+}
+
 @inject('InvoicesStore', 'TransactionsStore', 'UnitsStore', 'SettingsStore')
 @observer
-export default class PaymentRequest extends React.Component<InvoiceProps, {}> {
+export default class PaymentRequest extends React.Component<InvoiceProps, InvoiceState> {
+    state = {
+        setCustomAmount: false,
+        customAmount: ''
+    }
+
     render() {
         const { TransactionsStore, InvoicesStore, UnitsStore, SettingsStore, navigation } = this.props;
+        const { setCustomAmount, customAmount } = this.state;
         const { pay_req, paymentRequest, getPayReqError, loading } = InvoicesStore;
         const { units, changeUnits, getAmount } = UnitsStore;
         const {
@@ -85,25 +96,65 @@ export default class PaymentRequest extends React.Component<InvoiceProps, {}> {
 
                     {payment_hash && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Payment Hash:</Text>}
                     {payment_hash && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{payment_hash}</Text>}
+
+                    {setCustomAmount && <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Custom Amount (in satoshis)</Text>}
+                    {setCustomAmount && <TextInput
+                        placeholder={'100'}
+                        value={customAmount}
+                        onChangeText={(text: string) => this.setState({ customAmount: text })}
+                        numberOfLines={1}
+                        style={theme === 'dark' ? styles.textInputDark : styles.textInput}
+                        placeholderTextColor='gray'
+                    />}
                 </View>}
 
-                {pay_req && <Button
-                    title="Pay this invoice"
-                    icon={{
-                        name: "send",
-                        size: 25,
-                        color: "white"
-                    }}
-                    onPress={() => {
-                        TransactionsStore.sendPayment(paymentRequest);
-                        navigation.navigate('SendingLightning');
-                    }}
-                    style={styles.button}
-                    buttonStyle={{
-                        backgroundColor: "orange",
-                        borderRadius: 30
-                    }}
-                />}
+                {pay_req && <View style={styles.button}>
+                    <Button
+                        title={setCustomAmount ? "Pay default amount" : "Pay custom amount"}
+                        icon={{
+                            name: "edit",
+                            size: 25,
+                            color: theme === 'dark' ? 'black' : 'white'
+                        }}
+                        onPress={() => {
+                            this.setState({
+                                  setCustomAmount: !setCustomAmount
+                            });
+                        }}
+                        style={styles.button}
+                        titleStyle={{
+                            color: theme === 'dark' ? 'black' : 'white'
+                        }}
+                        buttonStyle={{
+                            backgroundColor: theme === 'dark' ? 'white' : 'black',
+                            borderRadius: 30
+                        }}
+                    />
+                </View>}
+
+                {pay_req && <View style={styles.button}>
+                    <Button
+                      title="Pay this invoice"
+                      icon={{
+                          name: "send",
+                          size: 25,
+                          color: "white"
+                      }}
+                      onPress={() => {
+                          if (setCustomAmount && customAmount) {
+                              TransactionsStore.sendPayment(paymentRequest, customAmount);
+                          } else {
+                              TransactionsStore.sendPayment(paymentRequest);
+                          }
+
+                          navigation.navigate('SendingLightning');
+                      }}
+                      buttonStyle={{
+                          backgroundColor: "orange",
+                          borderRadius: 30
+                      }}
+                  />
+              </View>}
             </View>
         );
     }
@@ -136,10 +187,10 @@ const styles = StyleSheet.create({
         color: 'white'
     },
     button: {
-        paddingTop: 5,
-        paddingBottom: 5,
-        paddingLeft: 20,
-        paddingRight: 20
+        paddingTop: 15,
+        paddingBottom: 15,
+        paddingLeft: 10,
+        paddingRight: 10
     },
     amount: {
         fontSize: 25,
@@ -154,5 +205,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingTop: 15,
         paddingBottom: 15
+    },
+    textInput: {
+        fontSize: 20,
+        color: 'black'
+    },
+    textInputDark: {
+        fontSize: 20,
+        color: 'white'
     }
 });

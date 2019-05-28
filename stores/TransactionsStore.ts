@@ -93,7 +93,7 @@ export default class TransactionsStore {
         });
     }
 
-    sendPayment = (payment_request: string) => {
+    sendPayment = (payment_request: string, amount?: string) => {
         const { settings } = this.settingsStore;
         const { host, port, macaroonHex } = settings;
 
@@ -105,15 +105,25 @@ export default class TransactionsStore {
         this.payment_hash = null;
         this.payment_error = null;
 
+        let data;
+        if (amount) {
+            data = {
+                amt: amount,
+                payment_request
+            };
+        } else {
+            data = {
+                payment_request
+            };
+        }
+
         axios.request({
             method: 'post',
             url: `https://${host}${port ? ':' + port : ''}/v1/channels/transactions`,
             headers: {
                 'Grpc-Metadata-macaroon': macaroonHex
             },
-            data: {
-                payment_request: payment_request
-            }
+            data
         }).then((response: any) => {
             // handle success
             const data = response.data;
