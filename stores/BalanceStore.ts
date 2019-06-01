@@ -32,8 +32,7 @@ export default class BalanceStore {
 
     @action
     public getBlockchainBalance = () => {
-        const { settings } = this.settingsStore;
-        const { host, port, macaroonHex } = settings;
+        const { host, port, macaroonHex } = this.settingsStore;
 
         this.loading = true;
         axios.request({
@@ -62,8 +61,7 @@ export default class BalanceStore {
 
     @action
     public getLightningBalance = () => {
-        const { settings } = this.settingsStore;
-        const { host, port, macaroonHex } = settings;
+        const { host, port, macaroonHex } = this.settingsStore;
 
         this.loading = true;
         axios.request({
