@@ -16,8 +16,7 @@ export default class PaymentsStore {
 
     @action
     public getPayments = () => {
-        const { settings } = this.settingsStore;
-        const { host, port, macaroonHex } = settings;
+        const { host, port, macaroonHex } = this.settingsStore;
 
         this.loading = true;
         axios.request({
