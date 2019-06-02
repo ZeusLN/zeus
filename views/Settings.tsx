@@ -17,6 +17,8 @@ interface SettingsState {
     saved: boolean;
     loading: boolean;
     passphrase: string;
+    passphraseConfirm: string;
+    passphraseError: boolean;
 }
 
 const themes: any = {
@@ -34,7 +36,9 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
           theme: 'light',
           saved: false,
           loading: false,
-          passphrase: ''
+          passphrase: '',
+          passphraseConfirm: '',
+          passphraseError: false
     }
 
     componentDidMount() {
@@ -47,8 +51,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         if (settings) {
             this.setState({
                 nodes: settings.nodes || [],
-                theme: settings.theme || '',
-                passphrase: settings.passphrase || ''
+                theme: settings.theme || ''
             });
         }
     }
@@ -61,8 +64,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             if (settings) {
                 this.setState({
                     nodes: settings.nodes || [],
-                    theme: settings.theme || '',
-                    passphrase: settings.passphrase || ''
+                    theme: settings.theme || ''
                 });
             }
         });
@@ -85,8 +87,16 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
     saveSettings = () => {
         const { SettingsStore } = this.props;
-        const { nodes, theme, passphrase } = this.state;
+        const { nodes, theme, passphrase, passphraseConfirm } = this.state;
         const { setSettings, settings } = SettingsStore;
+
+        if (passphrase !== passphraseConfirm) {
+            this.setState({
+                passphraseError: true
+            });
+
+            return;
+        }
 
         setSettings(JSON.stringify({
             nodes,
@@ -112,7 +122,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { saved, theme, nodes, passphrase } = this.state;
+        const { saved, theme, nodes, passphrase, passphraseConfirm, passphraseError } = this.state;
         const { loading, settings } = SettingsStore;
         const savedTheme = settings.theme;
         const selectedNode = settings.selectedNode;
@@ -143,21 +153,37 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     onPress={() => void(0)}
                 />}
 
+                {passphraseError && <Text style={{ color: 'red', textAlign: 'center', padding: 20 }}>Passphrases do not match</Text>}
+
                 <View style={styles.form}>
                     <Nodes nodes={nodes} navigation={navigation} theme={theme} loading={loading} selectedNode={selectedNode} />
                 </View>
 
-                <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>Passphrase</Text>
+                <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>New Passphrase</Text>
                 <TextInput
-                    placeholder={'*'}
+                    placeholder={'********'}
+                    placeholderTextColor='darkgray'
                     value={passphrase}
-                    onChangeText={(text: string) => this.setState({ passphrase: text })}
+                    onChangeText={(text: string) => this.setState({ passphrase: text, passphraseError: false })}
                     numberOfLines={1}
                     autoCapitalize='none'
                     autoCorrect={false}
                     secureTextEntry={true}
                     style={savedTheme === 'dark' ? styles.textInputDark : styles.textInput}
                   />
+
+                  <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>Confirm New Passphrase</Text>
+                  <TextInput
+                      placeholder={'********'}
+                      placeholderTextColor='darkgray'
+                      value={passphraseConfirm}
+                      onChangeText={(text: string) => this.setState({ passphraseConfirm: text, passphraseError: false })}
+                      numberOfLines={1}
+                      autoCapitalize='none'
+                      autoCorrect={false}
+                      secureTextEntry={true}
+                      style={savedTheme === 'dark' ? styles.textInputDark : styles.textInput}
+                    />
 
                 {Platform.OS !== 'ios' && <View>
                     <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>Theme</Text>
