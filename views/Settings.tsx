@@ -15,6 +15,7 @@ interface SettingsState {
     nodes: any[];
     theme: string;
     saved: boolean;
+    loading: boolean;
 }
 
 const themes: any = {
@@ -30,15 +31,14 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     state = {
           nodes: [],
           theme: 'light',
-          saved: false
+          saved: false,
+          loading: false
     }
 
-    async componentDidMount() {
+    componentDidMount() {
         const { SettingsStore } = this.props;
         const { getSettings, settings } = SettingsStore;
-        await getSettings();
-
-        console.log('Setting didmount');
+        this.refreshSettings();
 
         this.isComponentMounted = true;
 
@@ -50,18 +50,33 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         }
     }
 
-    componentWillReceiveProps() {
-        console.log('componentWillReceiveProps');
-        this.refreshSettings();
+    componentWillReceiveProps = (newProps: any) => {
+        const { SettingsStore } = newProps;
+        const { settings } = SettingsStore;
+
+        this.refreshSettings().then(() => {
+            if (settings) {
+                this.setState({
+                    nodes: settings.nodes || [],
+                    theme: settings.theme || ''
+                });
+            }
+        });
     }
 
     componentWillUnmount() {
         this.isComponentMounted = false;
     }
 
-    async refreshSettings() {
-        const { SettingsStore } = this.props;
-        await SettingsStore.getSettings();
+    refreshSettings() {
+        this.setState({
+            loading: true
+        });
+        return this.props.SettingsStore.getSettings().then(() => {
+            this.setState({
+                loading: false
+            });
+        });
     }
 
     saveSettings = () => {
@@ -79,6 +94,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             saved: true
         });
 
+        this.refreshSettings();
+
         setTimeout(() => {
             if (this.isComponentMounted) {
                 this.setState({
@@ -93,6 +110,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         const { saved, theme, nodes } = this.state;
         const { loading, settings } = SettingsStore;
         const savedTheme = settings.theme;
+        const selectedNode = settings.selectedNode;
 
         const BackButton = () => (
             <Icon
@@ -111,10 +129,17 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     backgroundColor={savedTheme === 'dark' ? '#261339' : 'rgba(92, 99,216, 1)'}
                 />
 
-                {loading && <Text>Loading Settings</Text>}
+                {loading && <Button
+                    title=""
+                    loading
+                    buttonStyle={{
+                        backgroundColor: 'transparent'
+                    }}
+                    onPress={() => void(0)}
+                />}
 
                 <View style={styles.form}>
-                    <Nodes nodes={nodes} navigation={navigation} settingsStore={SettingsStore} />
+                    <Nodes nodes={nodes} navigation={navigation} theme={theme} loading={loading} selectedNode={selectedNode} />
                 </View>
 
                 {Platform.OS !== 'ios' && <View style={styles.pickerWrapper}>
