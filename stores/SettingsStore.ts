@@ -2,18 +2,26 @@ import * as Keychain from 'react-native-keychain';
 import { action, observable } from 'mobx';
 import axios from 'axios';
 
-interface Settings {
+interface Node {
     host?: string;
     port?: string;
     macaroonHex?: string;
+}
+
+interface Settings {
+    nodes?: Array<Node>;
     onChainAndress?: string;
     theme?: string;
+    selectedNode?: number;
 }
 
 export default class SettingsStore {
     @observable settings: Settings = {};
     @observable loading: boolean = false;
     @observable btcPayError: string | null;
+    @observable host: string | null;
+    @observable port: string | null;
+    @observable macaroonHex: string | null;
 
     @action
     public fetchBTCPayConfig = (data: string) => {
@@ -56,6 +64,12 @@ export default class SettingsStore {
             this.loading = false;
             if (credentials) {
                 this.settings = JSON.parse(credentials.password);
+                const node: any = this.settings.nodes && this.settings.nodes[this.settings.selectedNode || 0];
+                if (node) {
+                    this.host = node.host;
+                    this.port = node.port;
+                    this.macaroonHex = node.macaroonHex;
+                }
             } else {
                 console.log('No credentials stored');
             }
@@ -77,7 +91,7 @@ export default class SettingsStore {
 
     @action
     public getNewAddress = () => {
-        const { host, port, macaroonHex } = this.settings;
+        const { host, port, macaroonHex } = this;
 
         return axios.request({
             method: 'get',

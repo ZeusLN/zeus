@@ -1,7 +1,8 @@
 import * as React from 'react';
-import { ActionSheetIOS, Picker, Platform, StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-native';
+import { ActionSheetIOS, Picker, Platform, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import Nodes from './Settings/Nodes';
 
 import SettingsStore from './../stores/SettingsStore';
 
@@ -11,11 +12,10 @@ interface SettingsProps {
 }
 
 interface SettingsState {
-    host: string;
-    port: string | number;
-    macaroonHex: string;
+    nodes: any[];
     theme: string;
     saved: boolean;
+    loading: boolean;
 }
 
 const themes: any = {
@@ -29,56 +29,63 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     isComponentMounted: boolean = false;
 
     state = {
-          host: '',
-          port: '',
-          macaroonHex: '',
+          nodes: [],
           theme: 'light',
-          saved: false
+          saved: false,
+          loading: false
     }
 
-    async componentDidMount() {
+    componentDidMount() {
         const { SettingsStore } = this.props;
-        const { getSettings, settings } = SettingsStore;
-        await getSettings();
+        const { settings } = SettingsStore;
+        this.refreshSettings();
 
         this.isComponentMounted = true;
 
         if (settings) {
             this.setState({
-                host: settings.host || '',
-                port: settings.port || '',
-                macaroonHex: settings.macaroonHex || '',
+                nodes: settings.nodes || [],
                 theme: settings.theme || ''
             });
         }
+    }
+
+    componentWillReceiveProps = (newProps: any) => {
+        const { SettingsStore } = newProps;
+        const { settings } = SettingsStore;
+
+        this.refreshSettings().then(() => {
+            if (settings) {
+                this.setState({
+                    nodes: settings.nodes || [],
+                    theme: settings.theme || ''
+                });
+            }
+        });
     }
 
     componentWillUnmount() {
         this.isComponentMounted = false;
     }
 
-    componentWillReceiveProps(nextProps: any) {
-        const { navigation } = nextProps;
-        const host = navigation.getParam('host', null);
-        const port = navigation.getParam('port', null);
-        const macaroonHex = navigation.getParam('macaroonHex', null);
-
+    refreshSettings() {
         this.setState({
-            host,
-            port,
-            macaroonHex
+            loading: true
+        });
+        return this.props.SettingsStore.getSettings().then(() => {
+            this.setState({
+                loading: false
+            });
         });
     }
 
     saveSettings = () => {
         const { SettingsStore } = this.props;
-        const { host, port, macaroonHex, theme } = this.state;
+        const { nodes, theme } = this.state;
         const { setSettings, settings } = SettingsStore;
 
         setSettings(JSON.stringify({
-            host,
-            port,
-            macaroonHex,
+            nodes,
             theme,
             onChainAndress: settings.onChainAndress
         }));
@@ -86,6 +93,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         this.setState({
             saved: true
         });
+
+        this.refreshSettings();
 
         setTimeout(() => {
             if (this.isComponentMounted) {
@@ -98,9 +107,10 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { host, port, macaroonHex, saved, theme } = this.state;
-        const { loading, btcPayError, settings } = SettingsStore;
+        const { saved, theme, nodes } = this.state;
+        const { loading, settings } = SettingsStore;
         const savedTheme = settings.theme;
+        const selectedNode = settings.selectedNode;
 
         const BackButton = () => (
             <Icon
@@ -119,40 +129,17 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     backgroundColor={savedTheme === 'dark' ? '#261339' : 'rgba(92, 99,216, 1)'}
                 />
 
+                {loading && <Button
+                    title=""
+                    loading
+                    buttonStyle={{
+                        backgroundColor: 'transparent'
+                    }}
+                    onPress={() => void(0)}
+                />}
+
                 <View style={styles.form}>
-                    {btcPayError && <Text style={styles.error}>{btcPayError}</Text>}
-                    <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>LND Host</Text>
-                    <TextInput
-                        placeholder={'localhost'}
-                        value={host}
-                        onChangeText={(text: string) => this.setState({ host: text })}
-                        numberOfLines={1}
-                        style={savedTheme === 'dark' ? styles.textInputDark : styles.textInput}
-                        editable={!loading}
-                        placeholderTextColor='gray'
-                    />
-
-                    <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>LND Port</Text>
-                    <TextInput
-                        placeholder={'443/8080'}
-                        value={port}
-                        onChangeText={(text: string) => this.setState({ port: text })}
-                        numberOfLines={1}
-                        style={savedTheme === 'dark' ? styles.textInputDark : styles.textInput}
-                        editable={!loading}
-                        placeholderTextColor='gray'
-                    />
-
-                    <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>LND Macaroon (Hex format)</Text>
-                    <TextInput
-                        placeholder={'0A...'}
-                        value={macaroonHex}
-                        onChangeText={(text: string) => this.setState({ macaroonHex: text })}
-                        numberOfLines={1}
-                        style={savedTheme === 'dark' ? styles.textInputDark : styles.textInput}
-                        editable={!loading}
-                        placeholderTextColor='gray'
-                    />
+                    <Nodes nodes={nodes} navigation={navigation} theme={theme} loading={loading} selectedNode={selectedNode} />
                 </View>
 
                 {Platform.OS !== 'ios' && <View style={styles.pickerWrapper}>
@@ -200,41 +187,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         }}
                         titleStyle={{
                             color: saved ? "black" : "white"
-                        }}
-                    />
-                </View>
-
-                <View style={styles.button}>
-                    <Button
-                        title="Scan lndconnect config"
-                        icon={{
-                            name: "crop-free",
-                            size: 25,
-                            color: savedTheme === 'dark' ? 'black' : 'white'
-                        }}
-                        onPress={() => navigation.navigate('LNDConnectConfigQRScanner')}
-                        buttonStyle={{
-                            backgroundColor: savedTheme === 'dark' ? 'white' : 'black',
-                            borderRadius: 30
-                        }}
-                        titleStyle={{
-                            color: savedTheme === 'dark' ? 'black' : 'white'
-                        }}
-                    />
-                </View>
-
-                <View style={styles.button}>
-                    <Button
-                        title="Scan BTCPay config"
-                        icon={{
-                            name: "crop-free",
-                            size: 25,
-                            color: "white"
-                        }}
-                        onPress={() => navigation.navigate('BTCPayConfigQRScanner')}
-                        buttonStyle={{
-                            backgroundColor: "rgba(5, 146, 35, 1)",
-                            borderRadius: 30
                         }}
                     />
                 </View>

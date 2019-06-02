@@ -36,8 +36,7 @@ export default class TransactionsStore {
 
     @action
     public getTransactions = () => {
-        const { settings } = this.settingsStore;
-        const { host, port, macaroonHex } = settings;
+        const { host, port, macaroonHex } = this.settingsStore;
 
         this.loading = true;
         axios.request({
@@ -61,8 +60,7 @@ export default class TransactionsStore {
 
     @action
     public sendCoins = (transactionRequest: TransactionRequest) => {
-        const { settings } = this.settingsStore;
-        const { host, port, macaroonHex } = settings;
+        const { host, port, macaroonHex } = this.settingsStore;
 
         this.error = false;
         this.error_msg = null;
@@ -94,8 +92,7 @@ export default class TransactionsStore {
     }
 
     sendPayment = (payment_request: string, amount?: string) => {
-        const { settings } = this.settingsStore;
-        const { host, port, macaroonHex } = settings;
+        const { host, port, macaroonHex } = this.settingsStore;
 
         this.loading = true;
         this.error_msg = null;
