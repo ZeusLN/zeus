@@ -70,8 +70,6 @@ export default class SettingsStore {
                     this.port = node.port;
                     this.macaroonHex = node.macaroonHex;
                 }
-                console.log('GOT SETTINGS');
-                console.log(this.settings);
             } else {
                 console.log('No credentials stored');
             }

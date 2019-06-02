@@ -10,28 +10,23 @@ import SettingsStore from './../../stores/SettingsStore';
 interface NodesProps {
     nodes: any[];
     navigation: any;
-    settingsStore: SettingsStore;
     edit?: boolean;
+    loading?: boolean;
+    theme?: string;
 }
 
 @inject('SettingsStore')
 @observer
 export default class Nodes extends React.Component<NodesProps, {}> {
     renderSeparator = () => {
-        const { settingsStore } = this.props;
-        const { settings } = settingsStore;
-        const { theme } = settings;
-
+        const { theme } = this.props;
         return (
             <View style={theme === 'dark' ? styles.darkSeparator : styles.lightSeparator} />
         )
     }
 
     render() {
-        const { navigation, settingsStore, nodes } = this.props;
-        const { settings, loading } = settingsStore;
-        const { theme } = settings;
-
+        const { navigation, nodes, theme, loading, selectedNode } = this.props;
         const Node = (balanceImage: string) => (
             <Avatar
                 source={{
@@ -41,8 +36,7 @@ export default class Nodes extends React.Component<NodesProps, {}> {
         );
 
         return (
-            <View style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
-                {loading && <Text>Loading</Text>}
+            <View>
                 {(!!nodes && !loading && nodes.length > 0) && <FlatList
                     data={nodes}
                     renderItem={({ item, index }) => {
@@ -52,18 +46,19 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                 <ListItem
                                     title={item.host}
                                     leftElement={Node(`data:image/png;base64,${data}`)}
-                                    subtitle={settings.selectedNode === index ? 'Activated' : ''}
+                                    subtitle={selectedNode === index ? 'Active' : ''}
                                     containerStyle={{
                                         borderBottomWidth: 0,
                                         backgroundColor: theme === 'dark' ? 'black' : 'white'
                                     }}
-                                    onPress={() => navigation.navigate('AddEditNode', { node: item, index: index })}
+                                    onPress={() => navigation.navigate('AddEditNode', { node: item, index: index, active: selectedNode === index })}
                                     titleStyle={{ color: theme === 'dark' ? 'white' : 'black' }}
                                     subtitleStyle={{ color: theme === 'dark' ? 'gray' : '#8a8999' }}
                                 />
                             </React.Fragment>
                         );
                     }}
+                    refreshing={loading}
                     keyExtractor={(item, index) => `${item.host}-${index}`}
                     ItemSeparatorComponent={this.renderSeparator}
                     onEndReachedThreshold={50}
@@ -83,7 +78,7 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                         color: theme === 'dark' ? 'white' : 'black'
                     }}
                 />}
-                <Button
+                {!loading && <Button
                     title="Add a new node"
                     icon={{
                         name: "add",
@@ -99,21 +94,13 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                     titleStyle={{
                         color: 'white'
                     }}
-                />
+                />}
             </View>
         );
     }
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
-        minHeight: 100
-    },
-    darkThemeStyle: {
-        minHeight: 100,
-        backgroundColor: 'black',
-        color: 'white'
-    },
     lightSeparator: {
         height: 1,
         width: "86%",
