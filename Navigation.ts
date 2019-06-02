@@ -2,7 +2,6 @@ import { createStackNavigator, createAppContainer } from 'react-navigation';
 
 // Views
 import Transaction from './views/Transaction';
-import Settings from './views/Settings';
 import Wallet from './views/Wallet/Wallet';
 import Send from './views/Send';
 import Receive from './views/Receive';
@@ -19,6 +18,10 @@ import BTCPayConfigQRScanner from './views/BTCPayConfigQRScanner';
 import LNDConnectConfigQRScanner from './views/LNDConnectConfigQRScanner';
 import NodeInfo from './views/NodeInfo';
 
+// Settings views
+import Settings from './views/Settings';
+import AddEditNode from './views/Settings/AddEditNode';
+
 const AppScenes = {
     Wallet: {
         screen: Wallet
@@ -31,6 +34,9 @@ const AppScenes = {
     },
     Settings: {
         screen: Settings
+    },
+    AddEditNode: {
+        screen: AddEditNode
     },
     Transaction: {
         screen: Transaction

@@ -30,8 +30,7 @@ export default class InvoicesStore {
 
     @action
     public getInvoices = () => {
-        const { settings } = this.settingsStore;
-        const { host, port, macaroonHex } = settings;
+        const { host, port, macaroonHex } = this.settingsStore;
 
         this.loading = true;
         axios.request({
@@ -56,8 +55,7 @@ export default class InvoicesStore {
 
     @action
     public getInvoice = (lightningInvoice: string) => {
-        const { settings } = this.settingsStore;
-        const { host, port, macaroonHex } = settings;
+        const { host, port, macaroonHex } = this.settingsStore;
 
         axios.request({
             method: 'get',
@@ -74,8 +72,7 @@ export default class InvoicesStore {
 
     @action
     public createInvoice = (memo: string, value: string, expiry: string = "3600") => {
-        const { settings } = this.settingsStore;
-        const { host, port, macaroonHex } = settings;
+        const { host, port, macaroonHex } = this.settingsStore;
 
         this.payment_request = null;
         this.creatingInvoice = true;
@@ -110,8 +107,7 @@ export default class InvoicesStore {
 
     @action
     public getPayReq = (paymentRequest: string) => {
-        const { settings } = this.settingsStore;
-        const { host, port, macaroonHex } = settings;
+        const { host, port, macaroonHex } = this.settingsStore;
 
         this.paymentRequest = paymentRequest;
         this.loading = true;

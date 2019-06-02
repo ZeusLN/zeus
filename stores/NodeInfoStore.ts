@@ -24,8 +24,7 @@ export default class NodeInfoStore {
 
     @action
     public getNodeInfo = () => {
-        const { settings } = this.settingsStore;
-        const { host, port, macaroonHex } = settings;
+        const { host, port, macaroonHex } = this.settingsStore;
 
         this.errorMsg = '';
         this.loading = true;
