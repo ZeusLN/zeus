@@ -121,17 +121,17 @@ export default class AddEditNode extends React.Component<AddEditNodeProps, AddEd
 
     deleteNodeConfig = () => {
         const { SettingsStore, navigation } = this.props;
-        const { getSettings, setSettings, settings } = SettingsStore;
+        const { setSettings, settings } = SettingsStore;
         const { index } = this.state;
         let { nodes } = settings;
 
-        let newNodes = [];
-        for (let i = 0; i < nodes.length; i++) {
+        let newNodes: any = [];
+        for (let i = 0; nodes && i < nodes.length; i++) {
             if (index !== i) {
                 newNodes.push(nodes[i]);
             }
         }
-        
+
         setSettings(JSON.stringify({
             nodes: newNodes,
             theme: settings.theme,
@@ -164,7 +164,7 @@ export default class AddEditNode extends React.Component<AddEditNodeProps, AddEd
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { host, port, macaroonHex, saved, active, index } = this.state;
+        const { host, port, macaroonHex, saved, active } = this.state;
         const { loading, settings } = SettingsStore;
         const savedTheme = settings.theme;
 
@@ -303,7 +303,7 @@ export default class AddEditNode extends React.Component<AddEditNodeProps, AddEd
                             size: 25,
                             color: "white"
                         }}
-                        onPress={() => this.deleteNodeConfig(index)}
+                        onPress={() => this.deleteNodeConfig()}
                         buttonStyle={{
                             backgroundColor: "red",
                             borderRadius: 30
