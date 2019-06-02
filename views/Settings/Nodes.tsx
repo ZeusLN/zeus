@@ -1,11 +1,8 @@
 import * as React from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
 import { Avatar, Button, ListItem } from 'react-native-elements';
 import Identicon from 'identicon.js';
-import { inject, observer } from 'mobx-react';
 const hash = require('object-hash');
-
-import SettingsStore from './../../stores/SettingsStore';
 
 interface NodesProps {
     nodes: any[];
@@ -13,10 +10,9 @@ interface NodesProps {
     edit?: boolean;
     loading?: boolean;
     theme?: string;
+    selectedNode?: number;
 }
 
-@inject('SettingsStore')
-@observer
 export default class Nodes extends React.Component<NodesProps, {}> {
     renderSeparator = () => {
         const { theme } = this.props;

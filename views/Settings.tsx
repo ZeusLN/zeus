@@ -37,7 +37,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
     componentDidMount() {
         const { SettingsStore } = this.props;
-        const { getSettings, settings } = SettingsStore;
+        const { settings } = SettingsStore;
         this.refreshSettings();
 
         this.isComponentMounted = true;
