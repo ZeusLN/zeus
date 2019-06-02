@@ -13,6 +13,7 @@ interface Settings {
     onChainAndress?: string;
     theme?: string;
     selectedNode?: number;
+    passphrase?: string;
 }
 
 export default class SettingsStore {
@@ -70,6 +71,7 @@ export default class SettingsStore {
                     this.port = node.port;
                     this.macaroonHex = node.macaroonHex;
                 }
+                return this.settings;
             } else {
                 console.log('No credentials stored');
             }
