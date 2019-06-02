@@ -17,12 +17,16 @@ import Invoice from './views/Invoice';
 import BTCPayConfigQRScanner from './views/BTCPayConfigQRScanner';
 import LNDConnectConfigQRScanner from './views/LNDConnectConfigQRScanner';
 import NodeInfo from './views/NodeInfo';
+import Lockscreen from './views/Lockscreen';
 
 // Settings views
 import Settings from './views/Settings';
 import AddEditNode from './views/Settings/AddEditNode';
 
 const AppScenes = {
+    Lockscreen: {
+        screen: Lockscreen
+    },
     Wallet: {
         screen: Wallet
     },

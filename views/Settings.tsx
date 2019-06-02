@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ActionSheetIOS, Picker, Platform, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { ActionSheetIOS, Picker, Platform, StyleSheet, Text, TextInput, View, TouchableOpacity } from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Nodes from './Settings/Nodes';
@@ -16,6 +16,7 @@ interface SettingsState {
     theme: string;
     saved: boolean;
     loading: boolean;
+    passphrase: string;
 }
 
 const themes: any = {
@@ -32,7 +33,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
           nodes: [],
           theme: 'light',
           saved: false,
-          loading: false
+          loading: false,
+          passphrase: ''
     }
 
     componentDidMount() {
@@ -45,7 +47,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         if (settings) {
             this.setState({
                 nodes: settings.nodes || [],
-                theme: settings.theme || ''
+                theme: settings.theme || '',
+                passphrase: settings.passphrase || ''
             });
         }
     }
@@ -58,7 +61,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             if (settings) {
                 this.setState({
                     nodes: settings.nodes || [],
-                    theme: settings.theme || ''
+                    theme: settings.theme || '',
+                    passphrase: settings.passphrase || ''
                 });
             }
         });
@@ -81,12 +85,13 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
     saveSettings = () => {
         const { SettingsStore } = this.props;
-        const { nodes, theme } = this.state;
+        const { nodes, theme, passphrase } = this.state;
         const { setSettings, settings } = SettingsStore;
 
         setSettings(JSON.stringify({
             nodes,
             theme,
+            passphrase,
             onChainAndress: settings.onChainAndress
         }));
 
@@ -107,7 +112,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { saved, theme, nodes } = this.state;
+        const { saved, theme, nodes, passphrase } = this.state;
         const { loading, settings } = SettingsStore;
         const savedTheme = settings.theme;
         const selectedNode = settings.selectedNode;
@@ -142,7 +147,19 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     <Nodes nodes={nodes} navigation={navigation} theme={theme} loading={loading} selectedNode={selectedNode} />
                 </View>
 
-                {Platform.OS !== 'ios' && <View style={styles.pickerWrapper}>
+                <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>Passphrase</Text>
+                <TextInput
+                    placeholder={'*'}
+                    value={passphrase}
+                    onChangeText={(text: string) => this.setState({ passphrase: text })}
+                    numberOfLines={1}
+                    autoCapitalize='none'
+                    autoCorrect={false}
+                    secureTextEntry={true}
+                    style={savedTheme === 'dark' ? styles.textInputDark : styles.textInput}
+                  />
+
+                {Platform.OS !== 'ios' && <View>
                     <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>Theme</Text>
                     <Picker
                         selectedValue={theme}
@@ -154,7 +171,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     </Picker>
                 </View>}
 
-                {Platform.OS === 'ios' && <View style={styles.pickerWrapper}>
+                {Platform.OS === 'ios' && <View>
                     <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>Theme</Text>
                     <TouchableOpacity onPress={() => ActionSheetIOS.showActionSheetWithOptions(
                       {
@@ -217,10 +234,6 @@ const styles = StyleSheet.create({
     },
     form: {
         paddingTop: 20,
-        paddingLeft: 5,
-        paddingRight: 5
-    },
-    pickerWrapper: {
         paddingLeft: 5,
         paddingRight: 5
     },
