@@ -2,7 +2,6 @@ import * as React from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import Channel from './../models/Channel';
-import BalanceSlider from './../components/BalanceSlider';
 import Identicon from 'identicon.js';
 import { inject, observer } from 'mobx-react';
 const hash = require('object-hash');
@@ -31,9 +30,8 @@ export default class ChannelView extends React.Component<ChannelProps> {
     };
 
     render() {
-        const { navigation, ChannelsStore, UnitsStore, SettingsStore } = this.props;
+        const { navigation, UnitsStore, SettingsStore } = this.props;
         const { changeUnits, getAmount, units } = UnitsStore;
-        const { nodes } = ChannelsStore;
         const { settings } = SettingsStore;
         const { theme } = settings;
 
@@ -74,20 +72,16 @@ export default class ChannelView extends React.Component<ChannelProps> {
                 />
                 <View style={styles.content}>
                     <View style={styles.center}>
-                        <Text style={theme === 'dark' ? styles.aliasDark : styles.alias }>{nodes[remote_pubkey] && nodes[remote_pubkey].alias}</Text>
                         <Text style={theme === 'dark' ? styles.pubkeyDark : styles.pubkey }>{remote_pubkey}</Text>
-
                         <Image source={{ uri: `data:image/png;base64,${data}` }} style={{ width: 200, height: 200 }} />
-                    </View>
 
-                    <BalanceSlider localBalance={local_balance} remoteBalance={remote_balance} theme={theme} />
-
-                    <View style={styles.balances}>
-                        <TouchableOpacity onPress={() => changeUnits()}>
-                            <Text style={theme === 'dark' ? styles.balanceDark : styles.balance}>{`Local balance: ${units && getAmount(local_balance || 0)}`}</Text>
-                            <Text style={theme === 'dark' ? styles.balanceDark : styles.balance}>{`Remote balance: ${units && getAmount(remote_balance || 0)}`}</Text>
-                            {unsettled_balance && <Text style={theme === 'dark' ? styles.balanceDark : styles.balance}>{`Unsettled balance: ${units && getAmount(unsettled_balance)}`}</Text>}
-                        </TouchableOpacity>
+                        <View style={styles.balances}>
+                            <TouchableOpacity onPress={() => changeUnits()}>
+                                <Text style={theme === 'dark' ? styles.balanceDark : styles.balance}>{`Local balance: ${units && getAmount(local_balance || 0)}`}</Text>
+                                <Text style={theme === 'dark' ? styles.balanceDark : styles.balance}>{`Remote balance: ${units && getAmount(remote_balance || 0)}`}</Text>
+                                {unsettled_balance && <Text style={theme === 'dark' ? styles.balanceDark : styles.balance}>{`Unsettled balance: ${units && getAmount(unsettled_balance)}`}</Text>}
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
                     <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Status:</Text>
@@ -131,11 +125,9 @@ export default class ChannelView extends React.Component<ChannelProps> {
                                 size: 25,
                                 color: "#fff"
                             }}
+                            backgroundColor="red"
                             onPress={() => this.closeChannel(channel_point)}
-                            buttonStyle={{
-                                backgroundColor: "red",
-                                borderRadius: 30
-                            }}
+                            borderRadius={30}
                         />
                     </View>
                 </View>
@@ -160,17 +152,6 @@ const styles = StyleSheet.create({
     center: {
         alignItems: 'center'
     },
-    alias: {
-        fontSize: 20,
-        paddingTop: 10,
-        paddingBottom: 10
-    },
-    aliasDark: {
-        fontSize: 20,
-        paddingTop: 10,
-        paddingBottom: 10,
-        color: 'white'
-    },
     pubkey: {
         paddingTop: 10,
         paddingBottom: 30
@@ -181,18 +162,17 @@ const styles = StyleSheet.create({
         color: 'white'
     },
     balance: {
-        fontSize: 15,
-        alignItems: 'center',
+        fontSize: 20,
         fontWeight: 'bold'
     },
     balanceDark: {
-        fontSize: 15,
+        fontSize: 20,
         fontWeight: 'bold',
         color: 'white'
     },
     balances: {
-        paddingBottom: 10,
-        alignItems: 'center'
+        paddingTop: 20,
+        paddingBottom: 20
     },
     label: {
         paddingTop: 5

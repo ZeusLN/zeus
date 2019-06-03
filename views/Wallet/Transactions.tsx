@@ -1,8 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, View, FlatList } from 'react-native';
-import { Avatar, Button, ListItem } from 'react-native-elements';
+import { Button, ListItem } from 'react-native-elements';
 import Transaction from './../../models/Transaction';
-import DateTimeUtils from './../../utils/DateTimeUtils';
 import { inject, observer } from 'mobx-react';
 
 import TransactionsStore from './../../stores/TransactionsStore';
@@ -14,10 +13,10 @@ const RemoveBalance = require('./../../images/onchain-red.png');
 const AddBalancePending = require('./../../images/onchain-green-pending.png');
 const RemoveBalancePending = require('./../../images/onchain-red-pending.png');
 
-const AddBalanceDark = require('./../../images/onchain-green-black.png');
-const RemoveBalanceDark = require('./../../images/onchain-red-black.png');
-const AddBalancePendingDark = require('./../../images/onchain-green-pending-black.png');
-const RemoveBalancePendingDark = require('./../../images/onchain-red-pending-black.png');
+const AddBalanceDark = require('./../../images/onchain-green-transparent.png');
+const RemoveBalanceDark = require('./../../images/onchain-red-transparent.png');
+const AddBalancePendingDark = require('./../../images/onchain-green-pending-transparent.png');
+const RemoveBalancePendingDark = require('./../../images/onchain-red-pending-transparent.png');
 
 interface TransactionsProps {
     navigation: any;
@@ -53,9 +52,8 @@ export default class Transactions extends React.Component<TransactionsProps> {
         const { settings } = SettingsStore;
         const { theme } = settings;
 
-        const BalanceImage = (item: Transaction) => {
+        const Balance = (item: Transaction) => {
             const { amount, num_confirmations } = item;
-
             if (num_confirmations && num_confirmations > 0) {
                 if (amount > 0) {
                     return theme === 'dark' ? AddBalanceDark : AddBalance;
@@ -71,27 +69,19 @@ export default class Transactions extends React.Component<TransactionsProps> {
             return theme === 'dark' ? RemoveBalancePendingDark : RemoveBalancePending;
         }
 
-        const Balance = (item: Transaction) => (
-            <Avatar
-                source={BalanceImage(item)}
-            />
-        );
-
         return (
             <View style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
                 {(!!transactions && transactions.length > 0) || loading ? <FlatList
                     data={transactions}
                     renderItem={({ item }: any) => {
-                        const subtitle = item.block_height ? `${item.block_height} | ${DateTimeUtils.listFormattedDate(item.time_stamp)}` : DateTimeUtils.listFormattedDate(item.time_stamp);
+                        const date = new Date(item.time_stamp * 1000);
+                        const subtitle = item.block_height ? `${item.block_height} | ${date}` : date.toString();
                         return (
                             <ListItem
                                 title={units && getAmount(item.amount)}
                                 subtitle={subtitle}
-                                containerStyle={{
-                                    borderBottomWidth: 0,
-                                    backgroundColor: theme === 'dark' ? 'black' : 'white'
-                                }}
-                                leftElement={Balance(item)}
+                                containerStyle={{ borderBottomWidth: 0 }}
+                                avatar={Balance(item)}
                                 onPress={() => this.viewTransaction(item)}
                                 titleStyle={{ color: theme === 'dark' ? 'white' : 'black' }}
                                 subtitleStyle={{ color: theme === 'dark' ? 'gray' : '#8a8999' }}
@@ -110,14 +100,10 @@ export default class Transactions extends React.Component<TransactionsProps> {
                         size: 25,
                         color: theme === 'dark' ? 'white' : 'black'
                     }}
+                    backgroundColor="transparent"
+                    color={theme === 'dark' ? 'white' : 'black'}
                     onPress={() => refresh()}
-                    buttonStyle={{
-                        backgroundColor: "transparent",
-                        borderRadius: 30
-                    }}
-                    titleStyle={{
-                        color: theme === 'dark' ? 'white' : 'black'
-                    }}
+                    borderRadius={30}
                 />}
             </View>
         );

@@ -57,17 +57,10 @@ export default class CopyButton extends React.Component<CopyButtonProps, CopyBut
                     size: 25,
                     color: copied ? "black" : "white"
                 }}
-                containerStyle={{
-                    marginBottom: 20
-                }}
-                buttonStyle={{
-                    backgroundColor: copied ? "white" : "black",
-                    borderRadius: 30
-                }}
-                titleStyle={{
-                    color: copied ? "black" : "white"
-                }}
+                backgroundColor={copied ? "white" : "black"}
+                color={copied ? "black" : "white"}
                 onPress={() => this.copyToClipboard()}
+                borderRadius={30}
             />
         );
     }

@@ -22,11 +22,6 @@ interface SettingsState {
     showPassphraseForm: boolean;
 }
 
-const themes: any = {
-    light: 'Light Theme',
-    dark: 'Dark Theme'
-};
-
 @inject('SettingsStore')
 @observer
 export default class Settings extends React.Component<SettingsProps, SettingsState> {
@@ -229,15 +224,11 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                             size: 25,
                             color: saved ? "black" : "white"
                         }}
+                        backgroundColor={saved ? "#fff" : savedTheme === 'dark' ? '#261339' : 'rgba(92, 99,216, 1)'}
+                        color={saved ? "black" : "white"}
                         onPress={() => this.saveSettings()}
                         style={styles.button}
-                        buttonStyle={{
-                            backgroundColor: saved ? "#fff" : savedTheme === 'dark' ? '#261339' : 'rgba(92, 99,216, 1)',
-                            borderRadius: 30
-                        }}
-                        titleStyle={{
-                            color: saved ? "black" : "white"
-                        }}
+                        borderRadius={30}
                     />
                 </View>
 
@@ -301,8 +292,6 @@ const styles = StyleSheet.create({
     },
     button: {
         paddingTop: 10,
-        paddingBottom: 10,
-        width: 350,
-        alignSelf: 'center'
+        paddingBottom: 10
     }
 });
