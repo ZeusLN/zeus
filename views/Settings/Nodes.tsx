@@ -84,7 +84,8 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                     buttonStyle={{
                         borderRadius: 30,
                         width: 200,
-                        alignSelf: 'center'
+                        alignSelf: 'center',
+                        marginBottom: 20
                     }}
                     onPress={() => navigation.navigate('AddEditNode', { index: nodes && nodes.length && Number(nodes.length) || 0 })}
                     titleStyle={{
