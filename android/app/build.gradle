@@ -101,8 +101,8 @@ android {
         applicationId "com.zeusln.zeus"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 8
-        versionName "0.0.8"
+        versionCode 10
+        versionName "0.1.0"
     }
     signingConfigs {
         release {

@@ -1,13 +1,16 @@
 import * as React from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button, FormValidationMessage, Header, Icon } from 'react-native-elements';
 import AddressUtils from './../utils/AddressUtils';
+import FeeTable from './../components/FeeTable';
+import FeeUtils from './../utils/FeeUtils';
 
 import InvoicesStore from './../stores/InvoicesStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
 import TransactionsStore from './../stores/TransactionsStore';
 import SettingsStore from './../stores/SettingsStore';
+import FeeStore from './../stores/FeeStore';
 
 interface SendProps {
     exitSetup: any;
@@ -16,6 +19,7 @@ interface SendProps {
     NodeInfoStore: NodeInfoStore;
     TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;
+    FeeStore: FeeStore;
 }
 
 interface SendState {
@@ -26,7 +30,7 @@ interface SendState {
     fee: string;
 }
 
-@inject('InvoicesStore', 'NodeInfoStore', 'TransactionsStore', 'SettingsStore')
+@inject('InvoicesStore', 'NodeInfoStore', 'TransactionsStore', 'SettingsStore', 'FeeStore')
 @observer
 export default class Send extends React.Component<SendProps, SendState> {
     constructor(props: any) {
@@ -94,8 +98,14 @@ export default class Send extends React.Component<SendProps, SendState> {
         navigation.navigate('SendingOnChain');
     }
 
+    setFee = (value: string) => {
+        this.setState({
+            fee: FeeUtils.roundFee(value)
+        });
+    }
+
     render() {
-        const { SettingsStore, navigation } = this.props;
+        const { SettingsStore, FeeStore, navigation } = this.props;
         const { isValid, transactionType, destination, amount, fee } = this.state;
         const { settings } = SettingsStore;
         const { theme } = settings;
@@ -110,7 +120,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         );
 
         return (
-            <View style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
+            <ScrollView style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{ text: 'Send', style: { color: '#fff' } }}
@@ -141,11 +151,13 @@ export default class Send extends React.Component<SendProps, SendState> {
                         <TextInput
                             placeholder="2"
                             value={fee}
-                            onChangeText={(text: string) => this.setState({ fee: text })}
+                            onChangeText={(text: string) => this.setFee(text)}
                             style={theme === 'dark' ? styles.textInputDark : styles.textInput}
                             placeholderTextColor='gray'
                         />
                     </React.Fragment>}
+                </View>
+                <View style={styles.buttons}>
                     {transactionType === 'Lightning' && <View style={styles.button}>
                         <Button
                             title="Look Up Payment Request"
@@ -171,7 +183,18 @@ export default class Send extends React.Component<SendProps, SendState> {
                             onPress={() => this.sendCoins()}
                             backgroundColor="orange"
                             style={styles.button}
-                            borderRadius={30}
+                            buttonStyle={{
+                                backgroundColor: "orange",
+                                borderRadius: 30,
+                                width: 200
+                            }}
+                        />
+                    </View>}
+                    {transactionType === 'On-chain' && <View style={styles.button}>
+                        <FeeTable
+                            setFee={this.setFee}
+                            SettingsStore={SettingsStore}
+                            FeeStore={FeeStore}
                         />
                     </View>}
                     <View style={styles.button}>
@@ -188,14 +211,15 @@ export default class Send extends React.Component<SendProps, SendState> {
                         />
                     </View>
                 </View>
-            </View>
+            </ScrollView>
         );
     }
 }
 
 const styles = StyleSheet.create({
     lightThemeStyle: {
-        flex: 1
+        flex: 1,
+        color: 'black'
     },
     darkThemeStyle: {
         flex: 1,
@@ -215,7 +239,12 @@ const styles = StyleSheet.create({
         paddingRight: 20
     },
     button: {
-        paddingTop: 15,
-        paddingBottom: 15
+        paddingTop: 10,
+        paddingBottom: 10
+    },
+    buttons: {
+        alignItems: 'center',
+        paddingTop: 20,
+        paddingBottom: 20
     }
 });

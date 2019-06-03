@@ -70,7 +70,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { NodeInfoStore, SettingsStore } = this.props;
         SettingsStore.getSettings().then(() => {
             if (SettingsStore.settings) {
-                NodeInfoStore.getNodeInfo()
+                NodeInfoStore.getNodeInfo();
                 this.refresh();
             }
         });

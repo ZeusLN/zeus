@@ -36,8 +36,7 @@ export default class TransactionsStore {
 
     @action
     public getTransactions = () => {
-        const { settings } = this.settingsStore;
-        const { host, port, macaroonHex } = settings;
+        const { host, port, macaroonHex } = this.settingsStore;
 
         this.loading = true;
         axios.request({
@@ -61,8 +60,7 @@ export default class TransactionsStore {
 
     @action
     public sendCoins = (transactionRequest: TransactionRequest) => {
-        const { settings } = this.settingsStore;
-        const { host, port, macaroonHex } = settings;
+        const { host, port, macaroonHex } = this.settingsStore;
 
         this.error = false;
         this.error_msg = null;
@@ -93,9 +91,8 @@ export default class TransactionsStore {
         });
     }
 
-    sendPayment = (payment_request: string) => {
-        const { settings } = this.settingsStore;
-        const { host, port, macaroonHex } = settings;
+    sendPayment = (payment_request: string, amount?: string) => {
+        const { host, port, macaroonHex } = this.settingsStore;
 
         this.loading = true;
         this.error_msg = null;
@@ -105,15 +102,25 @@ export default class TransactionsStore {
         this.payment_hash = null;
         this.payment_error = null;
 
+        let data;
+        if (amount) {
+            data = {
+                amt: amount,
+                payment_request
+            };
+        } else {
+            data = {
+                payment_request
+            };
+        }
+
         axios.request({
             method: 'post',
             url: `https://${host}${port ? ':' + port : ''}/v1/channels/transactions`,
             headers: {
                 'Grpc-Metadata-macaroon': macaroonHex
             },
-            data: {
-                payment_request: payment_request
-            }
+            data
         }).then((response: any) => {
             // handle success
             const data = response.data;
