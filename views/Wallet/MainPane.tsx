@@ -35,8 +35,8 @@ export default class MainPane extends React.Component<MainPaneProps, MainPaneSta
         const { combinedBalance } = this.state;
         const {changeUnits, getAmount, units } = UnitsStore;
         const { totalBlockchainBalance, unconfirmedBlockchainBalance, lightningBalance, pendingOpenBalance } = BalanceStore;
-        const { settings } = SettingsStore;
-        const { host, theme } = settings;
+        const { settings, host } = SettingsStore;
+        const { theme } = settings;
         const loading = NodeInfoStore.loading || BalanceStore.loading;
 
         const BalanceView = () => (

@@ -62,8 +62,7 @@ export default class ChannelsStore {
 
     @action
     getNodeInfo = (pubkey: string) => {
-        const { settings } = this.settingsStore;
-        const { host, port, macaroonHex } = settings;
+        const { host, port, macaroonHex } = this.settingsStore;
 
         this.loading = true;
         return axios.request({
@@ -81,8 +80,7 @@ export default class ChannelsStore {
 
     @action
     public getChannels = () => {
-        const { settings } = this.settingsStore;
-        const { host, port, macaroonHex } = settings;
+        const { host, port, macaroonHex } = this.settingsStore;
 
         this.loading = true;
         axios.request({
@@ -108,8 +106,7 @@ export default class ChannelsStore {
 
     @action
     public closeChannel = (request: CloseChannelRequest) => {
-        const { settings } = this.settingsStore;
-        const { host, port, macaroonHex } = settings;
+        const { host, port, macaroonHex } = this.settingsStore;
 
         const { funding_txid_str, output_index } = request;
 
@@ -138,8 +135,7 @@ export default class ChannelsStore {
 
     @action
     public connectPeer = (request: OpenChannelRequest) => {
-        const { settings } = this.settingsStore;
-        const { host, port, macaroonHex } = settings;
+        const { host, port, macaroonHex } = this.settingsStore;
 
         this.connectingToPeer = true;
         axios.request({
@@ -173,8 +169,7 @@ export default class ChannelsStore {
     }
 
     openChannel = (request: OpenChannelRequest) => {
-        const { settings } = this.settingsStore;
-        const { host, port, macaroonHex } = settings;
+        const { host, port, macaroonHex } = this.settingsStore;
 
         delete request.host;
 

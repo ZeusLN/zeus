@@ -6,6 +6,7 @@ import TransactionsStore from './TransactionsStore';
 import BalanceStore from './BalanceStore';
 import UnitsStore from './UnitsStore';
 import PaymentsStore from './PaymentsStore';
+import FeeStore from './FeeStore';
 
 class Stores {
     public channelsStore: ChannelsStore;
@@ -16,6 +17,7 @@ class Stores {
     public walletStore: BalanceStore;
     public unitsStore: UnitsStore;
     public paymentsStore: PaymentsStore;
+    public feeStore: FeeStore;
 
     constructor(){
         this.settingsStore = new SettingsStore();
@@ -26,6 +28,7 @@ class Stores {
         this.walletStore = new BalanceStore(this.settingsStore);
         this.unitsStore = new UnitsStore(this.settingsStore);
         this.paymentsStore = new PaymentsStore(this.settingsStore);
+        this.feeStore = new FeeStore();
     }
 }
 
