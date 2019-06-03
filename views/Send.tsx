@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Button, Header, Icon } from 'react-native-elements';
+import { Button, FormValidationMessage, Header, Icon } from 'react-native-elements';
 import AddressUtils from './../utils/AddressUtils';
 import FeeTable from './../components/FeeTable';
 import FeeUtils from './../utils/FeeUtils';
@@ -135,7 +135,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         style={theme === 'dark' ? styles.textInputDark : styles.textInput}
                         placeholderTextColor='gray'
                     />
-                    {(!isValid && !!destination) && <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Must be a valid Bitcoin address or Lightning payment request</Text>}
+                    {(!isValid && !!destination) && <FormValidationMessage>Must be a valid Bitcoin address or Lightning payment request</FormValidationMessage>}
                     {transactionType && <Text style={{ paddingTop: 10 }}>{`${transactionType} Transaction`}</Text>}
                     {transactionType === 'On-chain' && <React.Fragment>
                         <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Amount (in satoshis)</Text>
@@ -167,11 +167,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 color: "white"
                             }}
                             onPress={() => navigation.navigate('PaymentRequest')}
+                            backgroundColor="orange"
                             style={styles.button}
-                            buttonStyle={{
-                                backgroundColor: "orange",
-                                borderRadius: 30
-                            }}
+                            borderRadius={30}
                         />
                     </View>}
                     {transactionType === 'On-chain' && <View style={styles.button}>
@@ -183,6 +181,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 color: "white"
                             }}
                             onPress={() => this.sendCoins()}
+                            backgroundColor="orange"
                             style={styles.button}
                             buttonStyle={{
                                 backgroundColor: "orange",
@@ -207,10 +206,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 color: "white"
                             }}
                             onPress={() => navigation.navigate('AddressQRCodeScanner')}
-                            buttonStyle={{
-                                backgroundColor: theme === "dark" ? "#261339" : "rgba(92, 99,216, 1)",
-                                borderRadius: 30
-                            }}
+                            backgroundColor={theme === "dark" ? "#261339" : "rgba(92, 99,216, 1)"}
+                            borderRadius={30}
                         />
                     </View>
                 </View>
@@ -231,15 +228,11 @@ const styles = StyleSheet.create({
     },
     textInput: {
         fontSize: 20,
-        color: 'black',
-        paddingTop: 10,
-        paddingBottom: 10
+        color: 'black'
     },
     textInputDark: {
         fontSize: 20,
-        color: 'white',
-        paddingTop: 10,
-        paddingBottom: 10
+        color: 'white'
     },
     content: {
         paddingLeft: 20,
