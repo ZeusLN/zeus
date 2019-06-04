@@ -18,8 +18,10 @@ export default class BTCPayConfigQRScanner extends React.Component<BTCPayConfigQ
         const { SettingsStore, navigation } = this.props;
         const { fetchBTCPayConfig } = SettingsStore;
 
+        const index = navigation.getParam('index', null);
+
         fetchBTCPayConfig(data).then((config: any) => {
-            navigation.navigate('Settings', { ...config });
+            navigation.navigate('AddEditNode', { node: config, index });
         }).catch(() => {
             Alert.alert(
                 'Error',
@@ -37,10 +39,12 @@ export default class BTCPayConfigQRScanner extends React.Component<BTCPayConfigQ
     render() {
         const { navigation } = this.props;
 
+        const index = navigation.getParam('index', null);
+
         const BackButton = () => (
             <Icon
                 name="arrow-back"
-                onPress={() => navigation.navigate('Settings')}
+                onPress={() => navigation.navigate('AddEditNode', { index })}
                 color="#fff"
                 underlayColor="transparent"
             />
