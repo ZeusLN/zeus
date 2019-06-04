@@ -47,7 +47,7 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                         borderBottomWidth: 0,
                                         backgroundColor: theme === 'dark' ? 'black' : 'white'
                                     }}
-                                    onPress={() => navigation.navigate('AddEditNode', { node: item, index: index, active: selectedNode === index })}
+                                    onPress={() => navigation.navigate('AddEditNode', { node: item, index: index, active: selectedNode === index, saved: true })}
                                     titleStyle={{ color: theme === 'dark' ? 'white' : 'black' }}
                                     subtitleStyle={{ color: theme === 'dark' ? 'gray' : '#8a8999' }}
                                 />

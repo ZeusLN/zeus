@@ -34,10 +34,10 @@ export default class Lockscreen extends React.Component<LockscreenProps, Lockscr
         const { SettingsStore, navigation } = this.props;
         const { getSettings } = SettingsStore;
         getSettings().then((settings: any) => {
-            if (!settings.passphrase) {
-                navigation.navigate('Wallet');
-            } else {
+            if (settings && settings.passphrase) {
                 this.setState({ passphrase: settings.passphrase });
+            } else {
+                navigation.navigate('Wallet');
             }
         });
     }
