@@ -41,6 +41,7 @@ export default class AddEditNode extends React.Component<AddEditNodeProps, AddEd
         const node = navigation.getParam('node', null);
         const index = navigation.getParam('index', null);
         const active = navigation.getParam('active', null);
+        const saved = navigation.getParam('saved', null);
 
         if (node) {
             const { host, port, macaroonHex } = node;
@@ -51,7 +52,7 @@ export default class AddEditNode extends React.Component<AddEditNodeProps, AddEd
                 macaroonHex,
                 index,
                 active,
-                saved: true
+                saved
             });
         } else {
           this.setState({
@@ -164,7 +165,7 @@ export default class AddEditNode extends React.Component<AddEditNodeProps, AddEd
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { host, port, macaroonHex, saved, active } = this.state;
+        const { host, port, macaroonHex, saved, active, index } = this.state;
         const { loading, settings } = SettingsStore;
         const savedTheme = settings.theme;
 
@@ -268,7 +269,7 @@ export default class AddEditNode extends React.Component<AddEditNodeProps, AddEd
                             size: 25,
                             color: savedTheme === 'dark' ? 'black' : 'white'
                         }}
-                        onPress={() => navigation.navigate('LNDConnectConfigQRScanner')}
+                        onPress={() => navigation.navigate('LNDConnectConfigQRScanner', { index })}
                         buttonStyle={{
                             backgroundColor: savedTheme === 'dark' ? 'white' : 'black',
                             borderRadius: 30
@@ -287,7 +288,7 @@ export default class AddEditNode extends React.Component<AddEditNodeProps, AddEd
                             size: 25,
                             color: "white"
                         }}
-                        onPress={() => navigation.navigate('BTCPayConfigQRScanner')}
+                        onPress={() => navigation.navigate('BTCPayConfigQRScanner', { index })}
                         buttonStyle={{
                             backgroundColor: "rgba(5, 146, 35, 1)",
                             borderRadius: 30
