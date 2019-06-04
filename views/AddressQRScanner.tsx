@@ -26,6 +26,8 @@ export default class AddressQRScanner extends React.Component<AddressQRProps, {}
             processedValue = data.split('bitcoin:')[1];
         } else if (data.includes('lightning:')) {
             processedValue = data.split('lightning:')[1];
+        } else if (data.includes('LIGHTNING:')) {
+            processedValue = data.split('LIGHTNING:')[1];
         } else {
             processedValue = data;
         }
