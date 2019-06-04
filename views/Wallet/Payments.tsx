@@ -9,7 +9,6 @@ import UnitsStore from './../../stores/UnitsStore';
 import SettingsStore from './../../stores/SettingsStore';
 
 const RemoveBalance = require('./../../images/lightning-red.png');
-const RemoveBalanceDark = require('./../../images/lightning-red-transparent.png');
 
 interface PaymentsProps {
     navigation: any;
@@ -52,7 +51,7 @@ export default class PaymentsView extends React.Component<PaymentsProps, {}> {
                                 title={units && getAmount(item.value)}
                                 subtitle={date}
                                 containerStyle={{ borderBottomWidth: 0 }}
-                                avatar={theme === 'dark' ? RemoveBalanceDark : RemoveBalance}
+                                avatar={RemoveBalance}
                                 onPress={() => navigation.navigate('Payment', { payment: item })}
                                 titleStyle={{ color: theme === 'dark' ? 'white' : 'black' }}
                                 subtitleStyle={{ color: theme === 'dark' ? 'gray' : '#8a8999' }}
