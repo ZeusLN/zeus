@@ -12,8 +12,8 @@ import SettingsStore from './../../stores/SettingsStore';
 const AddBalance = require('./../../images/lightning-green.png');
 const AddBalancePending = require('./../../images/lightning-green-pending.png');
 
-const AddBalanceDark = require('./../../images/lightning-green-transparent.png');
-const AddBalancePendingDark = require('./../../images/lightning-green-pending-transparent.png');
+const AddBalanceDark = require('./../../images/lightning-green-dark.png');
+const AddBalancePendingDark = require('./../../images/lightning-green-pending-dark.png');
 
 interface InvoicesProps {
     invoices: Array<Invoice>;
