@@ -10,7 +10,7 @@ import UnitsStore from './../../stores/UnitsStore';
 import SettingsStore from './../../stores/SettingsStore';
 
 const RemoveBalance = require('./../../images/lightning-red.png');
-const RemoveBalanceDark = require('./../../images/lightning-red-transparent.png');
+const RemoveBalanceDark = require('./../../images/lightning-red-dark.png');
 
 interface PaymentsProps {
     navigation: any;
