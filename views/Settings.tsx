@@ -231,7 +231,9 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         }}
                         buttonStyle={{
                             backgroundColor: saved ? "#fff" : savedTheme === 'dark' ? '#261339' : 'rgba(92, 99,216, 1)',
-                            borderRadius: 30
+                            borderRadius: 30,
+                            width: 350,
+                            alignSelf: 'center'
                         }}
                         titleStyle={{
                             color: saved ? "black" : "white"
@@ -253,7 +255,9 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                         style={styles.button}
                         buttonStyle={{
                             backgroundColor: 'darkgray',
-                            borderRadius: 30
+                            borderRadius: 30,
+                            width: 350,
+                            alignSelf: 'center'
                         }}
                         titleStyle={{
                             color: "white"

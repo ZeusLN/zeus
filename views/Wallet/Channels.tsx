@@ -62,7 +62,9 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                         }}
                         buttonStyle={{
                             backgroundColor: theme === "dark" ? "#261339" : "rgba(92, 99,216, 1)",
-                            borderRadius: 30
+                            borderRadius: 30,
+                            width: 350,
+                            alignSelf: 'center'
                         }}
                         onPress={() => navigation.navigate('OpenChannel')}
                         style={{ paddingTop: 10, width: 250, alignSelf: 'center' }}
