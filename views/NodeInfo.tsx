@@ -1,9 +1,8 @@
 import * as React from 'react';
 import { StyleSheet, ScrollView, Text, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
+import CollapsedQR from './../components/CollapsedQR';
 import { inject, observer } from 'mobx-react';
-import QRCode from 'react-native-qrcode';
-import CopyButton from './../components/CopyButton';
 
 import NodeInfoStore from './../stores/NodeInfoStore';
 import SettingsStore from './../stores/SettingsStore';
@@ -38,17 +37,10 @@ export default class NodeInfo extends React.Component<InvoiceProps> {
             props. uris.forEach((uri, key) => {
                 items.push(
                     <React.Fragment key={key}>
-                        <View style={styles.qrPadding}>
-                            <QRCode
-                                value={uri}
-                                size={200}
-                                fgColor='white'
-                            />
-                        </View>
-                        <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{uri}</Text>
-                        <CopyButton
-                            copyValue={uri}
-                            title="Copy URI"
+                        <CollapsedQR
+                            value={uri}
+                            theme={theme}
+                            copyText="Copy URI"
                         />
                     </React.Fragment>
                 );

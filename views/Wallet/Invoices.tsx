@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, View, FlatList } from 'react-native';
-import { Button, ListItem } from 'react-native-elements';
+import { Avatar, Button, ListItem } from 'react-native-elements';
+import DateTimeUtils from './../../utils/DateTimeUtils';
 import Invoice from './../../models/Invoice';
 import { inject, observer } from 'mobx-react';
 
@@ -33,10 +34,6 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
         )
     }
 
-    renderAvatar = (settled: boolean) => {
-        return settled ? AddBalance : AddBalancePending;
-    }
-
     render() {
         const { invoices, navigation, refresh, InvoicesStore, UnitsStore, SettingsStore } = this.props;
         const { getAmount, units } = UnitsStore;
@@ -44,21 +41,32 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
         const { settings } = SettingsStore;
         const { theme } = settings;
 
+        const InvoiceImage = (settled: boolean) => {
+            return settled ? AddBalance : AddBalancePending;
+        }
+
+        const Invoice = (settled: boolean) => (
+            <Avatar
+                source={InvoiceImage(settled)}
+            />
+        );
+
         return (
             <View style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
                 {(!!invoices && invoices.length > 0) || loading  ? <FlatList
                     data={invoices}
                     renderItem={({ item }) => {
-                        const settleDate = new Date(Number(item.settle_date) * 1000).toString();
-                        const creationDate = new Date(Number(item.creation_date) * 1000).toString();
                         const { settled } = item;
                         return (
                             <ListItem
                                 key={item.r_hash}
                                 title={item.memo || "No memo"}
-                                subtitle={`${settled ? 'Paid' : 'Unpaid'}: ${units && getAmount(item.value)} | ${settled ? settleDate : creationDate}`}
-                                containerStyle={{ borderBottomWidth: 0 }}
-                                avatar={this.renderAvatar(item.settled)}
+                                subtitle={`${settled ? 'Paid' : 'Unpaid'}: ${units && getAmount(item.value)} | ${settled ? DateTimeUtils.listFormattedDate(item.settle_date) : DateTimeUtils.listFormattedDate(item.creation_date)}`}
+                                containerStyle={{
+                                    borderBottomWidth: 0,
+                                    backgroundColor: theme === 'dark' ? 'black' : 'white'
+                                }}
+                                leftElement={Invoice(item.settled)}
                                 onPress={() => navigation.navigate('Invoice', { invoice: item })}
                                 titleStyle={{ color: theme === 'dark' ? 'white' : 'black' }}
                                 subtitleStyle={{ color: theme === 'dark' ? 'gray' : '#8a8999' }}
@@ -77,10 +85,14 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
                         size: 25,
                         color: theme === 'dark' ? 'white' : 'black'
                     }}
-                    backgroundColor="transparent"
-                    color={theme === 'dark' ? 'white' : 'black'}
                     onPress={() => refresh()}
-                    borderRadius={30}
+                    buttonStyle={{
+                        backgroundColor: "transparent",
+                        borderRadius: 30
+                    }}
+                    titleStyle={{
+                        color: theme === 'dark' ? 'white' : 'black'
+                    }}
                 />}
             </View>
         );
