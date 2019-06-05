@@ -154,10 +154,12 @@ export default class OpenChannel extends React.Component<OpenChannelProps, OpenC
                                 size: 25,
                                 color: "white"
                             }}
-                            backgroundColor={theme === "dark" ? "#261339" : "rgba(92, 99,216, 1)"}
                             onPress={() => connectPeer(this.state)}
                             style={{ padding: 10 }}
-                            borderRadius={30}
+                            buttonStyle={{
+                                backgroundColor: theme === "dark" ? "#261339" : "rgba(92, 99,216, 1)",
+                                borderRadius: 30
+                            }}
                         />
                     </View>
                     <View style={styles.button}>
@@ -169,8 +171,10 @@ export default class OpenChannel extends React.Component<OpenChannelProps, OpenC
                                 color: "white"
                             }}
                             onPress={() => navigation.navigate('NodeQRCodeScanner')}
-                            backgroundColor={theme === "dark" ? "#261339" : "rgba(92, 99,216, 1)"}
-                            borderRadius={30}
+                            buttonStyle={{
+                                backgroundColor: theme === "dark" ? "#261339" : "rgba(92, 99,216, 1)",
+                                borderRadius: 30
+                            }}
                         />
                     </View>
                     <View style={styles.button}>
