@@ -1,16 +1,13 @@
 import * as React from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Button, FormValidationMessage, Header, Icon } from 'react-native-elements';
+import { Button, Header, Icon } from 'react-native-elements';
 import AddressUtils from './../utils/AddressUtils';
-import FeeTable from './../components/FeeTable';
-import FeeUtils from './../utils/FeeUtils';
 
 import InvoicesStore from './../stores/InvoicesStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
 import TransactionsStore from './../stores/TransactionsStore';
 import SettingsStore from './../stores/SettingsStore';
-import FeeStore from './../stores/FeeStore';
 
 interface SendProps {
     exitSetup: any;
@@ -19,7 +16,6 @@ interface SendProps {
     NodeInfoStore: NodeInfoStore;
     TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;
-    FeeStore: FeeStore;
 }
 
 interface SendState {
@@ -30,7 +26,7 @@ interface SendState {
     fee: string;
 }
 
-@inject('InvoicesStore', 'NodeInfoStore', 'TransactionsStore', 'SettingsStore', 'FeeStore')
+@inject('InvoicesStore', 'NodeInfoStore', 'TransactionsStore', 'SettingsStore')
 @observer
 export default class Send extends React.Component<SendProps, SendState> {
     constructor(props: any) {
@@ -98,14 +94,8 @@ export default class Send extends React.Component<SendProps, SendState> {
         navigation.navigate('SendingOnChain');
     }
 
-    setFee = (value: string) => {
-        this.setState({
-            fee: FeeUtils.roundFee(value)
-        });
-    }
-
     render() {
-        const { SettingsStore, FeeStore, navigation } = this.props;
+        const { SettingsStore, navigation } = this.props;
         const { isValid, transactionType, destination, amount, fee } = this.state;
         const { settings } = SettingsStore;
         const { theme } = settings;
@@ -120,7 +110,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         );
 
         return (
-            <ScrollView style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
+            <View style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{ text: 'Send', style: { color: '#fff' } }}
@@ -135,7 +125,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         style={theme === 'dark' ? styles.textInputDark : styles.textInput}
                         placeholderTextColor='gray'
                     />
-                    {(!isValid && !!destination) && <FormValidationMessage>Must be a valid Bitcoin address or Lightning payment request</FormValidationMessage>}
+                    {(!isValid && !!destination) && <Text>Must be a valid Bitcoin address or Lightning payment request</Text>}
                     {transactionType && <Text style={{ paddingTop: 10 }}>{`${transactionType} Transaction`}</Text>}
                     {transactionType === 'On-chain' && <React.Fragment>
                         <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Amount (in satoshis)</Text>
@@ -151,13 +141,11 @@ export default class Send extends React.Component<SendProps, SendState> {
                         <TextInput
                             placeholder="2"
                             value={fee}
-                            onChangeText={(text: string) => this.setFee(text)}
+                            onChangeText={(text: string) => this.setState({ fee: text })}
                             style={theme === 'dark' ? styles.textInputDark : styles.textInput}
                             placeholderTextColor='gray'
                         />
                     </React.Fragment>}
-                </View>
-                <View style={styles.buttons}>
                     {transactionType === 'Lightning' && <View style={styles.button}>
                         <Button
                             title="Look Up Payment Request"
@@ -167,9 +155,11 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 color: "white"
                             }}
                             onPress={() => navigation.navigate('PaymentRequest')}
-                            backgroundColor="orange"
                             style={styles.button}
-                            borderRadius={30}
+                            buttonStyle={{
+                                backgroundColor: "orange",
+                                borderRadius: 30
+                            }}
                         />
                     </View>}
                     {transactionType === 'On-chain' && <View style={styles.button}>
@@ -181,20 +171,11 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 color: "white"
                             }}
                             onPress={() => this.sendCoins()}
-                            backgroundColor="orange"
                             style={styles.button}
                             buttonStyle={{
                                 backgroundColor: "orange",
-                                borderRadius: 30,
-                                width: 200
+                                borderRadius: 30
                             }}
-                        />
-                    </View>}
-                    {transactionType === 'On-chain' && <View style={styles.button}>
-                        <FeeTable
-                            setFee={this.setFee}
-                            SettingsStore={SettingsStore}
-                            FeeStore={FeeStore}
                         />
                     </View>}
                     <View style={styles.button}>
@@ -206,20 +187,21 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 color: "white"
                             }}
                             onPress={() => navigation.navigate('AddressQRCodeScanner')}
-                            backgroundColor={theme === "dark" ? "#261339" : "rgba(92, 99,216, 1)"}
-                            borderRadius={30}
+                            buttonStyle={{
+                                backgroundColor: theme === "dark" ? "#261339" : "rgba(92, 99,216, 1)",
+                                borderRadius: 30
+                            }}
                         />
                     </View>
                 </View>
-            </ScrollView>
+            </View>
         );
     }
 }
 
 const styles = StyleSheet.create({
     lightThemeStyle: {
-        flex: 1,
-        color: 'black'
+        flex: 1
     },
     darkThemeStyle: {
         flex: 1,
@@ -228,23 +210,22 @@ const styles = StyleSheet.create({
     },
     textInput: {
         fontSize: 20,
-        color: 'black'
+        color: 'black',
+        paddingTop: 10,
+        paddingBottom: 10
     },
     textInputDark: {
         fontSize: 20,
-        color: 'white'
+        color: 'white',
+        paddingTop: 10,
+        paddingBottom: 10
     },
     content: {
         paddingLeft: 20,
         paddingRight: 20
     },
     button: {
-        paddingTop: 10,
-        paddingBottom: 10
-    },
-    buttons: {
-        alignItems: 'center',
-        paddingTop: 20,
-        paddingBottom: 20
+        paddingTop: 15,
+        paddingBottom: 15
     }
 });
