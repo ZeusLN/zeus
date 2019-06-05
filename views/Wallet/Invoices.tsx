@@ -12,6 +12,9 @@ import SettingsStore from './../../stores/SettingsStore';
 const AddBalance = require('./../../images/lightning-green.png');
 const AddBalancePending = require('./../../images/lightning-green-pending.png');
 
+const AddBalanceDark = require('./../../images/lightning-green-transparent.png');
+const AddBalancePendingDark = require('./../../images/lightning-green-pending-transparent.png');
+
 interface InvoicesProps {
     invoices: Array<Invoice>;
     navigation: any;
@@ -42,7 +45,18 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
         const { theme } = settings;
 
         const InvoiceImage = (settled: boolean) => {
-            return settled ? AddBalance : AddBalancePending;
+            const { SettingsStore } = this.props;
+            const { settings } = SettingsStore;
+            const { theme } = settings;
+
+            let avatar;
+            if (settled) {
+                avatar = theme === 'dark' ? AddBalanceDark : AddBalance;
+            } else {
+                avatar = theme === 'dark' ? AddBalancePendingDark : AddBalancePending;
+            }
+
+            return avatar;
         }
 
         const Invoice = (settled: boolean) => (

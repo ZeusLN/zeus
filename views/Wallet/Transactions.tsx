@@ -14,6 +14,11 @@ const RemoveBalance = require('./../../images/onchain-red.png');
 const AddBalancePending = require('./../../images/onchain-green-pending.png');
 const RemoveBalancePending = require('./../../images/onchain-red-pending.png');
 
+const AddBalanceDark = require('./../../images/onchain-green-transparent.png');
+const RemoveBalanceDark = require('./../../images/onchain-red-transparent.png');
+const AddBalancePendingDark = require('./../../images/onchain-green-pending-transparent.png');
+const RemoveBalancePendingDark = require('./../../images/onchain-red-pending-transparent.png');
+
 interface TransactionsProps {
     navigation: any;
     refresh: any;
@@ -53,17 +58,17 @@ export default class Transactions extends React.Component<TransactionsProps> {
 
             if (num_confirmations && num_confirmations > 0) {
                 if (amount > 0) {
-                    return AddBalance;
+                    return theme === 'dark' ? AddBalanceDark : AddBalance;
                 }
 
-                return RemoveBalance;
+                return theme === 'dark' ? RemoveBalanceDark : RemoveBalance;
             }
 
             if (amount > 0) {
-                return AddBalancePending;
+                return theme === 'dark' ? AddBalancePendingDark : AddBalancePending;
             }
 
-            return RemoveBalancePending;
+            return theme === 'dark' ? RemoveBalancePendingDark : RemoveBalancePending;
         }
 
         const Balance = (item: Transaction) => (
