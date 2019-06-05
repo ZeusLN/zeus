@@ -45,9 +45,11 @@ export default class SendingLightning extends React.Component<SendingLightningPr
                             size: 125,
                             color: "white"
                         }}
-                        backgroundColor="transparent"
                         style={{ padding: 20 }}
                         onPress={() => void(0)}
+                        buttonStyle={{
+                            backgroundColor: "transparent"
+                        }}
                     />}
                     {error && <Button
                         title=""
@@ -56,9 +58,11 @@ export default class SendingLightning extends React.Component<SendingLightningPr
                             size: 125,
                             color: "white"
                         }}
-                        backgroundColor="transparent"
                         style={{ padding: 20 }}
                         onPress={() => void(0)}
+                        buttonStyle={{
+                            backgroundColor: "transparent"
+                        }}
                     />}
 
                     {payment_route && <Button
@@ -68,11 +72,15 @@ export default class SendingLightning extends React.Component<SendingLightningPr
                             size: 25,
                             color: "green"
                         }}
-                        color="green"
-                        backgroundColor="#fff"
                         onPress={() => navigation.navigate('Wallet')}
                         style={styles.button}
-                        borderRadius={30}
+                        buttonStyle={{
+                            backgroundColor: "#fff",
+                            borderRadius: 30
+                        }}
+                        titleStyle={{
+                            color: "green"
+                        }}
                     />}
                 </View>
             </View>
