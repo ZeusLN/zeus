@@ -35,7 +35,7 @@ export default class MainPane extends React.Component<MainPaneProps, MainPaneSta
         const { combinedBalance } = this.state;
         const {changeUnits, getAmount, units } = UnitsStore;
         const { totalBlockchainBalance, unconfirmedBlockchainBalance, lightningBalance, pendingOpenBalance } = BalanceStore;
-        const { settings, host } = SettingsStore;
+        const { host, settings } = SettingsStore;
         const { theme } = settings;
         const loading = NodeInfoStore.loading || BalanceStore.loading;
 
@@ -68,24 +68,33 @@ export default class MainPane extends React.Component<MainPaneProps, MainPaneSta
         );
 
         const SettingsButton = () => (
-            <View style={styles.settings}>
-                <Button
-                    title=""
-                    icon={{
-                        name: "settings",
-                        size: 25,
-                        color: "#fff"
-                    }}
-                    backgroundColor="transparent"
-                    onPress={() => navigation.navigate('Settings')}
-                />
-            </View>
+            <Button
+                title=""
+                icon={{
+                    name: "settings",
+                    size: 25,
+                    color: "#fff"
+                }}
+                buttonStyle={{
+                    backgroundColor: "transparent",
+                    marginRight: -10
+                }}
+                onPress={() => navigation.navigate('Settings')}
+            />
         );
 
         const NodeInfoBadge = () => (
             <View style={styles.nodeInfo}>
                 {host && host.includes('.onion') && <TouchableOpacity onPress={() => navigation.navigate('NodeInfo')}><Image style={{ width: 25, height: 25 }} source={TorIcon} /></TouchableOpacity>}
-                {host && !host.includes('.onion') && <Badge onPress={() => navigation.navigate('NodeInfo')} value={NodeInfoStore.testnet ? 'Testnet' : 'ⓘ'} />}
+                {host && !host.includes('.onion') && <Badge
+                    onPress={() => navigation.navigate('NodeInfo')}
+                    value={NodeInfoStore.testnet ? 'Testnet' : 'ⓘ'}
+                    badgeStyle={{
+                        backgroundColor: 'gray',
+                        borderWidth: 0,
+                        marginLeft: 5
+                    }}
+                />}
             </View>
         );
 
@@ -97,12 +106,16 @@ export default class MainPane extends React.Component<MainPaneProps, MainPaneSta
                     <Header
                         rightComponent={<SettingsButton />}
                         backgroundColor='transparent'
-                        outerContainerStyles={{ borderBottomWidth: 0 }}
+                        containerStyle={{
+                            borderBottomWidth: 0
+                        }}
                     />
                     <Button
                         title=""
                         loading
-                        backgroundColor="transparent"
+                        buttonStyle={{
+                            backgroundColor: 'transparent'
+                        }}
                         onPress={() => void(0)}
                     />
                 </View>
@@ -115,7 +128,9 @@ export default class MainPane extends React.Component<MainPaneProps, MainPaneSta
                             leftComponent={<NodeInfoBadge />}
                             rightComponent={<SettingsButton />}
                             backgroundColor='transparent'
-                            outerContainerStyles={{ borderBottomWidth: 0 }}
+                            containerStyle={{
+                                borderBottomWidth: 0
+                            }}
                         />
                         <TouchableOpacity
                             onPress={() => changeUnits()}
@@ -131,10 +146,17 @@ export default class MainPane extends React.Component<MainPaneProps, MainPaneSta
                                     size: 25,
                                     color: "red"
                                 }}
-                                buttonStyle={{ backgroundColor: theme === 'dark' ? 'black' : 'white' }}
-                                color={theme === 'dark' ? 'white' : 'black'}
+                                buttonStyle={{
+                                    backgroundColor: theme === 'dark' ? 'black' : 'white',
+                                    borderRadius: 30
+                                }}
+                                containerStyle={{
+                                    marginRight: 10
+                                }}
+                                titleStyle={{
+                                    color: theme === 'dark' ? 'white' : 'black'
+                                }}
                                 onPress={() => navigation.navigate('Send')}
-                                borderRadius={30}
                                 raised={theme !== 'dark'}
                             />
                             <Button
@@ -144,10 +166,17 @@ export default class MainPane extends React.Component<MainPaneProps, MainPaneSta
                                     size: 25,
                                     color: "green"
                                 }}
-                                buttonStyle={{ backgroundColor: theme === 'dark' ? 'black' : 'white' }}
-                                color={theme === 'dark' ? 'white' : 'black'}
+                                buttonStyle={{
+                                    backgroundColor: theme === 'dark' ? 'black' : 'white',
+                                    borderRadius: 30
+                                }}
+                                containerStyle={{
+                                    marginLeft: 10
+                                }}
+                                titleStyle={{
+                                    color: theme === 'dark' ? 'white' : 'black'
+                                }}
                                 onPress={() => navigation.navigate('Receive')}
-                                borderRadius={30}
                                 raised={theme !== 'dark'}
                             />
                         </View>
@@ -165,9 +194,14 @@ export default class MainPane extends React.Component<MainPaneProps, MainPaneSta
                             color: "#fff"
                         }}
                         title="Go to Settings"
-                        backgroundColor="gray"
+                        buttonStyle={{
+                            backgroundColor: "gray",
+                            borderRadius: 30
+                        }}
+                        containerStyle={{
+                            alignItems: 'center'
+                        }}
                         onPress={() => navigation.navigate('Settings')}
-                        borderRadius={30}
                     />
                 </View>
             );
@@ -227,9 +261,6 @@ const styles = StyleSheet.create({
         color: '#fff'
     },
     settings: {
-        alignItems: 'flex-end',
-        marginRight: -40,
-        marginBottom: -15
     },
     nodeInfo: {
         alignItems: 'flex-start',
