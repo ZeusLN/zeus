@@ -88,7 +88,7 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                         marginBottom: 20,
                         backgroundColor: 'crimson'
                     }}
-                    onPress={() => navigation.navigate('AddEditNode', { index: nodes && nodes.length && Number(nodes.length) || 0 })}
+                    onPress={() => navigation.navigate('AddEditNode', { newEntry: true, index: nodes && nodes.length && Number(nodes.length) || 0 })}
                     titleStyle={{
                         color: 'white'
                     }}
