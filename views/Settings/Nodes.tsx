@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, StyleSheet, View, ActivityIndicator } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
 import { Avatar, Button, ListItem } from 'react-native-elements';
 import Identicon from 'identicon.js';
 const hash = require('object-hash');
@@ -33,7 +33,6 @@ export default class Nodes extends React.Component<NodesProps, {}> {
 
         return (
             <View>
-                {loading && <ActivityIndicator size="large" color="#0000ff" />}
                 {(!!nodes && !loading && nodes.length > 0) && <FlatList
                     data={nodes}
                     renderItem={({ item, index }) => {
@@ -51,6 +50,7 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                     onPress={() => navigation.navigate('AddEditNode', { node: item, index: index, active: selectedNode === index, saved: true })}
                                     titleStyle={{ color: theme === 'dark' ? 'white' : 'black' }}
                                     subtitleStyle={{ color: theme === 'dark' ? 'gray' : '#8a8999' }}
+                                    refreshing={loading}
                                 />
                             </React.Fragment>
                         );
