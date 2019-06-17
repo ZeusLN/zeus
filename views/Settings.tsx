@@ -150,15 +150,6 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                     backgroundColor={savedTheme === 'dark' ? '#261339' : 'rgba(92, 99,216, 1)'}
                 />
 
-                {loading && <Button
-                    title=""
-                    loading
-                    buttonStyle={{
-                        backgroundColor: 'transparent'
-                    }}
-                    onPress={() => void(0)}
-                />}
-
                 {passphraseError && <Text style={{ color: 'red', textAlign: 'center', padding: 20 }}>Passphrases do not match</Text>}
 
                 <View style={styles.form}>
