@@ -50,6 +50,7 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                     onPress={() => navigation.navigate('AddEditNode', { node: item, index: index, active: selectedNode === index, saved: true })}
                                     titleStyle={{ color: theme === 'dark' ? 'white' : 'black' }}
                                     subtitleStyle={{ color: theme === 'dark' ? 'gray' : '#8a8999' }}
+                                    refreshing={loading}
                                 />
                             </React.Fragment>
                         );
@@ -88,7 +89,7 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                         marginBottom: 20,
                         backgroundColor: 'crimson'
                     }}
-                    onPress={() => navigation.navigate('AddEditNode', { index: nodes && nodes.length && Number(nodes.length) || 0 })}
+                    onPress={() => navigation.navigate('AddEditNode', { newEntry: true, index: nodes && nodes.length && Number(nodes.length) || 0 })}
                     titleStyle={{
                         color: 'white'
                     }}
