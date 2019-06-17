@@ -17,6 +17,7 @@ interface AddEditNodeState {
     saved: boolean;
     active: boolean;
     index: number;
+    newEntry: boolean;
 }
 
 @inject('SettingsStore')
@@ -30,7 +31,8 @@ export default class AddEditNode extends React.Component<AddEditNodeProps, AddEd
           macaroonHex: '',
           saved: false,
           index: 0,
-          active: false
+          active: false,
+          newEntry: false
     }
 
     async componentDidMount() {
@@ -42,6 +44,7 @@ export default class AddEditNode extends React.Component<AddEditNodeProps, AddEd
         const index = navigation.getParam('index', null);
         const active = navigation.getParam('active', null);
         const saved = navigation.getParam('saved', null);
+        const newEntry = navigation.getParam('newEntry', null);
 
         if (node) {
             const { host, port, macaroonHex } = node;
@@ -52,12 +55,14 @@ export default class AddEditNode extends React.Component<AddEditNodeProps, AddEd
                 macaroonHex,
                 index,
                 active,
-                saved
+                saved,
+                newEntry
             });
         } else {
           this.setState({
               index,
-              active
+              active,
+              newEntry
           });
         }
     }
@@ -71,6 +76,7 @@ export default class AddEditNode extends React.Component<AddEditNodeProps, AddEd
         const node = navigation.getParam('node', null);
         const index = navigation.getParam('index', null);
         const active = navigation.getParam('active', null);
+        const newEntry = navigation.getParam('newEntry', null);
 
         if (node) {
           const { host, port, macaroonHex } = node;
@@ -80,21 +86,23 @@ export default class AddEditNode extends React.Component<AddEditNodeProps, AddEd
               port,
               macaroonHex,
               index,
-              active: index === this.props.SettingsStore.settings.selectedNode
+              active: index === this.props.SettingsStore.settings.selectedNode,
+              newEntry
           });
         } else {
           this.setState({
               index,
-              active
+              active,
+              newEntry
           });
         }
 
     }
 
     saveNodeConfiguration = () => {
-        const { SettingsStore } = this.props;
+        const { SettingsStore, navigation } = this.props;
         const { host, port, macaroonHex, index } = this.state;
-        const { getSettings, setSettings, settings } = SettingsStore;
+        const { setSettings, settings } = SettingsStore;
 
         const node = {
             host,
@@ -117,7 +125,7 @@ export default class AddEditNode extends React.Component<AddEditNodeProps, AddEd
             saved: true
         });
 
-        getSettings();
+        navigation.navigate('Settings', { refresh: true });
     }
 
     deleteNodeConfig = () => {
@@ -165,7 +173,7 @@ export default class AddEditNode extends React.Component<AddEditNodeProps, AddEd
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { host, port, macaroonHex, saved, active, index } = this.state;
+        const { host, port, macaroonHex, saved, active, index, newEntry } = this.state;
         const { loading, settings } = SettingsStore;
         const savedTheme = settings.theme;
 
@@ -241,7 +249,7 @@ export default class AddEditNode extends React.Component<AddEditNodeProps, AddEd
                     />
                 </View>
 
-                {saved && <View style={styles.button}>
+                {saved && !newEntry && <View style={styles.button}>
                     <Button
                         title={active ? "Node Active" : "Set Node Config as Active"}
                         icon={{
