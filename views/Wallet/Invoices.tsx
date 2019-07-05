@@ -75,7 +75,7 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
                             <ListItem
                                 key={item.r_hash}
                                 title={item.memo || "No memo"}
-                                subtitle={`${settled ? 'Paid' : 'Unpaid'}: ${units && getAmount(item.value)} | ${settled ? DateTimeUtils.listFormattedDate(item.settle_date) : DateTimeUtils.listFormattedDate(item.creation_date)}`}
+                                subtitle={`${settled ? 'Paid' : 'Unpaid'}: ${units && getAmount(settled ? item.amt_paid_sat : item.value)} | ${settled ? DateTimeUtils.listFormattedDate(item.settle_date) : DateTimeUtils.listFormattedDate(item.creation_date)}`}
                                 containerStyle={{
                                     borderBottomWidth: 0,
                                     backgroundColor: theme === 'dark' ? 'black' : 'white'
