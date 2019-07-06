@@ -24,6 +24,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
 
         const invoice: Invoice = navigation.getParam('invoice', null);
         const {
+            amt_paid_sat,
             fallback_addr,
             r_hash,
             settle_date,
@@ -59,7 +60,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                 />
                 <View style={styles.center}>
                     <TouchableOpacity onPress={() => changeUnits()}>
-                        <Text style={theme === 'dark' ? styles.amountDark : styles.amount}>{`${settled ? 'Paid' : 'Unpaid'}: ${units && getAmount(value)}`}</Text>
+                        <Text style={theme === 'dark' ? styles.amountDark : styles.amount}>{`${settled ? 'Paid' : 'Unpaid'}: ${units && getAmount(settled ? amt_paid_sat : value)}`}</Text>
                     </TouchableOpacity>
                 </View>
 
