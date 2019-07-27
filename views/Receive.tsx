@@ -212,6 +212,22 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
                                 }}
                             />
                         </View>
+
+                        <View style={styles.button}>
+                            <Button
+                                title="Scan LNURL"
+                                icon={{
+                                    name: "crop-free",
+                                    size: 25,
+                                    color: "white"
+                                }}
+                                onPress={() => navigation.navigate('AddressQRCodeScanner')}
+                                buttonStyle={{
+                                    backgroundColor: theme === "dark" ? "#261339" : "rgba(92, 99,216, 1)",
+                                    borderRadius: 30
+                                }}
+                            />
+                        </View>
                     </View>}
                 </View>
             </View>
