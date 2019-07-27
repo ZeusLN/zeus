@@ -20,13 +20,17 @@ export default class AddressQRScanner extends React.Component<AddressQRProps, {}
         const { testnet } = NodeInfoStore;
         let processedValue;
 
-        // handle addresses prefixed with 'bitcoin:' and
-        // payment requests prefixed with 'lightning:'
         data = data.toLowerCase();
+
+        // handle addresses prefixed with 'bitcoin:',
+        // payment requests prefixed with 'lightning:', and
+        // lnurls either prefixed with 'lightning:' or sent as a querystring fallback at '?lightning='
         if (data.includes('bitcoin:')) {
             processedValue = data.split('bitcoin:')[1];
         } else if (data.includes('lightning:')) {
             processedValue = data.split('lightning:')[1];
+        } else if (data.includes('lightning=')) {
+            processedValue = data.split('lightning=')[1].split('&')[0];
         } else {
             processedValue = data;
         }
