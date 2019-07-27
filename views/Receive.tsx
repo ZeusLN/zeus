@@ -30,6 +30,7 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
         selectedIndex: 0,
         memo: '',
         value: '',
+        valueFixed: false,
         expiry: '3600',
         lnurlCallback: null,
     }
@@ -54,6 +55,7 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
                     selectedIndex: 1,
                     memo: response.defaultDescription,
                     value: (response.maxWithdrawable / 1000).toString(),
+                    valueFixed: response.amountIsFixed || false,
                     lnurlCallback: response.callback + '?k1=' + response.k1
                 })
             })
@@ -78,6 +80,7 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
             // reset LN invoice values so old invoices don't linger
             memo: '',
             value: '',
+            valueFixed: false,
             expiry: '3600',
             lnurlCallback: null
         });
@@ -179,7 +182,11 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
                         <TextInput
                             placeholder={"100"}
                             value={value}
-                            onChangeText={(text: string) => this.setState({ value: text })}
+                            onChangeText={(text: string) => {
+                                if (!this.state.valueFixed) {
+                                    this.setState({ value: text });
+                                }
+                            }}
                             numberOfLines={1}
                             editable={true}
                             style={theme === 'dark' ? styles.textInputDark : styles.textInput}
