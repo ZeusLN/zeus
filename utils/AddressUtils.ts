@@ -2,6 +2,7 @@ const btcNonBech = /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
 const btcBech = /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,39}$/;
 
 const lnInvoice = /^(lnbcrt|lntb|lnbc|LNBCRT|LNTB|LNBC)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
+const lnUrl = /^(lnurl|LNURL)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
 
 /* testnet */
 const btcNonBechTestnet = /^[2][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
@@ -17,6 +18,8 @@ class AddressUtils {
     };
 
     isValidLightningPaymentRequest = (input: string) => lnInvoice.test(input);
+
+    isValidLNURL = (input: string) => lnUrl.test(input);
 };
 
 const addressUtils = new AddressUtils();

@@ -71,7 +71,7 @@ export default class InvoicesStore {
     }
 
     @action
-    public createInvoice = (memo: string, value: string, expiry: string = "3600") => {
+    public createInvoice = (memo: string, value: string, expiry: string = "3600", lnurlCallback: string | null = null) => {
         const { host, port, macaroonHex } = this.settingsStore;
 
         this.payment_request = null;
@@ -95,6 +95,14 @@ export default class InvoicesStore {
             const data = response.data;
             this.payment_request = data.payment_request;
             this.creatingInvoice = false;
+
+            // submit payment_request to lnurlCallback
+            if (lnurlCallback) {
+                axios.request({
+                    method: 'get',
+                    url: lnurlCallback + '&pr=' + data.payment_request
+                });
+            }
         })
         .catch((error: any) => {
             // handle error

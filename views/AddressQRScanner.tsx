@@ -22,12 +22,11 @@ export default class AddressQRScanner extends React.Component<AddressQRProps, {}
 
         // handle addresses prefixed with 'bitcoin:' and
         // payment requests prefixed with 'lightning:'
+        data = data.toLowerCase();
         if (data.includes('bitcoin:')) {
             processedValue = data.split('bitcoin:')[1];
         } else if (data.includes('lightning:')) {
             processedValue = data.split('lightning:')[1];
-        } else if (data.includes('LIGHTNING:')) {
-            processedValue = data.split('LIGHTNING:')[1];
         } else {
             processedValue = data;
         }
@@ -36,6 +35,8 @@ export default class AddressQRScanner extends React.Component<AddressQRProps, {}
             navigation.navigate('Send', { destination: processedValue, transactionType: 'On-chain' });
         } else if (AddressUtils.isValidLightningPaymentRequest(processedValue)) {
             navigation.navigate('Send', { destination: processedValue, transactionType: 'Lightning' });
+        } else if (AddressUtils.isValidLNURL(processedValue)) {
+            navigation.navigate('Receive', { lnurl: processedValue });
         } else {
             Alert.alert(
                 'Error',

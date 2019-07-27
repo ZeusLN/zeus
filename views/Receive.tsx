@@ -1,4 +1,6 @@
 import * as React from 'react';
+import axios from 'axios';
+import bech32 from 'bech32';
 import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, ButtonGroup, Header, Icon } from 'react-native-elements';
 import CollapsedQR from './../components/CollapsedQR';
@@ -28,7 +30,37 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
         selectedIndex: 0,
         memo: '',
         value: '',
-        expiry: '3600'
+        expiry: '3600',
+        lnurlCallback: null,
+    }
+
+    componentDidMount() {
+        const { navigation } = this.props;
+        const lnurl = navigation.getParam('lnurl', null);
+        if (lnurl) {
+            this.setState({ selectedIndex: 1 })
+
+            const decoded = bech32.decode(lnurl, 1500);
+            const url = Buffer.from(bech32.fromWords(decoded.words)).toString();
+            axios.request({
+                method: 'get',
+                url
+            }).then((response: any) => {
+                if (response.tag !== 'withdrawRequest') {
+                    return;
+                }
+
+                this.setState({
+                    selectedIndex: 1,
+                    memo: response.defaultDescription,
+                    value: (response.maxWithdrawable / 1000).toString(),
+                    lnurlCallback: response.callback + '?k1=' + response.k1
+                })
+            })
+            .catch((error: any) => {
+                // handle error? perhaps just ignore.
+            });
+        }
     }
 
     getNewAddress = () => {
@@ -46,7 +78,8 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
             // reset LN invoice values so old invoices don't linger
             memo: '',
             value: '',
-            expiry: '3600'
+            expiry: '3600',
+            lnurlCallback: null
         });
 
         if (InvoicesStore.payment_request) {
@@ -56,7 +89,7 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
 
     render() {
         const { InvoicesStore, SettingsStore, navigation } = this.props;
-        const { selectedIndex, memo, value, expiry } = this.state;
+        const { selectedIndex, memo, value, expiry, lnurlCallback } = this.state;
         const { createInvoice, payment_request, creatingInvoice, creatingInvoiceError, error_msg } = InvoicesStore;
         const { settings, loading } = SettingsStore;
         const { onChainAndress, theme } = settings;
@@ -172,7 +205,7 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
                                     size: 25,
                                     color: "white"
                                 }}
-                                onPress={() => createInvoice(memo, value, expiry)}
+                                onPress={() => createInvoice(memo, value, expiry, lnurlCallback)}
                                 buttonStyle={{
                                     backgroundColor: "orange",
                                     borderRadius: 30
