@@ -26,7 +26,7 @@ interface QRState {
 export default class QRCodeScanner extends React.Component<QRProps, QRState> {
   state = {
     hasCameraPermission: null,
-    useInternalScanner: false
+    useInternalScanner: Platform.OS !== 'android' // only try to use the external scanner on android
   }
 
   async startExternalQRScanner() {
