@@ -37,7 +37,7 @@ export default class BalanceStore {
         this.loading = true;
         axios.request({
             method: 'get',
-            url: `https://${host}:${port}/v1/balance/blockchain`,
+            url: `https://${host}${port ? ':' + port : ''}/v1/balance/blockchain`,
             headers: {
                 'Grpc-Metadata-macaroon': macaroonHex
             },
