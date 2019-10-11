@@ -35,15 +35,15 @@ export default class PaymentRequest extends React.Component<InvoiceProps, Invoic
         const { setCustomAmount, customAmount } = this.state;
         const { pay_req, paymentRequest, getPayReqError, loading } = InvoicesStore;
         const { units, changeUnits, getAmount } = UnitsStore;
-        const {
-            num_satoshis,
-            expiry,
-            cltv_expiry,
-            destination,
-            description,
-            payment_hash,
-            timestamp
-        } = pay_req;
+
+        const num_satoshis = pay_req && pay_req.num_satoshis;
+        const expiry = pay_req && pay_req.expiry;
+        const cltv_expiry = pay_req && pay_req.cltv_expiry;
+        const destination = pay_req && pay_req.destination;
+        const description = pay_req && pay_req.description;
+        const payment_hash = pay_req && pay_req.payment_hash;
+        const timestamp = pay_req && pay_req.timestamp;
+
         const date = new Date(Number(timestamp) * 1000).toString();
 
         const { settings } = SettingsStore;
@@ -75,7 +75,7 @@ export default class PaymentRequest extends React.Component<InvoiceProps, Invoic
                 {pay_req && <View style={styles.content}>
                     <View style={styles.center}>
                         <TouchableOpacity onPress={() => changeUnits()}>
-                            <Text style={theme === 'dark' ? styles.amountDark : styles.amount}>{units && getAmount(num_satoshis)}</Text>
+                            <Text style={theme === 'dark' ? styles.amountDark : styles.amount}>{units && getAmount(num_satoshis || 0)}</Text>
                         </TouchableOpacity>
                     </View>
 
