@@ -128,15 +128,11 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
           <Text>{text}</Text>
         </View>
         <CameraKitCameraScreen
-          laserColor={'orange'}
-          frameColor={'yellow'}
+          laserColor={"orange"}
           scanBarcode={true}
-          onReadCode={(event: any) =>
-            handleQRScanned(event.nativeEvent.codeStringValue)
-          }
-          hideControls={false}
-          showFrame={true}
-          heightForScannerFrame={250}
+          onReadCode={(event: any) => handleQRScanned(event.nativeEvent.codeStringValue)}
+          hideControls={true}
+          showFrame={false}
           style={{
             flex: 1
           }}
