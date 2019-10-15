@@ -30,10 +30,10 @@ const AppScenes = {
     Wallet: {
         screen: Wallet
     },
-    AddressQRCodeScanner : {
+    AddressQRCodeScanner: {
         screen: AddressQRScanner
     },
-    NodeQRCodeScanner : {
+    NodeQRCodeScanner: {
         screen: NodeQRScanner
     },
     Settings: {
@@ -81,12 +81,12 @@ const AppScenes = {
     NodeInfo: {
         screen: NodeInfo
     }
-}
+};
 
 const PopUpTransition = (index: number, position: any) => {
     const opacity = position.interpolate({
         inputRange: [index - 1, index, index + 0.999, index + 1],
-        outputRange: [ 0, 1, 1, 0]
+        outputRange: [0, 1, 1, 0]
     });
 
     const translateY = position.interpolate({
@@ -95,33 +95,32 @@ const PopUpTransition = (index: number, position: any) => {
     });
 
     return {
-    opacity,
-        transform: [
-            {translateY}
-        ]
-    }
+        opacity,
+        transform: [{ translateY }]
+    };
 };
 
-const SlideFromRightTransition = (index: number, position: any, layout: any) => {
+const SlideFromRightTransition = (
+    index: number,
+    position: any,
+    layout: any
+) => {
     const opacity = position.interpolate({
         inputRange: [index - 1, index, index + 0.999, index + 1],
-        outputRange: [ 0, 1, 1, 0]
+        outputRange: [0, 1, 1, 0]
     });
 
-    const width = layout.initWidth
+    const width = layout.initWidth;
 
     const translateX = position.interpolate({
         inputRange: [index - 1, index, index + 1],
         outputRange: [width, 0, 0]
-    })
-
+    });
 
     return {
-    opacity,
-        transform: [
-            {translateX}
-        ]
-    }
+        opacity,
+        transform: [{ translateX }]
+    };
 };
 
 const TransitionConfiguration = () => {
@@ -132,13 +131,18 @@ const TransitionConfiguration = () => {
             const { index } = scene;
 
             const routeName = scene.route.routeName;
-            if (routeName === 'Transaction' || routeName === 'Channel' || routeName === 'Invoice' || routeName === 'Payment') {
+            if (
+                routeName === 'Transaction' ||
+                routeName === 'Channel' ||
+                routeName === 'Invoice' ||
+                routeName === 'Payment'
+            ) {
                 return SlideFromRightTransition(index, position, layout);
             }
 
             return PopUpTransition(index, position);
         }
-    }
+    };
 };
 
 const AppNavigator = createStackNavigator(AppScenes, {

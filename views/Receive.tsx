@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+    ActivityIndicator,
+    StyleSheet,
+    Text,
+    TextInput,
+    View
+} from 'react-native';
 import { Button, ButtonGroup, Header, Icon } from 'react-native-elements';
 import CollapsedQR from './../components/CollapsedQR';
 import { inject, observer } from 'mobx-react';
@@ -23,20 +29,23 @@ interface ReceiveState {
 
 @inject('InvoicesStore', 'SettingsStore')
 @observer
-export default class Receive extends React.Component<ReceiveProps, ReceiveState> {
+export default class Receive extends React.Component<
+    ReceiveProps,
+    ReceiveState
+> {
     state = {
         selectedIndex: 0,
         memo: '',
         value: '',
         expiry: '3600'
-    }
+    };
 
     getNewAddress = () => {
-        const { SettingsStore } = this.props
+        const { SettingsStore } = this.props;
         SettingsStore.getNewAddress().then(() => {
             SettingsStore.getSettings();
         });
-    }
+    };
 
     updateIndex = (selectedIndex: number) => {
         const { InvoicesStore } = this.props;
@@ -52,12 +61,18 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
         if (InvoicesStore.payment_request) {
             InvoicesStore.resetPaymentReq();
         }
-    }
+    };
 
     render() {
         const { InvoicesStore, SettingsStore, navigation } = this.props;
         const { selectedIndex, memo, value, expiry } = this.state;
-        const { createInvoice, payment_request, creatingInvoice, creatingInvoiceError, error_msg } = InvoicesStore;
+        const {
+            createInvoice,
+            payment_request,
+            creatingInvoice,
+            creatingInvoiceError,
+            error_msg
+        } = InvoicesStore;
         const { settings, loading } = SettingsStore;
         const { onChainAndress, theme } = settings;
 
@@ -73,7 +88,10 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
             </React.Fragment>
         );
 
-        const buttons = [{ element: onChainButton }, { element: lightningButton }];
+        const buttons = [
+            { element: onChainButton },
+            { element: lightningButton }
+        ];
 
         const BackButton = () => (
             <Icon
@@ -85,11 +103,20 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
         );
 
         return (
-            <View style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
+            <View
+                style={
+                    theme === 'dark'
+                        ? styles.darkThemeStyle
+                        : styles.lightThemeStyle
+                }
+            >
                 <Header
                     leftComponent={<BackButton />}
-                    centerComponent={{ text: 'Receive', style: { color: '#fff' } }}
-                    backgroundColor='grey'
+                    centerComponent={{
+                        text: 'Receive',
+                        style: { color: '#fff' }
+                    }}
+                    backgroundColor="grey"
                 />
 
                 <ButtonGroup
@@ -105,81 +132,175 @@ export default class Receive extends React.Component<ReceiveProps, ReceiveState>
                 />
 
                 <View style={styles.content}>
-                    {selectedIndex === 0 && <React.Fragment>
-                        {(!onChainAndress && !loading) && <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>No on-chain address available. Generate one by pressing the button below.</Text>}
-                        {loading && <ActivityIndicator size="large" color="#0000ff" />}
-                        {onChainAndress && <CollapsedQR value={onChainAndress} copyText="Copy Address" theme={theme} />}
-                        <View style={styles.button}>
-                            <Button
-                                title="Get New Address"
-                                icon={{
-                                    name: "fiber-new",
-                                    size: 25,
-                                    color: "white"
+                    {selectedIndex === 0 && (
+                        <React.Fragment>
+                            {!onChainAndress && !loading && (
+                                <Text
+                                    style={{
+                                        color:
+                                            theme === 'dark' ? 'white' : 'black'
+                                    }}
+                                >
+                                    No on-chain address available. Generate one
+                                    by pressing the button below.
+                                </Text>
+                            )}
+                            {loading && (
+                                <ActivityIndicator
+                                    size="large"
+                                    color="#0000ff"
+                                />
+                            )}
+                            {onChainAndress && (
+                                <CollapsedQR
+                                    value={onChainAndress}
+                                    copyText="Copy Address"
+                                    theme={theme}
+                                />
+                            )}
+                            <View style={styles.button}>
+                                <Button
+                                    title="Get New Address"
+                                    icon={{
+                                        name: 'fiber-new',
+                                        size: 25,
+                                        color: 'white'
+                                    }}
+                                    onPress={() => this.getNewAddress()}
+                                    buttonStyle={{
+                                        backgroundColor: 'orange',
+                                        borderRadius: 30
+                                    }}
+                                />
+                            </View>
+                        </React.Fragment>
+                    )}
+                    {selectedIndex === 1 && (
+                        <View>
+                            {!!payment_request && (
+                                <Text style={{ color: 'green', padding: 20 }}>
+                                    Successfully created invoice
+                                </Text>
+                            )}
+                            {creatingInvoiceError && (
+                                <Text style={{ color: 'red', padding: 20 }}>
+                                    Error creating invoice
+                                </Text>
+                            )}
+                            {error_msg && (
+                                <Text
+                                    style={{
+                                        color:
+                                            theme === 'dark'
+                                                ? 'white'
+                                                : 'black',
+                                        padding: 20
+                                    }}
+                                >
+                                    {error_msg}
+                                </Text>
+                            )}
+                            {creatingInvoice && (
+                                <ActivityIndicator
+                                    size="large"
+                                    color="#0000ff"
+                                />
+                            )}
+                            {!!payment_request && (
+                                <CollapsedQR
+                                    value={payment_request}
+                                    copyText="Copy Invoice"
+                                    theme={theme}
+                                />
+                            )}
+                            <Text
+                                style={{
+                                    color: theme === 'dark' ? 'white' : 'black'
                                 }}
-                                onPress={() => this.getNewAddress()}
-                                buttonStyle={{
-                                    backgroundColor: "orange",
-                                    borderRadius: 30
-                                }}
+                            >
+                                Memo
+                            </Text>
+                            <TextInput
+                                placeholder="Sent a few satoshis"
+                                value={memo}
+                                onChangeText={(text: string) =>
+                                    this.setState({ memo: text })
+                                }
+                                numberOfLines={1}
+                                editable={true}
+                                style={
+                                    theme === 'dark'
+                                        ? styles.textInputDark
+                                        : styles.textInput
+                                }
+                                placeholderTextColor="gray"
                             />
-                        </View>
-                    </React.Fragment>}
-                    {selectedIndex === 1 && <View>
-                        {!!payment_request && <Text style={{ color: 'green', padding: 20 }}>Successfully created invoice</Text>}
-                        {creatingInvoiceError && <Text style={{ color: 'red', padding: 20 }}>Error creating invoice</Text>}
-                        {error_msg && <Text style={{ color: theme === 'dark' ? 'white' : 'black', padding: 20 }}>{error_msg}</Text>}
-                        {creatingInvoice && <ActivityIndicator size="large" color="#0000ff" />}
-                        {!!payment_request && <CollapsedQR value={payment_request} copyText="Copy Invoice" theme={theme} />}
-                        <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Memo</Text>
-                        <TextInput
-                            placeholder="Sent a few satoshis"
-                            value={memo}
-                            onChangeText={(text: string) => this.setState({ memo: text })}
-                            numberOfLines={1}
-                            editable={true}
-                            style={theme === 'dark' ? styles.textInputDark : styles.textInput}
-                            placeholderTextColor='gray'
-                        />
 
-                        <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Amount (in Satoshis)</Text>
-                        <TextInput
-                            placeholder={"100"}
-                            value={value}
-                            onChangeText={(text: string) => this.setState({ value: text })}
-                            numberOfLines={1}
-                            editable={true}
-                            style={theme === 'dark' ? styles.textInputDark : styles.textInput}
-                            placeholderTextColor='gray'
-                        />
-
-                        <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Expiration (in seconds)</Text>
-                        <TextInput
-                            placeholder={"3600 (one hour)"}
-                            value={expiry}
-                            onChangeText={(text: string) => this.setState({ expiry: text })}
-                            numberOfLines={1}
-                            editable={true}
-                            style={theme === 'dark' ? styles.textInputDark : styles.textInput}
-                            placeholderTextColor='gray'
-                        />
-
-                        <View style={styles.button}>
-                            <Button
-                                title="Create Invoice"
-                                icon={{
-                                    name: "create",
-                                    size: 25,
-                                    color: "white"
+                            <Text
+                                style={{
+                                    color: theme === 'dark' ? 'white' : 'black'
                                 }}
-                                onPress={() => createInvoice(memo, value, expiry)}
-                                buttonStyle={{
-                                    backgroundColor: "orange",
-                                    borderRadius: 30
-                                }}
+                            >
+                                Amount (in Satoshis)
+                            </Text>
+                            <TextInput
+                                placeholder={'100'}
+                                value={value}
+                                onChangeText={(text: string) =>
+                                    this.setState({ value: text })
+                                }
+                                numberOfLines={1}
+                                editable={true}
+                                style={
+                                    theme === 'dark'
+                                        ? styles.textInputDark
+                                        : styles.textInput
+                                }
+                                placeholderTextColor="gray"
                             />
+
+                            <Text
+                                style={{
+                                    color: theme === 'dark' ? 'white' : 'black'
+                                }}
+                            >
+                                Expiration (in seconds)
+                            </Text>
+                            <TextInput
+                                placeholder={'3600 (one hour)'}
+                                value={expiry}
+                                onChangeText={(text: string) =>
+                                    this.setState({ expiry: text })
+                                }
+                                numberOfLines={1}
+                                editable={true}
+                                style={
+                                    theme === 'dark'
+                                        ? styles.textInputDark
+                                        : styles.textInput
+                                }
+                                placeholderTextColor="gray"
+                            />
+
+                            <View style={styles.button}>
+                                <Button
+                                    title="Create Invoice"
+                                    icon={{
+                                        name: 'create',
+                                        size: 25,
+                                        color: 'white'
+                                    }}
+                                    onPress={() =>
+                                        createInvoice(memo, value, expiry)
+                                    }
+                                    buttonStyle={{
+                                        backgroundColor: 'orange',
+                                        borderRadius: 30
+                                    }}
+                                />
+                            </View>
                         </View>
-                    </View>}
+                    )}
                 </View>
             </View>
         );

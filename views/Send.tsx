@@ -41,7 +41,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             destination: destination || '',
             amount: '',
             fee: ''
-        }
+        };
     }
 
     componentWillReceiveProps(nextProps: any) {
@@ -61,42 +61,52 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     validateAddress = (text: string) => {
-          const { NodeInfoStore, InvoicesStore } = this.props;
-          const { testnet } = NodeInfoStore;
+        const { NodeInfoStore, InvoicesStore } = this.props;
+        const { testnet } = NodeInfoStore;
 
-          if (AddressUtils.isValidBitcoinAddress(text, testnet)) {
-              this.setState({
-                  transactionType: 'On-chain',
-                  isValid: true,
-                  destination: text
-              });
-          } else if (AddressUtils.isValidLightningPaymentRequest(text)) {
-              this.setState({
-                  transactionType: 'Lightning',
-                  isValid: true,
-                  destination: text
-              });
+        if (AddressUtils.isValidBitcoinAddress(text, testnet)) {
+            this.setState({
+                transactionType: 'On-chain',
+                isValid: true,
+                destination: text
+            });
+        } else if (AddressUtils.isValidLightningPaymentRequest(text)) {
+            this.setState({
+                transactionType: 'Lightning',
+                isValid: true,
+                destination: text
+            });
 
-              InvoicesStore.getPayReq(text);
-          } else {
-              this.setState({
-                  transactionType: null,
-                  isValid: false,
-                  destination: text
-              });
-          }
-    }
+            InvoicesStore.getPayReq(text);
+        } else {
+            this.setState({
+                transactionType: null,
+                isValid: false,
+                destination: text
+            });
+        }
+    };
 
     sendCoins = () => {
         const { TransactionsStore, navigation } = this.props;
         const { destination, amount, fee } = this.state;
-        TransactionsStore.sendCoins({ addr: destination, sat_per_byte: fee, amount: amount });
+        TransactionsStore.sendCoins({
+            addr: destination,
+            sat_per_byte: fee,
+            amount: amount
+        });
         navigation.navigate('SendingOnChain');
-    }
+    };
 
     render() {
         const { SettingsStore, navigation } = this.props;
-        const { isValid, transactionType, destination, amount, fee } = this.state;
+        const {
+            isValid,
+            transactionType,
+            destination,
+            amount,
+            fee
+        } = this.state;
         const { settings } = SettingsStore;
         const { theme } = settings;
 
@@ -110,85 +120,149 @@ export default class Send extends React.Component<SendProps, SendState> {
         );
 
         return (
-            <View style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
+            <View
+                style={
+                    theme === 'dark'
+                        ? styles.darkThemeStyle
+                        : styles.lightThemeStyle
+                }
+            >
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{ text: 'Send', style: { color: '#fff' } }}
-                    backgroundColor='grey'
+                    backgroundColor="grey"
                 />
                 <View style={styles.content}>
-                    <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Bitcoin address or Lightning payment request</Text>
+                    <Text
+                        style={{ color: theme === 'dark' ? 'white' : 'black' }}
+                    >
+                        Bitcoin address or Lightning payment request
+                    </Text>
                     <TextInput
                         placeholder={'lnbc1...'}
                         value={destination}
-                        onChangeText={(text: string) => this.validateAddress(text)}
-                        style={theme === 'dark' ? styles.textInputDark : styles.textInput}
-                        placeholderTextColor='gray'
+                        onChangeText={(text: string) =>
+                            this.validateAddress(text)
+                        }
+                        style={
+                            theme === 'dark'
+                                ? styles.textInputDark
+                                : styles.textInput
+                        }
+                        placeholderTextColor="gray"
                     />
-                    {(!isValid && !!destination) && <Text>Must be a valid Bitcoin address or Lightning payment request</Text>}
-                    {transactionType && <Text style={{ paddingTop: 10 }}>{`${transactionType} Transaction`}</Text>}
-                    {transactionType === 'On-chain' && <React.Fragment>
-                        <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Amount (in satoshis)</Text>
-                        <TextInput
-                            value={amount}
-                            onChangeText={(text: string) => this.setState({ amount: text })}
-                            style={theme === 'dark' ? styles.textInputDark : styles.textInput}
-                            placeholderTextColor='gray'
-                        />
-                    </React.Fragment>}
-                    {transactionType === 'On-chain' && <React.Fragment>
-                        <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>Fee (satoshis per byte)</Text>
-                        <TextInput
-                            placeholder="2"
-                            value={fee}
-                            onChangeText={(text: string) => this.setState({ fee: text })}
-                            style={theme === 'dark' ? styles.textInputDark : styles.textInput}
-                            placeholderTextColor='gray'
-                        />
-                    </React.Fragment>}
-                    {transactionType === 'Lightning' && <View style={styles.button}>
-                        <Button
-                            title="Look Up Payment Request"
-                            icon={{
-                                name: "send",
-                                size: 25,
-                                color: "white"
-                            }}
-                            onPress={() => navigation.navigate('PaymentRequest')}
-                            style={styles.button}
-                            buttonStyle={{
-                                backgroundColor: "orange",
-                                borderRadius: 30
-                            }}
-                        />
-                    </View>}
-                    {transactionType === 'On-chain' && <View style={styles.button}>
-                        <Button
-                            title="Send Coins"
-                            icon={{
-                                name: "send",
-                                size: 25,
-                                color: "white"
-                            }}
-                            onPress={() => this.sendCoins()}
-                            style={styles.button}
-                            buttonStyle={{
-                                backgroundColor: "orange",
-                                borderRadius: 30
-                            }}
-                        />
-                    </View>}
+                    {!isValid && !!destination && (
+                        <Text>
+                            Must be a valid Bitcoin address or Lightning payment
+                            request
+                        </Text>
+                    )}
+                    {transactionType && (
+                        <Text
+                            style={{ paddingTop: 10 }}
+                        >{`${transactionType} Transaction`}</Text>
+                    )}
+                    {transactionType === 'On-chain' && (
+                        <React.Fragment>
+                            <Text
+                                style={{
+                                    color: theme === 'dark' ? 'white' : 'black'
+                                }}
+                            >
+                                Amount (in satoshis)
+                            </Text>
+                            <TextInput
+                                value={amount}
+                                onChangeText={(text: string) =>
+                                    this.setState({ amount: text })
+                                }
+                                style={
+                                    theme === 'dark'
+                                        ? styles.textInputDark
+                                        : styles.textInput
+                                }
+                                placeholderTextColor="gray"
+                            />
+                        </React.Fragment>
+                    )}
+                    {transactionType === 'On-chain' && (
+                        <React.Fragment>
+                            <Text
+                                style={{
+                                    color: theme === 'dark' ? 'white' : 'black'
+                                }}
+                            >
+                                Fee (satoshis per byte)
+                            </Text>
+                            <TextInput
+                                placeholder="2"
+                                value={fee}
+                                onChangeText={(text: string) =>
+                                    this.setState({ fee: text })
+                                }
+                                style={
+                                    theme === 'dark'
+                                        ? styles.textInputDark
+                                        : styles.textInput
+                                }
+                                placeholderTextColor="gray"
+                            />
+                        </React.Fragment>
+                    )}
+                    {transactionType === 'Lightning' && (
+                        <View style={styles.button}>
+                            <Button
+                                title="Look Up Payment Request"
+                                icon={{
+                                    name: 'send',
+                                    size: 25,
+                                    color: 'white'
+                                }}
+                                onPress={() =>
+                                    navigation.navigate('PaymentRequest')
+                                }
+                                style={styles.button}
+                                buttonStyle={{
+                                    backgroundColor: 'orange',
+                                    borderRadius: 30
+                                }}
+                            />
+                        </View>
+                    )}
+                    {transactionType === 'On-chain' && (
+                        <View style={styles.button}>
+                            <Button
+                                title="Send Coins"
+                                icon={{
+                                    name: 'send',
+                                    size: 25,
+                                    color: 'white'
+                                }}
+                                onPress={() => this.sendCoins()}
+                                style={styles.button}
+                                buttonStyle={{
+                                    backgroundColor: 'orange',
+                                    borderRadius: 30
+                                }}
+                            />
+                        </View>
+                    )}
                     <View style={styles.button}>
                         <Button
                             title="Scan"
                             icon={{
-                                name: "crop-free",
+                                name: 'crop-free',
                                 size: 25,
-                                color: "white"
+                                color: 'white'
                             }}
-                            onPress={() => navigation.navigate('AddressQRCodeScanner')}
+                            onPress={() =>
+                                navigation.navigate('AddressQRCodeScanner')
+                            }
                             buttonStyle={{
-                                backgroundColor: theme === "dark" ? "#261339" : "rgba(92, 99,216, 1)",
+                                backgroundColor:
+                                    theme === 'dark'
+                                        ? '#261339'
+                                        : 'rgba(92, 99,216, 1)',
                                 borderRadius: 30
                             }}
                         />

@@ -8,7 +8,7 @@ export default class PaymentsStore {
     @observable error: boolean = false;
     @observable error_msg: string;
     @observable payments: Array<Payment> = [];
-    settingsStore: SettingsStore
+    settingsStore: SettingsStore;
 
     constructor(settingsStore: SettingsStore) {
         this.settingsStore = settingsStore;
@@ -19,22 +19,24 @@ export default class PaymentsStore {
         const { host, port, macaroonHex } = this.settingsStore;
 
         this.loading = true;
-        axios.request({
-            method: 'get',
-            url: `https://${host}${port ? ':' + port : ''}/v1/payments`,
-            headers: {
-                'Grpc-Metadata-macaroon': macaroonHex
-            }
-        }).then((response: any) => {
-            // handle success
-            const data = response.data;
-            this.payments = data.payments.reverse();
-            this.loading = false;
-        })
-        .catch(() => {
-            // handle error
-            this.payments = [];
-            this.loading = false;
-        });
-    }
+        axios
+            .request({
+                method: 'get',
+                url: `https://${host}${port ? ':' + port : ''}/v1/payments`,
+                headers: {
+                    'Grpc-Metadata-macaroon': macaroonHex
+                }
+            })
+            .then((response: any) => {
+                // handle success
+                const data = response.data;
+                this.payments = data.payments.reverse();
+                this.loading = false;
+            })
+            .catch(() => {
+                // handle error
+                this.payments = [];
+                this.loading = false;
+            });
+    };
 }

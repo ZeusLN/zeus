@@ -29,31 +29,34 @@ export default class SettingsStore {
         const configRoute = data.split('config=')[1];
         this.btcPayError = null;
 
-        return axios.request({
-            method: 'get',
-            url: configRoute
-        }).then((response: any) => {
-            // handle success
-            const data = response.data;
-            const configuration = data.configurations[0];
-            const { adminMacaroon, type, uri } = configuration;
+        return axios
+            .request({
+                method: 'get',
+                url: configRoute
+            })
+            .then((response: any) => {
+                // handle success
+                const data = response.data;
+                const configuration = data.configurations[0];
+                const { adminMacaroon, type, uri } = configuration;
 
-            if (type !== 'lnd-rest') {
-                this.btcPayError = "Sorry, we only currently support BTCPay instances using lnd";
-            } else {
-                const config = {
-                    host: uri.split('https://')[1],
-                    macaroonHex: adminMacaroon
+                if (type !== 'lnd-rest') {
+                    this.btcPayError =
+                        'Sorry, we only currently support BTCPay instances using lnd';
+                } else {
+                    const config = {
+                        host: uri.split('https://')[1],
+                        macaroonHex: adminMacaroon
+                    };
+
+                    return config;
                 }
-
-                return config;
-            }
-        })
-        .catch(() => {
-            // handle error
-            this.btcPayError = "Error getting BTCPay configuration";
-        });
-    }
+            })
+            .catch(() => {
+                // handle error
+                this.btcPayError = 'Error getting BTCPay configuration';
+            });
+    };
 
     @action
     public async getSettings() {
@@ -65,7 +68,9 @@ export default class SettingsStore {
             this.loading = false;
             if (credentials) {
                 this.settings = JSON.parse(credentials.password);
-                const node: any = this.settings.nodes && this.settings.nodes[this.settings.selectedNode || 0];
+                const node: any =
+                    this.settings.nodes &&
+                    this.settings.nodes[this.settings.selectedNode || 0];
                 if (node) {
                     this.host = node.host;
                     this.port = node.port;
@@ -77,7 +82,7 @@ export default class SettingsStore {
             }
         } catch (error) {
             this.loading = false;
-            console.log('Keychain couldn\'t be accessed!', error);
+            console.log("Keychain couldn't be accessed!", error);
         }
     }
 
@@ -95,22 +100,24 @@ export default class SettingsStore {
     public getNewAddress = () => {
         const { host, port, macaroonHex } = this;
 
-        return axios.request({
-            method: 'get',
-            url: `https://${host}${port ? ':' + port : ''}/v1/newaddress`,
-            headers: {
-                'Grpc-Metadata-macaroon': macaroonHex
-            }
-        }).then((response: any) => {
-            // handle success
-            const data = response.data;
-            const newAddress = data.address;
-            const newSettings = {
-                ...this.settings,
-                onChainAndress: newAddress
-            };
+        return axios
+            .request({
+                method: 'get',
+                url: `https://${host}${port ? ':' + port : ''}/v1/newaddress`,
+                headers: {
+                    'Grpc-Metadata-macaroon': macaroonHex
+                }
+            })
+            .then((response: any) => {
+                // handle success
+                const data = response.data;
+                const newAddress = data.address;
+                const newSettings = {
+                    ...this.settings,
+                    onChainAndress: newAddress
+                };
 
-            this.setSettings(JSON.stringify(newSettings));
-        });
-    }
+                this.setSettings(JSON.stringify(newSettings));
+            });
+    };
 }
