@@ -22,18 +22,21 @@ interface AddEditNodeState {
 
 @inject('SettingsStore')
 @observer
-export default class AddEditNode extends React.Component<AddEditNodeProps, AddEditNodeState> {
+export default class AddEditNode extends React.Component<
+    AddEditNodeProps,
+    AddEditNodeState
+> {
     isComponentMounted: boolean = false;
 
     state = {
-          host: '',
-          port: '',
-          macaroonHex: '',
-          saved: false,
-          index: 0,
-          active: false,
-          newEntry: false
-    }
+        host: '',
+        port: '',
+        macaroonHex: '',
+        saved: false,
+        index: 0,
+        active: false,
+        newEntry: false
+    };
 
     async componentDidMount() {
         const { navigation } = this.props;
@@ -59,11 +62,11 @@ export default class AddEditNode extends React.Component<AddEditNodeProps, AddEd
                 newEntry
             });
         } else {
-          this.setState({
-              index,
-              active,
-              newEntry
-          });
+            this.setState({
+                index,
+                active,
+                newEntry
+            });
         }
     }
 
@@ -79,24 +82,24 @@ export default class AddEditNode extends React.Component<AddEditNodeProps, AddEd
         const newEntry = navigation.getParam('newEntry', null);
 
         if (node) {
-          const { host, port, macaroonHex } = node;
+            const { host, port, macaroonHex } = node;
 
-          this.setState({
-              host,
-              port,
-              macaroonHex,
-              index,
-              active: index === this.props.SettingsStore.settings.selectedNode,
-              newEntry
-          });
+            this.setState({
+                host,
+                port,
+                macaroonHex,
+                index,
+                active:
+                    index === this.props.SettingsStore.settings.selectedNode,
+                newEntry
+            });
         } else {
-          this.setState({
-              index,
-              active,
-              newEntry
-          });
+            this.setState({
+                index,
+                active,
+                newEntry
+            });
         }
-
     }
 
     saveNodeConfiguration = () => {
@@ -114,19 +117,21 @@ export default class AddEditNode extends React.Component<AddEditNodeProps, AddEd
 
         nodes[index] = node;
 
-        setSettings(JSON.stringify({
-            nodes,
-            theme: settings.theme,
-            selectedNode: settings.selectedNode,
-            onChainAndress: settings.onChainAndress
-        }));
+        setSettings(
+            JSON.stringify({
+                nodes,
+                theme: settings.theme,
+                selectedNode: settings.selectedNode,
+                onChainAndress: settings.onChainAndress
+            })
+        );
 
         this.setState({
             saved: true
         });
 
         navigation.navigate('Settings', { refresh: true });
-    }
+    };
 
     deleteNodeConfig = () => {
         const { SettingsStore, navigation } = this.props;
@@ -141,15 +146,18 @@ export default class AddEditNode extends React.Component<AddEditNodeProps, AddEd
             }
         }
 
-        setSettings(JSON.stringify({
-            nodes: newNodes,
-            theme: settings.theme,
-            selectedNode: index === settings.selectedNode ? 0 : settings.selectedNode,
-            onChainAndress: settings.onChainAndress
-        })).then(() => {
+        setSettings(
+            JSON.stringify({
+                nodes: newNodes,
+                theme: settings.theme,
+                selectedNode:
+                    index === settings.selectedNode ? 0 : settings.selectedNode,
+                onChainAndress: settings.onChainAndress
+            })
+        ).then(() => {
             navigation.navigate('Wallet', { refresh: true });
         });
-    }
+    };
 
     setNodeConfigurationAsActive = () => {
         const { SettingsStore, navigation } = this.props;
@@ -157,129 +165,205 @@ export default class AddEditNode extends React.Component<AddEditNodeProps, AddEd
         const { index } = this.state;
         const { nodes } = settings;
 
-        setSettings(JSON.stringify({
-            nodes,
-            theme: settings.theme,
-            selectedNode: index,
-            onChainAndress: settings.onChainAndress
-        }));
+        setSettings(
+            JSON.stringify({
+                nodes,
+                theme: settings.theme,
+                selectedNode: index,
+                onChainAndress: settings.onChainAndress
+            })
+        );
 
         this.setState({
             active: true
         });
 
         navigation.navigate('Wallet', { refresh: true });
-    }
+    };
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { host, port, macaroonHex, saved, active, index, newEntry } = this.state;
+        const {
+            host,
+            port,
+            macaroonHex,
+            saved,
+            active,
+            index,
+            newEntry
+        } = this.state;
         const { loading, settings } = SettingsStore;
         const savedTheme = settings.theme;
 
         const BackButton = () => (
             <Icon
                 name="arrow-back"
-                onPress={() => navigation.navigate('Settings', { refresh: true })}
+                onPress={() =>
+                    navigation.navigate('Settings', { refresh: true })
+                }
                 color="#fff"
                 underlayColor="transparent"
             />
         );
 
         return (
-            <View style={savedTheme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
+            <View
+                style={
+                    savedTheme === 'dark'
+                        ? styles.darkThemeStyle
+                        : styles.lightThemeStyle
+                }
+            >
                 <Header
                     leftComponent={<BackButton />}
-                    centerComponent={{ text: 'Node Configuration', style: { color: '#fff' } }}
-                    backgroundColor={savedTheme === 'dark' ? '#261339' : 'rgba(92, 99,216, 1)'}
+                    centerComponent={{
+                        text: 'Node Configuration',
+                        style: { color: '#fff' }
+                    }}
+                    backgroundColor={
+                        savedTheme === 'dark'
+                            ? '#261339'
+                            : 'rgba(92, 99,216, 1)'
+                    }
                 />
 
                 <View style={styles.form}>
-                    <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>LND Host</Text>
+                    <Text
+                        style={{
+                            color: savedTheme === 'dark' ? 'white' : 'black'
+                        }}
+                    >
+                        LND Host
+                    </Text>
                     <TextInput
                         placeholder={'localhost'}
                         value={host}
-                        onChangeText={(text: string) => this.setState({ host: text, saved: false })}
+                        onChangeText={(text: string) =>
+                            this.setState({ host: text, saved: false })
+                        }
                         numberOfLines={1}
-                        style={savedTheme === 'dark' ? styles.textInputDark : styles.textInput}
+                        style={
+                            savedTheme === 'dark'
+                                ? styles.textInputDark
+                                : styles.textInput
+                        }
                         editable={!loading}
-                        placeholderTextColor='gray'
+                        placeholderTextColor="gray"
                     />
 
-                    <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>LND Port</Text>
+                    <Text
+                        style={{
+                            color: savedTheme === 'dark' ? 'white' : 'black'
+                        }}
+                    >
+                        LND Port
+                    </Text>
                     <TextInput
                         placeholder={'443/8080'}
                         value={port}
-                        onChangeText={(text: string) => this.setState({ port: text, saved: false })}
+                        onChangeText={(text: string) =>
+                            this.setState({ port: text, saved: false })
+                        }
                         numberOfLines={1}
-                        style={savedTheme === 'dark' ? styles.textInputDark : styles.textInput}
+                        style={
+                            savedTheme === 'dark'
+                                ? styles.textInputDark
+                                : styles.textInput
+                        }
                         editable={!loading}
-                        placeholderTextColor='gray'
+                        placeholderTextColor="gray"
                     />
 
-                    <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>LND Macaroon (Hex format)</Text>
+                    <Text
+                        style={{
+                            color: savedTheme === 'dark' ? 'white' : 'black'
+                        }}
+                    >
+                        LND Macaroon (Hex format)
+                    </Text>
                     <TextInput
                         placeholder={'0A...'}
                         value={macaroonHex}
-                        onChangeText={(text: string) => this.setState({ macaroonHex: text, saved: false })}
+                        onChangeText={(text: string) =>
+                            this.setState({ macaroonHex: text, saved: false })
+                        }
                         numberOfLines={1}
-                        style={savedTheme === 'dark' ? styles.textInputDark : styles.textInput}
+                        style={
+                            savedTheme === 'dark'
+                                ? styles.textInputDark
+                                : styles.textInput
+                        }
                         editable={!loading}
-                        placeholderTextColor='gray'
+                        placeholderTextColor="gray"
                     />
                 </View>
 
                 <View style={styles.button}>
                     <Button
-                        title={saved ? "Node Config Saved" : "Save Node Config"}
+                        title={saved ? 'Node Config Saved' : 'Save Node Config'}
                         icon={{
-                            name: "save",
+                            name: 'save',
                             size: 25,
-                            color: saved ? "black" : "white"
+                            color: saved ? 'black' : 'white'
                         }}
                         onPress={() => this.saveNodeConfiguration()}
                         style={styles.button}
                         buttonStyle={{
-                            backgroundColor: saved ? "#fff" : savedTheme === 'dark' ? '#261339' : 'rgba(92, 99,216, 1)',
+                            backgroundColor: saved
+                                ? '#fff'
+                                : savedTheme === 'dark'
+                                ? '#261339'
+                                : 'rgba(92, 99,216, 1)',
                             borderRadius: 30
                         }}
                         titleStyle={{
-                            color: saved ? "black" : "white"
+                            color: saved ? 'black' : 'white'
                         }}
                     />
                 </View>
 
-                {saved && !newEntry && <View style={styles.button}>
-                    <Button
-                        title={active ? "Node Active" : "Set Node Config as Active"}
-                        icon={{
-                            name: "blur-circular",
-                            size: 25,
-                            color: active ? 'white' : 'orange'
-                        }}
-                        onPress={() => this.setNodeConfigurationAsActive()}
-                        style={styles.button}
-                        buttonStyle={{
-                            backgroundColor: active ? 'orange' : 'white',
-                            borderRadius: 30
-                        }}
-                        titleStyle={{
-                            color: active ? 'white' : 'orange'
-                        }}
-                    />
-                </View>}
+                {saved && !newEntry && (
+                    <View style={styles.button}>
+                        <Button
+                            title={
+                                active
+                                    ? 'Node Active'
+                                    : 'Set Node Config as Active'
+                            }
+                            icon={{
+                                name: 'blur-circular',
+                                size: 25,
+                                color: active ? 'white' : 'orange'
+                            }}
+                            onPress={() => this.setNodeConfigurationAsActive()}
+                            style={styles.button}
+                            buttonStyle={{
+                                backgroundColor: active ? 'orange' : 'white',
+                                borderRadius: 30
+                            }}
+                            titleStyle={{
+                                color: active ? 'white' : 'orange'
+                            }}
+                        />
+                    </View>
+                )}
 
                 <View style={styles.button}>
                     <Button
                         title="Scan lndconnect config"
                         icon={{
-                            name: "crop-free",
+                            name: 'crop-free',
                             size: 25,
                             color: savedTheme === 'dark' ? 'black' : 'white'
                         }}
-                        onPress={() => navigation.navigate('LNDConnectConfigQRScanner', { index })}
+                        onPress={() =>
+                            navigation.navigate('LNDConnectConfigQRScanner', {
+                                index
+                            })
+                        }
                         buttonStyle={{
-                            backgroundColor: savedTheme === 'dark' ? 'white' : 'black',
+                            backgroundColor:
+                                savedTheme === 'dark' ? 'white' : 'black',
                             borderRadius: 30
                         }}
                         titleStyle={{
@@ -292,33 +376,39 @@ export default class AddEditNode extends React.Component<AddEditNodeProps, AddEd
                     <Button
                         title="Scan BTCPay config"
                         icon={{
-                            name: "crop-free",
+                            name: 'crop-free',
                             size: 25,
-                            color: "white"
+                            color: 'white'
                         }}
-                        onPress={() => navigation.navigate('BTCPayConfigQRScanner', { index })}
+                        onPress={() =>
+                            navigation.navigate('BTCPayConfigQRScanner', {
+                                index
+                            })
+                        }
                         buttonStyle={{
-                            backgroundColor: "rgba(5, 146, 35, 1)",
+                            backgroundColor: 'rgba(5, 146, 35, 1)',
                             borderRadius: 30
                         }}
                     />
                 </View>
 
-                {saved && <View style={styles.button}>
-                    <Button
-                        title="Delete Node config"
-                        icon={{
-                            name: "delete",
-                            size: 25,
-                            color: "white"
-                        }}
-                        onPress={() => this.deleteNodeConfig()}
-                        buttonStyle={{
-                            backgroundColor: "red",
-                            borderRadius: 30
-                        }}
-                    />
-                </View>}
+                {saved && (
+                    <View style={styles.button}>
+                        <Button
+                            title="Delete Node config"
+                            icon={{
+                                name: 'delete',
+                                size: 25,
+                                color: 'white'
+                            }}
+                            onPress={() => this.deleteNodeConfig()}
+                            buttonStyle={{
+                                backgroundColor: 'red',
+                                borderRadius: 30
+                            }}
+                        />
+                    </View>
+                )}
             </View>
         );
     }

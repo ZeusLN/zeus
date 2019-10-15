@@ -9,7 +9,7 @@ export default class NodeInfoStore {
     @observable public errorMsg: string;
     @observable public nodeInfo: NodeInfo = {};
     @observable public testnet: boolean;
-    settingsStore: SettingsStore
+    settingsStore: SettingsStore;
 
     constructor(settingsStore: SettingsStore) {
         this.settingsStore = settingsStore;
@@ -17,7 +17,7 @@ export default class NodeInfoStore {
         reaction(
             () => this.settingsStore.settings,
             () => {
-                this.getNodeInfo()
+                this.getNodeInfo();
             }
         );
     }
@@ -28,29 +28,31 @@ export default class NodeInfoStore {
 
         this.errorMsg = '';
         this.loading = true;
-        axios.request({
-            method: 'get',
-            url: `https://${host}${port ? ':' + port : ''}/v1/getinfo`,
-            headers: {
-                'Grpc-Metadata-macaroon': macaroonHex
-            }
-        }).then((response: any) => {
-            // handle success
-            const data = response.data;
-            this.nodeInfo = data;
-            this.testnet = data.testnet;
-            this.loading = false;
-            this.error = false;
-        })
-        .catch((error: any) => {
-            // handle error
-            const data = error.response && error.response.data;
-            this.error = true;
-            if (data && data.error) {
-                this.errorMsg = data.error;
-            }
-            this.loading = false;
-            this.nodeInfo = {};
-        });
-    }
+        axios
+            .request({
+                method: 'get',
+                url: `https://${host}${port ? ':' + port : ''}/v1/getinfo`,
+                headers: {
+                    'Grpc-Metadata-macaroon': macaroonHex
+                }
+            })
+            .then((response: any) => {
+                // handle success
+                const data = response.data;
+                this.nodeInfo = data;
+                this.testnet = data.testnet;
+                this.loading = false;
+                this.error = false;
+            })
+            .catch((error: any) => {
+                // handle error
+                const data = error.response && error.response.data;
+                this.error = true;
+                if (data && data.error) {
+                    this.errorMsg = data.error;
+                }
+                this.loading = false;
+                this.nodeInfo = {};
+            });
+    };
 }

@@ -17,7 +17,7 @@ class AddressUtils {
     };
 
     isValidLightningPaymentRequest = (input: string) => lnInvoice.test(input);
-};
+}
 
 const addressUtils = new AddressUtils();
 export default addressUtils;

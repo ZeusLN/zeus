@@ -1,5 +1,12 @@
 import * as React from 'react';
-import { TouchableOpacity, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+    TouchableOpacity,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button } from 'react-native-elements';
 
@@ -19,7 +26,10 @@ interface LockscreenState {
 
 @inject('SettingsStore')
 @observer
-export default class Lockscreen extends React.Component<LockscreenProps, LockscreenState> {
+export default class Lockscreen extends React.Component<
+    LockscreenProps,
+    LockscreenState
+> {
     constructor(props: any) {
         super(props);
         this.state = {
@@ -27,7 +37,7 @@ export default class Lockscreen extends React.Component<LockscreenProps, Lockscr
             passphrase: '',
             hidden: true,
             error: false
-        }
+        };
     }
 
     componentWillMount() {
@@ -43,59 +53,70 @@ export default class Lockscreen extends React.Component<LockscreenProps, Lockscr
     }
 
     onInputLabelPressed = () => {
-        this.setState({ hidden:!this.state.hidden });
+        this.setState({ hidden: !this.state.hidden });
     };
 
     onAttemptLogIn = () => {
-          const { navigation } = this.props;
-          const { passphrase, passphraseAttempt } = this.state;
+        const { navigation } = this.props;
+        const { passphrase, passphraseAttempt } = this.state;
 
-          this.setState({
-              error: false
-          });
+        this.setState({
+            error: false
+        });
 
-          if (passphraseAttempt === passphrase) {
-              navigation.navigate('Wallet');
-          } else {
-              this.setState({
-                  error: true
-              });
-          }
-    }
+        if (passphraseAttempt === passphrase) {
+            navigation.navigate('Wallet');
+        } else {
+            this.setState({
+                error: true
+            });
+        }
+    };
 
     render() {
         const { passphrase, passphraseAttempt, hidden, error } = this.state;
 
         return (
             <ScrollView style={styles.darkThemeStyle}>
-                {!!passphrase && <View style={styles.content}>
-                    {error && <Text style={{ color: 'red' }}>Incorrect Passphrase</Text>}
-                    <Text style={{ color: 'white' }}>Passphrase</Text>
-                    <TextInput
-                        placeholder={'****************'}
-                        placeholderTextColor='darkgray'
-                        value={passphraseAttempt}
-                        onChangeText={(text: string) => this.setState({ passphraseAttempt: text, error: false })}
-                        numberOfLines={1}
-                        autoCapitalize='none'
-                        autoCorrect={false}
-                        secureTextEntry={hidden}
-                        style={styles.textInputDark}
-                      />
-                      <TouchableOpacity onPress={this.onInputLabelPressed}>
-                          <Text style={{ color: 'white' }}>
-                              {hidden ? 'Show' : 'Hide'}
-                          </Text>
-                      </TouchableOpacity>
-                      <Button
-                          title="Log In"
-                          buttonStyle={{
-                              backgroundColor: 'orange',
-                              marginTop: 20
-                          }}
-                          onPress={() => this.onAttemptLogIn()}
-                      />
-                </View>}
+                {!!passphrase && (
+                    <View style={styles.content}>
+                        {error && (
+                            <Text style={{ color: 'red' }}>
+                                Incorrect Passphrase
+                            </Text>
+                        )}
+                        <Text style={{ color: 'white' }}>Passphrase</Text>
+                        <TextInput
+                            placeholder={'****************'}
+                            placeholderTextColor="darkgray"
+                            value={passphraseAttempt}
+                            onChangeText={(text: string) =>
+                                this.setState({
+                                    passphraseAttempt: text,
+                                    error: false
+                                })
+                            }
+                            numberOfLines={1}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            secureTextEntry={hidden}
+                            style={styles.textInputDark}
+                        />
+                        <TouchableOpacity onPress={this.onInputLabelPressed}>
+                            <Text style={{ color: 'white' }}>
+                                {hidden ? 'Show' : 'Hide'}
+                            </Text>
+                        </TouchableOpacity>
+                        <Button
+                            title="Log In"
+                            buttonStyle={{
+                                backgroundColor: 'orange',
+                                marginTop: 20
+                            }}
+                            onPress={() => this.onAttemptLogIn()}
+                        />
+                    </View>
+                )}
             </ScrollView>
         );
     }
@@ -110,7 +131,7 @@ const styles = StyleSheet.create({
     },
     darkThemeStyle: {
         flex: 1,
-        backgroundColor: 'black',
+        backgroundColor: 'black'
     },
     button: {
         paddingTop: 10,
