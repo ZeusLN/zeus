@@ -27,28 +27,31 @@ interface FeeTableState {
 
 @inject('SettingsStore', 'FeeStore')
 @observer
-export default class FeeTable extends React.Component<FeeTableProps, FeeTableState> {
+export default class FeeTable extends React.Component<
+    FeeTableProps,
+    FeeTableState
+> {
     state = {
         collapsed: true
-    }
+    };
 
-    styler(x: number|string) {
-        if(x == null || typeof x === 'string') {
+    styler(x: number | string) {
+        if (x == null || typeof x === 'string') {
             return {
-                "backgroundColor": "white",
-                "alignItems": "center",
-                "height": 53,
-                "width": 53
-            }
-        };
+                backgroundColor: 'white',
+                alignItems: 'center',
+                height: 53,
+                width: 53
+            };
+        }
 
-        const c: any = FeeUtils.gcolor(x/800);
+        const c: any = FeeUtils.gcolor(x / 800);
 
         return {
-            "backgroundColor": `hsl(${c[0]}, ${c[1]*100}%, ${c[2]*100}%)`,
-            "alignItems": "center",
-            "height": 53,
-            "width": 53
+            backgroundColor: `hsl(${c[0]}, ${c[1] * 100}%, ${c[2] * 100}%)`,
+            alignItems: 'center',
+            height: 53,
+            width: 53
         };
     }
 
@@ -64,13 +67,13 @@ export default class FeeTable extends React.Component<FeeTableProps, FeeTableSta
         this.setState({
             collapsed: false
         });
-    }
+    };
 
     closeTable = () => {
         this.setState({
             collapsed: true
         });
-    }
+    };
 
     render() {
         const { collapsed } = this.state;
@@ -84,15 +87,37 @@ export default class FeeTable extends React.Component<FeeTableProps, FeeTableSta
         let rows: any;
 
         if (!isEmpty(df) && !loading) {
-            headers = df.columns && df.columns.map((columnName: number, index: number) =>
-                <Cell style={{ backgroundColor: theme === 'dark' ? 'black' : 'white', minWidth: 53, height: 53 }} textStyle={{ color: theme === 'dark' ? 'white' : 'black' }} key={`item-${index}`}>{this.reprColumn(columnName)}</Cell>
-            );
+            headers =
+                df.columns &&
+                df.columns.map((columnName: number, index: number) => (
+                    <Cell
+                        style={{
+                            backgroundColor:
+                                theme === 'dark' ? 'black' : 'white',
+                            minWidth: 53,
+                            height: 53
+                        }}
+                        textStyle={{
+                            color: theme === 'dark' ? 'white' : 'black'
+                        }}
+                        key={`item-${index}`}
+                    >
+                        {this.reprColumn(columnName)}
+                    </Cell>
+                ));
 
             rows = df.index.map((index: number, i: number) => {
                 const cells = df.data[i].map((cell: any, k: number) => {
                     const value = this.repr(cell);
                     return (
-                        <TouchableOpacity key={`cell-${k}`} onPress={() => setFee(value)}><Cell style={this.styler(cell)}><Text style={{ color: 'white' }}>{value}</Text></Cell></TouchableOpacity>
+                        <TouchableOpacity
+                            key={`cell-${k}`}
+                            onPress={() => setFee(value)}
+                        >
+                            <Cell style={this.styler(cell)}>
+                                <Text style={{ color: 'white' }}>{value}</Text>
+                            </Cell>
+                        </TouchableOpacity>
                     );
                 });
 
@@ -100,7 +125,18 @@ export default class FeeTable extends React.Component<FeeTableProps, FeeTableSta
 
                 return (
                     <Row key={`row-${i}`}>
-                        <Cell style={this.styler(indexText)}><Text style={{ backgroundColor: theme === 'dark' ? 'black' : 'white', color: theme === 'dark' ? 'white' : 'black', width: 100 }}>{indexText}</Text></Cell>
+                        <Cell style={this.styler(indexText)}>
+                            <Text
+                                style={{
+                                    backgroundColor:
+                                        theme === 'dark' ? 'black' : 'white',
+                                    color: theme === 'dark' ? 'white' : 'black',
+                                    width: 100
+                                }}
+                            >
+                                {indexText}
+                            </Text>
+                        </Cell>
                         {cells}
                     </Row>
                 );
@@ -110,16 +146,16 @@ export default class FeeTable extends React.Component<FeeTableProps, FeeTableSta
         return (
             <View style={{ flex: 1 }}>
                 <Button
-                    title={collapsed ? "What the Fee?" : "Hide Fee Table"}
+                    title={collapsed ? 'What the Fee?' : 'Hide Fee Table'}
                     icon={{
-                        name: "view-module",
+                        name: 'view-module',
                         size: 25,
                         color: theme === 'dark' ? 'black' : 'white'
                     }}
                     containerStyle={{
                         marginBottom: 20,
                         width: 200,
-                        alignSelf: "center"
+                        alignSelf: 'center'
                     }}
                     buttonStyle={{
                         backgroundColor: theme === 'dark' ? 'white' : 'black',
@@ -128,15 +164,24 @@ export default class FeeTable extends React.Component<FeeTableProps, FeeTableSta
                     titleStyle={{
                         color: theme === 'dark' ? 'black' : 'white'
                     }}
-                    onPress={() => collapsed ? this.openTable() : this.closeTable()}
+                    onPress={() =>
+                        collapsed ? this.openTable() : this.closeTable()
+                    }
                 />
-                {!collapsed && loading && <ActivityIndicator size="large" color="#0000ff" />}
-                {!collapsed && !loading && headers && <View style={{ left: 25 }}>
-                    <Header style={{ backgroundColor: 'white', left: 15 }} textStyle={{ alignItems: 'center' }}>
-                        {headers}
-                    </Header>
-                    {rows}
-                </View>}
+                {!collapsed && loading && (
+                    <ActivityIndicator size="large" color="#0000ff" />
+                )}
+                {!collapsed && !loading && headers && (
+                    <View style={{ left: 25 }}>
+                        <Header
+                            style={{ backgroundColor: 'white', left: 15 }}
+                            textStyle={{ alignItems: 'center' }}
+                        >
+                            {headers}
+                        </Header>
+                        {rows}
+                    </View>
+                )}
             </View>
         );
     }

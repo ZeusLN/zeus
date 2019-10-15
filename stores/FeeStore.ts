@@ -14,21 +14,23 @@ export default class FeeStore {
     @action
     public getFees = () => {
         this.loading = true;
-        axios.request({
-            method: 'get',
-            url: `https://whatthefee.io/data.json`,
-            // url: `https://whatthefee.io/data.json?c=1555717500`,
-            cancelToken: this.getFeesToken
-        }).then((response: any) => {
-            // handle success
-            this.loading = false;
-            const data = response.data;
-            this.dataFrame = data;
-        })
-        .catch(() => {
-            // handle error
-            this.dataFrame = {};
-            this.loading = false;
-        });
-    }
+        axios
+            .request({
+                method: 'get',
+                url: `https://whatthefee.io/data.json`,
+                // url: `https://whatthefee.io/data.json?c=1555717500`,
+                cancelToken: this.getFeesToken
+            })
+            .then((response: any) => {
+                // handle success
+                this.loading = false;
+                const data = response.data;
+                this.dataFrame = data;
+            })
+            .catch(() => {
+                // handle error
+                this.dataFrame = {};
+                this.loading = false;
+            });
+    };
 }

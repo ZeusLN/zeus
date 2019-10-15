@@ -37,17 +37,29 @@ export default class Transactions extends React.Component<TransactionsProps> {
         const { theme } = settings;
 
         return (
-            <View style={theme === 'dark' ? styles.darkSeparator : styles.lightSeparator} />
-        )
-    }
+            <View
+                style={
+                    theme === 'dark'
+                        ? styles.darkSeparator
+                        : styles.lightSeparator
+                }
+            />
+        );
+    };
 
     viewTransaction = (transaction: Transaction) => {
-          const { navigation } = this.props;
-          navigation.navigate('Transaction', { transaction: transaction });
-    }
+        const { navigation } = this.props;
+        navigation.navigate('Transaction', { transaction: transaction });
+    };
 
     render() {
-        const { refresh, transactions, TransactionsStore, UnitsStore, SettingsStore } = this.props;
+        const {
+            refresh,
+            transactions,
+            TransactionsStore,
+            UnitsStore,
+            SettingsStore
+        } = this.props;
         const { loading } = TransactionsStore;
         const { getAmount, units } = UnitsStore;
         const { settings } = SettingsStore;
@@ -65,60 +77,91 @@ export default class Transactions extends React.Component<TransactionsProps> {
             }
 
             if (amount > 0) {
-                return theme === 'dark' ? AddBalancePendingDark : AddBalancePending;
+                return theme === 'dark'
+                    ? AddBalancePendingDark
+                    : AddBalancePending;
             }
 
-            return theme === 'dark' ? RemoveBalancePendingDark : RemoveBalancePending;
-        }
+            return theme === 'dark'
+                ? RemoveBalancePendingDark
+                : RemoveBalancePending;
+        };
 
         const Balance = (item: Transaction) => (
-            <Avatar
-                source={BalanceImage(item)}
-            />
+            <Avatar source={BalanceImage(item)} />
         );
 
         return (
-            <View style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
-                {(!!transactions && transactions.length > 0) || loading ? <FlatList
-                    data={transactions}
-                    renderItem={({ item }: any) => {
-                        const subtitle = item.block_height ? `${item.block_height} | ${DateTimeUtils.listFormattedDate(item.time_stamp)}` : DateTimeUtils.listFormattedDate(item.time_stamp);
-                        return (
-                            <ListItem
-                                title={units && getAmount(item.amount)}
-                                subtitle={subtitle}
-                                containerStyle={{
-                                    borderBottomWidth: 0,
-                                    backgroundColor: theme === 'dark' ? 'black' : 'white'
-                                }}
-                                leftElement={Balance(item)}
-                                onPress={() => this.viewTransaction(item)}
-                                titleStyle={{ color: theme === 'dark' ? 'white' : 'black' }}
-                                subtitleStyle={{ color: theme === 'dark' ? 'gray' : '#8a8999' }}
-                            />
-                        );
-                    }}
-                    keyExtractor={(item, index) => `${item.tx_hash}-${index}`}
-                    ItemSeparatorComponent={this.renderSeparator}
-                    onEndReachedThreshold={50}
-                    refreshing={loading}
-                    onRefresh={() => refresh()}
-                /> : <Button
-                    title="No Transactions"
-                    icon={{
-                        name: "error-outline",
-                        size: 25,
-                        color: theme === 'dark' ? 'white' : 'black'
-                    }}
-                    onPress={() => refresh()}
-                    buttonStyle={{
-                        backgroundColor: "transparent",
-                        borderRadius: 30
-                    }}
-                    titleStyle={{
-                        color: theme === 'dark' ? 'white' : 'black'
-                    }}
-                />}
+            <View
+                style={
+                    theme === 'dark'
+                        ? styles.darkThemeStyle
+                        : styles.lightThemeStyle
+                }
+            >
+                {(!!transactions && transactions.length > 0) || loading ? (
+                    <FlatList
+                        data={transactions}
+                        renderItem={({ item }: any) => {
+                            const subtitle = item.block_height
+                                ? `${
+                                      item.block_height
+                                  } | ${DateTimeUtils.listFormattedDate(
+                                      item.time_stamp
+                                  )}`
+                                : DateTimeUtils.listFormattedDate(
+                                      item.time_stamp
+                                  );
+                            return (
+                                <ListItem
+                                    title={units && getAmount(item.amount)}
+                                    subtitle={subtitle}
+                                    containerStyle={{
+                                        borderBottomWidth: 0,
+                                        backgroundColor:
+                                            theme === 'dark' ? 'black' : 'white'
+                                    }}
+                                    leftElement={Balance(item)}
+                                    onPress={() => this.viewTransaction(item)}
+                                    titleStyle={{
+                                        color:
+                                            theme === 'dark' ? 'white' : 'black'
+                                    }}
+                                    subtitleStyle={{
+                                        color:
+                                            theme === 'dark'
+                                                ? 'gray'
+                                                : '#8a8999'
+                                    }}
+                                />
+                            );
+                        }}
+                        keyExtractor={(item, index) =>
+                            `${item.tx_hash}-${index}`
+                        }
+                        ItemSeparatorComponent={this.renderSeparator}
+                        onEndReachedThreshold={50}
+                        refreshing={loading}
+                        onRefresh={() => refresh()}
+                    />
+                ) : (
+                    <Button
+                        title="No Transactions"
+                        icon={{
+                            name: 'error-outline',
+                            size: 25,
+                            color: theme === 'dark' ? 'white' : 'black'
+                        }}
+                        onPress={() => refresh()}
+                        buttonStyle={{
+                            backgroundColor: 'transparent',
+                            borderRadius: 30
+                        }}
+                        titleStyle={{
+                            color: theme === 'dark' ? 'white' : 'black'
+                        }}
+                    />
+                )}
             </View>
         );
     }
@@ -135,14 +178,14 @@ const styles = StyleSheet.create({
     },
     lightSeparator: {
         height: 1,
-        width: "86%",
-        backgroundColor: "#CED0CE",
-        marginLeft: "14%"
+        width: '86%',
+        backgroundColor: '#CED0CE',
+        marginLeft: '14%'
     },
     darkSeparator: {
         height: 1,
-        width: "86%",
-        backgroundColor: "darkgray",
-        marginLeft: "14%"
+        width: '86%',
+        backgroundColor: 'darkgray',
+        marginLeft: '14%'
     }
 });
