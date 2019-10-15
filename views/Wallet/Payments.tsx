@@ -30,63 +30,97 @@ export default class PaymentsView extends React.Component<PaymentsProps, {}> {
         const { theme } = settings;
 
         return (
-            <View style={theme === 'dark' ? styles.darkSeparator : styles.lightSeparator} />
-        )
-    }
+            <View
+                style={
+                    theme === 'dark'
+                        ? styles.darkSeparator
+                        : styles.lightSeparator
+                }
+            />
+        );
+    };
 
     render() {
-        const { payments, navigation, refresh, PaymentsStore, UnitsStore, SettingsStore } = this.props;
+        const {
+            payments,
+            navigation,
+            refresh,
+            PaymentsStore,
+            UnitsStore,
+            SettingsStore
+        } = this.props;
         const { getAmount, units } = UnitsStore;
         const { loading } = PaymentsStore;
         const { settings } = SettingsStore;
         const { theme } = settings;
 
-        const Balance = (balanceImage: any) => (
-            <Avatar
-                source={balanceImage}
-            />
-        );
+        const Balance = (balanceImage: any) => <Avatar source={balanceImage} />;
 
         return (
-            <View style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
-                {(!!payments && payments.length > 0) || loading  ? <FlatList
-                    data={payments}
-                    renderItem={({ item }: any) => (
-                        <ListItem
-                            key={item.payment_hash}
-                            title={units && getAmount(item.value)}
-                            subtitle={DateTimeUtils.listFormattedDate(item.creation_date)}
-                            containerStyle={{
-                                borderBottomWidth: 0,
-                                backgroundColor: theme === 'dark' ? 'black' : 'white'
-                            }}
-                            leftElement={theme === 'dark' ? Balance(RemoveBalanceDark) : Balance(RemoveBalance)}
-                            onPress={() => navigation.navigate('Payment', { payment: item })}
-                            titleStyle={{ color: theme === 'dark' ? 'white' : 'black' }}
-                            subtitleStyle={{ color: theme === 'dark' ? 'gray' : '#8a8999' }}
-                        />
-                    )}
-                    keyExtractor={item => item.payment_hash}
-                    ItemSeparatorComponent={this.renderSeparator}
-                    onEndReachedThreshold={50}
-                    refreshing={loading}
-                    onRefresh={() => refresh()}
-                /> : <Button
-                    title="No Payments"
-                    icon={{
-                        name: "error-outline",
-                        size: 25,
-                        color: theme === 'dark' ? 'white' : 'black'
-                    }}
-                    onPress={() => refresh()}
-                    buttonStyle={{
-                        backgroundColor: "transparent",
-                        borderRadius: 30
-                    }}
-                    titleStyle={{
-                        color: theme === 'dark' ? 'white' : 'black'
-                    }}
-                />}
+            <View
+                style={
+                    theme === 'dark'
+                        ? styles.darkThemeStyle
+                        : styles.lightThemeStyle
+                }
+            >
+                {(!!payments && payments.length > 0) || loading ? (
+                    <FlatList
+                        data={payments}
+                        renderItem={({ item }: any) => (
+                            <ListItem
+                                key={item.payment_hash}
+                                title={units && getAmount(item.value)}
+                                subtitle={DateTimeUtils.listFormattedDate(
+                                    item.creation_date
+                                )}
+                                containerStyle={{
+                                    borderBottomWidth: 0,
+                                    backgroundColor:
+                                        theme === 'dark' ? 'black' : 'white'
+                                }}
+                                leftElement={
+                                    theme === 'dark'
+                                        ? Balance(RemoveBalanceDark)
+                                        : Balance(RemoveBalance)
+                                }
+                                onPress={() =>
+                                    navigation.navigate('Payment', {
+                                        payment: item
+                                    })
+                                }
+                                titleStyle={{
+                                    color: theme === 'dark' ? 'white' : 'black'
+                                }}
+                                subtitleStyle={{
+                                    color: theme === 'dark' ? 'gray' : '#8a8999'
+                                }}
+                            />
+                        )}
+                        keyExtractor={item => item.payment_hash}
+                        ItemSeparatorComponent={this.renderSeparator}
+                        onEndReachedThreshold={50}
+                        refreshing={loading}
+                        onRefresh={() => refresh()}
+                    />
+                ) : (
+                    <Button
+                        title="No Payments"
+                        icon={{
+                            name: 'error-outline',
+                            size: 25,
+                            color: theme === 'dark' ? 'white' : 'black'
+                        }}
+                        onPress={() => refresh()}
+                        buttonStyle={{
+                            backgroundColor: 'transparent',
+                            borderRadius: 30
+                        }}
+                        titleStyle={{
+                            color: theme === 'dark' ? 'white' : 'black'
+                        }}
+                    />
+                )}
             </View>
         );
     }
@@ -103,14 +137,14 @@ const styles = StyleSheet.create({
     },
     lightSeparator: {
         height: 1,
-        width: "86%",
-        backgroundColor: "#CED0CE",
-        marginLeft: "14%"
+        width: '86%',
+        backgroundColor: '#CED0CE',
+        marginLeft: '14%'
     },
     darkSeparator: {
         height: 1,
-        width: "86%",
-        backgroundColor: "darkgray",
-        marginLeft: "14%"
+        width: '86%',
+        backgroundColor: 'darkgray',
+        marginLeft: '14%'
     }
 });

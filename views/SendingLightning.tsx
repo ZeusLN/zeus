@@ -12,7 +12,10 @@ interface SendingLightningProps {
 
 @inject('TransactionsStore')
 @observer
-export default class SendingLightning extends React.Component<SendingLightningProps, {}> {
+export default class SendingLightning extends React.Component<
+    SendingLightningProps,
+    {}
+> {
     getBackgroundColor() {
         const { TransactionsStore } = this.props;
         const { payment_route, error } = TransactionsStore;
@@ -20,7 +23,7 @@ export default class SendingLightning extends React.Component<SendingLightningPr
         if (error) {
             return 'darkred';
         } else if (payment_route) {
-            return 'green'
+            return 'green';
         }
 
         return 'white';
@@ -28,60 +31,108 @@ export default class SendingLightning extends React.Component<SendingLightningPr
 
     render() {
         const { TransactionsStore, navigation } = this.props;
-        const { loading, error, error_msg, payment_hash, payment_route, payment_error } = TransactionsStore;
+        const {
+            loading,
+            error,
+            error_msg,
+            payment_hash,
+            payment_route,
+            payment_error
+        } = TransactionsStore;
 
         return (
-            <View style={{ ...styles.container, backgroundColor: this.getBackgroundColor() }}>
+            <View
+                style={{
+                    ...styles.container,
+                    backgroundColor: this.getBackgroundColor()
+                }}
+            >
                 <View style={styles.content}>
-                    {loading && <ActivityIndicator size="large" color="#0000ff" />}
+                    {loading && (
+                        <ActivityIndicator size="large" color="#0000ff" />
+                    )}
                     {loading && <Text>Sending Transaction</Text>}
-                    {error && <Text style={{ color: 'white', padding: 20, fontSize: 40 }}>{payment_error || error_msg}</Text>}
-                    {payment_route && <Text style={{ color: 'white', padding: 20, fontSize: 40 }}>Transaction successfully sent</Text>}
-                    {payment_hash && <Text style={{ color: 'white', padding: 20, fontSize: 15 }}>{`Payment Hash: ${payment_hash}`}</Text>}
-                    {payment_route && <Button
-                        title=""
-                        icon={{
-                            name: "check",
-                            size: 125,
-                            color: "white"
-                        }}
-                        style={{ padding: 20 }}
-                        onPress={() => void(0)}
-                        buttonStyle={{
-                            backgroundColor: "transparent"
-                        }}
-                    />}
-                    {error && <Button
-                        title=""
-                        icon={{
-                            name: "error",
-                            size: 125,
-                            color: "white"
-                        }}
-                        style={{ padding: 20 }}
-                        onPress={() => void(0)}
-                        buttonStyle={{
-                            backgroundColor: "transparent"
-                        }}
-                    />}
+                    {error && (
+                        <Text
+                            style={{
+                                color: 'white',
+                                padding: 20,
+                                fontSize: 40
+                            }}
+                        >
+                            {payment_error || error_msg}
+                        </Text>
+                    )}
+                    {payment_route && (
+                        <Text
+                            style={{
+                                color: 'white',
+                                padding: 20,
+                                fontSize: 40
+                            }}
+                        >
+                            Transaction successfully sent
+                        </Text>
+                    )}
+                    {payment_hash && (
+                        <Text
+                            style={{
+                                color: 'white',
+                                padding: 20,
+                                fontSize: 15
+                            }}
+                        >{`Payment Hash: ${payment_hash}`}</Text>
+                    )}
+                    {payment_route && (
+                        <Button
+                            title=""
+                            icon={{
+                                name: 'check',
+                                size: 125,
+                                color: 'white'
+                            }}
+                            style={{ padding: 20 }}
+                            onPress={() => void 0}
+                            buttonStyle={{
+                                backgroundColor: 'transparent'
+                            }}
+                        />
+                    )}
+                    {error && (
+                        <Button
+                            title=""
+                            icon={{
+                                name: 'error',
+                                size: 125,
+                                color: 'white'
+                            }}
+                            style={{ padding: 20 }}
+                            onPress={() => void 0}
+                            buttonStyle={{
+                                backgroundColor: 'transparent'
+                            }}
+                        />
+                    )}
 
-                    {payment_route && <Button
-                        title="Go to Wallet"
-                        icon={{
-                            name: "list",
-                            size: 25,
-                            color: "green"
-                        }}
-                        onPress={() => navigation.navigate('Wallet')}
-                        style={styles.button}
-                        buttonStyle={{
-                            backgroundColor: "#fff",
-                            borderRadius: 30
-                        }}
-                        titleStyle={{
-                            color: "green"
-                        }}
-                    />}
+                    {payment_route && (
+                        <Button
+                            title="Go to Wallet"
+                            icon={{
+                                name: 'list',
+                                size: 25,
+                                color: 'green'
+                            }}
+                            onPress={() => navigation.navigate('Wallet')}
+                            style={styles.button}
+                            buttonStyle={{
+                                backgroundColor: '#fff',
+                                borderRadius: 30
+                            }}
+                            titleStyle={{
+                                color: 'green'
+                            }}
+                        />
+                    )}
                 </View>
             </View>
         );
