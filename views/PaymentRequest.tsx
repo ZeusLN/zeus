@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
     ActivityIndicator,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -100,263 +101,266 @@ export default class PaymentRequest extends React.Component<
 
                 {loading && <ActivityIndicator size="large" color="#0000ff" />}
 
-                {!!getPayReqError && (
-                    <View style={styles.content}>
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.labelDark
-                                    : styles.label
-                            }
-                        >
-                            Error loading invoice
-                        </Text>
-                    </View>
-                )}
+                <ScrollView>
+                    {!!getPayReqError && (
+                        <View style={styles.content}>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Error loading invoice
+                            </Text>
+                        </View>
+                    )}
 
-                {pay_req && (
-                    <View style={styles.content}>
-                        <View style={styles.center}>
-                            <TouchableOpacity onPress={() => changeUnits()}>
+                    {pay_req && (
+                        <View style={styles.content}>
+                            <View style={styles.center}>
+                                <TouchableOpacity onPress={() => changeUnits()}>
+                                    <Text
+                                        style={
+                                            theme === 'dark'
+                                                ? styles.amountDark
+                                                : styles.amount
+                                        }
+                                    >
+                                        {units && getAmount(num_satoshis || 0)}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            {description && (
                                 <Text
                                     style={
                                         theme === 'dark'
-                                            ? styles.amountDark
-                                            : styles.amount
+                                            ? styles.labelDark
+                                            : styles.label
                                     }
                                 >
-                                    {units && getAmount(num_satoshis || 0)}
+                                    Description:
                                 </Text>
-                            </TouchableOpacity>
+                            )}
+                            {description && (
+                                <Text
+                                    style={
+                                        theme === 'dark'
+                                            ? styles.valueDark
+                                            : styles.value
+                                    }
+                                >
+                                    {description}
+                                </Text>
+                            )}
+
+                            {timestamp && (
+                                <Text
+                                    style={
+                                        theme === 'dark'
+                                            ? styles.labelDark
+                                            : styles.label
+                                    }
+                                >
+                                    Timestamp:
+                                </Text>
+                            )}
+                            {timestamp && (
+                                <Text
+                                    style={
+                                        theme === 'dark'
+                                            ? styles.valueDark
+                                            : styles.value
+                                    }
+                                >
+                                    {date}
+                                </Text>
+                            )}
+
+                            {expiry && (
+                                <Text
+                                    style={
+                                        theme === 'dark'
+                                            ? styles.labelDark
+                                            : styles.label
+                                    }
+                                >
+                                    Expiry:
+                                </Text>
+                            )}
+                            {expiry && (
+                                <Text
+                                    style={
+                                        theme === 'dark'
+                                            ? styles.valueDark
+                                            : styles.value
+                                    }
+                                >
+                                    {expiry}
+                                </Text>
+                            )}
+
+                            {cltv_expiry && (
+                                <Text
+                                    style={
+                                        theme === 'dark'
+                                            ? styles.labelDark
+                                            : styles.label
+                                    }
+                                >
+                                    CLTV Expiry:
+                                </Text>
+                            )}
+                            {cltv_expiry && (
+                                <Text
+                                    style={
+                                        theme === 'dark'
+                                            ? styles.valueDark
+                                            : styles.value
+                                    }
+                                >
+                                    {cltv_expiry}
+                                </Text>
+                            )}
+
+                            {destination && (
+                                <Text
+                                    style={
+                                        theme === 'dark'
+                                            ? styles.labelDark
+                                            : styles.label
+                                    }
+                                >
+                                    Destination:
+                                </Text>
+                            )}
+                            {destination && (
+                                <Text
+                                    style={
+                                        theme === 'dark'
+                                            ? styles.valueDark
+                                            : styles.value
+                                    }
+                                >
+                                    {destination}
+                                </Text>
+                            )}
+
+                            {payment_hash && (
+                                <Text
+                                    style={
+                                        theme === 'dark'
+                                            ? styles.labelDark
+                                            : styles.label
+                                    }
+                                >
+                                    Payment Hash:
+                                </Text>
+                            )}
+                            {payment_hash && (
+                                <Text
+                                    style={
+                                        theme === 'dark'
+                                            ? styles.valueDark
+                                            : styles.value
+                                    }
+                                >
+                                    {payment_hash}
+                                </Text>
+                            )}
+
+                            {setCustomAmount && (
+                                <Text
+                                    style={{
+                                        color:
+                                            theme === 'dark' ? 'white' : 'black'
+                                    }}
+                                >
+                                    Custom Amount (in satoshis)
+                                </Text>
+                            )}
+                            {setCustomAmount && (
+                                <TextInput
+                                    placeholder={'100'}
+                                    value={customAmount}
+                                    onChangeText={(text: string) =>
+                                        this.setState({ customAmount: text })
+                                    }
+                                    numberOfLines={1}
+                                    style={
+                                        theme === 'dark'
+                                            ? styles.textInputDark
+                                            : styles.textInput
+                                    }
+                                    placeholderTextColor="gray"
+                                />
+                            )}
                         </View>
+                    )}
 
-                        {description && (
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
+                    {pay_req && (
+                        <View style={styles.button}>
+                            <Button
+                                title={
+                                    setCustomAmount
+                                        ? 'Pay default amount'
+                                        : 'Pay custom amount'
                                 }
-                            >
-                                Description:
-                            </Text>
-                        )}
-                        {description && (
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
-                                {description}
-                            </Text>
-                        )}
-
-                        {timestamp && (
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
-                                Timestamp:
-                            </Text>
-                        )}
-                        {timestamp && (
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
-                                {date}
-                            </Text>
-                        )}
-
-                        {expiry && (
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
-                                Expiry:
-                            </Text>
-                        )}
-                        {expiry && (
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
-                                {expiry}
-                            </Text>
-                        )}
-
-                        {cltv_expiry && (
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
-                                CLTV Expiry:
-                            </Text>
-                        )}
-                        {cltv_expiry && (
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
-                                {cltv_expiry}
-                            </Text>
-                        )}
-
-                        {destination && (
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
-                                Destination:
-                            </Text>
-                        )}
-                        {destination && (
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
-                                {destination}
-                            </Text>
-                        )}
-
-                        {payment_hash && (
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
-                                Payment Hash:
-                            </Text>
-                        )}
-                        {payment_hash && (
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
-                                {payment_hash}
-                            </Text>
-                        )}
-
-                        {setCustomAmount && (
-                            <Text
-                                style={{
-                                    color: theme === 'dark' ? 'white' : 'black'
+                                icon={{
+                                    name: 'edit',
+                                    size: 25,
+                                    color: theme === 'dark' ? 'black' : 'white'
                                 }}
-                            >
-                                Custom Amount (in satoshis)
-                            </Text>
-                        )}
-                        {setCustomAmount && (
-                            <TextInput
-                                placeholder={'100'}
-                                value={customAmount}
-                                onChangeText={(text: string) =>
-                                    this.setState({ customAmount: text })
-                                }
-                                numberOfLines={1}
-                                style={
-                                    theme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
-                                placeholderTextColor="gray"
+                                onPress={() => {
+                                    this.setState({
+                                        setCustomAmount: !setCustomAmount
+                                    });
+                                }}
+                                style={styles.button}
+                                titleStyle={{
+                                    color: theme === 'dark' ? 'black' : 'white'
+                                }}
+                                buttonStyle={{
+                                    backgroundColor:
+                                        theme === 'dark' ? 'white' : 'black',
+                                    borderRadius: 30
+                                }}
                             />
-                        )}
-                    </View>
-                )}
+                        </View>
+                    )}
 
-                {pay_req && (
-                    <View style={styles.button}>
-                        <Button
-                            title={
-                                setCustomAmount
-                                    ? 'Pay default amount'
-                                    : 'Pay custom amount'
-                            }
-                            icon={{
-                                name: 'edit',
-                                size: 25,
-                                color: theme === 'dark' ? 'black' : 'white'
-                            }}
-                            onPress={() => {
-                                this.setState({
-                                    setCustomAmount: !setCustomAmount
-                                });
-                            }}
-                            style={styles.button}
-                            titleStyle={{
-                                color: theme === 'dark' ? 'black' : 'white'
-                            }}
-                            buttonStyle={{
-                                backgroundColor:
-                                    theme === 'dark' ? 'white' : 'black',
-                                borderRadius: 30
-                            }}
-                        />
-                    </View>
-                )}
+                    {pay_req && (
+                        <View style={styles.button}>
+                            <Button
+                                title="Pay this invoice"
+                                icon={{
+                                    name: 'send',
+                                    size: 25,
+                                    color: 'white'
+                                }}
+                                onPress={() => {
+                                    if (setCustomAmount && customAmount) {
+                                        TransactionsStore.sendPayment(
+                                            paymentRequest,
+                                            customAmount
+                                        );
+                                    } else {
+                                        TransactionsStore.sendPayment(
+                                            paymentRequest
+                                        );
+                                    }
 
-                {pay_req && (
-                    <View style={styles.button}>
-                        <Button
-                            title="Pay this invoice"
-                            icon={{
-                                name: 'send',
-                                size: 25,
-                                color: 'white'
-                            }}
-                            onPress={() => {
-                                if (setCustomAmount && customAmount) {
-                                    TransactionsStore.sendPayment(
-                                        paymentRequest,
-                                        customAmount
-                                    );
-                                } else {
-                                    TransactionsStore.sendPayment(
-                                        paymentRequest
-                                    );
-                                }
-
-                                navigation.navigate('SendingLightning');
-                            }}
-                            buttonStyle={{
-                                backgroundColor: 'orange',
-                                borderRadius: 30
-                            }}
-                        />
-                    </View>
-                )}
+                                    navigation.navigate('SendingLightning');
+                                }}
+                                buttonStyle={{
+                                    backgroundColor: 'orange',
+                                    borderRadius: 30
+                                }}
+                            />
+                        </View>
+                    )}
+                </ScrollView>
             </View>
         );
     }
