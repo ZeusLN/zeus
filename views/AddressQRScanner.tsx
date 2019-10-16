@@ -30,30 +30,18 @@ export default class AddressQRScanner extends React.Component<
     handleAddressInvoiceScanned = (data: string) => {
         const { NodeInfoStore, navigation } = this.props;
         const { testnet } = NodeInfoStore;
-        let processedValue;
 
-        // handle addresses prefixed with 'bitcoin:' and
-        // payment requests prefixed with 'lightning:'
-        if (data.includes('bitcoin:')) {
-            processedValue = data.split('bitcoin:')[1];
-        } else if (data.includes('lightning:')) {
-            processedValue = data.split('lightning:')[1];
-        } else if (data.includes('LIGHTNING:')) {
-            processedValue = data.split('LIGHTNING:')[1];
-        } else {
-            processedValue = data;
-        }
+        const { value, amount } = AddressUtils.processSendAddress(data);
 
-        if (AddressUtils.isValidBitcoinAddress(processedValue, testnet)) {
+        if (AddressUtils.isValidBitcoinAddress(value, testnet)) {
             navigation.navigate('Send', {
-                destination: processedValue,
+                destination: value,
+                amount,
                 transactionType: 'On-chain'
             });
-        } else if (
-            AddressUtils.isValidLightningPaymentRequest(processedValue)
-        ) {
+        } else if (AddressUtils.isValidLightningPaymentRequest(value)) {
             navigation.navigate('Send', {
-                destination: processedValue,
+                destination: value,
                 transactionType: 'Lightning'
             });
         } else {
