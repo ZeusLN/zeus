@@ -3,7 +3,7 @@ import SettingsStore from './SettingsStore';
 
 type Units = 'sats' | 'btc';
 
-const satoshisPerBTC = 100000000;
+export const satoshisPerBTC = 100000000;
 
 export default class UnitsStore {
     @observable public units: Units = 'sats';
