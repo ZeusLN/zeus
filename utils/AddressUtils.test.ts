@@ -96,5 +96,27 @@ describe('AddressUtils', () => {
                 )
             ).toBeTruthy();
         });
+
+        describe('processSendAddress', () => {
+            it('process address inputed and scanned from the Send view', () => {
+                expect(
+                    AddressUtils.processSendAddress(
+                        'bitcoin:34K6tvoWM7k2ujeXVuimv29WyAsqzhWofb?amount=0.00170003'
+                    )
+                ).toEqual({
+                    value: '34K6tvoWM7k2ujeXVuimv29WyAsqzhWofb',
+                    amount: '170003' // amount in sats
+                });
+
+                expect(
+                    AddressUtils.processSendAddress(
+                        'bitcoin:34K6tvoWM7k2ujeXVuimv29WyAsqzhWofb'
+                    )
+                ).toEqual({
+                    value: '34K6tvoWM7k2ujeXVuimv29WyAsqzhWofb',
+                    amount: undefined
+                });
+            });
+        });
     });
 });
