@@ -33,13 +33,14 @@ export default class Send extends React.Component<SendProps, SendState> {
         super(props);
         const { navigation } = props;
         const destination = navigation.getParam('destination', null);
+        const amount = navigation.getParam('amount', null);
         const transactionType = navigation.getParam('transactionType', null);
 
         this.state = {
             isValid: false,
             transactionType: transactionType,
             destination: destination || '',
-            amount: '',
+            amount: amount || '',
             fee: ''
         };
     }
@@ -47,6 +48,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     componentWillReceiveProps(nextProps: any) {
         const { navigation } = nextProps;
         const destination = navigation.getParam('destination', null);
+        const amount = navigation.getParam('amount', null);
         const transactionType = navigation.getParam('transactionType', null);
 
         if (transactionType === 'Lightning') {
@@ -56,6 +58,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         this.setState({
             transactionType,
             destination,
+            amount,
             isValid: true
         });
     }
