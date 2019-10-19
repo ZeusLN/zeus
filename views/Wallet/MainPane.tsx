@@ -235,12 +235,36 @@ export default class MainPane extends React.Component<
                                     borderRadius: 30
                                 }}
                                 containerStyle={{
-                                    marginLeft: 10
+                                    marginLeft: 10,
+                                    marginRight: 10
                                 }}
                                 titleStyle={{
                                     color: theme === 'dark' ? 'white' : 'black'
                                 }}
                                 onPress={() => navigation.navigate('Receive')}
+                                raised={theme !== 'dark'}
+                            />
+                            <Button
+                                title="Scan"
+                                icon={{
+                                    name: 'crop-free',
+                                    size: 25,
+                                    color: '#f1a58c'
+                                }}
+                                buttonStyle={{
+                                    backgroundColor:
+                                        theme === 'dark' ? 'black' : 'white',
+                                    borderRadius: 20
+                                }}
+                                containerStyle={{
+                                    marginLeft: 10
+                                }}
+                                titleStyle={{
+                                    color: theme === 'dark' ? 'white' : 'black'
+                                }}
+                                onPress={() =>
+                                    navigation.navigate('AddressQRCodeScanner')
+                                }
                                 raised={theme !== 'dark'}
                             />
                         </View>
