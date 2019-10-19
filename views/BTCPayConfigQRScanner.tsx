@@ -1,5 +1,3 @@
-/** @format */
-
 import * as React from 'react';
 import { Alert } from 'react-native';
 import QRCodeScanner from './../components/QRCodeScanner';
