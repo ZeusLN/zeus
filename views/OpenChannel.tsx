@@ -63,9 +63,7 @@ export default class OpenChannel extends React.Component<
     }
 
     importClipboard = () => {
-        const splitNodeUri = this.state.suggestImport.split('@');
-        const pubkey = splitNodeUri[0];
-        const host = splitNodeUri[1];
+        const { pubkey, host } = NodeUriUtils.processNodeUri(this.state.suggestImport);
 
         this.setState({
             node_pubkey_string: pubkey,
