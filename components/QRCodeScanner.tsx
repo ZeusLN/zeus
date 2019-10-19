@@ -1,5 +1,3 @@
-/** @format */
-
 import * as React from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
