@@ -7,14 +7,16 @@ export default interface TransactionRequest {
     amount: string;
 }
 
-export type SendPaymentRequest = {
-    payment_request: string;
-    amt?: string;
-    fee_limit?: FeeLimit;
-} | {
-    dest_string: string;
-    amt: string;
-    final_cltv_delta: string;
-    payment_hash_string: string;
-    fee_limit?: FeeLimit;
-};
+export type SendPaymentRequest =
+    | {
+          payment_request: string;
+          amt?: string;
+          fee_limit?: FeeLimit;
+      }
+    | {
+          dest_string: string;
+          amt: string;
+          final_cltv_delta: string;
+          payment_hash_string: string;
+          fee_limit?: FeeLimit;
+      };

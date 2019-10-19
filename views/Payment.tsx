@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { StyleSheet, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import {
+    StyleSheet,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import Payment from './../models/Payment';
 import { inject, observer } from 'mobx-react';
@@ -23,7 +29,14 @@ export default class PaymentView extends React.Component<PaymentProps> {
         const { theme } = settings;
 
         const payment: Payment = navigation.getParam('payment', null);
-        const { creation_date, fee, payment_hash, value, payment_preimage, path } = payment;
+        const {
+            creation_date,
+            fee,
+            payment_hash,
+            value,
+            payment_preimage,
+            path
+        } = payment;
         const date = new Date(Number(creation_date) * 1000).toString();
 
         const BackButton = () => (
@@ -36,35 +49,122 @@ export default class PaymentView extends React.Component<PaymentProps> {
         );
 
         return (
-            <ScrollView style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
+            <ScrollView
+                style={
+                    theme === 'dark'
+                        ? styles.darkThemeStyle
+                        : styles.lightThemeStyle
+                }
+            >
                 <Header
                     leftComponent={<BackButton />}
-                    centerComponent={{ text: 'Payment', style: { color: '#fff' } }}
+                    centerComponent={{
+                        text: 'Payment',
+                        style: { color: '#fff' }
+                    }}
                     backgroundColor={theme === 'dark' ? '#261339' : 'black'}
                 />
                 <View style={styles.center}>
                     <TouchableOpacity onPress={() => changeUnits()}>
-                        <Text style={{ color: 'red', fontSize: 30, fontWeight: 'bold' }}>{getAmount(value)}</Text>
+                        <Text
+                            style={{
+                                color: 'red',
+                                fontSize: 30,
+                                fontWeight: 'bold'
+                            }}
+                        >
+                            {getAmount(value)}
+                        </Text>
                     </TouchableOpacity>
                 </View>
 
                 <View style={styles.content}>
-                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Fee:</Text>
+                    <Text
+                        style={
+                            theme === 'dark' ? styles.labelDark : styles.label
+                        }
+                    >
+                        Fee:
+                    </Text>
                     <TouchableOpacity onPress={() => changeUnits()}>
-                        <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{units && getAmount(fee)}</Text>
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.valueDark
+                                    : styles.value
+                            }
+                        >
+                            {units && getAmount(fee)}
+                        </Text>
                     </TouchableOpacity>
 
-                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Payment Hash</Text>
-                    <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{payment_hash}</Text>
+                    <Text
+                        style={
+                            theme === 'dark' ? styles.labelDark : styles.label
+                        }
+                    >
+                        Payment Hash
+                    </Text>
+                    <Text
+                        style={
+                            theme === 'dark' ? styles.valueDark : styles.value
+                        }
+                    >
+                        {payment_hash}
+                    </Text>
 
-                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Payment Pre-Image</Text>
-                    <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{payment_preimage}</Text>
+                    <Text
+                        style={
+                            theme === 'dark' ? styles.labelDark : styles.label
+                        }
+                    >
+                        Payment Pre-Image
+                    </Text>
+                    <Text
+                        style={
+                            theme === 'dark' ? styles.valueDark : styles.value
+                        }
+                    >
+                        {payment_preimage}
+                    </Text>
 
-                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Creation Date:</Text>
-                    <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{date}</Text>
+                    <Text
+                        style={
+                            theme === 'dark' ? styles.labelDark : styles.label
+                        }
+                    >
+                        Creation Date:
+                    </Text>
+                    <Text
+                        style={
+                            theme === 'dark' ? styles.valueDark : styles.value
+                        }
+                    >
+                        {date}
+                    </Text>
 
-                    {path && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>{path.length > 1 ? 'Paths:' : 'Path:'}</Text>}
-                    {path && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{path.join(', ')}</Text>}
+                    {path && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.labelDark
+                                    : styles.label
+                            }
+                        >
+                            {path.length > 1 ? 'Paths:' : 'Path:'}
+                        </Text>
+                    )}
+                    {path && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.valueDark
+                                    : styles.value
+                            }
+                        >
+                            {path.join(', ')}
+                        </Text>
+                    )}
                 </View>
             </ScrollView>
         );

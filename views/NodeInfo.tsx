@@ -34,7 +34,7 @@ export default class NodeInfo extends React.Component<InvoiceProps> {
         const URIs = (props: { uris: Array<any> }) => {
             const items: any = [];
 
-            props. uris.forEach((uri, key) => {
+            props.uris.forEach((uri, key) => {
                 items.push(
                     <React.Fragment key={key}>
                         <CollapsedQR
@@ -47,33 +47,115 @@ export default class NodeInfo extends React.Component<InvoiceProps> {
             });
 
             return items;
-        }
+        };
 
         return (
-            <ScrollView style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
+            <ScrollView
+                style={
+                    theme === 'dark'
+                        ? styles.darkThemeStyle
+                        : styles.lightThemeStyle
+                }
+            >
                 <Header
                     leftComponent={<BackButton />}
-                    centerComponent={{ text: 'Node Info', style: { color: '#fff' } }}
-                    backgroundColor='black'
+                    centerComponent={{
+                        text: 'Node Info',
+                        style: { color: '#fff' }
+                    }}
+                    backgroundColor="black"
                 />
                 <View style={styles.content}>
-                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Alias:</Text>
-                    <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{nodeInfo.alias}</Text>
+                    <Text
+                        style={
+                            theme === 'dark' ? styles.labelDark : styles.label
+                        }
+                    >
+                        Alias:
+                    </Text>
+                    <Text
+                        style={
+                            theme === 'dark' ? styles.valueDark : styles.value
+                        }
+                    >
+                        {nodeInfo.alias}
+                    </Text>
 
-                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Version:</Text>
-                    <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{nodeInfo.version}</Text>
+                    <Text
+                        style={
+                            theme === 'dark' ? styles.labelDark : styles.label
+                        }
+                    >
+                        Version:
+                    </Text>
+                    <Text
+                        style={
+                            theme === 'dark' ? styles.valueDark : styles.value
+                        }
+                    >
+                        {nodeInfo.version}
+                    </Text>
 
-                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Synced to Chain:</Text>
-                    <Text style={{ ...styles.value, color: nodeInfo.synced_to_chain ? 'green' : 'red' }}>{nodeInfo.synced_to_chain ? 'True' : 'False'}</Text>
+                    <Text
+                        style={
+                            theme === 'dark' ? styles.labelDark : styles.label
+                        }
+                    >
+                        Synced to Chain:
+                    </Text>
+                    <Text
+                        style={{
+                            ...styles.value,
+                            color: nodeInfo.synced_to_chain ? 'green' : 'red'
+                        }}
+                    >
+                        {nodeInfo.synced_to_chain ? 'True' : 'False'}
+                    </Text>
 
-                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Block Height</Text>
-                    <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{nodeInfo.block_height}</Text>
+                    <Text
+                        style={
+                            theme === 'dark' ? styles.labelDark : styles.label
+                        }
+                    >
+                        Block Height
+                    </Text>
+                    <Text
+                        style={
+                            theme === 'dark' ? styles.valueDark : styles.value
+                        }
+                    >
+                        {nodeInfo.block_height}
+                    </Text>
 
-                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Block Hash</Text>
-                    <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{nodeInfo.block_hash}</Text>
+                    <Text
+                        style={
+                            theme === 'dark' ? styles.labelDark : styles.label
+                        }
+                    >
+                        Block Hash
+                    </Text>
+                    <Text
+                        style={
+                            theme === 'dark' ? styles.valueDark : styles.value
+                        }
+                    >
+                        {nodeInfo.block_hash}
+                    </Text>
 
-                    <Text style={theme === 'dark' ? styles.labelDark : styles.label}>URIs:</Text>
-                    {nodeInfo.uris && nodeInfo.uris.length > 0 ? <URIs uris={nodeInfo.uris} /> : <Text style={{ ...styles.value, color: 'red' }}>No URIs available</Text>}
+                    <Text
+                        style={
+                            theme === 'dark' ? styles.labelDark : styles.label
+                        }
+                    >
+                        URIs:
+                    </Text>
+                    {nodeInfo.uris && nodeInfo.uris.length > 0 ? (
+                        <URIs uris={nodeInfo.uris} />
+                    ) : (
+                        <Text style={{ ...styles.value, color: 'red' }}>
+                            No URIs available
+                        </Text>
+                    )}
                 </View>
             </ScrollView>
         );

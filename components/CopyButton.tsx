@@ -11,12 +11,15 @@ interface CopyButtonState {
     copied: boolean;
 }
 
-export default class CopyButton extends React.Component<CopyButtonProps, CopyButtonState> {
+export default class CopyButton extends React.Component<
+    CopyButtonProps,
+    CopyButtonState
+> {
     isComponentMounted: boolean = false;
 
     state = {
         copied: false
-    }
+    };
 
     componentDidMount() {
         this.isComponentMounted = true;
@@ -41,31 +44,31 @@ export default class CopyButton extends React.Component<CopyButtonProps, CopyBut
                 });
             }
         }, 5000);
-    }
+    };
 
     render() {
         const { copied } = this.state;
         const { title } = this.props;
 
-        const buttonTitle = copied ? "Copied!" : (title || "Copy to Clipboard");
+        const buttonTitle = copied ? 'Copied!' : title || 'Copy to Clipboard';
 
         return (
             <Button
                 title={buttonTitle}
                 icon={{
-                    name: "content-copy",
+                    name: 'content-copy',
                     size: 25,
-                    color: copied ? "black" : "white"
+                    color: copied ? 'black' : 'white'
                 }}
                 containerStyle={{
                     marginBottom: 20
                 }}
                 buttonStyle={{
-                    backgroundColor: copied ? "white" : "black",
+                    backgroundColor: copied ? 'white' : 'black',
                     borderRadius: 30
                 }}
                 titleStyle={{
-                    color: copied ? "black" : "white"
+                    color: copied ? 'black' : 'white'
                 }}
                 onPress={() => this.copyToClipboard()}
             />

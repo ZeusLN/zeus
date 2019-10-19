@@ -101,8 +101,8 @@ android {
         applicationId "com.zeusln.zeus"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 10
-        versionName "0.1.0"
+        versionCode 11
+        versionName "0.1.1"
     }
     signingConfigs {
         release {
@@ -150,6 +150,7 @@ dependencies {
     implementation project(':rncamerakit')
     implementation project(':react-native-gesture-handler')
     implementation project(':react-native-vector-icons')
+    implementation project(':react-native-activity-result-fork')
     implementation fileTree(dir: "libs", include: ["*.jar"])
     implementation "com.android.support:appcompat-v7:${rootProject.ext.supportLibVersion}"
     implementation "com.facebook.react:react-native:+"  // From node_modules

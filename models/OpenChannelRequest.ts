@@ -11,4 +11,4 @@ export default interface OpenChannelRequest {
     min_htlc_msat?: string;
     local_funding_amount: string;
     host: string;
-};
+}

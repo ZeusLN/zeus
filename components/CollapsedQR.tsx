@@ -14,16 +14,19 @@ interface CollapsedQRState {
     collapsed: boolean;
 }
 
-export default class CollapsedQR extends React.Component<CollapsedQRProps, CollapsedQRState> {
+export default class CollapsedQR extends React.Component<
+    CollapsedQRProps,
+    CollapsedQRState
+> {
     state = {
         collapsed: true
-    }
+    };
 
     toggleCollapse = () => {
         this.setState({
             collapsed: !this.state.collapsed
         });
-    }
+    };
 
     render() {
         const { collapsed } = this.state;
@@ -31,25 +34,27 @@ export default class CollapsedQR extends React.Component<CollapsedQRProps, Colla
 
         return (
             <React.Fragment>
-                <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{value}</Text>
-                {!collapsed && <View style={styles.qrPadding}>
-                    <QRCode
-                        value={value}
-                        size={200}
-                        fgColor='white'
-                    />
-                </View>}
+                <Text
+                    style={theme === 'dark' ? styles.valueDark : styles.value}
+                >
+                    {value}
+                </Text>
+                {!collapsed && (
+                    <View style={styles.qrPadding}>
+                        <QRCode value={value} size={200} fgColor="white" />
+                    </View>
+                )}
                 <Button
-                    title={collapsed ? "Show QR" : "Hide QR"}
+                    title={collapsed ? 'Show QR' : 'Hide QR'}
                     icon={{
-                        name: "qrcode",
-                        type: "font-awesome",
+                        name: 'qrcode',
+                        type: 'font-awesome',
                         size: 25,
                         color: '#fff'
                     }}
                     buttonStyle={{
-                        backgroundColor: "grey",
-                        borderRadius: 30,
+                        backgroundColor: 'grey',
+                        borderRadius: 30
                     }}
                     containerStyle={{
                         paddingTop: collapsed ? 10 : 0,
@@ -57,10 +62,7 @@ export default class CollapsedQR extends React.Component<CollapsedQRProps, Colla
                     }}
                     onPress={() => this.toggleCollapse()}
                 />
-                <CopyButton
-                    copyValue={value}
-                    title={copyText || "Copy"}
-                />
+                <CopyButton copyValue={value} title={copyText || 'Copy'} />
             </React.Fragment>
         );
     }
