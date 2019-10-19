@@ -16,7 +16,11 @@ export default class LNDConnectConfigQRScanner extends React.Component<
 
         const index = navigation.getParam('index', null);
 
-        const { host, port, macaroonHex } = LndConnectUtils.processLndConnectUrl(data);
+        const {
+            host,
+            port,
+            macaroonHex
+        } = LndConnectUtils.processLndConnectUrl(data);
 
         if (host && port && macaroonHex) {
             navigation.navigate('AddEditNode', {
