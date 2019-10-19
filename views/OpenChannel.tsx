@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
     ActivityIndicator,
+    Clipboard,
     ScrollView,
     StyleSheet,
     Text,
@@ -11,6 +12,7 @@ import { inject, observer } from 'mobx-react';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import FeeTable from './../components/FeeTable';
 import FeeUtils from './../utils/FeeUtils';
+import NodeUriUtils from './../utils/NodeUriUtils';
 
 import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
@@ -31,6 +33,7 @@ interface OpenChannelState {
     sat_per_byte: string;
     private: boolean;
     host: string;
+    suggestImport: string;
 }
 
 @inject('ChannelsStore', 'SettingsStore', 'FeeStore')
@@ -45,7 +48,38 @@ export default class OpenChannel extends React.Component<
         min_confs: 1,
         sat_per_byte: '2',
         private: false,
-        host: ''
+        host: '',
+        suggestImport: ''
+    };
+
+    async componentWillMount() {
+        const clipboard = await Clipboard.getString();
+
+        if (NodeUriUtils.isValidNodeUri(clipboard)) {
+            this.setState({
+                suggestImport: clipboard
+            });
+        }
+    }
+
+    importClipboard = () => {
+        const splitNodeUri = this.state.suggestImport.split('@');
+        const pubkey = splitNodeUri[0];
+        const host = splitNodeUri[1];
+
+        this.setState({
+            node_pubkey_string: pubkey,
+            host,
+            suggestImport: ''
+        });
+
+        Clipboard.setString('');
+    };
+
+    clearImportSuggestion = () => {
+        this.setState({
+            suggestImport: ''
+        });
     };
 
     componentWillReceiveProps(nextProps: any) {
@@ -78,7 +112,8 @@ export default class OpenChannel extends React.Component<
             local_funding_amount,
             min_confs,
             host,
-            sat_per_byte
+            sat_per_byte,
+            suggestImport
         } = this.state;
         const privateChannel = this.state.private;
 
@@ -119,6 +154,44 @@ export default class OpenChannel extends React.Component<
                     }}
                     backgroundColor="grey"
                 />
+
+                {!!suggestImport && (
+                    <View style={styles.clipboardImport}>
+                        <Text style={{ color: 'white' }}>
+                            Detected the following Node URI in your clipboard:
+                        </Text>
+                        <Text style={{ color: 'white', padding: 15 }}>{suggestImport}</Text>
+                        <Text style={{ color: 'white' }}>
+                            Would you like to import it?
+                        </Text>
+                        <View style={styles.button}>
+                            <Button
+                                title="Import"
+                                onPress={() => this.importClipboard()}
+                                titleStyle={{
+                                    color: 'rgba(92, 99,216, 1)'
+                                }}
+                                buttonStyle={{
+                                    backgroundColor: 'white',
+                                    borderRadius: 30
+                                }}
+                            />
+                        </View>
+                        <View style={styles.button}>
+                            <Button
+                                title="Cancel"
+                                onPress={() => this.clearImportSuggestion()}
+                                titleStyle={{
+                                    color: 'rgba(92, 99,216, 1)'
+                                }}
+                                buttonStyle={{
+                                    backgroundColor: 'white',
+                                    borderRadius: 30
+                                }}
+                            />
+                        </View>
+                    </View>
+                )}
 
                 <View style={styles.content}>
                     {(connectingToPeer || openingChannel) && (
@@ -330,5 +403,10 @@ const styles = StyleSheet.create({
     button: {
         paddingTop: 10,
         paddingBottom: 10
+    },
+    clipboardImport: {
+        padding: 10,
+        backgroundColor: 'rgba(92, 99,216, 1)',
+        color: 'white'
     }
 });
