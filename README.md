@@ -80,7 +80,7 @@ Zeus is proud to be integrated on the following platforms:
 
 ## Contributing
 
-Please be sure to run `tsc` to check for type errors and `npm run test` to run all tests.
+Please be sure to run `tsc` to check for type errors, `npm run test` to run all tests, and `npm run prettier` to run the prettier
 
 If you are making cosmetic changes please test on both Android and iOS as things don't render exactly the same on both platforms.
 
