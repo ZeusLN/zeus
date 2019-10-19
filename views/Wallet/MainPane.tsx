@@ -204,7 +204,7 @@ export default class MainPane extends React.Component<
                             <Button
                                 title="Send"
                                 icon={{
-                                    name: 'arrow-forward',
+                                    name: 'arrow-upward',
                                     size: 25,
                                     color: 'red'
                                 }}
