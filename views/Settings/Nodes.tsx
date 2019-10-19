@@ -86,7 +86,6 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                                     ? 'gray'
                                                     : '#8a8999'
                                         }}
-                                        refreshing={loading}
                                     />
                                 </React.Fragment>
                             );
