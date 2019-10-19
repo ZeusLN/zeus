@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { StyleSheet, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import {
+    StyleSheet,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import Invoice from './../models/Invoice';
 import { inject, observer } from 'mobx-react';
@@ -24,6 +30,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
 
         const invoice: Invoice = navigation.getParam('invoice', null);
         const {
+            amt_paid_sat,
             fallback_addr,
             r_hash,
             settle_date,
@@ -51,51 +58,287 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
         );
 
         return (
-            <ScrollView style={theme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
+            <ScrollView
+                style={
+                    theme === 'dark'
+                        ? styles.darkThemeStyle
+                        : styles.lightThemeStyle
+                }
+            >
                 <Header
                     leftComponent={<BackButton />}
-                    centerComponent={{ text: 'Invoice', style: { color: '#fff' } }}
+                    centerComponent={{
+                        text: 'Invoice',
+                        style: { color: '#fff' }
+                    }}
                     backgroundColor={theme === 'dark' ? '#261339' : 'orange'}
                 />
                 <View style={styles.center}>
                     <TouchableOpacity onPress={() => changeUnits()}>
-                        <Text style={theme === 'dark' ? styles.amountDark : styles.amount}>{`${settled ? 'Paid' : 'Unpaid'}: ${units && getAmount(value)}`}</Text>
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.amountDark
+                                    : styles.amount
+                            }
+                        >{`${settled ? 'Paid' : 'Unpaid'}: ${units &&
+                            getAmount(settled ? amt_paid_sat : value)}`}</Text>
                     </TouchableOpacity>
                 </View>
 
                 <View style={styles.content}>
-                    {memo && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Memo:</Text>}
-                    {memo && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{memo}</Text>}
+                    {memo && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.labelDark
+                                    : styles.label
+                            }
+                        >
+                            Memo:
+                        </Text>
+                    )}
+                    {memo && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.valueDark
+                                    : styles.value
+                            }
+                        >
+                            {memo}
+                        </Text>
+                    )}
 
-                    {receipt && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Receipt:</Text>}
-                    {receipt && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{receipt}</Text>}
+                    {receipt && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.labelDark
+                                    : styles.label
+                            }
+                        >
+                            Receipt:
+                        </Text>
+                    )}
+                    {receipt && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.valueDark
+                                    : styles.value
+                            }
+                        >
+                            {receipt}
+                        </Text>
+                    )}
 
-                    {settle_date && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Settle Date:</Text>}
-                    {settle_date && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{settleDate}</Text>}
+                    {settle_date && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.labelDark
+                                    : styles.label
+                            }
+                        >
+                            Settle Date:
+                        </Text>
+                    )}
+                    {settle_date && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.valueDark
+                                    : styles.value
+                            }
+                        >
+                            {settleDate}
+                        </Text>
+                    )}
 
-                    {creation_date && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Creation Date:</Text>}
-                    {creation_date && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{creationDate}</Text>}
+                    {creation_date && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.labelDark
+                                    : styles.label
+                            }
+                        >
+                            Creation Date:
+                        </Text>
+                    )}
+                    {creation_date && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.valueDark
+                                    : styles.value
+                            }
+                        >
+                            {creationDate}
+                        </Text>
+                    )}
 
-                    {expiry && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Expiry:</Text>}
-                    {expiry && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{expiry}</Text>}
+                    {expiry && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.labelDark
+                                    : styles.label
+                            }
+                        >
+                            Expiry:
+                        </Text>
+                    )}
+                    {expiry && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.valueDark
+                                    : styles.value
+                            }
+                        >
+                            {expiry}
+                        </Text>
+                    )}
 
-                    {privateInvoice && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Private:</Text>}
-                    {privateInvoice && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{privateInvoice}</Text>}
+                    {privateInvoice && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.labelDark
+                                    : styles.label
+                            }
+                        >
+                            Private:
+                        </Text>
+                    )}
+                    {privateInvoice && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.valueDark
+                                    : styles.value
+                            }
+                        >
+                            {privateInvoice}
+                        </Text>
+                    )}
 
-                    {fallback_addr && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Fallback Address:</Text>}
-                    {fallback_addr && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{fallback_addr}</Text>}
+                    {fallback_addr && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.labelDark
+                                    : styles.label
+                            }
+                        >
+                            Fallback Address:
+                        </Text>
+                    )}
+                    {fallback_addr && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.valueDark
+                                    : styles.value
+                            }
+                        >
+                            {fallback_addr}
+                        </Text>
+                    )}
 
-                    {cltv_expiry && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>CLTV Expiry:</Text>}
-                    {cltv_expiry && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{cltv_expiry}</Text>}
+                    {cltv_expiry && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.labelDark
+                                    : styles.label
+                            }
+                        >
+                            CLTV Expiry:
+                        </Text>
+                    )}
+                    {cltv_expiry && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.valueDark
+                                    : styles.value
+                            }
+                        >
+                            {cltv_expiry}
+                        </Text>
+                    )}
 
-                    {r_hash && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>R Hash:</Text>}
-                    {r_hash && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{r_hash}</Text>}
+                    {r_hash && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.labelDark
+                                    : styles.label
+                            }
+                        >
+                            R Hash:
+                        </Text>
+                    )}
+                    {r_hash && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.valueDark
+                                    : styles.value
+                            }
+                        >
+                            {r_hash}
+                        </Text>
+                    )}
 
-                    {r_preimage && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>R Pre-Image:</Text>}
-                    {r_preimage && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{r_preimage}</Text>}
+                    {r_preimage && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.labelDark
+                                    : styles.label
+                            }
+                        >
+                            R Pre-Image:
+                        </Text>
+                    )}
+                    {r_preimage && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.valueDark
+                                    : styles.value
+                            }
+                        >
+                            {r_preimage}
+                        </Text>
+                    )}
 
-                    {description_hash && <Text style={theme === 'dark' ? styles.labelDark : styles.label}>Description Hash:</Text>}
-                    {description_hash && <Text style={theme === 'dark' ? styles.valueDark : styles.value}>{description_hash}</Text>}
+                    {description_hash && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.labelDark
+                                    : styles.label
+                            }
+                        >
+                            Description Hash:
+                        </Text>
+                    )}
+                    {description_hash && (
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.valueDark
+                                    : styles.value
+                            }
+                        >
+                            {description_hash}
+                        </Text>
+                    )}
                 </View>
             </ScrollView>
         );

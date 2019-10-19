@@ -19,7 +19,7 @@ class Stores {
     public paymentsStore: PaymentsStore;
     public feeStore: FeeStore;
 
-    constructor(){
+    constructor() {
         this.settingsStore = new SettingsStore();
         this.channelsStore = new ChannelsStore(this.settingsStore);
         this.invoicesStore = new InvoicesStore(this.settingsStore);

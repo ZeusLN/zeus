@@ -7,29 +7,29 @@ class MacaroonUtils {
 
         for (let i = 0; i < raw.length; i++) {
             const hexChar = raw.charCodeAt(i).toString(16);
-            HEX += (hexChar.length === 2 ? hexChar : '0' + hexChar);
+            HEX += hexChar.length === 2 ? hexChar : '0' + hexChar;
         }
         return HEX.toUpperCase();
-    }
+    };
 
     base64UrlToBase64 = (input: string) => {
         // Replace non-url compatible chars with base64 standard chars
-        input = input
-            .replace(/-/g, '+')
-            .replace(/_/g, '/');
+        input = input.replace(/-/g, '+').replace(/_/g, '/');
 
         // Pad out with standard base64 required padding characters
         const pad = input.length % 4;
         if (pad) {
             if (pad === 1) {
-                throw new Error('InvalidLengthError: Input base64url string is the wrong length to determine padding');
+                throw new Error(
+                    'InvalidLengthError: Input base64url string is the wrong length to determine padding'
+                );
             }
-            input += new Array(5-pad).join('=');
+            input += new Array(5 - pad).join('=');
         }
 
         return input;
-    }
-};
+    };
+}
 
 const macaroonUtils = new MacaroonUtils();
 export default macaroonUtils;

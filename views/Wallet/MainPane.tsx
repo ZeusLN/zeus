@@ -25,16 +25,30 @@ interface MainPaneState {
 
 @inject('UnitsStore', 'SettingsStore')
 @observer
-export default class MainPane extends React.Component<MainPaneProps, MainPaneState> {
+export default class MainPane extends React.Component<
+    MainPaneProps,
+    MainPaneState
+> {
     state = {
         combinedBalance: false
-    }
+    };
 
     render() {
-        const { NodeInfoStore, UnitsStore, BalanceStore, SettingsStore, navigation } = this.props;
+        const {
+            NodeInfoStore,
+            UnitsStore,
+            BalanceStore,
+            SettingsStore,
+            navigation
+        } = this.props;
         const { combinedBalance } = this.state;
-        const {changeUnits, getAmount, units } = UnitsStore;
-        const { totalBlockchainBalance, unconfirmedBlockchainBalance, lightningBalance, pendingOpenBalance } = BalanceStore;
+        const { changeUnits, getAmount, units } = UnitsStore;
+        const {
+            totalBlockchainBalance,
+            unconfirmedBlockchainBalance,
+            lightningBalance,
+            pendingOpenBalance
+        } = BalanceStore;
         const { host, settings } = SettingsStore;
         const { theme } = settings;
         const loading = NodeInfoStore.loading || BalanceStore.loading;
@@ -44,39 +58,55 @@ export default class MainPane extends React.Component<MainPaneProps, MainPaneSta
                 <Text style={styles.lightningBalance}>
                     {units && getAmount(lightningBalance)} ⚡
                 </Text>
-                {pendingOpenBalance > 0 ? <Text style={styles.pendingBalance}>
-                    {units && getAmount(pendingOpenBalance)} pending open
-                </Text> : null}
+                {pendingOpenBalance > 0 ? (
+                    <Text style={styles.pendingBalance}>
+                        {units && getAmount(pendingOpenBalance)} pending open
+                    </Text>
+                ) : null}
                 <Text style={styles.blockchainBalance}>
                     {units && getAmount(totalBlockchainBalance)} ⛓️
                 </Text>
-                {unconfirmedBlockchainBalance ? <Text style={styles.pendingBalance}>
-                    {units && getAmount(unconfirmedBlockchainBalance)} pending
-                </Text> : null}
+                {unconfirmedBlockchainBalance ? (
+                    <Text style={styles.pendingBalance}>
+                        {units && getAmount(unconfirmedBlockchainBalance)}{' '}
+                        pending
+                    </Text>
+                ) : null}
             </React.Fragment>
         );
 
         const BalanceViewCombined = () => (
-          <React.Fragment>
-              <Text style={styles.lightningBalance}>
-                  {units && getAmount(Number(totalBlockchainBalance) + Number(lightningBalance))}
-              </Text>
-              {unconfirmedBlockchainBalance || pendingOpenBalance ? <Text style={styles.pendingBalance}>
-                  {units && getAmount(Number(pendingOpenBalance) + Number(unconfirmedBlockchainBalance))} pending
-              </Text> : null}
-          </React.Fragment>
+            <React.Fragment>
+                <Text style={styles.lightningBalance}>
+                    {units &&
+                        getAmount(
+                            Number(totalBlockchainBalance) +
+                                Number(lightningBalance)
+                        )}
+                </Text>
+                {unconfirmedBlockchainBalance || pendingOpenBalance ? (
+                    <Text style={styles.pendingBalance}>
+                        {units &&
+                            getAmount(
+                                Number(pendingOpenBalance) +
+                                    Number(unconfirmedBlockchainBalance)
+                            )}{' '}
+                        pending
+                    </Text>
+                ) : null}
+            </React.Fragment>
         );
 
         const SettingsButton = () => (
             <Button
                 title=""
                 icon={{
-                    name: "settings",
+                    name: 'settings',
                     size: 25,
-                    color: "#fff"
+                    color: '#fff'
                 }}
                 buttonStyle={{
-                    backgroundColor: "transparent",
+                    backgroundColor: 'transparent',
                     marginRight: -10
                 }}
                 onPress={() => navigation.navigate('Settings')}
@@ -85,16 +115,27 @@ export default class MainPane extends React.Component<MainPaneProps, MainPaneSta
 
         const NodeInfoBadge = () => (
             <View style={styles.nodeInfo}>
-                {host && host.includes('.onion') && <TouchableOpacity onPress={() => navigation.navigate('NodeInfo')}><Image style={{ width: 25, height: 25 }} source={TorIcon} /></TouchableOpacity>}
-                {host && !host.includes('.onion') && <Badge
-                    onPress={() => navigation.navigate('NodeInfo')}
-                    value={NodeInfoStore.testnet ? 'Testnet' : 'ⓘ'}
-                    badgeStyle={{
-                        backgroundColor: 'gray',
-                        borderWidth: 0,
-                        marginLeft: 5
-                    }}
-                />}
+                {host && host.includes('.onion') && (
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('NodeInfo')}
+                    >
+                        <Image
+                            style={{ width: 25, height: 25 }}
+                            source={TorIcon}
+                        />
+                    </TouchableOpacity>
+                )}
+                {host && !host.includes('.onion') && (
+                    <Badge
+                        onPress={() => navigation.navigate('NodeInfo')}
+                        value={NodeInfoStore.testnet ? 'Testnet' : 'ⓘ'}
+                        badgeStyle={{
+                            backgroundColor: 'gray',
+                            borderWidth: 0,
+                            marginLeft: 5
+                        }}
+                    />
+                )}
             </View>
         );
 
@@ -102,10 +143,16 @@ export default class MainPane extends React.Component<MainPaneProps, MainPaneSta
 
         if (loading) {
             mainPane = (
-                <View style={theme === 'dark' ? styles.loadingContainerDark : styles.loadingContainer}>
+                <View
+                    style={
+                        theme === 'dark'
+                            ? styles.loadingContainerDark
+                            : styles.loadingContainer
+                    }
+                >
                     <Header
                         rightComponent={<SettingsButton />}
-                        backgroundColor='transparent'
+                        backgroundColor="transparent"
                         containerStyle={{
                             borderBottomWidth: 0
                         }}
@@ -116,38 +163,54 @@ export default class MainPane extends React.Component<MainPaneProps, MainPaneSta
                         buttonStyle={{
                             backgroundColor: 'transparent'
                         }}
-                        onPress={() => void(0)}
+                        onPress={() => void 0}
                     />
                 </View>
             );
         } else if (!NodeInfoStore.error) {
-           mainPane = (
-               <View>
-                    <LinearGradient colors={theme === 'dark' ? darkThemeGradient : lightThemeGradient} style={styles.container}>
+            mainPane = (
+                <View>
+                    <LinearGradient
+                        colors={
+                            theme === 'dark'
+                                ? darkThemeGradient
+                                : lightThemeGradient
+                        }
+                        style={styles.container}
+                    >
                         <Header
                             leftComponent={<NodeInfoBadge />}
                             rightComponent={<SettingsButton />}
-                            backgroundColor='transparent'
+                            backgroundColor="transparent"
                             containerStyle={{
                                 borderBottomWidth: 0
                             }}
                         />
                         <TouchableOpacity
                             onPress={() => changeUnits()}
-                            onLongPress={() => this.setState({ combinedBalance: !combinedBalance })}
+                            onLongPress={() =>
+                                this.setState({
+                                    combinedBalance: !combinedBalance
+                                })
+                            }
                         >
-                            {combinedBalance ? <BalanceViewCombined /> :<BalanceView />}
+                            {combinedBalance ? (
+                                <BalanceViewCombined />
+                            ) : (
+                                <BalanceView />
+                            )}
                         </TouchableOpacity>
                         <View style={styles.buttons}>
                             <Button
                                 title="Send"
                                 icon={{
-                                    name: "arrow-forward",
+                                    name: 'arrow-upward',
                                     size: 25,
-                                    color: "red"
+                                    color: 'red'
                                 }}
                                 buttonStyle={{
-                                    backgroundColor: theme === 'dark' ? 'black' : 'white',
+                                    backgroundColor:
+                                        theme === 'dark' ? 'black' : 'white',
                                     borderRadius: 30
                                 }}
                                 containerStyle={{
@@ -162,16 +225,18 @@ export default class MainPane extends React.Component<MainPaneProps, MainPaneSta
                             <Button
                                 title="Receive"
                                 icon={{
-                                    name: "arrow-downward",
+                                    name: 'arrow-downward',
                                     size: 25,
-                                    color: "green"
+                                    color: 'green'
                                 }}
                                 buttonStyle={{
-                                    backgroundColor: theme === 'dark' ? 'black' : 'white',
+                                    backgroundColor:
+                                        theme === 'dark' ? 'black' : 'white',
                                     borderRadius: 30
                                 }}
                                 containerStyle={{
-                                    marginLeft: 10
+                                    marginLeft: 10,
+                                    marginRight: 10
                                 }}
                                 titleStyle={{
                                     color: theme === 'dark' ? 'white' : 'black'
@@ -179,23 +244,63 @@ export default class MainPane extends React.Component<MainPaneProps, MainPaneSta
                                 onPress={() => navigation.navigate('Receive')}
                                 raised={theme !== 'dark'}
                             />
+                            <Button
+                                title="Scan"
+                                icon={{
+                                    name: 'crop-free',
+                                    size: 25,
+                                    color: '#f1a58c'
+                                }}
+                                buttonStyle={{
+                                    backgroundColor:
+                                        theme === 'dark' ? 'black' : 'white',
+                                    borderRadius: 20
+                                }}
+                                containerStyle={{
+                                    marginLeft: 10
+                                }}
+                                titleStyle={{
+                                    color: theme === 'dark' ? 'white' : 'black'
+                                }}
+                                onPress={() =>
+                                    navigation.navigate('AddressQRCodeScanner')
+                                }
+                                raised={theme !== 'dark'}
+                            />
                         </View>
                     </LinearGradient>
-               </View>
-           );
+                </View>
+            );
         } else {
             mainPane = (
-                <View style={theme === 'dark' ? styles.errorContainerDark : styles.errorContainer}>
-                    <Text style={{ color: '#fff', fontSize: 20, marginTop: 20, marginBottom: 25 }}>{NodeInfoStore.errorMsg ? NodeInfoStore.errorMsg : 'Error connecting to your node. Please check your settings and try again.'}</Text>
+                <View
+                    style={
+                        theme === 'dark'
+                            ? styles.errorContainerDark
+                            : styles.errorContainer
+                    }
+                >
+                    <Text
+                        style={{
+                            color: '#fff',
+                            fontSize: 20,
+                            marginTop: 20,
+                            marginBottom: 25
+                        }}
+                    >
+                        {NodeInfoStore.errorMsg
+                            ? NodeInfoStore.errorMsg
+                            : 'Error connecting to your node. Please check your settings and try again.'}
+                    </Text>
                     <Button
                         icon={{
-                            name: "settings",
+                            name: 'settings',
                             size: 25,
-                            color: "#fff"
+                            color: '#fff'
                         }}
                         title="Go to Settings"
                         buttonStyle={{
-                            backgroundColor: "gray",
+                            backgroundColor: 'gray',
                             borderRadius: 30
                         }}
                         containerStyle={{
@@ -207,11 +312,7 @@ export default class MainPane extends React.Component<MainPaneProps, MainPaneSta
             );
         }
 
-        return (
-            <React.Fragment>
-                {mainPane}
-            </React.Fragment>
-        );
+        return <React.Fragment>{mainPane}</React.Fragment>;
     }
 }
 
@@ -260,8 +361,7 @@ const styles = StyleSheet.create({
         fontSize: 20,
         color: '#fff'
     },
-    settings: {
-    },
+    settings: {},
     nodeInfo: {
         alignItems: 'flex-start',
         marginLeft: -15

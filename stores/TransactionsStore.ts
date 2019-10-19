@@ -29,7 +29,7 @@ export default class TransactionsStore {
         reaction(
             () => this.settingsStore.settings,
             () => {
-                this.getTransactions()
+                this.getTransactions();
             }
         );
     }
@@ -39,24 +39,26 @@ export default class TransactionsStore {
         const { host, port, macaroonHex } = this.settingsStore;
 
         this.loading = true;
-        axios.request({
-            method: 'get',
-            url: `https://${host}${port ? ':' + port : ''}/v1/transactions`,
-            headers: {
-                'Grpc-Metadata-macaroon': macaroonHex
-            }
-        }).then((response: any) => {
-            // handle success
-            const data = response.data;
-            this.transactions = data.transactions.reverse();
-            this.loading = false;
-        })
-        .catch(() => {
-            // handle error
-            this.transactions = [];
-            this.loading = false;
-        });
-    }
+        axios
+            .request({
+                method: 'get',
+                url: `https://${host}${port ? ':' + port : ''}/v1/transactions`,
+                headers: {
+                    'Grpc-Metadata-macaroon': macaroonHex
+                }
+            })
+            .then((response: any) => {
+                // handle success
+                const data = response.data;
+                this.transactions = data.transactions.reverse();
+                this.loading = false;
+            })
+            .catch(() => {
+                // handle error
+                this.transactions = [];
+                this.loading = false;
+            });
+    };
 
     @action
     public sendCoins = (transactionRequest: TransactionRequest) => {
@@ -67,29 +69,31 @@ export default class TransactionsStore {
         this.txid = null;
         this.loading = true;
 
-        axios.request({
-            method: 'post',
-            url: `https://${host}${port ? ':' + port : ''}/v1/transactions`,
-            headers: {
-                'Grpc-Metadata-macaroon': macaroonHex
-            },
-            data: {
-                ...transactionRequest
-            }
-        }).then((response: any) => {
-            // handle success
-            const data = response.data;
-            this.txid = data.txid;
-            this.loading = false;
-        })
-        .catch((error: any) => {
-            // handle error
-            const errorInfo = error.response.data;
-            this.error_msg = errorInfo.error;
-            this.error = true;
-            this.loading = false;
-        });
-    }
+        axios
+            .request({
+                method: 'post',
+                url: `https://${host}${port ? ':' + port : ''}/v1/transactions`,
+                headers: {
+                    'Grpc-Metadata-macaroon': macaroonHex
+                },
+                data: {
+                    ...transactionRequest
+                }
+            })
+            .then((response: any) => {
+                // handle success
+                const data = response.data;
+                this.txid = data.txid;
+                this.loading = false;
+            })
+            .catch((error: any) => {
+                // handle error
+                const errorInfo = error.response.data;
+                this.error_msg = errorInfo.error;
+                this.error = true;
+                this.loading = false;
+            });
+    };
 
     sendPayment = (payment_request: string, amount?: string) => {
         const { host, port, macaroonHex } = this.settingsStore;
@@ -114,29 +118,36 @@ export default class TransactionsStore {
             };
         }
 
-        axios.request({
-            method: 'post',
-            url: `https://${host}${port ? ':' + port : ''}/v1/channels/transactions`,
-            headers: {
-                'Grpc-Metadata-macaroon': macaroonHex
-            },
-            data
-        }).then((response: any) => {
-            // handle success
-            const data = response.data;
-            this.loading = false;
-            this.payment_route = data.payment_route;
-            this.payment_preimage = data.payment_preimage;
-            this.payment_hash = data.payment_hash;
-            this.payment_error = data.payment_error;
-        })
-        .catch((error: any)=> {
-            // handle error
-            const errorInfo = error.response.data;
-            const code = errorInfo.code;
-            this.error = true;
-            this.loading = false;
-            this.error_msg = ErrorUtils.errorToUserFriendly(code) || errorInfo.error || 'Error sending payment';
-        });
-    }
+        axios
+            .request({
+                method: 'post',
+                url: `https://${host}${
+                    port ? ':' + port : ''
+                }/v1/channels/transactions`,
+                headers: {
+                    'Grpc-Metadata-macaroon': macaroonHex
+                },
+                data
+            })
+            .then((response: any) => {
+                // handle success
+                const data = response.data;
+                this.loading = false;
+                this.payment_route = data.payment_route;
+                this.payment_preimage = data.payment_preimage;
+                this.payment_hash = data.payment_hash;
+                this.payment_error = data.payment_error;
+            })
+            .catch((error: any) => {
+                // handle error
+                const errorInfo = error.response.data;
+                const code = errorInfo.code;
+                this.error = true;
+                this.loading = false;
+                this.error_msg =
+                    ErrorUtils.errorToUserFriendly(code) ||
+                    errorInfo.error ||
+                    'Error sending payment';
+            });
+    };
 }

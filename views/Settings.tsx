@@ -1,5 +1,14 @@
 import * as React from 'react';
-import { ActionSheetIOS, Picker, Platform, StyleSheet, Text, TextInput, View, TouchableOpacity } from 'react-native';
+import {
+    ActionSheetIOS,
+    Picker,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+    TouchableOpacity
+} from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Nodes from './Settings/Nodes';
@@ -29,19 +38,22 @@ const themes: any = {
 
 @inject('SettingsStore')
 @observer
-export default class Settings extends React.Component<SettingsProps, SettingsState> {
+export default class Settings extends React.Component<
+    SettingsProps,
+    SettingsState
+> {
     isComponentMounted: boolean = false;
 
     state = {
-          nodes: [],
-          theme: 'light',
-          saved: false,
-          loading: false,
-          passphrase: '',
-          passphraseConfirm: '',
-          passphraseError: false,
-          showPassphraseForm: false
-    }
+        nodes: [],
+        theme: 'light',
+        saved: false,
+        loading: false,
+        passphrase: '',
+        passphraseConfirm: '',
+        passphraseError: false,
+        showPassphraseForm: false
+    };
 
     componentDidMount() {
         const { SettingsStore } = this.props;
@@ -74,7 +86,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                 });
             }
         });
-    }
+    };
 
     componentWillUnmount() {
         this.isComponentMounted = false;
@@ -104,12 +116,14 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
             return;
         }
 
-        setSettings(JSON.stringify({
-            nodes,
-            theme,
-            passphrase,
-            onChainAndress: settings.onChainAndress
-        }));
+        setSettings(
+            JSON.stringify({
+                nodes,
+                theme,
+                passphrase,
+                onChainAndress: settings.onChainAndress
+            })
+        );
 
         this.setState({
             saved: true
@@ -124,11 +138,19 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                 });
             }
         }, 5000);
-    }
+    };
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { saved, theme, nodes, passphrase, passphraseConfirm, passphraseError, showPassphraseForm } = this.state;
+        const {
+            saved,
+            theme,
+            nodes,
+            passphrase,
+            passphraseConfirm,
+            passphraseError,
+            showPassphraseForm
+        } = this.state;
         const { loading, settings } = SettingsStore;
         const savedTheme = settings.theme;
         const selectedNode = settings.selectedNode;
@@ -143,91 +165,202 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
         );
 
         return (
-            <View style={savedTheme === 'dark' ? styles.darkThemeStyle : styles.lightThemeStyle}>
+            <View
+                style={
+                    savedTheme === 'dark'
+                        ? styles.darkThemeStyle
+                        : styles.lightThemeStyle
+                }
+            >
                 <Header
                     leftComponent={<BackButton />}
-                    centerComponent={{ text: 'Settings', style: { color: '#fff' } }}
-                    backgroundColor={savedTheme === 'dark' ? '#261339' : 'rgba(92, 99,216, 1)'}
+                    centerComponent={{
+                        text: 'Settings',
+                        style: { color: '#fff' }
+                    }}
+                    backgroundColor={
+                        savedTheme === 'dark'
+                            ? '#261339'
+                            : 'rgba(92, 99,216, 1)'
+                    }
                 />
 
-                {passphraseError && <Text style={{ color: 'red', textAlign: 'center', padding: 20 }}>Passphrases do not match</Text>}
+                {passphraseError && (
+                    <Text
+                        style={{
+                            color: 'red',
+                            textAlign: 'center',
+                            padding: 20
+                        }}
+                    >
+                        Passphrases do not match
+                    </Text>
+                )}
 
                 <View style={styles.form}>
-                    <Nodes nodes={nodes} navigation={navigation} theme={theme} loading={loading} selectedNode={selectedNode} />
+                    <Nodes
+                        nodes={nodes}
+                        navigation={navigation}
+                        theme={theme}
+                        loading={loading}
+                        selectedNode={selectedNode}
+                    />
                 </View>
 
-                {Platform.OS !== 'ios' && <View>
-                    <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>Theme</Text>
-                    <Picker
-                        selectedValue={theme}
-                        onValueChange={(itemValue: string) => this.setState({ theme: itemValue })}
-                        style={savedTheme === 'dark' ? styles.pickerDark : styles.picker}
+                {Platform.OS !== 'ios' && (
+                    <View>
+                        <Text
+                            style={{
+                                color: savedTheme === 'dark' ? 'white' : 'black'
+                            }}
+                        >
+                            Theme
+                        </Text>
+                        <Picker
+                            selectedValue={theme}
+                            onValueChange={(itemValue: string) =>
+                                this.setState({ theme: itemValue })
+                            }
+                            style={
+                                savedTheme === 'dark'
+                                    ? styles.pickerDark
+                                    : styles.picker
+                            }
+                        >
+                            <Picker.Item label="Light" value="light" />
+                            <Picker.Item label="Dark" value="dark" />
+                        </Picker>
+                    </View>
+                )}
+
+                {Platform.OS === 'ios' && (
+                    <View>
+                        <Text
+                            style={{
+                                color: savedTheme === 'dark' ? 'white' : 'black'
+                            }}
+                        >
+                            Theme
+                        </Text>
+                        <TouchableOpacity
+                            onPress={() =>
+                                ActionSheetIOS.showActionSheetWithOptions(
+                                    {
+                                        options: [
+                                            'Cancel',
+                                            'Light Theme',
+                                            'Dark Theme'
+                                        ],
+                                        cancelButtonIndex: 0
+                                    },
+                                    buttonIndex => {
+                                        if (buttonIndex === 1) {
+                                            this.setState({ theme: 'light' });
+                                        } else if (buttonIndex === 2) {
+                                            this.setState({ theme: 'dark' });
+                                        }
+                                    }
+                                )
+                            }
+                        >
+                            <Text
+                                style={{
+                                    color:
+                                        savedTheme === 'dark'
+                                            ? 'white'
+                                            : 'black'
+                                }}
+                            >
+                                {themes[theme]}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                {showPassphraseForm && (
+                    <Text
+                        style={{
+                            color: savedTheme === 'dark' ? 'white' : 'black'
+                        }}
                     >
-                        <Picker.Item label='Light' value='light' />
-                        <Picker.Item label='Dark' value='dark' />
-                    </Picker>
-                </View>}
-
-                {Platform.OS === 'ios' && <View>
-                    <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>Theme</Text>
-                    <TouchableOpacity onPress={() => ActionSheetIOS.showActionSheetWithOptions(
-                      {
-                        options: ['Cancel', 'Light Theme', 'Dark Theme'],
-                        cancelButtonIndex: 0,
-                      },
-                      (buttonIndex) => {
-                        if (buttonIndex === 1) {
-                            this.setState({ theme: 'light' })
-                        } else if (buttonIndex === 2) {
-                            this.setState({ theme: 'dark' })
+                        New Passphrase
+                    </Text>
+                )}
+                {showPassphraseForm && (
+                    <TextInput
+                        placeholder={'********'}
+                        placeholderTextColor="darkgray"
+                        value={passphrase}
+                        onChangeText={(text: string) =>
+                            this.setState({
+                                passphrase: text,
+                                passphraseError: false
+                            })
                         }
-                      },
-                    )}><Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>{themes[theme]}</Text></TouchableOpacity>
-                </View>}
+                        numberOfLines={1}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        secureTextEntry={true}
+                        style={
+                            savedTheme === 'dark'
+                                ? styles.textInputDark
+                                : styles.textInput
+                        }
+                    />
+                )}
 
-                {showPassphraseForm && <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>New Passphrase</Text>}
-                {showPassphraseForm && <TextInput
-                    placeholder={'********'}
-                    placeholderTextColor='darkgray'
-                    value={passphrase}
-                    onChangeText={(text: string) => this.setState({ passphrase: text, passphraseError: false })}
-                    numberOfLines={1}
-                    autoCapitalize='none'
-                    autoCorrect={false}
-                    secureTextEntry={true}
-                    style={savedTheme === 'dark' ? styles.textInputDark : styles.textInput}
-                  />}
-
-                  {showPassphraseForm && <Text style={{ color: savedTheme === 'dark' ? 'white' : 'black' }}>Confirm New Passphrase</Text>}
-                  {showPassphraseForm && <TextInput
-                      placeholder={'********'}
-                      placeholderTextColor='darkgray'
-                      value={passphraseConfirm}
-                      onChangeText={(text: string) => this.setState({ passphraseConfirm: text, passphraseError: false })}
-                      numberOfLines={1}
-                      autoCapitalize='none'
-                      autoCorrect={false}
-                      secureTextEntry={true}
-                      style={savedTheme === 'dark' ? styles.textInputDark : styles.textInput}
-                    />}
-
+                {showPassphraseForm && (
+                    <Text
+                        style={{
+                            color: savedTheme === 'dark' ? 'white' : 'black'
+                        }}
+                    >
+                        Confirm New Passphrase
+                    </Text>
+                )}
+                {showPassphraseForm && (
+                    <TextInput
+                        placeholder={'********'}
+                        placeholderTextColor="darkgray"
+                        value={passphraseConfirm}
+                        onChangeText={(text: string) =>
+                            this.setState({
+                                passphraseConfirm: text,
+                                passphraseError: false
+                            })
+                        }
+                        numberOfLines={1}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        secureTextEntry={true}
+                        style={
+                            savedTheme === 'dark'
+                                ? styles.textInputDark
+                                : styles.textInput
+                        }
+                    />
+                )}
 
                 <View style={styles.button}>
                     <Button
-                        title={saved ? "Settings Saved!" : "Save Settings"}
+                        title={saved ? 'Settings Saved!' : 'Save Settings'}
                         icon={{
-                            name: "save",
+                            name: 'save',
                             size: 25,
-                            color: saved ? "black" : "white"
+                            color: saved ? 'black' : 'white'
                         }}
                         buttonStyle={{
-                            backgroundColor: saved ? "#fff" : savedTheme === 'dark' ? '#261339' : 'rgba(92, 99,216, 1)',
+                            backgroundColor: saved
+                                ? '#fff'
+                                : savedTheme === 'dark'
+                                ? '#261339'
+                                : 'rgba(92, 99,216, 1)',
                             borderRadius: 30,
                             width: 350,
                             alignSelf: 'center'
                         }}
                         titleStyle={{
-                            color: saved ? "black" : "white"
+                            color: saved ? 'black' : 'white'
                         }}
                         onPress={() => this.saveSettings()}
                         style={styles.button}
@@ -236,13 +369,21 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
 
                 <View style={styles.button}>
                     <Button
-                        title={showPassphraseForm ? "Hide New Passphrase Form" : "Show New Passphrase Form"}
+                        title={
+                            showPassphraseForm
+                                ? 'Hide New Passphrase Form'
+                                : 'Show New Passphrase Form'
+                        }
                         icon={{
-                            name: "perm-identity",
+                            name: 'perm-identity',
                             size: 25,
-                            color: "white"
+                            color: 'white'
                         }}
-                        onPress={() => this.setState({ showPassphraseForm: !showPassphraseForm }) }
+                        onPress={() =>
+                            this.setState({
+                                showPassphraseForm: !showPassphraseForm
+                            })
+                        }
                         style={styles.button}
                         buttonStyle={{
                             backgroundColor: 'darkgray',
@@ -251,7 +392,7 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
                             alignSelf: 'center'
                         }}
                         titleStyle={{
-                            color: "white"
+                            color: 'white'
                         }}
                     />
                 </View>
