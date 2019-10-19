@@ -67,17 +67,28 @@ export default class Send extends React.Component<SendProps, SendState> {
         const { NodeInfoStore, InvoicesStore } = this.props;
         const { testnet } = NodeInfoStore;
 
-        if (AddressUtils.isValidBitcoinAddress(text, testnet)) {
-            this.setState({
-                transactionType: 'On-chain',
-                isValid: true,
-                destination: text
-            });
-        } else if (AddressUtils.isValidLightningPaymentRequest(text)) {
+        const { value, amount } = AddressUtils.processSendAddress(text);
+
+        if (AddressUtils.isValidBitcoinAddress(value, testnet)) {
+            if (amount) {
+                this.setState({
+                    transactionType: 'On-chain',
+                    isValid: true,
+                    destination: value,
+                    amount
+                });
+            } else {
+                this.setState({
+                    transactionType: 'On-chain',
+                    isValid: true,
+                    destination: value
+                });
+            }
+        } else if (AddressUtils.isValidLightningPaymentRequest(value)) {
             this.setState({
                 transactionType: 'Lightning',
                 isValid: true,
-                destination: text
+                destination: value
             });
 
             InvoicesStore.getPayReq(text);
@@ -85,7 +96,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             this.setState({
                 transactionType: null,
                 isValid: false,
-                destination: text
+                destination: value
             });
         }
     };
