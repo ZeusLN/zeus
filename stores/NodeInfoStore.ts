@@ -17,7 +17,9 @@ export default class NodeInfoStore {
         reaction(
             () => this.settingsStore.settings,
             () => {
-                this.getNodeInfo();
+                if (this.settingsStore.macaroonHex) {
+                    this.getNodeInfo();
+                }
             }
         );
     }

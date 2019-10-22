@@ -66,15 +66,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
     };
 
-    getSettingsAndRefresh = () => {
+    async getSettingsAndRefresh() {
         const { NodeInfoStore, SettingsStore } = this.props;
-        SettingsStore.getSettings().then(() => {
-            if (SettingsStore.settings) {
-                NodeInfoStore.getNodeInfo();
-                this.refresh();
-            }
+        await SettingsStore.getSettings().then(() => {
+            NodeInfoStore.getNodeInfo();
+            this.refresh();
         });
-    };
+    }
 
     refresh = () => {
         const {
