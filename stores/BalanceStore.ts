@@ -24,8 +24,10 @@ export default class BalanceStore {
         reaction(
             () => this.settingsStore.settings,
             () => {
-                this.getBlockchainBalance();
-                this.getLightningBalance();
+                if (this.settingsStore.macaroonHex) {
+                    this.getBlockchainBalance();
+                    this.getLightningBalance();
+                }
             }
         );
     }

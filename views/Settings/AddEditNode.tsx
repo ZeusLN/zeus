@@ -130,7 +130,11 @@ export default class AddEditNode extends React.Component<
             saved: true
         });
 
-        navigation.navigate('Settings', { refresh: true });
+        if (nodes.length === 1) {
+            navigation.navigate('Wallet', { refresh: true });
+        } else {
+            navigation.navigate('Settings', { refresh: true });
+        }
     };
 
     deleteNodeConfig = () => {
