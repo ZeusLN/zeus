@@ -91,7 +91,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                 destination: value
             });
 
-            InvoicesStore.getPayReq(text);
+            InvoicesStore.getPayReq(value);
         } else {
             this.setState({
                 transactionType: null,
