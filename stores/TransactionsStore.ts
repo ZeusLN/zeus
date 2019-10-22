@@ -29,7 +29,9 @@ export default class TransactionsStore {
         reaction(
             () => this.settingsStore.settings,
             () => {
-                this.getTransactions();
+                if (this.settingsStore.macaroonHex) {
+                    this.getTransactions();
+                }
             }
         );
     }

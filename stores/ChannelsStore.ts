@@ -31,7 +31,9 @@ export default class ChannelsStore {
         reaction(
             () => this.settingsStore.settings,
             () => {
-                this.getChannels();
+                if (this.settingsStore.macaroonHex) {
+                    this.getChannels();
+                }
             }
         );
 
