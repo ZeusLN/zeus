@@ -122,17 +122,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { settings } = SettingsStore;
         const { theme } = settings;
 
-        const transactionsButton = () => (
-            <React.Fragment>
-                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
-                    {(transactions && transactions.length) || 0}
-                </Text>
-                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
-                    Transactions
-                </Text>
-            </React.Fragment>
-        );
-
         const paymentsButton = () => (
             <React.Fragment>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
@@ -155,6 +144,17 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             </React.Fragment>
         );
 
+        const transactionsButton = () => (
+            <React.Fragment>
+                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
+                    {(transactions && transactions.length) || 0}
+                </Text>
+                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
+                    Transactions
+                </Text>
+            </React.Fragment>
+        );
+
         const channelsButton = () => (
             <React.Fragment>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
@@ -167,9 +167,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         );
 
         const buttons = [
-            { element: transactionsButton },
             { element: paymentsButton },
             { element: invoicesButton },
+            { element: transactionsButton },
             { element: channelsButton }
         ];
 
@@ -233,16 +233,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 )}
 
                 {selectedIndex == 0 && (
-                    <Transactions
-                        transactions={transactions}
-                        navigation={navigation}
-                        refresh={this.refresh}
-                        TransactionsStore={TransactionsStore}
-                        UnitsStore={UnitsStore}
-                        SettingsStore={SettingsStore}
-                    />
-                )}
-                {selectedIndex == 1 && (
                     <Payments
                         payments={payments}
                         navigation={navigation}
@@ -252,12 +242,22 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         SettingsStore={SettingsStore}
                     />
                 )}
-                {selectedIndex == 2 && (
+                {selectedIndex == 1 && (
                     <Invoices
                         invoices={invoices}
                         navigation={navigation}
                         refresh={this.refresh}
                         InvoicesStore={InvoicesStore}
+                        UnitsStore={UnitsStore}
+                        SettingsStore={SettingsStore}
+                    />
+                )}
+                {selectedIndex == 2 && (
+                    <Transactions
+                        transactions={transactions}
+                        navigation={navigation}
+                        refresh={this.refresh}
+                        TransactionsStore={TransactionsStore}
                         UnitsStore={UnitsStore}
                         SettingsStore={SettingsStore}
                     />
