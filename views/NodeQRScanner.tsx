@@ -13,7 +13,10 @@ export default class NodeQRScanner extends React.Component<NodeQRProps, {}> {
 
         if (NodeUriUtils.isValidNodeUri(data)) {
             const { pubkey, host } = NodeUriUtils.processNodeUri(data);
-            navigation.navigate('OpenChannel', { node_pubkey_string: pubkey, host });
+            navigation.navigate('OpenChannel', {
+                node_pubkey_string: pubkey,
+                host
+            });
         } else {
             Alert.alert(
                 'Error',

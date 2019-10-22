@@ -8,7 +8,7 @@ class NodeUriUtils {
         const host = split[1];
 
         return { pubkey, host };
-    }
+    };
 }
 
 const nodeUriUtils = new NodeUriUtils();
