@@ -75,28 +75,27 @@ export default class Settings extends React.Component<
     componentWillReceiveProps = (newProps: any) => {
         const { SettingsStore } = newProps;
         const { settings } = SettingsStore;
+        this.refreshSettings();
 
-        this.refreshSettings().then(() => {
-            if (settings) {
-                this.setState({
-                    nodes: settings.nodes || [],
-                    theme: settings.theme || '',
-                    passphrase: settings.passphrase || '',
-                    passphraseConfirm: settings.passphrase || ''
-                });
-            }
-        });
+        if (settings) {
+            this.setState({
+                nodes: settings.nodes || [],
+                theme: settings.theme || '',
+                passphrase: settings.passphrase || '',
+                passphraseConfirm: settings.passphrase || ''
+            });
+        }
     };
 
     componentWillUnmount() {
         this.isComponentMounted = false;
     }
 
-    refreshSettings() {
+    async refreshSettings() {
         this.setState({
             loading: true
         });
-        return this.props.SettingsStore.getSettings().then(() => {
+        await this.props.SettingsStore.getSettings().then(() => {
             this.setState({
                 loading: false
             });
