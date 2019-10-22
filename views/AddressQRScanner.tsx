@@ -5,13 +5,15 @@ import QRCodeScanner from './../components/QRCodeScanner';
 import { inject, observer } from 'mobx-react';
 
 import NodeInfoStore from './../stores/NodeInfoStore';
+import InvoicesStore from './../stores/InvoicesStore';
 
 interface AddressQRProps {
     navigation: any;
+    InvoicesStore: InvoicesStore;
     NodeInfoStore: NodeInfoStore;
 }
 
-@inject('NodeInfoStore')
+@inject('InvoicesStore', 'NodeInfoStore')
 @observer
 export default class AddressQRScanner extends React.Component<
     AddressQRProps,
@@ -26,7 +28,7 @@ export default class AddressQRScanner extends React.Component<
     }
 
     handleAddressInvoiceScanned = (data: string) => {
-        const { NodeInfoStore, navigation } = this.props;
+        const { InvoicesStore, NodeInfoStore, navigation } = this.props;
         const { testnet } = NodeInfoStore;
 
         const { value, amount } = AddressUtils.processSendAddress(data);
@@ -42,6 +44,9 @@ export default class AddressQRScanner extends React.Component<
                 destination: value,
                 transactionType: 'Lightning'
             });
+
+            InvoicesStore.getPayReq(value);
+            navigation.navigate('PaymentRequest');
         } else {
             Alert.alert(
                 'Error',
