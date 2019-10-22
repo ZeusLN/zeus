@@ -142,7 +142,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                     scanBarcode={true}
                     onReadCode={(event: any) => {
                         this.setState({ complete: true });
-                        handleQRScanned(event.nativeEvent.codeStringValue)
+                        handleQRScanned(event.nativeEvent.codeStringValue);
                     }}
                     hideControls={true}
                     showFrame={false}
