@@ -63,7 +63,9 @@ export default class OpenChannel extends React.Component<
     }
 
     importClipboard = () => {
-        const { pubkey, host } = NodeUriUtils.processNodeUri(this.state.suggestImport);
+        const { pubkey, host } = NodeUriUtils.processNodeUri(
+            this.state.suggestImport
+        );
 
         this.setState({
             node_pubkey_string: pubkey,
@@ -158,7 +160,9 @@ export default class OpenChannel extends React.Component<
                         <Text style={{ color: 'white' }}>
                             Detected the following Node URI in your clipboard:
                         </Text>
-                        <Text style={{ color: 'white', padding: 15 }}>{suggestImport}</Text>
+                        <Text style={{ color: 'white', padding: 15 }}>
+                            {suggestImport}
+                        </Text>
                         <Text style={{ color: 'white' }}>
                             Would you like to import it?
                         </Text>

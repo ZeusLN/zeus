@@ -29,7 +29,8 @@ describe('NodeUriUtils', () => {
                     '03e1210c8d4b236a53191bb172701d76ec06dfa869a1afffcfd8f4e07d9129d898@0.0.0.0:9735'
                 )
             ).toEqual({
-                pubkey: '03e1210c8d4b236a53191bb172701d76ec06dfa869a1afffcfd8f4e07d9129d898',
+                pubkey:
+                    '03e1210c8d4b236a53191bb172701d76ec06dfa869a1afffcfd8f4e07d9129d898',
                 host: '0.0.0.0:9735'
             });
         });
