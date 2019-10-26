@@ -128,7 +128,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     {(payments && payments.length) || 0}
                 </Text>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
-                    LN Payments
+                    Payments
                 </Text>
             </React.Fragment>
         );
@@ -150,7 +150,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     {(transactions && transactions.length) || 0}
                 </Text>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
-                    Transactions
+                    On-chain
                 </Text>
             </React.Fragment>
         );
