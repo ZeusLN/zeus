@@ -26,7 +26,7 @@ export default class SendingLightning extends React.Component<
             return 'green';
         }
 
-        return 'white';
+        return 'lightcoral';
     }
 
     render() {
@@ -40,11 +40,13 @@ export default class SendingLightning extends React.Component<
             payment_error
         } = TransactionsStore;
 
+        const backgroundColor = this.getBackgroundColor();
+
         return (
             <View
                 style={{
                     ...styles.container,
-                    backgroundColor: this.getBackgroundColor()
+                    backgroundColor
                 }}
             >
                 <View style={styles.content}>
@@ -52,7 +54,7 @@ export default class SendingLightning extends React.Component<
                         <ActivityIndicator size="large" color="#0000ff" />
                     )}
                     {loading && <Text>Sending Transaction</Text>}
-                    {error && (
+                    {(error || payment_error) && (
                         <Text
                             style={{
                                 color: 'white',
@@ -60,7 +62,7 @@ export default class SendingLightning extends React.Component<
                                 fontSize: 40
                             }}
                         >
-                            {payment_error || error_msg}
+                            Error: {payment_error || error_msg}
                         </Text>
                     )}
                     {payment_route && (
@@ -114,13 +116,13 @@ export default class SendingLightning extends React.Component<
                         />
                     )}
 
-                    {payment_route && (
+                    {(error || payment_error || payment_route) && (
                         <Button
                             title="Go to Wallet"
                             icon={{
                                 name: 'list',
                                 size: 25,
-                                color: 'green'
+                                color: backgroundColor
                             }}
                             onPress={() => navigation.navigate('Wallet')}
                             style={styles.button}
@@ -129,7 +131,7 @@ export default class SendingLightning extends React.Component<
                                 borderRadius: 30
                             }}
                             titleStyle={{
-                                color: 'green'
+                                color: backgroundColor
                             }}
                         />
                     )}
