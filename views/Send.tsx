@@ -41,7 +41,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             transactionType: transactionType,
             destination: destination || '',
             amount: amount || '',
-            fee: ''
+            fee: '2'
         };
     }
 

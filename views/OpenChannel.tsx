@@ -307,7 +307,7 @@ export default class OpenChannel extends React.Component<
                         Satoshis per byte
                     </Text>
                     <TextInput
-                        placeholder={'2'}
+                        placeholder="2"
                         value={sat_per_byte}
                         onChangeText={(text: string) => this.setFee(text)}
                         numberOfLines={1}
