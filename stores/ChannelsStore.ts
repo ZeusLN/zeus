@@ -50,15 +50,16 @@ export default class ChannelsStore {
             () => this.channels,
             () => {
                 if (this.channels) {
-                    this.nodes = {};
-                    const nodes: any = {};
                     this.channels.forEach((channel: Channel) => {
-                        this.getNodeInfo(channel.remote_pubkey).then(
-                            nodeInfo => {
-                                nodes[channel.remote_pubkey] = nodeInfo;
-                                this.nodes = nodes;
-                            }
-                        );
+                        if (!this.nodes[channel.remote_pubkey]) {
+                            this.getNodeInfo(channel.remote_pubkey).then(
+                                nodeInfo => {
+                                    this.nodes[
+                                        channel.remote_pubkey
+                                    ] = nodeInfo;
+                                }
+                            );
+                        }
                     });
                 }
             }
