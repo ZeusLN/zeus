@@ -119,7 +119,11 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                         leftElement={Channel(
                                             `data:image/png;base64,${data}`
                                         )}
-                                        subtitle={`Local: ${units &&
+                                        subtitle={`${
+                                            !item.active ? 'INACTIVE | ' : ''
+                                        }${
+                                            item.private ? 'Private | ' : ''
+                                        }Local: ${units &&
                                             getAmount(
                                                 item.local_balance || 0
                                             )} | Remote: ${units &&
