@@ -321,7 +321,6 @@ const darkThemeGradient = ['#33194d', '#261339', 'black'];
 
 const styles = StyleSheet.create({
     container: {
-        paddingTop: 10,
         paddingBottom: 50,
         paddingLeft: 10
     },

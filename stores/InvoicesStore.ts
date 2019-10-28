@@ -123,6 +123,7 @@ export default class InvoicesStore {
     public getPayReq = (paymentRequest: string) => {
         const { host, port, macaroonHex } = this.settingsStore;
 
+        this.pay_req = null;
         this.paymentRequest = paymentRequest;
         this.loading = true;
 
