@@ -76,21 +76,21 @@ export default class Receive extends React.Component<
         const { settings, loading } = SettingsStore;
         const { onChainAndress, theme } = settings;
 
-        const onChainButton = () => (
-            <React.Fragment>
-                <Text>On-chain</Text>
-            </React.Fragment>
-        );
-
         const lightningButton = () => (
             <React.Fragment>
                 <Text>Lightning</Text>
             </React.Fragment>
         );
 
+        const onChainButton = () => (
+            <React.Fragment>
+                <Text>On-chain</Text>
+            </React.Fragment>
+        );
+
         const buttons = [
-            { element: onChainButton },
-            { element: lightningButton }
+            { element: lightningButton },
+            { element: onChainButton }
         ];
 
         const BackButton = () => (
@@ -133,49 +133,6 @@ export default class Receive extends React.Component<
 
                 <View style={styles.content}>
                     {selectedIndex === 0 && (
-                        <React.Fragment>
-                            {!onChainAndress && !loading && (
-                                <Text
-                                    style={{
-                                        color:
-                                            theme === 'dark' ? 'white' : 'black'
-                                    }}
-                                >
-                                    No on-chain address available. Generate one
-                                    by pressing the button below.
-                                </Text>
-                            )}
-                            {loading && (
-                                <ActivityIndicator
-                                    size="large"
-                                    color="#0000ff"
-                                />
-                            )}
-                            {onChainAndress && (
-                                <CollapsedQR
-                                    value={onChainAndress}
-                                    copyText="Copy Address"
-                                    theme={theme}
-                                />
-                            )}
-                            <View style={styles.button}>
-                                <Button
-                                    title="Get New Address"
-                                    icon={{
-                                        name: 'fiber-new',
-                                        size: 25,
-                                        color: 'white'
-                                    }}
-                                    onPress={() => this.getNewAddress()}
-                                    buttonStyle={{
-                                        backgroundColor: 'orange',
-                                        borderRadius: 30
-                                    }}
-                                />
-                            </View>
-                        </React.Fragment>
-                    )}
-                    {selectedIndex === 1 && (
                         <View>
                             {!!payment_request && (
                                 <Text style={{ color: 'green', padding: 20 }}>
@@ -300,6 +257,49 @@ export default class Receive extends React.Component<
                                 />
                             </View>
                         </View>
+                    )}
+                    {selectedIndex === 1 && (
+                        <React.Fragment>
+                            {!onChainAndress && !loading && (
+                                <Text
+                                    style={{
+                                        color:
+                                            theme === 'dark' ? 'white' : 'black'
+                                    }}
+                                >
+                                    No on-chain address available. Generate one
+                                    by pressing the button below.
+                                </Text>
+                            )}
+                            {loading && (
+                                <ActivityIndicator
+                                    size="large"
+                                    color="#0000ff"
+                                />
+                            )}
+                            {onChainAndress && (
+                                <CollapsedQR
+                                    value={onChainAndress}
+                                    copyText="Copy Address"
+                                    theme={theme}
+                                />
+                            )}
+                            <View style={styles.button}>
+                                <Button
+                                    title="Get New Address"
+                                    icon={{
+                                        name: 'fiber-new',
+                                        size: 25,
+                                        color: 'white'
+                                    }}
+                                    onPress={() => this.getNewAddress()}
+                                    buttonStyle={{
+                                        backgroundColor: 'orange',
+                                        borderRadius: 30
+                                    }}
+                                />
+                            </View>
+                        </React.Fragment>
                     )}
                 </View>
             </View>
