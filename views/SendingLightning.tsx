@@ -18,15 +18,17 @@ export default class SendingLightning extends React.Component<
 > {
     getBackgroundColor() {
         const { TransactionsStore } = this.props;
-        const { payment_route, error } = TransactionsStore;
+        const { payment_route, payment_error, error } = TransactionsStore;
 
         if (error) {
             return 'darkred';
         } else if (payment_route) {
             return 'green';
+        } else if (payment_error) {
+            return 'lightcoral';
         }
 
-        return 'lightcoral';
+        return 'white';
     }
 
     render() {
