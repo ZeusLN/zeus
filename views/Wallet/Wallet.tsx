@@ -66,15 +66,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
     };
 
-    getSettingsAndRefresh = () => {
+    async getSettingsAndRefresh() {
         const { NodeInfoStore, SettingsStore } = this.props;
-        SettingsStore.getSettings().then(() => {
-            if (SettingsStore.settings) {
-                NodeInfoStore.getNodeInfo();
-                this.refresh();
-            }
+        await SettingsStore.getSettings().then(() => {
+            NodeInfoStore.getNodeInfo();
+            this.refresh();
         });
-    };
+    }
 
     refresh = () => {
         const {
@@ -124,24 +122,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { settings } = SettingsStore;
         const { theme } = settings;
 
-        const transactionsButton = () => (
-            <React.Fragment>
-                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
-                    {(transactions && transactions.length) || 0}
-                </Text>
-                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
-                    Transactions
-                </Text>
-            </React.Fragment>
-        );
-
         const paymentsButton = () => (
             <React.Fragment>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
                     {(payments && payments.length) || 0}
                 </Text>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
-                    LN Payments
+                    Payments
                 </Text>
             </React.Fragment>
         );
@@ -153,6 +140,17 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 </Text>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
                     Invoices
+                </Text>
+            </React.Fragment>
+        );
+
+        const transactionsButton = () => (
+            <React.Fragment>
+                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
+                    {(transactions && transactions.length) || 0}
+                </Text>
+                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
+                    On-chain
                 </Text>
             </React.Fragment>
         );
@@ -169,9 +167,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         );
 
         const buttons = [
-            { element: transactionsButton },
             { element: paymentsButton },
             { element: invoicesButton },
+            { element: transactionsButton },
             { element: channelsButton }
         ];
 
@@ -235,16 +233,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 )}
 
                 {selectedIndex == 0 && (
-                    <Transactions
-                        transactions={transactions}
-                        navigation={navigation}
-                        refresh={this.refresh}
-                        TransactionsStore={TransactionsStore}
-                        UnitsStore={UnitsStore}
-                        SettingsStore={SettingsStore}
-                    />
-                )}
-                {selectedIndex == 1 && (
                     <Payments
                         payments={payments}
                         navigation={navigation}
@@ -254,12 +242,22 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         SettingsStore={SettingsStore}
                     />
                 )}
-                {selectedIndex == 2 && (
+                {selectedIndex == 1 && (
                     <Invoices
                         invoices={invoices}
                         navigation={navigation}
                         refresh={this.refresh}
                         InvoicesStore={InvoicesStore}
+                        UnitsStore={UnitsStore}
+                        SettingsStore={SettingsStore}
+                    />
+                )}
+                {selectedIndex == 2 && (
+                    <Transactions
+                        transactions={transactions}
+                        navigation={navigation}
+                        refresh={this.refresh}
+                        TransactionsStore={TransactionsStore}
                         UnitsStore={UnitsStore}
                         SettingsStore={SettingsStore}
                     />

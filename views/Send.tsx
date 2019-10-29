@@ -41,7 +41,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             transactionType: transactionType,
             destination: destination || '',
             amount: amount || '',
-            fee: ''
+            fee: '2'
         };
     }
 
@@ -91,7 +91,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                 destination: value
             });
 
-            InvoicesStore.getPayReq(text);
+            InvoicesStore.getPayReq(value);
         } else {
             this.setState({
                 transactionType: null,

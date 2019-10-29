@@ -20,12 +20,14 @@ interface QRProps {
 }
 
 interface QRState {
+    complete: boolean;
     hasCameraPermission: boolean | null;
     useInternalScanner: boolean;
 }
 
 export default class QRCodeScanner extends React.Component<QRProps, QRState> {
     state = {
+        complete: false,
         hasCameraPermission: null,
         useInternalScanner: Platform.OS !== 'android' // only try to use the external scanner on android
     };
@@ -97,7 +99,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
     }
 
     render() {
-        const { hasCameraPermission } = this.state;
+        const { complete, hasCameraPermission } = this.state;
         const { title, text, handleQRScanned, goBack } = this.props;
 
         if (!this.state.useInternalScanner) {
@@ -111,6 +113,11 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
 
         if (hasCameraPermission === false) {
             return <Text>No access to camera</Text>;
+        }
+
+        // scan has completed, prevent additional scanning
+        if (complete) {
+            return null;
         }
 
         return (
@@ -133,9 +140,10 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                 <CameraKitCameraScreen
                     laserColor={'orange'}
                     scanBarcode={true}
-                    onReadCode={(event: any) =>
-                        handleQRScanned(event.nativeEvent.codeStringValue)
-                    }
+                    onReadCode={(event: any) => {
+                        this.setState({ complete: true });
+                        handleQRScanned(event.nativeEvent.codeStringValue);
+                    }}
                     hideControls={true}
                     showFrame={false}
                     style={{
