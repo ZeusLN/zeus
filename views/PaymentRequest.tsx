@@ -119,17 +119,90 @@ export default class PaymentRequest extends React.Component<
                     {pay_req && (
                         <View style={styles.content}>
                             <View style={styles.center}>
-                                <TouchableOpacity onPress={() => changeUnits()}>
+                                {!setCustomAmount && (
+                                    <TouchableOpacity
+                                        onPress={() => changeUnits()}
+                                    >
+                                        <Text
+                                            style={
+                                                theme === 'dark'
+                                                    ? styles.amountDark
+                                                    : styles.amount
+                                            }
+                                        >
+                                            {units &&
+                                                getAmount(num_satoshis || 0)}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                                {setCustomAmount && (
                                     <Text
+                                        style={{
+                                            color:
+                                                theme === 'dark'
+                                                    ? 'white'
+                                                    : 'black'
+                                        }}
+                                    >
+                                        Custom Amount (in satoshis)
+                                    </Text>
+                                )}
+                                {setCustomAmount && (
+                                    <TextInput
+                                        placeholder={
+                                            num_satoshis ? num_satoshis : '0'
+                                        }
+                                        value={customAmount}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                customAmount: text
+                                            })
+                                        }
+                                        numberOfLines={1}
                                         style={
                                             theme === 'dark'
-                                                ? styles.amountDark
-                                                : styles.amount
+                                                ? styles.textInputDark
+                                                : styles.textInput
                                         }
-                                    >
-                                        {units && getAmount(num_satoshis || 0)}
-                                    </Text>
-                                </TouchableOpacity>
+                                        placeholderTextColor="gray"
+                                    />
+                                )}
+                                <View style={styles.button}>
+                                    <Button
+                                        title={
+                                            setCustomAmount
+                                                ? 'Pay default amount'
+                                                : 'Pay custom amount'
+                                        }
+                                        icon={{
+                                            name: 'edit',
+                                            size: 25,
+                                            color:
+                                                theme === 'dark'
+                                                    ? 'black'
+                                                    : 'white'
+                                        }}
+                                        onPress={() => {
+                                            this.setState({
+                                                setCustomAmount: !setCustomAmount
+                                            });
+                                        }}
+                                        style={styles.button}
+                                        titleStyle={{
+                                            color:
+                                                theme === 'dark'
+                                                    ? 'black'
+                                                    : 'white'
+                                        }}
+                                        buttonStyle={{
+                                            backgroundColor:
+                                                theme === 'dark'
+                                                    ? 'white'
+                                                    : 'black',
+                                            borderRadius: 30
+                                        }}
+                                    />
+                                </View>
                             </View>
 
                             {description && (
@@ -269,64 +342,6 @@ export default class PaymentRequest extends React.Component<
                                     {payment_hash}
                                 </Text>
                             )}
-
-                            {setCustomAmount && (
-                                <Text
-                                    style={{
-                                        color:
-                                            theme === 'dark' ? 'white' : 'black'
-                                    }}
-                                >
-                                    Custom Amount (in satoshis)
-                                </Text>
-                            )}
-                            {setCustomAmount && (
-                                <TextInput
-                                    placeholder={'100'}
-                                    value={customAmount}
-                                    onChangeText={(text: string) =>
-                                        this.setState({ customAmount: text })
-                                    }
-                                    numberOfLines={1}
-                                    style={
-                                        theme === 'dark'
-                                            ? styles.textInputDark
-                                            : styles.textInput
-                                    }
-                                    placeholderTextColor="gray"
-                                />
-                            )}
-                        </View>
-                    )}
-
-                    {pay_req && (
-                        <View style={styles.button}>
-                            <Button
-                                title={
-                                    setCustomAmount
-                                        ? 'Pay default amount'
-                                        : 'Pay custom amount'
-                                }
-                                icon={{
-                                    name: 'edit',
-                                    size: 25,
-                                    color: theme === 'dark' ? 'black' : 'white'
-                                }}
-                                onPress={() => {
-                                    this.setState({
-                                        setCustomAmount: !setCustomAmount
-                                    });
-                                }}
-                                style={styles.button}
-                                titleStyle={{
-                                    color: theme === 'dark' ? 'black' : 'white'
-                                }}
-                                buttonStyle={{
-                                    backgroundColor:
-                                        theme === 'dark' ? 'white' : 'black',
-                                    borderRadius: 30
-                                }}
-                            />
                         </View>
                     )}
 
