@@ -6,6 +6,7 @@ import {
     TextInput,
     View
 } from 'react-native';
+import { LNURLWithdrawParams } from 'js-lnurl';
 import { Button, ButtonGroup, Header, Icon } from 'react-native-elements';
 import CollapsedQR from './../components/CollapsedQR';
 import { inject, observer } from 'mobx-react';
@@ -16,6 +17,7 @@ import SettingsStore from './../stores/SettingsStore';
 interface ReceiveProps {
     exitSetup: any;
     navigation: any;
+    lnurlParams: LNURLWithdrawParams | undefined;
     InvoicesStore: InvoicesStore;
     SettingsStore: SettingsStore;
 }
@@ -39,6 +41,18 @@ export default class Receive extends React.Component<
         value: '',
         expiry: '3600'
     };
+
+    componentDidMount() {
+        const { lnurlParams } = this.props;
+
+        if (lnurlParams) {
+            this.setState({
+                selectedIndex: 1,
+                memo: lnurlParams.defaultDescription,
+                value: lnurlParams.maxWithdrawable.toString()
+            });
+        }
+    }
 
     getNewAddress = () => {
         const { SettingsStore } = this.props;
@@ -64,7 +78,12 @@ export default class Receive extends React.Component<
     };
 
     render() {
-        const { InvoicesStore, SettingsStore, navigation } = this.props;
+        const {
+            InvoicesStore,
+            SettingsStore,
+            navigation,
+            lnurlParams
+        } = this.props;
         const { selectedIndex, memo, value, expiry } = this.state;
         const {
             createInvoice,
@@ -203,11 +222,31 @@ export default class Receive extends React.Component<
                             <TextInput
                                 placeholder={'100'}
                                 value={value}
-                                onChangeText={(text: string) =>
-                                    this.setState({ value: text })
-                                }
+                                onChangeText={(text: string) => {
+                                    if (lnurlParams) {
+                                        let [min, max] = [
+                                            lnurlParams.minWithdrawable / 1000,
+                                            lnurlParams.maxWithdrawable / 1000
+                                        ];
+
+                                        if (parseFloat(text) < min) {
+                                            text = min.toString();
+                                        }
+                                        if (parseFloat(text) > max) {
+                                            text = max.toString();
+                                        }
+                                    }
+
+                                    this.setState({ value: text });
+                                }}
                                 numberOfLines={1}
-                                editable={true}
+                                editable={
+                                    lnurlParams &&
+                                    lnurlParams.minWithdrawable ===
+                                        lnurlParams.maxWithdrawable
+                                        ? false
+                                        : true
+                                }
                                 style={
                                     theme === 'dark'
                                         ? styles.textInputDark
@@ -248,7 +287,12 @@ export default class Receive extends React.Component<
                                         color: 'white'
                                     }}
                                     onPress={() =>
-                                        createInvoice(memo, value, expiry)
+                                        createInvoice(
+                                            memo,
+                                            value,
+                                            expiry,
+                                            lnurlParams
+                                        )
                                     }
                                     buttonStyle={{
                                         backgroundColor: 'orange',
