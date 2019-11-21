@@ -6,6 +6,7 @@ interface Node {
     host?: string;
     port?: string;
     macaroonHex?: string;
+    implementation?: string;
 }
 
 interface Settings {
@@ -23,6 +24,7 @@ export default class SettingsStore {
     @observable host: string | null;
     @observable port: string | null;
     @observable macaroonHex: string | null;
+    @observable implementation: string | null;
 
     @action
     public fetchBTCPayConfig = (data: string) => {
@@ -75,6 +77,7 @@ export default class SettingsStore {
                     this.host = node.host;
                     this.port = node.port;
                     this.macaroonHex = node.macaroonHex;
+                    this.implementation = node.implementation;
                 }
                 return this.settings;
             } else {
@@ -98,15 +101,19 @@ export default class SettingsStore {
 
     @action
     public getNewAddress = () => {
-        const { host, port, macaroonHex } = this;
+        const { host, port, macaroonHex, implementation } = this;
+
+        const headers = implementation === 'c-lightning-REST' ? {
+            'macaroon': macaroonHex
+        } : {
+            'Grpc-Metadata-macaroon': macaroonHex
+        };
 
         return axios
             .request({
                 method: 'get',
                 url: `https://${host}${port ? ':' + port : ''}/v1/newaddress`,
-                headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
-                }
+                headers: headers
             })
             .then((response: any) => {
                 // handle success
