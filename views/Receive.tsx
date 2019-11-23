@@ -17,7 +17,6 @@ import SettingsStore from './../stores/SettingsStore';
 interface ReceiveProps {
     exitSetup: any;
     navigation: any;
-    lnurlParams: LNURLWithdrawParams | undefined;
     InvoicesStore: InvoicesStore;
     SettingsStore: SettingsStore;
 }
@@ -43,13 +42,16 @@ export default class Receive extends React.Component<
     };
 
     componentDidMount() {
-        const { lnurlParams } = this.props;
+        const { navigation } = this.props;
+        const lnurl: LNURLWithdrawParams | undefined = navigation.getParam(
+            'lnurlParams'
+        );
 
-        if (lnurlParams) {
+        if (lnurl) {
             this.setState({
-                selectedIndex: 1,
-                memo: lnurlParams.defaultDescription,
-                value: lnurlParams.maxWithdrawable.toString()
+                selectedIndex: 0,
+                memo: lnurl.defaultDescription,
+                value: Math.floor(lnurl.maxWithdrawable / 1000).toString()
             });
         }
     }
@@ -78,12 +80,7 @@ export default class Receive extends React.Component<
     };
 
     render() {
-        const {
-            InvoicesStore,
-            SettingsStore,
-            navigation,
-            lnurlParams
-        } = this.props;
+        const { InvoicesStore, SettingsStore, navigation } = this.props;
         const { selectedIndex, memo, value, expiry } = this.state;
         const {
             createInvoice,
@@ -94,6 +91,10 @@ export default class Receive extends React.Component<
         } = InvoicesStore;
         const { settings, loading } = SettingsStore;
         const { onChainAndress, theme } = settings;
+
+        const lnurl: LNURLWithdrawParams | undefined = navigation.getParam(
+            'lnurlParams'
+        );
 
         const lightningButton = () => (
             <React.Fragment>
@@ -218,32 +219,26 @@ export default class Receive extends React.Component<
                                 }}
                             >
                                 Amount (in Satoshis)
+                                {lnurl &&
+                                lnurl.minWithdrawable !== lnurl.maxWithdrawable
+                                    ? ` (${Math.ceil(
+                                          lnurl.minWithdrawable / 1000
+                                      )}--${Math.floor(
+                                          lnurl.maxWithdrawable / 1000
+                                      )})`
+                                    : ''}
                             </Text>
                             <TextInput
                                 placeholder={'100'}
                                 value={value}
                                 onChangeText={(text: string) => {
-                                    if (lnurlParams) {
-                                        let [min, max] = [
-                                            lnurlParams.minWithdrawable / 1000,
-                                            lnurlParams.maxWithdrawable / 1000
-                                        ];
-
-                                        if (parseFloat(text) < min) {
-                                            text = min.toString();
-                                        }
-                                        if (parseFloat(text) > max) {
-                                            text = max.toString();
-                                        }
-                                    }
-
                                     this.setState({ value: text });
                                 }}
                                 numberOfLines={1}
                                 editable={
-                                    lnurlParams &&
-                                    lnurlParams.minWithdrawable ===
-                                        lnurlParams.maxWithdrawable
+                                    lnurl &&
+                                    lnurl.minWithdrawable ===
+                                        lnurl.maxWithdrawable
                                         ? false
                                         : true
                                 }
@@ -291,7 +286,7 @@ export default class Receive extends React.Component<
                                             memo,
                                             value,
                                             expiry,
-                                            lnurlParams
+                                            lnurl
                                         )
                                     }
                                     buttonStyle={{

@@ -84,7 +84,7 @@ export default class InvoicesStore {
         memo: string,
         value: string,
         expiry: string = '3600',
-        lnurlParams: LNURLWithdrawParams = undefined
+        lnurl: LNURLWithdrawParams = undefined
     ) => {
         const { host, port, macaroonHex } = this.settingsStore;
 
@@ -112,10 +112,23 @@ export default class InvoicesStore {
                 this.payment_request = data.payment_request;
                 this.creatingInvoice = false;
 
-                if (lnurlParams) {
-                    axios.get(lnurlParams.callback, {
-                        params: { k1: lnurlParams.k1, pr: this.payment_request }
-                    });
+                if (lnurl) {
+                    axios
+                        .get(lnurl.callback, {
+                            params: {
+                                k1: lnurl.k1,
+                                pr: this.payment_request
+                            }
+                        })
+                        .catch((err: any) => ({
+                            status: 'ERROR',
+                            reason: err.response.data
+                        }))
+                        .then((response: any) => {
+                            if (response.data.status === 'ERROR') {
+                                Alert.alert(response.data.reason);
+                            }
+                        });
                 }
             })
             .catch((error: any) => {
