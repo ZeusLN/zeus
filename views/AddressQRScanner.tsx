@@ -48,8 +48,8 @@ export default class AddressQRScanner extends React.Component<
 
             InvoicesStore.getPayReq(value);
             navigation.navigate('PaymentRequest');
-        } else if (findlnurl(value) !== null) {
-            getlnurlParams(findlnurl(value))
+        } else if (findlnurl(value.toLowerCase()) !== null) {
+            getlnurlParams(findlnurl(value.toLowerCase()))
                 .then(params => {
                     switch (params.tag) {
                         case 'withdrawRequest':
