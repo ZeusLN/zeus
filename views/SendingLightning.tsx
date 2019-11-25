@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { when } from 'mobx';
 import { Button } from 'react-native-elements';
+import LnurlPaySuccess from './LnurlPaySuccess';
 
 import TransactionsStore from './../stores/TransactionsStore';
 import LnurlPayStore from './../stores/LnurlPayStore';
@@ -20,17 +21,12 @@ export default class SendingLightning extends React.Component<
     {}
 > {
     componentDidMount = () => {
-        if (
-            LnurlPayStore.paymentHash &&
-            LnurlPayStore.paymentHash == TransactionsStore.payment_hash
-        ) {
-            when(() => TransactionsStore.payment_route).then(() => {
-                LnurlPayStore.acknowledge(TransactionsStore.payment_hash);
-            });
-            when(() => TransactionsStore.payment_error).then(() => {
-                LnurlPayStore.clear(TransactionsStore.payment_hash);
-            });
-        }
+        when(() => TransactionsStore.payment_route).then(() => {
+            LnurlPayStore.acknowledge(TransactionsStore.payment_hash);
+        });
+        when(() => TransactionsStore.payment_error).then(() => {
+            LnurlPayStore.clear(TransactionsStore.payment_hash);
+        });
     };
 
     getBackgroundColor() {
@@ -58,7 +54,6 @@ export default class SendingLightning extends React.Component<
             payment_route,
             payment_error
         } = TransactionsStore;
-        const { successAction } = LnurlPayStore;
         const backgroundColor = this.getBackgroundColor();
 
         return (
@@ -95,17 +90,14 @@ export default class SendingLightning extends React.Component<
                             Transaction successfully sent
                         </Text>
                     )}
-                    {payment_route && successAction && (
-                        <Text
-                            style={{
-                                color: 'white',
-                                padding: 20,
-                                fontSize: 40
-                            }}
-                        >
-                            JSON.stringify(successAction)
-                        </Text>
-                    )}
+                    {payment_route &&
+                        payment_hash === LnurlPayStore.paymentHash &&
+                        LnurlPayStore.successAction && (
+                            <LnurlPaySuccess
+                                domain={LnurlPayStore.domain}
+                                successAction={LnurlPayStore.successAction}
+                            />
+                        )}
                     {payment_hash && (
                         <Text
                             style={{

@@ -25,11 +25,15 @@ interface LnurlPayProps {
 
 interface LnurlPayState {
     amount: string;
+    domain: string;
 }
 
 @inject('InvoicesStore', 'SettingsStore', 'LnurlPayStore')
 @observer
-export default class LnurlPay extends React.Component<SendProps, SendState> {
+export default class LnurlPay extends React.Component<
+    LnurlPayProps,
+    LnurlPayState
+> {
     constructor(props: any) {
         super(props);
 
@@ -140,11 +144,15 @@ export default class LnurlPay extends React.Component<SendProps, SendState> {
                     backgroundColor="grey"
                 />
                 <View style={styles.content}>
-                    <View style={{ padding: 20 }}>
-                        <Text style={{ fontWeight: 'bold', fontSize: 22 }}>
-                            {domain}
-                        </Text>
-                    </View>
+                    <Text
+                        style={{
+                            padding: 20,
+                            fontWeight: 'bold',
+                            fontSize: 22
+                        }}
+                    >
+                        {domain}
+                    </Text>
                 </View>
                 <View style={styles.content}>
                     <Text
