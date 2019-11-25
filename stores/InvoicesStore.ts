@@ -1,5 +1,6 @@
 import { action, observable } from 'mobx';
 import axios from 'axios';
+import { LNURLWithdrawParams } from 'js-lnurl';
 import Invoice from './../models/Invoice';
 import PaymentRequest from './../models/PaymentRequest';
 import SettingsStore from './SettingsStore';
@@ -82,7 +83,8 @@ export default class InvoicesStore {
     public createInvoice = (
         memo: string,
         value: string,
-        expiry: string = '3600'
+        expiry: string = '3600',
+        lnurl: LNURLWithdrawParams = undefined
     ) => {
         const { host, port, macaroonHex } = this.settingsStore;
 
@@ -109,6 +111,25 @@ export default class InvoicesStore {
                 const data = response.data;
                 this.payment_request = data.payment_request;
                 this.creatingInvoice = false;
+
+                if (lnurl) {
+                    axios
+                        .get(lnurl.callback, {
+                            params: {
+                                k1: lnurl.k1,
+                                pr: this.payment_request
+                            }
+                        })
+                        .catch((err: any) => ({
+                            status: 'ERROR',
+                            reason: err.response.data
+                        }))
+                        .then((response: any) => {
+                            if (response.data.status === 'ERROR') {
+                                Alert.alert(response.data.reason);
+                            }
+                        });
+                }
             })
             .catch((error: any) => {
                 // handle error

@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import AddressUtils from './../utils/AddressUtils';
 import QRCodeScanner from './../components/QRCodeScanner';
 import { inject, observer } from 'mobx-react';
+import { getParams as getlnurlParams, findlnurl } from 'js-lnurl';
 
 import NodeInfoStore from './../stores/NodeInfoStore';
 import InvoicesStore from './../stores/InvoicesStore';
@@ -47,6 +48,25 @@ export default class AddressQRScanner extends React.Component<
 
             InvoicesStore.getPayReq(value);
             navigation.navigate('PaymentRequest');
+        } else if (findlnurl(value.toLowerCase()) !== null) {
+            getlnurlParams(findlnurl(value.toLowerCase()))
+                .then(params => {
+                    switch (params.tag) {
+                        case 'withdrawRequest':
+                            navigation.navigate('Receive', {
+                                lnurlParams: params
+                            });
+                            break;
+                        default:
+                            throw new Error(
+                                params.reason ||
+                                    `Unsupported lnurl type: ${params.tag}`
+                            );
+                    }
+                })
+                .catch(err => {
+                    Alert.alert(err.message);
+                });
         } else {
             Alert.alert(
                 'Error',
