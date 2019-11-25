@@ -31,7 +31,10 @@ class Stores {
         this.unitsStore = new UnitsStore(this.settingsStore);
         this.paymentsStore = new PaymentsStore(this.settingsStore);
         this.feeStore = new FeeStore();
-        this.lnurlPayStore = new LnurlPayStore(this.nodeInfoStore);
+        this.lnurlPayStore = new LnurlPayStore(
+            this.settingsStore,
+            this.nodeInfoStore
+        );
     }
 }
 
