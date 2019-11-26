@@ -1,6 +1,8 @@
 import { action, observable } from 'mobx';
 import axios from 'axios';
+import { Alert } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
+import hashjs from 'hash.js';
 import Invoice from './../models/Invoice';
 import PaymentRequest from './../models/PaymentRequest';
 import SettingsStore from './SettingsStore';
@@ -10,7 +12,7 @@ export default class InvoicesStore {
     @observable loading: boolean = false;
     @observable error: boolean = false;
     @observable error_msg: string | null;
-    @observable getPayReqError: boolean = false;
+    @observable getPayReqError: string | null = null;
     @observable invoices: Array<Invoice> = [];
     @observable invoice: Invoice;
     @observable pay_req: PaymentRequest | null;
@@ -141,14 +143,17 @@ export default class InvoicesStore {
     };
 
     @action
-    public getPayReq = (paymentRequest: string) => {
+    public getPayReq = (
+        paymentRequest: string,
+        descriptionPreimage: string | undefined
+    ) => {
         const { host, port, macaroonHex } = this.settingsStore;
 
         this.pay_req = null;
         this.paymentRequest = paymentRequest;
         this.loading = true;
 
-        axios
+        return axios
             .request({
                 method: 'get',
                 url: `https://${host}${
@@ -160,15 +165,32 @@ export default class InvoicesStore {
             })
             .then((response: any) => {
                 // handle success
-                const data = response.data;
+                const data = response.data as PaymentRequest;
                 this.pay_req = data;
+
+                // check description_hash if asked for
+                if (
+                    descriptionPreimage &&
+                    this.pay_req.description_hash !==
+                        hashjs
+                            .sha256()
+                            .update(descriptionPreimage)
+                            .digest('hex')
+                ) {
+                    throw new Error('wrong description_hash!');
+                }
+
                 this.loading = false;
-                this.getPayReqError = false;
+                this.getPayReqError = null;
             })
-            .catch(() => {
+            .catch(err => {
                 // handle error
                 this.loading = false;
-                this.getPayReqError = true;
+                this.getPayReqError =
+                    (err.response &&
+                        err.response.data &&
+                        err.response.data.error) ||
+                    err.message;
                 this.pay_req = null;
             });
     };
