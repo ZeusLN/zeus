@@ -66,7 +66,7 @@ export default class Transactions extends React.Component<TransactionsProps> {
         const { theme } = settings;
 
         const BalanceImage = (item: Transaction) => {
-            const { amount, num_confirmations } = item;
+            let { amount, value, num_confirmations } = item;
 
             if (num_confirmations && num_confirmations > 0) {
                 if (amount > 0) {
@@ -106,10 +106,10 @@ export default class Transactions extends React.Component<TransactionsProps> {
                             const subtitle = item.block_height
                                 ? `${
                                       item.block_height
-                                  } | ${DateTimeUtils.listFormattedDate(
+                                  } | ${item.time_stamp && DateTimeUtils.listFormattedDate(
                                       item.time_stamp
                                   )}`
-                                : DateTimeUtils.listFormattedDate(
+                                : item.time_stamp && DateTimeUtils.listFormattedDate(
                                       item.time_stamp
                                   );
                             return (

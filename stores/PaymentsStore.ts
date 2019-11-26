@@ -7,7 +7,7 @@ export default class PaymentsStore {
     @observable loading: boolean = false;
     @observable error: boolean = false;
     @observable error_msg: string;
-    @observable payments: Array<Payment> = [];
+    @observable payments: Array<Payment|any> = [];
     settingsStore: SettingsStore;
 
     constructor(settingsStore: SettingsStore) {
@@ -22,15 +22,18 @@ export default class PaymentsStore {
         axios
             .request({
                 method: 'get',
-                url: `https://${host}${port ? ':' + port : ''}/v1/payments`,
+                url: `https://${host}${port ? ':' + port : ''}/v1/pay/listPays/`,
                 headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
+                    'macaroon': macaroonHex,
+                    'encodingtype': 'hex'
                 }
             })
             .then((response: any) => {
                 // handle success
                 const data = response.data;
-                this.payments = data.payments.reverse();
+                console.log('!');
+                console.log(data);
+                this.payments = data.pays;
                 this.loading = false;
             })
             .catch(() => {

@@ -10,7 +10,7 @@ export default class InvoicesStore {
     @observable error: boolean = false;
     @observable error_msg: string | null;
     @observable getPayReqError: boolean = false;
-    @observable invoices: Array<Invoice> = [];
+    @observable invoices: Array<Invoice|any> = [];
     @observable invoice: Invoice;
     @observable pay_req: PaymentRequest | null;
     @observable payment_request: string | null;
@@ -38,16 +38,19 @@ export default class InvoicesStore {
                 method: 'get',
                 url: `https://${host}${
                     port ? ':' + port : ''
-                }/v1/invoices?reversed=true&num_max_invoices=100`,
+                }/v1/pay/listPayments`,
                 headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
+                    'macaroon': macaroonHex,
+                    'encodingtype': 'hex'
                 }
             })
             .then((response: any) => {
                 // handle success
                 const data = response.data;
-                this.invoices = data.invoices.reverse();
-                this.invoicesCount = data.last_index_offset;
+                console.log('!!');
+                console.log(data);
+                this.invoices = data.payments.reverse();
+                this.invoicesCount = data.last_index_offset || data.payments.length;
                 this.loading = false;
             })
             .catch(() => {
@@ -68,7 +71,8 @@ export default class InvoicesStore {
                     port ? ':' + port : ''
                 }/v1/invoice/${lightningInvoice}`,
                 headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
+                    'macaroon': macaroonHex,
+                    'encodingtype': 'hex'
                 }
             })
             .then((response: any) => {
@@ -96,7 +100,8 @@ export default class InvoicesStore {
                 method: 'post',
                 url: `https://${host}${port ? ':' + port : ''}/v1/invoices`,
                 headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
+                    'macaroon': macaroonHex,
+                    'encodingtype': 'hex'
                 },
                 data: {
                     memo,
@@ -134,7 +139,8 @@ export default class InvoicesStore {
                     port ? ':' + port : ''
                 }/v1/payreq/${paymentRequest}`,
                 headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
+                    'macaroon': macaroonHex,
+                    'encodingtype': 'hex'
                 }
             })
             .then((response: any) => {
