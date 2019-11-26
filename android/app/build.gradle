@@ -145,6 +145,7 @@ android {
 }
 
 dependencies {
+    implementation project(':realm')
     implementation project(':react-native-linear-gradient')
     implementation project(':react-native-keychain')
     implementation project(':rncamerakit')
