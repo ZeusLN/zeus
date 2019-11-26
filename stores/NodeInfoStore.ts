@@ -35,7 +35,8 @@ export default class NodeInfoStore {
                 method: 'get',
                 url: `https://${host}${port ? ':' + port : ''}/v1/getinfo`,
                 headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
+                    'macaroon': macaroonHex,
+                    'encodingtype': 'hex'
                 }
             })
             .then((response: any) => {

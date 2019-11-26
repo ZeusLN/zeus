@@ -7,4 +7,9 @@ export default interface Payment {
     payment_preimage: string;
     value_msat: string;
     path: Array<string>;
+    //
+    bolt: string;
+    status: string;
+    payment_preimage: string;
+    amount_sent_msat: string;
 }

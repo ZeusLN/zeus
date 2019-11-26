@@ -104,14 +104,14 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                         data={channels}
                         renderItem={({ item }) => {
                             const data = new Identicon(
-                                hash.sha1(item.remote_pubkey),
+                                hash.sha1(item.alias || item.remote_pubkey),
                                 420
                             ).toString();
                             return (
                                 <React.Fragment>
                                     <ListItem
                                         title={
-                                            (nodes[item.remote_pubkey] &&
+                                            (item.alias || nodes[item.remote_pubkey] &&
                                                 nodes[item.remote_pubkey]
                                                     .alias) ||
                                             item.remote_pubkey
@@ -120,7 +120,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                             `data:image/png;base64,${data}`
                                         )}
                                         subtitle={`${
-                                            !item.active ? 'INACTIVE | ' : ''
+                                            !item.isActive ? 'INACTIVE | ' : ''
                                         }${
                                             item.private ? 'Private | ' : ''
                                         }Local: ${units &&

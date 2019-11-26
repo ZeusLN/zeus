@@ -42,9 +42,10 @@ export default class BalanceStore {
                 method: 'get',
                 url: `https://${host}${
                     port ? ':' + port : ''
-                }/v1/balance/blockchain`,
+                }/v1/getBalance`,
                 headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
+                    'macaroon': macaroonHex,
+                    'encodingtype': 'hex'
                 },
                 cancelToken: this.getBlockchainBalanceToken
             })
@@ -52,11 +53,11 @@ export default class BalanceStore {
                 // handle success
                 const data = response.data;
                 this.unconfirmedBlockchainBalance =
-                    Number(data.unconfirmed_balance) || 0;
+                    Number(data.unconfBalance) || 0;
                 this.confirmedBlockchainBalance = Number(
-                    data.confirmed_balance || 0
+                    data.confBalance || 0
                 );
-                this.totalBlockchainBalance = Number(data.total_balance || 0);
+                this.totalBlockchainBalance = Number(data.totalBalance || 0);
                 this.loading = false;
             })
             .catch(() => {
@@ -78,9 +79,10 @@ export default class BalanceStore {
                 method: 'get',
                 url: `https://${host}${
                     port ? ':' + port : ''
-                }/v1/balance/channels`,
+                }/v1/channel/localremotebal`,
                 headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
+                    'macaroon': macaroonHex,
+                    'encodingtype': 'hex'
                 },
                 cancelToken: this.getLightningBalanceToken
             })
@@ -90,7 +92,7 @@ export default class BalanceStore {
                 this.pendingOpenBalance = Number(
                     data.pending_open_balance || 0
                 );
-                this.lightningBalance = Number(data.balance || 0);
+                this.lightningBalance = Number(data.localBalance) + Number(data.remoteBalance) || 0;
                 this.loading = false;
             })
             .catch(() => {

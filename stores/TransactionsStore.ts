@@ -44,15 +44,18 @@ export default class TransactionsStore {
         axios
             .request({
                 method: 'get',
-                url: `https://${host}${port ? ':' + port : ''}/v1/transactions`,
+                url: `https://${host}${port ? ':' + port : ''}/v1/listFunds`,
                 headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
+                    'macaroon': macaroonHex,
+                    'encodingtype': 'hex'
                 }
             })
             .then((response: any) => {
                 // handle success
                 const data = response.data;
-                this.transactions = data.transactions.reverse();
+                console.log('!!!');
+                console.log(data);
+                this.transactions = data.outputs.reverse();
                 this.loading = false;
             })
             .catch(() => {
@@ -76,7 +79,8 @@ export default class TransactionsStore {
                 method: 'post',
                 url: `https://${host}${port ? ':' + port : ''}/v1/transactions`,
                 headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
+                    'macaroon': macaroonHex,
+                    'encodingtype': 'hex'
                 },
                 data: {
                     ...transactionRequest
@@ -127,7 +131,8 @@ export default class TransactionsStore {
                     port ? ':' + port : ''
                 }/v1/channels/transactions`,
                 headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
+                    'macaroon': macaroonHex,
+                    'encodingtype': 'hex'
                 },
                 data
             })

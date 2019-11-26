@@ -1,5 +1,6 @@
 import { action, observable, reaction } from 'mobx';
 import axios from 'axios';
+import { forEach } from 'lodash';
 import Channel from './../models/Channel';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import CloseChannelRequest from './../models/CloseChannelRequest';
@@ -12,7 +13,7 @@ export default class ChannelsStore {
     @observable public errorMsgChannel: string | null;
     @observable public errorMsgPeer: string | null;
     @observable public nodes: any = {};
-    @observable public channels: Array<Channel> = [];
+    @observable public channels: Array<Channel>;
     @observable public output_index: number | null;
     @observable public funding_txid_str: string | null;
     @observable public openingChannel: boolean = false;
@@ -78,7 +79,8 @@ export default class ChannelsStore {
                     port ? ':' + port : ''
                 }/v1/graph/node/${pubkey}`,
                 headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
+                    'macaroon': macaroonHex,
+                    'encodingtype': 'hex'
                 }
             })
             .then((response: any) => {
@@ -97,15 +99,29 @@ export default class ChannelsStore {
         axios
             .request({
                 method: 'get',
-                url: `https://${host}${port ? ':' + port : ''}/v1/channels`,
+                url: `https://${host}${port ? ':' + port : ''}/v1/channel/listChannels`,
                 headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
+                    'macaroon': macaroonHex,
+                    'encodingtype': 'hex'
                 }
             })
             .then((response: any) => {
                 // handle success
+                console.log('chan resp');
                 const data = response.data;
-                this.channels = data.channels;
+                console.log('D');
+                console.log(data);
+                /*
+                data = forEach(data, function(channel: Channel) {
+                    console.log('B');
+                    return Channel(channel);
+                    console.log('A');
+                    console.log(channel);
+                });
+                */
+                this.channels = data;
+                console.log('CHANs');
+                console.log(this.channels);
                 this.error = false;
                 this.loading = false;
             })
@@ -131,7 +147,8 @@ export default class ChannelsStore {
                     port ? ':' + port : ''
                 }/v1/channels/${funding_txid_str}/${output_index}`,
                 headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
+                    'macaroon': macaroonHex,
+                    'encodingtype': 'hex'
                 }
             })
             .then((response: any) => {
@@ -160,7 +177,8 @@ export default class ChannelsStore {
                 method: 'post',
                 url: `https://${host}${port ? ':' + port : ''}/v1/peers`,
                 headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
+                    'macaroon': macaroonHex,
+                    'encodingtype': 'hex'
                 },
                 data: JSON.stringify({
                     addr: {
@@ -209,7 +227,8 @@ export default class ChannelsStore {
                 method: 'post',
                 url: `https://${host}${port ? ':' + port : ''}/v1/channels`,
                 headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
+                    'macaroon': macaroonHex,
+                    'encodingtype': 'hex'
                 },
                 data: JSON.stringify(request)
             })
