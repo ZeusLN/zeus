@@ -4,12 +4,13 @@ import Transaction from './../models/Transaction';
 import TransactionRequest from './../models/TransactionRequest';
 import ErrorUtils from './../utils/ErrorUtils';
 import SettingsStore from './SettingsStore';
+import RESTUtils from './../utils/RESTUtils';
 
 export default class TransactionsStore {
     @observable loading: boolean = false;
     @observable error: boolean = false;
     @observable error_msg: string | null;
-    @observable transactions: Array<Transaction> = [];
+    @observable transactions: Array<Transaction> = <Transaction>[];
     @observable transaction: Transaction;
 
     @observable payment_route: any; // Route
@@ -38,24 +39,13 @@ export default class TransactionsStore {
 
     @action
     public getTransactions = () => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
         this.loading = true;
-        axios
-            .request({
-                method: 'get',
-                url: `https://${host}${port ? ':' + port : ''}/v1/listFunds`,
-                headers: {
-                    'macaroon': macaroonHex,
-                    'encodingtype': 'hex'
-                }
-            })
+        RESTUtils.getTransactions(this.settingsStore)
             .then((response: any) => {
                 // handle success
                 const data = response.data;
-                console.log('!!!');
-                console.log(data);
-                this.transactions = data.outputs.reverse();
+                const transactions = data.transactions || data.outputs;
+                this.transactions =  transactions.reverse().map(tx => new Transaction(tx));
                 this.loading = false;
             })
             .catch(() => {
@@ -67,35 +57,21 @@ export default class TransactionsStore {
 
     @action
     public sendCoins = (transactionRequest: TransactionRequest) => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
         this.error = false;
         this.error_msg = null;
         this.txid = null;
         this.loading = true;
-
-        axios
-            .request({
-                method: 'post',
-                url: `https://${host}${port ? ':' + port : ''}/v1/transactions`,
-                headers: {
-                    'macaroon': macaroonHex,
-                    'encodingtype': 'hex'
-                },
-                data: {
-                    ...transactionRequest
-                }
-            })
+        RESTUtils.sendCoins(this.settingsStore, transactionRequest)
             .then((response: any) => {
                 // handle success
-                const data = response.data;
+                const data = response.data || response;
                 this.txid = data.txid;
                 this.loading = false;
             })
             .catch((error: any) => {
                 // handle error
                 const errorInfo = error.response.data;
-                this.error_msg = errorInfo.error;
+                this.error_msg = errorInfo.error.message || errorInfo.error;
                 this.error = true;
                 this.loading = false;
             });

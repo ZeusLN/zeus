@@ -2,6 +2,8 @@ import { action, reaction, observable } from 'mobx';
 import axios from 'axios';
 import Transaction from './../models/Transaction';
 import SettingsStore from './SettingsStore';
+import RESTUtils from './../utils/RESTUtils';
+import Balance from './../models/Balance';
 
 export default class BalanceStore {
     @observable public totalBlockchainBalance: number = 0;
@@ -13,13 +15,9 @@ export default class BalanceStore {
     @observable public pendingOpenBalance: number = 0;
     @observable public lightningBalance: number = 0;
     settingsStore: SettingsStore;
-    getBlockchainBalanceToken: any;
-    getLightningBalanceToken: any;
 
     constructor(settingsStore: SettingsStore) {
         this.settingsStore = settingsStore;
-        this.getBlockchainBalanceToken = axios.CancelToken.source().token;
-        this.getLightningBalanceToken = axios.CancelToken.source().token;
 
         reaction(
             () => this.settingsStore.settings,
@@ -34,30 +32,14 @@ export default class BalanceStore {
 
     @action
     public getBlockchainBalance = () => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
         this.loading = true;
-        axios
-            .request({
-                method: 'get',
-                url: `https://${host}${
-                    port ? ':' + port : ''
-                }/v1/getBalance`,
-                headers: {
-                    'macaroon': macaroonHex,
-                    'encodingtype': 'hex'
-                },
-                cancelToken: this.getBlockchainBalanceToken
-            })
+        RESTUtils.getBlockchainBalance(this.settingsStore)
             .then((response: any) => {
                 // handle success
-                const data = response.data;
-                this.unconfirmedBlockchainBalance =
-                    Number(data.unconfBalance) || 0;
-                this.confirmedBlockchainBalance = Number(
-                    data.confBalance || 0
-                );
-                this.totalBlockchainBalance = Number(data.totalBalance || 0);
+                const balance = new Balance(response.data);
+                this.unconfirmedBlockchainBalance = balance.unconfirmedBalance;
+                this.confirmedBlockchainBalance = balance.confirmedBalance;
+                this.totalBlockchainBalance = balance.getTotalBalance;
                 this.loading = false;
             })
             .catch(() => {
@@ -71,28 +53,13 @@ export default class BalanceStore {
 
     @action
     public getLightningBalance = () => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
         this.loading = true;
-        axios
-            .request({
-                method: 'get',
-                url: `https://${host}${
-                    port ? ':' + port : ''
-                }/v1/channel/localremotebal`,
-                headers: {
-                    'macaroon': macaroonHex,
-                    'encodingtype': 'hex'
-                },
-                cancelToken: this.getLightningBalanceToken
-            })
+        RESTUtils.getLightningBalance(this.settingsStore)
             .then((response: any) => {
                 // handle success
-                const data = response.data;
-                this.pendingOpenBalance = Number(
-                    data.pending_open_balance || 0
-                );
-                this.lightningBalance = Number(data.localBalance) + Number(data.remoteBalance) || 0;
+                const balance = new Balance(response.data);
+                this.pendingOpenBalance = balance.pending_open_balance || 0;
+                this.lightningBalance = balance.getTotalLightningBalance;
                 this.loading = false;
             })
             .catch(() => {

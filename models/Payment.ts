@@ -1,4 +1,6 @@
-export default interface Payment {
+import BaseModel from './BaseModel.ts';
+
+export default class Payment extends BaseModel {
     creation_date: string;
     value: string;
     fee: string;
