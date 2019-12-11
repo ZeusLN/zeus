@@ -1,7 +1,7 @@
 import { action, observable, reaction } from 'mobx';
-import axios from 'axios';
 import NodeInfo from './../models/NodeInfo';
 import SettingsStore from './SettingsStore';
+import RESTUtils from './../utils/RESTUtils';
 
 export default class NodeInfoStore {
     @observable public loading: boolean = false;
@@ -26,24 +26,14 @@ export default class NodeInfoStore {
 
     @action
     public getNodeInfo = () => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
         this.errorMsg = '';
         this.loading = true;
-        axios
-            .request({
-                method: 'get',
-                url: `https://${host}${port ? ':' + port : ''}/v1/getinfo`,
-                headers: {
-                    'macaroon': macaroonHex,
-                    'encodingtype': 'hex'
-                }
-            })
+        RESTUtils.getNodeInfo(this.settingsStore)
             .then((response: any) => {
                 // handle success
-                const data = response.data;
-                this.nodeInfo = data;
-                this.testnet = data.testnet;
+                const nodeInfo = new NodeInfo(response.data);
+                this.nodeInfo = nodeInfo;
+                this.testnet = nodeInfo.isTestNet;
                 this.loading = false;
                 this.error = false;
             })

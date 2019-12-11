@@ -5,6 +5,7 @@ import Channel from './../models/Channel';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import CloseChannelRequest from './../models/CloseChannelRequest';
 import SettingsStore from './SettingsStore';
+import RESTUtils from './../utils/RESTUtils';
 
 export default class ChannelsStore {
     @observable public loading: boolean = false;
@@ -13,7 +14,7 @@ export default class ChannelsStore {
     @observable public errorMsgChannel: string | null;
     @observable public errorMsgPeer: string | null;
     @observable public nodes: any = {};
-    @observable public channels: Array<Channel>;
+    @observable public channels: Array<Channel> = [];
     @observable public output_index: number | null;
     @observable public funding_txid_str: string | null;
     @observable public openingChannel: boolean = false;
@@ -53,6 +54,7 @@ export default class ChannelsStore {
                 if (this.channels) {
                     this.channels.forEach((channel: Channel) => {
                         if (!this.nodes[channel.remote_pubkey]) {
+                            /*
                             this.getNodeInfo(channel.remote_pubkey).then(
                                 nodeInfo => {
                                     this.nodes[
@@ -60,6 +62,7 @@ export default class ChannelsStore {
                                     ] = nodeInfo;
                                 }
                             );
+                            */
                         }
                     });
                 }
@@ -92,36 +95,13 @@ export default class ChannelsStore {
 
     @action
     public getChannels = () => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
         this.channels = [];
         this.loading = true;
-        axios
-            .request({
-                method: 'get',
-                url: `https://${host}${port ? ':' + port : ''}/v1/channel/listChannels`,
-                headers: {
-                    'macaroon': macaroonHex,
-                    'encodingtype': 'hex'
-                }
-            })
+        RESTUtils.getChannels(this.settingsStore)
             .then((response: any) => {
-                // handle success
-                console.log('chan resp');
                 const data = response.data;
-                console.log('D');
-                console.log(data);
-                /*
-                data = forEach(data, function(channel: Channel) {
-                    console.log('B');
-                    return Channel(channel);
-                    console.log('A');
-                    console.log(channel);
-                });
-                */
-                this.channels = data;
-                console.log('CHANs');
-                console.log(this.channels);
+                const channels = data.channels || data;
+                this.channels = channels.map(channel => new Channel(channel));
                 this.error = false;
                 this.loading = false;
             })

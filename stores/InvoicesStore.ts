@@ -47,8 +47,6 @@ export default class InvoicesStore {
             .then((response: any) => {
                 // handle success
                 const data = response.data;
-                console.log('!!');
-                console.log(data);
                 this.invoices = data.payments.reverse();
                 this.invoicesCount = data.last_index_offset || data.payments.length;
                 this.loading = false;

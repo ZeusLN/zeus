@@ -1,4 +1,5 @@
-import { observable, copmuted } from 'mobx';
+import { observable, computed } from 'mobx';
+import BaseModel from './BaseModel.ts';
 
 interface HTLC {
     hash_lock: string;
@@ -7,7 +8,7 @@ interface HTLC {
     amount: string;
 }
 
-export default class Channel {
+export default class Channel extends BaseModel {
     commit_weight: string;
     local_balance: string;
     commit_fee: string;
@@ -26,17 +27,12 @@ export default class Channel {
     remote_pubkey: string;
     capacity: string;
     private: boolean;
-    // c-lightningInvoice
+    // c-lightning
     @observable
     status: string;
 
     @computed
     public get isActive(): boolean {
         return this.active || this.status === 'CHANNELD_NORMAL';
-    }
-
-    constructor(data?: any) {
-        super();
-        this.compose(data);
     }
 }

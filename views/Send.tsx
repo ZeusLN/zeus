@@ -102,13 +102,23 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     sendCoins = () => {
-        const { TransactionsStore, navigation } = this.props;
+        const { TransactionsStore, navigation, SettingsStore } = this.props;
         const { destination, amount, fee } = this.state;
-        TransactionsStore.sendCoins({
-            addr: destination,
-            sat_per_byte: fee,
-            amount: amount
-        });
+        const { implementation } = SettingsStore;
+        
+        if (implementation === 'c-lightning-REST') {
+            TransactionsStore.sendCoins({
+                destination,
+                feeRate: fee,
+                satoshis: amount
+            });
+        } else {
+            TransactionsStore.sendCoins({
+                addr: destination,
+                sat_per_byte: fee,
+                amount: amount
+            });
+        }
         navigation.navigate('SendingOnChain');
     };
 

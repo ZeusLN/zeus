@@ -31,8 +31,6 @@ export default class PaymentsStore {
             .then((response: any) => {
                 // handle success
                 const data = response.data;
-                console.log('!');
-                console.log(data);
                 this.payments = data.pays;
                 this.loading = false;
             })
