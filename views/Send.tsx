@@ -46,7 +46,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     componentDidMount() {
-        Clipboard.getString().then(text => this.validateAddress(text));
+        Clipboard.getString().then(text => this.validateAddress(text, false));
     }
 
     componentWillReceiveProps(nextProps: any) {
@@ -67,7 +67,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         });
     }
 
-    validateAddress = (text: string) => {
+    validateAddress = (text: string, apply: boolean = true) => {
         const { navigation } = this.props;
         handleAnything(text)
             .then(([route, props]) => {
@@ -77,7 +77,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                 this.setState({
                     transactionType: null,
                     isValid: false,
-                    destination: text
+                    destination: apply ? text : this.state.destination
                 });
             });
     };
