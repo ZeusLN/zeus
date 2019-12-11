@@ -1,8 +1,8 @@
 import * as React from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View, Clipboard } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
-import AddressUtils from './../utils/AddressUtils';
+import handleAnything from './../utils/handleAnything';
 
 import InvoicesStore from './../stores/InvoicesStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
@@ -45,6 +45,10 @@ export default class Send extends React.Component<SendProps, SendState> {
         };
     }
 
+    componentDidMount() {
+        Clipboard.getString().then(text => this.validateAddress(text));
+    }
+
     componentWillReceiveProps(nextProps: any) {
         const { navigation } = nextProps;
         const destination = navigation.getParam('destination', null);
@@ -64,41 +68,18 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     validateAddress = (text: string) => {
-        const { NodeInfoStore, InvoicesStore } = this.props;
-        const { testnet } = NodeInfoStore;
-
-        const { value, amount } = AddressUtils.processSendAddress(text);
-
-        if (AddressUtils.isValidBitcoinAddress(value, testnet)) {
-            if (amount) {
+        const { navigation } = this.props;
+        handleAnything(text)
+            .then(([route, props]) => {
+                navigation.navigate(route, props);
+            })
+            .catch(err => {
                 this.setState({
-                    transactionType: 'On-chain',
-                    isValid: true,
-                    destination: value,
-                    amount
+                    transactionType: null,
+                    isValid: false,
+                    destination: text
                 });
-            } else {
-                this.setState({
-                    transactionType: 'On-chain',
-                    isValid: true,
-                    destination: value
-                });
-            }
-        } else if (AddressUtils.isValidLightningPaymentRequest(value)) {
-            this.setState({
-                transactionType: 'Lightning',
-                isValid: true,
-                destination: value
             });
-
-            InvoicesStore.getPayReq(value);
-        } else {
-            this.setState({
-                transactionType: null,
-                isValid: false,
-                destination: value
-            });
-        }
     };
 
     sendCoins = () => {
