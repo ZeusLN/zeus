@@ -55,6 +55,10 @@ export default class Send extends React.Component<SendProps, SendState> {
         const amount = navigation.getParam('amount', null);
         const transactionType = navigation.getParam('transactionType', null);
 
+        if (destination) {
+            this.validateAddress(destination);
+        }
+
         if (transactionType === 'Lightning') {
             this.props.InvoicesStore.getPayReq(destination);
         }
