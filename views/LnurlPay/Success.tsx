@@ -40,15 +40,14 @@ export default class LnurlPaySuccess extends React.Component<
                     break;
                 case 'url':
                     body = (
-                        <Text style={{ color: this.props.color }}>
-                            {description}:{' '}
-                            <TouchableOpacity
-                                style={{ textDecoration: 'underline' }}
-                                onPress={() => this.URLClicked()}
-                            >
-                                {url}
-                            </TouchableOpacity>
-                        </Text>
+                        <TouchableOpacity
+                            style={{ textDecoration: 'underline' }}
+                            onPress={() => this.URLClicked()}
+                        >
+                            <Text style={{ color: this.props.color }}>
+                                {description}: {url}
+                            </Text>
+                        </TouchableOpacity>
                     );
                     break;
                 case 'aes':
@@ -62,14 +61,14 @@ export default class LnurlPaySuccess extends React.Component<
                         plaintext = `<error decrypting message: ${err.message}>`;
                     }
                     body = (
-                        <View>
+                        <>
                             <Text style={{ color: this.props.color }}>
                                 {description}:{' '}
                             </Text>
                             <Text style={{ color: this.props.color }}>
                                 {plaintext}
                             </Text>
-                        </View>
+                        </>
                     );
                     break;
             }
