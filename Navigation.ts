@@ -4,7 +4,7 @@ import { createStackNavigator, createAppContainer } from 'react-navigation';
 import Transaction from './views/Transaction';
 import Wallet from './views/Wallet/Wallet';
 import Send from './views/Send';
-import LnurlPay from './views/LnurlPay';
+import LnurlPay from './views/LnurlPay/LnurlPay';
 import Receive from './views/Receive';
 import PaymentRequest from './views/PaymentRequest';
 import AddressQRScanner from './views/AddressQRScanner';
