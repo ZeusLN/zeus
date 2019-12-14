@@ -16,7 +16,7 @@
     "dateformat": "3.0.3",
     "hash.js": "^1.1.7",
     "identicon.js": "2.3.3",
-    "js-lnurl": "0.0.5",
+    "js-lnurl": "0.0.8",
     "lodash": "4.17.15",
     "mobx": "4.9.1",
     "mobx-react": "5.4.3",

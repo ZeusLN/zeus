@@ -1,9 +1,15 @@
 import * as React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import {
+    ActivityIndicator,
+    StyleSheet,
+    Text,
+    View,
+    ScrollView
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { when } from 'mobx';
 import { Button } from 'react-native-elements';
-import LnurlPaySuccess from './LnurlPaySuccess';
+import LnurlPaySuccess from './LnurlPay/Success';
 
 import TransactionsStore from './../stores/TransactionsStore';
 import LnurlPayStore from './../stores/LnurlPayStore';
@@ -52,6 +58,7 @@ export default class SendingLightning extends React.Component<
             error_msg,
             payment_hash,
             payment_route,
+            payment_preimage,
             payment_error
         } = TransactionsStore;
         const backgroundColor = this.getBackgroundColor();
@@ -63,7 +70,12 @@ export default class SendingLightning extends React.Component<
                     backgroundColor
                 }}
             >
-                <View style={styles.content}>
+                <ScrollView
+                    contentContainerStyle={{
+                        ...styles.content,
+                        height: '100%'
+                    }}
+                >
                     {loading && (
                         <ActivityIndicator size="large" color="#0000ff" />
                     )}
@@ -90,12 +102,14 @@ export default class SendingLightning extends React.Component<
                             Transaction successfully sent
                         </Text>
                     )}
-                    {payment_route &&
+                    {payment_preimage &&
                         payment_hash === LnurlPayStore.paymentHash &&
                         LnurlPayStore.successAction && (
                             <LnurlPaySuccess
+                                color="white"
                                 domain={LnurlPayStore.domain}
                                 successAction={LnurlPayStore.successAction}
+                                preimage={payment_preimage}
                             />
                         )}
                     {payment_hash && (
@@ -146,7 +160,9 @@ export default class SendingLightning extends React.Component<
                                 size: 25,
                                 color: backgroundColor
                             }}
-                            onPress={() => navigation.navigate('Wallet')}
+                            onPress={() =>
+                                navigation.navigate('Wallet', { refresh: true })
+                            }
                             style={styles.button}
                             buttonStyle={{
                                 backgroundColor: '#fff',
@@ -157,7 +173,7 @@ export default class SendingLightning extends React.Component<
                             }}
                         />
                     )}
-                </View>
+                </ScrollView>
             </View>
         );
     }
