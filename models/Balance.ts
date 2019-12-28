@@ -32,6 +32,8 @@ export default class Balance extends BaseModel {
 
     @computed
     public get getTotalLightningBalance(): Number {
-        return this.balance ? Number(this.balance) : Number(this.localBalance) + Number(this.remoteBalance) || 0;
+        return this.balance
+            ? Number(this.balance)
+            : Number(this.localBalance) + Number(this.remoteBalance) || 0;
     }
 }

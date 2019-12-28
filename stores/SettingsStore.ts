@@ -106,18 +106,22 @@ export default class SettingsStore {
     public getNewAddress = () => {
         const { host, port, macaroonHex, implementation } = this;
 
-        return RESTUtils.getNewAddress({ host, port, macaroonHex, implementation })
-            .then((response: any) => {
-                // handle success
-                const data = response.data;
-                const newAddress = data.address;
-                this.chainAddress = newAddress;
-                const newSettings = {
-                    ...this.settings,
-                    onChainAddress: newAddress
-                };
+        return RESTUtils.getNewAddress({
+            host,
+            port,
+            macaroonHex,
+            implementation
+        }).then((response: any) => {
+            // handle success
+            const data = response.data;
+            const newAddress = data.address;
+            this.chainAddress = newAddress;
+            const newSettings = {
+                ...this.settings,
+                onChainAddress: newAddress
+            };
 
-                this.setSettings(JSON.stringify(newSettings));
-            });
+            this.setSettings(JSON.stringify(newSettings));
+        });
     };
 }

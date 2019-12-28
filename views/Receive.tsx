@@ -42,7 +42,7 @@ export default class Receive extends React.Component<
 
     getNewAddress = () => {
         const { SettingsStore } = this.props;
-        SettingsStore.getNewAddress()
+        SettingsStore.getNewAddress();
     };
 
     updateIndex = (selectedIndex: number) => {

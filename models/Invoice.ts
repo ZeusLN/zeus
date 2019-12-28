@@ -38,17 +38,17 @@ export default class Invoice extends BaseModel {
     // c-lightning
     public bolt11: string;
     public label: string;
-    public description: string
+    public description: string;
     public msatoshi: Number;
     public payment_hash: string;
     public expires_at: Number;
     public status: string;
 
-    @computed public get getMemo(): number|string {
+    @computed public get getMemo(): number | string {
         return this.memo || this.label || this.description || 'No memo';
     }
 
-    @computed public get isPaid(): number|string {
+    @computed public get isPaid(): number | string {
         return this.status === 'paid' || this.settled;
     }
 
@@ -61,7 +61,7 @@ export default class Invoice extends BaseModel {
     }
 
     // return amount in satoshis
-    @computed public get getAmount(): string|number {
+    @computed public get getAmount(): string | number {
         if (this.msatoshi) {
             const msatoshi = this.msatoshi.toString();
             return Number(msatoshi.replace('msat', '')) / 1000;
@@ -72,9 +72,7 @@ export default class Invoice extends BaseModel {
     // return amount in satoshis
     @computed public get listDate(): string {
         return this.isPaid
-            ? DateTimeUtils.listFormattedDate(
-                  this.settle_date
-              )
+            ? DateTimeUtils.listFormattedDate(this.settle_date)
             : DateTimeUtils.listFormattedDate(
                   this.expires_at || this.creation_date
               );

@@ -97,7 +97,10 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
                                     title={item.getMemo}
                                     subtitle={`${
                                         isPaid ? 'Paid' : 'Unpaid'
-                                    }: ${units && getAmount(item.getAmount)} | ${item.listDate}`}
+                                    }: ${units &&
+                                        getAmount(item.getAmount)} | ${
+                                        item.listDate
+                                    }`}
                                     containerStyle={{
                                         borderBottomWidth: 0,
                                         backgroundColor:

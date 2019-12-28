@@ -37,9 +37,12 @@ export default class InvoicesStore {
                 // handle success
                 const data = response.data;
                 this.invoices = data.payments || data.invoices;
-                this.invoices = this.invoices.map(invoice => new Invoice(invoice));
+                this.invoices = this.invoices.map(
+                    invoice => new Invoice(invoice)
+                );
                 this.invoices = this.invoices.reverse();
-                this.invoicesCount = data.last_index_offset || this.invoices.length;
+                this.invoicesCount =
+                    data.last_index_offset || this.invoices.length;
                 this.loading = false;
             })
             .catch(() => {
@@ -63,20 +66,20 @@ export default class InvoicesStore {
 
         let data;
         if (implementation === 'c-lightning-REST') {
-          // amount(msats), label, description
-          data = {
-              description: memo,
-              label: memo,
-              amount: Number(value) * 1000,
-              expiry,
-              private: true
-          };
+            // amount(msats), label, description
+            data = {
+                description: memo,
+                label: memo,
+                amount: Number(value) * 1000,
+                expiry,
+                private: true
+            };
         } else {
-          data = {
-              memo,
-              value,
-              expiry
-          };
+            data = {
+                memo,
+                value,
+                expiry
+            };
         }
 
         RESTUtils.createInvoice(this.settingsStore, data)

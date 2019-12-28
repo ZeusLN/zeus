@@ -7,7 +7,7 @@ export default class PaymentsStore {
     @observable loading: boolean = false;
     @observable error: boolean = false;
     @observable error_msg: string;
-    @observable payments: Array<Payment|any> = [];
+    @observable payments: Array<Payment | any> = [];
     settingsStore: SettingsStore;
 
     constructor(settingsStore: SettingsStore) {
