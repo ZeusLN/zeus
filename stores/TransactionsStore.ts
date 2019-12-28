@@ -44,7 +44,9 @@ export default class TransactionsStore {
                 // handle success
                 const data = response.data;
                 const transactions = data.transactions || data.outputs;
-                this.transactions =  transactions.reverse().map(tx => new Transaction(tx));
+                this.transactions = transactions
+                    .reverse()
+                    .map(tx => new Transaction(tx));
                 this.loading = false;
             })
             .catch(() => {
@@ -92,7 +94,7 @@ export default class TransactionsStore {
             data = {
                 invoice: payment_request,
                 amount
-            }
+            };
         } else {
             if (amount) {
                 data = {

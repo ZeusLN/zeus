@@ -103,9 +103,14 @@ export default class Transactions extends React.Component<TransactionsProps> {
                     <FlatList
                         data={transactions}
                         renderItem={({ item }: Transaction) => {
-                            let subtitle = item.getBlockHeight || 'Awaiting Confirmation';
+                            let subtitle =
+                                item.getBlockHeight || 'Awaiting Confirmation';
                             if (item.time_stamp) {
-                                subtitle.append(` | ${DateTimeUtils.listFormattedDate(item.time_stamp)}`);
+                                subtitle.append(
+                                    ` | ${DateTimeUtils.listFormattedDate(
+                                        item.time_stamp
+                                    )}`
+                                );
                             }
                             return (
                                 <ListItem
@@ -131,9 +136,7 @@ export default class Transactions extends React.Component<TransactionsProps> {
                                 />
                             );
                         }}
-                        keyExtractor={(item, index) =>
-                            `${item.tx}-${index}`
-                        }
+                        keyExtractor={(item, index) => `${item.tx}-${index}`}
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}
                         refreshing={loading}

@@ -111,7 +111,8 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                 <React.Fragment>
                                     <ListItem
                                         title={
-                                            (item.alias || nodes[item.remote_pubkey] &&
+                                            item.alias ||
+                                            (nodes[item.remote_pubkey] &&
                                                 nodes[item.remote_pubkey]
                                                     .alias) ||
                                             item.remote_pubkey

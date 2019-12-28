@@ -51,7 +51,10 @@ export default class ChannelsStore {
         reaction(
             () => this.channels,
             () => {
-                if (this.channels && this.settingsStore.implementation !== 'c-lightning-REST') {
+                if (
+                    this.channels &&
+                    this.settingsStore.implementation !== 'c-lightning-REST'
+                ) {
                     this.channels.forEach((channel: Channel) => {
                         if (!this.nodes[channel.remote_pubkey]) {
                             this.getNodeInfo(channel.remote_pubkey).then(
@@ -80,8 +83,8 @@ export default class ChannelsStore {
                     port ? ':' + port : ''
                 }/v1/graph/node/${pubkey}`,
                 headers: {
-                    'macaroon': macaroonHex,
-                    'encodingtype': 'hex'
+                    macaroon: macaroonHex,
+                    encodingtype: 'hex'
                 }
             })
             .then((response: any) => {
@@ -112,7 +115,10 @@ export default class ChannelsStore {
     };
 
     @action
-    public closeChannel = (request?: CloseChannelRequest, channelId?: string) => {
+    public closeChannel = (
+        request?: CloseChannelRequest,
+        channelId?: string
+    ) => {
         const { implementation } = this.settingsStore;
         this.loading = true;
 
@@ -121,10 +127,7 @@ export default class ChannelsStore {
             urlParams = [channelId];
         } else {
             const { funding_txid_str, output_index } = request;
-            urlParams = [
-                funding_txid_str,
-                output_index
-            ];
+            urlParams = [funding_txid_str, output_index];
         }
 
         RESTUtils.closeChannel(this.settingsStore, urlParams)
@@ -162,7 +165,7 @@ export default class ChannelsStore {
         }
 
         RESTUtils.connectPeer(this.settingsStore, data)
-            .then((response) => {;
+            .then(response => {
                 // handle success
                 this.errorPeerConnect = false;
                 this.connectingToPeer = false;
@@ -173,7 +176,8 @@ export default class ChannelsStore {
             .catch((error: any) => {
                 // handle error
                 const errorInfo = error.response && error.response.data;
-                this.errorMsgPeer = errorInfo && errorInfo.error.message || error.message;
+                this.errorMsgPeer =
+                    (errorInfo && errorInfo.error.message) || error.message;
                 this.errorPeerConnect = true;
                 this.connectingToPeer = false;
                 this.peerSuccess = false;
@@ -216,7 +220,8 @@ export default class ChannelsStore {
             })
             .catch((error: err) => {
                 const errorInfo = error.response.data;
-                this.errorMsgChannel = errorInfo.error.message || errorInfo.error;
+                this.errorMsgChannel =
+                    errorInfo.error.message || errorInfo.error;
                 this.output_index = null;
                 this.funding_txid_str = null;
                 this.errorOpenChannel = true;

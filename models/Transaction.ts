@@ -11,7 +11,7 @@ export default class Transaction extends BaseModel {
     public tx_hash: string;
     public total_fees: string;
     // c-lightning
-    public value: number|string;
+    public value: number | string;
     public blockheight: number;
     public status: string;
     public txid: string;
@@ -22,11 +22,11 @@ export default class Transaction extends BaseModel {
         return this.num_confirmations > 0 || this.status === 'confirmed';
     }
 
-    @computed public get getAmount(): number|string {
+    @computed public get getAmount(): number | string {
         return this.value || this.amount;
     }
 
-    @computed public get getBlockHeight(): number|string {
+    @computed public get getBlockHeight(): number | string {
         const block_height = this.blockheight || this.block_height;
         return block_height ? block_height.toString() : false;
     }

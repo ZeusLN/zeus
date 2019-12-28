@@ -108,26 +108,30 @@ export default class TransactionView extends React.Component<TransactionProps> {
                 </View>
 
                 <View style={styles.content}>
-                    {total_fees && <View>
-                        <Text
-                            style={
-                                theme === 'dark' ? styles.labelDark : styles.label
-                            }
-                        >
-                            Total Fees:
-                        </Text>
-                        <TouchableOpacity onPress={() => changeUnits()}>
+                    {total_fees && (
+                        <View>
                             <Text
                                 style={
                                     theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
+                                        ? styles.labelDark
+                                        : styles.label
                                 }
                             >
-                                {units && getAmount(total_fees || 0)}
+                                Total Fees:
                             </Text>
-                        </TouchableOpacity>
-                    </View>}
+                            <TouchableOpacity onPress={() => changeUnits()}>
+                                <Text
+                                    style={
+                                        theme === 'dark'
+                                            ? styles.valueDark
+                                            : styles.value
+                                    }
+                                >
+                                    {units && getAmount(total_fees || 0)}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
                     <Text
                         style={
@@ -196,72 +200,89 @@ export default class TransactionView extends React.Component<TransactionProps> {
                         </TouchableOpacity>
                     )}
 
-                    {num_confirmations && <View>
-                        <Text
-                            style={
-                                theme === 'dark' ? styles.labelDark : styles.label
-                            }
-                        >
-                            Number of Confirmations:
-                        </Text>
-                        <Text
-                            style={{
-                                ...styles.value,
-                                color: num_confirmations > 0 ? 'green' : 'red'
-                            }}
-                        >
-                            {num_confirmations}
-                        </Text>
-                    </View>}
+                    {num_confirmations && (
+                        <View>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Number of Confirmations:
+                            </Text>
+                            <Text
+                                style={{
+                                    ...styles.value,
+                                    color:
+                                        num_confirmations > 0 ? 'green' : 'red'
+                                }}
+                            >
+                                {num_confirmations}
+                            </Text>
+                        </View>
+                    )}
 
-                    {status && <View>
-                        <Text
-                            style={
-                                theme === 'dark' ? styles.labelDark : styles.label
-                            }
-                        >
-                            Status:
-                        </Text>
-                        <Text
-                            style={{
-                                ...styles.value
-                            }}
-                        >
-                            {status}
-                        </Text>
-                    </View>}
+                    {status && (
+                        <View>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Status:
+                            </Text>
+                            <Text
+                                style={{
+                                    ...styles.value
+                                }}
+                            >
+                                {status}
+                            </Text>
+                        </View>
+                    )}
 
-                    {date && <View>
-                        <Text
-                            style={
-                                theme === 'dark' ? styles.labelDark : styles.label
-                            }
-                        >
-                            Timestamp:
-                        </Text>
-                        <Text
-                            style={
-                                theme === 'dark' ? styles.valueDark : styles.value
-                            }
-                        >
-                            {date.toString()}
-                        </Text>
-                    </View>}
+                    {date && (
+                        <View>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Timestamp:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {date.toString()}
+                            </Text>
+                        </View>
+                    )}
 
-                    {destAddresses && <View>
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.labelDark
-                                    : styles.label
-                            }
-                        >
-                            {destAddresses.length > 1
-                                ? 'Destination Addresses:'
-                                : 'Destination Address:'}
-                        </Text>
-                        <React.Fragment>{addresses}</React.Fragment>
-                    </View>}
+                    {destAddresses && (
+                        <View>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                {destAddresses.length > 1
+                                    ? 'Destination Addresses:'
+                                    : 'Destination Address:'}
+                            </Text>
+                            <React.Fragment>{addresses}</React.Fragment>
+                        </View>
+                    )}
                 </View>
             </ScrollView>
         );

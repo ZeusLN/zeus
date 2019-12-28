@@ -1,5 +1,14 @@
 import * as React from 'react';
-import { ActionSheetIOS, Picker, Platform, StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-native';
+import {
+    ActionSheetIOS,
+    Picker,
+    Platform,
+    StyleSheet,
+    Text,
+    View,
+    TextInput,
+    TouchableOpacity
+} from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -311,7 +320,10 @@ export default class AddEditNode extends React.Component<
                         <View>
                             <Text
                                 style={{
-                                    color: savedTheme === 'dark' ? 'white' : 'black'
+                                    color:
+                                        savedTheme === 'dark'
+                                            ? 'white'
+                                            : 'black'
                                 }}
                             >
                                 Theme
@@ -319,7 +331,10 @@ export default class AddEditNode extends React.Component<
                             <Picker
                                 selectedValue={theme}
                                 onValueChange={(itemValue: string) =>
-                                    this.setState({ implementation: itemValue, saved: false })
+                                    this.setState({
+                                        implementation: itemValue,
+                                        saved: false
+                                    })
                                 }
                                 style={
                                     savedTheme === 'dark'
@@ -328,7 +343,10 @@ export default class AddEditNode extends React.Component<
                                 }
                             >
                                 <Picker.Item label="lnd" value="lnd" />
-                                <Picker.Item label="c-lightning-REST" value="c-lightning-REST" />
+                                <Picker.Item
+                                    label="c-lightning-REST"
+                                    value="c-lightning-REST"
+                                />
                             </Picker>
                         </View>
                     )}
@@ -337,7 +355,10 @@ export default class AddEditNode extends React.Component<
                         <View>
                             <Text
                                 style={{
-                                    color: savedTheme === 'dark' ? 'white' : 'black'
+                                    color:
+                                        savedTheme === 'dark'
+                                            ? 'white'
+                                            : 'black'
                                 }}
                             >
                                 Node implementation
@@ -355,9 +376,16 @@ export default class AddEditNode extends React.Component<
                                         },
                                         buttonIndex => {
                                             if (buttonIndex === 1) {
-                                                this.setState({ implementation: 'lnd', saved: false });
+                                                this.setState({
+                                                    implementation: 'lnd',
+                                                    saved: false
+                                                });
                                             } else if (buttonIndex === 2) {
-                                                this.setState({ implementation: 'c-lightning-REST', saved: false });
+                                                this.setState({
+                                                    implementation:
+                                                        'c-lightning-REST',
+                                                    saved: false
+                                                });
                                             }
                                         }
                                     )
