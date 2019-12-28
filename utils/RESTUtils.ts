@@ -7,7 +7,7 @@ const lndRoutes = {
     getLightningBalance: '/v1/balance/channels',
     getChannels: '/v1/channels',
     sendCoins: '/v1/transactions',
-    getNodeInfo: '/v1/getinfo',
+    getMyNodeInfo: '/v1/getinfo',
     getInvoices: '/v1/invoices?reversed=true&num_max_invoices=100',
     createInvoice: '/v1/invoices',
     getPayments: '/v1/payments',
@@ -33,7 +33,7 @@ const clightningRoutes = {
     getLightningBalance: '/v1/channel/localremotebal',
     getChannels: '/v1/channel/listChannels',
     sendCoins: '/v1/withdraw',
-    getNodeInfo: '/v1/getinfo',
+    getMyNodeInfo: '/v1/getinfo',
     getInvoices: '/v1/invoice/listInvoices/',
     createInvoice: '/v1/invoice/genInvoice/',
     getPayments: '/v1/pay/listPays',
@@ -61,7 +61,7 @@ const getTransactionsToken = axios.CancelToken.source().token;
 const getChannelsToken = axios.CancelToken.source().token;
 const getBlockchainBalanceToken = axios.CancelToken.source().token;
 const getLightningBalanceToken = axios.CancelToken.source().token;
-const getNodeInfoToken = axios.CancelToken.source().token;
+const getMyNodeInfoToken = axios.CancelToken.source().token;
 const getInvoicesToken = axios.CancelToken.source().token;
 const getPaymentsToken = axios.CancelToken.source().token;
 
@@ -184,8 +184,8 @@ class RESTUtils {
         );
     sendCoins = (settingsStore: SettingsStore, data: any) =>
         this.postRequest(settingsStore, 'sendCoins', data);
-    getNodeInfo = (settingsStore: SettingsStore) =>
-        this.getRequest(settingsStore, 'getNodeInfo', getNodeInfoToken);
+    getMyNodeInfo = (settingsStore: SettingsStore) =>
+        this.getRequest(settingsStore, 'getMyNodeInfo', getMyNodeInfoToken);
     getInvoices = (settingsStore: SettingsStore) =>
         this.getRequest(settingsStore, 'getInvoices', getInvoicesToken);
     createInvoice = (settingsStore: SettingsStore, data: any) =>
@@ -210,7 +210,7 @@ class RESTUtils {
     closeChannel = (settingsStore: SettingsStore, urlParams?: Array<string>) =>
         this.deleteRequest(settingsStore, 'closeChannel', urlParams);
     getNodeInfo = (settingsStore: SettingsStore, urlParams?: Array<string>) =>
-        this.getRequest(settingsStore, 'getNodeInfo', null, urlParams);
+        this.getRequest(settingsStore, 'getNodeInfo', urlParams);
 }
 
 const restUtils = new RESTUtils();
