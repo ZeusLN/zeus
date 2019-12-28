@@ -2,9 +2,13 @@ type FeeLimit = { percent: string } | { fixed: string };
 
 export default interface TransactionRequest {
     target_conf?: Number | null; // optional
-    addr: string;
+    addr?: string;
     sat_per_byte?: string | null; // optional
-    amount: string;
+    amount?: string;
+    // c-lightning
+    address?: string;
+    feeRate?: string;
+    satoshis?: string;
 }
 
 export type SendPaymentRequest =

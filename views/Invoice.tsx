@@ -34,19 +34,19 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
             fallback_addr,
             r_hash,
             settle_date,
-            settled,
+            isPaid,
             expiry,
-            memo,
+            getMemo,
             receipt,
             value,
             creation_date,
             description_hash,
             r_preimage,
-            cltv_expiry
+            cltv_expiry,
+            settleDate,
+            creationDate
         } = invoice;
         const privateInvoice = invoice.private;
-        const settleDate = new Date(Number(settle_date) * 1000).toString();
-        const creationDate = new Date(Number(creation_date) * 1000).toString();
 
         const BackButton = () => (
             <Icon
@@ -81,13 +81,13 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                     ? styles.amountDark
                                     : styles.amount
                             }
-                        >{`${settled ? 'Paid' : 'Unpaid'}: ${units &&
-                            getAmount(settled ? amt_paid_sat : value)}`}</Text>
+                        >{`${isPaid ? 'Paid' : 'Unpaid'}: ${units &&
+                            getAmount(invoice.getAmount)}`}</Text>
                     </TouchableOpacity>
                 </View>
 
                 <View style={styles.content}>
-                    {memo && (
+                    {getMemo && (
                         <Text
                             style={
                                 theme === 'dark'
@@ -98,7 +98,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                             Memo:
                         </Text>
                     )}
-                    {memo && (
+                    {getMemo && (
                         <Text
                             style={
                                 theme === 'dark'
@@ -106,7 +106,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                     : styles.value
                             }
                         >
-                            {memo}
+                            {getMemo}
                         </Text>
                     )}
 

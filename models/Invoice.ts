@@ -1,3 +1,7 @@
+import BaseModel from './BaseModel.ts';
+import { observable, computed } from 'mobx';
+import DateTimeUtils from './../utils/DateTimeUtils';
+
 interface HopHint {
     fee_proportional_millionths: number;
     chan_id: string;
@@ -10,25 +14,75 @@ interface RouteHint {
     hop_hints: Array<HopHint>;
 }
 
-export default interface Invoice {
-    route_hints: Array<RouteHint>;
-    fallback_addr: string;
-    r_hash: string;
-    settle_date: string;
-    expiry: string;
-    memo: string;
-    receipt: string;
-    settle_index: string;
-    add_index: string;
-    payment_request: string;
-    value: string;
-    settled: boolean;
-    amt_paid_msat: string;
-    amt_paid: string;
-    amt_paid_sat: string;
-    private: boolean;
-    creation_date: string;
-    description_hash: string;
-    r_preimage: string;
-    cltv_expiry: string;
+export default class Invoice extends BaseModel {
+    public route_hints: Array<RouteHint>;
+    public fallback_addr: string;
+    public r_hash: string;
+    public settle_date: string;
+    public expiry: string;
+    public memo: string;
+    public receipt: string;
+    public settle_index: string;
+    public add_index: string;
+    public payment_request: string;
+    public value: string;
+    public settled: boolean;
+    public amt_paid_msat: string;
+    public amt_paid: string;
+    public amt_paid_sat: string;
+    public private: boolean;
+    public creation_date: string;
+    public description_hash: string;
+    public r_preimage: string;
+    public cltv_expiry: string;
+    // c-lightning
+    public bolt11: string;
+    public label: string;
+    public description: string;
+    public msatoshi: Number;
+    public payment_hash: string;
+    public expires_at: Number;
+    public status: string;
+
+    @computed public get getMemo(): number | string {
+        return this.memo || this.label || this.description || 'No memo';
+    }
+
+    @computed public get isPaid(): number | string {
+        return this.status === 'paid' || this.settled;
+    }
+
+    @computed public get key(): string {
+        return this.bolt11 || this.r_hash;
+    }
+
+    @computed public get getPaymentRequest(): string {
+        return this.bolt11 || this.payment_request;
+    }
+
+    // return amount in satoshis
+    @computed public get getAmount(): string | number {
+        if (this.msatoshi) {
+            const msatoshi = this.msatoshi.toString();
+            return Number(msatoshi.replace('msat', '')) / 1000;
+        }
+        return this.settled ? item.amt_paid_sat : item.value;
+    }
+
+    // return amount in satoshis
+    @computed public get listDate(): string {
+        return this.isPaid
+            ? DateTimeUtils.listFormattedDate(this.settle_date)
+            : DateTimeUtils.listFormattedDate(
+                  this.expires_at || this.creation_date
+              );
+    }
+
+    @computed public get settleDate(): Date {
+        return new Date(Number(this.settle_date) * 1000).toString();
+    }
+
+    @computed public get creationDate(): Date {
+        return new Date(Number(this.creation_date) * 1000).toString();
+    }
 }

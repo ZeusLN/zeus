@@ -56,7 +56,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
         const { settings } = SettingsStore;
         const { theme } = settings;
 
-        const Channel = (balanceImage: string) => (
+        const ChannelIcon = (balanceImage: string) => (
             <Avatar
                 source={{
                     uri: balanceImage
@@ -104,31 +104,32 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                         data={channels}
                         renderItem={({ item }) => {
                             const data = new Identicon(
-                                hash.sha1(item.remote_pubkey),
+                                hash.sha1(item.alias || item.remote_pubkey),
                                 420
                             ).toString();
                             return (
                                 <React.Fragment>
                                     <ListItem
                                         title={
+                                            item.alias ||
                                             (nodes[item.remote_pubkey] &&
                                                 nodes[item.remote_pubkey]
                                                     .alias) ||
                                             item.remote_pubkey
                                         }
-                                        leftElement={Channel(
+                                        leftElement={ChannelIcon(
                                             `data:image/png;base64,${data}`
                                         )}
                                         subtitle={`${
-                                            !item.active ? 'INACTIVE | ' : ''
+                                            !item.isActive ? 'INACTIVE | ' : ''
                                         }${
                                             item.private ? 'Private | ' : ''
                                         }Local: ${units &&
                                             getAmount(
-                                                item.local_balance || 0
+                                                item.localBalance || 0
                                             )} | Remote: ${units &&
                                             getAmount(
-                                                item.remote_balance || 0
+                                                item.remoteBalance || 0
                                             )}`}
                                         containerStyle={{
                                             borderBottomWidth: 0,

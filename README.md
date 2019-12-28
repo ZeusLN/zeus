@@ -1,5 +1,5 @@
 # Zeus
-A mobile Bitcoin app for Lightning Network Daemon (lnd) node operators ⚡️
+A mobile Bitcoin app for lnd and c-lightning node operators ⚡️
 
 *Notice*: If you are looking for Zeus Server, the Lightning-based Point-of-Sale solution (unrelated to this project), please visit [puzzle/zeus](https://github.com/puzzle/zeus).
 
@@ -21,15 +21,15 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 [Telegram](https://t.me/zeusLN)
 * Keep up with us on
 [Twitter](https://twitter.com/ZeusLN)
-* Open a channel with 
+* Open a channel with
 [our node](https://1ml.com/node/03e1210c8d4b236a53191bb172701d76ec06dfa869a1afffcfd8f4e07d9129d898)
 
 ## Connecting to your node
 
 Currently, to use Zeus, you must have a Bitcoin Lightning node running
-[Lightning Network Daemon (lnd)](https://github.com/LightningNetwork/lnd).
+[Lightning Network Daemon (lnd)](https://github.com/LightningNetwork/lnd) or [c-lightning](https://github.com/ElementsProject/lightning) using the [c-lightning-REST](https://github.com/Ride-The-Lightning/c-lightning-REST/) REST API.
 
-You must provide Zeus with your node's hostname, port number, and the lnd macaroon you choose to use in **hex format**. If you need help converting your macaroon to hex format we wrote up a Node.js script that can use
+You must provide Zeus with your node's hostname, port number, and the macaroon you choose to use in **hex format**. If you need help converting your macaroon to hex format we wrote up a Node.js script that can use
 [here](https://github.com/ZeusLN/lnd-hex-macaroon-generator/). Alternatively, if you're running a Unix-based operating system (eg. macOS, Linux) you can run `xxd -ps -u -c 1000 /path/to/admin.macaroon` to generate your macaroon in hex format.
 
 If you would like to learn more about running your own guide we suggest checking out the following guides:
