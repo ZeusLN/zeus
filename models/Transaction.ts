@@ -18,13 +18,17 @@ export default class Transaction extends BaseModel {
     public outputs: number;
     public address: string;
 
+    @computed public get isConfirmed(): boolean {
+        return this.num_confirmations > 0 || this.status === 'confirmed';
+    }
+
     @computed public get getAmount(): number|string {
         return this.value || this.amount;
     }
 
     @computed public get getBlockHeight(): number|string {
         const block_height = this.blockheight || this.block_height;
-        return block_height.toString();
+        return block_height ? block_height.toString() : false;
     }
 
     @computed public get tx(): string {

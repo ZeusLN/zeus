@@ -7,7 +7,15 @@ const lndRoutes = {
     getLightningBalance: '/v1/balance/channels',
     getChannels: '/v1/channels',
     sendCoins: '/v1/transactions',
-    getNodeInfo: '/v1/getinfo'
+    getNodeInfo: '/v1/getinfo',
+    getInvoices: '/v1/invoices?reversed=true&num_max_invoices=100',
+    createInvoice: '/v1/invoices',
+    getPayments: '/v1/payments',
+    getNewAddress: '/v1/newaddress',
+    openChannel: '/v1/channels',
+    connectPeer: '/v1/peers',
+    listNode: '/v1/network/listNode',
+    closeChannel: '/v1/channel/closeChannel/'
 };
 
 const clightningRoutes = {
@@ -16,7 +24,16 @@ const clightningRoutes = {
     getLightningBalance: '/v1/channel/localremotebal',
     getChannels: '/v1/channel/listChannels',
     sendCoins: '/v1/withdraw',
-    getNodeInfo: '/v1/getinfo'
+    getNodeInfo: '/v1/getinfo',
+    // getInvoices: '/v1/pay/listPayments',
+    getInvoices: '/v1/invoice/listInvoices/',
+    createInvoice: '/v1/invoice/genInvoice/',
+    getPayments: '/v1/pay/listPays/',
+    getNewAddress: '/v1/newaddr',
+    openChannel: '/v1/channel/openChannel/',
+    connectPeer: '/v1/peer/connect',
+    listNode: '/v1/network/listNode',
+    closeChannel: '/v1/channel/closeChannel/'
 };
 
 interface Headers {
@@ -30,6 +47,8 @@ const getChannelsToken = axios.CancelToken.source().token;
 const getBlockchainBalanceToken = axios.CancelToken.source().token;
 const getLightningBalanceToken = axios.CancelToken.source().token;
 const getNodeInfoToken = axios.CancelToken.source().token;
+const getInvoicesToken = axios.CancelToken.source().token;
+const getPaymentsToken = axios.CancelToken.source().token;
 
 class RESTUtils {
     axiosReq = (headers: Headers, url: string, method: string, cancelToken?: any, data?: any) => {
@@ -82,6 +101,13 @@ class RESTUtils {
     getLightningBalance = (settingsStore: SettingsStore) => this.getRequest(settingsStore, 'getLightningBalance', getLightningBalanceToken);
     sendCoins = (settingsStore: SettingsStore, data: any) => this.postRequest(settingsStore, 'sendCoins', data);
     getNodeInfo = (settingsStore: SettingsStore) => this.getRequest(settingsStore, 'getNodeInfo', getNodeInfoToken);
+    getInvoices = (settingsStore: SettingsStore) => this.getRequest(settingsStore, 'getInvoices', getInvoicesToken);
+    createInvoice = (settingsStore: SettingsStore, data: any) => this.postRequest(settingsStore, 'createInvoice', data);
+    getPayments = (settingsStore: SettingsStore) => this.getRequest(settingsStore, 'getPayments', getPaymentsToken);
+    getNewAddress = (settingsStore: SettingsStore) => this.getRequest(settingsStore, 'getNewAddress');
+    openChannel = (settingsStore: SettingsStore, data: any) => this.postRequest(settingsStore, 'openChannel', data);
+    connectPeer = (settingsStore: SettingsStore, data: any) => this.postRequest(settingsStore, 'connectPeer', data);
+    listNode = (settingsStore: SettingsStore) => this.getRequest(settingsStore, 'listNode');
 }
 
 const restUtils = new RESTUtils();

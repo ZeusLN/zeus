@@ -127,7 +127,7 @@ export default class AddEditNode extends React.Component<
                 nodes,
                 theme: settings.theme,
                 selectedNode: settings.selectedNode,
-                onChainAndress: settings.onChainAndress
+                onChainAddress: settings.onChainAddress
             })
         );
 
@@ -161,7 +161,7 @@ export default class AddEditNode extends React.Component<
                 theme: settings.theme,
                 selectedNode:
                     index === settings.selectedNode ? 0 : settings.selectedNode,
-                onChainAndress: settings.onChainAndress
+                onChainAddress: settings.onChainAddress
             })
         ).then(() => {
             navigation.navigate('Wallet', { refresh: true });
@@ -179,7 +179,7 @@ export default class AddEditNode extends React.Component<
                 nodes,
                 theme: settings.theme,
                 selectedNode: index,
-                onChainAndress: settings.onChainAndress
+                onChainAddress: settings.onChainAddress
             })
         );
 
@@ -289,7 +289,7 @@ export default class AddEditNode extends React.Component<
                             color: savedTheme === 'dark' ? 'white' : 'black'
                         }}
                     >
-                        LND Macaroon (Hex format)
+                        Macaroon (Hex format)
                     </Text>
                     <TextInput
                         placeholder={'0A...'}

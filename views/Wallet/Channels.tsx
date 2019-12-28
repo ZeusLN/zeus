@@ -56,7 +56,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
         const { settings } = SettingsStore;
         const { theme } = settings;
 
-        const Channel = (balanceImage: string) => (
+        const ChannelIcon = (balanceImage: string) => (
             <Avatar
                 source={{
                     uri: balanceImage
@@ -116,7 +116,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                                     .alias) ||
                                             item.remote_pubkey
                                         }
-                                        leftElement={Channel(
+                                        leftElement={ChannelIcon(
                                             `data:image/png;base64,${data}`
                                         )}
                                         subtitle={`${
@@ -125,10 +125,10 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                             item.private ? 'Private | ' : ''
                                         }Local: ${units &&
                                             getAmount(
-                                                item.local_balance || 0
+                                                item.localBalance || 0
                                             )} | Remote: ${units &&
                                             getAmount(
-                                                item.remote_balance || 0
+                                                item.remoteBalance || 0
                                             )}`}
                                         containerStyle={{
                                             borderBottomWidth: 0,
