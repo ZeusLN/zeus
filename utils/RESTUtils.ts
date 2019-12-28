@@ -21,7 +21,10 @@ const lndRoutes = {
     decodePaymentRequest: function(urlParams: Array<string>) {
         return `/v1/payreq/${urlParams[0]}`;
     },
-    payLightningInvoice: '/v1/channels/transactions'
+    payLightningInvoice: '/v1/channels/transactions',
+    getNodeInfo: function(urlParams: Array<string>) {
+        return `/v1/graph/node/${urlParams[0]}`;
+    }
 };
 
 const clightningRoutes = {
@@ -44,7 +47,8 @@ const clightningRoutes = {
     decodePaymentRequest: function(urlParams: Array<string>) {
         return `/v1/pay/decodePay/${urlParams[0]}`;
     },
-    payLightningInvoice: '/v1/pay'
+    payLightningInvoice: '/v1/pay',
+    getNodeInfo: 'N/A'
 };
 
 interface Headers {
@@ -205,6 +209,8 @@ class RESTUtils {
         this.postRequest(settingsStore, 'payLightningInvoice', data);
     closeChannel = (settingsStore: SettingsStore, urlParams?: Array<string>) =>
         this.deleteRequest(settingsStore, 'closeChannel', urlParams);
+    getNodeInfo = (settingsStore: SettingsStore, urlParams?: Array<string>) =>
+        this.getRequest(settingsStore, 'getNodeInfo', null, urlParams);
 }
 
 const restUtils = new RESTUtils();
