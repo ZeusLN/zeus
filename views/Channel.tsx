@@ -28,12 +28,16 @@ interface ChannelProps {
 @inject('ChannelsStore', 'UnitsStore', 'SettingsStore')
 @observer
 export default class ChannelView extends React.Component<ChannelProps> {
-    closeChannel = (channelPoint: string) => {
+    closeChannel = (channelPoint: string, channelId: string) => {
         const { ChannelsStore, navigation } = this.props;
-        const funding_txid_str = channelPoint.split(':')[0];
-        const output_index = channelPoint.split(':')[1];
+        if (channelId) {
+            ChannelsStore.closeChannel(null, channelId);
+        } else {
+            const funding_txid_str = channelPoint.split(':')[0];
+            const output_index = channelPoint.split(':')[1];
 
-        ChannelsStore.closeChannel({ funding_txid_str, output_index });
+            ChannelsStore.closeChannel({ funding_txid_str, output_index });
+        }
         navigation.navigate('Wallet');
     };
 
@@ -64,7 +68,8 @@ export default class ChannelView extends React.Component<ChannelProps> {
             total_satoshis_sent,
             remote_pubkey,
             capacity,
-            alias
+            alias,
+            channel_id
         } = channel;
         const privateChannel = channel.private;
         const data = new Identicon(hash.sha1(alias || remote_pubkey), 420).toString();
@@ -330,7 +335,7 @@ export default class ChannelView extends React.Component<ChannelProps> {
                                 size: 25,
                                 color: '#fff'
                             }}
-                            onPress={() => this.closeChannel(channel_point)}
+                            onPress={() => this.closeChannel(channel_point, channel_id)}
                             buttonStyle={{
                                 backgroundColor: 'red',
                                 borderRadius: 30

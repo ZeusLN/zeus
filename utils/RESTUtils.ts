@@ -15,7 +15,13 @@ const lndRoutes = {
     openChannel: '/v1/channels',
     connectPeer: '/v1/peers',
     listNode: '/v1/network/listNode',
-    closeChannel: '/v1/channel/closeChannel/'
+    closeChannel: function (urlParams: Array<string>) {
+        return `/v1/channels/${urlParams[0]}/${urlParams[1]}/`;
+    },
+    decodePaymentRequest: function (urlParams: Array<string>) {
+        return `/v1/payreq/${urlParams[0]}`;
+    },
+    payLightningInvoice: '/v1/channels/transactions'
 };
 
 const clightningRoutes = {
@@ -25,15 +31,20 @@ const clightningRoutes = {
     getChannels: '/v1/channel/listChannels',
     sendCoins: '/v1/withdraw',
     getNodeInfo: '/v1/getinfo',
-    // getInvoices: '/v1/pay/listPayments',
     getInvoices: '/v1/invoice/listInvoices/',
     createInvoice: '/v1/invoice/genInvoice/',
-    getPayments: '/v1/pay/listPays/',
+    getPayments: '/v1/pay/listPays',
     getNewAddress: '/v1/newaddr',
     openChannel: '/v1/channel/openChannel/',
     connectPeer: '/v1/peer/connect',
     listNode: '/v1/network/listNode',
-    closeChannel: '/v1/channel/closeChannel/'
+    closeChannel: function (urlParams: Array<string>) {
+        return `/v1/channel/closeChannel/${urlParams[0]}/`;
+    },
+    decodePaymentRequest: function (urlParams: Array<string>) {
+        return `/v1/pay/decodePay/${urlParams[0]}`;
+    },
+    payLightningInvoice: '/v1/pay'
 };
 
 interface Headers {
@@ -79,20 +90,31 @@ class RESTUtils {
         return `${baseUrl}${route}`;
     };
 
-    request = (settingsStore: SettingsStore, request: string, method: string, cancelToken?: any, data?: any) => {
+    request = (settingsStore: SettingsStore, request: string, method: string, cancelToken?: any, data?: any, urlParams?: Array<string>) => {
         const { host, port, macaroonHex, implementation } = settingsStore;
-        const route: string = implementation === 'c-lightning-REST' ? clightningRoutes[request] : lndRoutes[request];
+
+        let route: string;
+        if (urlParams) {
+            route = implementation === 'c-lightning-REST' ? clightningRoutes[request](urlParams) : lndRoutes[request](urlParams);
+        } else {
+            route = implementation === 'c-lightning-REST' ? clightningRoutes[request] : lndRoutes[request];
+        }
+
         const headers = this.getHeaders(implementation, macaroonHex);
         const url = this.getURL(host, port, route);
         return this.axiosReq(headers, url, method, cancelToken, data);
     };
 
-    getRequest = (settingsStore: SettingsStore, request: string, cancelToken?: any) => {
-        return this.request(settingsStore, request, 'get', cancelToken);
+    getRequest = (settingsStore: SettingsStore, request: string, cancelToken?: any, urlParams?: Array<string>) => {
+        return this.request(settingsStore, request, 'get', cancelToken, null, urlParams);
     };
 
     postRequest = (settingsStore: SettingsStore, request: string, data?: any) => {
         return this.request(settingsStore, request, 'post', null, data);
+    };
+
+    deleteRequest = (settingsStore: SettingsStore, request: string, urlParams?: Array<string>) => {
+        return this.request(settingsStore, request, 'delete', null, null, urlParams);
     };
 
     getTransactions = (settingsStore: SettingsStore) => this.getRequest(settingsStore, 'getTransactions', getTransactionsToken);
@@ -108,6 +130,9 @@ class RESTUtils {
     openChannel = (settingsStore: SettingsStore, data: any) => this.postRequest(settingsStore, 'openChannel', data);
     connectPeer = (settingsStore: SettingsStore, data: any) => this.postRequest(settingsStore, 'connectPeer', data);
     listNode = (settingsStore: SettingsStore) => this.getRequest(settingsStore, 'listNode');
+    decodePaymentRequest = (settingsStore: SettingsStore, urlParams?: Array<string>) => this.getRequest(settingsStore, 'decodePaymentRequest', null, urlParams);
+    payLightningInvoice = (settingsStore: SettingsStore, data: any) => this.postRequest(settingsStore, 'payLightningInvoice', data);
+    closeChannel = (settingsStore: SettingsStore, urlParams?: Array<string>) => this.deleteRequest(settingsStore, 'closeChannel', urlParams);
 }
 
 const restUtils = new RESTUtils();

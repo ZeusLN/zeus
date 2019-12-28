@@ -1,5 +1,4 @@
 import { action, reaction, observable } from 'mobx';
-import axios from 'axios';
 import Transaction from './../models/Transaction';
 import TransactionRequest from './../models/TransactionRequest';
 import ErrorUtils from './../utils/ErrorUtils';
@@ -89,29 +88,25 @@ export default class TransactionsStore {
         this.payment_error = null;
 
         let data;
-        if (amount) {
+        if (implementation === 'c-lightning-REST') {
             data = {
-                amt: amount,
-                payment_request
-            };
+                invoice: payment_request,
+                amount
+            }
         } else {
-            data = {
-                payment_request
-            };
+            if (amount) {
+                data = {
+                    amt: amount,
+                    payment_request
+                };
+            } else {
+                data = {
+                    payment_request
+                };
+            }
         }
 
-        axios
-            .request({
-                method: 'post',
-                url: `https://${host}${
-                    port ? ':' + port : ''
-                }/v1/channels/transactions`,
-                headers: {
-                    'macaroon': macaroonHex,
-                    'encodingtype': 'hex'
-                },
-                data
-            })
+        RESTUtils.payLightningInvoice(this.settingsStore, data)
             .then((response: any) => {
                 // handle success
                 const data = response.data;
@@ -129,6 +124,7 @@ export default class TransactionsStore {
                 this.loading = false;
                 this.error_msg =
                     ErrorUtils.errorToUserFriendly(code) ||
+                    errorInfo.message ||
                     errorInfo.error ||
                     'Error sending payment';
             });
