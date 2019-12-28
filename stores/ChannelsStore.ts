@@ -1,9 +1,9 @@
 import { action, observable, reaction } from 'mobx';
-import axios from 'axios';
 import Channel from './../models/Channel';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import CloseChannelRequest from './../models/CloseChannelRequest';
 import SettingsStore from './SettingsStore';
+import RESTUtils from './../utils/RESTUtils';
 
 export default class ChannelsStore {
     @observable public loading: boolean = false;
@@ -41,7 +41,8 @@ export default class ChannelsStore {
             () => this.channelRequest,
             () => {
                 if (this.channelRequest) {
-                    this.openChannel(this.channelRequest);
+                    const chanReq = new OpenChannelRequest(this.channelRequest);
+                    this.openChannel(chanReq);
                 }
             }
         );
@@ -49,7 +50,10 @@ export default class ChannelsStore {
         reaction(
             () => this.channels,
             () => {
-                if (this.channels) {
+                if (
+                    this.channels &&
+                    this.settingsStore.implementation !== 'c-lightning-REST'
+                ) {
                     this.channels.forEach((channel: Channel) => {
                         if (!this.nodes[channel.remote_pubkey]) {
                             this.getNodeInfo(channel.remote_pubkey).then(
@@ -68,19 +72,8 @@ export default class ChannelsStore {
 
     @action
     getNodeInfo = (pubkey: string) => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
         this.loading = true;
-        return axios
-            .request({
-                method: 'get',
-                url: `https://${host}${
-                    port ? ':' + port : ''
-                }/v1/graph/node/${pubkey}`,
-                headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
-                }
-            })
+        RESTUtils.getNodeInfo(this.settingsStore, [pubkey])
             .then((response: any) => {
                 // handle success
                 const data = response.data;
@@ -90,22 +83,13 @@ export default class ChannelsStore {
 
     @action
     public getChannels = () => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
         this.channels = [];
         this.loading = true;
-        axios
-            .request({
-                method: 'get',
-                url: `https://${host}${port ? ':' + port : ''}/v1/channels`,
-                headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
-                }
-            })
+        RESTUtils.getChannels(this.settingsStore)
             .then((response: any) => {
-                // handle success
                 const data = response.data;
-                this.channels = data.channels;
+                const channels = data.channels || data;
+                this.channels = channels.map(channel => new Channel(channel));
                 this.error = false;
                 this.loading = false;
             })
@@ -118,24 +102,23 @@ export default class ChannelsStore {
     };
 
     @action
-    public closeChannel = (request: CloseChannelRequest) => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
-        const { funding_txid_str, output_index } = request;
-
+    public closeChannel = (
+        request?: CloseChannelRequest,
+        channelId?: string
+    ) => {
+        const { implementation } = this.settingsStore;
         this.loading = true;
-        axios
-            .request({
-                method: 'delete',
-                url: `https://${host}${
-                    port ? ':' + port : ''
-                }/v1/channels/${funding_txid_str}/${output_index}`,
-                headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
-                }
-            })
+
+        let urlParams: Array<string>;
+        if (implementation === 'c-lightning-REST') {
+            urlParams = [channelId];
+        } else {
+            const { funding_txid_str, output_index } = request;
+            urlParams = [funding_txid_str, output_index];
+        }
+
+        RESTUtils.closeChannel(this.settingsStore, urlParams)
             .then((response: any) => {
-                // handle success
                 const data = response.data;
                 const { chan_close } = data;
                 this.closeChannelSuccess = chan_close.success;
@@ -143,7 +126,6 @@ export default class ChannelsStore {
                 this.loading = false;
             })
             .catch(() => {
-                // handle error
                 this.channels = [];
                 this.error = true;
                 this.loading = false;
@@ -152,24 +134,25 @@ export default class ChannelsStore {
 
     @action
     public connectPeer = (request: OpenChannelRequest) => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
+        const { implementation } = this.settingsStore;
         this.connectingToPeer = true;
-        axios
-            .request({
-                method: 'post',
-                url: `https://${host}${port ? ':' + port : ''}/v1/peers`,
-                headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
-                },
-                data: JSON.stringify({
-                    addr: {
-                        pubkey: request.node_pubkey_string,
-                        host: request.host
-                    }
-                })
-            })
-            .then(() => {
+
+        let data;
+        if (implementation === 'c-lightning-REST') {
+            data = {
+                id: `${request.node_pubkey_string}@${request.host}`
+            };
+        } else {
+            data = JSON.stringify({
+                addr: {
+                    pubkey: request.node_pubkey_string,
+                    host: request.host
+                }
+            });
+        }
+
+        RESTUtils.connectPeer(this.settingsStore, data)
+            .then(response => {
                 // handle success
                 this.errorPeerConnect = false;
                 this.connectingToPeer = false;
@@ -179,8 +162,9 @@ export default class ChannelsStore {
             })
             .catch((error: any) => {
                 // handle error
-                const errorInfo = error.response.data;
-                this.errorMsgPeer = errorInfo.error;
+                const errorInfo = error.response && error.response.data;
+                this.errorMsgPeer =
+                    (errorInfo && errorInfo.error.message) || error.message;
                 this.errorPeerConnect = true;
                 this.connectingToPeer = false;
                 this.peerSuccess = false;
@@ -196,25 +180,22 @@ export default class ChannelsStore {
     };
 
     openChannel = (request: OpenChannelRequest) => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
+        const { implementation } = this.settingsStore;
         delete request.host;
 
         this.peerSuccess = false;
         this.channelSuccess = false;
-
         this.openingChannel = true;
-        axios
-            .request({
-                method: 'post',
-                url: `https://${host}${port ? ':' + port : ''}/v1/channels`,
-                headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
-                },
-                data: JSON.stringify(request)
-            })
+
+        let openChannelReq;
+        if (implementation === 'c-lightning-REST') {
+            openChannelReq = request;
+        } else {
+            openChannelReq = JSON.stringify(request);
+        }
+
+        RESTUtils.openChannel(this.settingsStore, openChannelReq)
             .then((response: any) => {
-                // handle success
                 const data = response.data;
                 this.output_index = data.output_index;
                 this.funding_txid_str = data.funding_txid_str;
@@ -224,10 +205,10 @@ export default class ChannelsStore {
                 this.channelRequest = null;
                 this.channelSuccess = true;
             })
-            .catch((error: any) => {
-                // handle error
+            .catch((error: err) => {
                 const errorInfo = error.response.data;
-                this.errorMsgChannel = errorInfo.error;
+                this.errorMsgChannel =
+                    errorInfo.error.message || errorInfo.error;
                 this.output_index = null;
                 this.funding_txid_str = null;
                 this.errorOpenChannel = true;

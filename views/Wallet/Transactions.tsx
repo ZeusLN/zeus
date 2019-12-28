@@ -66,17 +66,17 @@ export default class Transactions extends React.Component<TransactionsProps> {
         const { theme } = settings;
 
         const BalanceImage = (item: Transaction) => {
-            const { amount, num_confirmations } = item;
+            const { getAmount, isConfirmed } = item;
 
-            if (num_confirmations && num_confirmations > 0) {
-                if (amount > 0) {
+            if (isConfirmed) {
+                if (getAmount > 0) {
                     return theme === 'dark' ? AddBalanceDark : AddBalance;
                 }
 
                 return theme === 'dark' ? RemoveBalanceDark : RemoveBalance;
             }
 
-            if (amount > 0) {
+            if (getAmount > 0) {
                 return theme === 'dark'
                     ? AddBalancePendingDark
                     : AddBalancePending;
@@ -102,19 +102,19 @@ export default class Transactions extends React.Component<TransactionsProps> {
                 {(!!transactions && transactions.length > 0) || loading ? (
                     <FlatList
                         data={transactions}
-                        renderItem={({ item }: any) => {
-                            const subtitle = item.block_height
-                                ? `${
-                                      item.block_height
-                                  } | ${DateTimeUtils.listFormattedDate(
-                                      item.time_stamp
-                                  )}`
-                                : DateTimeUtils.listFormattedDate(
-                                      item.time_stamp
-                                  );
+                        renderItem={({ item }: Transaction) => {
+                            let subtitle =
+                                item.getBlockHeight || 'Awaiting Confirmation';
+                            if (item.time_stamp) {
+                                subtitle.append(
+                                    ` | ${DateTimeUtils.listFormattedDate(
+                                        item.time_stamp
+                                    )}`
+                                );
+                            }
                             return (
                                 <ListItem
-                                    title={units && getAmount(item.amount)}
+                                    title={units && getAmount(item.getAmount)}
                                     subtitle={subtitle}
                                     containerStyle={{
                                         borderBottomWidth: 0,
@@ -136,9 +136,7 @@ export default class Transactions extends React.Component<TransactionsProps> {
                                 />
                             );
                         }}
-                        keyExtractor={(item, index) =>
-                            `${item.tx_hash}-${index}`
-                        }
+                        keyExtractor={(item, index) => `${item.tx}-${index}`}
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}
                         refreshing={loading}
