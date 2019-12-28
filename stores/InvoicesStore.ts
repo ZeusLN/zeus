@@ -11,7 +11,7 @@ export default class InvoicesStore {
     @observable error: boolean = false;
     @observable error_msg: string | null;
     @observable getPayReqError: boolean = false;
-    @observable invoices: Array<Invoice|any> = [];
+    @observable invoices: Array<Invoice> = [];
     @observable invoice: Invoice;
     @observable pay_req: PaymentRequest | null;
     @observable payment_request: string | null;

@@ -51,10 +51,9 @@ export default class ChannelsStore {
         reaction(
             () => this.channels,
             () => {
-                if (this.channels) {
+                if (this.channels && this.settingsStore.implementation !== 'c-lightning-REST') {
                     this.channels.forEach((channel: Channel) => {
                         if (!this.nodes[channel.remote_pubkey]) {
-                            /*
                             this.getNodeInfo(channel.remote_pubkey).then(
                                 nodeInfo => {
                                     this.nodes[
@@ -62,7 +61,6 @@ export default class ChannelsStore {
                                     ] = nodeInfo;
                                 }
                             );
-                            */
                         }
                     });
                 }
