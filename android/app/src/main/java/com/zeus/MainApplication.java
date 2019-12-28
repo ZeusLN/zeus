@@ -1,8 +1,9 @@
-package com.zeusln.zeus;
+package com.zeusln.zeusbeta;
 
 import android.app.Application;
 
 import com.facebook.react.ReactApplication;
+import io.realm.react.RealmReactPackage;
 import com.BV.LinearGradient.LinearGradientPackage;
 import com.oblador.keychain.KeychainPackage;
 import com.facebook.react.modules.network.OkHttpClientProvider;
@@ -13,7 +14,7 @@ import com.facebook.react.ReactNativeHost;
 import com.facebook.react.ReactPackage;
 import com.facebook.react.shell.MainReactPackage;
 import com.facebook.soloader.SoLoader;
-import com.zeusln.zeus.extensions.CustomClientFactory;
+import com.zeusln.zeusbeta.extensions.CustomClientFactory;
 import com.microsoft.ActivityResultPackage;
 
 import java.util.Arrays;
@@ -31,6 +32,7 @@ public class MainApplication extends Application implements ReactApplication {
     protected List<ReactPackage> getPackages() {
       return Arrays.<ReactPackage>asList(
           new MainReactPackage(),
+            new RealmReactPackage(),
             new LinearGradientPackage(),
             new KeychainPackage(),
             new RNCameraKitPackage(),
