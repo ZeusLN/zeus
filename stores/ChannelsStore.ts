@@ -1,5 +1,4 @@
 import { action, observable, reaction } from 'mobx';
-import axios from 'axios';
 import Channel from './../models/Channel';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import CloseChannelRequest from './../models/CloseChannelRequest';
@@ -73,20 +72,8 @@ export default class ChannelsStore {
 
     @action
     getNodeInfo = (pubkey: string) => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
         this.loading = true;
-        return axios
-            .request({
-                method: 'get',
-                url: `https://${host}${
-                    port ? ':' + port : ''
-                }/v1/graph/node/${pubkey}`,
-                headers: {
-                    macaroon: macaroonHex,
-                    encodingtype: 'hex'
-                }
-            })
+        RESTUtils.getNodeInfo(this.settingsStore, [pubkey])
             .then((response: any) => {
                 // handle success
                 const data = response.data;
