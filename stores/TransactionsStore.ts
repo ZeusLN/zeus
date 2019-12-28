@@ -1,15 +1,15 @@
 import { action, reaction, observable } from 'mobx';
-import axios from 'axios';
 import Transaction from './../models/Transaction';
 import TransactionRequest from './../models/TransactionRequest';
 import ErrorUtils from './../utils/ErrorUtils';
 import SettingsStore from './SettingsStore';
+import RESTUtils from './../utils/RESTUtils';
 
 export default class TransactionsStore {
     @observable loading: boolean = false;
     @observable error: boolean = false;
     @observable error_msg: string | null;
-    @observable transactions: Array<Transaction> = [];
+    @observable transactions: Array<Transaction> = <Transaction>[];
     @observable transaction: Transaction;
 
     @observable payment_route: any; // Route
@@ -38,21 +38,15 @@ export default class TransactionsStore {
 
     @action
     public getTransactions = () => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
         this.loading = true;
-        axios
-            .request({
-                method: 'get',
-                url: `https://${host}${port ? ':' + port : ''}/v1/transactions`,
-                headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
-                }
-            })
+        RESTUtils.getTransactions(this.settingsStore)
             .then((response: any) => {
                 // handle success
                 const data = response.data;
-                this.transactions = data.transactions.reverse();
+                const transactions = data.transactions || data.outputs;
+                this.transactions = transactions
+                    .reverse()
+                    .map(tx => new Transaction(tx));
                 this.loading = false;
             })
             .catch(() => {
@@ -64,34 +58,21 @@ export default class TransactionsStore {
 
     @action
     public sendCoins = (transactionRequest: TransactionRequest) => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
         this.error = false;
         this.error_msg = null;
         this.txid = null;
         this.loading = true;
-
-        axios
-            .request({
-                method: 'post',
-                url: `https://${host}${port ? ':' + port : ''}/v1/transactions`,
-                headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
-                },
-                data: {
-                    ...transactionRequest
-                }
-            })
+        RESTUtils.sendCoins(this.settingsStore, transactionRequest)
             .then((response: any) => {
                 // handle success
-                const data = response.data;
+                const data = response.data || response;
                 this.txid = data.txid;
                 this.loading = false;
             })
             .catch((error: any) => {
                 // handle error
                 const errorInfo = error.response.data;
-                this.error_msg = errorInfo.error;
+                this.error_msg = errorInfo.error.message || errorInfo.error;
                 this.error = true;
                 this.loading = false;
             });
@@ -109,28 +90,25 @@ export default class TransactionsStore {
         this.payment_error = null;
 
         let data;
-        if (amount) {
+        if (implementation === 'c-lightning-REST') {
             data = {
-                amt: amount,
-                payment_request
+                invoice: payment_request,
+                amount
             };
         } else {
-            data = {
-                payment_request
-            };
+            if (amount) {
+                data = {
+                    amt: amount,
+                    payment_request
+                };
+            } else {
+                data = {
+                    payment_request
+                };
+            }
         }
 
-        axios
-            .request({
-                method: 'post',
-                url: `https://${host}${
-                    port ? ':' + port : ''
-                }/v1/channels/transactions`,
-                headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
-                },
-                data
-            })
+        RESTUtils.payLightningInvoice(this.settingsStore, data)
             .then((response: any) => {
                 // handle success
                 const data = response.data;
@@ -148,6 +126,7 @@ export default class TransactionsStore {
                 this.loading = false;
                 this.error_msg =
                     ErrorUtils.errorToUserFriendly(code) ||
+                    errorInfo.message ||
                     errorInfo.error ||
                     'Error sending payment';
             });

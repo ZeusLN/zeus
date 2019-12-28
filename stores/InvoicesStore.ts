@@ -6,6 +6,7 @@ import hashjs from 'hash.js';
 import Invoice from './../models/Invoice';
 import PaymentRequest from './../models/PaymentRequest';
 import SettingsStore from './SettingsStore';
+import RESTUtils from './../utils/RESTUtils';
 
 export default class InvoicesStore {
     @observable paymentRequest: string;
@@ -33,24 +34,18 @@ export default class InvoicesStore {
 
     @action
     public getInvoices = () => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
         this.loading = true;
-        axios
-            .request({
-                method: 'get',
-                url: `https://${host}${
-                    port ? ':' + port : ''
-                }/v1/invoices?reversed=true&num_max_invoices=100`,
-                headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
-                }
-            })
+        RESTUtils.getInvoices(this.settingsStore)
             .then((response: any) => {
                 // handle success
                 const data = response.data;
-                this.invoices = data.invoices.reverse();
-                this.invoicesCount = data.last_index_offset;
+                this.invoices = data.payments || data.invoices;
+                this.invoices = this.invoices.map(
+                    invoice => new Invoice(invoice)
+                );
+                this.invoices = this.invoices.reverse();
+                this.invoicesCount =
+                    data.last_index_offset || this.invoices.length;
                 this.loading = false;
             })
             .catch(() => {
@@ -61,57 +56,41 @@ export default class InvoicesStore {
     };
 
     @action
-    public getInvoice = (lightningInvoice: string) => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
-        axios
-            .request({
-                method: 'get',
-                url: `https://${host}${
-                    port ? ':' + port : ''
-                }/v1/invoice/${lightningInvoice}`,
-                headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
-                }
-            })
-            .then((response: any) => {
-                // handle success
-                const data = response.data;
-                this.invoice = data;
-            });
-    };
-
-    @action
     public createInvoice = (
         memo: string,
         value: string,
         expiry: string = '3600',
         lnurl: LNURLWithdrawParams = undefined
     ) => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
+        const { implementation } = this.settingsStore;
         this.payment_request = null;
         this.creatingInvoice = true;
         this.creatingInvoiceError = false;
         this.error_msg = null;
 
-        axios
-            .request({
-                method: 'post',
-                url: `https://${host}${port ? ':' + port : ''}/v1/invoices`,
-                headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
-                },
-                data: {
-                    memo,
-                    value,
-                    expiry
-                }
-            })
+        let data;
+        if (implementation === 'c-lightning-REST') {
+            // amount(msats), label, description
+            data = {
+                description: memo,
+                label: memo,
+                amount: Number(value) * 1000,
+                expiry,
+                private: true
+            };
+        } else {
+            data = {
+                memo,
+                value,
+                expiry
+            };
+        }
+
+        RESTUtils.createInvoice(this.settingsStore, data)
             .then((response: any) => {
                 // handle success
-                const data = response.data;
-                this.payment_request = data.payment_request;
+                const data = new Invoice(response.data);
+                this.payment_request = data.getPaymentRequest;
                 this.creatingInvoice = false;
 
                 if (lnurl) {
@@ -147,26 +126,15 @@ export default class InvoicesStore {
         paymentRequest: string,
         descriptionPreimage: string | undefined
     ) => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
         this.pay_req = null;
         this.paymentRequest = paymentRequest;
         this.loading = true;
 
-        return axios
-            .request({
-                method: 'get',
-                url: `https://${host}${
-                    port ? ':' + port : ''
-                }/v1/payreq/${paymentRequest}`,
-                headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
-                }
-            })
+        RESTUtils.decodePaymentRequest(this.settingsStore, [paymentRequest])
             .then((response: any) => {
                 // handle success
                 const data = response.data as PaymentRequest;
-                this.pay_req = data;
+                this.pay_req = new Invoice(data);
 
                 // check description_hash if asked for
                 if (
@@ -179,11 +147,11 @@ export default class InvoicesStore {
                 ) {
                     throw new Error('wrong description_hash!');
                 }
-
+          
                 this.loading = false;
                 this.getPayReqError = null;
             })
-            .catch(err => {
+            .catch((err: error) => {
                 // handle error
                 this.loading = false;
                 this.getPayReqError =
