@@ -1,21 +1,34 @@
 import * as React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { when } from 'mobx';
 import { Button } from 'react-native-elements';
+import LnurlPaySuccess from './LnurlPaySuccess';
 
 import TransactionsStore from './../stores/TransactionsStore';
+import LnurlPayStore from './../stores/LnurlPayStore';
 
 interface SendingLightningProps {
     navigation: any;
     TransactionsStore: TransactionsStore;
+    LnurlPayStore: LnurlPayStore;
 }
 
-@inject('TransactionsStore')
+@inject('TransactionsStore', 'LnurlPayStore')
 @observer
 export default class SendingLightning extends React.Component<
     SendingLightningProps,
     {}
 > {
+    componentDidMount = () => {
+        when(() => TransactionsStore.payment_route).then(() => {
+            LnurlPayStore.acknowledge(TransactionsStore.payment_hash);
+        });
+        when(() => TransactionsStore.payment_error).then(() => {
+            LnurlPayStore.clear(TransactionsStore.payment_hash);
+        });
+    };
+
     getBackgroundColor() {
         const { TransactionsStore } = this.props;
         const { payment_route, payment_error, error } = TransactionsStore;
@@ -32,7 +45,7 @@ export default class SendingLightning extends React.Component<
     }
 
     render() {
-        const { TransactionsStore, navigation } = this.props;
+        const { TransactionsStore, LnurlPayStore, navigation } = this.props;
         const {
             loading,
             error,
@@ -41,7 +54,6 @@ export default class SendingLightning extends React.Component<
             payment_route,
             payment_error
         } = TransactionsStore;
-
         const backgroundColor = this.getBackgroundColor();
 
         return (
@@ -78,6 +90,14 @@ export default class SendingLightning extends React.Component<
                             Transaction successfully sent
                         </Text>
                     )}
+                    {payment_route &&
+                        payment_hash === LnurlPayStore.paymentHash &&
+                        LnurlPayStore.successAction && (
+                            <LnurlPaySuccess
+                                domain={LnurlPayStore.domain}
+                                successAction={LnurlPayStore.successAction}
+                            />
+                        )}
                     {payment_hash && (
                         <Text
                             style={{

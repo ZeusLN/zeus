@@ -1,4 +1,4 @@
-package com.zeusln.zeus.extensions;
+package com.zeusln.zeusbeta.extensions;
 
 import android.util.Log;
 
