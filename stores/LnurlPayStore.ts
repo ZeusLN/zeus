@@ -9,6 +9,29 @@ import NodeInfoStore from './../stores/NodeInfoStore';
 import SettingsStore from './../stores/SettingsStore';
 import Payment from './../models/Payment';
 
+interface LnurlPayTransaction {
+    paymentHash: string;
+    pending: boolean;
+    domain: string;
+    lnurl: string;
+    metadata: LnurlPayMetadata;
+    successAction: LnurlPaySuccessAction;
+}
+
+interface LnurlPayMetadata {
+    descriptionHash: string;
+    metadata: string;
+}
+
+interface LnurlPaySuccessAction {
+    tag: string;
+    description: string;
+    url: string;
+    message: string;
+    iv: string;
+    ciphertext: string;
+}
+
 const LnurlPayTransactionSchema = {
     name: 'LnurlPayTransaction',
     primaryKey: 'paymentHash',
@@ -17,8 +40,17 @@ const LnurlPayTransactionSchema = {
         pending: { type: 'bool', default: true },
         domain: { type: 'string', indexed: true },
         lnurl: 'string',
-        metadata: 'string',
+        metadata: 'LnurlPayMetadata',
         successAction: 'LnurlPaySuccessAction'
+    }
+};
+
+const LnurlPayMetadataSchema = {
+    name: 'LnurlPayMetadata',
+    primaryKey: 'descriptionHash',
+    properties: {
+        descriptionHash: 'string',
+        metadata: 'string'
     }
 };
 
@@ -28,7 +60,9 @@ const LnurlPaySuccessActionSchema = {
         tag: { type: 'string', default: 'noop' },
         description: 'string?',
         url: 'string?',
-        message: 'string?'
+        message: 'string?',
+        iv: 'string?',
+        ciphertext: 'string?'
     }
 };
 
@@ -45,7 +79,11 @@ export default class LnurlPayStore {
         this.nodeInfoStore = nodeInfoStore;
         this.realm = new Realm({
             path: `lnurl-${nodeInfoStore.nodeInfo.identity_pubkey}.realm`,
-            schema: [LnurlPayTransactionSchema, LnurlPaySuccessActionSchema]
+            schema: [
+                LnurlPayTransactionSchema,
+                LnurlPaySuccessActionSchema,
+                LnurlPayMetadataSchema
+            ]
         });
 
         when(
@@ -115,6 +153,14 @@ export default class LnurlPayStore {
 
         // if we got here it's because there is no match / the payment is not on lnd
         this.clear(pendingHash);
+    };
+
+    @action
+    public load = (paymentHash: string): LnurlPayTransaction => {
+        return this.realm.objectForPrimaryKey(
+            'LnurlPayTransaction',
+            paymentHash
+        );
     };
 
     @action

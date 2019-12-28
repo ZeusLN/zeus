@@ -11,10 +11,11 @@ import {
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
 import { getDomain, LNURLPayResult, LNURLPaySuccessAction } from 'js-lnurl';
-import AddressUtils from './../utils/AddressUtils';
-import InvoicesStore from './../stores/InvoicesStore';
-import LnurlPayStore from './../stores/LnurlPayStore';
-import SettingsStore from './../stores/SettingsStore';
+import AddressUtils from './../../utils/AddressUtils';
+import InvoicesStore from './../../stores/InvoicesStore';
+import LnurlPayStore from './../../stores/LnurlPayStore';
+import SettingsStore from './../../stores/SettingsStore';
+import LnurlPayMetadata from './Metadata';
 
 interface LnurlPayProps {
     navigation: any;
@@ -41,6 +42,7 @@ export default class LnurlPay extends React.Component<
             this.state = this.stateFromProps(props);
         } catch (err) {
             this.state = {};
+
             Alert.alert(`Invalid lnurl params!`, err.message, [], {
                 onDismiss: () => {
                     props.navigation.navigate('Wallet');
@@ -55,7 +57,7 @@ export default class LnurlPay extends React.Component<
         const domain = getDomain(lnurl.callback);
 
         return {
-            amount: Math.floor(lnurl.maxSendable / 1000).toString(),
+            amount: Math.floor(lnurl.minSendable / 1000).toString(),
             domain
         };
     }
@@ -104,7 +106,10 @@ export default class LnurlPay extends React.Component<
                     InvoicesStore.pay_req.payment_hash,
                     domain,
                     lnurl.lnurlText,
-                    lnurl.metadata,
+                    {
+                        metadata: lnurl.metadata,
+                        descriptionHash: InvoicesStore.pay_req.description_hash
+                    },
                     successAction
                 );
                 navigation.navigate('PaymentRequest');
@@ -117,9 +122,6 @@ export default class LnurlPay extends React.Component<
         const { settings } = SettingsStore;
         const { theme } = settings;
         const lnurl = navigation.getParam('lnurlParams');
-        const metadata = JSON.parse(lnurl.metadata)
-            .filter(([typ, _]) => typ === 'text/plain')
-            .map(([_, content]) => content)[0];
 
         const BackButton = () => (
             <Icon
@@ -205,17 +207,7 @@ export default class LnurlPay extends React.Component<
                     </View>
                 </View>
                 <View style={styles.content}>
-                    <ScrollView
-                        style={{
-                            height: 220,
-                            paddingTop: 20,
-                            paddingBottom: 20
-                        }}
-                    >
-                        <Text style={{ fontFamily: 'monospace' }}>
-                            {metadata}
-                        </Text>
-                    </ScrollView>
+                    <LnurlPayMetadata metadata={lnurl.metadata} />
                 </View>
             </View>
         );
