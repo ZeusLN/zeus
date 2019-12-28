@@ -7,6 +7,7 @@ import BalanceStore from './BalanceStore';
 import UnitsStore from './UnitsStore';
 import PaymentsStore from './PaymentsStore';
 import FeeStore from './FeeStore';
+import LnurlPayStore from './LnurlPayStore';
 
 class Stores {
     public channelsStore: ChannelsStore;
@@ -18,6 +19,7 @@ class Stores {
     public unitsStore: UnitsStore;
     public paymentsStore: PaymentsStore;
     public feeStore: FeeStore;
+    public lnurlPayStore: LnurlPayStore;
 
     constructor() {
         this.settingsStore = new SettingsStore();
@@ -29,6 +31,10 @@ class Stores {
         this.unitsStore = new UnitsStore(this.settingsStore);
         this.paymentsStore = new PaymentsStore(this.settingsStore);
         this.feeStore = new FeeStore();
+        this.lnurlPayStore = new LnurlPayStore(
+            this.settingsStore,
+            this.nodeInfoStore
+        );
     }
 }
 
