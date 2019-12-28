@@ -28,7 +28,7 @@ export default class NodeInfoStore {
     public getNodeInfo = () => {
         this.errorMsg = '';
         this.loading = true;
-        RESTUtils.getNodeInfo(this.settingsStore)
+        RESTUtils.getMyNodeInfo(this.settingsStore)
             .then((response: any) => {
                 // handle success
                 const nodeInfo = new NodeInfo(response.data);
