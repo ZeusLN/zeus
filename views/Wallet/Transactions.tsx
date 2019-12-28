@@ -66,9 +66,9 @@ export default class Transactions extends React.Component<TransactionsProps> {
         const { theme } = settings;
 
         const BalanceImage = (item: Transaction) => {
-            const { getAmount, num_confirmations } = item;
+            const { getAmount, isConfirmed } = item;
 
-            if (num_confirmations && num_confirmations > 0) {
+            if (isConfirmed) {
                 if (getAmount > 0) {
                     return theme === 'dark' ? AddBalanceDark : AddBalance;
                 }
@@ -103,7 +103,7 @@ export default class Transactions extends React.Component<TransactionsProps> {
                     <FlatList
                         data={transactions}
                         renderItem={({ item }: Transaction) => {
-                            let subtitle = item.getBlockHeight;
+                            let subtitle = item.getBlockHeight || 'Awaiting Confirmation';
                             if (item.time_stamp) {
                                 subtitle.append(` | ${DateTimeUtils.listFormattedDate(item.time_stamp)}`);
                             }

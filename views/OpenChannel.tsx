@@ -211,7 +211,7 @@ export default class OpenChannel extends React.Component<
                     )}
                     {(errorMsgPeer || errorMsgChannel) && (
                         <Text style={{ color: 'red' }}>
-                            {errorMsgChannel || errorMsgPeer}
+                            {errorMsgChannel || errorMsgPeer || 'Error'}
                         </Text>
                     )}
 

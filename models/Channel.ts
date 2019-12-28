@@ -29,10 +29,22 @@ export default class Channel extends BaseModel {
     private: boolean;
     // c-lightning
     @observable
-    status: string;
+    state: string;
+    msatoshi_total: string;
+    msatoshi_to_us: string;
 
     @computed
     public get isActive(): boolean {
-        return this.active || this.status === 'CHANNELD_NORMAL';
+        return this.active || this.state === 'CHANNELD_NORMAL';
+    }
+
+    @computed
+    public get remoteBalance(): string {
+        return this.remote_balance || ((Number(this.msatoshi_total) - Number(this.msatoshi_to_us)) / 1000).toString();
+    }
+
+    @computed
+    public get localBalance(): string {
+        return this.local_balance || (Number(this.msatoshi_to_us) / 1000).toString();
     }
 }

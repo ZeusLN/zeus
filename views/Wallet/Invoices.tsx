@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { StyleSheet, View, FlatList } from 'react-native';
 import { Avatar, Button, ListItem } from 'react-native-elements';
-import DateTimeUtils from './../../utils/DateTimeUtils';
 import Invoice from './../../models/Invoice';
 import { inject, observer } from 'mobx-react';
 
@@ -91,33 +90,20 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
                     <FlatList
                         data={invoices}
                         renderItem={({ item }) => {
-                            const { settled } = item;
+                            const { isPaid } = item;
                             return (
                                 <ListItem
-                                    key={item.r_hash}
-                                    title={item.memo || 'No memo'}
+                                    key={item.key}
+                                    title={item.getMemo}
                                     subtitle={`${
-                                        settled ? 'Paid' : 'Unpaid'
-                                    }: ${units &&
-                                        getAmount(
-                                            settled
-                                                ? item.amt_paid_sat
-                                                : item.value
-                                        )} | ${
-                                        settled
-                                            ? DateTimeUtils.listFormattedDate(
-                                                  item.settle_date
-                                              )
-                                            : DateTimeUtils.listFormattedDate(
-                                                  item.creation_date
-                                              )
-                                    }`}
+                                        isPaid ? 'Paid' : 'Unpaid'
+                                    }: ${units && getAmount(item.getAmount)} | ${item.listDate}`}
                                     containerStyle={{
                                         borderBottomWidth: 0,
                                         backgroundColor:
                                             theme === 'dark' ? 'black' : 'white'
                                     }}
-                                    leftElement={Invoice(item.settled)}
+                                    leftElement={Invoice(item.isPaid)}
                                     onPress={() =>
                                         navigation.navigate('Invoice', {
                                             invoice: item
@@ -136,7 +122,7 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
                                 />
                             );
                         }}
-                        keyExtractor={item => item.r_hash}
+                        keyExtractor={item => item.key}
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}
                         refreshing={loading}

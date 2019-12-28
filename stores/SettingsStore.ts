@@ -1,6 +1,7 @@
 import * as Keychain from 'react-native-keychain';
 import { action, observable } from 'mobx';
 import axios from 'axios';
+import RESTUtils from '../utils/RESTUtils';
 
 interface Node {
     host?: string;
@@ -11,7 +12,7 @@ interface Node {
 
 interface Settings {
     nodes?: Array<Node>;
-    onChainAndress?: string;
+    onChainAddress?: string;
     theme?: string;
     selectedNode?: number;
     passphrase?: string;
@@ -25,6 +26,7 @@ export default class SettingsStore {
     @observable port: string | null;
     @observable macaroonHex: string | null;
     @observable implementation: string | null;
+    @observable chainAddress: string;
 
     @action
     public fetchBTCPayConfig = (data: string) => {
@@ -79,6 +81,7 @@ export default class SettingsStore {
                     this.macaroonHex = node.macaroonHex;
                     this.implementation = node.implementation;
                 }
+                this.chainAddress = this.settings.onChainAddress;
                 return this.settings;
             } else {
                 console.log('No credentials stored');
@@ -103,25 +106,15 @@ export default class SettingsStore {
     public getNewAddress = () => {
         const { host, port, macaroonHex, implementation } = this;
 
-        const headers = implementation === 'c-lightning-REST' ? {
-            'macaroon': macaroonHex
-        } : {
-            'Grpc-Metadata-macaroon': macaroonHex
-        };
-
-        return axios
-            .request({
-                method: 'get',
-                url: `https://${host}${port ? ':' + port : ''}/v1/newaddress`,
-                headers: headers
-            })
+        return RESTUtils.getNewAddress({ host, port, macaroonHex, implementation })
             .then((response: any) => {
                 // handle success
                 const data = response.data;
                 const newAddress = data.address;
+                this.chainAddress = newAddress;
                 const newSettings = {
                     ...this.settings,
-                    onChainAndress: newAddress
+                    onChainAddress: newAddress
                 };
 
                 this.setSettings(JSON.stringify(newSettings));

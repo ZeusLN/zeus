@@ -1,6 +1,5 @@
 import { action, observable, reaction } from 'mobx';
 import axios from 'axios';
-import { forEach } from 'lodash';
 import Channel from './../models/Channel';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import CloseChannelRequest from './../models/CloseChannelRequest';
@@ -43,7 +42,8 @@ export default class ChannelsStore {
             () => this.channelRequest,
             () => {
                 if (this.channelRequest) {
-                    this.openChannel(this.channelRequest);
+                    const chanReq = new OpenChannelRequest(this.channelRequest);
+                    this.openChannel(chanReq);
                 }
             }
         );
@@ -149,25 +149,25 @@ export default class ChannelsStore {
 
     @action
     public connectPeer = (request: OpenChannelRequest) => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
+        const { implementation } = this.settingsStore;
         this.connectingToPeer = true;
-        axios
-            .request({
-                method: 'post',
-                url: `https://${host}${port ? ':' + port : ''}/v1/peers`,
-                headers: {
-                    'macaroon': macaroonHex,
-                    'encodingtype': 'hex'
-                },
-                data: JSON.stringify({
-                    addr: {
-                        pubkey: request.node_pubkey_string,
-                        host: request.host
-                    }
-                })
-            })
-            .then(() => {
+
+        let data;
+        if (implementation === 'c-lightning-REST') {
+            data = {
+                id: `${request.node_pubkey_string}@${request.host}`
+            };
+        } else {
+            data = JSON.stringify({
+                addr: {
+                    pubkey: request.node_pubkey_string,
+                    host: request.host
+                }
+            });
+        }
+
+        RESTUtils.connectPeer(this.settingsStore, data)
+            .then((response) => {;
                 // handle success
                 this.errorPeerConnect = false;
                 this.connectingToPeer = false;
@@ -177,8 +177,8 @@ export default class ChannelsStore {
             })
             .catch((error: any) => {
                 // handle error
-                const errorInfo = error.response.data;
-                this.errorMsgPeer = errorInfo.error;
+                const errorInfo = error.response && error.response.data;
+                this.errorMsgPeer = errorInfo && errorInfo.error.message || error.message;
                 this.errorPeerConnect = true;
                 this.connectingToPeer = false;
                 this.peerSuccess = false;
@@ -194,24 +194,21 @@ export default class ChannelsStore {
     };
 
     openChannel = (request: OpenChannelRequest) => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
+        const { implementation } = this.settingsStore;
         delete request.host;
 
         this.peerSuccess = false;
         this.channelSuccess = false;
-
         this.openingChannel = true;
-        axios
-            .request({
-                method: 'post',
-                url: `https://${host}${port ? ':' + port : ''}/v1/channels`,
-                headers: {
-                    'macaroon': macaroonHex,
-                    'encodingtype': 'hex'
-                },
-                data: JSON.stringify(request)
-            })
+
+        let openChannelReq;
+        if (implementation === 'c-lightning-REST') {
+            openChannelReq = request;
+        } else {
+            openChannelReq = JSON.stringify(request);
+        }
+
+        RESTUtils.openChannel(this.settingsStore, openChannelReq)
             .then((response: any) => {
                 // handle success
                 const data = response.data;
@@ -226,7 +223,7 @@ export default class ChannelsStore {
             .catch((error: any) => {
                 // handle error
                 const errorInfo = error.response.data;
-                this.errorMsgChannel = errorInfo.error;
+                this.errorMsgChannel = errorInfo.error.message || errorInfo.error;
                 this.output_index = null;
                 this.funding_txid_str = null;
                 this.errorOpenChannel = true;
