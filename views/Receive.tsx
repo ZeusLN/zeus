@@ -275,7 +275,9 @@ export default class Receive extends React.Component<
 
                             <View style={styles.button}>
                                 <Button
-                                    title="Create Invoice"
+                                    title={`Create${
+                                        lnurl ? ' and submit ' : ' '
+                                    }invoice`}
                                     icon={{
                                         name: 'create',
                                         size: 25,
