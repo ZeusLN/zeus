@@ -1,13 +1,13 @@
 import { action, observable } from 'mobx';
-import axios from 'axios';
 import Payment from './../models/Payment';
 import SettingsStore from './SettingsStore';
+import RESTUtils from './../utils/RESTUtils';
 
 export default class PaymentsStore {
     @observable loading: boolean = false;
     @observable error: boolean = false;
     @observable error_msg: string;
-    @observable payments: Array<Payment> = [];
+    @observable payments: Array<Payment | any> = [];
     settingsStore: SettingsStore;
 
     constructor(settingsStore: SettingsStore) {
@@ -16,24 +16,15 @@ export default class PaymentsStore {
 
     @action
     public getPayments = () => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
         this.loading = true;
-        axios
-            .request({
-                method: 'get',
-                url: `https://${host}${port ? ':' + port : ''}/v1/payments`,
-                headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
-                }
-            })
+        RESTUtils.getPayments(this.settingsStore)
             .then((response: any) => {
                 // handle success
                 const data = response.data;
-                this.payments = data.payments.reverse();
+                this.payments = data.pays || data.payments;
                 this.loading = false;
             })
-            .catch(() => {
+            .catch((err: error) => {
                 // handle error
                 this.payments = [];
                 this.loading = false;
