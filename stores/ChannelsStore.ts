@@ -114,25 +114,23 @@ export default class ChannelsStore {
     };
 
     @action
-    public closeChannel = (request: CloseChannelRequest) => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
-        const { funding_txid_str, output_index } = request;
-
+    public closeChannel = (request?: CloseChannelRequest, channelId?: string) => {
+        const { implementation } = this.settingsStore;
         this.loading = true;
-        axios
-            .request({
-                method: 'delete',
-                url: `https://${host}${
-                    port ? ':' + port : ''
-                }/v1/channels/${funding_txid_str}/${output_index}`,
-                headers: {
-                    'macaroon': macaroonHex,
-                    'encodingtype': 'hex'
-                }
-            })
+
+        let urlParams: Array<string>;
+        if (implementation === 'c-lightning-REST') {
+            urlParams = [channelId];
+        } else {
+            const { funding_txid_str, output_index } = request;
+            urlParams = [
+                funding_txid_str,
+                output_index
+            ];
+        }
+
+        RESTUtils.closeChannel(this.settingsStore, urlParams)
             .then((response: any) => {
-                // handle success
                 const data = response.data;
                 const { chan_close } = data;
                 this.closeChannelSuccess = chan_close.success;
@@ -140,7 +138,6 @@ export default class ChannelsStore {
                 this.loading = false;
             })
             .catch(() => {
-                // handle error
                 this.channels = [];
                 this.error = true;
                 this.loading = false;
@@ -210,7 +207,6 @@ export default class ChannelsStore {
 
         RESTUtils.openChannel(this.settingsStore, openChannelReq)
             .then((response: any) => {
-                // handle success
                 const data = response.data;
                 this.output_index = data.output_index;
                 this.funding_txid_str = data.funding_txid_str;
@@ -220,8 +216,7 @@ export default class ChannelsStore {
                 this.channelRequest = null;
                 this.channelSuccess = true;
             })
-            .catch((error: any) => {
-                // handle error
+            .catch((error: err) => {
                 const errorInfo = error.response.data;
                 this.errorMsgChannel = errorInfo.error.message || errorInfo.error;
                 this.output_index = null;

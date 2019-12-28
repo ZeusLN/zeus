@@ -58,7 +58,7 @@ export default class PaymentRequest extends React.Component<
         } = InvoicesStore;
         const { units, changeUnits, getAmount } = UnitsStore;
 
-        const num_satoshis = pay_req && pay_req.num_satoshis;
+        const num_satoshis = pay_req && pay_req.getAmount;
         const expiry = pay_req && pay_req.expiry;
         const cltv_expiry = pay_req && pay_req.cltv_expiry;
         const destination = pay_req && pay_req.destination;

@@ -50,28 +50,6 @@ export default class InvoicesStore {
     };
 
     @action
-    public getInvoice = (lightningInvoice: string) => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
-        axios
-            .request({
-                method: 'get',
-                url: `https://${host}${
-                    port ? ':' + port : ''
-                }/v1/invoice/${lightningInvoice}`,
-                headers: {
-                    'macaroon': macaroonHex,
-                    'encodingtype': 'hex'
-                }
-            })
-            .then((response: any) => {
-                // handle success
-                const data = response.data;
-                this.invoice = data;
-            });
-    };
-
-    @action
     public createInvoice = (
         memo: string,
         value: string,
@@ -119,31 +97,21 @@ export default class InvoicesStore {
 
     @action
     public getPayReq = (paymentRequest: string) => {
-        const { host, port, macaroonHex } = this.settingsStore;
+        const { implementation } = this.settingsStore;
 
         this.pay_req = null;
         this.paymentRequest = paymentRequest;
         this.loading = true;
 
-        axios
-            .request({
-                method: 'get',
-                url: `https://${host}${
-                    port ? ':' + port : ''
-                }/v1/payreq/${paymentRequest}`,
-                headers: {
-                    'macaroon': macaroonHex,
-                    'encodingtype': 'hex'
-                }
-            })
+        RESTUtils.decodePaymentRequest(this.settingsStore, [paymentRequest])
             .then((response: any) => {
                 // handle success
                 const data = response.data;
-                this.pay_req = data;
+                this.pay_req = new Invoice(data);
                 this.loading = false;
                 this.getPayReqError = false;
             })
-            .catch(() => {
+            .catch((err: error) => {
                 // handle error
                 this.loading = false;
                 this.getPayReqError = true;
