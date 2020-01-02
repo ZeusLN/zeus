@@ -49,7 +49,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         Clipboard.getString().then(text => this.validateAddress(text, false));
     }
 
-    componentWillReceiveProps(nextProps: any) {
+    UNSAFE_componentWillReceiveProps(nextProps: any) {
         const { navigation } = nextProps;
         const destination = navigation.getParam('destination', null);
         const amount = navigation.getParam('amount', null);

@@ -72,7 +72,7 @@ export default class Settings extends React.Component<
         }
     }
 
-    componentWillReceiveProps = (newProps: any) => {
+    UNSAFE_componentWillReceiveProps = (newProps: any) => {
         const { SettingsStore } = newProps;
         const { settings } = SettingsStore;
         this.refreshSettings();

@@ -52,7 +52,7 @@ export default class OpenChannel extends React.Component<
         suggestImport: ''
     };
 
-    async componentWillMount() {
+    async UNSAFE_componentWillMount() {
         const clipboard = await Clipboard.getString();
 
         if (NodeUriUtils.isValidNodeUri(clipboard)) {
@@ -82,7 +82,7 @@ export default class OpenChannel extends React.Component<
         });
     };
 
-    componentWillReceiveProps(nextProps: any) {
+    UNSAFE_componentWillReceiveProps(nextProps: any) {
         const { navigation } = nextProps;
         const node_pubkey_string = navigation.getParam(
             'node_pubkey_string',

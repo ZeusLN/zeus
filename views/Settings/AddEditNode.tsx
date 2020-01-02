@@ -74,7 +74,7 @@ export default class AddEditNode extends React.Component<
         this.isComponentMounted = false;
     }
 
-    componentWillReceiveProps(nextProps: any) {
+    UNSAFE_componentWillReceiveProps(nextProps: any) {
         const { navigation } = nextProps;
         const node = navigation.getParam('node', null);
         const index = navigation.getParam('index', null);
