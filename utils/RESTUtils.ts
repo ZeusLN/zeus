@@ -36,7 +36,7 @@ const clightningRoutes = {
     getMyNodeInfo: '/v1/getinfo',
     getInvoices: '/v1/invoice/listInvoices/',
     createInvoice: '/v1/invoice/genInvoice/',
-    getPayments: '/v1/pay/listPays',
+    getPayments: '/v1/pay/listPayments',
     getNewAddress: '/v1/newaddr',
     openChannel: '/v1/channel/openChannel/',
     connectPeer: '/v1/peer/connect',
