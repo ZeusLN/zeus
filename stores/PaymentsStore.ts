@@ -21,7 +21,7 @@ export default class PaymentsStore {
             .then((response: any) => {
                 // handle success
                 const data = response.data;
-                this.payments = data.pays || data.payments;
+                this.payments = data.transaction && data.transactions.reverse() || data.payments;
                 this.loading = false;
             })
             .catch((err: error) => {
