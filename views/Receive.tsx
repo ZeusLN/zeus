@@ -6,6 +6,7 @@ import {
     TextInput,
     View
 } from 'react-native';
+import { LNURLWithdrawParams } from 'js-lnurl';
 import { Button, ButtonGroup, Header, Icon } from 'react-native-elements';
 import CollapsedQR from './../components/CollapsedQR';
 import { inject, observer } from 'mobx-react';
@@ -39,6 +40,21 @@ export default class Receive extends React.Component<
         value: '',
         expiry: '3600'
     };
+
+    componentDidMount() {
+        const { navigation } = this.props;
+        const lnurl: LNURLWithdrawParams | undefined = navigation.getParam(
+            'lnurlParams'
+        );
+
+        if (lnurl) {
+            this.setState({
+                selectedIndex: 0,
+                memo: lnurl.defaultDescription,
+                value: Math.floor(lnurl.maxWithdrawable / 1000).toString()
+            });
+        }
+    }
 
     getNewAddress = () => {
         const { SettingsStore } = this.props;
@@ -75,6 +91,10 @@ export default class Receive extends React.Component<
         } = InvoicesStore;
         const { settings, loading } = SettingsStore;
         const { onChainAndress, theme } = settings;
+
+        const lnurl: LNURLWithdrawParams | undefined = navigation.getParam(
+            'lnurlParams'
+        );
 
         const lightningButton = () => (
             <React.Fragment>
@@ -199,15 +219,29 @@ export default class Receive extends React.Component<
                                 }}
                             >
                                 Amount (in Satoshis)
+                                {lnurl &&
+                                lnurl.minWithdrawable !== lnurl.maxWithdrawable
+                                    ? ` (${Math.ceil(
+                                          lnurl.minWithdrawable / 1000
+                                      )}--${Math.floor(
+                                          lnurl.maxWithdrawable / 1000
+                                      )})`
+                                    : ''}
                             </Text>
                             <TextInput
                                 placeholder={'100'}
                                 value={value}
-                                onChangeText={(text: string) =>
-                                    this.setState({ value: text })
-                                }
+                                onChangeText={(text: string) => {
+                                    this.setState({ value: text });
+                                }}
                                 numberOfLines={1}
-                                editable={true}
+                                editable={
+                                    lnurl &&
+                                    lnurl.minWithdrawable ===
+                                        lnurl.maxWithdrawable
+                                        ? false
+                                        : true
+                                }
                                 style={
                                     theme === 'dark'
                                         ? styles.textInputDark
@@ -241,14 +275,21 @@ export default class Receive extends React.Component<
 
                             <View style={styles.button}>
                                 <Button
-                                    title="Create Invoice"
+                                    title={`Create${
+                                        lnurl ? ' and submit ' : ' '
+                                    }invoice`}
                                     icon={{
                                         name: 'create',
                                         size: 25,
                                         color: 'white'
                                     }}
                                     onPress={() =>
-                                        createInvoice(memo, value, expiry)
+                                        createInvoice(
+                                            memo,
+                                            value,
+                                            expiry,
+                                            lnurl
+                                        )
                                     }
                                     buttonStyle={{
                                         backgroundColor: 'orange',

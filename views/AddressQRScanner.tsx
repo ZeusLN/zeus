@@ -1,19 +1,13 @@
 import * as React from 'react';
 import { Alert } from 'react-native';
-import AddressUtils from './../utils/AddressUtils';
-import QRCodeScanner from './../components/QRCodeScanner';
 import { inject, observer } from 'mobx-react';
-
-import NodeInfoStore from './../stores/NodeInfoStore';
-import InvoicesStore from './../stores/InvoicesStore';
+import QRCodeScanner from './../components/QRCodeScanner';
+import handleAnything from './../utils/handleAnything';
 
 interface AddressQRProps {
     navigation: any;
-    InvoicesStore: InvoicesStore;
-    NodeInfoStore: NodeInfoStore;
 }
 
-@inject('InvoicesStore', 'NodeInfoStore')
 @observer
 export default class AddressQRScanner extends React.Component<
     AddressQRProps,
@@ -28,35 +22,21 @@ export default class AddressQRScanner extends React.Component<
     }
 
     handleAddressInvoiceScanned = (data: string) => {
-        const { InvoicesStore, NodeInfoStore, navigation } = this.props;
-        const { testnet } = NodeInfoStore;
+        const { navigation } = this.props;
+        handleAnything(data)
+            .then(([route, props]) => {
+                navigation.navigate(route, props);
+            })
+            .catch(err => {
+                Alert.alert(
+                    'Error',
+                    err.message,
+                    [{ text: 'OK', onPress: () => void 0 }],
+                    { cancelable: false }
+                );
 
-        const { value, amount } = AddressUtils.processSendAddress(data);
-
-        if (AddressUtils.isValidBitcoinAddress(value, testnet)) {
-            navigation.navigate('Send', {
-                destination: value,
-                amount,
-                transactionType: 'On-chain'
+                navigation.navigate('Send');
             });
-        } else if (AddressUtils.isValidLightningPaymentRequest(value)) {
-            navigation.navigate('Send', {
-                destination: value,
-                transactionType: 'Lightning'
-            });
-
-            InvoicesStore.getPayReq(value);
-            navigation.navigate('PaymentRequest');
-        } else {
-            Alert.alert(
-                'Error',
-                'Scanned QR code was not a valid Bitcoin address or Lightning Invoice',
-                [{ text: 'OK', onPress: () => void 0 }],
-                { cancelable: false }
-            );
-
-            navigation.navigate('Send');
-        }
     };
 
     render() {
