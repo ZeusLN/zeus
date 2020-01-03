@@ -13,12 +13,17 @@ export default class NodeInfo extends BaseModel {
     synced_to_chain?: boolean;
     @observable testnet?: boolean;
     block_hash?: string;
-    block_height?: number;
+    @observable block_height?: number;
     best_header_timestamp?: string;
     // c-lightning
     @observable network?: string;
+    @observable blockheight?: number;
 
     @computed public get isTestNet(): boolean {
         return this.testnet || this.network === 'testnet';
+    }
+
+    @computed public get currentBlockHeight(): Number {
+        return this.block_height || this.blockheight;
     }
 }
