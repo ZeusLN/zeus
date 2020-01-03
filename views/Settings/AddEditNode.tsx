@@ -1,5 +1,14 @@
 import * as React from 'react';
-import { StyleSheet, Text, View, TextInput } from 'react-native';
+import {
+    ActionSheetIOS,
+    Picker,
+    Platform,
+    StyleSheet,
+    Text,
+    View,
+    TextInput,
+    TouchableOpacity
+} from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -14,6 +23,7 @@ interface AddEditNodeState {
     host: string;
     port: string | number;
     macaroonHex: string;
+    implementation: string;
     saved: boolean;
     active: boolean;
     index: number;
@@ -35,7 +45,8 @@ export default class AddEditNode extends React.Component<
         saved: false,
         index: 0,
         active: false,
-        newEntry: false
+        newEntry: false,
+        implementation: 'lnd'
     };
 
     async componentDidMount() {
@@ -50,12 +61,13 @@ export default class AddEditNode extends React.Component<
         const newEntry = navigation.getParam('newEntry', null);
 
         if (node) {
-            const { host, port, macaroonHex } = node;
+            const { host, port, macaroonHex, implementation } = node;
 
             this.setState({
                 host,
                 port,
                 macaroonHex,
+                implementation,
                 index,
                 active,
                 saved,
@@ -82,12 +94,13 @@ export default class AddEditNode extends React.Component<
         const newEntry = navigation.getParam('newEntry', null);
 
         if (node) {
-            const { host, port, macaroonHex } = node;
+            const { host, port, macaroonHex, implementation } = node;
 
             this.setState({
                 host,
                 port,
                 macaroonHex,
+                implementation,
                 index,
                 active:
                     index === this.props.SettingsStore.settings.selectedNode,
@@ -104,13 +117,14 @@ export default class AddEditNode extends React.Component<
 
     saveNodeConfiguration = () => {
         const { SettingsStore, navigation } = this.props;
-        const { host, port, macaroonHex, index } = this.state;
+        const { host, port, macaroonHex, implementation, index } = this.state;
         const { setSettings, settings } = SettingsStore;
 
         const node = {
             host,
             port,
-            macaroonHex
+            macaroonHex,
+            implementation
         };
 
         let nodes: any = settings.nodes || [];
@@ -122,7 +136,7 @@ export default class AddEditNode extends React.Component<
                 nodes,
                 theme: settings.theme,
                 selectedNode: settings.selectedNode,
-                onChainAndress: settings.onChainAndress
+                onChainAddress: settings.onChainAddress
             })
         );
 
@@ -156,7 +170,7 @@ export default class AddEditNode extends React.Component<
                 theme: settings.theme,
                 selectedNode:
                     index === settings.selectedNode ? 0 : settings.selectedNode,
-                onChainAndress: settings.onChainAndress
+                onChainAddress: settings.onChainAddress
             })
         ).then(() => {
             navigation.navigate('Wallet', { refresh: true });
@@ -174,7 +188,7 @@ export default class AddEditNode extends React.Component<
                 nodes,
                 theme: settings.theme,
                 selectedNode: index,
-                onChainAndress: settings.onChainAndress
+                onChainAddress: settings.onChainAddress
             })
         );
 
@@ -194,7 +208,8 @@ export default class AddEditNode extends React.Component<
             saved,
             active,
             index,
-            newEntry
+            newEntry,
+            implementation
         } = this.state;
         const { loading, settings } = SettingsStore;
         const savedTheme = settings.theme;
@@ -283,7 +298,7 @@ export default class AddEditNode extends React.Component<
                             color: savedTheme === 'dark' ? 'white' : 'black'
                         }}
                     >
-                        LND Macaroon (Hex format)
+                        Macaroon (Hex format)
                     </Text>
                     <TextInput
                         placeholder={'0A...'}
@@ -300,6 +315,95 @@ export default class AddEditNode extends React.Component<
                         editable={!loading}
                         placeholderTextColor="gray"
                     />
+
+                    {Platform.OS !== 'ios' && (
+                        <View>
+                            <Text
+                                style={{
+                                    color:
+                                        savedTheme === 'dark'
+                                            ? 'white'
+                                            : 'black'
+                                }}
+                            >
+                                Theme
+                            </Text>
+                            <Picker
+                                selectedValue={theme}
+                                onValueChange={(itemValue: string) =>
+                                    this.setState({
+                                        implementation: itemValue,
+                                        saved: false
+                                    })
+                                }
+                                style={
+                                    savedTheme === 'dark'
+                                        ? styles.pickerDark
+                                        : styles.picker
+                                }
+                            >
+                                <Picker.Item label="lnd" value="lnd" />
+                                <Picker.Item
+                                    label="c-lightning-REST"
+                                    value="c-lightning-REST"
+                                />
+                            </Picker>
+                        </View>
+                    )}
+
+                    {Platform.OS === 'ios' && (
+                        <View>
+                            <Text
+                                style={{
+                                    color:
+                                        savedTheme === 'dark'
+                                            ? 'white'
+                                            : 'black'
+                                }}
+                            >
+                                Node implementation
+                            </Text>
+                            <TouchableOpacity
+                                onPress={() =>
+                                    ActionSheetIOS.showActionSheetWithOptions(
+                                        {
+                                            options: [
+                                                'Cancel',
+                                                'lnd',
+                                                'c-lightning-REST'
+                                            ],
+                                            cancelButtonIndex: 0
+                                        },
+                                        buttonIndex => {
+                                            if (buttonIndex === 1) {
+                                                this.setState({
+                                                    implementation: 'lnd',
+                                                    saved: false
+                                                });
+                                            } else if (buttonIndex === 2) {
+                                                this.setState({
+                                                    implementation:
+                                                        'c-lightning-REST',
+                                                    saved: false
+                                                });
+                                            }
+                                        }
+                                    )
+                                }
+                            >
+                                <Text
+                                    style={{
+                                        color:
+                                            savedTheme === 'dark'
+                                                ? 'white'
+                                                : 'black'
+                                    }}
+                                >
+                                    {implementation}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </View>
 
                 <View style={styles.button}>

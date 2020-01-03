@@ -28,12 +28,16 @@ interface ChannelProps {
 @inject('ChannelsStore', 'UnitsStore', 'SettingsStore')
 @observer
 export default class ChannelView extends React.Component<ChannelProps> {
-    closeChannel = (channelPoint: string) => {
+    closeChannel = (channelPoint: string, channelId: string) => {
         const { ChannelsStore, navigation } = this.props;
-        const funding_txid_str = channelPoint.split(':')[0];
-        const output_index = channelPoint.split(':')[1];
+        if (channelId) {
+            ChannelsStore.closeChannel(null, channelId);
+        } else {
+            const funding_txid_str = channelPoint.split(':')[0];
+            const output_index = channelPoint.split(':')[1];
 
-        ChannelsStore.closeChannel({ funding_txid_str, output_index });
+            ChannelsStore.closeChannel({ funding_txid_str, output_index });
+        }
         navigation.navigate('Wallet');
     };
 
@@ -53,20 +57,25 @@ export default class ChannelView extends React.Component<ChannelProps> {
         const {
             channel_point,
             commit_weight,
-            local_balance,
+            localBalance,
             commit_fee,
             csv_delay,
             fee_per_kw,
             total_satoshis_received,
-            active,
-            remote_balance,
+            isActive,
+            remoteBalance,
             unsettled_balance,
             total_satoshis_sent,
             remote_pubkey,
-            capacity
+            capacity,
+            alias,
+            channel_id
         } = channel;
         const privateChannel = channel.private;
-        const data = new Identicon(hash.sha1(remote_pubkey), 420).toString();
+        const data = new Identicon(
+            hash.sha1(alias || remote_pubkey),
+            420
+        ).toString();
 
         const BackButton = () => (
             <Icon
@@ -102,17 +111,21 @@ export default class ChannelView extends React.Component<ChannelProps> {
                                     : styles.alias
                             }
                         >
-                            {nodes[remote_pubkey] && nodes[remote_pubkey].alias}
+                            {(nodes[remote_pubkey] &&
+                                nodes[remote_pubkey].alias) ||
+                                alias}
                         </Text>
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.pubkeyDark
-                                    : styles.pubkey
-                            }
-                        >
-                            {remote_pubkey}
-                        </Text>
+                        {remote_pubkey && (
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.pubkeyDark
+                                        : styles.pubkey
+                                }
+                            >
+                                {remote_pubkey}
+                            </Text>
+                        )}
 
                         <Image
                             source={{ uri: `data:image/png;base64,${data}` }}
@@ -121,8 +134,8 @@ export default class ChannelView extends React.Component<ChannelProps> {
                     </View>
 
                     <BalanceSlider
-                        localBalance={local_balance}
-                        remoteBalance={remote_balance}
+                        localBalance={localBalance}
+                        remoteBalance={remoteBalance}
                         theme={theme}
                     />
 
@@ -135,7 +148,7 @@ export default class ChannelView extends React.Component<ChannelProps> {
                                         : styles.balance
                                 }
                             >{`Local balance: ${units &&
-                                getAmount(local_balance || 0)}`}</Text>
+                                getAmount(localBalance || 0)}`}</Text>
                             <Text
                                 style={
                                     theme === 'dark'
@@ -143,7 +156,7 @@ export default class ChannelView extends React.Component<ChannelProps> {
                                         : styles.balance
                                 }
                             >{`Remote balance: ${units &&
-                                getAmount(remote_balance || 0)}`}</Text>
+                                getAmount(remoteBalance || 0)}`}</Text>
                             {unsettled_balance && (
                                 <Text
                                     style={
@@ -167,10 +180,10 @@ export default class ChannelView extends React.Component<ChannelProps> {
                     <Text
                         style={{
                             ...styles.value,
-                            color: active ? 'green' : 'red'
+                            color: isActive ? 'green' : 'red'
                         }}
                     >
-                        {active ? 'Active' : 'Inactive'}
+                        {isActive ? 'Active' : 'Inactive'}
                     </Text>
 
                     <Text
@@ -189,122 +202,174 @@ export default class ChannelView extends React.Component<ChannelProps> {
                         {privateChannel ? 'True' : 'False'}
                     </Text>
 
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.labelDark : styles.label
-                        }
-                    >
-                        Total Received:
-                    </Text>
-                    <TouchableOpacity onPress={() => changeUnits()}>
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.valueDark
-                                    : styles.value
-                            }
-                        >
-                            {units && getAmount(total_satoshis_received || 0)}
-                        </Text>
-                    </TouchableOpacity>
+                    {total_satoshis_received && (
+                        <View>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Total Received:
+                            </Text>
+                            <TouchableOpacity onPress={() => changeUnits()}>
+                                <Text
+                                    style={
+                                        theme === 'dark'
+                                            ? styles.valueDark
+                                            : styles.value
+                                    }
+                                >
+                                    {units &&
+                                        getAmount(total_satoshis_received || 0)}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.labelDark : styles.label
-                        }
-                    >
-                        Total Sent:
-                    </Text>
-                    <TouchableOpacity onPress={() => changeUnits()}>
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.valueDark
-                                    : styles.value
-                            }
-                        >
-                            {units && getAmount(total_satoshis_sent || 0)}
-                        </Text>
-                    </TouchableOpacity>
+                    {total_satoshis_sent && (
+                        <View>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Total Sent:
+                            </Text>
+                            <TouchableOpacity onPress={() => changeUnits()}>
+                                <Text
+                                    style={
+                                        theme === 'dark'
+                                            ? styles.valueDark
+                                            : styles.value
+                                    }
+                                >
+                                    {units &&
+                                        getAmount(total_satoshis_sent || 0)}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.labelDark : styles.label
-                        }
-                    >
-                        Capacity:
-                    </Text>
-                    <TouchableOpacity onPress={() => changeUnits()}>
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.valueDark
-                                    : styles.value
-                            }
-                        >
-                            {units && getAmount(capacity)}
-                        </Text>
-                    </TouchableOpacity>
+                    {capacity && (
+                        <View>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Capacity:
+                            </Text>
+                            <TouchableOpacity onPress={() => changeUnits()}>
+                                <Text
+                                    style={
+                                        theme === 'dark'
+                                            ? styles.valueDark
+                                            : styles.value
+                                    }
+                                >
+                                    {units && getAmount(capacity)}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.labelDark : styles.label
-                        }
-                    >
-                        Commit Weight:
-                    </Text>
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.valueDark : styles.value
-                        }
-                    >
-                        {commit_weight}
-                    </Text>
+                    {commit_weight && (
+                        <View>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Commit Weight:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {commit_weight}
+                            </Text>
+                        </View>
+                    )}
 
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.labelDark : styles.label
-                        }
-                    >
-                        Commit Fee:
-                    </Text>
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.valueDark : styles.value
-                        }
-                    >
-                        {commit_fee}
-                    </Text>
+                    {commit_fee && (
+                        <View>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Commit Fee:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {commit_fee}
+                            </Text>
+                        </View>
+                    )}
 
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.labelDark : styles.label
-                        }
-                    >
-                        CSV Delay:
-                    </Text>
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.valueDark : styles.value
-                        }
-                    >
-                        {csv_delay}
-                    </Text>
+                    {csv_delay && (
+                        <View>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                CSV Delay:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {csv_delay}
+                            </Text>
+                        </View>
+                    )}
 
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.labelDark : styles.label
-                        }
-                    >
-                        Fee per kilo-weight:
-                    </Text>
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.valueDark : styles.value
-                        }
-                    >
-                        {fee_per_kw}
-                    </Text>
+                    {fee_per_kw && (
+                        <View>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Fee per kilo-weight:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {fee_per_kw}
+                            </Text>
+                        </View>
+                    )}
 
                     <View style={styles.button}>
                         <Button
@@ -314,7 +379,9 @@ export default class ChannelView extends React.Component<ChannelProps> {
                                 size: 25,
                                 color: '#fff'
                             }}
-                            onPress={() => this.closeChannel(channel_point)}
+                            onPress={() =>
+                                this.closeChannel(channel_point, channel_id)
+                            }
                             buttonStyle={{
                                 backgroundColor: 'red',
                                 borderRadius: 30
