@@ -34,7 +34,7 @@
     "react-native-qrcode": "0.2.7",
     "react-native-vector-icons": "6.2.0",
     "react-navigation": "3.0.9",
-    "realm": "^2.26.1",
+    "realm": "^3.6.0",
     "sha.js": "^2.4.11"
   },
   "devDependencies": {
