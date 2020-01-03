@@ -12,18 +12,26 @@ import { inject, observer } from 'mobx-react';
 
 import UnitsStore from './../stores/UnitsStore';
 import SettingsStore from './../stores/SettingsStore';
+import LnurlPayStore from './../stores/LnurlPayStore';
+import LnurlPayHistorical from './LnurlPay/Historical';
 
 interface PaymentProps {
     navigation: any;
     UnitsStore: UnitsStore;
     SettingsStore: SettingsStore;
+    LnurlPayStore: LnurlPayStore;
 }
 
-@inject('UnitsStore', 'SettingsStore')
+@inject('UnitsStore', 'SettingsStore', 'LnurlPayStore')
 @observer
 export default class PaymentView extends React.Component<PaymentProps> {
     render() {
-        const { navigation, UnitsStore, SettingsStore } = this.props;
+        const {
+            navigation,
+            UnitsStore,
+            SettingsStore,
+            LnurlPayStore
+        } = this.props;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { settings } = SettingsStore;
         const { theme } = settings;
@@ -38,6 +46,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
             path
         } = payment;
         const date = new Date(Number(creation_date) * 1000).toString();
+        const lnurlpaytx = LnurlPayStore.load(payment_hash);
 
         const BackButton = () => (
             <Icon
@@ -77,6 +86,16 @@ export default class PaymentView extends React.Component<PaymentProps> {
                         </Text>
                     </TouchableOpacity>
                 </View>
+
+                {lnurlpaytx && (
+                    <View style={styles.content}>
+                        <LnurlPayHistorical
+                            navigation={navigation}
+                            lnurlpaytx={lnurlpaytx}
+                            preimage={payment_preimage}
+                        />
+                    </View>
+                )}
 
                 <View style={styles.content}>
                     <Text
