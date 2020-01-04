@@ -124,23 +124,31 @@ export default class NodeInfo extends React.Component<InvoiceProps> {
                             theme === 'dark' ? styles.valueDark : styles.value
                         }
                     >
-                        {nodeInfo.block_height}
+                        {nodeInfo.currentBlockHeight}
                     </Text>
 
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.labelDark : styles.label
-                        }
-                    >
-                        Block Hash
-                    </Text>
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.valueDark : styles.value
-                        }
-                    >
-                        {nodeInfo.block_hash}
-                    </Text>
+                    {nodeInfo.block_hash && (
+                        <View>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Block Hash
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {nodeInfo.block_hash}
+                            </Text>
+                        </View>
+                    )}
 
                     <Text
                         style={
