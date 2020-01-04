@@ -326,10 +326,9 @@ export default class AddEditNode extends React.Component<
                                             : 'black'
                                 }}
                             >
-                                Theme
+                                Implementation
                             </Text>
                             <Picker
-                                selectedValue={theme}
                                 onValueChange={(itemValue: string) =>
                                     this.setState({
                                         implementation: itemValue,
