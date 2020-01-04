@@ -106,7 +106,7 @@ export default class Transactions extends React.Component<TransactionsProps> {
                             let subtitle =
                                 item.getBlockHeight || 'Awaiting Confirmation';
                             if (item.time_stamp) {
-                                subtitle.append(
+                                subtitle.concat(
                                     ` | ${DateTimeUtils.listFormattedDate(
                                         item.time_stamp
                                     )}`

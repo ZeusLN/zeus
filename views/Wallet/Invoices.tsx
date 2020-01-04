@@ -74,7 +74,7 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
             return avatar;
         };
 
-        const Invoice = (settled: boolean) => (
+        const InvoiceIcon = (settled: boolean) => (
             <Avatar source={InvoiceImage(settled)} />
         );
 
@@ -106,7 +106,7 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
                                         backgroundColor:
                                             theme === 'dark' ? 'black' : 'white'
                                     }}
-                                    leftElement={Invoice(item.isPaid)}
+                                    leftElement={InvoiceIcon(item.isPaid)}
                                     onPress={() =>
                                         navigation.navigate('Invoice', {
                                             invoice: item
