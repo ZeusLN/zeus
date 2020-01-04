@@ -147,7 +147,7 @@ export default class InvoicesStore {
                 ) {
                     throw new Error('wrong description_hash!');
                 }
-          
+
                 this.loading = false;
                 this.getPayReqError = null;
             })
