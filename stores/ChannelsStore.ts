@@ -73,12 +73,13 @@ export default class ChannelsStore {
     @action
     getNodeInfo = (pubkey: string) => {
         this.loading = true;
-        RESTUtils.getNodeInfo(this.settingsStore, [pubkey])
-            .then((response: any) => {
+        RESTUtils.getNodeInfo(this.settingsStore, [pubkey]).then(
+            (response: any) => {
                 // handle success
                 const data = response.data;
                 return data.node;
-            });
+            }
+        );
     };
 
     @action
