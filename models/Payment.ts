@@ -1,5 +1,6 @@
 import BaseModel from './BaseModel.ts';
-import DateTimeUtils from './../../utils/DateTimeUtils';
+import DateTimeUtils from './../utils/DateTimeUtils';
+import { computed } from 'mobx';
 
 export default class Payment extends BaseModel {
     payment_hash: string;
