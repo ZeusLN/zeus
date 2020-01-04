@@ -2,7 +2,6 @@ import * as React from 'react';
 import { StyleSheet, View, FlatList } from 'react-native';
 import { Avatar, Button, ListItem } from 'react-native-elements';
 import Payment from './../../models/Payment';
-import DateTimeUtils from './../../utils/DateTimeUtils';
 import { inject, observer } from 'mobx-react';
 
 import PaymentsStore from './../../stores/PaymentsStore';
@@ -70,10 +69,8 @@ export default class PaymentsView extends React.Component<PaymentsProps, {}> {
                         renderItem={({ item }: any) => (
                             <ListItem
                                 key={item.payment_hash}
-                                title={units && getAmount(item.value)}
-                                subtitle={DateTimeUtils.listFormattedDate(
-                                    item.creation_date
-                                )}
+                                title={units && getAmount(item.getAmount)}
+                                subtitle={item.getCreationTime}
                                 containerStyle={{
                                     borderBottomWidth: 0,
                                     backgroundColor:

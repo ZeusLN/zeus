@@ -22,7 +22,7 @@ export default class NodeInfo extends BaseModel {
     @computed public get isTestNet(): boolean {
         return this.testnet || this.network === 'testnet';
     }
-  
+
     @computed public get currentBlockHeight(): Number {
         return this.block_height || this.blockheight;
     }
