@@ -64,6 +64,7 @@ const getLightningBalanceToken = axios.CancelToken.source().token;
 const getMyNodeInfoToken = axios.CancelToken.source().token;
 const getInvoicesToken = axios.CancelToken.source().token;
 const getPaymentsToken = axios.CancelToken.source().token;
+const getNodeInfoToken = axios.CancelToken.source().token;
 
 class RESTUtils {
     axiosReq = (
@@ -210,7 +211,7 @@ class RESTUtils {
     closeChannel = (settingsStore: SettingsStore, urlParams?: Array<string>) =>
         this.deleteRequest(settingsStore, 'closeChannel', urlParams);
     getNodeInfo = (settingsStore: SettingsStore, urlParams?: Array<string>) =>
-        this.getRequest(settingsStore, 'getNodeInfo', urlParams);
+        this.getRequest(settingsStore, 'getNodeInfo', getNodeInfoToken, urlParams);
 }
 
 const restUtils = new RESTUtils();
