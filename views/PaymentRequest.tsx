@@ -150,7 +150,7 @@ export default class PaymentRequest extends React.Component<
                                 {setCustomAmount && (
                                     <TextInput
                                         placeholder={
-                                            num_satoshis ? num_satoshis : '0'
+                                            num_satoshis ? num_satoshis.toString() : '0'
                                         }
                                         value={customAmount}
                                         onChangeText={(text: string) =>
