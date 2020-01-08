@@ -29,11 +29,11 @@ export default class Payment extends BaseModel {
 
     @computed public get getCreationTime(): string {
         return DateTimeUtils.listFormattedDate(
-            this.creation_date || this.creation_at
+            this.creation_date || this.created_at
         );
     }
 
     @computed public get getAmount(): number | string {
-        return this.value || Number(this.amount_msat) / 1000;
+        return this.value || Number(this.msatoshi) / 1000;
     }
 }

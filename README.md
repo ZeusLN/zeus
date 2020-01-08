@@ -12,8 +12,8 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 *Disclaimer*: Zeus and Lightning in general are software projects in their early development stages. Please be wary when using Lightning and do not fund your node with more money than you are willing to lose.
 
 ### App Store links
-* [F-Droid](https://f-droid.org/packages/com.zeusln.zeusbeta/)
-* [Google Play](https://play.google.com/store/apps/details?id=com.zeusln.zeusbeta)
+* [F-Droid](https://f-droid.org/packages/com.zeusln.zeus/)
+* [Google Play](https://play.google.com/store/apps/details?id=com.zeusln.zeus)
 * [Apple TestFlight](https://testflight.apple.com/join/gpVFzEHN)
 
 ### Get in touch with us
