@@ -211,7 +211,12 @@ class RESTUtils {
     closeChannel = (settingsStore: SettingsStore, urlParams?: Array<string>) =>
         this.deleteRequest(settingsStore, 'closeChannel', urlParams);
     getNodeInfo = (settingsStore: SettingsStore, urlParams?: Array<string>) =>
-        this.getRequest(settingsStore, 'getNodeInfo', getNodeInfoToken, urlParams);
+        this.getRequest(
+            settingsStore,
+            'getNodeInfo',
+            getNodeInfoToken,
+            urlParams
+        );
 }
 
 const restUtils = new RESTUtils();
