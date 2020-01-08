@@ -31,7 +31,7 @@ export default class NodeInfo extends React.Component<InvoiceProps> {
             />
         );
 
-        const URIs = (props: { uris: Array<any> }) => {
+        const URIs = (props: { uris: Array<string> }) => {
             const items: any = [];
 
             props.uris.forEach((uri, key) => {
@@ -96,21 +96,29 @@ export default class NodeInfo extends React.Component<InvoiceProps> {
                         {nodeInfo.version}
                     </Text>
 
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.labelDark : styles.label
-                        }
-                    >
-                        Synced to Chain:
-                    </Text>
-                    <Text
-                        style={{
-                            ...styles.value,
-                            color: nodeInfo.synced_to_chain ? 'green' : 'red'
-                        }}
-                    >
-                        {nodeInfo.synced_to_chain ? 'True' : 'False'}
-                    </Text>
+                    {!!nodeInfo.synced_to_chain && (
+                        <View>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Synced to Chain:
+                            </Text>
+                            <Text
+                                style={{
+                                    ...styles.value,
+                                    color: nodeInfo.synced_to_chain
+                                        ? 'green'
+                                        : 'red'
+                                }}
+                            >
+                                {nodeInfo.synced_to_chain ? 'True' : 'False'}
+                            </Text>
+                        </View>
+                    )}
 
                     <Text
                         style={
@@ -157,8 +165,8 @@ export default class NodeInfo extends React.Component<InvoiceProps> {
                     >
                         URIs:
                     </Text>
-                    {nodeInfo.uris && nodeInfo.uris.length > 0 ? (
-                        <URIs uris={nodeInfo.uris} />
+                    {nodeInfo.getURIs && nodeInfo.getURIs.length > 0 ? (
+                        <URIs uris={nodeInfo.getURIs} />
                     ) : (
                         <Text style={{ ...styles.value, color: 'red' }}>
                             No URIs available
