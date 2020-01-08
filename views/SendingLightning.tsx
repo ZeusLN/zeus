@@ -37,11 +37,11 @@ export default class SendingLightning extends React.Component<
 
     getBackgroundColor() {
         const { TransactionsStore } = this.props;
-        const { payment_route, payment_error, error } = TransactionsStore;
+        const { payment_route, payment_error, status, error } = TransactionsStore;
 
         if (error) {
             return 'darkred';
-        } else if (payment_route) {
+        } else if (payment_route || status === 'complete') {
             return 'green';
         } else if (payment_error) {
             return 'lightcoral';
@@ -59,9 +59,11 @@ export default class SendingLightning extends React.Component<
             payment_hash,
             payment_route,
             payment_preimage,
-            payment_error
+            payment_error,
+            status
         } = TransactionsStore;
         const backgroundColor = this.getBackgroundColor();
+        const success = payment_route || status === 'complete';
 
         return (
             <View
@@ -91,7 +93,7 @@ export default class SendingLightning extends React.Component<
                             Error: {payment_error || error_msg}
                         </Text>
                     )}
-                    {payment_route && (
+                    {(payment_route || status === 'complete') && (
                         <Text
                             style={{
                                 color: 'white',
@@ -121,7 +123,7 @@ export default class SendingLightning extends React.Component<
                             }}
                         >{`Payment Hash: ${payment_hash}`}</Text>
                     )}
-                    {payment_route && (
+                    {success && (
                         <Button
                             title=""
                             icon={{
@@ -152,7 +154,7 @@ export default class SendingLightning extends React.Component<
                         />
                     )}
 
-                    {(error || payment_error || payment_route) && (
+                    {(error || payment_error || success) && (
                         <Button
                             title="Go to Wallet"
                             icon={{
