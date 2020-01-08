@@ -34,6 +34,6 @@ export default class Payment extends BaseModel {
     }
 
     @computed public get getAmount(): number | string {
-        return this.value || Number(this.amount_msat) / 1000;
+        return this.value || Number(this.msatoshi) / 1000;
     }
 }
