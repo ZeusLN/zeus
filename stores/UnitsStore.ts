@@ -23,15 +23,16 @@ export default class UnitsStore {
 
     @action
     public getAmount = (value: string | number) => {
+        const wholeSats = value.toString().split('.')[0];
         if (this.units === 'btc') {
             // handle negative values
-            const valueToProcess = (value && value.toString()) || '0';
+            const valueToProcess = (wholeSats && wholeSats.toString()) || '0';
             if (valueToProcess.includes('-')) {
                 let processedValue = valueToProcess.split('-')[1];
                 return `- ₿ ${Number(processedValue) / satoshisPerBTC}`;
             }
 
-            return `₿ ${Number(value || 0) / satoshisPerBTC}`;
+            return `₿ ${Number(wholeSats || 0) / satoshisPerBTC}`;
         }
 
         const sats = `${value || 0} ${
