@@ -11,15 +11,14 @@ export default class TransactionsStore {
     @observable error_msg: string | null;
     @observable transactions: Array<Transaction> = <Transaction>[];
     @observable transaction: Transaction;
-
     @observable payment_route: any; // Route
     @observable payment_preimage: string | null;
     @observable payment_hash: string | null;
     @observable payment_error: string | null;
-
     @observable onchain_address: string;
-
     @observable txid: string | null;
+    // c-lightning
+    @observable status: string | null;
 
     settingsStore: SettingsStore;
 
@@ -79,7 +78,7 @@ export default class TransactionsStore {
     };
 
     sendPayment = (payment_request: string, amount?: string) => {
-        const { host, port, macaroonHex } = this.settingsStore;
+        const { implementation } = this.settingsStore;
 
         this.loading = true;
         this.error_msg = null;
@@ -88,6 +87,7 @@ export default class TransactionsStore {
         this.payment_preimage = null;
         this.payment_hash = null;
         this.payment_error = null;
+        this.status = null;
 
         let data;
         if (implementation === 'c-lightning-REST') {
@@ -117,14 +117,16 @@ export default class TransactionsStore {
                 this.payment_preimage = data.payment_preimage;
                 this.payment_hash = data.payment_hash;
                 this.payment_error = data.payment_error;
+                this.status = data.status;
             })
-            .catch((error: any) => {
+            .catch((err: error) => {
                 // handle error
-                const errorInfo = error.response.data;
+                const errorInfo = err.response.data;
                 const code = errorInfo.code;
                 this.error = true;
                 this.loading = false;
                 this.error_msg =
+                    errorInfo.error.message ||
                     ErrorUtils.errorToUserFriendly(code) ||
                     errorInfo.message ||
                     errorInfo.error ||

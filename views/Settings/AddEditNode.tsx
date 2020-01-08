@@ -329,6 +329,7 @@ export default class AddEditNode extends React.Component<
                                 Implementation
                             </Text>
                             <Picker
+                                selectedValue={implementation}
                                 onValueChange={(itemValue: string) =>
                                     this.setState({
                                         implementation: itemValue,

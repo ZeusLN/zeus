@@ -1640,7 +1640,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.zeusln.zeusbeta;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zeusln.zeus;
 				PRODUCT_NAME = zeus;
 				PROVISIONING_PROFILE_SPECIFIER = "Zeus Distribution";
 				VERSIONING_SYSTEM = "apple-generic";
@@ -1675,7 +1675,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.zeusln.zeusbeta;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zeusln.zeus;
 				PRODUCT_NAME = zeus;
 				PROVISIONING_PROFILE_SPECIFIER = "Zeus Distribution";
 				VERSIONING_SYSTEM = "apple-generic";

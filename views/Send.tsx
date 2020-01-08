@@ -46,7 +46,10 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     componentDidMount() {
-        Clipboard.getString().then(text => this.validateAddress(text, false));
+        Clipboard.getString().then((text: string) => {
+            Clipboard.setString('');
+            this.validateAddress(text, false);
+        });
     }
 
     componentWillReceiveProps(nextProps: any) {
