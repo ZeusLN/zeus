@@ -11,15 +11,14 @@ export default class TransactionsStore {
     @observable error_msg: string | null;
     @observable transactions: Array<Transaction> = <Transaction>[];
     @observable transaction: Transaction;
-
     @observable payment_route: any; // Route
     @observable payment_preimage: string | null;
     @observable payment_hash: string | null;
     @observable payment_error: string | null;
-
     @observable onchain_address: string;
-
     @observable txid: string | null;
+    // c-lightning
+    @observable status: string;
 
     settingsStore: SettingsStore;
 
@@ -117,6 +116,7 @@ export default class TransactionsStore {
                 this.payment_preimage = data.payment_preimage;
                 this.payment_hash = data.payment_hash;
                 this.payment_error = data.payment_error;
+                this.status = data.status;
             })
             .catch((error: any) => {
                 // handle error
