@@ -117,7 +117,7 @@ export default class InvoicesStore {
                 const errorInfo = error.response.data;
                 this.creatingInvoiceError = true;
                 this.creatingInvoice = false;
-                this.error_msg = errorInfo.error;
+                this.error_msg = errorInfo.error.message || errorInfo.error;
             });
     };
 
