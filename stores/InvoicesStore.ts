@@ -4,7 +4,6 @@ import { Alert } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import hashjs from 'hash.js';
 import Invoice from './../models/Invoice';
-import PaymentRequest from './../models/PaymentRequest';
 import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
 
@@ -16,7 +15,7 @@ export default class InvoicesStore {
     @observable getPayReqError: string | null = null;
     @observable invoices: Array<Invoice> = [];
     @observable invoice: Invoice;
-    @observable pay_req: PaymentRequest | null;
+    @observable pay_req: Invoice | null;
     @observable payment_request: string | null;
     @observable creatingInvoice: boolean = false;
     @observable creatingInvoiceError: boolean = false;
@@ -133,8 +132,7 @@ export default class InvoicesStore {
         RESTUtils.decodePaymentRequest(this.settingsStore, [paymentRequest])
             .then((response: any) => {
                 // handle success
-                const data = response.data as PaymentRequest;
-                this.pay_req = new Invoice(data);
+                this.pay_req = new Invoice(response.data);
 
                 // check description_hash if asked for
                 if (
