@@ -34,6 +34,17 @@ export default class Payment extends BaseModel {
     }
 
     @computed public get getAmount(): number | string {
-        return this.value || Number(this.msatoshi) / 1000;
+        return this.value || Number(this.msatoshi_sent) / 1000;
+    }
+
+    @computed public get getFee(): string {
+        // lnd
+        if (this.fee) {
+            return this.fee;
+        }
+
+        // c-lightning
+        const fee = Number(this.msatoshi_sent - this.msatoshi) / 1000;
+        return fee.toString();
     }
 }
