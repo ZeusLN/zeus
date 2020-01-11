@@ -77,32 +77,48 @@ export default class FeeStore {
     public setFees = (
         newBaseFeeMsat: string,
         newFeeRateMiliMsat: string,
-        channelPoint?: string
+        channelPoint?: string,
+        channelId?: string
     ) => {
+        const { implementation } = this.settingsStore;
+
         this.loading = true;
         this.setFeesError = false;
         this.setFeesSuccess = false;
 
         let data;
-        if (channelPoint) {
-            const [funding_txid, output_index] = channelPoint.split(':');
-            data = {
-                base_fee_msat: newBaseFeeMsat,
-                fee_rate: newFeeRateMiliMsat / 1000000,
-                time_lock_delta: 4,
-                chan_point: {
-                    output_index: Number(output_index),
-                    funding_txid_str: funding_txid,
-                    funding_txid_bytes: btoa(funding_txid) // must encode in base64
-                }
-            };
+        if (implementation === 'c-lightning-REST') {
+            if (channelPoint) {
+                data = {
+                    base: newBaseFeeMsat,
+                    ppm: newFeeRateMiliMsat / 1000000,
+                    id: channelId
+                };
+            }
+
+            // currently no way in CLR to set all fees at once
         } else {
-            data = {
-                base_fee_msat: newBaseFeeMsat,
-                fee_rate: newFeeRateMiliMsat / 1000000,
-                time_lock_delta: 4,
-                global: true
-            };
+            // lnd
+            if (channelPoint) {
+                const [funding_txid, output_index] = channelPoint.split(':');
+                data = {
+                    base_fee_msat: newBaseFeeMsat,
+                    fee_rate: newFeeRateMiliMsat / 1000000,
+                    time_lock_delta: 4,
+                    chan_point: {
+                        output_index: Number(output_index),
+                        funding_txid_str: funding_txid,
+                        funding_txid_bytes: btoa(funding_txid) // must encode in base64
+                    }
+                };
+            } else {
+                data = {
+                    base_fee_msat: newBaseFeeMsat,
+                    fee_rate: newFeeRateMiliMsat / 1000000,
+                    time_lock_delta: 4,
+                    global: true
+                };
+            }
         }
 
         RESTUtils.setFees(this.settingsStore, data)

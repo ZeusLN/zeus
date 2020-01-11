@@ -50,7 +50,9 @@ const clightningRoutes = {
         return `/v1/pay/decodePay/${urlParams[0]}`;
     },
     payLightningInvoice: '/v1/pay',
-    getNodeInfo: 'N/A'
+    getNodeInfo: 'N/A',
+    getFees: '',
+    setFees: '/v1/channel/setChannelFee/'
 };
 
 interface Headers {
