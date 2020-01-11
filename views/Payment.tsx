@@ -39,7 +39,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
         const payment: Payment = navigation.getParam('payment', null);
         const {
             getCreationTime,
-            fee,
+            getFee,
             payment_hash,
             value,
             payment_preimage,
@@ -98,7 +98,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                 )}
 
                 <View style={styles.content}>
-                    {fee && (
+                    {getFee && (
                         <View>
                             <Text
                                 style={
@@ -117,7 +117,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                             : styles.value
                                     }
                                 >
-                                    {units && getAmount(fee)}
+                                    {units && getAmount(getFee)}
                                 </Text>
                             </TouchableOpacity>
                         </View>

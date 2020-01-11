@@ -4,12 +4,14 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import Channel from './../models/Channel';
 import BalanceSlider from './../components/BalanceSlider';
+import SetFeesForm from './../components/SetFeesForm';
 import Identicon from 'identicon.js';
 import { inject, observer } from 'mobx-react';
 const hash = require('object-hash');
@@ -25,19 +27,36 @@ interface ChannelProps {
     SettingsStore: SettingsStore;
 }
 
-@inject('ChannelsStore', 'UnitsStore', 'SettingsStore')
+interface ChannelState {
+    confirmCloseChannel: boolean;
+    showNewFeesForm: boolean;
+    newBaseFeeMsat: string;
+    newFeeRateMiliMsat: string;
+    feesSubmitted: boolean;
+}
+
+@inject('ChannelsStore', 'UnitsStore', 'FeeStore', 'SettingsStore')
 @observer
-export default class ChannelView extends React.Component<ChannelProps> {
+export default class ChannelView extends React.Component<
+    ChannelProps,
+    ChannelState
+> {
+    state = {
+        confirmCloseChannel: false,
+        showNewFeesForm: false,
+        newBaseFeeMsat: '0',
+        newFeeRateMiliMsat: '0',
+        feesSubmitted: false
+    };
+
     closeChannel = (channelPoint: string, channelId: string) => {
         const { ChannelsStore, navigation } = this.props;
-        if (channelId) {
-            ChannelsStore.closeChannel(null, channelId);
-        } else {
-            const funding_txid_str = channelPoint.split(':')[0];
-            const output_index = channelPoint.split(':')[1];
+        const [funding_txid_str, output_index] = channelPoint.split(':');
 
-            ChannelsStore.closeChannel({ funding_txid_str, output_index });
-        }
+        ChannelsStore.closeChannel(
+            { funding_txid_str, output_index },
+            channelId
+        );
         navigation.navigate('Wallet');
     };
 
@@ -46,9 +65,24 @@ export default class ChannelView extends React.Component<ChannelProps> {
             navigation,
             ChannelsStore,
             UnitsStore,
+            FeeStore,
             SettingsStore
         } = this.props;
+        const {
+            confirmCloseChannel,
+            showNewFeesForm,
+            newBaseFeeMsat,
+            newFeeRateMiliMsat,
+            feesSubmitted
+        } = this.state;
         const { changeUnits, getAmount, units } = UnitsStore;
+        const {
+            channelFees,
+            setFees,
+            loading,
+            setFeesError,
+            setFeesSuccess
+        } = FeeStore;
         const { nodes } = ChannelsStore;
         const { settings } = SettingsStore;
         const { theme } = settings;
@@ -69,13 +103,15 @@ export default class ChannelView extends React.Component<ChannelProps> {
             remote_pubkey,
             capacity,
             alias,
-            channel_id
+            channelId
         } = channel;
         const privateChannel = channel.private;
         const data = new Identicon(
             hash.sha1(alias || remote_pubkey),
             420
         ).toString();
+
+        const channelFee = channelFees[channel_point];
 
         const BackButton = () => (
             <Icon
@@ -279,6 +315,52 @@ export default class ChannelView extends React.Component<ChannelProps> {
                         </View>
                     )}
 
+                    {channelFee && channelFee.base_fee_msat && (
+                        <View>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Base Fee:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {channelFee.base_fee_msat}
+                            </Text>
+                        </View>
+                    )}
+
+                    {channelFee && channelFee.fee_rate && (
+                        <View>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Fee Rate:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {channelFee.fee_rate * 1000000}
+                            </Text>
+                        </View>
+                    )}
+
                     {commit_weight && (
                         <View>
                             <Text
@@ -371,23 +453,66 @@ export default class ChannelView extends React.Component<ChannelProps> {
                         </View>
                     )}
 
+                    <SetFeesForm
+                        baseFeeMsat={
+                            channelFee &&
+                            channelFee.base_fee_msat &&
+                            channelFee.base_fee_msat.toString()
+                        }
+                        feeRate={
+                            channelFee &&
+                            channelFee.fee_rate &&
+                            channelFee.fee_rate.toString()
+                        }
+                        channelPoint={channel_point}
+                        channelId={channelId}
+                    />
+
                     <View style={styles.button}>
                         <Button
-                            title="Close Channel"
+                            title={
+                                confirmCloseChannel
+                                    ? 'Cancel Channel Close'
+                                    : 'Close Channel'
+                            }
                             icon={{
-                                name: 'delete',
+                                name: confirmCloseChannel ? 'cancel' : 'delete',
                                 size: 25,
                                 color: '#fff'
                             }}
                             onPress={() =>
-                                this.closeChannel(channel_point, channel_id)
+                                this.setState({
+                                    confirmCloseChannel: !confirmCloseChannel
+                                })
                             }
                             buttonStyle={{
-                                backgroundColor: 'red',
+                                backgroundColor: confirmCloseChannel
+                                    ? 'black'
+                                    : 'red',
                                 borderRadius: 30
                             }}
                         />
                     </View>
+
+                    {confirmCloseChannel && (
+                        <View style={styles.button}>
+                            <Button
+                                title="Confirm Channel Close"
+                                icon={{
+                                    name: 'delete-forever',
+                                    size: 25,
+                                    color: '#fff'
+                                }}
+                                onPress={() =>
+                                    this.closeChannel(channel_point, channelId)
+                                }
+                                buttonStyle={{
+                                    backgroundColor: 'red',
+                                    borderRadius: 30
+                                }}
+                            />
+                        </View>
+                    )}
                 </View>
             </ScrollView>
         );

@@ -157,8 +157,8 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                         }}
                                     />
                                     <BalanceSlider
-                                        localBalance={item.local_balance}
-                                        remoteBalance={item.remote_balance}
+                                        localBalance={item.localBalance}
+                                        remoteBalance={item.remoteBalance}
                                         theme={theme}
                                         list
                                     />

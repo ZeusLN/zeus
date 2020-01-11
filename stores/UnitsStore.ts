@@ -22,7 +22,7 @@ export default class UnitsStore {
         x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
     @action
-    public getAmount = (value: string | number) => {
+    public getAmount = (value: string | number = 0) => {
         const wholeSats = value.toString().split('.')[0];
         if (this.units === 'btc') {
             // handle negative values
