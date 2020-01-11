@@ -40,7 +40,7 @@ export default class Invoice extends BaseModel {
     public label: string;
     public description: string;
     public msatoshi: Number;
-    public payment_hash: string;
+    @observable public payment_hash: string;
     public expires_at: Number;
     public status: string;
 
