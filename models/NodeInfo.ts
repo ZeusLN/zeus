@@ -16,8 +16,10 @@ export default class NodeInfo extends BaseModel {
     @observable block_height?: number;
     best_header_timestamp?: string;
     // c-lightning
+    id?: string;
     @observable network?: string;
     @observable blockheight?: number;
+    address?: Array<any>;
 
     @computed public get isTestNet(): boolean {
         return this.testnet || this.network === 'testnet';
@@ -25,5 +27,19 @@ export default class NodeInfo extends BaseModel {
 
     @computed public get currentBlockHeight(): Number {
         return this.block_height || this.blockheight;
+    }
+
+    @computed public get getURIs(): Array<string> {
+        // lnd
+        if (this.uris) {
+            return this.uris;
+        }
+
+        // c-lightning
+        const uris = [];
+        this.address.forEach(uri => {
+            uris.push(`${this.id}@${uri.address}:${uri.port}`);
+        });
+        return uris;
     }
 }

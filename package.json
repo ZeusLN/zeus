@@ -1,6 +1,6 @@
 {
   "name": "zeus",
-  "version": "0.2.0-beta2",
+  "version": "0.2.0-beta3",
   "private": true,
   "scripts": {
     "start": "node node_modules/react-native/local-cli/cli.js start",
@@ -32,7 +32,7 @@
     "react-native-linear-gradient": "2.5.3",
     "react-native-permissions": "1.1.1",
     "react-native-qrcode": "0.2.7",
-    "react-native-vector-icons": "6.2.0",
+    "react-native-vector-icons": "6.6.0",
     "react-navigation": "3.0.9",
     "realm": "3.6.0",
     "sha.js": "2.4.11"

@@ -14,7 +14,7 @@ export default class Channel extends BaseModel {
     commit_fee: string;
     csv_delay: number;
     channel_point: string;
-    chan_id: string;
+    chan_id?: string;
     fee_per_kw: string;
     total_satoshis_received: string;
     pending_htlcs: Array<HTLC>;
@@ -32,6 +32,7 @@ export default class Channel extends BaseModel {
     state: string;
     msatoshi_total: string;
     msatoshi_to_us: string;
+    channel_id?: string;
 
     @computed
     public get isActive(): boolean {
@@ -40,20 +41,23 @@ export default class Channel extends BaseModel {
 
     @computed
     public get remoteBalance(): string {
-        return (
-            this.remote_balance ||
-            (
-                (Number(this.msatoshi_total) - Number(this.msatoshi_to_us)) /
-                1000
-            ).toString()
-        );
+        return this.msatoshi_total
+            ? (
+                  (Number(this.msatoshi_total) - Number(this.msatoshi_to_us)) /
+                  1000
+              ).toString()
+            : this.remote_balance || '0';
     }
 
     @computed
     public get localBalance(): string {
-        return (
-            this.local_balance ||
-            (Number(this.msatoshi_to_us) / 1000).toString()
-        );
+        return this.msatoshi_to_us
+            ? (Number(this.msatoshi_to_us) / 1000).toString()
+            : this.local_balance || '0';
+    }
+
+    @computed
+    public get channelId(): string {
+        return this.chan_id || this.channel_id;
     }
 }
