@@ -51,7 +51,7 @@ const clightningRoutes = {
     },
     payLightningInvoice: '/v1/pay',
     getNodeInfo: 'N/A',
-    getFees: 'v1/getFees/',
+    getFees: '/v1/getFees/',
     setFees: '/v1/channel/setChannelFee/'
 };
 
