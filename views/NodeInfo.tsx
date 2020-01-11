@@ -10,6 +10,7 @@ import { Button, ButtonGroup, Header, Icon } from 'react-native-elements';
 import CollapsedQR from './../components/CollapsedQR';
 import SetFeesForm from './../components/SetFeesForm';
 import { inject, observer } from 'mobx-react';
+import { isNil } from 'lodash';
 
 import NodeInfoStore from './../stores/NodeInfoStore';
 import SettingsStore from './../stores/SettingsStore';
@@ -108,7 +109,7 @@ export default class NodeInfo extends React.Component<
         const FeeReportView = () => (
             <React.Fragment>
                 <TouchableOpacity onPress={() => changeUnits()}>
-                    {dayEarned && (
+                    {!isNil(dayEarned) && (
                         <React.Fragment>
                             <Text
                                 style={
@@ -131,7 +132,7 @@ export default class NodeInfo extends React.Component<
                         </React.Fragment>
                     )}
 
-                    {weekEarned && (
+                    {!isNil(weekEarned) && (
                         <React.Fragment>
                             <Text
                                 style={
@@ -154,7 +155,7 @@ export default class NodeInfo extends React.Component<
                         </React.Fragment>
                     )}
 
-                    {monthEarned && (
+                    {!isNil(monthEarned) && (
                         <React.Fragment>
                             <Text
                                 style={
@@ -177,7 +178,7 @@ export default class NodeInfo extends React.Component<
                         </React.Fragment>
                     )}
 
-                    {totalEarned && (
+                    {!isNil(totalEarned) && (
                         <React.Fragment>
                             <Text
                                 style={
@@ -230,7 +231,7 @@ export default class NodeInfo extends React.Component<
                 </Text>
 
                 {!!nodeInfo.synced_to_chain && (
-                    <View>
+                    <React.Fragment>
                         <Text
                             style={
                                 theme === 'dark'
@@ -250,7 +251,7 @@ export default class NodeInfo extends React.Component<
                         >
                             {nodeInfo.synced_to_chain ? 'True' : 'False'}
                         </Text>
-                    </View>
+                    </React.Fragment>
                 )}
 
                 <Text
@@ -265,7 +266,7 @@ export default class NodeInfo extends React.Component<
                 </Text>
 
                 {nodeInfo.block_hash && (
-                    <View>
+                    <React.Fragment>
                         <Text
                             style={
                                 theme === 'dark'
@@ -284,7 +285,7 @@ export default class NodeInfo extends React.Component<
                         >
                             {nodeInfo.block_hash}
                         </Text>
-                    </View>
+                    </React.Fragment>
                 )}
 
                 <Text

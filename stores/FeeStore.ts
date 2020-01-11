@@ -14,6 +14,7 @@ export default class FeeStore {
     @observable public dayEarned: string | number = 0;
     @observable public weekEarned: string | number = 0;
     @observable public monthEarned: string | number = 0;
+    @observable public totalEarned: string | number;
 
     getOnchainFeesToken: any;
 
@@ -55,10 +56,6 @@ export default class FeeStore {
                 // handle success
                 const data = response.data;
                 // lnd
-                this.dayEarned = data.day_fee_sum;
-                this.weekEarned = data.week_fee_sum;
-                this.monthEarned = data.month_fee_sum;
-
                 if (data.channel_fees) {
                     const channelFees = {};
                     data.channel_fees.forEach((channelFee: any) => {
@@ -66,10 +63,16 @@ export default class FeeStore {
                     });
 
                     this.channelFees = channelFees;
+
+                    this.dayEarned = data.day_fee_sum || 0;
+                    this.weekEarned = data.week_fee_sum || 0;
+                    this.monthEarned = data.month_fee_sum || 0;
                 }
 
                 // c-lighting-REST
-                this.totalEarned = data.feeCollected / 1000; // msatoshi_fees_collected
+                if (data.feeCollected) {
+                    this.totalEarned = data.feeCollected / 1000; // msatoshi_fees_collected
+                }
 
                 this.loading = false;
             })
