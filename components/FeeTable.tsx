@@ -62,7 +62,7 @@ export default class FeeTable extends React.Component<
     reprIndex = (x: number) => x / 6 + 'h';
 
     openTable = () => {
-        this.props.FeeStore.getFees();
+        this.props.FeeStore.getOnchainFees();
 
         this.setState({
             collapsed: false
