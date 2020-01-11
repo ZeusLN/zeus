@@ -58,7 +58,7 @@ export default class NodeInfo extends React.Component<
         const { nodeInfo } = NodeInfoStore;
         const { dayEarned, weekEarned, monthEarned } = FeeStore;
         const { changeUnits, getAmount, units } = UnitsStore;
-        const { settings } = SettingsStore;
+        const { settings, implementation } = SettingsStore;
         const { theme } = settings;
 
         const generalInfoButton = () => (
@@ -154,7 +154,7 @@ export default class NodeInfo extends React.Component<
                     </Text>
                 </TouchableOpacity>
 
-                <SetFeesForm />
+                {implementation !== 'c-lightning-REST' && <SetFeesForm />}
             </React.Fragment>
         );
 

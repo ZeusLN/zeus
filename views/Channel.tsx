@@ -105,7 +105,7 @@ export default class ChannelView extends React.Component<
             remote_pubkey,
             capacity,
             alias,
-            channel_id
+            channelId
         } = channel;
         const privateChannel = channel.private;
         const data = new Identicon(
@@ -467,6 +467,7 @@ export default class ChannelView extends React.Component<
                             channelFee.fee_rate.toString()
                         }
                         channelPoint={channel_point}
+                        channelId={channelId}
                     />
 
                     <View style={styles.button}>
@@ -505,7 +506,7 @@ export default class ChannelView extends React.Component<
                                     color: '#fff'
                                 }}
                                 onPress={() =>
-                                    this.closeChannel(channel_point, channel_id)
+                                    this.closeChannel(channel_point, channelId)
                                 }
                                 buttonStyle={{
                                     backgroundColor: 'red',

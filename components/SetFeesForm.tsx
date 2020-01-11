@@ -12,6 +12,7 @@ interface SetFeesFormProps {
     baseFeeMsat?: string;
     feeRate?: string;
     channelPoint?: string;
+    channelId?: string;
 }
 
 interface SetFeesFormState {
@@ -46,7 +47,8 @@ export default class SetFeesForm extends React.Component<
             FeeStore,
             baseFeeMsat,
             feeRate,
-            channelPoint
+            channelPoint,
+            channelId
         } = this.props;
         const { theme } = SettingsStore;
         const {
@@ -166,7 +168,8 @@ export default class SetFeesForm extends React.Component<
                                     setFees(
                                         newBaseFeeMsat,
                                         newFeeRateMiliMsat,
-                                        channelPoint
+                                        channelPoint,
+                                        channelId
                                     );
                                     this.setState({ feesSubmitted: true });
                                 }}
