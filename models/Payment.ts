@@ -6,7 +6,9 @@ export default class Payment extends BaseModel {
     payment_hash: string;
     creation_date?: string;
     value: string;
-    fee?: string;
+    // fee?: string; DEPRECATED
+    fee_sat?: string;
+    fee_msat?: string;
     value_sat: string;
     payment_preimage: string;
     value_msat: string;
@@ -39,8 +41,8 @@ export default class Payment extends BaseModel {
 
     @computed public get getFee(): string {
         // lnd
-        if (this.fee) {
-            return this.fee;
+        if (this.fee_sat || this.fee_msat) {
+            return this.fee_sat || (Number(this.fee_msat) / 1000).toString();
         }
 
         // c-lightning
