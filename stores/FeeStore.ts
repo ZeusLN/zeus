@@ -54,16 +54,23 @@ export default class FeeStore {
             .then((response: any) => {
                 // handle success
                 const data = response.data;
+                // lnd
                 this.dayEarned = data.day_fee_sum;
                 this.weekEarned = data.week_fee_sum;
                 this.monthEarned = data.month_fee_sum;
 
-                const channelFees = {};
-                data.channel_fees.forEach((channelFee: any) => {
-                    channelFees[channelFee.chan_point] = channelFee;
-                });
+                if (data.channel_fees) {
+                    const channelFees = {};
+                    data.channel_fees.forEach((channelFee: any) => {
+                        channelFees[channelFee.chan_point] = channelFee;
+                    });
 
-                this.channelFees = channelFees;
+                    this.channelFees = channelFees;
+                }
+
+                // c-lighting-REST
+                this.totalEarned = data.feeCollected / 1000; // msatoshi_fees_collected
+
                 this.loading = false;
             })
             .catch(() => {
