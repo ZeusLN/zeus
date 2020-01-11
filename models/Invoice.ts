@@ -61,12 +61,21 @@ export default class Invoice extends BaseModel {
     }
 
     // return amount in satoshis
-    @computed public get getAmount(): string | number {
+    @computed public get getAmount(): number {
         if (this.msatoshi) {
             const msatoshi = this.msatoshi.toString();
             return Number(msatoshi.replace('msat', '')) / 1000;
         }
-        return this.settled ? this.amt_paid_sat : this.value;
+        return this.settled ? Number(this.amt_paid_sat) : Number(this.value);
+    }
+
+    // return amount in satoshis
+    @computed public get getRequestAmount(): number {
+        if (this.msatoshi) {
+            const msatoshi = this.msatoshi.toString();
+            return Number(msatoshi.replace('msat', '')) / 1000;
+        }
+        return Number(this.num_satoshis);
     }
 
     // return amount in satoshis

@@ -24,7 +24,9 @@ const lndRoutes = {
     payLightningInvoice: '/v1/channels/transactions',
     getNodeInfo: function(urlParams: Array<string>) {
         return `/v1/graph/node/${urlParams[0]}`;
-    }
+    },
+    getFees: '/v1/fees',
+    setFees: '/v1/chanpolicy'
 };
 
 const clightningRoutes = {
@@ -48,7 +50,9 @@ const clightningRoutes = {
         return `/v1/pay/decodePay/${urlParams[0]}`;
     },
     payLightningInvoice: '/v1/pay',
-    getNodeInfo: 'N/A'
+    getNodeInfo: 'N/A',
+    getFees: '/v1/getFees/',
+    setFees: '/v1/channel/setChannelFee/'
 };
 
 interface Headers {
@@ -217,6 +221,10 @@ class RESTUtils {
             getNodeInfoToken,
             urlParams
         );
+    getFees = (settingsStore: SettingsStore) =>
+        this.getRequest(settingsStore, 'getFees');
+    setFees = (settingsStore: SettingsStore, data: any) =>
+        this.postRequest(settingsStore, 'setFees', data);
 }
 
 const restUtils = new RESTUtils();
