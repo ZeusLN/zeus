@@ -56,7 +56,7 @@ export default class NodeInfo extends React.Component<
         } = this.props;
         const { selectedIndex } = this.state;
         const { nodeInfo } = NodeInfoStore;
-        const { dayEarned, weekEarned, monthEarned } = FeeStore;
+        const { dayEarned, weekEarned, monthEarned, totalEarned } = FeeStore;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { settings, implementation } = SettingsStore;
         const { theme } = settings;
@@ -108,50 +108,97 @@ export default class NodeInfo extends React.Component<
         const FeeReportView = () => (
             <React.Fragment>
                 <TouchableOpacity onPress={() => changeUnits()}>
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.labelDark : styles.label
-                        }
-                    >
-                        Earned today:
-                    </Text>
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.valueDark : styles.value
-                        }
-                    >
-                        {units && getAmount(dayEarned)}
-                    </Text>
+                    {dayEarned && (
+                        <React.Fragment>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Earned today:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {units && getAmount(dayEarned)}
+                            </Text>
+                        </React.Fragment>
+                    )}
 
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.labelDark : styles.label
-                        }
-                    >
-                        Earned this week:
-                    </Text>
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.valueDark : styles.value
-                        }
-                    >
-                        {units && getAmount(weekEarned)}
-                    </Text>
+                    {weekEarned && (
+                        <React.Fragment>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Earned this week:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {units && getAmount(weekEarned)}
+                            </Text>
+                        </React.Fragment>
+                    )}
 
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.labelDark : styles.label
-                        }
-                    >
-                        Earned this month:
-                    </Text>
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.valueDark : styles.value
-                        }
-                    >
-                        {units && getAmount(monthEarned)}
-                    </Text>
+                    {monthEarned && (
+                        <React.Fragment>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Earned this month:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {units && getAmount(monthEarned)}
+                            </Text>
+                        </React.Fragment>
+                    )}
+
+                    {totalEarned && (
+                        <React.Fragment>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Total fees earned:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {units && getAmount(totalEarned)}
+                            </Text>
+                        </React.Fragment>
+                    )}
                 </TouchableOpacity>
 
                 {implementation !== 'c-lightning-REST' && <SetFeesForm />}
