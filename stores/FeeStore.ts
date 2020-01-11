@@ -98,11 +98,11 @@ export default class FeeStore {
 
         let data;
         if (implementation === 'c-lightning-REST') {
-            if (channelPoint) {
+            if (channelId) {
                 data = {
+                    id: channelId,
                     base: newBaseFeeMsat,
-                    ppm: newFeeRateMiliMsat / 1000000,
-                    id: channelId
+                    ppm: newFeeRateMiliMsat / 1000000
                 };
             }
 
@@ -137,7 +137,7 @@ export default class FeeStore {
                 this.loading = false;
                 this.setFeesSuccess = true;
             })
-            .catch((err: error) => {
+            .catch(() => {
                 // handle error
                 this.loading = false;
                 this.setFeesError = true;
