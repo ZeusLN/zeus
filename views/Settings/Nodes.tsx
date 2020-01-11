@@ -55,9 +55,10 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                             `data:image/png;base64,${data}`
                                         )}
                                         subtitle={
-                                            selectedNode === index
-                                                ? 'Active'
-                                                : ''
+                                            selectedNode === index ||
+                                            (!selectedNode && index === 0)
+                                                ? `Active | ${item.implementation}`
+                                                : item.implementation
                                         }
                                         containerStyle={{
                                             borderBottomWidth: 0,
