@@ -2,6 +2,7 @@ import { action, observable } from 'mobx';
 import axios from 'axios';
 import RESTUtils from './../utils/RESTUtils';
 import SettingsStore from './SettingsStore';
+import { isNil } from 'lodash';
 
 export default class FeeStore {
     @observable public channelFees: any = {};
@@ -11,9 +12,9 @@ export default class FeeStore {
     @observable public setFeesError: boolean = false;
     @observable public setFeesSuccess: boolean = false;
 
-    @observable public dayEarned: string | number = 0;
-    @observable public weekEarned: string | number = 0;
-    @observable public monthEarned: string | number = 0;
+    @observable public dayEarned: string | number;
+    @observable public weekEarned: string | number;
+    @observable public monthEarned: string | number;
     @observable public totalEarned: string | number;
 
     getOnchainFeesToken: any;
@@ -55,6 +56,7 @@ export default class FeeStore {
             .then((response: any) => {
                 // handle success
                 const data = response.data;
+
                 // lnd
                 if (data.channel_fees) {
                     const channelFees = {};
@@ -70,7 +72,7 @@ export default class FeeStore {
                 }
 
                 // c-lighting-REST
-                if (data.feeCollected) {
+                if (!isNil(data.feeCollected)) {
                     this.totalEarned = data.feeCollected / 1000; // msatoshi_fees_collected
                 }
 
