@@ -104,9 +104,13 @@ export default class FeeStore {
                     base: newBaseFeeMsat,
                     ppm: newFeeRateMiliMsat / 1000000
                 };
+            } else {
+                data = {
+                    id: 'all',
+                    base: newBaseFeeMsat,
+                    ppm: newFeeRateMiliMsat / 1000000
+                };
             }
-
-            // currently no way in CLR to set all fees at once
         } else {
             // lnd
             if (channelPoint) {
