@@ -40,20 +40,18 @@ export default class Channel extends BaseModel {
 
     @computed
     public get remoteBalance(): string {
-        return (
-            this.remote_balance ||
-            (
-                (Number(this.msatoshi_total) - Number(this.msatoshi_to_us)) /
-                1000
-            ).toString()
-        );
+        return this.msatoshi_total
+            ? (
+                  (Number(this.msatoshi_total) - Number(this.msatoshi_to_us)) /
+                  1000
+              ).toString()
+            : this.remote_balance || '0';
     }
 
     @computed
     public get localBalance(): string {
-        return (
-            this.local_balance ||
-            (Number(this.msatoshi_to_us) / 1000).toString()
-        );
+        return this.msatoshi_to_us
+            ? (Number(this.msatoshi_to_us) / 1000).toString()
+            : this.local_balance || '0';
     }
 }
