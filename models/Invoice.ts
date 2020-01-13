@@ -41,6 +41,7 @@ export default class Invoice extends BaseModel {
     public description: string;
     public msatoshi: Number;
     @observable public payment_hash: string;
+    public paid_at: Number;
     public expires_at: Number;
     public status: string;
 
@@ -81,7 +82,7 @@ export default class Invoice extends BaseModel {
     // return amount in satoshis
     @computed public get listDate(): string {
         return this.isPaid
-            ? DateTimeUtils.listFormattedDate(this.settle_date)
+            ? DateTimeUtils.listFormattedDate(this.paid_at || this.settle_date)
             : DateTimeUtils.listFormattedDate(
                   this.expires_at || this.creation_date
               );
