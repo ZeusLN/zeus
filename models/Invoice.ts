@@ -46,7 +46,7 @@ export default class Invoice extends BaseModel {
     public status: string;
 
     @computed public get getMemo(): number | string {
-        return this.memo || this.label || this.description || 'No memo';
+        return this.memo || this.description || 'No memo';
     }
 
     @computed public get isPaid(): number | string {
