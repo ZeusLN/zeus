@@ -41,8 +41,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
             description_hash,
             r_preimage,
             cltv_expiry,
-            expirationDate,
-            creationDate
+            expirationDate
         } = invoice;
         const privateInvoice = invoice.private;
 
@@ -172,7 +171,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.value
                                 }
                             >
-                                {creationDate}
+                                {invoice.creationDate}
                             </Text>
                         </React.Fragment>
                     )}
