@@ -113,6 +113,13 @@ export default class MainPane extends React.Component<
             />
         );
 
+        let infoValue = 'ⓘ';
+        if (NodeInfoStore.testnet) {
+            infoValue = 'Testnet';
+        } else if (NodeInfoStore.regtest) {
+            infoValue = 'Regtest';
+        }
+
         const NodeInfoBadge = () => (
             <View style={styles.nodeInfo}>
                 {host && host.includes('.onion') && (
@@ -128,7 +135,7 @@ export default class MainPane extends React.Component<
                 {host && !host.includes('.onion') && (
                     <Badge
                         onPress={() => navigation.navigate('NodeInfo')}
-                        value={NodeInfoStore.testnet ? 'Testnet' : 'ⓘ'}
+                        value={infoValue}
                         badgeStyle={{
                             backgroundColor: 'gray',
                             borderWidth: 0,
