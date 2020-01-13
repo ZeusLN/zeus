@@ -82,17 +82,23 @@ export default class Invoice extends BaseModel {
     // return amount in satoshis
     @computed public get listDate(): string {
         return this.isPaid
-            ? DateTimeUtils.listFormattedDate(this.paid_at || this.settle_date)
+            ? this.settleDate
             : DateTimeUtils.listFormattedDate(
                   this.expires_at || this.creation_date
               );
     }
 
     @computed public get settleDate(): Date {
-        return new Date(Number(this.settle_date) * 1000).toString();
+        return DateTimeUtils.listFormattedDate(
+            this.settle_date || this.paid_at
+        );
     }
 
     @computed public get creationDate(): Date {
-        return new Date(Number(this.creation_date) * 1000).toString();
+        return DateTimeUtils.listFormattedDate(this.creation_date);
+    }
+
+    @computed public get expirationDate(): Date | string {
+        return this.expiry || DateTimeUtils.listFormattedDate(this.expires_at);
     }
 }

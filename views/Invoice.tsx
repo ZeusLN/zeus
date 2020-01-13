@@ -33,9 +33,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
             amt_paid_sat,
             fallback_addr,
             r_hash,
-            settle_date,
             isPaid,
-            expiry,
             getMemo,
             receipt,
             value,
@@ -43,7 +41,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
             description_hash,
             r_preimage,
             cltv_expiry,
-            settleDate,
+            expirationDate,
             creationDate
         } = invoice;
         const privateInvoice = invoice.private;
@@ -88,256 +86,256 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
 
                 <View style={styles.content}>
                     {getMemo && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.labelDark
-                                    : styles.label
-                            }
-                        >
-                            Memo:
-                        </Text>
-                    )}
-                    {getMemo && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.valueDark
-                                    : styles.value
-                            }
-                        >
-                            {getMemo}
-                        </Text>
+                        <React.Fragment>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Memo:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {getMemo}
+                            </Text>
+                        </React.Fragment>
                     )}
 
                     {receipt && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.labelDark
-                                    : styles.label
-                            }
-                        >
-                            Receipt:
-                        </Text>
-                    )}
-                    {receipt && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.valueDark
-                                    : styles.value
-                            }
-                        >
-                            {receipt}
-                        </Text>
+                        <React.Fragment>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Receipt:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {receipt}
+                            </Text>
+                        </React.Fragment>
                     )}
 
-                    {settle_date && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.labelDark
-                                    : styles.label
-                            }
-                        >
-                            Settle Date:
-                        </Text>
-                    )}
-                    {settle_date && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.valueDark
-                                    : styles.value
-                            }
-                        >
-                            {settleDate}
-                        </Text>
+                    {isPaid && (
+                        <React.Fragment>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Settle Date:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {invoice.settleDate}
+                            </Text>
+                        </React.Fragment>
                     )}
 
                     {creation_date && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.labelDark
-                                    : styles.label
-                            }
-                        >
-                            Creation Date:
-                        </Text>
-                    )}
-                    {creation_date && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.valueDark
-                                    : styles.value
-                            }
-                        >
-                            {creationDate}
-                        </Text>
+                        <React.Fragment>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Creation Date:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {creationDate}
+                            </Text>
+                        </React.Fragment>
                     )}
 
-                    {expiry && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.labelDark
-                                    : styles.label
-                            }
-                        >
-                            Expiry:
-                        </Text>
-                    )}
-                    {expiry && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.valueDark
-                                    : styles.value
-                            }
-                        >
-                            {expiry}
-                        </Text>
+                    {expirationDate && (
+                        <React.Fragment>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Expiration:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {expirationDate}
+                            </Text>
+                        </React.Fragment>
                     )}
 
                     {privateInvoice && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.labelDark
-                                    : styles.label
-                            }
-                        >
-                            Private:
-                        </Text>
-                    )}
-                    {privateInvoice && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.valueDark
-                                    : styles.value
-                            }
-                        >
-                            {privateInvoice}
-                        </Text>
+                        <React.Fragment>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Private:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {privateInvoice}
+                            </Text>
+                        </React.Fragment>
                     )}
 
                     {fallback_addr && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.labelDark
-                                    : styles.label
-                            }
-                        >
-                            Fallback Address:
-                        </Text>
-                    )}
-                    {fallback_addr && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.valueDark
-                                    : styles.value
-                            }
-                        >
-                            {fallback_addr}
-                        </Text>
+                        <React.Fragment>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Fallback Address:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {fallback_addr}
+                            </Text>
+                        </React.Fragment>
                     )}
 
                     {cltv_expiry && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.labelDark
-                                    : styles.label
-                            }
-                        >
-                            CLTV Expiry:
-                        </Text>
-                    )}
-                    {cltv_expiry && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.valueDark
-                                    : styles.value
-                            }
-                        >
-                            {cltv_expiry}
-                        </Text>
+                        <React.Fragment>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                CLTV Expiry:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {cltv_expiry}
+                            </Text>
+                        </React.Fragment>
                     )}
 
                     {r_hash && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.labelDark
-                                    : styles.label
-                            }
-                        >
-                            R Hash:
-                        </Text>
-                    )}
-                    {r_hash && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.valueDark
-                                    : styles.value
-                            }
-                        >
-                            {r_hash}
-                        </Text>
+                        <React.Fragment>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                R Hash:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {r_hash}
+                            </Text>
+                        </React.Fragment>
                     )}
 
                     {r_preimage && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.labelDark
-                                    : styles.label
-                            }
-                        >
-                            R Pre-Image:
-                        </Text>
-                    )}
-                    {r_preimage && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.valueDark
-                                    : styles.value
-                            }
-                        >
-                            {r_preimage}
-                        </Text>
+                        <React.Fragment>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                R Pre-Image:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {r_preimage}
+                            </Text>
+                        </React.Fragment>
                     )}
 
                     {description_hash && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.labelDark
-                                    : styles.label
-                            }
-                        >
-                            Description Hash:
-                        </Text>
-                    )}
-                    {description_hash && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.valueDark
-                                    : styles.value
-                            }
-                        >
-                            {description_hash}
-                        </Text>
+                        <React.Fragment>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Description Hash:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {description_hash}
+                            </Text>
+                        </React.Fragment>
                     )}
                 </View>
             </ScrollView>
