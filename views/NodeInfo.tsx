@@ -11,6 +11,7 @@ import CollapsedQR from './../components/CollapsedQR';
 import SetFeesForm from './../components/SetFeesForm';
 import { inject, observer } from 'mobx-react';
 import { isNil } from 'lodash';
+import { version } from './../package.json';
 
 import NodeInfoStore from './../stores/NodeInfoStore';
 import SettingsStore from './../stores/SettingsStore';
@@ -222,12 +223,23 @@ export default class NodeInfo extends React.Component<
                 <Text
                     style={theme === 'dark' ? styles.labelDark : styles.label}
                 >
-                    Version:
+                    Implementation Version:
                 </Text>
                 <Text
                     style={theme === 'dark' ? styles.valueDark : styles.value}
                 >
                     {nodeInfo.version}
+                </Text>
+
+                <Text
+                    style={theme === 'dark' ? styles.labelDark : styles.label}
+                >
+                    Zeus Version:
+                </Text>
+                <Text
+                    style={theme === 'dark' ? styles.valueDark : styles.value}
+                >
+                    {version}
                 </Text>
 
                 {!!nodeInfo.synced_to_chain && (
