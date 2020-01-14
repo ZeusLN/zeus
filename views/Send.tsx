@@ -45,8 +45,11 @@ export default class Send extends React.Component<SendProps, SendState> {
         };
     }
 
-    componentDidMount() {
-        Clipboard.getString().then(text => this.validateAddress(text, false));
+    async componentWillMount() {
+        const clipboard = await Clipboard.getString();
+
+        Clipboard.setString('');
+        this.validateAddress(clipboard, false);
     }
 
     componentWillReceiveProps(nextProps: any) {
@@ -54,10 +57,6 @@ export default class Send extends React.Component<SendProps, SendState> {
         const destination = navigation.getParam('destination', null);
         const amount = navigation.getParam('amount', null);
         const transactionType = navigation.getParam('transactionType', null);
-
-        if (destination) {
-            this.validateAddress(destination);
-        }
 
         if (transactionType === 'Lightning') {
             this.props.InvoicesStore.getPayReq(destination);
@@ -87,13 +86,23 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     sendCoins = () => {
-        const { TransactionsStore, navigation } = this.props;
+        const { TransactionsStore, navigation, SettingsStore } = this.props;
         const { destination, amount, fee } = this.state;
-        TransactionsStore.sendCoins({
-            addr: destination,
-            sat_per_byte: fee,
-            amount: amount
-        });
+        const { implementation } = SettingsStore;
+
+        if (implementation === 'c-lightning-REST') {
+            TransactionsStore.sendCoins({
+                address: destination,
+                feeRate: `${Number(fee) * 1000}perkb`, // satoshis per kilobyte
+                satoshis: amount
+            });
+        } else {
+            TransactionsStore.sendCoins({
+                addr: destination,
+                sat_per_byte: fee,
+                amount
+            });
+        }
         navigation.navigate('SendingOnChain');
     };
 
@@ -182,10 +191,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 }
                                 placeholderTextColor="gray"
                             />
-                        </React.Fragment>
-                    )}
-                    {transactionType === 'On-chain' && (
-                        <React.Fragment>
                             <Text
                                 style={{
                                     color: theme === 'dark' ? 'white' : 'black'
@@ -206,6 +211,22 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 }
                                 placeholderTextColor="gray"
                             />
+                            <View style={styles.button}>
+                                <Button
+                                    title="Send Coins"
+                                    icon={{
+                                        name: 'send',
+                                        size: 25,
+                                        color: 'white'
+                                    }}
+                                    onPress={() => this.sendCoins()}
+                                    style={styles.button}
+                                    buttonStyle={{
+                                        backgroundColor: 'orange',
+                                        borderRadius: 30
+                                    }}
+                                />
+                            </View>
                         </React.Fragment>
                     )}
                     {transactionType === 'Lightning' && (
@@ -220,24 +241,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 onPress={() =>
                                     navigation.navigate('PaymentRequest')
                                 }
-                                style={styles.button}
-                                buttonStyle={{
-                                    backgroundColor: 'orange',
-                                    borderRadius: 30
-                                }}
-                            />
-                        </View>
-                    )}
-                    {transactionType === 'On-chain' && (
-                        <View style={styles.button}>
-                            <Button
-                                title="Send Coins"
-                                icon={{
-                                    name: 'send',
-                                    size: 25,
-                                    color: 'white'
-                                }}
-                                onPress={() => this.sendCoins()}
                                 style={styles.button}
                                 buttonStyle={{
                                     backgroundColor: 'orange',

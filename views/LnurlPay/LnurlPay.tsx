@@ -86,33 +86,34 @@ export default class LnurlPay extends React.Component<
                     tag: 'noop'
                 };
 
-                await InvoicesStore.getPayReq(pr, lnurl.metadata);
-
-                if (!!InvoicesStore.getPayReqError) {
-                    Alert.alert(
-                        `Got an invalid invoice!`,
-                        InvoicesStore.getPayReqError,
-                        [],
-                        {
-                            onDismiss: () => {
-                                navigation.navigate('Wallet');
+                InvoicesStore.getPayReq(pr, lnurl.metadata).then(() => {
+                    if (!!InvoicesStore.getPayReqError) {
+                        Alert.alert(
+                            `Got an invalid invoice!`,
+                            InvoicesStore.getPayReqError,
+                            [],
+                            {
+                                onDismiss: () => {
+                                    navigation.navigate('Wallet');
+                                }
                             }
-                        }
-                    );
-                    return;
-                }
+                        );
+                        return;
+                    }
 
-                LnurlPayStore.keep(
-                    InvoicesStore.pay_req.payment_hash,
-                    domain,
-                    lnurl.lnurlText,
-                    {
-                        metadata: lnurl.metadata,
-                        descriptionHash: InvoicesStore.pay_req.description_hash
-                    },
-                    successAction
-                );
-                navigation.navigate('PaymentRequest');
+                    LnurlPayStore.keep(
+                        InvoicesStore.pay_req.payment_hash,
+                        domain,
+                        lnurl.lnurlText,
+                        {
+                            metadata: lnurl.metadata,
+                            descriptionHash:
+                                InvoicesStore.pay_req.description_hash
+                        },
+                        successAction
+                    );
+                    navigation.navigate('PaymentRequest');
+                });
             });
     }
 

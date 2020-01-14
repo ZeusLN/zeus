@@ -50,14 +50,15 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                             return (
                                 <React.Fragment>
                                     <ListItem
-                                        title={item.host}
+                                        title={`${item.host}:${item.port}`}
                                         leftElement={Node(
                                             `data:image/png;base64,${data}`
                                         )}
                                         subtitle={
-                                            selectedNode === index
-                                                ? 'Active'
-                                                : ''
+                                            selectedNode === index ||
+                                            (!selectedNode && index === 0)
+                                                ? `Active | ${item.implementation}`
+                                                : item.implementation
                                         }
                                         containerStyle={{
                                             borderBottomWidth: 0,

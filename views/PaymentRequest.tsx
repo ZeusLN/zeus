@@ -58,7 +58,7 @@ export default class PaymentRequest extends React.Component<
         } = InvoicesStore;
         const { units, changeUnits, getAmount } = UnitsStore;
 
-        const num_satoshis = pay_req && pay_req.num_satoshis;
+        const requestAmount = pay_req && pay_req.getRequestAmount;
         const expiry = pay_req && pay_req.expiry;
         const cltv_expiry = pay_req && pay_req.cltv_expiry;
         const destination = pay_req && pay_req.destination;
@@ -131,7 +131,7 @@ export default class PaymentRequest extends React.Component<
                                             }
                                         >
                                             {units &&
-                                                getAmount(num_satoshis || 0)}
+                                                getAmount(requestAmount || 0)}
                                         </Text>
                                     </TouchableOpacity>
                                 )}
@@ -150,7 +150,9 @@ export default class PaymentRequest extends React.Component<
                                 {setCustomAmount && (
                                     <TextInput
                                         placeholder={
-                                            num_satoshis ? num_satoshis : '0'
+                                            requestAmount
+                                                ? requestAmount.toString()
+                                                : '0'
                                         }
                                         value={customAmount}
                                         onChangeText={(text: string) =>
