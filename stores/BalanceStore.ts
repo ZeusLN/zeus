@@ -60,7 +60,7 @@ export default class BalanceStore {
                 // handle success
                 const balance = new Balance(response.data);
                 this.pendingOpenBalance = balance.pending_open_balance || 0;
-                this.lightningBalance = balance.getTotalLightningBalance;
+                this.lightningBalance = balance.getTotalLightningBalance || 0;
                 this.loading = false;
             })
             .catch(() => {
