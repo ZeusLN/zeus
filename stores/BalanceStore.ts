@@ -37,9 +37,10 @@ export default class BalanceStore {
             .then((response: any) => {
                 // handle success
                 const balance = new Balance(response.data);
-                this.unconfirmedBlockchainBalance = balance.unconfirmedBalance;
-                this.confirmedBlockchainBalance = balance.confirmedBalance;
-                this.totalBlockchainBalance = balance.getTotalBalance;
+                this.unconfirmedBlockchainBalance =
+                    balance.unconfirmedBalance || 0;
+                this.confirmedBlockchainBalance = balance.confirmedBalance || 0;
+                this.totalBlockchainBalance = balance.getTotalBalance || 0;
                 this.loading = false;
             })
             .catch(() => {
