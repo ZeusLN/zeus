@@ -235,9 +235,11 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                 Status:
                             </Text>
                             <Text
-                                style={{
-                                    ...styles.value
-                                }}
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
                             >
                                 {status}
                             </Text>
