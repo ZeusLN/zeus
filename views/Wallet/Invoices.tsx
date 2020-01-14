@@ -93,7 +93,6 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
                             const { isPaid } = item;
                             return (
                                 <ListItem
-                                    key={item.key}
                                     title={item.getMemo}
                                     subtitle={`${
                                         isPaid ? 'Paid' : 'Unpaid'

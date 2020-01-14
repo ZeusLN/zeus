@@ -50,7 +50,8 @@ export default class SetFeesForm extends React.Component<
             channelPoint,
             channelId
         } = this.props;
-        const { theme } = SettingsStore;
+        const { settings } = SettingsStore;
+        const { theme } = settings;
         const {
             channelFees,
             setFees,

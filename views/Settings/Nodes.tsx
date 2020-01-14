@@ -50,7 +50,7 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                             return (
                                 <React.Fragment>
                                     <ListItem
-                                        title={item.host}
+                                        title={`${item.host}:${item.port}`}
                                         leftElement={Node(
                                             `data:image/png;base64,${data}`
                                         )}
