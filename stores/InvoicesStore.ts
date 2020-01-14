@@ -129,7 +129,9 @@ export default class InvoicesStore {
         this.paymentRequest = paymentRequest;
         this.loading = true;
 
-        RESTUtils.decodePaymentRequest(this.settingsStore, [paymentRequest])
+        return RESTUtils.decodePaymentRequest(this.settingsStore, [
+            paymentRequest
+        ])
             .then((response: any) => {
                 // handle success
                 this.pay_req = new Invoice(response.data);

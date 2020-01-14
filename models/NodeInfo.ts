@@ -25,6 +25,10 @@ export default class NodeInfo extends BaseModel {
         return this.testnet || this.network === 'testnet';
     }
 
+    @computed public get isRegTest(): boolean {
+        return this.regtest || this.network === 'regtest';
+    }
+
     @computed public get currentBlockHeight(): Number {
         return this.block_height || this.blockheight;
     }
