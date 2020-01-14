@@ -34,6 +34,7 @@ export default class NodeInfoStore {
                 const nodeInfo = new NodeInfo(response.data);
                 this.nodeInfo = nodeInfo;
                 this.testnet = nodeInfo.isTestNet;
+                this.regtest = nodeInfo.isRegTest;
                 this.loading = false;
                 this.error = false;
             })
