@@ -58,9 +58,7 @@ export default class Receive extends React.Component<
 
     getNewAddress = () => {
         const { SettingsStore } = this.props;
-        SettingsStore.getNewAddress().then(() => {
-            SettingsStore.getSettings();
-        });
+        SettingsStore.getNewAddress();
     };
 
     updateIndex = (selectedIndex: number) => {
@@ -89,8 +87,9 @@ export default class Receive extends React.Component<
             creatingInvoiceError,
             error_msg
         } = InvoicesStore;
-        const { settings, loading } = SettingsStore;
-        const { onChainAndress, theme } = settings;
+        const { settings, loading, chainAddress } = SettingsStore;
+        const { theme } = settings;
+        const address = chainAddress;
 
         const lnurl: LNURLWithdrawParams | undefined = navigation.getParam(
             'lnurlParams'
@@ -301,7 +300,7 @@ export default class Receive extends React.Component<
                     )}
                     {selectedIndex === 1 && (
                         <React.Fragment>
-                            {!onChainAndress && !loading && (
+                            {!address && !loading && (
                                 <Text
                                     style={{
                                         color:
@@ -318,9 +317,9 @@ export default class Receive extends React.Component<
                                     color="#0000ff"
                                 />
                             )}
-                            {onChainAndress && (
+                            {address && (
                                 <CollapsedQR
-                                    value={onChainAndress}
+                                    value={address}
                                     copyText="Copy Address"
                                     theme={theme}
                                 />

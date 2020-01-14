@@ -41,6 +41,7 @@ interface WalletState {
     'ChannelsStore',
     'InvoicesStore',
     'NodeInfoStore',
+    'FeeStore',
     'PaymentsStore',
     'SettingsStore',
     'TransactionsStore',
@@ -67,27 +68,30 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     };
 
     async getSettingsAndRefresh() {
-        const { NodeInfoStore, SettingsStore } = this.props;
+        const { SettingsStore } = this.props;
         await SettingsStore.getSettings().then(() => {
-            NodeInfoStore.getNodeInfo();
             this.refresh();
         });
     }
 
     refresh = () => {
         const {
+            NodeInfoStore,
             BalanceStore,
             TransactionsStore,
             ChannelsStore,
             InvoicesStore,
-            PaymentsStore
+            PaymentsStore,
+            FeeStore
         } = this.props;
+        NodeInfoStore.getNodeInfo();
         BalanceStore.getBlockchainBalance();
         BalanceStore.getLightningBalance();
         TransactionsStore.getTransactions();
         PaymentsStore.getPayments();
         InvoicesStore.getInvoices();
         ChannelsStore.getChannels();
+        FeeStore.getFees();
     };
 
     updateIndex = (selectedIndex: number) => {
