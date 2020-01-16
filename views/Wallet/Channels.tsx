@@ -103,20 +103,26 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                     <FlatList
                         data={channels}
                         renderItem={({ item }) => {
+                            const displayName =
+                                item.alias ||
+                                (nodes[item.remote_pubkey] &&
+                                    nodes[item.remote_pubkey].alias) ||
+                                item.remote_pubkey ||
+                                item.channelId;
+
                             const data = new Identicon(
-                                hash.sha1(item.alias || item.remote_pubkey),
+                                hash.sha1(
+                                    item.alias ||
+                                        item.remote_pubkey ||
+                                        item.channelId
+                                ),
                                 420
                             ).toString();
+
                             return (
                                 <React.Fragment>
                                     <ListItem
-                                        title={
-                                            item.alias ||
-                                            (nodes[item.remote_pubkey] &&
-                                                nodes[item.remote_pubkey]
-                                                    .alias) ||
-                                            item.remote_pubkey
-                                        }
+                                        title={displayName}
                                         leftElement={ChannelIcon(
                                             `data:image/png;base64,${data}`
                                         )}
