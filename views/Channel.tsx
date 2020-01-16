@@ -107,7 +107,7 @@ export default class ChannelView extends React.Component<
         } = channel;
         const privateChannel = channel.private;
         const data = new Identicon(
-            hash.sha1(alias || remote_pubkey),
+            hash.sha1(alias || remote_pubkey || channelId),
             420
         ).toString();
 
@@ -149,7 +149,8 @@ export default class ChannelView extends React.Component<
                         >
                             {(nodes[remote_pubkey] &&
                                 nodes[remote_pubkey].alias) ||
-                                alias}
+                                alias ||
+                                channelId}
                         </Text>
                         {remote_pubkey && (
                             <Text
