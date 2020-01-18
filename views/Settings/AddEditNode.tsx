@@ -252,7 +252,7 @@ export default class AddEditNode extends React.Component<
                             color: savedTheme === 'dark' ? 'white' : 'black'
                         }}
                     >
-                        LND Host
+                        Host
                     </Text>
                     <TextInput
                         placeholder={'localhost'}
