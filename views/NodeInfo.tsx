@@ -235,7 +235,7 @@ export default class NodeInfo extends React.Component<
                 <Text
                     style={theme === 'dark' ? styles.valueDark : styles.value}
                 >
-                    {`v${nodeInfo.version}`}
+                    {nodeInfo.version}
                 </Text>
 
                 <Text

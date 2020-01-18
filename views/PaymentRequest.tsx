@@ -68,8 +68,14 @@ export default class PaymentRequest extends React.Component<
 
         const date = new Date(Number(timestamp) * 1000).toString();
 
-        const { settings } = SettingsStore;
+        const { settings, implementation } = SettingsStore;
         const { theme } = settings;
+
+        // c-lightning can only pay custom amounts if the amount is not specified
+        const canPayCustomAmount = !(
+            implementation === 'c-lightning-REST' &&
+            (!!requestAmount || requestAmount !== 0)
+        );
 
         const BackButton = () => (
             <Icon
@@ -116,7 +122,7 @@ export default class PaymentRequest extends React.Component<
                         </View>
                     )}
 
-                    {pay_req && (
+                    {!!pay_req && (
                         <View style={styles.content}>
                             <View style={styles.center}>
                                 {!setCustomAmount && (
@@ -169,185 +175,187 @@ export default class PaymentRequest extends React.Component<
                                         placeholderTextColor="gray"
                                     />
                                 )}
-                                <View style={styles.button}>
-                                    <Button
-                                        title={
-                                            setCustomAmount
-                                                ? 'Pay default amount'
-                                                : 'Pay custom amount'
-                                        }
-                                        icon={{
-                                            name: 'edit',
-                                            size: 25,
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'black'
-                                                    : 'white'
-                                        }}
-                                        onPress={() => {
-                                            this.setState({
-                                                setCustomAmount: !setCustomAmount
-                                            });
-                                        }}
-                                        style={styles.button}
-                                        titleStyle={{
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'black'
-                                                    : 'white'
-                                        }}
-                                        buttonStyle={{
-                                            backgroundColor:
-                                                theme === 'dark'
-                                                    ? 'white'
-                                                    : 'black',
-                                            borderRadius: 30
-                                        }}
-                                    />
-                                </View>
+                                {canPayCustomAmount && (
+                                    <View style={styles.button}>
+                                        <Button
+                                            title={
+                                                setCustomAmount
+                                                    ? 'Pay default amount'
+                                                    : 'Pay custom amount'
+                                            }
+                                            icon={{
+                                                name: 'edit',
+                                                size: 25,
+                                                color:
+                                                    theme === 'dark'
+                                                        ? 'black'
+                                                        : 'white'
+                                            }}
+                                            onPress={() => {
+                                                this.setState({
+                                                    setCustomAmount: !setCustomAmount
+                                                });
+                                            }}
+                                            style={styles.button}
+                                            titleStyle={{
+                                                color:
+                                                    theme === 'dark'
+                                                        ? 'black'
+                                                        : 'white'
+                                            }}
+                                            buttonStyle={{
+                                                backgroundColor:
+                                                    theme === 'dark'
+                                                        ? 'white'
+                                                        : 'black',
+                                                borderRadius: 30
+                                            }}
+                                        />
+                                    </View>
+                                )}
                             </View>
 
-                            {description && (
-                                <Text
-                                    style={
-                                        theme === 'dark'
-                                            ? styles.labelDark
-                                            : styles.label
-                                    }
-                                >
-                                    Description:
-                                </Text>
-                            )}
-                            {description && (
-                                <Text
-                                    style={
-                                        theme === 'dark'
-                                            ? styles.valueDark
-                                            : styles.value
-                                    }
-                                >
-                                    {description}
-                                </Text>
-                            )}
-
-                            {timestamp && (
-                                <Text
-                                    style={
-                                        theme === 'dark'
-                                            ? styles.labelDark
-                                            : styles.label
-                                    }
-                                >
-                                    Timestamp:
-                                </Text>
-                            )}
-                            {timestamp && (
-                                <Text
-                                    style={
-                                        theme === 'dark'
-                                            ? styles.valueDark
-                                            : styles.value
-                                    }
-                                >
-                                    {date}
-                                </Text>
+                            {!!description && (
+                                <React.Fragment>
+                                    <Text
+                                        style={
+                                            theme === 'dark'
+                                                ? styles.labelDark
+                                                : styles.label
+                                        }
+                                    >
+                                        Description:
+                                    </Text>
+                                    <Text
+                                        style={
+                                            theme === 'dark'
+                                                ? styles.valueDark
+                                                : styles.value
+                                        }
+                                    >
+                                        {description}
+                                    </Text>
+                                </React.Fragment>
                             )}
 
-                            {expiry && (
-                                <Text
-                                    style={
-                                        theme === 'dark'
-                                            ? styles.labelDark
-                                            : styles.label
-                                    }
-                                >
-                                    Expiry:
-                                </Text>
-                            )}
-                            {expiry && (
-                                <Text
-                                    style={
-                                        theme === 'dark'
-                                            ? styles.valueDark
-                                            : styles.value
-                                    }
-                                >
-                                    {expiry}
-                                </Text>
-                            )}
-
-                            {cltv_expiry && (
-                                <Text
-                                    style={
-                                        theme === 'dark'
-                                            ? styles.labelDark
-                                            : styles.label
-                                    }
-                                >
-                                    CLTV Expiry:
-                                </Text>
-                            )}
-                            {cltv_expiry && (
-                                <Text
-                                    style={
-                                        theme === 'dark'
-                                            ? styles.valueDark
-                                            : styles.value
-                                    }
-                                >
-                                    {cltv_expiry}
-                                </Text>
+                            {!!timestamp && (
+                                <React.Fragment>
+                                    <Text
+                                        style={
+                                            theme === 'dark'
+                                                ? styles.labelDark
+                                                : styles.label
+                                        }
+                                    >
+                                        Timestamp:
+                                    </Text>
+                                    <Text
+                                        style={
+                                            theme === 'dark'
+                                                ? styles.valueDark
+                                                : styles.value
+                                        }
+                                    >
+                                        {date}
+                                    </Text>
+                                </React.Fragment>
                             )}
 
-                            {destination && (
-                                <Text
-                                    style={
-                                        theme === 'dark'
-                                            ? styles.labelDark
-                                            : styles.label
-                                    }
-                                >
-                                    Destination:
-                                </Text>
-                            )}
-                            {destination && (
-                                <Text
-                                    style={
-                                        theme === 'dark'
-                                            ? styles.valueDark
-                                            : styles.value
-                                    }
-                                >
-                                    {destination}
-                                </Text>
+                            {!!expiry && (
+                                <React.Fragment>
+                                    <Text
+                                        style={
+                                            theme === 'dark'
+                                                ? styles.labelDark
+                                                : styles.label
+                                        }
+                                    >
+                                        Expiry:
+                                    </Text>
+                                    <Text
+                                        style={
+                                            theme === 'dark'
+                                                ? styles.valueDark
+                                                : styles.value
+                                        }
+                                    >
+                                        {expiry}
+                                    </Text>
+                                </React.Fragment>
                             )}
 
-                            {payment_hash && (
-                                <Text
-                                    style={
-                                        theme === 'dark'
-                                            ? styles.labelDark
-                                            : styles.label
-                                    }
-                                >
-                                    Payment Hash:
-                                </Text>
+                            {!!cltv_expiry && (
+                                <React.Fragment>
+                                    <Text
+                                        style={
+                                            theme === 'dark'
+                                                ? styles.labelDark
+                                                : styles.label
+                                        }
+                                    >
+                                        CLTV Expiry:
+                                    </Text>
+                                    <Text
+                                        style={
+                                            theme === 'dark'
+                                                ? styles.valueDark
+                                                : styles.value
+                                        }
+                                    >
+                                        {cltv_expiry}
+                                    </Text>
+                                </React.Fragment>
                             )}
-                            {payment_hash && (
-                                <Text
-                                    style={
-                                        theme === 'dark'
-                                            ? styles.valueDark
-                                            : styles.value
-                                    }
-                                >
-                                    {payment_hash}
-                                </Text>
+
+                            {!!destination && (
+                                <React.Fragment>
+                                    <Text
+                                        style={
+                                            theme === 'dark'
+                                                ? styles.labelDark
+                                                : styles.label
+                                        }
+                                    >
+                                        Destination:
+                                    </Text>
+                                    <Text
+                                        style={
+                                            theme === 'dark'
+                                                ? styles.valueDark
+                                                : styles.value
+                                        }
+                                    >
+                                        {destination}
+                                    </Text>
+                                </React.Fragment>
+                            )}
+
+                            {!!payment_hash && (
+                                <React.Fragment>
+                                    <Text
+                                        style={
+                                            theme === 'dark'
+                                                ? styles.labelDark
+                                                : styles.label
+                                        }
+                                    >
+                                        Payment Hash:
+                                    </Text>
+                                    <Text
+                                        style={
+                                            theme === 'dark'
+                                                ? styles.valueDark
+                                                : styles.value
+                                        }
+                                    >
+                                        {payment_hash}
+                                    </Text>
+                                </React.Fragment>
                             )}
                         </View>
                     )}
 
-                    {pay_req && (
+                    {!!pay_req && (
                         <View style={styles.button}>
                             <Button
                                 title="Pay this invoice"

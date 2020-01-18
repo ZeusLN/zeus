@@ -16,7 +16,7 @@ const lndRoutes: any = {
     connectPeer: '/v1/peers',
     listNode: '/v1/network/listNode',
     closeChannel: function(urlParams: Array<string>) {
-        return `/v1/channels/${urlParams[0]}/${urlParams[1]}/`;
+        return `/v1/channels/${urlParams[0]}/${urlParams[1]}`;
     },
     decodePaymentRequest: function(urlParams: Array<string>) {
         return `/v1/payreq/${urlParams[0]}`;

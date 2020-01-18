@@ -80,7 +80,7 @@ export default class Invoice extends BaseModel {
             const msatoshi = this.msatoshi.toString();
             return Number(msatoshi.replace('msat', '')) / 1000;
         }
-        return Number(this.num_satoshis);
+        return Number(this.num_satoshis || 0);
     }
 
     // return amount in satoshis
