@@ -21,24 +21,22 @@ export default class UnitsStore {
     numberWithCommas = (x: string | number) =>
         x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
-    toFixed(x: number) {
-        let newValue: any = x;
+    toFixed(x: any) {
         if (Math.abs(x) < 1.0) {
             let e = parseInt(x.toString().split('e-')[1]);
             if (e) {
-                newValue *= Math.pow(10, e - 1);
-                newValue =
-                    '0.' + new Array(e).join('0') + x.toString().substring(2);
+                x *= Math.pow(10, e - 1);
+                x = '0.' + new Array(e).join('0') + x.toString().substring(2);
             }
         } else {
             let e = parseInt(x.toString().split('+')[1]);
             if (e > 20) {
                 e -= 20;
-                newValue /= Math.pow(10, e);
-                newValue += new Array(e + 1).join('0');
+                x /= Math.pow(10, e);
+                x += new Array(e + 1).join('0');
             }
         }
-        return newValue;
+        return x;
     }
 
     @action
