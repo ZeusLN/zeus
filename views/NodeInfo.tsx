@@ -235,7 +235,7 @@ export default class NodeInfo extends React.Component<
                 <Text
                     style={theme === 'dark' ? styles.valueDark : styles.value}
                 >
-                    {nodeInfo.version}
+                    {`v${nodeInfo.version}`}
                 </Text>
 
                 <Text
@@ -246,7 +246,7 @@ export default class NodeInfo extends React.Component<
                 <Text
                     style={theme === 'dark' ? styles.valueDark : styles.value}
                 >
-                    {version}
+                    {`v${version}`}
                 </Text>
 
                 {!!nodeInfo.synced_to_chain && (
