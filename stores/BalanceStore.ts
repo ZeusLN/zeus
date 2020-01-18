@@ -1,25 +1,22 @@
 import { action, reaction, observable } from 'mobx';
-import axios from 'axios';
 import Transaction from './../models/Transaction';
 import SettingsStore from './SettingsStore';
+import RESTUtils from './../utils/RESTUtils';
+import Balance from './../models/Balance';
 
 export default class BalanceStore {
-    @observable public totalBlockchainBalance: number = 0;
-    @observable public confirmedBlockchainBalance: number = 0;
-    @observable public unconfirmedBlockchainBalance: number = 0;
+    @observable public totalBlockchainBalance: number | string = 0;
+    @observable public confirmedBlockchainBalance: number | string = 0;
+    @observable public unconfirmedBlockchainBalance: number | string = 0;
     @observable public loading: boolean = false;
     @observable public error: boolean = false;
     @observable public transactions: Array<Transaction> = [];
-    @observable public pendingOpenBalance: number = 0;
-    @observable public lightningBalance: number = 0;
+    @observable public pendingOpenBalance: number | string = 0;
+    @observable public lightningBalance: number | string = 0;
     settingsStore: SettingsStore;
-    getBlockchainBalanceToken: any;
-    getLightningBalanceToken: any;
 
     constructor(settingsStore: SettingsStore) {
         this.settingsStore = settingsStore;
-        this.getBlockchainBalanceToken = axios.CancelToken.source().token;
-        this.getLightningBalanceToken = axios.CancelToken.source().token;
 
         reaction(
             () => this.settingsStore.settings,
@@ -34,29 +31,15 @@ export default class BalanceStore {
 
     @action
     public getBlockchainBalance = () => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
         this.loading = true;
-        axios
-            .request({
-                method: 'get',
-                url: `https://${host}${
-                    port ? ':' + port : ''
-                }/v1/balance/blockchain`,
-                headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
-                },
-                cancelToken: this.getBlockchainBalanceToken
-            })
+        RESTUtils.getBlockchainBalance(this.settingsStore)
             .then((response: any) => {
                 // handle success
-                const data = response.data;
+                const balance = new Balance(response.data);
                 this.unconfirmedBlockchainBalance =
-                    Number(data.unconfirmed_balance) || 0;
-                this.confirmedBlockchainBalance = Number(
-                    data.confirmed_balance || 0
-                );
-                this.totalBlockchainBalance = Number(data.total_balance || 0);
+                    balance.unconfirmedBalance || 0;
+                this.confirmedBlockchainBalance = balance.confirmedBalance || 0;
+                this.totalBlockchainBalance = balance.getTotalBalance || 0;
                 this.loading = false;
             })
             .catch(() => {
@@ -70,27 +53,13 @@ export default class BalanceStore {
 
     @action
     public getLightningBalance = () => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
         this.loading = true;
-        axios
-            .request({
-                method: 'get',
-                url: `https://${host}${
-                    port ? ':' + port : ''
-                }/v1/balance/channels`,
-                headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
-                },
-                cancelToken: this.getLightningBalanceToken
-            })
+        RESTUtils.getLightningBalance(this.settingsStore)
             .then((response: any) => {
                 // handle success
-                const data = response.data;
-                this.pendingOpenBalance = Number(
-                    data.pending_open_balance || 0
-                );
-                this.lightningBalance = Number(data.balance || 0);
+                const balance = new Balance(response.data);
+                this.pendingOpenBalance = balance.pending_open_balance || 0;
+                this.lightningBalance = balance.getTotalLightningBalance || 0;
                 this.loading = false;
             })
             .catch(() => {

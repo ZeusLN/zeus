@@ -1,8 +1,8 @@
 import * as React from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View, Clipboard } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
-import AddressUtils from './../utils/AddressUtils';
+import handleAnything from './../utils/handleAnything';
 
 import InvoicesStore from './../stores/InvoicesStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
@@ -45,6 +45,13 @@ export default class Send extends React.Component<SendProps, SendState> {
         };
     }
 
+    async componentWillMount() {
+        const clipboard = await Clipboard.getString();
+
+        Clipboard.setString('');
+        this.validateAddress(clipboard, false);
+    }
+
     componentWillReceiveProps(nextProps: any) {
         const { navigation } = nextProps;
         const destination = navigation.getParam('destination', null);
@@ -63,52 +70,39 @@ export default class Send extends React.Component<SendProps, SendState> {
         });
     }
 
-    validateAddress = (text: string) => {
-        const { NodeInfoStore, InvoicesStore } = this.props;
-        const { testnet } = NodeInfoStore;
-
-        const { value, amount } = AddressUtils.processSendAddress(text);
-
-        if (AddressUtils.isValidBitcoinAddress(value, testnet)) {
-            if (amount) {
+    validateAddress = (text: string, apply: boolean = true) => {
+        const { navigation } = this.props;
+        handleAnything(text)
+            .then(([route, props]) => {
+                navigation.navigate(route, props);
+            })
+            .catch(() => {
                 this.setState({
-                    transactionType: 'On-chain',
-                    isValid: true,
-                    destination: value,
-                    amount
+                    transactionType: null,
+                    isValid: false,
+                    destination: apply ? text : this.state.destination
                 });
-            } else {
-                this.setState({
-                    transactionType: 'On-chain',
-                    isValid: true,
-                    destination: value
-                });
-            }
-        } else if (AddressUtils.isValidLightningPaymentRequest(value)) {
-            this.setState({
-                transactionType: 'Lightning',
-                isValid: true,
-                destination: value
             });
-
-            InvoicesStore.getPayReq(value);
-        } else {
-            this.setState({
-                transactionType: null,
-                isValid: false,
-                destination: value
-            });
-        }
     };
 
     sendCoins = () => {
-        const { TransactionsStore, navigation } = this.props;
+        const { TransactionsStore, navigation, SettingsStore } = this.props;
         const { destination, amount, fee } = this.state;
-        TransactionsStore.sendCoins({
-            addr: destination,
-            sat_per_byte: fee,
-            amount: amount
-        });
+        const { implementation } = SettingsStore;
+
+        if (implementation === 'c-lightning-REST') {
+            TransactionsStore.sendCoins({
+                address: destination,
+                feeRate: `${Number(fee) * 1000}perkb`, // satoshis per kilobyte
+                satoshis: amount
+            });
+        } else {
+            TransactionsStore.sendCoins({
+                addr: destination,
+                sat_per_byte: fee,
+                amount
+            });
+        }
         navigation.navigate('SendingOnChain');
     };
 
@@ -166,14 +160,21 @@ export default class Send extends React.Component<SendProps, SendState> {
                         placeholderTextColor="gray"
                     />
                     {!isValid && !!destination && (
-                        <Text>
+                        <Text
+                            style={{
+                                color: theme === 'dark' ? 'white' : 'black'
+                            }}
+                        >
                             Must be a valid Bitcoin address or Lightning payment
                             request
                         </Text>
                     )}
                     {transactionType && (
                         <Text
-                            style={{ paddingTop: 10 }}
+                            style={{
+                                paddingTop: 10,
+                                color: theme === 'dark' ? 'white' : 'black'
+                            }}
                         >{`${transactionType} Transaction`}</Text>
                     )}
                     {transactionType === 'On-chain' && (
@@ -197,10 +198,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 }
                                 placeholderTextColor="gray"
                             />
-                        </React.Fragment>
-                    )}
-                    {transactionType === 'On-chain' && (
-                        <React.Fragment>
                             <Text
                                 style={{
                                     color: theme === 'dark' ? 'white' : 'black'
@@ -221,6 +218,22 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 }
                                 placeholderTextColor="gray"
                             />
+                            <View style={styles.button}>
+                                <Button
+                                    title="Send Coins"
+                                    icon={{
+                                        name: 'send',
+                                        size: 25,
+                                        color: 'white'
+                                    }}
+                                    onPress={() => this.sendCoins()}
+                                    style={styles.button}
+                                    buttonStyle={{
+                                        backgroundColor: 'orange',
+                                        borderRadius: 30
+                                    }}
+                                />
+                            </View>
                         </React.Fragment>
                     )}
                     {transactionType === 'Lightning' && (
@@ -235,24 +248,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 onPress={() =>
                                     navigation.navigate('PaymentRequest')
                                 }
-                                style={styles.button}
-                                buttonStyle={{
-                                    backgroundColor: 'orange',
-                                    borderRadius: 30
-                                }}
-                            />
-                        </View>
-                    )}
-                    {transactionType === 'On-chain' && (
-                        <View style={styles.button}>
-                            <Button
-                                title="Send Coins"
-                                icon={{
-                                    name: 'send',
-                                    size: 25,
-                                    color: 'white'
-                                }}
-                                onPress={() => this.sendCoins()}
                                 style={styles.button}
                                 buttonStyle={{
                                     backgroundColor: 'orange',
