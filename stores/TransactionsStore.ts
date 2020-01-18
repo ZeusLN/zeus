@@ -93,7 +93,7 @@ export default class TransactionsStore {
         if (implementation === 'c-lightning-REST') {
             data = {
                 invoice: payment_request,
-                amount
+                amount: Number(amount) * 1000
             };
         } else {
             if (amount) {
