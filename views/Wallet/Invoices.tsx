@@ -124,7 +124,7 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
                                 />
                             );
                         }}
-                        keyExtractor={item => item.key}
+                        keyExtractor={(item, index) => `${item.key}-${index}`}
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}
                         refreshing={loading}
