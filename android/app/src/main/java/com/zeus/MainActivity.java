@@ -1,4 +1,4 @@
-package com.zeusln.zeusbeta;
+package com.zeusln.zeus;
 
 import com.facebook.react.ReactActivity;
 
