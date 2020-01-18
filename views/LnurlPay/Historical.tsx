@@ -3,17 +3,23 @@ import { Text, View, TouchableOpacity } from 'react-native';
 import { LnurlPayTransaction } from './../../stores/LnurlPayStore';
 import LnurlPayMetadata from './Metadata';
 import LnurlPaySuccess from './Success';
+import { inject, observer } from 'mobx-react';
+
+import SettingsStore from './../../stores/SettingsStore';
 
 interface LnurlPayHistoricalProps {
     navigation: any;
     lnurlpaytx: LnurlPayTransaction;
     preimage: string;
+    SettingsStore: SettingsStore;
 }
 
 interface LnurlPayHistoricalState {
     showLnurlSuccess: boolean;
 }
 
+@inject('SettingsStore')
+@observer
 export default class LnurlPayHistorical extends React.Component<
     LnurlPayHistoricalProps,
     LnurlPayHistoricalState
@@ -27,8 +33,10 @@ export default class LnurlPayHistorical extends React.Component<
     }
 
     render() {
-        const { navigation, lnurlpaytx, preimage } = this.props;
+        const { navigation, lnurlpaytx, preimage, SettingsStore } = this.props;
         const { showLnurlSuccess } = this.state;
+        const { settings } = SettingsStore;
+        const { theme } = settings;
 
         return (
             <View>
@@ -39,7 +47,12 @@ export default class LnurlPayHistorical extends React.Component<
                         })
                     }
                 >
-                    <Text style={{ fontWeight: 'bold' }}>
+                    <Text
+                        style={{
+                            color: theme === 'dark' ? 'white' : 'black',
+                            fontWeight: 'bold'
+                        }}
+                    >
                         {lnurlpaytx.lnurl}
                     </Text>
                 </TouchableOpacity>
