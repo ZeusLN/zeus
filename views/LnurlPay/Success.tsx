@@ -25,18 +25,14 @@ export default class LnurlPaySuccess extends React.Component<
     };
 
     render() {
-        const { domain, successAction } = this.props;
+        const { color, domain, successAction } = this.props;
 
-        var body = null;
+        let body;
         if (successAction) {
             const { tag, description, url, message } = successAction;
             switch (tag) {
                 case 'message':
-                    body = (
-                        <Text style={{ color: this.props.color }}>
-                            {message}
-                        </Text>
-                    );
+                    body = <Text style={{ color }}>{message}</Text>;
                     break;
                 case 'url':
                     body = (
@@ -61,14 +57,10 @@ export default class LnurlPaySuccess extends React.Component<
                         plaintext = `<error decrypting message: ${err.message}>`;
                     }
                     body = (
-                        <>
-                            <Text style={{ color: this.props.color }}>
-                                {description}:{' '}
-                            </Text>
-                            <Text style={{ color: this.props.color }}>
-                                {plaintext}
-                            </Text>
-                        </>
+                        <React.Fragment>
+                            <Text style={{ color }}>{description}: </Text>
+                            <Text style={{ color }}>{plaintext}</Text>
+                        </React.Fragment>
                     );
                     break;
             }
@@ -77,7 +69,7 @@ export default class LnurlPaySuccess extends React.Component<
         return (
             <View
                 style={{
-                    color: this.props.color,
+                    color,
                     padding: 20,
                     fontSize: 40
                 }}
@@ -87,7 +79,7 @@ export default class LnurlPaySuccess extends React.Component<
                         padding: 20,
                         fontWeight: 'bold',
                         fontSize: 22,
-                        color: this.props.color
+                        color
                     }}
                 >
                     {domain}

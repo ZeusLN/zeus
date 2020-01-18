@@ -151,7 +151,8 @@ export default class LnurlPay extends React.Component<
                         style={{
                             padding: 20,
                             fontWeight: 'bold',
-                            fontSize: 22
+                            fontSize: 22,
+                            color: theme === 'dark' ? 'white' : 'black'
                         }}
                     >
                         {domain}
