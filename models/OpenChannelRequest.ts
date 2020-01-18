@@ -1,4 +1,4 @@
-import BaseModel from './BaseModel.ts';
+import BaseModel from './BaseModel';
 
 export default class OpenChannelRequest extends BaseModel {
     public min_confs?: number;
@@ -13,9 +13,9 @@ export default class OpenChannelRequest extends BaseModel {
     public min_htlc_msat?: string;
     public local_funding_amount: string;
     public host: string;
-    public id: string;
-    public satoshis: string;
-    public announce: boolean;
+    public id?: string;
+    public satoshis?: string;
+    public announce?: boolean;
 
     constructor(data?: any) {
         super(data);

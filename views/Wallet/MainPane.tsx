@@ -11,6 +11,8 @@ import SettingsStore from './../../stores/SettingsStore';
 
 const TorIcon = require('./../../images/tor.png');
 
+import { version } from './../../package.json';
+
 interface MainPaneProps {
     navigation: any;
     NodeInfoStore: NodeInfoStore;
@@ -315,6 +317,16 @@ export default class MainPane extends React.Component<
                         }}
                         onPress={() => navigation.navigate('Settings')}
                     />
+                    <Text
+                        style={{
+                            color: '#fff',
+                            fontSize: 12,
+                            marginTop: 20,
+                            marginBottom: -40
+                        }}
+                    >
+                        {`v${version}`}
+                    </Text>
                 </View>
             );
         }

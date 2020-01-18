@@ -13,25 +13,35 @@ import LnurlPaySuccess from './LnurlPay/Success';
 
 import TransactionsStore from './../stores/TransactionsStore';
 import LnurlPayStore from './../stores/LnurlPayStore';
+import SettingsStore from './../stores/SettingsStore';
 
 interface SendingLightningProps {
     navigation: any;
     TransactionsStore: TransactionsStore;
     LnurlPayStore: LnurlPayStore;
+    SettingsStore: SettingsStore;
 }
 
-@inject('TransactionsStore', 'LnurlPayStore')
+@inject('TransactionsStore', 'LnurlPayStore', 'SettingsStore')
 @observer
 export default class SendingLightning extends React.Component<
     SendingLightningProps,
     {}
 > {
     componentDidMount = () => {
-        when(() => TransactionsStore.payment_route).then(() => {
-            LnurlPayStore.acknowledge(TransactionsStore.payment_hash);
+        const { TransactionsStore, LnurlPayStore } = this.props;
+        const {
+            payment_route,
+            payment_hash,
+            payment_error
+        } = TransactionsStore;
+        const { acknowledge, clear } = LnurlPayStore;
+
+        when(() => payment_route).then(() => {
+            acknowledge(payment_hash);
         });
-        when(() => TransactionsStore.payment_error).then(() => {
-            LnurlPayStore.clear(TransactionsStore.payment_hash);
+        when(() => payment_error).then(() => {
+            clear(payment_hash);
         });
     };
 
@@ -56,7 +66,12 @@ export default class SendingLightning extends React.Component<
     }
 
     render() {
-        const { TransactionsStore, LnurlPayStore, navigation } = this.props;
+        const {
+            TransactionsStore,
+            LnurlPayStore,
+            SettingsStore,
+            navigation
+        } = this.props;
         const {
             loading,
             error,
@@ -117,6 +132,7 @@ export default class SendingLightning extends React.Component<
                                 domain={LnurlPayStore.domain}
                                 successAction={LnurlPayStore.successAction}
                                 preimage={payment_preimage}
+                                SettingsStore={SettingsStore}
                             />
                         )}
                     {payment_hash && (

@@ -90,7 +90,9 @@ export default class ChannelsStore {
             .then((response: any) => {
                 const data = response.data;
                 const channels = data.channels || data;
-                this.channels = channels.map(channel => new Channel(channel));
+                this.channels = channels.map(
+                    (channel: any) => new Channel(channel)
+                );
                 this.error = false;
                 this.loading = false;
             })
@@ -110,10 +112,10 @@ export default class ChannelsStore {
         const { implementation } = this.settingsStore;
         this.loading = true;
 
-        let urlParams: Array<string>;
-        if (implementation === 'c-lightning-REST') {
+        let urlParams: Array<string> = [];
+        if (implementation === 'c-lightning-REST' && channelId) {
             urlParams = [channelId];
-        } else {
+        } else if (request) {
             const { funding_txid_str, output_index } = request;
             urlParams = [funding_txid_str, output_index];
         }
@@ -153,7 +155,7 @@ export default class ChannelsStore {
         }
 
         RESTUtils.connectPeer(this.settingsStore, data)
-            .then(response => {
+            .then(() => {
                 // handle success
                 this.errorPeerConnect = false;
                 this.connectingToPeer = false;
@@ -206,7 +208,7 @@ export default class ChannelsStore {
                 this.channelRequest = null;
                 this.channelSuccess = true;
             })
-            .catch((error: err) => {
+            .catch((error: any) => {
                 const errorInfo = error.response.data;
                 this.errorMsgChannel =
                     errorInfo.error.message || errorInfo.error;

@@ -1,5 +1,5 @@
 import { observable, computed } from 'mobx';
-import BaseModel from './BaseModel.ts';
+import BaseModel from './BaseModel';
 
 export default class NodeInfo extends BaseModel {
     chains?: Array<string>;
@@ -12,6 +12,7 @@ export default class NodeInfo extends BaseModel {
     num_peers?: number;
     synced_to_chain?: boolean;
     @observable testnet?: boolean;
+    @observable regtest?: boolean;
     block_hash?: string;
     @observable block_height?: number;
     best_header_timestamp?: string;
@@ -30,7 +31,7 @@ export default class NodeInfo extends BaseModel {
     }
 
     @computed public get currentBlockHeight(): Number {
-        return this.block_height || this.blockheight;
+        return this.block_height || this.blockheight || 0;
     }
 
     @computed public get getURIs(): Array<string> {
@@ -40,10 +41,11 @@ export default class NodeInfo extends BaseModel {
         }
 
         // c-lightning
-        const uris = [];
-        this.address.forEach(uri => {
-            uris.push(`${this.id}@${uri.address}:${uri.port}`);
-        });
+        const uris: any[] = [];
+        this.address &&
+            this.address.forEach(uri => {
+                uris.push(`${this.id}@${uri.address}:${uri.port}`);
+            });
         return uris;
     }
 }

@@ -1,5 +1,5 @@
-import BaseModel from './BaseModel.ts';
-import { observable, computed } from 'mobx';
+import BaseModel from './BaseModel';
+import { computed } from 'mobx';
 
 export default class Transaction extends BaseModel {
     public amount: number;
@@ -26,7 +26,7 @@ export default class Transaction extends BaseModel {
         return this.value || this.amount;
     }
 
-    @computed public get getBlockHeight(): number | string {
+    @computed public get getBlockHeight(): string | boolean {
         const block_height = this.blockheight || this.block_height;
         return block_height ? block_height.toString() : false;
     }

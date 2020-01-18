@@ -30,13 +30,11 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
 
         const invoice: Invoice = navigation.getParam('invoice', null);
         const {
-            amt_paid_sat,
             fallback_addr,
             r_hash,
             isPaid,
             getMemo,
             receipt,
-            value,
             creation_date,
             description_hash,
             r_preimage,
