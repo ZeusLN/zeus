@@ -1,4 +1,4 @@
-package com.zeusln.zeusbeta;
+package com.zeusln.zeus;
 
 import android.app.Application;
 
@@ -14,7 +14,7 @@ import com.facebook.react.ReactNativeHost;
 import com.facebook.react.ReactPackage;
 import com.facebook.react.shell.MainReactPackage;
 import com.facebook.soloader.SoLoader;
-import com.zeusln.zeusbeta.extensions.CustomClientFactory;
+import com.zeusln.zeus.extensions.CustomClientFactory;
 import com.microsoft.ActivityResultPackage;
 
 import java.util.Arrays;
