@@ -1,4 +1,4 @@
-import BaseModel from './BaseModel.ts';
+import BaseModel from './BaseModel';
 import DateTimeUtils from './../utils/DateTimeUtils';
 import { computed } from 'mobx';
 
@@ -15,7 +15,6 @@ export default class Payment extends BaseModel {
     path: Array<string>;
     bolt: string;
     status: string;
-    payment_preimage: string;
     amount_sent_msat: string;
     // c-lightning
     id?: string;
@@ -23,7 +22,8 @@ export default class Payment extends BaseModel {
     destination?: string;
     amount_msat?: string;
     msatoshi_sent?: string;
-    amount_sent_msat?: string;
+    msatoshi?: string;
+    // amount_sent_msat?: string;
     created_at?: string;
     // status: string;
     // payment_preimage: string;
@@ -31,7 +31,7 @@ export default class Payment extends BaseModel {
 
     @computed public get getCreationTime(): string {
         return DateTimeUtils.listFormattedDate(
-            this.creation_date || this.created_at
+            this.creation_date || this.created_at || 0
         );
     }
 
@@ -46,7 +46,9 @@ export default class Payment extends BaseModel {
         }
 
         // c-lightning
-        const fee = Number(this.msatoshi_sent - this.msatoshi) / 1000;
+        const msatoshi_sent: any = this.msatoshi_sent;
+        const msatoshi: any = this.msatoshi;
+        const fee = Number(msatoshi_sent - msatoshi) / 1000;
         return fee.toString();
     }
 }

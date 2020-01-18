@@ -9,12 +9,12 @@ export default class TransactionsStore {
     @observable loading: boolean = false;
     @observable error: boolean = false;
     @observable error_msg: string | null;
-    @observable transactions: Array<Transaction> = <Transaction>[];
+    @observable transactions: Array<Transaction> = [];
     @observable transaction: Transaction;
     @observable payment_route: any; // Route
     @observable payment_preimage: string | null;
-    @observable payment_hash: string | null;
-    @observable payment_error: string | null;
+    @observable payment_hash: any;
+    @observable payment_error: any;
     @observable onchain_address: string;
     @observable txid: string | null;
     // c-lightning
@@ -45,7 +45,7 @@ export default class TransactionsStore {
                 const transactions = data.transactions || data.outputs;
                 this.transactions = transactions
                     .reverse()
-                    .map(tx => new Transaction(tx));
+                    .map((tx: any) => new Transaction(tx));
                 this.loading = false;
             })
             .catch(() => {
@@ -119,9 +119,9 @@ export default class TransactionsStore {
                 this.payment_error = data.payment_error;
                 this.status = data.status;
             })
-            .catch((err: error) => {
+            .catch((error: any) => {
                 // handle error
-                const errorInfo = err.response.data;
+                const errorInfo = error.response.data;
                 const code = errorInfo.code;
                 this.error = true;
                 this.loading = false;

@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { Text, ScrollView } from 'react-native';
-import { inject, observer } from 'mobx-react';
 
 import SettingsStore from './../../stores/SettingsStore';
 
@@ -9,8 +8,6 @@ interface LnurlPayMetadataProps {
     SettingsStore: SettingsStore;
 }
 
-@inject('SettingsStore')
-@observer
 export default class LnurlPayMetadata extends React.Component<
     LnurlPayMetadataProps
 > {
@@ -20,8 +17,8 @@ export default class LnurlPayMetadata extends React.Component<
         const { theme } = settings;
 
         const parsedMetadata = JSON.parse(metadata)
-            .filter(([typ, _]) => typ === 'text/plain')
-            .map(([_, content]) => content)[0];
+            .filter(([typ, _]: any) => typ === 'text/plain')
+            .map(([_, content]: any) => content)[0];
 
         return (
             <ScrollView

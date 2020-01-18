@@ -22,11 +22,11 @@ export default class SettingsStore {
     @observable settings: Settings = {};
     @observable loading: boolean = false;
     @observable btcPayError: string | null;
-    @observable host: string | null;
-    @observable port: string | null;
-    @observable macaroonHex: string | null;
-    @observable implementation: string | null;
-    @observable chainAddress: string;
+    @observable host: string;
+    @observable port: string;
+    @observable macaroonHex: string;
+    @observable implementation: string;
+    @observable chainAddress: string | undefined;
 
     @action
     public fetchBTCPayConfig = (data: string) => {
@@ -104,14 +104,7 @@ export default class SettingsStore {
 
     @action
     public getNewAddress = () => {
-        const { host, port, macaroonHex, implementation } = this;
-
-        return RESTUtils.getNewAddress({
-            host,
-            port,
-            macaroonHex,
-            implementation
-        }).then((response: any) => {
+        return RESTUtils.getNewAddress(this).then((response: any) => {
             // handle success
             const data = response.data;
             const newAddress = data.address;

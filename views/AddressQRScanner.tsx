@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Alert } from 'react-native';
-import { inject, observer } from 'mobx-react';
+import { observer } from 'mobx-react';
 import QRCodeScanner from './../components/QRCodeScanner';
 import handleAnything from './../utils/handleAnything';
 

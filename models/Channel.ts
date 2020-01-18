@@ -1,5 +1,5 @@
 import { observable, computed } from 'mobx';
-import BaseModel from './BaseModel.ts';
+import BaseModel from './BaseModel';
 
 interface HTLC {
     hash_lock: string;
@@ -33,6 +33,7 @@ export default class Channel extends BaseModel {
     msatoshi_total: string;
     msatoshi_to_us: string;
     channel_id?: string;
+    alias?: string;
 
     @computed
     public get isActive(): boolean {
@@ -58,6 +59,6 @@ export default class Channel extends BaseModel {
 
     @computed
     public get channelId(): string {
-        return this.chan_id || this.channel_id;
+        return this.chan_id || this.channel_id || 'Unknown Channel ID';
     }
 }

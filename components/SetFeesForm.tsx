@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from 'react-native-elements';
-import { inject, observer } from 'mobx-react';
 
 import FeeStore from './../stores/FeeStore';
 import SettingsStore from './../stores/SettingsStore';
@@ -22,8 +21,6 @@ interface SetFeesFormState {
     newFeeRateMiliMsat: string;
 }
 
-@inject('SettingsStore', 'FeeStore')
-@observer
 export default class SetFeesForm extends React.Component<
     SetFeesFormProps,
     SetFeesFormState
@@ -52,13 +49,7 @@ export default class SetFeesForm extends React.Component<
         } = this.props;
         const { settings } = SettingsStore;
         const { theme } = settings;
-        const {
-            channelFees,
-            setFees,
-            loading,
-            setFeesError,
-            setFeesSuccess
-        } = FeeStore;
+        const { setFees, loading, setFeesError, setFeesSuccess } = FeeStore;
 
         return (
             <React.Fragment>

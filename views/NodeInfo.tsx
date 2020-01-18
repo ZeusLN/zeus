@@ -6,7 +6,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { Button, ButtonGroup, Header, Icon } from 'react-native-elements';
+import { ButtonGroup, Header, Icon } from 'react-native-elements';
 import CollapsedQR from './../components/CollapsedQR';
 import SetFeesForm from './../components/SetFeesForm';
 import { inject, observer } from 'mobx-react';
@@ -14,11 +14,15 @@ import { isNil } from 'lodash';
 import { version } from './../package.json';
 
 import NodeInfoStore from './../stores/NodeInfoStore';
+import FeeStore from './../stores/FeeStore';
+import UnitsStore from './../stores/UnitsStore';
 import SettingsStore from './../stores/SettingsStore';
 
 interface NodeInfoProps {
     navigation: any;
     NodeInfoStore: NodeInfoStore;
+    FeeStore: FeeStore;
+    UnitsStore: UnitsStore;
     SettingsStore: SettingsStore;
 }
 
@@ -203,7 +207,10 @@ export default class NodeInfo extends React.Component<
                     )}
                 </TouchableOpacity>
 
-                <SetFeesForm />
+                <SetFeesForm
+                    FeeStore={FeeStore}
+                    SettingsStore={SettingsStore}
+                />
             </React.Fragment>
         );
 
