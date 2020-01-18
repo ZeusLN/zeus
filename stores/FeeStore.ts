@@ -2,9 +2,9 @@ import { action, observable } from 'mobx';
 import axios from 'axios';
 import RESTUtils from './../utils/RESTUtils';
 import SettingsStore from './SettingsStore';
-import { isNil } from 'lodash';
 
 export default class FeeStore {
+    @observable public fees: any = {};
     @observable public channelFees: any = {};
     @observable public dataFrame: any = {};
     @observable public loading: boolean = false;
@@ -59,7 +59,7 @@ export default class FeeStore {
 
                 // lnd
                 if (data.channel_fees) {
-                    const channelFees = {};
+                    const channelFees: any = {};
                     data.channel_fees.forEach((channelFee: any) => {
                         channelFees[channelFee.chan_point] = channelFee;
                     });
@@ -86,7 +86,7 @@ export default class FeeStore {
     @action
     public setFees = (
         newBaseFeeMsat: string,
-        newFeeRateMiliMsat: string,
+        newFeeRateMiliMsat: any,
         channelPoint?: string,
         channelId?: string
     ) => {
@@ -102,13 +102,13 @@ export default class FeeStore {
                 data = {
                     id: channelId,
                     base: newBaseFeeMsat,
-                    ppm: newFeeRateMiliMsat / 1000000
+                    ppm: Number(newFeeRateMiliMsat) / 1000000
                 };
             } else {
                 data = {
                     id: 'all',
                     base: newBaseFeeMsat,
-                    ppm: newFeeRateMiliMsat / 1000000
+                    ppm: Number(newFeeRateMiliMsat) / 1000000
                 };
             }
         } else {

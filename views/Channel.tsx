@@ -4,7 +4,6 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
@@ -17,22 +16,20 @@ import { inject, observer } from 'mobx-react';
 const hash = require('object-hash');
 
 import ChannelsStore from './../stores/ChannelsStore';
+import FeeStore from './../stores/FeeStore';
 import UnitsStore from './../stores/UnitsStore';
 import SettingsStore from './../stores/SettingsStore';
 
 interface ChannelProps {
     navigation: any;
     ChannelsStore: ChannelsStore;
+    FeeStore: FeeStore;
     UnitsStore: UnitsStore;
     SettingsStore: SettingsStore;
 }
 
 interface ChannelState {
     confirmCloseChannel: boolean;
-    showNewFeesForm: boolean;
-    newBaseFeeMsat: string;
-    newFeeRateMiliMsat: string;
-    feesSubmitted: boolean;
 }
 
 @inject('ChannelsStore', 'UnitsStore', 'FeeStore', 'SettingsStore')
@@ -42,11 +39,7 @@ export default class ChannelView extends React.Component<
     ChannelState
 > {
     state = {
-        confirmCloseChannel: false,
-        showNewFeesForm: false,
-        newBaseFeeMsat: '0',
-        newFeeRateMiliMsat: '0',
-        feesSubmitted: false
+        confirmCloseChannel: false
     };
 
     closeChannel = (channelPoint: string, channelId: string) => {
@@ -68,21 +61,9 @@ export default class ChannelView extends React.Component<
             FeeStore,
             SettingsStore
         } = this.props;
-        const {
-            confirmCloseChannel,
-            showNewFeesForm,
-            newBaseFeeMsat,
-            newFeeRateMiliMsat,
-            feesSubmitted
-        } = this.state;
+        const { confirmCloseChannel } = this.state;
         const { changeUnits, getAmount, units } = UnitsStore;
-        const {
-            channelFees,
-            setFees,
-            loading,
-            setFeesError,
-            setFeesSuccess
-        } = FeeStore;
+        const { channelFees } = FeeStore;
         const { nodes } = ChannelsStore;
         const { settings } = SettingsStore;
         const { theme } = settings;
@@ -107,7 +88,7 @@ export default class ChannelView extends React.Component<
         } = channel;
         const privateChannel = channel.private;
         const data = new Identicon(
-            hash.sha1(alias || remote_pubkey),
+            hash.sha1(alias || remote_pubkey || channelId),
             420
         ).toString();
 
@@ -149,7 +130,8 @@ export default class ChannelView extends React.Component<
                         >
                             {(nodes[remote_pubkey] &&
                                 nodes[remote_pubkey].alias) ||
-                                alias}
+                                alias ||
+                                channelId}
                         </Text>
                         {remote_pubkey && (
                             <Text
@@ -466,6 +448,8 @@ export default class ChannelView extends React.Component<
                         }
                         channelPoint={channel_point}
                         channelId={channelId}
+                        FeeStore={FeeStore}
+                        SettingsStore={SettingsStore}
                     />
 
                     <View style={styles.button}>

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import SettingsStore from './../stores/SettingsStore';
 
-const lndRoutes = {
+const lndRoutes: any = {
     getTransactions: '/v1/transactions',
     getBlockchainBalance: '/v1/balance/blockchain',
     getLightningBalance: '/v1/balance/channels',
@@ -29,7 +29,7 @@ const lndRoutes = {
     setFees: '/v1/chanpolicy'
 };
 
-const clightningRoutes = {
+const clightningRoutes: any = {
     getTransactions: '/v1/listFunds',
     getBlockchainBalance: '/v1/getBalance',
     getLightningBalance: '/v1/channel/localremotebal',
@@ -74,7 +74,7 @@ class RESTUtils {
     axiosReq = (
         headers: Headers,
         url: string,
-        method: string,
+        method: any,
         cancelToken?: any,
         data?: any
     ) => {

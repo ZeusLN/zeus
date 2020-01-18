@@ -24,10 +24,10 @@ export default class PaymentsStore {
                 const payments = data.transaction || data.payments;
                 this.payments = payments
                     .reverse()
-                    .map(payment => new Payment(payment));
+                    .map((payment: any) => new Payment(payment));
                 this.loading = false;
             })
-            .catch((err: error) => {
+            .catch(() => {
                 // handle error
                 this.payments = [];
                 this.loading = false;

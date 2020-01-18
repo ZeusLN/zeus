@@ -1,19 +1,18 @@
 import { action, reaction, observable } from 'mobx';
-import axios from 'axios';
 import Transaction from './../models/Transaction';
 import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
 import Balance from './../models/Balance';
 
 export default class BalanceStore {
-    @observable public totalBlockchainBalance: number = 0;
-    @observable public confirmedBlockchainBalance: number = 0;
-    @observable public unconfirmedBlockchainBalance: number = 0;
+    @observable public totalBlockchainBalance: number | string = 0;
+    @observable public confirmedBlockchainBalance: number | string = 0;
+    @observable public unconfirmedBlockchainBalance: number | string = 0;
     @observable public loading: boolean = false;
     @observable public error: boolean = false;
     @observable public transactions: Array<Transaction> = [];
-    @observable public pendingOpenBalance: number = 0;
-    @observable public lightningBalance: number = 0;
+    @observable public pendingOpenBalance: number | string = 0;
+    @observable public lightningBalance: number | string = 0;
     settingsStore: SettingsStore;
 
     constructor(settingsStore: SettingsStore) {
@@ -37,9 +36,10 @@ export default class BalanceStore {
             .then((response: any) => {
                 // handle success
                 const balance = new Balance(response.data);
-                this.unconfirmedBlockchainBalance = balance.unconfirmedBalance;
-                this.confirmedBlockchainBalance = balance.confirmedBalance;
-                this.totalBlockchainBalance = balance.getTotalBalance;
+                this.unconfirmedBlockchainBalance =
+                    balance.unconfirmedBalance || 0;
+                this.confirmedBlockchainBalance = balance.confirmedBalance || 0;
+                this.totalBlockchainBalance = balance.getTotalBalance || 0;
                 this.loading = false;
             })
             .catch(() => {
@@ -59,7 +59,7 @@ export default class BalanceStore {
                 // handle success
                 const balance = new Balance(response.data);
                 this.pendingOpenBalance = balance.pending_open_balance || 0;
-                this.lightningBalance = balance.getTotalLightningBalance;
+                this.lightningBalance = balance.getTotalLightningBalance || 0;
                 this.loading = false;
             })
             .catch(() => {
