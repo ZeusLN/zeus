@@ -26,8 +26,9 @@ export default class Transaction extends BaseModel {
         return this.value || this.amount;
     }
 
-    @computed public get getBlockHeight(): number | string {
-        return this.blockheight || this.block_height || 0;
+    @computed public get getBlockHeight(): string | boolean {
+        const block_height = this.blockheight || this.block_height;
+        return block_height ? block_height.toString() : false;
     }
 
     @computed public get tx(): string {
