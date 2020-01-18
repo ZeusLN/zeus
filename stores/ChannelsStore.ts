@@ -106,7 +106,7 @@ export default class ChannelsStore {
 
     @action
     public closeChannel = (
-        request?: CloseChannelRequest,
+        request?: CloseChannelRequest | null,
         channelId?: string
     ) => {
         const { implementation } = this.settingsStore;

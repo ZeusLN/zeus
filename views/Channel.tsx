@@ -44,12 +44,17 @@ export default class ChannelView extends React.Component<
 
     closeChannel = (channelPoint: string, channelId: string) => {
         const { ChannelsStore, navigation } = this.props;
-        const [funding_txid_str, output_index] = channelPoint.split(':');
 
-        ChannelsStore.closeChannel(
-            { funding_txid_str, output_index },
-            channelId
-        );
+        // lnd
+        if (channelPoint) {
+            const [funding_txid_str, output_index] = channelPoint.split(':');
+
+            ChannelsStore.closeChannel({ funding_txid_str, output_index });
+        } else if (channelId) {
+            // c-lightning
+            ChannelsStore.closeChannel(null, channelId);
+        }
+
         navigation.navigate('Wallet');
     };
 
