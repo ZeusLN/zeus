@@ -68,8 +68,14 @@ export default class PaymentRequest extends React.Component<
 
         const date = new Date(Number(timestamp) * 1000).toString();
 
-        const { settings } = SettingsStore;
+        const { settings, implementation } = SettingsStore;
         const { theme } = settings;
+
+        // c-lightning can only pay custom amounts if the amount is not specified
+        const canPayCustomAmount = !(
+            implementation === 'c-lightning-REST' &&
+            (!!requestAmount || requestAmount !== 0)
+        );
 
         const BackButton = () => (
             <Icon
@@ -169,42 +175,44 @@ export default class PaymentRequest extends React.Component<
                                         placeholderTextColor="gray"
                                     />
                                 )}
-                                <View style={styles.button}>
-                                    <Button
-                                        title={
-                                            setCustomAmount
-                                                ? 'Pay default amount'
-                                                : 'Pay custom amount'
-                                        }
-                                        icon={{
-                                            name: 'edit',
-                                            size: 25,
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'black'
-                                                    : 'white'
-                                        }}
-                                        onPress={() => {
-                                            this.setState({
-                                                setCustomAmount: !setCustomAmount
-                                            });
-                                        }}
-                                        style={styles.button}
-                                        titleStyle={{
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'black'
-                                                    : 'white'
-                                        }}
-                                        buttonStyle={{
-                                            backgroundColor:
-                                                theme === 'dark'
-                                                    ? 'white'
-                                                    : 'black',
-                                            borderRadius: 30
-                                        }}
-                                    />
-                                </View>
+                                {canPayCustomAmount && (
+                                    <View style={styles.button}>
+                                        <Button
+                                            title={
+                                                setCustomAmount
+                                                    ? 'Pay default amount'
+                                                    : 'Pay custom amount'
+                                            }
+                                            icon={{
+                                                name: 'edit',
+                                                size: 25,
+                                                color:
+                                                    theme === 'dark'
+                                                        ? 'black'
+                                                        : 'white'
+                                            }}
+                                            onPress={() => {
+                                                this.setState({
+                                                    setCustomAmount: !setCustomAmount
+                                                });
+                                            }}
+                                            style={styles.button}
+                                            titleStyle={{
+                                                color:
+                                                    theme === 'dark'
+                                                        ? 'black'
+                                                        : 'white'
+                                            }}
+                                            buttonStyle={{
+                                                backgroundColor:
+                                                    theme === 'dark'
+                                                        ? 'white'
+                                                        : 'black',
+                                                borderRadius: 30
+                                            }}
+                                        />
+                                    </View>
+                                )}
                             </View>
 
                             {!!description && (
