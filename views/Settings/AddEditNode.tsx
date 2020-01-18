@@ -275,7 +275,7 @@ export default class AddEditNode extends React.Component<
                             color: savedTheme === 'dark' ? 'white' : 'black'
                         }}
                     >
-                        LND Port
+                        REST Port
                     </Text>
                     <TextInput
                         placeholder={'443/8080'}
