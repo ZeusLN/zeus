@@ -65,6 +65,7 @@ export default class LnurlPayHistorical extends React.Component<
                             domain={lnurlpaytx.domain}
                             successAction={lnurlpaytx.successAction}
                             preimage={preimage}
+                            SettingsStore={SettingsStore}
                         />
                     ) : (
                         <LnurlPayMetadata

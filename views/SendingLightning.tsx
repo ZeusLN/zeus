@@ -13,14 +13,16 @@ import LnurlPaySuccess from './LnurlPay/Success';
 
 import TransactionsStore from './../stores/TransactionsStore';
 import LnurlPayStore from './../stores/LnurlPayStore';
+import SettingsStore from './../stores/SettingsStore';
 
 interface SendingLightningProps {
     navigation: any;
     TransactionsStore: TransactionsStore;
     LnurlPayStore: LnurlPayStore;
+    SettingsStore: SettingsStore;
 }
 
-@inject('TransactionsStore', 'LnurlPayStore')
+@inject('TransactionsStore', 'LnurlPayStore', 'SettingsStore')
 @observer
 export default class SendingLightning extends React.Component<
     SendingLightningProps,
@@ -64,7 +66,12 @@ export default class SendingLightning extends React.Component<
     }
 
     render() {
-        const { TransactionsStore, LnurlPayStore, navigation } = this.props;
+        const {
+            TransactionsStore,
+            LnurlPayStore,
+            SettingsStore,
+            navigation
+        } = this.props;
         const {
             loading,
             error,
@@ -125,6 +132,7 @@ export default class SendingLightning extends React.Component<
                                 domain={LnurlPayStore.domain}
                                 successAction={LnurlPayStore.successAction}
                                 preimage={payment_preimage}
+                                SettingsStore={SettingsStore}
                             />
                         )}
                     {payment_hash && (
