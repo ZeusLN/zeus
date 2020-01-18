@@ -2,11 +2,14 @@ import * as React from 'react';
 import { Alert, View, Text, TouchableOpacity, Linking } from 'react-native';
 import { LNURLPaySuccessAction, decipherAES } from 'js-lnurl';
 
+import SettingsStore from './../../stores/SettingsStore';
+
 interface LnurlPaySuccessProps {
     color?: string;
     domain: any;
     successAction: LNURLPaySuccessAction;
     preimage: string;
+    SettingsStore: SettingsStore;
 }
 
 export default class LnurlPaySuccess extends React.Component<
@@ -27,19 +30,45 @@ export default class LnurlPaySuccess extends React.Component<
     };
 
     render() {
-        const { color, domain, successAction, preimage } = this.props;
+        const {
+            color,
+            domain,
+            successAction,
+            preimage,
+            SettingsStore
+        } = this.props;
+        const { settings } = SettingsStore;
+        const { theme } = settings;
 
         let body;
         if (successAction) {
             const { tag, description, url, message } = successAction;
             switch (tag) {
                 case 'message':
-                    body = <Text style={{ color }}>{message}</Text>;
+                    body = (
+                        <Text
+                            style={{
+                                color:
+                                    color || theme === 'dark'
+                                        ? 'white'
+                                        : 'black'
+                            }}
+                        >
+                            {message}
+                        </Text>
+                    );
                     break;
                 case 'url':
                     body = (
                         <TouchableOpacity onPress={() => this.URLClicked()}>
-                            <Text style={{ color }}>
+                            <Text
+                                style={{
+                                    color:
+                                        color || theme === 'dark'
+                                            ? 'white'
+                                            : 'black'
+                                }}
+                            >
                                 {description}: {url}
                             </Text>
                         </TouchableOpacity>
@@ -54,8 +83,26 @@ export default class LnurlPaySuccess extends React.Component<
                     }
                     body = (
                         <React.Fragment>
-                            <Text style={{ color }}>{description}: </Text>
-                            <Text style={{ color }}>{plaintext}</Text>
+                            <Text
+                                style={{
+                                    color:
+                                        color || theme === 'dark'
+                                            ? 'white'
+                                            : 'black'
+                                }}
+                            >
+                                {description}:{' '}
+                            </Text>
+                            <Text
+                                style={{
+                                    color:
+                                        color || theme === 'dark'
+                                            ? 'white'
+                                            : 'black'
+                                }}
+                            >
+                                {plaintext}
+                            </Text>
                         </React.Fragment>
                     );
                     break;
@@ -65,7 +112,6 @@ export default class LnurlPaySuccess extends React.Component<
         return (
             <View
                 style={{
-                    color,
                     padding: 20,
                     fontSize: 40
                 }}
@@ -75,7 +121,7 @@ export default class LnurlPaySuccess extends React.Component<
                         padding: 20,
                         fontWeight: 'bold',
                         fontSize: 22,
-                        color
+                        color: color || theme === 'dark' ? 'white' : 'black'
                     }}
                 >
                     {domain}
