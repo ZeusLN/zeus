@@ -1,4 +1,4 @@
-import BaseModel from './BaseModel.ts';
+import BaseModel from './BaseModel';
 import { observable, computed } from 'mobx';
 import DateTimeUtils from './../utils/DateTimeUtils';
 
@@ -39,17 +39,21 @@ export default class Invoice extends BaseModel {
     public bolt11: string;
     public label: string;
     public description: string;
-    public msatoshi: Number;
+    public msatoshi: number;
     @observable public payment_hash: string;
-    public paid_at: Number;
-    public expires_at: Number;
+    public paid_at: number;
+    public expires_at: number;
     public status: string;
+    // pay req
+    public timestamp?: string | number;
+    public destination?: string;
+    public num_satoshis?: string | number;
 
-    @computed public get getMemo(): number | string {
+    @computed public get getMemo(): string {
         return this.memo || this.description || 'No memo';
     }
 
-    @computed public get isPaid(): number | string {
+    @computed public get isPaid(): boolean {
         return this.status === 'paid' || this.settled;
     }
 

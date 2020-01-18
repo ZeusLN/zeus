@@ -27,11 +27,19 @@ export default class SendingLightning extends React.Component<
     {}
 > {
     componentDidMount = () => {
-        when(() => TransactionsStore.payment_route).then(() => {
-            LnurlPayStore.acknowledge(TransactionsStore.payment_hash);
+        const { TransactionsStore, LnurlPayStore } = this.props;
+        const {
+            payment_route,
+            payment_hash,
+            payment_error
+        } = TransactionsStore;
+        const { acknowledge, clear } = LnurlPayStore;
+
+        when(() => payment_route).then(() => {
+            acknowledge(payment_hash);
         });
-        when(() => TransactionsStore.payment_error).then(() => {
-            LnurlPayStore.clear(TransactionsStore.payment_hash);
+        when(() => payment_error).then(() => {
+            clear(payment_hash);
         });
     };
 

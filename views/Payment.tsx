@@ -41,7 +41,6 @@ export default class PaymentView extends React.Component<PaymentProps> {
             getCreationTime,
             getFee,
             payment_hash,
-            value,
             payment_preimage,
             path
         } = payment;
@@ -93,6 +92,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             navigation={navigation}
                             lnurlpaytx={lnurlpaytx}
                             preimage={payment_preimage}
+                            SettingsStore={SettingsStore}
                         />
                     </View>
                 )}

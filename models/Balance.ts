@@ -1,5 +1,5 @@
 import { observable, computed } from 'mobx';
-import BaseModel from './BaseModel.ts';
+import BaseModel from './BaseModel';
 
 export default class Balance extends BaseModel {
     @observable confirmed_balance: string;
@@ -16,22 +16,22 @@ export default class Balance extends BaseModel {
     public pending_open_balance: string;
 
     @computed
-    public get unconfirmedBalance(): Number {
+    public get unconfirmedBalance(): number {
         return Number(this.unconfBalance || this.unconfirmed_balance);
     }
 
     @computed
-    public get confirmedBalance(): Number {
+    public get confirmedBalance(): number {
         return Number(this.confBalance || this.confirmed_balance);
     }
 
     @computed
-    public get getTotalBalance(): Number {
+    public get getTotalBalance(): number {
         return Number(this.totalBalance || this.total_balance);
     }
 
     @computed
-    public get getTotalLightningBalance(): Number {
+    public get getTotalLightningBalance(): number {
         return this.balance
             ? Number(this.balance)
             : Number(this.localBalance) || 0;

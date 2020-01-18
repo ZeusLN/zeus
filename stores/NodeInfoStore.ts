@@ -7,8 +7,9 @@ export default class NodeInfoStore {
     @observable public loading: boolean = false;
     @observable public error: boolean = false;
     @observable public errorMsg: string;
-    @observable public nodeInfo: NodeInfo = {};
+    @observable public nodeInfo: NodeInfo | any = {};
     @observable public testnet: boolean;
+    @observable public regtest: boolean;
     settingsStore: SettingsStore;
 
     constructor(settingsStore: SettingsStore) {

@@ -3,9 +3,10 @@ import { Alert, View, Text, TouchableOpacity, Linking } from 'react-native';
 import { LNURLPaySuccessAction, decipherAES } from 'js-lnurl';
 
 interface LnurlPaySuccessProps {
-    color: string;
-    domain: string;
+    color?: string;
+    domain: any;
     successAction: LNURLPaySuccessAction;
+    preimage: string;
 }
 
 export default class LnurlPaySuccess extends React.Component<
@@ -14,18 +15,19 @@ export default class LnurlPaySuccess extends React.Component<
     URLClicked = () => {
         const { successAction } = this.props;
         const { url } = successAction;
+        const urlString: string = url || '';
 
-        Linking.canOpenURL(url).then(supported => {
+        Linking.canOpenURL(urlString).then((supported: boolean) => {
             if (supported) {
-                Linking.openURL(url);
+                Linking.openURL(urlString);
             } else {
-                Alert.alert("Don't know how to open URI: " + url);
+                Alert.alert(`Don't know how to open URI: ${urlString}`);
             }
         });
     };
 
     render() {
-        const { color, domain, successAction } = this.props;
+        const { color, domain, successAction, preimage } = this.props;
 
         let body;
         if (successAction) {
@@ -36,23 +38,17 @@ export default class LnurlPaySuccess extends React.Component<
                     break;
                 case 'url':
                     body = (
-                        <TouchableOpacity
-                            style={{ textDecoration: 'underline' }}
-                            onPress={() => this.URLClicked()}
-                        >
-                            <Text style={{ color: this.props.color }}>
+                        <TouchableOpacity onPress={() => this.URLClicked()}>
+                            <Text style={{ color }}>
                                 {description}: {url}
                             </Text>
                         </TouchableOpacity>
                     );
                     break;
                 case 'aes':
-                    var plaintext;
+                    let plaintext;
                     try {
-                        plaintext = decipherAES(
-                            successAction,
-                            this.props.preimage
-                        );
+                        plaintext = decipherAES(successAction, preimage);
                     } catch (err) {
                         plaintext = `<error decrypting message: ${err.message}>`;
                     }

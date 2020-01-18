@@ -4,7 +4,7 @@ import { getParams as getlnurlParams, findlnurl } from 'js-lnurl';
 
 const { nodeInfoStore, invoicesStore } = stores;
 
-export default async function(data: string): Promise<[string, any]> {
+export default async function(data: string): Promise<any> {
     const { testnet } = nodeInfoStore;
     const { value, amount } = AddressUtils.processSendAddress(data);
 
@@ -21,8 +21,8 @@ export default async function(data: string): Promise<[string, any]> {
         invoicesStore.getPayReq(value);
         return ['PaymentRequest', {}];
     } else if (findlnurl(value) !== null) {
-        const raw = findlnurl(value);
-        return getlnurlParams(raw).then(params => {
+        const raw: string = findlnurl(value) || '';
+        return getlnurlParams(raw).then((params: any) => {
             switch (params.tag) {
                 case 'withdrawRequest':
                     return [

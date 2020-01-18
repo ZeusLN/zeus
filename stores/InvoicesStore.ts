@@ -59,7 +59,7 @@ export default class InvoicesStore {
         memo: string,
         value: string,
         expiry: string = '3600',
-        lnurl: LNURLWithdrawParams = undefined
+        lnurl?: LNURLWithdrawParams
     ) => {
         const { implementation } = this.settingsStore;
         this.payment_request = null;
@@ -123,7 +123,7 @@ export default class InvoicesStore {
     @action
     public getPayReq = (
         paymentRequest: string,
-        descriptionPreimage: string | undefined
+        descriptionPreimage?: string
     ) => {
         this.pay_req = null;
         this.paymentRequest = paymentRequest;
@@ -151,14 +151,14 @@ export default class InvoicesStore {
                 this.loading = false;
                 this.getPayReqError = null;
             })
-            .catch((err: error) => {
+            .catch((error: any) => {
                 // handle error
                 this.loading = false;
                 this.getPayReqError =
-                    (err.response &&
-                        err.response.data &&
-                        err.response.data.error) ||
-                    err.message;
+                    (error.response &&
+                        error.response.data &&
+                        error.response.data.error) ||
+                    error.message;
                 this.pay_req = null;
             });
     };

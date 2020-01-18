@@ -10,6 +10,7 @@ import { inject, observer } from 'mobx-react';
 
 import BalanceStore from './../../stores/BalanceStore';
 import ChannelsStore from './../../stores/ChannelsStore';
+import FeeStore from './../../stores/FeeStore';
 import InvoicesStore from './../../stores/InvoicesStore';
 import NodeInfoStore from './../../stores/NodeInfoStore';
 import PaymentsStore from './../../stores/PaymentsStore';
@@ -23,6 +24,7 @@ interface WalletProps {
     navigation: any;
     BalanceStore: BalanceStore;
     ChannelsStore: ChannelsStore;
+    FeeStore: FeeStore;
     InvoicesStore: InvoicesStore;
     NodeInfoStore: NodeInfoStore;
     PaymentsStore: PaymentsStore;

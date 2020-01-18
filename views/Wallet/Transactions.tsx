@@ -102,7 +102,7 @@ export default class Transactions extends React.Component<TransactionsProps> {
                 {(!!transactions && transactions.length > 0) || loading ? (
                     <FlatList
                         data={transactions}
-                        renderItem={({ item }: Transaction) => {
+                        renderItem={({ item }: any) => {
                             let subtitle =
                                 item.getBlockHeight || 'Awaiting Confirmation';
                             if (item.time_stamp) {

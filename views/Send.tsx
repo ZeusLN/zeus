@@ -76,7 +76,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             .then(([route, props]) => {
                 navigation.navigate(route, props);
             })
-            .catch(err => {
+            .catch(() => {
                 this.setState({
                     transactionType: null,
                     isValid: false,
