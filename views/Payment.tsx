@@ -12,32 +12,40 @@ import { inject, observer } from 'mobx-react';
 
 import UnitsStore from './../stores/UnitsStore';
 import SettingsStore from './../stores/SettingsStore';
+import LnurlPayStore from './../stores/LnurlPayStore';
+import LnurlPayHistorical from './LnurlPay/Historical';
 
 interface PaymentProps {
     navigation: any;
     UnitsStore: UnitsStore;
     SettingsStore: SettingsStore;
+    LnurlPayStore: LnurlPayStore;
 }
 
-@inject('UnitsStore', 'SettingsStore')
+@inject('UnitsStore', 'SettingsStore', 'LnurlPayStore')
 @observer
 export default class PaymentView extends React.Component<PaymentProps> {
     render() {
-        const { navigation, UnitsStore, SettingsStore } = this.props;
+        const {
+            navigation,
+            UnitsStore,
+            SettingsStore,
+            LnurlPayStore
+        } = this.props;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { settings } = SettingsStore;
         const { theme } = settings;
 
         const payment: Payment = navigation.getParam('payment', null);
         const {
-            creation_date,
-            fee,
+            getCreationTime,
+            getFee,
             payment_hash,
-            value,
             payment_preimage,
             path
         } = payment;
-        const date = new Date(Number(creation_date) * 1000).toString();
+        const date = getCreationTime;
+        const lnurlpaytx = LnurlPayStore.load(payment_hash);
 
         const BackButton = () => (
             <Icon
@@ -73,30 +81,47 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                 fontWeight: 'bold'
                             }}
                         >
-                            {getAmount(value)}
+                            {getAmount(payment.getAmount)}
                         </Text>
                     </TouchableOpacity>
                 </View>
 
+                {lnurlpaytx && (
+                    <View style={styles.content}>
+                        <LnurlPayHistorical
+                            navigation={navigation}
+                            lnurlpaytx={lnurlpaytx}
+                            preimage={payment_preimage}
+                            SettingsStore={SettingsStore}
+                        />
+                    </View>
+                )}
+
                 <View style={styles.content}>
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.labelDark : styles.label
-                        }
-                    >
-                        Fee:
-                    </Text>
-                    <TouchableOpacity onPress={() => changeUnits()}>
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.valueDark
-                                    : styles.value
-                            }
-                        >
-                            {units && getAmount(fee)}
-                        </Text>
-                    </TouchableOpacity>
+                    {getFee && (
+                        <View>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Fee:
+                            </Text>
+                            <TouchableOpacity onPress={() => changeUnits()}>
+                                <Text
+                                    style={
+                                        theme === 'dark'
+                                            ? styles.valueDark
+                                            : styles.value
+                                    }
+                                >
+                                    {units && getAmount(getFee)}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
                     <Text
                         style={

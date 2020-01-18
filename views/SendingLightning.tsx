@@ -1,28 +1,62 @@
 import * as React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import {
+    ActivityIndicator,
+    StyleSheet,
+    Text,
+    View,
+    ScrollView
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { when } from 'mobx';
 import { Button } from 'react-native-elements';
+import LnurlPaySuccess from './LnurlPay/Success';
 
 import TransactionsStore from './../stores/TransactionsStore';
+import LnurlPayStore from './../stores/LnurlPayStore';
+import SettingsStore from './../stores/SettingsStore';
 
 interface SendingLightningProps {
     navigation: any;
     TransactionsStore: TransactionsStore;
+    LnurlPayStore: LnurlPayStore;
+    SettingsStore: SettingsStore;
 }
 
-@inject('TransactionsStore')
+@inject('TransactionsStore', 'LnurlPayStore', 'SettingsStore')
 @observer
 export default class SendingLightning extends React.Component<
     SendingLightningProps,
     {}
 > {
+    componentDidMount = () => {
+        const { TransactionsStore, LnurlPayStore } = this.props;
+        const {
+            payment_route,
+            payment_hash,
+            payment_error
+        } = TransactionsStore;
+        const { acknowledge, clear } = LnurlPayStore;
+
+        when(() => payment_route).then(() => {
+            acknowledge(payment_hash);
+        });
+        when(() => payment_error).then(() => {
+            clear(payment_hash);
+        });
+    };
+
     getBackgroundColor() {
         const { TransactionsStore } = this.props;
-        const { payment_route, payment_error, error } = TransactionsStore;
+        const {
+            payment_route,
+            payment_error,
+            status,
+            error
+        } = TransactionsStore;
 
         if (error) {
             return 'darkred';
-        } else if (payment_route) {
+        } else if (payment_route || status === 'complete') {
             return 'green';
         } else if (payment_error) {
             return 'lightcoral';
@@ -32,17 +66,24 @@ export default class SendingLightning extends React.Component<
     }
 
     render() {
-        const { TransactionsStore, navigation } = this.props;
+        const {
+            TransactionsStore,
+            LnurlPayStore,
+            SettingsStore,
+            navigation
+        } = this.props;
         const {
             loading,
             error,
             error_msg,
             payment_hash,
             payment_route,
-            payment_error
+            payment_preimage,
+            payment_error,
+            status
         } = TransactionsStore;
-
         const backgroundColor = this.getBackgroundColor();
+        const success = payment_route || status === 'complete';
 
         return (
             <View
@@ -51,7 +92,12 @@ export default class SendingLightning extends React.Component<
                     backgroundColor
                 }}
             >
-                <View style={styles.content}>
+                <ScrollView
+                    contentContainerStyle={{
+                        ...styles.content,
+                        height: '100%'
+                    }}
+                >
                     {loading && (
                         <ActivityIndicator size="large" color="#0000ff" />
                     )}
@@ -67,7 +113,7 @@ export default class SendingLightning extends React.Component<
                             Error: {payment_error || error_msg}
                         </Text>
                     )}
-                    {payment_route && (
+                    {(payment_route || status === 'complete') && (
                         <Text
                             style={{
                                 color: 'white',
@@ -78,6 +124,17 @@ export default class SendingLightning extends React.Component<
                             Transaction successfully sent
                         </Text>
                     )}
+                    {payment_preimage &&
+                        payment_hash === LnurlPayStore.paymentHash &&
+                        LnurlPayStore.successAction && (
+                            <LnurlPaySuccess
+                                color="white"
+                                domain={LnurlPayStore.domain}
+                                successAction={LnurlPayStore.successAction}
+                                preimage={payment_preimage}
+                                SettingsStore={SettingsStore}
+                            />
+                        )}
                     {payment_hash && (
                         <Text
                             style={{
@@ -87,7 +144,7 @@ export default class SendingLightning extends React.Component<
                             }}
                         >{`Payment Hash: ${payment_hash}`}</Text>
                     )}
-                    {payment_route && (
+                    {success && (
                         <Button
                             title=""
                             icon={{
@@ -118,7 +175,7 @@ export default class SendingLightning extends React.Component<
                         />
                     )}
 
-                    {(error || payment_error || payment_route) && (
+                    {(error || payment_error || success) && (
                         <Button
                             title="Go to Wallet"
                             icon={{
@@ -126,7 +183,9 @@ export default class SendingLightning extends React.Component<
                                 size: 25,
                                 color: backgroundColor
                             }}
-                            onPress={() => navigation.navigate('Wallet')}
+                            onPress={() =>
+                                navigation.navigate('Wallet', { refresh: true })
+                            }
                             style={styles.button}
                             buttonStyle={{
                                 backgroundColor: '#fff',
@@ -137,7 +196,7 @@ export default class SendingLightning extends React.Component<
                             }}
                         />
                     )}
-                </View>
+                </ScrollView>
             </View>
         );
     }

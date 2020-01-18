@@ -10,6 +10,7 @@ import { inject, observer } from 'mobx-react';
 
 import BalanceStore from './../../stores/BalanceStore';
 import ChannelsStore from './../../stores/ChannelsStore';
+import FeeStore from './../../stores/FeeStore';
 import InvoicesStore from './../../stores/InvoicesStore';
 import NodeInfoStore from './../../stores/NodeInfoStore';
 import PaymentsStore from './../../stores/PaymentsStore';
@@ -23,6 +24,7 @@ interface WalletProps {
     navigation: any;
     BalanceStore: BalanceStore;
     ChannelsStore: ChannelsStore;
+    FeeStore: FeeStore;
     InvoicesStore: InvoicesStore;
     NodeInfoStore: NodeInfoStore;
     PaymentsStore: PaymentsStore;
@@ -41,6 +43,7 @@ interface WalletState {
     'ChannelsStore',
     'InvoicesStore',
     'NodeInfoStore',
+    'FeeStore',
     'PaymentsStore',
     'SettingsStore',
     'TransactionsStore',
@@ -67,27 +70,30 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     };
 
     async getSettingsAndRefresh() {
-        const { NodeInfoStore, SettingsStore } = this.props;
+        const { SettingsStore } = this.props;
         await SettingsStore.getSettings().then(() => {
-            NodeInfoStore.getNodeInfo();
             this.refresh();
         });
     }
 
     refresh = () => {
         const {
+            NodeInfoStore,
             BalanceStore,
             TransactionsStore,
             ChannelsStore,
             InvoicesStore,
-            PaymentsStore
+            PaymentsStore,
+            FeeStore
         } = this.props;
+        NodeInfoStore.getNodeInfo();
         BalanceStore.getBlockchainBalance();
         BalanceStore.getLightningBalance();
         TransactionsStore.getTransactions();
         PaymentsStore.getPayments();
         InvoicesStore.getInvoices();
         ChannelsStore.getChannels();
+        FeeStore.getFees();
     };
 
     updateIndex = (selectedIndex: number) => {

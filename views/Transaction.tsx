@@ -43,19 +43,20 @@ export default class TransactionView extends React.Component<TransactionProps> {
         const { theme } = settings;
 
         const {
-            amount,
-            tx_hash,
+            tx,
             block_hash,
             block_height,
             num_confirmations,
             time_stamp,
-            dest_addresses,
-            total_fees
+            destAddresses,
+            total_fees,
+            status
         } = transaction;
-        const date = new Date(Number(time_stamp) * 1000);
+        const amount = transaction.getAmount;
+        const date = time_stamp && new Date(Number(time_stamp) * 1000);
         const addresses: Array<any> = [];
 
-        forEach(dest_addresses, (address: any, key: string) =>
+        forEach(destAddresses, (address: any, key: string) =>
             addresses.push(
                 <TouchableOpacity
                     key={`${address}-${key}`}
@@ -107,24 +108,30 @@ export default class TransactionView extends React.Component<TransactionProps> {
                 </View>
 
                 <View style={styles.content}>
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.labelDark : styles.label
-                        }
-                    >
-                        Total Fees:
-                    </Text>
-                    <TouchableOpacity onPress={() => changeUnits()}>
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.valueDark
-                                    : styles.value
-                            }
-                        >
-                            {units && getAmount(total_fees || 0)}
-                        </Text>
-                    </TouchableOpacity>
+                    {total_fees && (
+                        <View>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Total Fees:
+                            </Text>
+                            <TouchableOpacity onPress={() => changeUnits()}>
+                                <Text
+                                    style={
+                                        theme === 'dark'
+                                            ? styles.valueDark
+                                            : styles.value
+                                    }
+                                >
+                                    {units && getAmount(total_fees || 0)}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
                     <Text
                         style={
@@ -135,36 +142,36 @@ export default class TransactionView extends React.Component<TransactionProps> {
                     </Text>
                     <TouchableOpacity
                         onPress={() =>
-                            UrlUtils.goToBlockExplorerTXID(tx_hash, testnet)
+                            UrlUtils.goToBlockExplorerTXID(tx, testnet)
                         }
                     >
-                        <Text style={styles.valueWithLink}>{tx_hash}</Text>
+                        <Text style={styles.valueWithLink}>{tx}</Text>
                     </TouchableOpacity>
 
                     {block_hash && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.labelDark
-                                    : styles.label
-                            }
-                        >
-                            Block Hash:
-                        </Text>
-                    )}
-                    {block_hash && (
-                        <TouchableOpacity
-                            onPress={() =>
-                                UrlUtils.goToBlockExplorerBlockHash(
-                                    block_hash,
-                                    testnet
-                                )
-                            }
-                        >
-                            <Text style={styles.valueWithLink}>
-                                {block_hash}
+                        <View>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Block Hash:
                             </Text>
-                        </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() =>
+                                    UrlUtils.goToBlockExplorerBlockHash(
+                                        block_hash,
+                                        testnet
+                                    )
+                                }
+                            >
+                                <Text style={styles.valueWithLink}>
+                                    {block_hash}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
                     )}
 
                     {block_height && (
@@ -193,52 +200,90 @@ export default class TransactionView extends React.Component<TransactionProps> {
                         </TouchableOpacity>
                     )}
 
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.labelDark : styles.label
-                        }
-                    >
-                        Number of Confirmations:
-                    </Text>
-                    <Text
-                        style={{
-                            ...styles.value,
-                            color: num_confirmations > 0 ? 'green' : 'red'
-                        }}
-                    >
-                        {num_confirmations || 0}
-                    </Text>
-
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.labelDark : styles.label
-                        }
-                    >
-                        Timestamp:
-                    </Text>
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.valueDark : styles.value
-                        }
-                    >
-                        {date.toString()}
-                    </Text>
-
-                    {dest_addresses && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.labelDark
-                                    : styles.label
-                            }
-                        >
-                            {dest_addresses.length > 1
-                                ? 'Destination Addresses:'
-                                : 'Destination Address:'}
-                        </Text>
+                    {num_confirmations && (
+                        <View>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Number of Confirmations:
+                            </Text>
+                            <Text
+                                style={{
+                                    ...styles.value,
+                                    color:
+                                        num_confirmations > 0 ? 'green' : 'red'
+                                }}
+                            >
+                                {num_confirmations}
+                            </Text>
+                        </View>
                     )}
-                    {dest_addresses && (
-                        <React.Fragment>{addresses}</React.Fragment>
+
+                    {status && (
+                        <View>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Status:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {status}
+                            </Text>
+                        </View>
+                    )}
+
+                    {date && (
+                        <View>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Timestamp:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {date.toString()}
+                            </Text>
+                        </View>
+                    )}
+
+                    {destAddresses && (
+                        <View>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                {destAddresses.length > 1
+                                    ? 'Destination Addresses:'
+                                    : 'Destination Address:'}
+                            </Text>
+                            <React.Fragment>{addresses}</React.Fragment>
+                        </View>
                     )}
                 </View>
             </ScrollView>

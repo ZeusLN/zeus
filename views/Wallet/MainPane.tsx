@@ -11,6 +11,8 @@ import SettingsStore from './../../stores/SettingsStore';
 
 const TorIcon = require('./../../images/tor.png');
 
+import { version } from './../../package.json';
+
 interface MainPaneProps {
     navigation: any;
     NodeInfoStore: NodeInfoStore;
@@ -113,6 +115,13 @@ export default class MainPane extends React.Component<
             />
         );
 
+        let infoValue = 'ⓘ';
+        if (NodeInfoStore.testnet) {
+            infoValue = 'Testnet';
+        } else if (NodeInfoStore.regtest) {
+            infoValue = 'Regtest';
+        }
+
         const NodeInfoBadge = () => (
             <View style={styles.nodeInfo}>
                 {host && host.includes('.onion') && (
@@ -128,7 +137,7 @@ export default class MainPane extends React.Component<
                 {host && !host.includes('.onion') && (
                     <Badge
                         onPress={() => navigation.navigate('NodeInfo')}
-                        value={NodeInfoStore.testnet ? 'Testnet' : 'ⓘ'}
+                        value={infoValue}
                         badgeStyle={{
                             backgroundColor: 'gray',
                             borderWidth: 0,
@@ -308,6 +317,16 @@ export default class MainPane extends React.Component<
                         }}
                         onPress={() => navigation.navigate('Settings')}
                     />
+                    <Text
+                        style={{
+                            color: '#fff',
+                            fontSize: 12,
+                            marginTop: 20,
+                            marginBottom: -40
+                        }}
+                    >
+                        {`v${version}`}
+                    </Text>
                 </View>
             );
         }
