@@ -27,7 +27,7 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 ## Connecting to your node
 
 Currently, to use Zeus, you must have a Bitcoin Lightning node running
-[Lightning Network Daemon (lnd)](https://github.com/LightningNetwork/lnd) or [c-lightning](https://github.com/ElementsProject/lightning) using the [c-lightning-REST](https://github.com/Ride-The-Lightning/c-lightning-REST/) REST API.
+[Lightning Network Daemon (lnd)](https://github.com/LightningNetwork/lnd) or [c-lightning](https://github.com/ElementsProject/lightning) using the [c-lightning-REST](https://github.com/Ride-The-Lightning/c-lightning-REST/) API.
 
 You must provide Zeus with your node's hostname, port number, and the macaroon you choose to use in **hex format**. If you need help converting your macaroon to hex format we wrote up a Node.js script that can use
 [here](https://github.com/ZeusLN/lnd-hex-macaroon-generator/). Alternatively, if you're running a Unix-based operating system (eg. macOS, Linux) you can run `xxd -ps -u -c 1000 /path/to/admin.macaroon` to generate your macaroon in hex format.
@@ -69,7 +69,8 @@ Zeus is proud to be integrated on the following platforms:
 [enable Developer mode and USB Debugging](https://developer.android.com/studio/debug/dev-options)
 , then make sure it is connected to your computer by running `adb devices`
 3. install node dependencies with `npm i`
-4. open up your Android simulator or connect your phone and run `react-native run-android`
+4. apply patches with `npm run patch`
+5. open up your Android simulator or connect your phone and run `react-native run-android`
 
 ### iOS
 1. install and setup react-native and its related dependencies under **"Building Projects with Native Code"** on
