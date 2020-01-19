@@ -1,5 +1,5 @@
 # Zeus
-A mobile Bitcoin app for lnd and c-lightning node operators ⚡️
+A mobile Bitcoin/Lightning app for lnd and c-lightning node operators ⚡️
 
 *Notice*: If you are looking for Zeus Server, the Lightning-based Point-of-Sale solution (unrelated to this project), please visit [puzzle/zeus](https://github.com/puzzle/zeus).
 
