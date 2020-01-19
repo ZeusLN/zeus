@@ -14,6 +14,7 @@ interface Settings {
     nodes?: Array<Node>;
     onChainAddress?: string;
     theme?: string;
+    lurkerMode?: boolean;
     selectedNode?: number;
     passphrase?: string;
 }
