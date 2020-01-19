@@ -3,6 +3,7 @@ import { StyleSheet, View, FlatList } from 'react-native';
 import { Avatar, Button, ListItem } from 'react-native-elements';
 import Payment from './../../models/Payment';
 import { inject, observer } from 'mobx-react';
+import PrivacyUtils from './../../utils/PrivacyUtils';
 
 import PaymentsStore from './../../stores/PaymentsStore';
 import UnitsStore from './../../stores/UnitsStore';
@@ -51,7 +52,7 @@ export default class PaymentsView extends React.Component<PaymentsProps, {}> {
         const { getAmount, units } = UnitsStore;
         const { loading } = PaymentsStore;
         const { settings } = SettingsStore;
-        const { theme } = settings;
+        const { theme, lurkerMode } = settings;
 
         const Balance = (balanceImage: any) => <Avatar source={balanceImage} />;
 
@@ -69,8 +70,23 @@ export default class PaymentsView extends React.Component<PaymentsProps, {}> {
                         renderItem={({ item }: any) => (
                             <ListItem
                                 key={item.payment_hash}
-                                title={units && getAmount(item.getAmount)}
-                                subtitle={item.getCreationTime}
+                                title={
+                                    units &&
+                                    (lurkerMode
+                                        ? PrivacyUtils.hideValue(
+                                              getAmount(item.getAmount),
+                                              null,
+                                              true
+                                          )
+                                        : getAmount(item.getAmount))
+                                }
+                                subtitle={
+                                    lurkerMode
+                                        ? PrivacyUtils.hideValue(
+                                              item.getCreationTime
+                                          )
+                                        : item.getCreationTime
+                                }
                                 containerStyle={{
                                     borderBottomWidth: 0,
                                     backgroundColor:
