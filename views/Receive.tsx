@@ -4,7 +4,8 @@ import {
     StyleSheet,
     Text,
     TextInput,
-    View
+    View,
+    ScrollView
 } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import { Button, ButtonGroup, Header, Icon } from 'react-native-elements';
@@ -150,7 +151,7 @@ export default class Receive extends React.Component<
                     }}
                 />
 
-                <View style={styles.content}>
+                <ScrollView style={styles.content}>
                     {selectedIndex === 0 && (
                         <View>
                             {!!payment_request && (
@@ -341,7 +342,7 @@ export default class Receive extends React.Component<
                             </View>
                         </React.Fragment>
                     )}
-                </View>
+                </ScrollView>
             </View>
         );
     }
