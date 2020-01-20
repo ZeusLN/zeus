@@ -103,7 +103,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         ChannelsStore.getChannels();
         FeeStore.getFees();
 
-        if (fiat !== 'Disabled') {
+        if (!!fiat && fiat !== 'Disabled') {
             FiatStore.getFiatRates();
         }
     };
