@@ -42,15 +42,16 @@ export default class SettingsStore {
                 // handle success
                 const data = response.data;
                 const configuration = data.configurations[0];
-                const { adminMacaroon, type, uri } = configuration;
+                const { adminMacaroon, macaroon, type, uri } = configuration;
 
-                if (type !== 'lnd-rest') {
+                if (type !== 'lnd-rest' && type !== 'clightning-rest') {
                     this.btcPayError =
-                        'Sorry, we only currently support BTCPay instances using lnd';
+                        'Sorry, we currently only support BTCPay instances using lnd or c-lightning';
                 } else {
                     const config = {
                         host: uri.split('https://')[1],
-                        macaroonHex: adminMacaroon
+                        macaroonHex: adminMacaroon || macaroon,
+                        implementation: type === 'clightning-rest' ? 'c-lightning-REST' : 'lnd'
                     };
 
                     return config;
