@@ -14,6 +14,7 @@ import SetFeesForm from './../components/SetFeesForm';
 import Identicon from 'identicon.js';
 import { inject, observer } from 'mobx-react';
 const hash = require('object-hash');
+import PrivacyUtils from './../utils/PrivacyUtils';
 
 import ChannelsStore from './../stores/ChannelsStore';
 import FeeStore from './../stores/FeeStore';
@@ -71,7 +72,7 @@ export default class ChannelView extends React.Component<
         const { channelFees } = FeeStore;
         const { nodes } = ChannelsStore;
         const { settings } = SettingsStore;
-        const { theme } = settings;
+        const { theme, lurkerMode } = settings;
 
         const channel: Channel = navigation.getParam('channel', null);
         const {
@@ -92,12 +93,49 @@ export default class ChannelView extends React.Component<
             channelId
         } = channel;
         const privateChannel = channel.private;
-        const data = new Identicon(
-            hash.sha1(alias || remote_pubkey || channelId),
-            420
-        ).toString();
+
+        const channelName =
+            (nodes[remote_pubkey] && nodes[remote_pubkey].alias) ||
+            alias ||
+            channelId;
+
+        const channelDisplay = lurkerMode
+            ? PrivacyUtils.hideValue(channelName, 8)
+            : channelName;
+
+        const data = new Identicon(hash.sha1(channelDisplay), 420).toString();
 
         const channelFee = channelFees[channel_point];
+
+        const channelBalanceLocal = lurkerMode
+            ? PrivacyUtils.hideValue(getAmount(localBalance || 0), 8, true)
+            : getAmount(localBalance || 0);
+        const channelBalanceRemote = lurkerMode
+            ? PrivacyUtils.hideValue(getAmount(remoteBalance || 0), 8, true)
+            : getAmount(remoteBalance || 0);
+
+        const unsettledBalance = lurkerMode
+            ? PrivacyUtils.hideValue(getAmount(unsettled_balance), 8, true)
+            : getAmount(unsettled_balance);
+
+        const totalSatoshisReceived = lurkerMode
+            ? PrivacyUtils.hideValue(
+                  getAmount(total_satoshis_received || 0),
+                  8,
+                  true
+              )
+            : getAmount(total_satoshis_received || 0);
+        const totalSatoshisSent = lurkerMode
+            ? PrivacyUtils.hideValue(
+                  getAmount(total_satoshis_sent || 0),
+                  8,
+                  true
+              )
+            : getAmount(total_satoshis_sent || 0);
+
+        const capacityDisplay = lurkerMode
+            ? PrivacyUtils.hideValue(getAmount(capacity), 5, true)
+            : getAmount(capacity);
 
         const BackButton = () => (
             <Icon
@@ -133,10 +171,7 @@ export default class ChannelView extends React.Component<
                                     : styles.alias
                             }
                         >
-                            {(nodes[remote_pubkey] &&
-                                nodes[remote_pubkey].alias) ||
-                                alias ||
-                                channelId}
+                            {channelDisplay}
                         </Text>
                         {remote_pubkey && (
                             <Text
@@ -146,7 +181,9 @@ export default class ChannelView extends React.Component<
                                         : styles.pubkey
                                 }
                             >
-                                {remote_pubkey}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(remote_pubkey)
+                                    : remote_pubkey}
                             </Text>
                         )}
 
@@ -157,8 +194,8 @@ export default class ChannelView extends React.Component<
                     </View>
 
                     <BalanceSlider
-                        localBalance={localBalance}
-                        remoteBalance={remoteBalance}
+                        localBalance={lurkerMode ? 50 : localBalance}
+                        remoteBalance={lurkerMode ? 50 : remoteBalance}
                         theme={theme}
                     />
 
@@ -171,7 +208,7 @@ export default class ChannelView extends React.Component<
                                         : styles.balance
                                 }
                             >{`Local balance: ${units &&
-                                getAmount(localBalance || 0)}`}</Text>
+                                channelBalanceLocal}`}</Text>
                             <Text
                                 style={
                                     theme === 'dark'
@@ -179,7 +216,7 @@ export default class ChannelView extends React.Component<
                                         : styles.balance
                                 }
                             >{`Remote balance: ${units &&
-                                getAmount(remoteBalance || 0)}`}</Text>
+                                channelBalanceRemote}`}</Text>
                             {unsettled_balance && (
                                 <Text
                                     style={
@@ -188,7 +225,7 @@ export default class ChannelView extends React.Component<
                                             : styles.balance
                                     }
                                 >{`Unsettled balance: ${units &&
-                                    getAmount(unsettled_balance)}`}</Text>
+                                    unsettledBalance}`}</Text>
                             )}
                         </TouchableOpacity>
                     </View>
@@ -244,8 +281,7 @@ export default class ChannelView extends React.Component<
                                             : styles.value
                                     }
                                 >
-                                    {units &&
-                                        getAmount(total_satoshis_received || 0)}
+                                    {units && totalSatoshisReceived}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -270,8 +306,7 @@ export default class ChannelView extends React.Component<
                                             : styles.value
                                     }
                                 >
-                                    {units &&
-                                        getAmount(total_satoshis_sent || 0)}
+                                    {units && totalSatoshisSent}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -296,7 +331,7 @@ export default class ChannelView extends React.Component<
                                             : styles.value
                                     }
                                 >
-                                    {units && getAmount(capacity)}
+                                    {units && capacityDisplay}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -320,7 +355,13 @@ export default class ChannelView extends React.Component<
                                         : styles.value
                                 }
                             >
-                                {channelFee.base_fee_msat}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(
+                                          channelFee.base_fee_msat,
+                                          5,
+                                          true
+                                      )
+                                    : channelFee.base_fee_msat}
                             </Text>
                         </View>
                     )}
@@ -343,7 +384,13 @@ export default class ChannelView extends React.Component<
                                         : styles.value
                                 }
                             >
-                                {channelFee.fee_rate * 1000000}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(
+                                          channelFee.fee_rate * 1000000,
+                                          2,
+                                          true
+                                      )
+                                    : channelFee.fee_rate * 1000000}
                             </Text>
                         </View>
                     )}
@@ -389,7 +436,13 @@ export default class ChannelView extends React.Component<
                                         : styles.value
                                 }
                             >
-                                {commit_fee}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(
+                                          commit_fee,
+                                          4,
+                                          true
+                                      )
+                                    : commit_fee}
                             </Text>
                         </View>
                     )}
@@ -435,7 +488,9 @@ export default class ChannelView extends React.Component<
                                         : styles.value
                                 }
                             >
-                                {fee_per_kw}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(fee_per_kw, 6, true)
+                                    : fee_per_kw}
                             </Text>
                         </View>
                     )}

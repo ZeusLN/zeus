@@ -11,6 +11,7 @@ import { Header, Icon } from 'react-native-elements';
 import UrlUtils from './../utils/UrlUtils';
 import Transaction from './../models/Transaction';
 import { inject, observer } from 'mobx-react';
+import PrivacyUtils from './../utils/PrivacyUtils';
 
 import NodeInfoStore from './../stores/NodeInfoStore';
 import UnitsStore from './../stores/UnitsStore';
@@ -40,7 +41,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
         );
         const { testnet } = NodeInfoStore;
         const { settings } = SettingsStore;
-        const { theme } = settings;
+        const { theme, lurkerMode } = settings;
 
         const {
             tx,
@@ -64,7 +65,9 @@ export default class TransactionView extends React.Component<TransactionProps> {
                         UrlUtils.goToBlockExplorerAddress(address, testnet)
                     }
                 >
-                    <Text style={styles.valueWithLink}>{address}</Text>
+                    <Text style={styles.valueWithLink}>
+                        {lurkerMode ? PrivacyUtils.hideValue(address) : address}
+                    </Text>
                 </TouchableOpacity>
             )
         );
@@ -77,6 +80,13 @@ export default class TransactionView extends React.Component<TransactionProps> {
                 underlayColor="transparent"
             />
         );
+
+        const amountDisplay = lurkerMode
+            ? PrivacyUtils.hideValue(getAmount(amount), 8, true)
+            : getAmount(amount);
+        const totalFees = lurkerMode
+            ? PrivacyUtils.hideValue(getAmount(total_fees || 0), 4, true)
+            : getAmount(total_fees || 0);
 
         return (
             <ScrollView
@@ -103,7 +113,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                 fontWeight: 'bold'
                             }}
                         >{`${amount > 0 ? '+' : ''}${units &&
-                            getAmount(amount)}`}</Text>
+                            amountDisplay}`}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -127,7 +137,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                             : styles.value
                                     }
                                 >
-                                    {units && getAmount(total_fees || 0)}
+                                    {units && totalFees}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -145,7 +155,9 @@ export default class TransactionView extends React.Component<TransactionProps> {
                             UrlUtils.goToBlockExplorerTXID(tx, testnet)
                         }
                     >
-                        <Text style={styles.valueWithLink}>{tx}</Text>
+                        <Text style={styles.valueWithLink}>
+                            {lurkerMode ? PrivacyUtils.hideValue(tx) : tx}
+                        </Text>
                     </TouchableOpacity>
 
                     {block_hash && (
@@ -168,7 +180,9 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                 }
                             >
                                 <Text style={styles.valueWithLink}>
-                                    {block_hash}
+                                    {lurkerMode
+                                        ? PrivacyUtils.hideValue(block_hash)
+                                        : block_hash}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -195,7 +209,13 @@ export default class TransactionView extends React.Component<TransactionProps> {
                             }
                         >
                             <Text style={styles.valueWithLink}>
-                                {block_height}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(
+                                          block_height,
+                                          5,
+                                          true
+                                      )
+                                    : block_height}
                             </Text>
                         </TouchableOpacity>
                     )}
@@ -218,7 +238,13 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                         num_confirmations > 0 ? 'green' : 'red'
                                 }}
                             >
-                                {num_confirmations}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(
+                                          num_confirmations,
+                                          3,
+                                          true
+                                      )
+                                    : num_confirmations}
                             </Text>
                         </View>
                     )}
@@ -264,7 +290,12 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                         : styles.value
                                 }
                             >
-                                {date.toString()}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(
+                                          date.toString(),
+                                          14
+                                      )
+                                    : date.toString()}
                             </Text>
                         </View>
                     )}
