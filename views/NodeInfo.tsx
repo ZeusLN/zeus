@@ -12,6 +12,7 @@ import SetFeesForm from './../components/SetFeesForm';
 import { inject, observer } from 'mobx-react';
 import { isNil } from 'lodash';
 import { version } from './../package.json';
+import PrivacyUtils from './../utils/PrivacyUtils';
 
 import NodeInfoStore from './../stores/NodeInfoStore';
 import FeeStore from './../stores/FeeStore';
@@ -65,7 +66,7 @@ export default class NodeInfo extends React.Component<
         const { dayEarned, weekEarned, monthEarned, totalEarned } = FeeStore;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { settings } = SettingsStore;
-        const { theme } = settings;
+        const { theme, lurkerMode } = settings;
 
         const generalInfoButton = () => (
             <React.Fragment>
@@ -132,7 +133,14 @@ export default class NodeInfo extends React.Component<
                                         : styles.value
                                 }
                             >
-                                {units && getAmount(dayEarned)}
+                                {units &&
+                                    (lurkerMode
+                                        ? PrivacyUtils.hideValue(
+                                              getAmount(dayEarned),
+                                              5,
+                                              true
+                                          )
+                                        : getAmount(dayEarned))}
                             </Text>
                         </React.Fragment>
                     )}
@@ -155,7 +163,14 @@ export default class NodeInfo extends React.Component<
                                         : styles.value
                                 }
                             >
-                                {units && getAmount(weekEarned)}
+                                {units &&
+                                    (lurkerMode
+                                        ? PrivacyUtils.hideValue(
+                                              getAmount(weekEarned),
+                                              5,
+                                              true
+                                          )
+                                        : getAmount(weekEarned))}
                             </Text>
                         </React.Fragment>
                     )}
@@ -178,7 +193,14 @@ export default class NodeInfo extends React.Component<
                                         : styles.value
                                 }
                             >
-                                {units && getAmount(monthEarned)}
+                                {units &&
+                                    (lurkerMode
+                                        ? PrivacyUtils.hideValue(
+                                              getAmount(monthEarned),
+                                              5,
+                                              true
+                                          )
+                                        : getAmount(monthEarned))}
                             </Text>
                         </React.Fragment>
                     )}
@@ -201,7 +223,14 @@ export default class NodeInfo extends React.Component<
                                         : styles.value
                                 }
                             >
-                                {units && getAmount(totalEarned)}
+                                {units &&
+                                    (lurkerMode
+                                        ? PrivacyUtils.hideValue(
+                                              getAmount(totalEarned),
+                                              5,
+                                              true
+                                          )
+                                        : getAmount(totalEarned))}
                             </Text>
                         </React.Fragment>
                     )}
@@ -224,7 +253,9 @@ export default class NodeInfo extends React.Component<
                 <Text
                     style={theme === 'dark' ? styles.valueDark : styles.value}
                 >
-                    {nodeInfo.alias}
+                    {lurkerMode
+                        ? PrivacyUtils.hideValue(nodeInfo.alias, 10)
+                        : nodeInfo.alias}
                 </Text>
 
                 <Text
@@ -235,7 +266,9 @@ export default class NodeInfo extends React.Component<
                 <Text
                     style={theme === 'dark' ? styles.valueDark : styles.value}
                 >
-                    {nodeInfo.version}
+                    {lurkerMode
+                        ? PrivacyUtils.hideValue(nodeInfo.version, 12)
+                        : nodeInfo.version}
                 </Text>
 
                 <Text
@@ -312,7 +345,9 @@ export default class NodeInfo extends React.Component<
                 >
                     URIs:
                 </Text>
-                {nodeInfo.getURIs && nodeInfo.getURIs.length > 0 ? (
+                {nodeInfo.getURIs &&
+                nodeInfo.getURIs.length > 0 &&
+                !lurkerMode ? (
                     <URIs uris={nodeInfo.getURIs} />
                 ) : (
                     <Text style={{ ...styles.value, color: 'red' }}>

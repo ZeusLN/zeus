@@ -27,7 +27,7 @@ const zeusAffairs = [
 
 class PrivacyUtils {
     hideValue = (
-        input: string | number,
+        input: string | number | Date,
         fixedLength?: number | null,
         numberSet?: boolean
     ) => {

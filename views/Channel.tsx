@@ -489,7 +489,11 @@ export default class ChannelView extends React.Component<
                                 }
                             >
                                 {lurkerMode
-                                    ? PrivacyUtils.hideValue(fee_per_kw, 6, true)
+                                    ? PrivacyUtils.hideValue(
+                                          fee_per_kw,
+                                          6,
+                                          true
+                                      )
                                     : fee_per_kw}
                             </Text>
                         </View>

@@ -3,6 +3,8 @@ import { FlatList, StyleSheet, View } from 'react-native';
 import { Avatar, Button, ListItem } from 'react-native-elements';
 import Identicon from 'identicon.js';
 const hash = require('object-hash');
+import SettingsStore from './../../stores/SettingsStore';
+import PrivacyUtils from './../../utils/PrivacyUtils';
 
 interface NodesProps {
     nodes: any[];
@@ -11,6 +13,7 @@ interface NodesProps {
     loading?: boolean;
     theme?: string;
     selectedNode?: number;
+    SettingsStore: SettingsStore;
 }
 
 export default class Nodes extends React.Component<NodesProps, {}> {
@@ -28,7 +31,17 @@ export default class Nodes extends React.Component<NodesProps, {}> {
     };
 
     render() {
-        const { navigation, nodes, theme, loading, selectedNode } = this.props;
+        const {
+            navigation,
+            nodes,
+            theme,
+            loading,
+            selectedNode,
+            SettingsStore
+        } = this.props;
+        const { settings } = SettingsStore;
+        const { lurkerMode } = settings;
+
         const Node = (balanceImage: string) => (
             <Avatar
                 source={{
@@ -47,23 +60,30 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                 ? `${item.host}:${item.port}`
                                 : item.host;
 
+                            const title = lurkerMode
+                                ? PrivacyUtils.hideValue(displayName, 8)
+                                : displayName;
+                            const implementation = lurkerMode
+                                ? PrivacyUtils.hideValue(item.implementation, 8)
+                                : item.implementation;
+
                             const data = new Identicon(
-                                hash.sha1(displayName),
+                                hash.sha1(title),
                                 420
                             ).toString();
 
                             return (
                                 <React.Fragment>
                                     <ListItem
-                                        title={displayName}
+                                        title={title}
                                         leftElement={Node(
                                             `data:image/png;base64,${data}`
                                         )}
                                         subtitle={
                                             selectedNode === index ||
                                             (!selectedNode && index === 0)
-                                                ? `Active | ${item.implementation}`
-                                                : item.implementation
+                                                ? `Active | ${implementation}`
+                                                : implementation
                                         }
                                         containerStyle={{
                                             borderBottomWidth: 0,
