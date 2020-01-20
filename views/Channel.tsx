@@ -4,6 +4,7 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
@@ -30,6 +31,7 @@ interface ChannelProps {
 
 interface ChannelState {
     confirmCloseChannel: boolean;
+    satPerByte: string;
 }
 
 @inject('ChannelsStore', 'UnitsStore', 'FeeStore', 'SettingsStore')
@@ -39,17 +41,22 @@ export default class ChannelView extends React.Component<
     ChannelState
 > {
     state = {
-        confirmCloseChannel: false
+        confirmCloseChannel: false,
+        satPerByte: ''
     };
 
-    closeChannel = (channelPoint: string, channelId: string) => {
+    closeChannel = (channelPoint: string, channelId: string, satPerByte?: string) => {
         const { ChannelsStore, navigation } = this.props;
 
         // lnd
         if (channelPoint) {
             const [funding_txid_str, output_index] = channelPoint.split(':');
 
-            ChannelsStore.closeChannel({ funding_txid_str, output_index });
+            if (satPerByte) {
+                ChannelsStore.closeChannel({ funding_txid_str, output_index }, null, satPerByte);
+            } else {
+                ChannelsStore.closeChannel({ funding_txid_str, output_index });
+            }
         } else if (channelId) {
             // c-lightning
             ChannelsStore.closeChannel(null, channelId);
@@ -66,11 +73,11 @@ export default class ChannelView extends React.Component<
             FeeStore,
             SettingsStore
         } = this.props;
-        const { confirmCloseChannel } = this.state;
+        const { confirmCloseChannel, satPerByte } = this.state;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { channelFees } = FeeStore;
         const { nodes } = ChannelsStore;
-        const { settings } = SettingsStore;
+        const { settings, implementation } = SettingsStore;
         const { theme } = settings;
 
         const channel: Channel = navigation.getParam('channel', null);
@@ -484,23 +491,52 @@ export default class ChannelView extends React.Component<
                     </View>
 
                     {confirmCloseChannel && (
-                        <View style={styles.button}>
-                            <Button
-                                title="Confirm Channel Close"
-                                icon={{
-                                    name: 'delete-forever',
-                                    size: 25,
-                                    color: '#fff'
-                                }}
-                                onPress={() =>
-                                    this.closeChannel(channel_point, channelId)
-                                }
-                                buttonStyle={{
-                                    backgroundColor: 'red',
-                                    borderRadius: 30
-                                }}
-                            />
-                        </View>
+                        <React.Fragment>
+                            {implementation === 'lnd' && <React.Fragment>
+                                <Text
+                                    style={{
+                                        color: theme === 'dark' ? 'white' : 'black'
+                                    }}
+                                >
+                                    Sats per byte closing fee
+                                </Text>
+                                <TextInput
+                                    placeholder={'2'}
+                                    placeholderTextColor="darkgray"
+                                    value={satPerByte}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            satPerByte: text
+                                        })
+                                    }
+                                    numberOfLines={1}
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                    style={
+                                        theme === 'dark'
+                                            ? styles.textInputDark
+                                            : styles.textInput
+                                    }
+                                />
+                            </React.Fragment>}
+                            <View style={styles.button}>
+                                <Button
+                                    title="Confirm Channel Close"
+                                    icon={{
+                                        name: 'delete-forever',
+                                        size: 25,
+                                        color: '#fff'
+                                    }}
+                                    onPress={() =>
+                                        this.closeChannel(channel_point, channelId, satPerByte)
+                                    }
+                                    buttonStyle={{
+                                        backgroundColor: 'red',
+                                        borderRadius: 30
+                                    }}
+                                />
+                            </View>
+                        </React.Fragment>
                     )}
                 </View>
             </ScrollView>
@@ -579,5 +615,13 @@ const styles = StyleSheet.create({
     button: {
         paddingTop: 15,
         paddingBottom: 15
+    },
+    textInput: {
+        fontSize: 20,
+        color: 'black'
+    },
+    textInputDark: {
+        fontSize: 20,
+        color: 'white'
     }
 });
