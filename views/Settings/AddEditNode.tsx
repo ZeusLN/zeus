@@ -138,17 +138,17 @@ export default class AddEditNode extends React.Component<
                 selectedNode: settings.selectedNode,
                 onChainAddress: settings.onChainAddress
             })
-        );
+        ).then(() => {
+            this.setState({
+                saved: true
+            });
 
-        this.setState({
-            saved: true
+            if (nodes.length === 1) {
+                navigation.navigate('Wallet', { refresh: true });
+            } else {
+                navigation.navigate('Settings', { refresh: true });
+            }
         });
-
-        if (nodes.length === 1) {
-            navigation.navigate('Wallet', { refresh: true });
-        } else {
-            navigation.navigate('Settings', { refresh: true });
-        }
     };
 
     deleteNodeConfig = () => {

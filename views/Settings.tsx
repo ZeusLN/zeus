@@ -203,6 +203,7 @@ export default class Settings extends React.Component<
                         theme={theme}
                         loading={loading}
                         selectedNode={selectedNode}
+                        SettingsStore={SettingsStore}
                     />
                 </View>
 
