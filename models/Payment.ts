@@ -46,9 +46,13 @@ export default class Payment extends BaseModel {
         }
 
         // c-lightning
-        const msatoshi_sent: any = this.msatoshi_sent;
-        const msatoshi: any = this.msatoshi;
-        const fee = Number(msatoshi_sent - msatoshi) / 1000;
-        return fee.toString();
+        if (this.msatoshi && this.msatoshi_sent) {
+            const msatoshi_sent: any = this.msatoshi_sent;
+            const msatoshi: any = this.msatoshi;
+            const fee = Number(msatoshi_sent - msatoshi) / 1000;
+            return fee.toString();
+        }
+
+        return '0';
     }
 }
