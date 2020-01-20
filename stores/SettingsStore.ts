@@ -99,6 +99,7 @@ export default class SettingsStore {
         // Store the credentials
         await Keychain.setGenericPassword('settings', settings).then(() => {
             this.loading = false;
+            return settings;
         });
     }
 
