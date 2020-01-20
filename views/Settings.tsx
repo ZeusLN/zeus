@@ -14,10 +14,12 @@ import { inject, observer } from 'mobx-react';
 import Nodes from './Settings/Nodes';
 
 import SettingsStore from './../stores/SettingsStore';
+import UnitsStore from './../stores/UnitsStore';
 
 interface SettingsProps {
     navigation: any;
     SettingsStore: SettingsStore;
+    UnitsStore: UnitsStore;
 }
 
 interface SettingsState {
@@ -29,6 +31,7 @@ interface SettingsState {
     passphraseConfirm: string;
     passphraseError: boolean;
     showPassphraseForm: boolean;
+    fiat: string;
 }
 
 const themes: any = {
@@ -36,7 +39,7 @@ const themes: any = {
     dark: 'Dark Theme'
 };
 
-@inject('SettingsStore')
+@inject('SettingsStore', 'UnitsStore')
 @observer
 export default class Settings extends React.Component<
     SettingsProps,
@@ -52,7 +55,8 @@ export default class Settings extends React.Component<
         passphrase: '',
         passphraseConfirm: '',
         passphraseError: false,
-        showPassphraseForm: false
+        showPassphraseForm: false,
+        fiat: 'Disabled'
     };
 
     componentDidMount() {
@@ -67,7 +71,8 @@ export default class Settings extends React.Component<
                 nodes: settings.nodes || [],
                 theme: settings.theme || '',
                 passphrase: settings.passphrase || '',
-                passphraseConfirm: settings.passphrase || ''
+                passphraseConfirm: settings.passphrase || '',
+                fiat: settings.fiat || 'Disabled'
             });
         }
     }
@@ -82,7 +87,8 @@ export default class Settings extends React.Component<
                 nodes: settings.nodes || [],
                 theme: settings.theme || '',
                 passphrase: settings.passphrase || '',
-                passphraseConfirm: settings.passphrase || ''
+                passphraseConfirm: settings.passphrase || '',
+                fiat: settings.fiat || 'Disabled'
             });
         }
     };
@@ -103,8 +109,14 @@ export default class Settings extends React.Component<
     }
 
     saveSettings = () => {
-        const { SettingsStore } = this.props;
-        const { nodes, theme, passphrase, passphraseConfirm } = this.state;
+        const { SettingsStore, UnitsStore } = this.props;
+        const {
+            nodes,
+            theme,
+            passphrase,
+            passphraseConfirm,
+            fiat
+        } = this.state;
         const { setSettings, settings } = SettingsStore;
 
         if (passphrase !== passphraseConfirm) {
@@ -115,11 +127,14 @@ export default class Settings extends React.Component<
             return;
         }
 
+        UnitsStore.resetUnits();
+
         setSettings(
             JSON.stringify({
                 nodes,
                 theme,
                 passphrase,
+                fiat,
                 onChainAddress: settings.onChainAddress
             })
         );
@@ -148,7 +163,8 @@ export default class Settings extends React.Component<
             passphrase,
             passphraseConfirm,
             passphraseError,
-            showPassphraseForm
+            showPassphraseForm,
+            fiat
         } = this.state;
         const { loading, settings } = SettingsStore;
         const savedTheme = settings.theme;
@@ -271,6 +287,156 @@ export default class Settings extends React.Component<
                                 }}
                             >
                                 {themes[theme]}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                {Platform.OS !== 'ios' && (
+                    <View>
+                        <Text
+                            style={{
+                                color: savedTheme === 'dark' ? 'white' : 'black'
+                            }}
+                        >
+                            Fiat Currency Rate
+                        </Text>
+                        <Picker
+                            selectedValue={fiat}
+                            onValueChange={(itemValue: string) =>
+                                this.setState({ fiat: itemValue })
+                            }
+                            style={
+                                savedTheme === 'dark'
+                                    ? styles.pickerDark
+                                    : styles.picker
+                            }
+                        >
+                            <Picker.Item label="Disabled" value="Disabled" />
+                            <Picker.Item label="USD" value="USD" />
+                            <Picker.Item label="JPY" value="JPY" />
+                            <Picker.Item label="CNY" value="CNY" />
+                            <Picker.Item label="SGD" value="SGD" />
+                            <Picker.Item label="HKD" value="HKD" />
+                            <Picker.Item label="CAD" value="CAD" />
+                            <Picker.Item label="NZD" value="NZD" />
+                            <Picker.Item label="AUD" value="AUD" />
+                            <Picker.Item label="CLP" value="CLP" />
+                            <Picker.Item label="GBP" value="GBP" />
+                            <Picker.Item label="DKK" value="DKK" />
+                            <Picker.Item label="SEK" value="SEK" />
+                            <Picker.Item label="ISK" value="ISK" />
+                            <Picker.Item label="CHF" value="CHF" />
+                            <Picker.Item label="BRL" value="BRL" />
+                            <Picker.Item label="EUR" value="EUR" />
+                            <Picker.Item label="RUB" value="RUB" />
+                            <Picker.Item label="PLN" value="PLN" />
+                            <Picker.Item label="THB" value="THB" />
+                            <Picker.Item label="KRW" value="KRW" />
+                            <Picker.Item label="TWD" value="TWD" />
+                        </Picker>
+                    </View>
+                )}
+
+                {Platform.OS === 'ios' && (
+                    <View>
+                        <Text
+                            style={{
+                                color: savedTheme === 'dark' ? 'white' : 'black'
+                            }}
+                        >
+                            Fiat Currency Rate
+                        </Text>
+                        <TouchableOpacity
+                            onPress={() =>
+                                ActionSheetIOS.showActionSheetWithOptions(
+                                    {
+                                        options: [
+                                            'Cancel',
+                                            'Disabled',
+                                            'USD',
+                                            'JPY',
+                                            'CNY',
+                                            'SGD',
+                                            'HKD',
+                                            'CAD',
+                                            'NZD',
+                                            'AUD',
+                                            'CLP',
+                                            'GBP',
+                                            'DKK',
+                                            'SEK',
+                                            'ISK',
+                                            'CHF',
+                                            'BRL',
+                                            'EUR',
+                                            'RUB',
+                                            'PLN',
+                                            'THB',
+                                            'KRW',
+                                            'TWD'
+                                        ],
+                                        cancelButtonIndex: 0
+                                    },
+                                    buttonIndex => {
+                                        if (buttonIndex === 1) {
+                                            this.setState({ fiat: 'Disabled' });
+                                        } else if (buttonIndex === 2) {
+                                            this.setState({ fiat: 'USD' });
+                                        } else if (buttonIndex === 3) {
+                                            this.setState({ fiat: 'JPY' });
+                                        } else if (buttonIndex === 4) {
+                                            this.setState({ fiat: 'CNY' });
+                                        } else if (buttonIndex === 5) {
+                                            this.setState({ fiat: 'SGD' });
+                                        } else if (buttonIndex === 6) {
+                                            this.setState({ fiat: 'HKD' });
+                                        } else if (buttonIndex === 7) {
+                                            this.setState({ fiat: 'CAD' });
+                                        } else if (buttonIndex === 8) {
+                                            this.setState({ fiat: 'NZD' });
+                                        } else if (buttonIndex === 9) {
+                                            this.setState({ fiat: 'AUD' });
+                                        } else if (buttonIndex === 10) {
+                                            this.setState({ fiat: 'CLP' });
+                                        } else if (buttonIndex === 11) {
+                                            this.setState({ fiat: 'GBP' });
+                                        } else if (buttonIndex === 12) {
+                                            this.setState({ fiat: 'DKK' });
+                                        } else if (buttonIndex === 13) {
+                                            this.setState({ fiat: 'SEK' });
+                                        } else if (buttonIndex === 14) {
+                                            this.setState({ fiat: 'ISK' });
+                                        } else if (buttonIndex === 15) {
+                                            this.setState({ fiat: 'CHF' });
+                                        } else if (buttonIndex === 16) {
+                                            this.setState({ fiat: 'BRL' });
+                                        } else if (buttonIndex === 17) {
+                                            this.setState({ fiat: 'EUR' });
+                                        } else if (buttonIndex === 18) {
+                                            this.setState({ fiat: 'RUB' });
+                                        } else if (buttonIndex === 19) {
+                                            this.setState({ fiat: 'PLN' });
+                                        } else if (buttonIndex === 20) {
+                                            this.setState({ fiat: 'THB' });
+                                        } else if (buttonIndex === 21) {
+                                            this.setState({ fiat: 'KRW' });
+                                        } else if (buttonIndex === 22) {
+                                            this.setState({ fiat: 'TWD' });
+                                        }
+                                    }
+                                )
+                            }
+                        >
+                            <Text
+                                style={{
+                                    color:
+                                        savedTheme === 'dark'
+                                            ? 'white'
+                                            : 'black'
+                                }}
+                            >
+                                {fiat}
                             </Text>
                         </TouchableOpacity>
                     </View>

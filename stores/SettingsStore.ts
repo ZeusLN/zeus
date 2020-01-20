@@ -16,6 +16,7 @@ interface Settings {
     theme?: string;
     selectedNode?: number;
     passphrase?: string;
+    fiat?: string;
 }
 
 export default class SettingsStore {

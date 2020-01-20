@@ -15,6 +15,7 @@ import InvoicesStore from './../../stores/InvoicesStore';
 import NodeInfoStore from './../../stores/NodeInfoStore';
 import PaymentsStore from './../../stores/PaymentsStore';
 import SettingsStore from './../../stores/SettingsStore';
+import FiatStore from './../../stores/FiatStore';
 import TransactionsStore from './../../stores/TransactionsStore';
 import UnitsStore from './../../stores/UnitsStore';
 
@@ -31,6 +32,7 @@ interface WalletProps {
     SettingsStore: SettingsStore;
     TransactionsStore: TransactionsStore;
     UnitsStore: UnitsStore;
+    FiatStore: FiatStore;
 }
 
 interface WalletState {
@@ -47,7 +49,8 @@ interface WalletState {
     'PaymentsStore',
     'SettingsStore',
     'TransactionsStore',
-    'UnitsStore'
+    'UnitsStore',
+    'FiatStore'
 )
 @observer
 export default class Wallet extends React.Component<WalletProps, WalletState> {
@@ -84,8 +87,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             ChannelsStore,
             InvoicesStore,
             PaymentsStore,
-            FeeStore
+            FeeStore,
+            SettingsStore,
+            FiatStore
         } = this.props;
+        const { settings } = SettingsStore;
+        const { fiat } = settings;
+
         NodeInfoStore.getNodeInfo();
         BalanceStore.getBlockchainBalance();
         BalanceStore.getLightningBalance();
@@ -94,6 +102,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         InvoicesStore.getInvoices();
         ChannelsStore.getChannels();
         FeeStore.getFees();
+
+        if (fiat !== 'Disabled') {
+            FiatStore.getFiatRates();
+        }
     };
 
     updateIndex = (selectedIndex: number) => {
