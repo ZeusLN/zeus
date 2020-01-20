@@ -50,7 +50,7 @@ export default class Nodes extends React.Component<NodesProps, {}> {
 
         return (
             <View>
-                {!!nodes && !loading && nodes.length > 0 && (
+                {!!nodes && nodes.length > 0 && (
                     <FlatList
                         data={nodes}
                         renderItem={({ item, index }) => {
