@@ -498,7 +498,7 @@ export default class ChannelView extends React.Component<
                                         color: theme === 'dark' ? 'white' : 'black'
                                     }}
                                 >
-                                    Sats per byte closing fee
+                                    (Optional) Sat per byte closing fee
                                 </Text>
                                 <TextInput
                                     placeholder={'2'}
