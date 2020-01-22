@@ -201,6 +201,7 @@ android {
 }
 
 dependencies {
+    implementation project(':realm')
     implementation project(':react-native-linear-gradient')
     implementation "androidx.core:core:1.1.0"
     implementation project(':rncamerakit')
