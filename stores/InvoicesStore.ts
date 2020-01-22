@@ -4,8 +4,8 @@ import { Alert } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import hashjs from 'hash.js';
 import Invoice from './../models/Invoice';
-import PaymentRequest from './../models/PaymentRequest';
 import SettingsStore from './SettingsStore';
+import RESTUtils from './../utils/RESTUtils';
 
 export default class InvoicesStore {
     @observable paymentRequest: string;
@@ -15,7 +15,7 @@ export default class InvoicesStore {
     @observable getPayReqError: string | null = null;
     @observable invoices: Array<Invoice> = [];
     @observable invoice: Invoice;
-    @observable pay_req: PaymentRequest | null;
+    @observable pay_req: Invoice | null;
     @observable payment_request: string | null;
     @observable creatingInvoice: boolean = false;
     @observable creatingInvoiceError: boolean = false;
@@ -33,24 +33,18 @@ export default class InvoicesStore {
 
     @action
     public getInvoices = () => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
         this.loading = true;
-        axios
-            .request({
-                method: 'get',
-                url: `https://${host}${
-                    port ? ':' + port : ''
-                }/v1/invoices?reversed=true&num_max_invoices=100`,
-                headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
-                }
-            })
+        RESTUtils.getInvoices(this.settingsStore)
             .then((response: any) => {
                 // handle success
                 const data = response.data;
-                this.invoices = data.invoices.reverse();
-                this.invoicesCount = data.last_index_offset;
+                this.invoices = data.payments || data.invoices;
+                this.invoices = this.invoices.map(
+                    invoice => new Invoice(invoice)
+                );
+                this.invoices = this.invoices.reverse();
+                this.invoicesCount =
+                    data.last_index_offset || this.invoices.length;
                 this.loading = false;
             })
             .catch(() => {
@@ -61,57 +55,41 @@ export default class InvoicesStore {
     };
 
     @action
-    public getInvoice = (lightningInvoice: string) => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
-        axios
-            .request({
-                method: 'get',
-                url: `https://${host}${
-                    port ? ':' + port : ''
-                }/v1/invoice/${lightningInvoice}`,
-                headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
-                }
-            })
-            .then((response: any) => {
-                // handle success
-                const data = response.data;
-                this.invoice = data;
-            });
-    };
-
-    @action
     public createInvoice = (
         memo: string,
         value: string,
         expiry: string = '3600',
-        lnurl: LNURLWithdrawParams = undefined
+        lnurl?: LNURLWithdrawParams
     ) => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
+        const { implementation } = this.settingsStore;
         this.payment_request = null;
         this.creatingInvoice = true;
         this.creatingInvoiceError = false;
         this.error_msg = null;
 
-        axios
-            .request({
-                method: 'post',
-                url: `https://${host}${port ? ':' + port : ''}/v1/invoices`,
-                headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
-                },
-                data: {
-                    memo,
-                    value,
-                    expiry
-                }
-            })
+        let data;
+        if (implementation === 'c-lightning-REST') {
+            // amount(msats), label, description
+            data = {
+                description: memo,
+                label: memo,
+                amount: Number(value) * 1000,
+                expiry,
+                private: true
+            };
+        } else {
+            data = {
+                memo,
+                value,
+                expiry
+            };
+        }
+
+        RESTUtils.createInvoice(this.settingsStore, data)
             .then((response: any) => {
                 // handle success
-                const data = response.data;
-                this.payment_request = data.payment_request;
+                const data = new Invoice(response.data);
+                this.payment_request = data.getPaymentRequest;
                 this.creatingInvoice = false;
 
                 if (lnurl) {
@@ -138,35 +116,25 @@ export default class InvoicesStore {
                 const errorInfo = error.response.data;
                 this.creatingInvoiceError = true;
                 this.creatingInvoice = false;
-                this.error_msg = errorInfo.error;
+                this.error_msg = errorInfo.error.message || errorInfo.error;
             });
     };
 
     @action
     public getPayReq = (
         paymentRequest: string,
-        descriptionPreimage: string | undefined
+        descriptionPreimage?: string
     ) => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
         this.pay_req = null;
         this.paymentRequest = paymentRequest;
         this.loading = true;
 
-        return axios
-            .request({
-                method: 'get',
-                url: `https://${host}${
-                    port ? ':' + port : ''
-                }/v1/payreq/${paymentRequest}`,
-                headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
-                }
-            })
+        return RESTUtils.decodePaymentRequest(this.settingsStore, [
+            paymentRequest
+        ])
             .then((response: any) => {
                 // handle success
-                const data = response.data as PaymentRequest;
-                this.pay_req = data;
+                this.pay_req = new Invoice(response.data);
 
                 // check description_hash if asked for
                 if (
@@ -183,14 +151,14 @@ export default class InvoicesStore {
                 this.loading = false;
                 this.getPayReqError = null;
             })
-            .catch(err => {
+            .catch((error: any) => {
                 // handle error
                 this.loading = false;
                 this.getPayReqError =
-                    (err.response &&
-                        err.response.data &&
-                        err.response.data.error) ||
-                    err.message;
+                    (error.response &&
+                        error.response.data &&
+                        error.response.data.error) ||
+                    error.message;
                 this.pay_req = null;
             });
     };

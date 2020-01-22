@@ -43,21 +43,27 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                     <FlatList
                         data={nodes}
                         renderItem={({ item, index }) => {
+                            const displayName = item.port
+                                ? `${item.host}:${item.port}`
+                                : item.host;
+
                             const data = new Identicon(
-                                hash.sha1(item.host),
+                                hash.sha1(displayName),
                                 420
                             ).toString();
+
                             return (
                                 <React.Fragment>
                                     <ListItem
-                                        title={item.host}
+                                        title={displayName}
                                         leftElement={Node(
                                             `data:image/png;base64,${data}`
                                         )}
                                         subtitle={
-                                            selectedNode === index
-                                                ? 'Active'
-                                                : ''
+                                            selectedNode === index ||
+                                            (!selectedNode && index === 0)
+                                                ? `Active | ${item.implementation}`
+                                                : item.implementation
                                         }
                                         containerStyle={{
                                             borderBottomWidth: 0,

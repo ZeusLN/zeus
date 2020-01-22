@@ -1,17 +1,9 @@
 import * as React from 'react';
 import axios from 'axios';
-import {
-    Alert,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
-    ScrollView
-} from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
-import { getDomain, LNURLPayResult, LNURLPaySuccessAction } from 'js-lnurl';
-import AddressUtils from './../../utils/AddressUtils';
+import { getDomain } from 'js-lnurl';
 import InvoicesStore from './../../stores/InvoicesStore';
 import LnurlPayStore from './../../stores/LnurlPayStore';
 import SettingsStore from './../../stores/SettingsStore';
@@ -35,13 +27,16 @@ export default class LnurlPay extends React.Component<
     LnurlPayProps,
     LnurlPayState
 > {
-    constructor(props: any) {
+    constructor(props: LnurlPayProps) {
         super(props);
 
         try {
             this.state = this.stateFromProps(props);
         } catch (err) {
-            this.state = {};
+            this.state = {
+                amount: '',
+                domain: ''
+            };
 
             Alert.alert(`Invalid lnurl params!`, err.message, [], {
                 onDismiss: () => {
@@ -51,7 +46,7 @@ export default class LnurlPay extends React.Component<
         }
     }
 
-    stateFromProps(props) {
+    stateFromProps(props: LnurlPayProps) {
         const { navigation } = props;
         const lnurl = navigation.getParam('lnurlParams');
         const domain = getDomain(lnurl.callback);
@@ -86,33 +81,41 @@ export default class LnurlPay extends React.Component<
                     tag: 'noop'
                 };
 
-                await InvoicesStore.getPayReq(pr, lnurl.metadata);
-
-                if (!!InvoicesStore.getPayReqError) {
-                    Alert.alert(
-                        `Got an invalid invoice!`,
-                        InvoicesStore.getPayReqError,
-                        [],
-                        {
-                            onDismiss: () => {
-                                navigation.navigate('Wallet');
+                InvoicesStore.getPayReq(pr, lnurl.metadata).then(() => {
+                    if (!!InvoicesStore.getPayReqError) {
+                        Alert.alert(
+                            `Got an invalid invoice!`,
+                            InvoicesStore.getPayReqError,
+                            [],
+                            {
+                                onDismiss: () => {
+                                    navigation.navigate('Wallet');
+                                }
                             }
-                        }
-                    );
-                    return;
-                }
+                        );
+                        return;
+                    }
 
-                LnurlPayStore.keep(
-                    InvoicesStore.pay_req.payment_hash,
-                    domain,
-                    lnurl.lnurlText,
-                    {
-                        metadata: lnurl.metadata,
-                        descriptionHash: InvoicesStore.pay_req.description_hash
-                    },
-                    successAction
-                );
-                navigation.navigate('PaymentRequest');
+                    const payment_hash: string =
+                        (InvoicesStore.pay_req &&
+                            InvoicesStore.pay_req.payment_hash) ||
+                        '';
+                    const description_hash: string =
+                        (InvoicesStore.pay_req &&
+                            InvoicesStore.pay_req.description_hash) ||
+                        '';
+                    LnurlPayStore.keep(
+                        payment_hash,
+                        domain,
+                        lnurl.lnurlText,
+                        {
+                            metadata: lnurl.metadata,
+                            descriptionHash: description_hash
+                        },
+                        successAction
+                    );
+                    navigation.navigate('PaymentRequest');
+                });
             });
     }
 
@@ -150,7 +153,8 @@ export default class LnurlPay extends React.Component<
                         style={{
                             padding: 20,
                             fontWeight: 'bold',
-                            fontSize: 22
+                            fontSize: 22,
+                            color: theme === 'dark' ? 'white' : 'black'
                         }}
                     >
                         {domain}
@@ -207,7 +211,10 @@ export default class LnurlPay extends React.Component<
                     </View>
                 </View>
                 <View style={styles.content}>
-                    <LnurlPayMetadata metadata={lnurl.metadata} />
+                    <LnurlPayMetadata
+                        metadata={lnurl.metadata}
+                        SettingsStore={SettingsStore}
+                    />
                 </View>
             </View>
         );

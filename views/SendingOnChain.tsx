@@ -56,7 +56,7 @@ export default class SendingOnChain extends React.Component<
                         <ActivityIndicator size="large" color="#0000ff" />
                     )}
                     {loading && <Text>Broadcasting Transaction</Text>}
-                    {error && (
+                    {error && error_msg && (
                         <Text
                             style={{
                                 color: 'white',

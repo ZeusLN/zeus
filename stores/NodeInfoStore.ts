@@ -1,14 +1,15 @@
 import { action, observable, reaction } from 'mobx';
-import axios from 'axios';
 import NodeInfo from './../models/NodeInfo';
 import SettingsStore from './SettingsStore';
+import RESTUtils from './../utils/RESTUtils';
 
 export default class NodeInfoStore {
     @observable public loading: boolean = false;
     @observable public error: boolean = false;
     @observable public errorMsg: string;
-    @observable public nodeInfo: NodeInfo = {};
+    @observable public nodeInfo: NodeInfo | any = {};
     @observable public testnet: boolean;
+    @observable public regtest: boolean;
     settingsStore: SettingsStore;
 
     constructor(settingsStore: SettingsStore) {
@@ -26,23 +27,15 @@ export default class NodeInfoStore {
 
     @action
     public getNodeInfo = () => {
-        const { host, port, macaroonHex } = this.settingsStore;
-
         this.errorMsg = '';
         this.loading = true;
-        axios
-            .request({
-                method: 'get',
-                url: `https://${host}${port ? ':' + port : ''}/v1/getinfo`,
-                headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
-                }
-            })
+        RESTUtils.getMyNodeInfo(this.settingsStore)
             .then((response: any) => {
                 // handle success
-                const data = response.data;
-                this.nodeInfo = data;
-                this.testnet = data.testnet;
+                const nodeInfo = new NodeInfo(response.data);
+                this.nodeInfo = nodeInfo;
+                this.testnet = nodeInfo.isTestNet;
+                this.regtest = nodeInfo.isRegTest;
                 this.loading = false;
                 this.error = false;
             })
