@@ -1,14 +1,26 @@
-export default interface OpenChannelRequest {
-    min_confs?: number;
-    spend_unconfirmed?: boolean;
-    remote_csv_delay?: number;
-    node_pubkey_string: string;
-    node_pubkey?: any;
-    push_sat?: string;
-    target_conf?: number;
-    sat_per_byte?: string;
-    private?: boolean;
-    min_htlc_msat?: string;
-    local_funding_amount: string;
-    host: string;
+import BaseModel from './BaseModel';
+
+export default class OpenChannelRequest extends BaseModel {
+    public min_confs?: number;
+    public spend_unconfirmed?: boolean;
+    public remote_csv_delay?: number;
+    public node_pubkey_string: string;
+    public node_pubkey?: any;
+    public push_sat?: string;
+    public target_conf?: number;
+    public sat_per_byte?: string;
+    public private?: boolean;
+    public min_htlc_msat?: string;
+    public local_funding_amount: string;
+    public host: string;
+    public id?: string;
+    public satoshis?: string;
+    public announce?: boolean;
+
+    constructor(data?: any) {
+        super(data);
+        this.id = data.node_pubkey_string || data.node_pubkey;
+        this.satoshis = data.local_funding_amount;
+        this.announce = !data.private;
+    }
 }

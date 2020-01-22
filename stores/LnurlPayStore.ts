@@ -1,15 +1,13 @@
-import { action, observable } from 'mobx';
-import { Alert } from 'react-native';
+import { action } from 'mobx';
 import axios from 'axios';
 import Realm from 'realm';
-import sha256 from 'hash.js/lib/hash/sha/256';
 import { when } from 'mobx';
 import { LNURLPaySuccessAction } from 'js-lnurl';
 import NodeInfoStore from './../stores/NodeInfoStore';
 import SettingsStore from './../stores/SettingsStore';
 import Payment from './../models/Payment';
 
-interface LnurlPayTransaction {
+export interface LnurlPayTransaction {
     paymentHash: string;
     pending: boolean;
     domain: string;
@@ -88,9 +86,9 @@ export default class LnurlPayStore {
 
         when(
             () =>
-                this.settingsStore.host &&
-                this.settingsStore.port &&
-                this.settingsStore.macaroonHex,
+                !!this.settingsStore.host &&
+                !!this.settingsStore.port &&
+                !!this.settingsStore.macaroonHex,
             () => this.checkPending()
         );
     }
@@ -168,7 +166,7 @@ export default class LnurlPayStore {
         paymentHash: string,
         domain: string,
         lnurl: string,
-        metadata: string,
+        metadata: any,
         successAction: LNURLPaySuccessAction
     ) => {
         this.realm.write(() => {

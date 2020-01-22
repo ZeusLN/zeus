@@ -13,35 +13,50 @@ import LnurlPaySuccess from './LnurlPay/Success';
 
 import TransactionsStore from './../stores/TransactionsStore';
 import LnurlPayStore from './../stores/LnurlPayStore';
+import SettingsStore from './../stores/SettingsStore';
 
 interface SendingLightningProps {
     navigation: any;
     TransactionsStore: TransactionsStore;
     LnurlPayStore: LnurlPayStore;
+    SettingsStore: SettingsStore;
 }
 
-@inject('TransactionsStore', 'LnurlPayStore')
+@inject('TransactionsStore', 'LnurlPayStore', 'SettingsStore')
 @observer
 export default class SendingLightning extends React.Component<
     SendingLightningProps,
     {}
 > {
     componentDidMount = () => {
-        when(() => TransactionsStore.payment_route).then(() => {
-            LnurlPayStore.acknowledge(TransactionsStore.payment_hash);
+        const { TransactionsStore, LnurlPayStore } = this.props;
+        const {
+            payment_route,
+            payment_hash,
+            payment_error
+        } = TransactionsStore;
+        const { acknowledge, clear } = LnurlPayStore;
+
+        when(() => payment_route).then(() => {
+            acknowledge(payment_hash);
         });
-        when(() => TransactionsStore.payment_error).then(() => {
-            LnurlPayStore.clear(TransactionsStore.payment_hash);
+        when(() => payment_error).then(() => {
+            clear(payment_hash);
         });
     };
 
     getBackgroundColor() {
         const { TransactionsStore } = this.props;
-        const { payment_route, payment_error, error } = TransactionsStore;
+        const {
+            payment_route,
+            payment_error,
+            status,
+            error
+        } = TransactionsStore;
 
         if (error) {
             return 'darkred';
-        } else if (payment_route) {
+        } else if (payment_route || status === 'complete') {
             return 'green';
         } else if (payment_error) {
             return 'lightcoral';
@@ -51,7 +66,12 @@ export default class SendingLightning extends React.Component<
     }
 
     render() {
-        const { TransactionsStore, LnurlPayStore, navigation } = this.props;
+        const {
+            TransactionsStore,
+            LnurlPayStore,
+            SettingsStore,
+            navigation
+        } = this.props;
         const {
             loading,
             error,
@@ -59,9 +79,11 @@ export default class SendingLightning extends React.Component<
             payment_hash,
             payment_route,
             payment_preimage,
-            payment_error
+            payment_error,
+            status
         } = TransactionsStore;
         const backgroundColor = this.getBackgroundColor();
+        const success = payment_route || status === 'complete';
 
         return (
             <View
@@ -91,7 +113,7 @@ export default class SendingLightning extends React.Component<
                             Error: {payment_error || error_msg}
                         </Text>
                     )}
-                    {payment_route && (
+                    {(payment_route || status === 'complete') && (
                         <Text
                             style={{
                                 color: 'white',
@@ -110,6 +132,7 @@ export default class SendingLightning extends React.Component<
                                 domain={LnurlPayStore.domain}
                                 successAction={LnurlPayStore.successAction}
                                 preimage={payment_preimage}
+                                SettingsStore={SettingsStore}
                             />
                         )}
                     {payment_hash && (
@@ -121,7 +144,7 @@ export default class SendingLightning extends React.Component<
                             }}
                         >{`Payment Hash: ${payment_hash}`}</Text>
                     )}
-                    {payment_route && (
+                    {success && (
                         <Button
                             title=""
                             icon={{
@@ -152,7 +175,7 @@ export default class SendingLightning extends React.Component<
                         />
                     )}
 
-                    {(error || payment_error || payment_route) && (
+                    {(error || payment_error || success) && (
                         <Button
                             title="Go to Wallet"
                             icon={{

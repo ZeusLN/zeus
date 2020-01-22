@@ -4,10 +4,13 @@ import { LnurlPayTransaction } from './../../stores/LnurlPayStore';
 import LnurlPayMetadata from './Metadata';
 import LnurlPaySuccess from './Success';
 
+import SettingsStore from './../../stores/SettingsStore';
+
 interface LnurlPayHistoricalProps {
     navigation: any;
     lnurlpaytx: LnurlPayTransaction;
     preimage: string;
+    SettingsStore: SettingsStore;
 }
 
 interface LnurlPayHistoricalState {
@@ -27,8 +30,10 @@ export default class LnurlPayHistorical extends React.Component<
     }
 
     render() {
-        const { navigation, lnurlpaytx, preimage } = this.props;
+        const { navigation, lnurlpaytx, preimage, SettingsStore } = this.props;
         const { showLnurlSuccess } = this.state;
+        const { settings } = SettingsStore;
+        const { theme } = settings;
 
         return (
             <View>
@@ -39,7 +44,12 @@ export default class LnurlPayHistorical extends React.Component<
                         })
                     }
                 >
-                    <Text style={{ fontWeight: 'bold' }}>
+                    <Text
+                        style={{
+                            color: theme === 'dark' ? 'white' : 'black',
+                            fontWeight: 'bold'
+                        }}
+                    >
                         {lnurlpaytx.lnurl}
                     </Text>
                 </TouchableOpacity>
@@ -55,10 +65,12 @@ export default class LnurlPayHistorical extends React.Component<
                             domain={lnurlpaytx.domain}
                             successAction={lnurlpaytx.successAction}
                             preimage={preimage}
+                            SettingsStore={SettingsStore}
                         />
                     ) : (
                         <LnurlPayMetadata
                             metadata={lnurlpaytx.metadata.metadata}
+                            SettingsStore={SettingsStore}
                         />
                     )}
                 </TouchableOpacity>

@@ -120,7 +120,7 @@ export default class Settings extends React.Component<
                 nodes,
                 theme,
                 passphrase,
-                onChainAndress: settings.onChainAndress
+                onChainAddress: settings.onChainAddress
             })
         );
 
