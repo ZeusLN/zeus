@@ -226,8 +226,6 @@ PODS:
     - ReactCommon/jscallinvoker (= 0.61.5)
   - ReactNativePermissions (1.1.1):
     - React
-  - Realm (4.3.1):
-    - Realm/Headers (= 4.3.1)
   - Realm/Headers (4.3.1)
   - RealmJS (3.6.0):
     - GCDWebServer
@@ -273,7 +271,6 @@ DEPENDENCIES:
   - ReactCommon/jscallinvoker (from `../node_modules/react-native/ReactCommon`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - ReactNativePermissions (from `../node_modules/react-native-permissions`)
-  - Realm
   - Realm/Headers
   - RealmJS (from `../node_modules/realm`)
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
@@ -394,6 +391,6 @@ SPEC CHECKSUMS:
   RNVectorIcons: 0bb4def82230be1333ddaeee9fcba45f0b288ed4
   Yoga: f2a7cd4280bfe2cca5a7aed98ba0eb3d1310f18b
 
-PODFILE CHECKSUM: 066bf2624addeeb543cdd849f97a8e7216cc2ec7
+PODFILE CHECKSUM: 4fe76220fd560a9cadff6d3659a347726d6e0191
 
 COCOAPODS: 1.8.4

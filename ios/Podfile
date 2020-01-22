@@ -35,7 +35,8 @@ target 'zeus' do
   pod 'Folly', :podspec => '../node_modules/react-native/third-party-podspecs/Folly.podspec'
 
   pod 'BVLinearGradient', :path => '../node_modules/react-native-linear-gradient'
-  pod 'Realm'
+
+  pod 'RealmJS', :path => '../node_modules/realm'
 
   target 'zeusTests' do
     inherit! :search_paths
