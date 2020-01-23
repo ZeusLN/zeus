@@ -116,7 +116,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                         item.remote_pubkey ||
                                         item.channelId
                                 ),
-                                420
+                                255
                             ).toString();
 
                             return (
