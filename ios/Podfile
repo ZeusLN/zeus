@@ -37,6 +37,7 @@ target 'zeus' do
   pod 'BVLinearGradient', :path => '../node_modules/react-native-linear-gradient'
 
   pod 'RealmJS', :path => '../node_modules/realm'
+  pod 'react-native-camera-kit', :path => '../node_modules/react-native-camera-kit'
 
   target 'zeusTests' do
     inherit! :search_paths

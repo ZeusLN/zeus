@@ -3,6 +3,10 @@ import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import ActivityResult from 'react-native-activity-result-fork';
 import Permissions from 'react-native-permissions';
+import {
+    CameraKitCamera,
+    CameraKitCameraScreen
+} from 'react-native-camera-kit';
 
 const QRINTENT = 'com.google.zxing.client.android.SCAN';
 
@@ -66,7 +70,6 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
     }
 
     async componentDidMount() {
-      /*
         // When on Android we'll try to use the external scanner
         if (Platform.OS === 'android') {
             this.startExternalQRScanner();
@@ -80,7 +83,6 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                 this.setState({ hasCameraPermission: true });
             }
         }
-        */
     }
 
     async componentDidUpdate() {
@@ -135,6 +137,19 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                 <View style={styles.content}>
                     <Text>{text}</Text>
                 </View>
+                <CameraKitCameraScreen
+                    laserColor={'orange'}
+                    scanBarcode={true}
+                    onReadCode={(event: any) => {
+                        this.setState({ complete: true });
+                        handleQRScanned(event.nativeEvent.codeStringValue);
+                    }}
+                    hideControls={true}
+                    showFrame={false}
+                    style={{
+                        flex: 1
+                    }}
+                />
             </React.Fragment>
         );
     }
