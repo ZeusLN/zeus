@@ -45,10 +45,24 @@
 			</dict>
 		</dict>
 	</dict>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Not Used</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Not Used</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Not Used</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Zeus would like permission to use your camera to scan QR codes</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Not Used</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Not Used</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Not Used</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Zeus would like permission to use load QR codes from your photo library</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Not Used</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>AntDesign.ttf</string>
