@@ -2,11 +2,11 @@ import * as React from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import ActivityResult from 'react-native-activity-result-fork';
+import Permissions from 'react-native-permissions';
 import {
     CameraKitCamera,
     CameraKitCameraScreen
 } from 'react-native-camera-kit';
-import Permissions from 'react-native-permissions';
 
 const QRINTENT = 'com.google.zxing.client.android.SCAN';
 
