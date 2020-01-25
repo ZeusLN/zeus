@@ -110,7 +110,7 @@ export default class SetFeesForm extends React.Component<
                             Base Fee msat
                         </Text>
                         <TextInput
-                            keyboardType='numeric'
+                            keyboardType="numeric"
                             placeholder={baseFeeMsat || '1'}
                             placeholderTextColor="darkgray"
                             value={newBaseFeeMsat}
@@ -136,7 +136,7 @@ export default class SetFeesForm extends React.Component<
                             Fee Rate mili msat
                         </Text>
                         <TextInput
-                            keyboardType='numeric'
+                            keyboardType="numeric"
                             placeholder={feeRate || '1000000'}
                             placeholderTextColor="darkgray"
                             value={newFeeRateMiliMsat}
