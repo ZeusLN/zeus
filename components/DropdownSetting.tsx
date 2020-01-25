@@ -31,7 +31,7 @@ export default class DropdownSetting extends React.Component<
         } = this.props;
 
         const pickerValuesAndroid: Array<any> = [];
-        const pickerValuesIOS: Array<string> = [];
+        const pickerValuesIOS: Array<string> = ['Cancel'];
         values.forEach((value: { key: string; value: string }) => {
             pickerValuesAndroid.push(
                 <Picker.Item
@@ -76,7 +76,8 @@ export default class DropdownSetting extends React.Component<
                         <Text
                             style={{
                                 color: theme === 'dark' ? 'white' : 'black',
-                                paddingLeft: 10
+                                paddingLeft: 10,
+                                paddingTop: 10
                             }}
                         >
                             {title}
@@ -85,17 +86,20 @@ export default class DropdownSetting extends React.Component<
                             onPress={() =>
                                 ActionSheetIOS.showActionSheetWithOptions(
                                     {
-                                        options: ['Cancel', ...pickerValuesIOS],
+                                        options: pickerValuesIOS,
                                         cancelButtonIndex: 0
                                     },
                                     buttonIndex =>
-                                        onValueChange(values[buttonIndex - 1])
+                                        onValueChange(
+                                            values[buttonIndex - 1].value
+                                        )
                                 )
                             }
                         >
                             <Text
                                 style={{
-                                    color: theme === 'dark' ? 'white' : 'black'
+                                    color: theme === 'dark' ? 'white' : 'black',
+                                    paddingLeft: 10
                                 }}
                             >
                                 {selectedValue}

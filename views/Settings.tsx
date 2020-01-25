@@ -59,7 +59,7 @@ export default class Settings extends React.Component<
         if (settings) {
             this.setState({
                 nodes: settings.nodes || [],
-                theme: settings.theme || '',
+                theme: settings.theme || 'light',
                 lurkerMode: settings.lurkerMode || false,
                 passphrase: settings.passphrase || '',
                 passphraseConfirm: settings.passphrase || '',
@@ -76,7 +76,7 @@ export default class Settings extends React.Component<
         if (settings) {
             this.setState({
                 nodes: settings.nodes || [],
-                theme: settings.theme || '',
+                theme: settings.theme || 'light',
                 lurkerMode: settings.lurkerMode || false,
                 passphrase: settings.passphrase || '',
                 passphraseConfirm: settings.passphrase || '',
@@ -164,6 +164,11 @@ export default class Settings extends React.Component<
         const { loading, settings } = SettingsStore;
         const savedTheme = settings.theme;
         const selectedNode = settings.selectedNode;
+
+        const themes: any = {
+            dark: 'Dark Theme',
+            light: 'Light Theme'
+        };
 
         const BackButton = () => (
             <Icon
@@ -254,7 +259,7 @@ export default class Settings extends React.Component<
                 <DropdownSetting
                     title="Theme"
                     theme={savedTheme}
-                    selectedValue={theme}
+                    selectedValue={themes[theme]}
                     onValueChange={(value: string) =>
                         this.setState({ theme: value })
                     }
@@ -267,7 +272,7 @@ export default class Settings extends React.Component<
                 <DropdownSetting
                     title={lurkerLabel}
                     theme={savedTheme}
-                    selectedValue={lurkerMode}
+                    selectedValue={lurkerMode ? 'Enabled' : 'Disabled'}
                     onValueChange={(value: boolean) =>
                         this.setState({ lurkerMode: value })
                     }
