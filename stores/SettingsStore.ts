@@ -74,7 +74,9 @@ export default class SettingsStore {
 
         try {
             // Retrieve the credentials
-            const credentials: any = await RNSecureKeyStore.get('zeus-settings');
+            const credentials: any = await RNSecureKeyStore.get(
+                'zeus-settings'
+            );
             this.loading = false;
             if (credentials) {
                 this.settings = JSON.parse(credentials);
@@ -103,7 +105,9 @@ export default class SettingsStore {
         this.loading = true;
 
         // Store the credentials
-        await RNSecureKeyStore.set('zeus-settings', settings, { accessible: ACCESSIBLE.WHEN_UNLOCKED }).then(() => {
+        await RNSecureKeyStore.set('zeus-settings', settings, {
+            accessible: ACCESSIBLE.WHEN_UNLOCKED
+        }).then(() => {
             this.loading = false;
             return settings;
         });

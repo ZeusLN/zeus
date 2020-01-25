@@ -263,7 +263,7 @@ export default class OpenChannel extends React.Component<
                         Local amount (in satoshis)
                     </Text>
                     <TextInput
-                        keyboardType='numeric'
+                        keyboardType="numeric"
                         placeholder={'20000 (min)'}
                         value={local_funding_amount}
                         onChangeText={(text: string) =>
@@ -285,7 +285,7 @@ export default class OpenChannel extends React.Component<
                         Number of Confirmations
                     </Text>
                     <TextInput
-                        keyboardType='numeric'
+                        keyboardType="numeric"
                         placeholder={'1'}
                         value={min_confs.toString()}
                         onChangeText={(text: string) =>
@@ -309,7 +309,7 @@ export default class OpenChannel extends React.Component<
                         Satoshis per byte
                     </Text>
                     <TextInput
-                        keyboardType='numeric'
+                        keyboardType="numeric"
                         placeholder="2"
                         value={sat_per_byte}
                         onChangeText={(text: string) => this.setFee(text)}

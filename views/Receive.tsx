@@ -229,7 +229,7 @@ export default class Receive extends React.Component<
                                     : ''}
                             </Text>
                             <TextInput
-                                keyboardType='numeric'
+                                keyboardType="numeric"
                                 placeholder={'100'}
                                 value={value}
                                 onChangeText={(text: string) => {
@@ -259,7 +259,7 @@ export default class Receive extends React.Component<
                                 Expiration (in seconds)
                             </Text>
                             <TextInput
-                                keyboardType='numeric'
+                                keyboardType="numeric"
                                 placeholder={'3600 (one hour)'}
                                 value={expiry}
                                 onChangeText={(text: string) =>
