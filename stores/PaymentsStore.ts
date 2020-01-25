@@ -23,6 +23,7 @@ export default class PaymentsStore {
                 const data = response.data;
                 const payments = data.transaction || data.payments;
                 this.payments = payments
+                    .slice()
                     .reverse()
                     .map((payment: any) => new Payment(payment));
                 this.loading = false;
