@@ -9,6 +9,7 @@ import {
 import { Header, Icon } from 'react-native-elements';
 import Payment from './../models/Payment';
 import { inject, observer } from 'mobx-react';
+import PrivacyUtils from './../utils/PrivacyUtils';
 
 import UnitsStore from './../stores/UnitsStore';
 import SettingsStore from './../stores/SettingsStore';
@@ -34,7 +35,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
         } = this.props;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { settings } = SettingsStore;
-        const { theme } = settings;
+        const { theme, lurkerMode } = settings;
 
         const payment: Payment = navigation.getParam('payment', null);
         const {
@@ -55,6 +56,13 @@ export default class PaymentView extends React.Component<PaymentProps> {
                 underlayColor="transparent"
             />
         );
+
+        const amount = lurkerMode
+            ? PrivacyUtils.hideValue(getAmount(payment.getAmount), 8, true)
+            : getAmount(payment.getAmount);
+        const fee = lurkerMode
+            ? PrivacyUtils.hideValue(getAmount(getFee), 3, true)
+            : getAmount(getFee);
 
         return (
             <ScrollView
@@ -81,7 +89,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                 fontWeight: 'bold'
                             }}
                         >
-                            {getAmount(payment.getAmount)}
+                            {units && amount}
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -117,7 +125,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                             : styles.value
                                     }
                                 >
-                                    {units && getAmount(getFee)}
+                                    {units && fee}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -135,7 +143,9 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             theme === 'dark' ? styles.valueDark : styles.value
                         }
                     >
-                        {payment_hash}
+                        {lurkerMode
+                            ? PrivacyUtils.hideValue(payment_hash)
+                            : payment_hash}
                     </Text>
 
                     <Text
@@ -150,7 +160,9 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             theme === 'dark' ? styles.valueDark : styles.value
                         }
                     >
-                        {payment_preimage}
+                        {lurkerMode
+                            ? PrivacyUtils.hideValue(payment_preimage)
+                            : payment_preimage}
                     </Text>
 
                     <Text
@@ -165,7 +177,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             theme === 'dark' ? styles.valueDark : styles.value
                         }
                     >
-                        {date}
+                        {lurkerMode ? PrivacyUtils.hideValue(date, 14) : date}
                     </Text>
 
                     {path && (
@@ -187,7 +199,9 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                     : styles.value
                             }
                         >
-                            {path.join(', ')}
+                            {lurkerMode
+                                ? PrivacyUtils.hideValue(path.join(', '))
+                                : path.join(', ')}
                         </Text>
                     )}
                 </View>
@@ -198,7 +212,8 @@ export default class PaymentView extends React.Component<PaymentProps> {
 
 const styles = StyleSheet.create({
     lightThemeStyle: {
-        flex: 1
+        flex: 1,
+        backgroundColor: 'white'
     },
     darkThemeStyle: {
         flex: 1,
