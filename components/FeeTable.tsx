@@ -41,8 +41,9 @@ export default class FeeTable extends React.Component<
             return {
                 backgroundColor: 'white',
                 alignItems: 'center',
-                height: 53,
-                width: 53
+                height: 27,
+                width: 6,
+                marginTop: 18
             };
         }
 
@@ -116,7 +117,9 @@ export default class FeeTable extends React.Component<
                             onPress={() => setFee(value)}
                         >
                             <DataTable.Cell style={this.styler(cell)}>
-                                <Text style={{ color: 'white' }}>{value}</Text>
+                                <Text
+                                    style={{ color: 'white' }}
+                                >{`    ${value}`}</Text>
                             </DataTable.Cell>
                         </TouchableOpacity>
                     );
@@ -126,7 +129,7 @@ export default class FeeTable extends React.Component<
 
                 return (
                     <DataTable.Row key={`row-${i}`}>
-                        <DataTable.Cell style={this.styler(indexText)}>
+                        <View style={this.styler(indexText)}>
                             <Text
                                 style={{
                                     backgroundColor:
@@ -137,7 +140,7 @@ export default class FeeTable extends React.Component<
                             >
                                 {indexText}
                             </Text>
-                        </DataTable.Cell>
+                        </View>
                         {cells}
                     </DataTable.Row>
                 );
