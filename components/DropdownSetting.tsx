@@ -12,6 +12,7 @@ import {
 interface DropdownSettingProps {
     title: string;
     selectedValue: string | boolean;
+    displayValue?: string;
     theme?: string;
     onValueChange: (value: any) => void;
     values: Array<any>;
@@ -26,6 +27,7 @@ export default class DropdownSetting extends React.Component<
             theme,
             title,
             selectedValue,
+            displayValue,
             onValueChange,
             values
         } = this.props;
@@ -102,7 +104,7 @@ export default class DropdownSetting extends React.Component<
                                     paddingLeft: 10
                                 }}
                             >
-                                {selectedValue}
+                                {displayValue ? displayValue : selectedValue}
                             </Text>
                         </TouchableOpacity>
                     </View>
@@ -115,7 +117,8 @@ export default class DropdownSetting extends React.Component<
 const styles = StyleSheet.create({
     picker: {
         height: 50,
-        width: 100
+        width: 100,
+        color: 'black'
     },
     pickerDark: {
         height: 50,

@@ -259,7 +259,8 @@ export default class Settings extends React.Component<
                 <DropdownSetting
                     title="Theme"
                     theme={savedTheme}
-                    selectedValue={themes[theme]}
+                    selectedValue={theme}
+                    displayValue={themes[theme]}
                     onValueChange={(value: string) =>
                         this.setState({ theme: value })
                     }
@@ -272,7 +273,8 @@ export default class Settings extends React.Component<
                 <DropdownSetting
                     title={lurkerLabel}
                     theme={savedTheme}
-                    selectedValue={lurkerMode ? 'Enabled' : 'Disabled'}
+                    selectedValue={lurkerMode}
+                    displayValue={lurkerMode ? 'Enabled' : 'Disabled'}
                     onValueChange={(value: boolean) =>
                         this.setState({ lurkerMode: value })
                     }
