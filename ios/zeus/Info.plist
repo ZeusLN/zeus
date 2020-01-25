@@ -47,12 +47,16 @@
 	</dict>
 	<key>NSAppleMusicUsageDescription</key>
 	<string>Not Used</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Not Used</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
 	<string>Not Used</string>
 	<key>NSCalendarsUsageDescription</key>
 	<string>Not Used</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Zeus would like permission to use your camera to scan QR codes</string>
+	<key>NSLocationAlwaysDescription</key>
+	<string>Not Used</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Not Used</string>
 	<key>NSMotionUsageDescription</key>
