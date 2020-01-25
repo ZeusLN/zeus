@@ -563,14 +563,16 @@ export default class ChannelView extends React.Component<
                                     (Optional) Sat per byte closing fee
                                 </Text>
                                 <TextInput
+                                    keyboardType='numeric'
                                     placeholder={'2'}
                                     placeholderTextColor="darkgray"
                                     value={satPerByte}
-                                    onChangeText={(text: string) =>
+                                    onChangeText={(text: string) => {
+                                        console.log(typeof text);
                                         this.setState({
                                             satPerByte: text
                                         })
-                                    }
+                                    }}
                                     numberOfLines={1}
                                     autoCapitalize="none"
                                     autoCorrect={false}
