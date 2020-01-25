@@ -187,6 +187,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 Amount (in satoshis)
                             </Text>
                             <TextInput
+                                keyboardType='numeric'
                                 value={amount}
                                 onChangeText={(text: string) =>
                                     this.setState({ amount: text })
@@ -206,6 +207,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 Fee (satoshis per byte)
                             </Text>
                             <TextInput
+                                keyboardType='numeric'
                                 placeholder="2"
                                 value={fee}
                                 onChangeText={(text: string) =>

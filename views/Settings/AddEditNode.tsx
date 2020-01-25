@@ -278,6 +278,7 @@ export default class AddEditNode extends React.Component<
                         REST Port
                     </Text>
                     <TextInput
+                        keyboardType='numeric'
                         placeholder={'443/8080'}
                         value={port}
                         onChangeText={(text: string) =>
