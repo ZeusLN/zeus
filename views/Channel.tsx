@@ -46,7 +46,11 @@ export default class ChannelView extends React.Component<
         satPerByte: ''
     };
 
-    closeChannel = (channelPoint: string, channelId: string, satPerByte?: string) => {
+    closeChannel = (
+        channelPoint: string,
+        channelId: string,
+        satPerByte?: string
+    ) => {
         const { ChannelsStore, navigation } = this.props;
 
         // lnd
@@ -54,7 +58,11 @@ export default class ChannelView extends React.Component<
             const [funding_txid_str, output_index] = channelPoint.split(':');
 
             if (satPerByte) {
-                ChannelsStore.closeChannel({ funding_txid_str, output_index }, null, satPerByte);
+                ChannelsStore.closeChannel(
+                    { funding_txid_str, output_index },
+                    null,
+                    satPerByte
+                );
             } else {
                 ChannelsStore.closeChannel({ funding_txid_str, output_index });
             }
@@ -554,35 +562,40 @@ export default class ChannelView extends React.Component<
 
                     {confirmCloseChannel && (
                         <React.Fragment>
-                            {implementation === 'lnd' && <React.Fragment>
-                                <Text
-                                    style={{
-                                        color: theme === 'dark' ? 'white' : 'black'
-                                    }}
-                                >
-                                    (Optional) Sat per byte closing fee
-                                </Text>
-                                <TextInput
-                                    keyboardType='numeric'
-                                    placeholder={'2'}
-                                    placeholderTextColor="darkgray"
-                                    value={satPerByte}
-                                    onChangeText={(text: string) => {
-                                        console.log(typeof text);
-                                        this.setState({
-                                            satPerByte: text
-                                        })
-                                    }}
-                                    numberOfLines={1}
-                                    autoCapitalize="none"
-                                    autoCorrect={false}
-                                    style={
-                                        theme === 'dark'
-                                            ? styles.textInputDark
-                                            : styles.textInput
-                                    }
-                                />
-                            </React.Fragment>}
+                            {implementation === 'lnd' && (
+                                <React.Fragment>
+                                    <Text
+                                        style={{
+                                            color:
+                                                theme === 'dark'
+                                                    ? 'white'
+                                                    : 'black'
+                                        }}
+                                    >
+                                        (Optional) Sat per byte closing fee
+                                    </Text>
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        placeholder={'2'}
+                                        placeholderTextColor="darkgray"
+                                        value={satPerByte}
+                                        onChangeText={(text: string) => {
+                                            console.log(typeof text);
+                                            this.setState({
+                                                satPerByte: text
+                                            });
+                                        }}
+                                        numberOfLines={1}
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
+                                        style={
+                                            theme === 'dark'
+                                                ? styles.textInputDark
+                                                : styles.textInput
+                                        }
+                                    />
+                                </React.Fragment>
+                            )}
                             <View style={styles.button}>
                                 <Button
                                     title="Confirm Channel Close"
@@ -592,7 +605,11 @@ export default class ChannelView extends React.Component<
                                         color: '#fff'
                                     }}
                                     onPress={() =>
-                                        this.closeChannel(channel_point, channelId, satPerByte)
+                                        this.closeChannel(
+                                            channel_point,
+                                            channelId,
+                                            satPerByte
+                                        )
                                     }
                                     buttonStyle={{
                                         backgroundColor: 'red',

@@ -244,13 +244,13 @@ PODS:
     - React
   - RNGestureHandler (1.5.3):
     - React
-  - RNKeychain (4.0.5):
-    - React
   - RNPermissions (2.0.9):
     - React
   - RNReanimated (1.7.0):
     - React
   - RNScreens (2.0.0-alpha.29):
+    - React
+  - RNSecureKeyStore (1.0.0):
     - React
   - RNSVG (9.13.6):
     - React
@@ -312,10 +312,10 @@ DEPENDENCIES:
   - RealmJS (from `../node_modules/realm`)
   - "RNCMaskedView (from `../node_modules/@react-native-community/masked-view`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
-  - RNKeychain (from `../node_modules/react-native-keychain`)
   - RNPermissions (from `../node_modules/react-native-permissions`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
+  - RNSecureKeyStore (from `../node_modules/react-native-secure-key-store/ios`)
   - RNSVG (from `../node_modules/react-native-svg`)
   - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
   - UMBarCodeScannerInterface (from `../node_modules/unimodules-barcode-scanner-interface/ios`)
@@ -411,14 +411,14 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-community/masked-view"
   RNGestureHandler:
     :path: "../node_modules/react-native-gesture-handler"
-  RNKeychain:
-    :path: "../node_modules/react-native-keychain"
   RNPermissions:
     :path: "../node_modules/react-native-permissions"
   RNReanimated:
     :path: "../node_modules/react-native-reanimated"
   RNScreens:
     :path: "../node_modules/react-native-screens"
+  RNSecureKeyStore:
+    :path: "../node_modules/react-native-secure-key-store/ios"
   RNSVG:
     :path: "../node_modules/react-native-svg"
   RNVectorIcons:
@@ -500,10 +500,10 @@ SPEC CHECKSUMS:
   RealmJS: ccaef6c07181c21bbafc227f184bc32065f6b27a
   RNCMaskedView: e5b99bc191945f157adeede68da9d424462de177
   RNGestureHandler: 02905abe54e1f6e59c081a10b4bd689721e17aa6
-  RNKeychain: 840f8e6f13be0576202aefcdffd26a4f54bfe7b5
   RNPermissions: 6db7e0a4d94c9c02390d11020b1d3d187aaf77e5
   RNReanimated: 031fe8d9ea93c2bd689a40f05320ef9d96f74d7f
   RNScreens: b20bdb598fe95ac37aada88a5e92f36622549e49
+  RNSecureKeyStore: f1ad870e53806453039f650720d2845c678d89c8
   RNSVG: 8ba35cbeb385a52fd960fd28db9d7d18b4c2974f
   RNVectorIcons: 0bb4def82230be1333ddaeee9fcba45f0b288ed4
   UMBarCodeScannerInterface: 550e7ffd7a789289260bde3d547be29407e75437
