@@ -78,7 +78,6 @@ export default class ChannelView extends React.Component<
         const { changeUnits, getAmount, units } = UnitsStore;
         const { channelFees } = FeeStore;
         const { nodes } = ChannelsStore;
-
         const { settings, implementation } = SettingsStore;
         const { theme, lurkerMode } = settings;
 
