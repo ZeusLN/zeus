@@ -371,7 +371,8 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
 
 const styles = StyleSheet.create({
     lightThemeStyle: {
-        flex: 1
+        flex: 1,
+        backgroundColor: 'white'
     },
     darkThemeStyle: {
         flex: 1,

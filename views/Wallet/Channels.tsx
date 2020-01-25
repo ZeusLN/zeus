@@ -117,7 +117,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
 
                             const data = new Identicon(
                                 hash.sha1(channelTitle),
-                                420
+                                255
                             ).toString();
 
                             const localBalanceDisplay = lurkerMode
@@ -220,7 +220,8 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
 
 const styles = StyleSheet.create({
     lightThemeStyle: {
-        flex: 1
+        flex: 1,
+        backgroundColor: 'white'
     },
     darkThemeStyle: {
         flex: 1,

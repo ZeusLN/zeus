@@ -51,7 +51,8 @@ export default class LnurlPaySuccess extends React.Component<
                                 color:
                                     color || theme === 'dark'
                                         ? 'white'
-                                        : 'black'
+                                        : 'black',
+                                fontSize: 40
                             }}
                         >
                             {message}
@@ -66,7 +67,8 @@ export default class LnurlPaySuccess extends React.Component<
                                     color:
                                         color || theme === 'dark'
                                             ? 'white'
-                                            : 'black'
+                                            : 'black',
+                                    fontSize: 40
                                 }}
                             >
                                 {description}: {url}
@@ -88,7 +90,8 @@ export default class LnurlPaySuccess extends React.Component<
                                     color:
                                         color || theme === 'dark'
                                             ? 'white'
-                                            : 'black'
+                                            : 'black',
+                                    fontSize: 40
                                 }}
                             >
                                 {description}:{' '}
@@ -98,7 +101,8 @@ export default class LnurlPaySuccess extends React.Component<
                                     color:
                                         color || theme === 'dark'
                                             ? 'white'
-                                            : 'black'
+                                            : 'black',
+                                    fontSize: 40
                                 }}
                             >
                                 {plaintext}
@@ -112,8 +116,7 @@ export default class LnurlPaySuccess extends React.Component<
         return (
             <View
                 style={{
-                    padding: 20,
-                    fontSize: 40
+                    padding: 20
                 }}
             >
                 <Text

@@ -58,6 +58,12 @@ class FeeUtils {
 
         return final;
     };
+    toFixed = (x: any) => {
+        return x.toLocaleString('fullwide', {
+            useGrouping: false,
+            maximumSignificantDigits: 8
+        });
+    };
 }
 
 const feeUtils = new FeeUtils();

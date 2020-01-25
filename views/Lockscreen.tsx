@@ -40,7 +40,7 @@ export default class Lockscreen extends React.Component<
         };
     }
 
-    componentWillMount() {
+    UNSAFE_componentWillMount() {
         const { SettingsStore, navigation } = this.props;
         const { getSettings } = SettingsStore;
         getSettings().then((settings: any) => {
