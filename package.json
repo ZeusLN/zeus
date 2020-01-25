@@ -67,7 +67,7 @@
     "prettier": "1.18.2",
     "react-test-renderer": "16.6.3",
     "ts-jest": "23.10.5",
-    "typescript": "3.2.4"
+    "typescript": "^3.7.5"
   },
   "jest": {
     "preset": "react-native",
