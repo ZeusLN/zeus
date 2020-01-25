@@ -1,4 +1,4 @@
-import * as Keychain from 'react-native-keychain';
+import RNSecureKeyStore, { ACCESSIBLE } from 'react-native-secure-key-store';
 import { action, observable } from 'mobx';
 import axios from 'axios';
 import RESTUtils from '../utils/RESTUtils';
@@ -74,10 +74,10 @@ export default class SettingsStore {
 
         try {
             // Retrieve the credentials
-            const credentials: any = await Keychain.getGenericPassword();
+            const credentials: any = await RNSecureKeyStore.get('settings');
             this.loading = false;
             if (credentials) {
-                this.settings = JSON.parse(credentials.password);
+                this.settings = JSON.parse(credentials);
                 const node: any =
                     this.settings.nodes &&
                     this.settings.nodes[this.settings.selectedNode || 0];
@@ -103,7 +103,7 @@ export default class SettingsStore {
         this.loading = true;
 
         // Store the credentials
-        await Keychain.setGenericPassword('settings', settings).then(() => {
+        await RNSecureKeyStore.set('settings', settings, { accessible: ACCESSIBLE.WHEN_UNLOCKED }).then(() => {
             this.loading = false;
             return settings;
         });

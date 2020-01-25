@@ -41,6 +41,8 @@ target 'zeus' do
   pod 'RealmJS', :path => '../node_modules/realm'
   pod 'react-native-camera-kit', :path => '../node_modules/react-native-camera-kit'
 
+  pod 'RNSecureKeyStore', :path => '../node_modules/react-native-secure-key-store'
+
   target 'zeusTests' do
     inherit! :search_paths
       pod 'Realm/Headers'
