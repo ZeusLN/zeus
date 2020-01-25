@@ -68,7 +68,7 @@ export default class MainPane extends React.Component<
                         (lurkerMode
                             ? PrivacyUtils.hideValue(
                                   getAmount(lightningBalance),
-                                  null,
+                                  8,
                                   true
                               )
                             : getAmount(lightningBalance))}{' '}
@@ -80,7 +80,7 @@ export default class MainPane extends React.Component<
                             (lurkerMode
                                 ? PrivacyUtils.hideValue(
                                       getAmount(pendingOpenBalance),
-                                      null,
+                                      8,
                                       true
                                   )
                                 : getAmount(pendingOpenBalance))}{' '}
@@ -92,7 +92,7 @@ export default class MainPane extends React.Component<
                         (lurkerMode
                             ? PrivacyUtils.hideValue(
                                   getAmount(totalBlockchainBalance),
-                                  null,
+                                  8,
                                   true
                               )
                             : getAmount(totalBlockchainBalance))}{' '}
@@ -104,7 +104,7 @@ export default class MainPane extends React.Component<
                             (lurkerMode
                                 ? PrivacyUtils.hideValue(
                                       getAmount(unconfirmedBlockchainBalance),
-                                      null,
+                                      8,
                                       true
                                   )
                                 : getAmount(unconfirmedBlockchainBalance))}{' '}
