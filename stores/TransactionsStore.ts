@@ -44,6 +44,7 @@ export default class TransactionsStore {
                 const data = response.data;
                 const transactions = data.transactions || data.outputs;
                 this.transactions = transactions
+                    .slice()
                     .reverse()
                     .map((tx: any) => new Transaction(tx));
                 this.loading = false;
