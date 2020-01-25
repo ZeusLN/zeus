@@ -38,27 +38,6 @@ public class MainApplication extends Application implements ReactApplication {
         protected List<ReactPackage> getPackages() {
           @SuppressWarnings("UnnecessaryLocalVariable")
           List<ReactPackage> packages = new PackageList(this).getPackages();
-          // Packages that cannot be autolinked yet can be added manually here, for example:
-          packages.add(new MainReactPackage());
-          /*
-          packages.add(new RealmReactPackage());
-          packages.add(new LinearGradientPackage());
-          packages.add(new KeychainPackage());
-          packages.add(new RNCameraKitPackage());
-          packages.add(new RNGestureHandlerPackage());
-          packages.add(new VectorIconsPackage());
-          packages.add(new ActivityResultPackage());
-          */
-          /*
-          new MainReactPackage(),
-          new RealmReactPackage(),
-          new LinearGradientPackage(),
-          new KeychainPackage(),
-          new RNCameraKitPackage(),
-          new RNGestureHandlerPackage(),
-          new VectorIconsPackage(),
-          new ActivityResultPackage()
-          */
           return packages;
         }
         @Override
