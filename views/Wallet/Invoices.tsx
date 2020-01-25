@@ -3,6 +3,7 @@ import { StyleSheet, View, FlatList } from 'react-native';
 import { Avatar, Button, ListItem } from 'react-native-elements';
 import Invoice from './../../models/Invoice';
 import { inject, observer } from 'mobx-react';
+import PrivacyUtils from './../../utils/PrivacyUtils';
 
 import InvoicesStore from './../../stores/InvoicesStore';
 import UnitsStore from './../../stores/UnitsStore';
@@ -54,13 +55,9 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
         const { getAmount, units } = UnitsStore;
         const { loading } = InvoicesStore;
         const { settings } = SettingsStore;
-        const { theme } = settings;
+        const { theme, lurkerMode } = settings;
 
         const InvoiceImage = (settled: boolean) => {
-            const { SettingsStore } = this.props;
-            const { settings } = SettingsStore;
-            const { theme } = settings;
-
             let avatar;
             if (settled) {
                 avatar = theme === 'dark' ? AddBalanceDark : AddBalance;
@@ -91,15 +88,29 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
                         data={invoices}
                         renderItem={({ item }) => {
                             const { isPaid } = item;
+
+                            const memo = lurkerMode
+                                ? PrivacyUtils.hideValue(item.getMemo, 10)
+                                : item.getMemo;
+
+                            const invoiceAmount = lurkerMode
+                                ? PrivacyUtils.hideValue(
+                                      getAmount(item.getAmount),
+                                      null,
+                                      true
+                                  )
+                                : getAmount(item.getAmount);
+
+                            const date = lurkerMode
+                                ? PrivacyUtils.hideValue(item.listDate, 14)
+                                : item.listDate;
+
                             return (
                                 <ListItem
-                                    title={item.getMemo}
+                                    title={memo}
                                     subtitle={`${
                                         isPaid ? 'Paid' : 'Unpaid'
-                                    }: ${units &&
-                                        getAmount(item.getAmount)} | ${
-                                        item.listDate
-                                    }`}
+                                    }: ${units && invoiceAmount} | ${date}`}
                                     containerStyle={{
                                         borderBottomWidth: 0,
                                         backgroundColor:

@@ -4,6 +4,8 @@ import { Avatar, Button, ListItem } from 'react-native-elements';
 import SettingsStore from './../../stores/SettingsStore';
 import Identicon from 'identicon.js';
 const hash = require('object-hash');
+import SettingsStore from './../../stores/SettingsStore';
+import PrivacyUtils from './../../utils/PrivacyUtils';
 
 interface NodesProps {
     nodes: any[];
@@ -39,6 +41,7 @@ export default class Nodes extends React.Component<NodesProps, {}> {
             SettingsStore
         } = this.props;
         const { setSettings, settings } = SettingsStore;
+        const { lurkerMode } = settings;
 
         const Node = (balanceImage: string) => (
             <Avatar
@@ -58,15 +61,22 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                 ? `${item.host}:${item.port}`
                                 : item.host;
 
+                            const title = lurkerMode
+                                ? PrivacyUtils.hideValue(displayName, 8)
+                                : displayName;
+                            const implementation = lurkerMode
+                                ? PrivacyUtils.hideValue(item.implementation, 8)
+                                : item.implementation;
+
                             const data = new Identicon(
-                                hash.sha1(displayName),
+                                hash.sha1(title),
                                 255
                             ).toString();
 
                             return (
                                 <React.Fragment>
                                     <ListItem
-                                        title={displayName}
+                                        title={title}
                                         leftElement={Node(
                                             `data:image/png;base64,${data}`
                                         )}
@@ -104,8 +114,8 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                         subtitle={
                                             selectedNode === index ||
                                             (!selectedNode && index === 0)
-                                                ? `Active | ${item.implementation}`
-                                                : item.implementation
+                                                ? `Active | ${implementation}`
+                                                : implementation
                                         }
                                         containerStyle={{
                                             borderBottomWidth: 0,

@@ -6,6 +6,7 @@ import BalanceSlider from './../../components/BalanceSlider';
 import Identicon from 'identicon.js';
 import { inject, observer } from 'mobx-react';
 const hash = require('object-hash');
+import PrivacyUtils from './../../utils/PrivacyUtils';
 
 import ChannelsStore from './../../stores/ChannelsStore';
 import NodeInfoStore from './../../stores/NodeInfoStore';
@@ -54,7 +55,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
         const { getAmount, units } = UnitsStore;
         const { nodes, loading } = ChannelsStore;
         const { settings } = SettingsStore;
-        const { theme } = settings;
+        const { theme, lurkerMode } = settings;
 
         const ChannelIcon = (balanceImage: string) => (
             <Avatar
@@ -110,19 +111,34 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                 item.remote_pubkey ||
                                 item.channelId;
 
+                            const channelTitle = lurkerMode
+                                ? PrivacyUtils.hideValue(displayName, 8)
+                                : displayName;
+
                             const data = new Identicon(
-                                hash.sha1(
-                                    item.alias ||
-                                        item.remote_pubkey ||
-                                        item.channelId
-                                ),
+                                hash.sha1(channelTitle),
                                 255
                             ).toString();
+
+                            const localBalanceDisplay = lurkerMode
+                                ? PrivacyUtils.hideValue(
+                                      getAmount(item.localBalance || 0),
+                                      7,
+                                      true
+                                  )
+                                : getAmount(item.localBalance || 0);
+                            const remoteBalanceDisplay = lurkerMode
+                                ? PrivacyUtils.hideValue(
+                                      getAmount(item.remoteBalance || 0),
+                                      7,
+                                      true
+                                  )
+                                : getAmount(item.remoteBalance || 0);
 
                             return (
                                 <React.Fragment>
                                     <ListItem
-                                        title={displayName}
+                                        title={channelTitle}
                                         leftElement={ChannelIcon(
                                             `data:image/png;base64,${data}`
                                         )}
@@ -131,12 +147,8 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                         }${
                                             item.private ? 'Private | ' : ''
                                         }Local: ${units &&
-                                            getAmount(
-                                                item.localBalance || 0
-                                            )} | Remote: ${units &&
-                                            getAmount(
-                                                item.remoteBalance || 0
-                                            )}`}
+                                            localBalanceDisplay} | Remote: ${units &&
+                                            remoteBalanceDisplay}`}
                                         containerStyle={{
                                             borderBottomWidth: 0,
                                             backgroundColor:
@@ -163,8 +175,12 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                         }}
                                     />
                                     <BalanceSlider
-                                        localBalance={item.localBalance}
-                                        remoteBalance={item.remoteBalance}
+                                        localBalance={
+                                            lurkerMode ? 50 : item.localBalance
+                                        }
+                                        remoteBalance={
+                                            lurkerMode ? 50 : item.remoteBalance
+                                        }
                                         theme={theme}
                                         list
                                     />
