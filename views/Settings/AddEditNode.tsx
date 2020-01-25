@@ -86,7 +86,7 @@ export default class AddEditNode extends React.Component<
         this.isComponentMounted = false;
     }
 
-    componentWillReceiveProps(nextProps: any) {
+    UNSAFE_componentWillReceiveProps(nextProps: any) {
         const { navigation } = nextProps;
         const node = navigation.getParam('node', null);
         const index = navigation.getParam('index', null);
@@ -524,7 +524,8 @@ export default class AddEditNode extends React.Component<
 
 const styles = StyleSheet.create({
     lightThemeStyle: {
-        flex: 1
+        flex: 1,
+        backgroundColor: 'white'
     },
     darkThemeStyle: {
         flex: 1,

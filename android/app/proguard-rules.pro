@@ -15,3 +15,5 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
+-keep class com.facebook.hermes.unicode.** { *; }
+-keep class io.realm.react.**

@@ -49,7 +49,7 @@ export default class Nodes extends React.Component<NodesProps, {}> {
 
                             const data = new Identicon(
                                 hash.sha1(displayName),
-                                420
+                                255
                             ).toString();
 
                             return (
