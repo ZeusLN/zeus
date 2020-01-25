@@ -155,7 +155,7 @@ export default class PaymentRequest extends React.Component<
                                 )}
                                 {setCustomAmount && (
                                     <TextInput
-                                        keyboardType='numeric'
+                                        keyboardType="numeric"
                                         placeholder={
                                             requestAmount
                                                 ? requestAmount.toString()
