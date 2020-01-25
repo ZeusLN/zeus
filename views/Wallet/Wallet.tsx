@@ -92,6 +92,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             SettingsStore,
             FiatStore
         } = this.props;
+        const { settings } = SettingsStore;
+        const { fiat } = settings;
+
         NodeInfoStore.getNodeInfo();
         BalanceStore.getBlockchainBalance();
         BalanceStore.getLightningBalance();
