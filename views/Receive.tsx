@@ -185,7 +185,7 @@ export default class Receive extends React.Component<
                             )}
                             {!!payment_request && (
                                 <CollapsedQR
-                                    value={payment_request}
+                                    value={payment_request.toUpperCase()}
                                     copyText="Copy Invoice"
                                     theme={theme}
                                 />
