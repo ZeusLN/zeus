@@ -32,7 +32,7 @@ export default class FeeStore {
         axios
             .request({
                 method: 'get',
-                url: `https://whatthefee.io/data.json`,
+                url: 'https://whatthefee.io/data.json',
                 // url: `https://whatthefee.io/data.json?c=1555717500`,
                 cancelToken: this.getOnchainFeesToken
             })

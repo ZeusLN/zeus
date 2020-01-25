@@ -4,7 +4,6 @@ import { Avatar, Button, ListItem } from 'react-native-elements';
 import SettingsStore from './../../stores/SettingsStore';
 import Identicon from 'identicon.js';
 const hash = require('object-hash');
-import SettingsStore from './../../stores/SettingsStore';
 import PrivacyUtils from './../../utils/PrivacyUtils';
 
 interface NodesProps {

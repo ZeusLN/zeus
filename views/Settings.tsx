@@ -1,24 +1,18 @@
 import * as React from 'react';
-import {
-    ActionSheetIOS,
-    Picker,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
-    TouchableOpacity
-} from 'react-native';
+import { StyleSheet, Text, TextInput, View, ScrollView } from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Nodes from './Settings/Nodes';
 import PrivacyUtils from './../utils/PrivacyUtils';
+import DropdownSetting from './../components/DropdownSetting';
 
 import SettingsStore from './../stores/SettingsStore';
+import UnitsStore from './../stores/UnitsStore';
 
 interface SettingsProps {
     navigation: any;
     SettingsStore: SettingsStore;
+    UnitsStore: UnitsStore;
 }
 
 interface SettingsState {
@@ -31,14 +25,10 @@ interface SettingsState {
     passphraseConfirm: string;
     passphraseError: boolean;
     showPassphraseForm: boolean;
+    fiat: string;
 }
 
-const themes: any = {
-    light: 'Light Theme',
-    dark: 'Dark Theme'
-};
-
-@inject('SettingsStore')
+@inject('SettingsStore', 'UnitsStore')
 @observer
 export default class Settings extends React.Component<
     SettingsProps,
@@ -55,7 +45,8 @@ export default class Settings extends React.Component<
         passphrase: '',
         passphraseConfirm: '',
         passphraseError: false,
-        showPassphraseForm: false
+        showPassphraseForm: false,
+        fiat: 'Disabled'
     };
 
     componentDidMount() {
@@ -68,10 +59,11 @@ export default class Settings extends React.Component<
         if (settings) {
             this.setState({
                 nodes: settings.nodes || [],
-                theme: settings.theme || '',
+                theme: settings.theme || 'light',
                 lurkerMode: settings.lurkerMode || false,
                 passphrase: settings.passphrase || '',
-                passphraseConfirm: settings.passphrase || ''
+                passphraseConfirm: settings.passphrase || '',
+                fiat: settings.fiat || 'Disabled'
             });
         }
     }
@@ -84,10 +76,11 @@ export default class Settings extends React.Component<
         if (settings) {
             this.setState({
                 nodes: settings.nodes || [],
-                theme: settings.theme || '',
+                theme: settings.theme || 'light',
                 lurkerMode: settings.lurkerMode || false,
                 passphrase: settings.passphrase || '',
-                passphraseConfirm: settings.passphrase || ''
+                passphraseConfirm: settings.passphrase || '',
+                fiat: settings.fiat || 'Disabled'
             });
         }
     };
@@ -108,13 +101,14 @@ export default class Settings extends React.Component<
     }
 
     saveSettings = () => {
-        const { SettingsStore } = this.props;
+        const { SettingsStore, UnitsStore } = this.props;
         const {
             nodes,
             theme,
             lurkerMode,
             passphrase,
-            passphraseConfirm
+            passphraseConfirm,
+            fiat
         } = this.state;
         const { setSettings, settings } = SettingsStore;
 
@@ -126,12 +120,15 @@ export default class Settings extends React.Component<
             return;
         }
 
+        UnitsStore.resetUnits();
+
         setSettings(
             JSON.stringify({
                 nodes,
                 theme,
                 lurkerMode,
                 passphrase,
+                fiat,
                 onChainAddress: settings.onChainAddress
             })
         );
@@ -161,11 +158,17 @@ export default class Settings extends React.Component<
             passphrase,
             passphraseConfirm,
             passphraseError,
-            showPassphraseForm
+            showPassphraseForm,
+            fiat
         } = this.state;
         const { loading, settings } = SettingsStore;
         const savedTheme = settings.theme;
         const selectedNode = settings.selectedNode;
+
+        const themes: any = {
+            dark: 'Dark Theme',
+            light: 'Light Theme'
+        };
 
         const BackButton = () => (
             <Icon
@@ -179,7 +182,7 @@ export default class Settings extends React.Component<
         const lurkerLabel = `Lurking ${PrivacyUtils.getLover()} Mode: hides sensitive values`;
 
         return (
-            <View
+            <ScrollView
                 style={
                     savedTheme === 'dark'
                         ? styles.darkThemeStyle
@@ -198,7 +201,6 @@ export default class Settings extends React.Component<
                             : 'rgba(92, 99,216, 1)'
                     }
                 />
-
                 {passphraseError && (
                     <Text
                         style={{
@@ -210,159 +212,77 @@ export default class Settings extends React.Component<
                         Passphrases do not match
                     </Text>
                 )}
-
                 <View style={styles.form}>
                     <Nodes
                         nodes={nodes}
                         navigation={navigation}
-                        theme={theme}
+                        theme={savedTheme}
                         loading={loading}
                         selectedNode={selectedNode}
                         SettingsStore={SettingsStore}
                     />
                 </View>
 
-                {Platform.OS !== 'ios' && (
-                    <View style={styles.dropdownField}>
-                        <Text
-                            style={{
-                                color: savedTheme === 'dark' ? 'white' : 'black'
-                            }}
-                        >
-                            Theme
-                        </Text>
-                        <Picker
-                            selectedValue={theme}
-                            onValueChange={(itemValue: string) =>
-                                this.setState({ theme: itemValue })
-                            }
-                            style={
-                                savedTheme === 'dark'
-                                    ? styles.pickerDark
-                                    : styles.picker
-                            }
-                        >
-                            <Picker.Item label="Light" value="light" />
-                            <Picker.Item label="Dark" value="dark" />
-                        </Picker>
-                    </View>
-                )}
+                <DropdownSetting
+                    title="Fiat Currency Rate"
+                    theme={savedTheme}
+                    selectedValue={fiat}
+                    onValueChange={(value: string) =>
+                        this.setState({ fiat: value })
+                    }
+                    values={[
+                        { key: 'Disabled', value: 'Disabled' },
+                        { key: 'USD', value: 'USD' },
+                        { key: 'JPY', value: 'JPY' },
+                        { key: 'CNY', value: 'CNY' },
+                        { key: 'SGD', value: 'SGD' },
+                        { key: 'HKD', value: 'HKD' },
+                        { key: 'CAD', value: 'CAD' },
+                        { key: 'NZD', value: 'NZD' },
+                        { key: 'AUD', value: 'AUD' },
+                        { key: 'CLP', value: 'CLP' },
+                        { key: 'GBP', value: 'GBP' },
+                        { key: 'DKK', value: 'DKK' },
+                        { key: 'SEK', value: 'SEK' },
+                        { key: 'ISK', value: 'ISK' },
+                        { key: 'CHF', value: 'CHF' },
+                        { key: 'BRL', value: 'BRL' },
+                        { key: 'EUR', value: 'EUR' },
+                        { key: 'RUB', value: 'RUB' },
+                        { key: 'PLN', value: 'PLN' },
+                        { key: 'THB', value: 'THB' },
+                        { key: 'KRW', value: 'KRW' },
+                        { key: 'TWD', value: 'TWD' }
+                    ]}
+                />
 
-                {Platform.OS === 'ios' && (
-                    <View style={styles.dropdownField}>
-                        <Text
-                            style={{
-                                color: savedTheme === 'dark' ? 'white' : 'black'
-                            }}
-                        >
-                            Theme
-                        </Text>
-                        <TouchableOpacity
-                            onPress={() =>
-                                ActionSheetIOS.showActionSheetWithOptions(
-                                    {
-                                        options: [
-                                            'Cancel',
-                                            'Light Theme',
-                                            'Dark Theme'
-                                        ],
-                                        cancelButtonIndex: 0
-                                    },
-                                    buttonIndex => {
-                                        if (buttonIndex === 1) {
-                                            this.setState({ theme: 'light' });
-                                        } else if (buttonIndex === 2) {
-                                            this.setState({ theme: 'dark' });
-                                        }
-                                    }
-                                )
-                            }
-                        >
-                            <Text
-                                style={{
-                                    color:
-                                        savedTheme === 'dark'
-                                            ? 'white'
-                                            : 'black'
-                                }}
-                            >
-                                {themes[theme]}
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
+                <DropdownSetting
+                    title="Theme"
+                    theme={savedTheme}
+                    selectedValue={theme}
+                    displayValue={themes[theme]}
+                    onValueChange={(value: string) =>
+                        this.setState({ theme: value })
+                    }
+                    values={[
+                        { key: 'Light', value: 'light' },
+                        { key: 'Dark', value: 'dark' }
+                    ]}
+                />
 
-                {Platform.OS !== 'ios' && (
-                    <View style={styles.lurkerField}>
-                        <Text
-                            style={{
-                                color: savedTheme === 'dark' ? 'white' : 'black'
-                            }}
-                        >
-                            {lurkerLabel}
-                        </Text>
-                        <Picker
-                            selectedValue={lurkerMode}
-                            onValueChange={(itemValue: boolean) =>
-                                this.setState({ lurkerMode: itemValue })
-                            }
-                            style={
-                                savedTheme === 'dark'
-                                    ? styles.pickerDark
-                                    : styles.picker
-                            }
-                        >
-                            <Picker.Item label="Disable" value={false} />
-                            <Picker.Item label="Enable" value={true} />
-                        </Picker>
-                    </View>
-                )}
-
-                {Platform.OS === 'ios' && (
-                    <View style={styles.lurkerField}>
-                        <Text
-                            style={{
-                                color: savedTheme === 'dark' ? 'white' : 'black'
-                            }}
-                        >
-                            {lurkerLabel}
-                        </Text>
-                        <TouchableOpacity
-                            onPress={() =>
-                                ActionSheetIOS.showActionSheetWithOptions(
-                                    {
-                                        options: [
-                                            'Cancel',
-                                            'Disable',
-                                            'Enable'
-                                        ],
-                                        cancelButtonIndex: 0
-                                    },
-                                    buttonIndex => {
-                                        if (buttonIndex === 1) {
-                                            this.setState({
-                                                lurkerMode: false
-                                            });
-                                        } else if (buttonIndex === 2) {
-                                            this.setState({ lurkerMode: true });
-                                        }
-                                    }
-                                )
-                            }
-                        >
-                            <Text
-                                style={{
-                                    color:
-                                        savedTheme === 'dark'
-                                            ? 'white'
-                                            : 'black'
-                                }}
-                            >
-                                {lurkerMode ? 'Enabled' : 'Disabled'}
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
+                <DropdownSetting
+                    title={lurkerLabel}
+                    theme={savedTheme}
+                    selectedValue={lurkerMode}
+                    displayValue={lurkerMode ? 'Enabled' : 'Disabled'}
+                    onValueChange={(value: boolean) =>
+                        this.setState({ lurkerMode: value })
+                    }
+                    values={[
+                        { key: 'Disabled', value: false },
+                        { key: 'Enabled', value: true }
+                    ]}
+                />
 
                 {showPassphraseForm && (
                     <Text
@@ -395,7 +315,6 @@ export default class Settings extends React.Component<
                         }
                     />
                 )}
-
                 {showPassphraseForm && (
                     <Text
                         style={{
@@ -427,7 +346,6 @@ export default class Settings extends React.Component<
                         }
                     />
                 )}
-
                 <View style={styles.button}>
                     <Button
                         title={saved ? 'Settings Saved!' : 'Save Settings'}
@@ -453,7 +371,6 @@ export default class Settings extends React.Component<
                         style={styles.button}
                     />
                 </View>
-
                 <View style={styles.button}>
                     <Button
                         title={
@@ -483,7 +400,7 @@ export default class Settings extends React.Component<
                         }}
                     />
                 </View>
-            </View>
+            </ScrollView>
         );
     }
 }
@@ -529,9 +446,6 @@ const styles = StyleSheet.create({
     },
     lurkerField: {
         paddingTop: 15,
-        paddingLeft: 10
-    },
-    dropdownField: {
         paddingLeft: 10
     }
 });

@@ -17,6 +17,7 @@ interface Settings {
     lurkerMode?: boolean;
     selectedNode?: number;
     passphrase?: string;
+    fiat?: string;
 }
 
 export default class SettingsStore {
@@ -52,7 +53,10 @@ export default class SettingsStore {
                     const config = {
                         host: uri.split('https://')[1],
                         macaroonHex: adminMacaroon || macaroon,
-                        implementation: type === 'clightning-rest' ? 'c-lightning-REST' : 'lnd'
+                        implementation:
+                            type === 'clightning-rest'
+                                ? 'c-lightning-REST'
+                                : 'lnd'
                     };
 
                     return config;
