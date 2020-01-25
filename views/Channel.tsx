@@ -94,7 +94,7 @@ export default class ChannelView extends React.Component<
         const privateChannel = channel.private;
         const data = new Identicon(
             hash.sha1(alias || remote_pubkey || channelId),
-            420
+            255
         ).toString();
 
         const channelFee = channelFees[channel_point];
@@ -510,7 +510,8 @@ export default class ChannelView extends React.Component<
 
 const styles = StyleSheet.create({
     lightThemeStyle: {
-        flex: 1
+        flex: 1,
+        backgroundColor: 'white'
     },
     darkThemeStyle: {
         flex: 1,

@@ -72,7 +72,7 @@ export default class Settings extends React.Component<
         }
     }
 
-    componentWillReceiveProps = (newProps: any) => {
+    UNSAFE_componentWillReceiveProps = (newProps: any) => {
         const { SettingsStore } = newProps;
         const { settings } = SettingsStore;
         this.refreshSettings();
@@ -402,7 +402,8 @@ export default class Settings extends React.Component<
 
 const styles = StyleSheet.create({
     lightThemeStyle: {
-        flex: 1
+        flex: 1,
+        backgroundColor: 'white'
     },
     darkThemeStyle: {
         flex: 1,

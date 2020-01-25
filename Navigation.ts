@@ -1,4 +1,5 @@
-import { createStackNavigator, createAppContainer } from 'react-navigation';
+import { createAppContainer } from 'react-navigation';
+import { createStackNavigator } from 'react-navigation-stack';
 
 // Views
 import Transaction from './views/Transaction';
@@ -87,75 +88,12 @@ const AppScenes = {
     }
 };
 
-const PopUpTransition = (index: number, position: any) => {
-    const opacity = position.interpolate({
-        inputRange: [index - 1, index, index + 0.999, index + 1],
-        outputRange: [0, 1, 1, 0]
-    });
-
-    const translateY = position.interpolate({
-        inputRange: [index - 1, index, index + 1],
-        outputRange: [150, 0, 0]
-    });
-
-    return {
-        opacity,
-        transform: [{ translateY }]
-    };
-};
-
-const SlideFromRightTransition = (
-    index: number,
-    position: any,
-    layout: any
-) => {
-    const opacity = position.interpolate({
-        inputRange: [index - 1, index, index + 0.999, index + 1],
-        outputRange: [0, 1, 1, 0]
-    });
-
-    const width = layout.initWidth;
-
-    const translateX = position.interpolate({
-        inputRange: [index - 1, index, index + 1],
-        outputRange: [width, 0, 0]
-    });
-
-    return {
-        opacity,
-        transform: [{ translateX }]
-    };
-};
-
-const TransitionConfiguration = () => {
-    return {
-        // Define scene interpolation, eq. custom transition
-        screenInterpolator: (sceneProps: any) => {
-            const { position, scene, layout } = sceneProps;
-            const { index } = scene;
-
-            const routeName = scene.route.routeName;
-            if (
-                routeName === 'Transaction' ||
-                routeName === 'Channel' ||
-                routeName === 'Invoice' ||
-                routeName === 'Payment'
-            ) {
-                return SlideFromRightTransition(index, position, layout);
-            }
-
-            return PopUpTransition(index, position);
-        }
-    };
-};
-
 const AppNavigator = createStackNavigator(AppScenes, {
     headerMode: 'none',
     mode: 'modal',
     defaultNavigationOptions: {
-        gesturesEnabled: false
-    },
-    transitionConfig: TransitionConfiguration
+        gestureEnabled: false
+    }
 });
 
 const Navigation = createAppContainer(AppNavigator);
