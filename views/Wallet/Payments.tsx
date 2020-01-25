@@ -125,7 +125,8 @@ export default class PaymentsView extends React.Component<PaymentsProps, {}> {
 
 const styles = StyleSheet.create({
     lightThemeStyle: {
-        flex: 1
+        flex: 1,
+        backgroundColor: 'white'
     },
     darkThemeStyle: {
         flex: 1,
