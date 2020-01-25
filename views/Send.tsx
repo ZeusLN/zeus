@@ -284,7 +284,8 @@ export default class Send extends React.Component<SendProps, SendState> {
 
 const styles = StyleSheet.create({
     lightThemeStyle: {
-        flex: 1
+        flex: 1,
+        backgroundColor: 'white'
     },
     darkThemeStyle: {
         flex: 1,
