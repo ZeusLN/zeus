@@ -17,6 +17,7 @@ interface Settings {
     lurkerMode?: boolean;
     selectedNode?: number;
     passphrase?: string;
+    fiat?: string;
 }
 
 export default class SettingsStore {
