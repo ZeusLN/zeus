@@ -22,7 +22,7 @@ export default class UnitsStore {
         const { settings } = this.settingsStore;
         const { fiat } = settings;
 
-        if (fiat === 'Disabled') {
+        if (!fiat || fiat === 'Disabled') {
             this.units = this.units == 'sats' ? 'btc' : 'sats';
         } else {
             switch (this.units) {
@@ -63,7 +63,9 @@ export default class UnitsStore {
                 )}`;
             }
 
-            return `₿ ${FeeUtils.toFixed(Number(wholeSats || 0) / satoshisPerBTC)}`;
+            return `₿ ${FeeUtils.toFixed(
+                Number(wholeSats || 0) / satoshisPerBTC
+            )}`;
         } else if (this.units === 'sats') {
             const sats = `${value || 0} ${
                 Number(value) === 1 || Number(value) === -1 ? 'sat' : 'sats'
@@ -77,7 +79,8 @@ export default class UnitsStore {
             if (valueToProcess.includes('-')) {
                 let processedValue = valueToProcess.split('-')[1];
                 return `- ${symbol} ${(
-                    FeeUtils.toFixed(Number(processedValue) / satoshisPerBTC) * rate
+                    FeeUtils.toFixed(Number(processedValue) / satoshisPerBTC) *
+                    rate
                 ).toFixed(2)}`;
             }
 
