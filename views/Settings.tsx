@@ -12,6 +12,7 @@ import {
 import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Nodes from './Settings/Nodes';
+import PrivacyUtils from './../utils/PrivacyUtils';
 
 import SettingsStore from './../stores/SettingsStore';
 
@@ -23,6 +24,7 @@ interface SettingsProps {
 interface SettingsState {
     nodes: any[];
     theme: string;
+    lurkerMode: boolean;
     saved: boolean;
     loading: boolean;
     passphrase: string;
@@ -47,6 +49,7 @@ export default class Settings extends React.Component<
     state = {
         nodes: [],
         theme: 'light',
+        lurkerMode: false,
         saved: false,
         loading: false,
         passphrase: '',
@@ -66,6 +69,7 @@ export default class Settings extends React.Component<
             this.setState({
                 nodes: settings.nodes || [],
                 theme: settings.theme || '',
+                lurkerMode: settings.lurkerMode || false,
                 passphrase: settings.passphrase || '',
                 passphraseConfirm: settings.passphrase || ''
             });
@@ -81,6 +85,7 @@ export default class Settings extends React.Component<
             this.setState({
                 nodes: settings.nodes || [],
                 theme: settings.theme || '',
+                lurkerMode: settings.lurkerMode || false,
                 passphrase: settings.passphrase || '',
                 passphraseConfirm: settings.passphrase || ''
             });
@@ -104,7 +109,13 @@ export default class Settings extends React.Component<
 
     saveSettings = () => {
         const { SettingsStore } = this.props;
-        const { nodes, theme, passphrase, passphraseConfirm } = this.state;
+        const {
+            nodes,
+            theme,
+            lurkerMode,
+            passphrase,
+            passphraseConfirm
+        } = this.state;
         const { setSettings, settings } = SettingsStore;
 
         if (passphrase !== passphraseConfirm) {
@@ -119,6 +130,7 @@ export default class Settings extends React.Component<
             JSON.stringify({
                 nodes,
                 theme,
+                lurkerMode,
                 passphrase,
                 onChainAddress: settings.onChainAddress
             })
@@ -144,6 +156,7 @@ export default class Settings extends React.Component<
         const {
             saved,
             theme,
+            lurkerMode,
             nodes,
             passphrase,
             passphraseConfirm,
@@ -162,6 +175,8 @@ export default class Settings extends React.Component<
                 underlayColor="transparent"
             />
         );
+
+        const lurkerLabel = `Lurking ${PrivacyUtils.getLover()} Mode: hides sensitive values`;
 
         return (
             <View
@@ -208,7 +223,7 @@ export default class Settings extends React.Component<
                 </View>
 
                 {Platform.OS !== 'ios' && (
-                    <View>
+                    <View style={styles.dropdownField}>
                         <Text
                             style={{
                                 color: savedTheme === 'dark' ? 'white' : 'black'
@@ -234,7 +249,7 @@ export default class Settings extends React.Component<
                 )}
 
                 {Platform.OS === 'ios' && (
-                    <View>
+                    <View style={styles.dropdownField}>
                         <Text
                             style={{
                                 color: savedTheme === 'dark' ? 'white' : 'black'
@@ -272,6 +287,78 @@ export default class Settings extends React.Component<
                                 }}
                             >
                                 {themes[theme]}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                {Platform.OS !== 'ios' && (
+                    <View style={styles.lurkerField}>
+                        <Text
+                            style={{
+                                color: savedTheme === 'dark' ? 'white' : 'black'
+                            }}
+                        >
+                            {lurkerLabel}
+                        </Text>
+                        <Picker
+                            selectedValue={lurkerMode}
+                            onValueChange={(itemValue: boolean) =>
+                                this.setState({ lurkerMode: itemValue })
+                            }
+                            style={
+                                savedTheme === 'dark'
+                                    ? styles.pickerDark
+                                    : styles.picker
+                            }
+                        >
+                            <Picker.Item label="Disable" value={false} />
+                            <Picker.Item label="Enable" value={true} />
+                        </Picker>
+                    </View>
+                )}
+
+                {Platform.OS === 'ios' && (
+                    <View style={styles.lurkerField}>
+                        <Text
+                            style={{
+                                color: savedTheme === 'dark' ? 'white' : 'black'
+                            }}
+                        >
+                            {lurkerLabel}
+                        </Text>
+                        <TouchableOpacity
+                            onPress={() =>
+                                ActionSheetIOS.showActionSheetWithOptions(
+                                    {
+                                        options: [
+                                            'Cancel',
+                                            'Disable',
+                                            'Enable'
+                                        ],
+                                        cancelButtonIndex: 0
+                                    },
+                                    buttonIndex => {
+                                        if (buttonIndex === 1) {
+                                            this.setState({
+                                                lurkerMode: false
+                                            });
+                                        } else if (buttonIndex === 2) {
+                                            this.setState({ lurkerMode: true });
+                                        }
+                                    }
+                                )
+                            }
+                        >
+                            <Text
+                                style={{
+                                    color:
+                                        savedTheme === 'dark'
+                                            ? 'white'
+                                            : 'black'
+                                }}
+                            >
+                                {lurkerMode ? 'Enabled' : 'Disabled'}
                             </Text>
                         </TouchableOpacity>
                     </View>
@@ -439,5 +526,12 @@ const styles = StyleSheet.create({
     button: {
         paddingTop: 10,
         paddingBottom: 10
+    },
+    lurkerField: {
+        paddingTop: 15,
+        paddingLeft: 10
+    },
+    dropdownField: {
+        paddingLeft: 10
     }
 });
