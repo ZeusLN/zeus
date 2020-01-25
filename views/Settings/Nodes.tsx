@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { Avatar, Button, ListItem } from 'react-native-elements';
+import SettingsStore from './../../stores/SettingsStore';
 import Identicon from 'identicon.js';
 const hash = require('object-hash');
 
@@ -11,6 +12,7 @@ interface NodesProps {
     loading?: boolean;
     theme?: string;
     selectedNode?: number;
+    SettingsStore: SettingsStore;
 }
 
 export default class Nodes extends React.Component<NodesProps, {}> {
@@ -28,7 +30,16 @@ export default class Nodes extends React.Component<NodesProps, {}> {
     };
 
     render() {
-        const { navigation, nodes, theme, loading, selectedNode } = this.props;
+        const {
+            navigation,
+            nodes,
+            theme,
+            loading,
+            selectedNode,
+            SettingsStore
+        } = this.props;
+        const { setSettings, settings } = SettingsStore;
+
         const Node = (balanceImage: string) => (
             <Avatar
                 source={{
@@ -39,7 +50,7 @@ export default class Nodes extends React.Component<NodesProps, {}> {
 
         return (
             <View>
-                {!!nodes && !loading && nodes.length > 0 && (
+                {!!nodes && nodes.length > 0 && (
                     <FlatList
                         data={nodes}
                         renderItem={({ item, index }) => {
@@ -59,6 +70,37 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                         leftElement={Node(
                                             `data:image/png;base64,${data}`
                                         )}
+                                        rightElement={
+                                            <Button
+                                                title=""
+                                                icon={{
+                                                    name: 'settings',
+                                                    size: 25,
+                                                    color:
+                                                        theme === 'dark'
+                                                            ? 'white'
+                                                            : 'black'
+                                                }}
+                                                buttonStyle={{
+                                                    backgroundColor:
+                                                        'transparent',
+                                                    marginRight: -10
+                                                }}
+                                                onPress={() =>
+                                                    navigation.navigate(
+                                                        'AddEditNode',
+                                                        {
+                                                            node: item,
+                                                            index: index,
+                                                            active:
+                                                                selectedNode ===
+                                                                index,
+                                                            saved: true
+                                                        }
+                                                    )
+                                                }
+                                            />
+                                        }
                                         subtitle={
                                             selectedNode === index ||
                                             (!selectedNode && index === 0)
@@ -72,14 +114,21 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                                     ? 'black'
                                                     : 'white'
                                         }}
-                                        onPress={() =>
-                                            navigation.navigate('AddEditNode', {
-                                                node: item,
-                                                index: index,
-                                                active: selectedNode === index,
-                                                saved: true
-                                            })
-                                        }
+                                        onPress={() => {
+                                            setSettings(
+                                                JSON.stringify({
+                                                    nodes,
+                                                    theme: settings.theme,
+                                                    selectedNode: index,
+                                                    onChainAddress:
+                                                        settings.onChainAddress
+                                                })
+                                            ).then(() => {
+                                                navigation.navigate('Wallet', {
+                                                    refresh: true
+                                                });
+                                            });
+                                        }}
                                         titleStyle={{
                                             color:
                                                 theme === 'dark'
