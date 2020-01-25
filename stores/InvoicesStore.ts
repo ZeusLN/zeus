@@ -50,6 +50,7 @@ export default class InvoicesStore {
             .catch(() => {
                 // handle error
                 this.invoices = [];
+                this.invoicesCount = 0;
                 this.loading = false;
             });
     };
