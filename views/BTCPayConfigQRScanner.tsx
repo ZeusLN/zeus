@@ -24,6 +24,14 @@ export default class BTCPayConfigQRScanner extends React.Component<
 
         fetchBTCPayConfig(data)
             .then((config: any) => {
+                if (!!SettingsStore.btcPayError) {
+                    Alert.alert(
+                        'Error',
+                        SettingsStore.btcPayError,
+                        [{ text: 'OK', onPress: () => void 0 }],
+                        { cancelable: false }
+                    );
+                }
                 navigation.navigate('AddEditNode', { node: config, index });
             })
             .catch(() => {

@@ -103,7 +103,10 @@ export default class ChannelView extends React.Component<
             ? PrivacyUtils.hideValue(channelName, 8)
             : channelName;
 
-        const data = new Identicon(hash.sha1(channelDisplay), 420).toString();
+        const data = new Identicon(
+            hash.sha1(alias || remote_pubkey || channelId),
+            255
+        ).toString();
 
         const channelFee = channelFees[channel_point];
 
@@ -569,7 +572,8 @@ export default class ChannelView extends React.Component<
 
 const styles = StyleSheet.create({
     lightThemeStyle: {
-        flex: 1
+        flex: 1,
+        backgroundColor: 'white'
     },
     darkThemeStyle: {
         flex: 1,

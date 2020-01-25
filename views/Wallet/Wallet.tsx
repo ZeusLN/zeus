@@ -57,11 +57,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         selectedIndex: 0
     };
 
-    componentWillMount = () => {
+    UNSAFE_componentWillMount = () => {
         this.getSettingsAndRefresh();
     };
 
-    componentWillReceiveProps = (nextProps: any) => {
+    UNSAFE_componentWillReceiveProps = (nextProps: any) => {
         const { navigation } = nextProps;
         const refresh = navigation.getParam('refresh', null);
 
