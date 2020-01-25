@@ -8,7 +8,8 @@ import * as React from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { Button } from 'react-native-elements';
 import FeeUtils from './../utils/FeeUtils';
-import { Cell, Header, Row } from 'react-native-data-table';
+// import { Cell, Header, Row } from 'react-native-data-table';
+import { DataTable } from 'react-native-paper';
 import { isEmpty } from 'lodash';
 import { inject, observer } from 'mobx-react';
 
@@ -40,8 +41,9 @@ export default class FeeTable extends React.Component<
             return {
                 backgroundColor: 'white',
                 alignItems: 'center',
-                height: 53,
-                width: 53
+                height: 27,
+                width: 6,
+                marginTop: 18
             };
         }
 
@@ -90,20 +92,18 @@ export default class FeeTable extends React.Component<
             headers =
                 df.columns &&
                 df.columns.map((columnName: number, index: number) => (
-                    <Cell
+                    <DataTable.Cell
                         style={{
                             backgroundColor:
                                 theme === 'dark' ? 'black' : 'white',
                             minWidth: 53,
-                            height: 53
-                        }}
-                        textStyle={{
+                            height: 53,
                             color: theme === 'dark' ? 'white' : 'black'
                         }}
                         key={`item-${index}`}
                     >
                         {this.reprColumn(columnName)}
-                    </Cell>
+                    </DataTable.Cell>
                 ));
 
             rows = df.index.map((index: number, i: number) => {
@@ -114,9 +114,11 @@ export default class FeeTable extends React.Component<
                             key={`cell-${k}`}
                             onPress={() => setFee(value)}
                         >
-                            <Cell style={this.styler(cell)}>
-                                <Text style={{ color: 'white' }}>{value}</Text>
-                            </Cell>
+                            <DataTable.Cell style={this.styler(cell)}>
+                                <Text
+                                    style={{ color: 'white' }}
+                                >{`    ${value}`}</Text>
+                            </DataTable.Cell>
                         </TouchableOpacity>
                     );
                 });
@@ -124,8 +126,8 @@ export default class FeeTable extends React.Component<
                 const indexText = this.reprIndex(index);
 
                 return (
-                    <Row key={`row-${i}`}>
-                        <Cell style={this.styler(indexText)}>
+                    <DataTable.Row key={`row-${i}`}>
+                        <View style={this.styler(indexText)}>
                             <Text
                                 style={{
                                     backgroundColor:
@@ -136,9 +138,9 @@ export default class FeeTable extends React.Component<
                             >
                                 {indexText}
                             </Text>
-                        </Cell>
+                        </View>
                         {cells}
-                    </Row>
+                    </DataTable.Row>
                 );
             });
         }
@@ -173,12 +175,15 @@ export default class FeeTable extends React.Component<
                 )}
                 {!collapsed && !loading && headers && (
                     <View style={{ left: 25 }}>
-                        <Header
-                            style={{ backgroundColor: 'white', left: 15 }}
-                            textStyle={{ alignItems: 'center' }}
+                        <DataTable.Header
+                            style={{
+                                backgroundColor: 'white',
+                                left: 15,
+                                alignItems: 'center'
+                            }}
                         >
                             {headers}
-                        </Header>
+                        </DataTable.Header>
                         {rows}
                     </View>
                 )}

@@ -35,17 +35,22 @@ export default class LnurlPaySuccess extends React.Component<
         return (
             <View
                 style={{
-                    color: 'white',
-                    padding: 20,
-                    fontSize: 40
+                    padding: 20
                 }}
             >
-                <Text style={{ padding: 20, fontWeight: 'bold', fontSize: 22 }}>
+                <Text
+                    style={{
+                        padding: 20,
+                        fontWeight: 'bold',
+                        fontSize: 22,
+                        color: 'white'
+                    }}
+                >
                     {domain}
                 </Text>
                 {tag === 'message' && <Text>{message}</Text>}
                 {tag === 'url' && (
-                    <Text>
+                    <Text style={{ fontSize: 40, color: 'white' }}>
                         {message}:{' '}
                         <TouchableOpacity onPress={this.URLClicked}>
                             {url}

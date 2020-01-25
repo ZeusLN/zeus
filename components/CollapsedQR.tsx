@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Button } from 'react-native-elements';
-import QRCode from 'react-native-qrcode';
+import QRCode from 'react-native-qrcode-svg';
 import CopyButton from './CopyButton';
 
 interface CollapsedQRProps {
@@ -41,7 +41,7 @@ export default class CollapsedQR extends React.Component<
                 </Text>
                 {!collapsed && (
                     <View style={styles.qrPadding}>
-                        <QRCode value={value} size={200} fgColor="white" />
+                        <QRCode value={value} size={200} />
                     </View>
                 )}
                 <Button

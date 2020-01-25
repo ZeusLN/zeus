@@ -9,6 +9,7 @@ import {
 import { Header, Icon } from 'react-native-elements';
 import Invoice from './../models/Invoice';
 import { inject, observer } from 'mobx-react';
+import PrivacyUtils from './../utils/PrivacyUtils';
 
 import UnitsStore from './../stores/UnitsStore';
 import SettingsStore from './../stores/SettingsStore';
@@ -26,7 +27,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
         const { navigation, UnitsStore, SettingsStore } = this.props;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { settings } = SettingsStore;
-        const { theme } = settings;
+        const { theme, lurkerMode } = settings;
 
         const invoice: Invoice = navigation.getParam('invoice', null);
         const {
@@ -51,6 +52,10 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                 underlayColor="transparent"
             />
         );
+
+        const amount = lurkerMode
+            ? PrivacyUtils.hideValue(getAmount(invoice.getAmount), 8, true)
+            : getAmount(invoice.getAmount);
 
         return (
             <ScrollView
@@ -77,7 +82,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                     : styles.amount
                             }
                         >{`${isPaid ? 'Paid' : 'Unpaid'}: ${units &&
-                            getAmount(invoice.getAmount)}`}</Text>
+                            amount}`}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -100,7 +105,9 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.value
                                 }
                             >
-                                {getMemo}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(getMemo)
+                                    : getMemo}
                             </Text>
                         </React.Fragment>
                     )}
@@ -123,7 +130,9 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.value
                                 }
                             >
-                                {receipt}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(receipt)
+                                    : receipt}
                             </Text>
                         </React.Fragment>
                     )}
@@ -146,7 +155,12 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.value
                                 }
                             >
-                                {invoice.settleDate}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(
+                                          invoice.settleDate,
+                                          14
+                                      )
+                                    : invoice.settleDate}
                             </Text>
                         </React.Fragment>
                     )}
@@ -169,7 +183,12 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.value
                                 }
                             >
-                                {invoice.creationDate}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(
+                                          invoice.creationDate,
+                                          14
+                                      )
+                                    : invoice.creationDate}
                             </Text>
                         </React.Fragment>
                     )}
@@ -192,7 +211,9 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.value
                                 }
                             >
-                                {expirationDate}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(expirationDate, 14)
+                                    : expirationDate}
                             </Text>
                         </React.Fragment>
                     )}
@@ -238,7 +259,9 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.value
                                 }
                             >
-                                {fallback_addr}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(fallback_addr)
+                                    : fallback_addr}
                             </Text>
                         </React.Fragment>
                     )}
@@ -284,7 +307,9 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.value
                                 }
                             >
-                                {r_hash}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(r_hash)
+                                    : r_hash}
                             </Text>
                         </React.Fragment>
                     )}
@@ -307,7 +332,9 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.value
                                 }
                             >
-                                {r_preimage}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(r_preimage)
+                                    : r_preimage}
                             </Text>
                         </React.Fragment>
                     )}
@@ -330,7 +357,9 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.value
                                 }
                             >
-                                {description_hash}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(description_hash)
+                                    : description_hash}
                             </Text>
                         </React.Fragment>
                     )}
@@ -342,7 +371,8 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
 
 const styles = StyleSheet.create({
     lightThemeStyle: {
-        flex: 1
+        flex: 1,
+        backgroundColor: 'white'
     },
     darkThemeStyle: {
         flex: 1,

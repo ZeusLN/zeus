@@ -4,6 +4,7 @@ import { Avatar, Button, ListItem } from 'react-native-elements';
 import Transaction from './../../models/Transaction';
 import DateTimeUtils from './../../utils/DateTimeUtils';
 import { inject, observer } from 'mobx-react';
+import PrivacyUtils from './../../utils/PrivacyUtils';
 
 import TransactionsStore from './../../stores/TransactionsStore';
 import UnitsStore from './../../stores/UnitsStore';
@@ -63,7 +64,7 @@ export default class Transactions extends React.Component<TransactionsProps> {
         const { loading } = TransactionsStore;
         const { getAmount, units } = UnitsStore;
         const { settings } = SettingsStore;
-        const { theme } = settings;
+        const { theme, lurkerMode } = settings;
 
         const BalanceImage = (item: Transaction) => {
             const { getAmount, isConfirmed } = item;
@@ -103,18 +104,44 @@ export default class Transactions extends React.Component<TransactionsProps> {
                     <FlatList
                         data={transactions}
                         renderItem={({ item }: any) => {
-                            let subtitle =
-                                item.getBlockHeight || 'Awaiting Confirmation';
+                            let subtitle;
+                            if (item.getBlockHeight) {
+                                subtitle = lurkerMode
+                                    ? PrivacyUtils.hideValue(
+                                          item.getBlockHeight,
+                                          6,
+                                          true
+                                      )
+                                    : item.getBlockHeight;
+                            } else {
+                                subtitle = 'Awaiting Confirmation';
+                            }
+
+                            const txAmount = lurkerMode
+                                ? PrivacyUtils.hideValue(
+                                      getAmount(item.getAmount),
+                                      7,
+                                      true
+                                  )
+                                : getAmount(item.getAmount);
+
                             if (item.time_stamp) {
-                                subtitle.concat(
-                                    ` | ${DateTimeUtils.listFormattedDate(
-                                        item.time_stamp
-                                    )}`
-                                );
+                                const timeStamp = lurkerMode
+                                    ? PrivacyUtils.hideValue(
+                                          DateTimeUtils.listFormattedDate(
+                                              item.time_stamp
+                                          ),
+                                          14
+                                      )
+                                    : DateTimeUtils.listFormattedDate(
+                                          item.time_stamp
+                                      );
+
+                                subtitle.concat(` | ${timeStamp}`);
                             }
                             return (
                                 <ListItem
-                                    title={units && getAmount(item.getAmount)}
+                                    title={units && txAmount}
                                     subtitle={subtitle}
                                     containerStyle={{
                                         borderBottomWidth: 0,
@@ -167,7 +194,8 @@ export default class Transactions extends React.Component<TransactionsProps> {
 
 const styles = StyleSheet.create({
     lightThemeStyle: {
-        flex: 1
+        flex: 1,
+        backgroundColor: 'white'
     },
     darkThemeStyle: {
         flex: 1,

@@ -42,7 +42,7 @@ export default class InvoicesStore {
                 this.invoices = this.invoices.map(
                     invoice => new Invoice(invoice)
                 );
-                this.invoices = this.invoices.reverse();
+                this.invoices = this.invoices.slice().reverse();
                 this.invoicesCount =
                     data.last_index_offset || this.invoices.length;
                 this.loading = false;
@@ -50,6 +50,7 @@ export default class InvoicesStore {
             .catch(() => {
                 // handle error
                 this.invoices = [];
+                this.invoicesCount = 0;
                 this.loading = false;
             });
     };
