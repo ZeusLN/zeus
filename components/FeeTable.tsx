@@ -97,9 +97,7 @@ export default class FeeTable extends React.Component<
                             backgroundColor:
                                 theme === 'dark' ? 'black' : 'white',
                             minWidth: 53,
-                            height: 53
-                        }}
-                        textStyle={{
+                            height: 53,
                             color: theme === 'dark' ? 'white' : 'black'
                         }}
                         key={`item-${index}`}
@@ -178,8 +176,11 @@ export default class FeeTable extends React.Component<
                 {!collapsed && !loading && headers && (
                     <View style={{ left: 25 }}>
                         <DataTable.Header
-                            style={{ backgroundColor: 'white', left: 15 }}
-                            textStyle={{ alignItems: 'center' }}
+                            style={{
+                                backgroundColor: 'white',
+                                left: 15,
+                                alignItems: 'center'
+                            }}
                         >
                             {headers}
                         </DataTable.Header>
