@@ -16,7 +16,9 @@ describe('FeeUtils', () => {
             expect(FeeUtils.toFixed(1000 / satoshisPerBTC)).toEqual('0.00001');
             expect(FeeUtils.toFixed(10000 / satoshisPerBTC)).toEqual('0.0001');
             // was returning "0.00000009999999999999999" in original version
-            expect(FeeUtils.toFixed(10 / satoshisPerBTC)).toEqual('0.0000001');
+            expect(
+                FeeUtils.toFixed(Number('10') / satoshisPerBTC).toString()
+            ).toBe('0.0000001');
             expect(FeeUtils.toFixed(1 / satoshisPerBTC)).toEqual('0.00000001');
             expect(FeeUtils.toFixed(283190 / satoshisPerBTC)).toEqual(
                 '0.0028319'
