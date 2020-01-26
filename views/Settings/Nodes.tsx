@@ -65,7 +65,7 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                 : displayName;
                             const implementation = lurkerMode
                                 ? PrivacyUtils.hideValue(item.implementation, 8)
-                                : item.implementation;
+                                : item.implementation || 'lnd';
 
                             const data = new Identicon(
                                 hash.sha1(title),
