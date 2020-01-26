@@ -562,7 +562,7 @@ export default class ChannelView extends React.Component<
 
                     {confirmCloseChannel && (
                         <React.Fragment>
-                            {implementation === 'lnd' && (
+                            {(implementation === 'lnd' || !implementation) && (
                                 <React.Fragment>
                                     <Text
                                         style={{
