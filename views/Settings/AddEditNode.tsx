@@ -119,6 +119,11 @@ export default class AddEditNode extends React.Component<
         const { SettingsStore, navigation } = this.props;
         const { host, port, macaroonHex, implementation, index } = this.state;
         const { setSettings, settings } = SettingsStore;
+        const {
+            lurkerMode,
+            passphrase,
+            fiat
+        } = settings;
 
         const node = {
             host,
@@ -136,7 +141,10 @@ export default class AddEditNode extends React.Component<
                 nodes,
                 theme: settings.theme,
                 selectedNode: settings.selectedNode,
-                onChainAddress: settings.onChainAddress
+                onChainAddress: settings.onChainAddress,
+                fiat,
+                lurkerMode,
+                passphrase
             })
         ).then(() => {
             this.setState({
@@ -155,7 +163,12 @@ export default class AddEditNode extends React.Component<
         const { SettingsStore, navigation } = this.props;
         const { setSettings, settings } = SettingsStore;
         const { index } = this.state;
-        let { nodes } = settings;
+        const {
+            nodes,
+            lurkerMode,
+            passphrase,
+            fiat
+        } = settings;
 
         let newNodes: any = [];
         for (let i = 0; nodes && i < nodes.length; i++) {
@@ -170,7 +183,10 @@ export default class AddEditNode extends React.Component<
                 theme: settings.theme,
                 selectedNode:
                     index === settings.selectedNode ? 0 : settings.selectedNode,
-                onChainAddress: settings.onChainAddress
+                onChainAddress: settings.onChainAddress,
+                fiat,
+                lurkerMode,
+                passphrase
             })
         ).then(() => {
             navigation.navigate('Wallet', { refresh: true });
@@ -181,14 +197,22 @@ export default class AddEditNode extends React.Component<
         const { SettingsStore, navigation } = this.props;
         const { setSettings, settings } = SettingsStore;
         const { index } = this.state;
-        const { nodes } = settings;
+        const {
+            nodes,
+            lurkerMode,
+            passphrase,
+            fiat
+        } = settings;
 
         setSettings(
             JSON.stringify({
                 nodes,
                 theme: settings.theme,
                 selectedNode: index,
-                onChainAddress: settings.onChainAddress
+                onChainAddress: settings.onChainAddress,
+                fiat,
+                lurkerMode,
+                passphrase
             })
         );
 
