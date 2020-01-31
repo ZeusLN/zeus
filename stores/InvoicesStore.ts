@@ -1,4 +1,4 @@
-import { action, observable } from 'mobx';
+import { action, observable, reaction } from 'mobx';
 import axios from 'axios';
 import { Alert } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
@@ -22,8 +22,29 @@ export default class InvoicesStore {
     @observable invoicesCount: number;
     settingsStore: SettingsStore;
 
+    // lnd
+    @observable loadingFeeEstimate: boolean = false;
+    @observable feeEstimate: number | null;
+    @observable successProbability: number | null;
+
     constructor(settingsStore: SettingsStore) {
         this.settingsStore = settingsStore;
+
+        reaction(
+            () => this.pay_req,
+            () => {
+                if (
+                    this.pay_req &&
+                    this.pay_req.destination &&
+                    this.settingsStore.implementation === 'lnd'
+                ) {
+                    this.estimateFee(
+                        this.pay_req.destination,
+                        this.pay_req.getRequestAmount
+                    );
+                }
+            }
+        );
     }
 
     @action
@@ -129,6 +150,7 @@ export default class InvoicesStore {
         this.pay_req = null;
         this.paymentRequest = paymentRequest;
         this.loading = true;
+        this.feeEstimate = null;
 
         return RESTUtils.decodePaymentRequest(this.settingsStore, [
             paymentRequest
@@ -161,6 +183,34 @@ export default class InvoicesStore {
                         error.response.data.error) ||
                     error.message;
                 this.pay_req = null;
+            });
+    };
+
+    @action
+    public estimateFee = (destination: string, amount: string) => {
+        this.loadingFeeEstimate = true;
+        this.feeEstimate = null;
+        this.successProbability = null;
+
+        return RESTUtils.estimateFee(this.settingsStore, [destination, amount])
+            .then((response: any) => {
+                // handle success
+                const data = response.data;
+                this.loadingFeeEstimate = false;
+                this.successProbability = data.success_prob
+                    ? data.success_prob * 100
+                    : 0;
+                this.feeEstimate =
+                    (data.routes &&
+                        data.routes[0] &&
+                        Number(data.routes[0].total_fees || 0)) ||
+                    0;
+            })
+            .catch((error: any) => {
+                // handle error
+                this.loadingFeeEstimate = false;
+                this.feeEstimate = null;
+                this.successProbability = null;
             });
     };
 }
