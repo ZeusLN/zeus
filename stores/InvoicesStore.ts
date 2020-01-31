@@ -210,7 +210,7 @@ export default class InvoicesStore {
                                 this.feeEstimate = route.total_fees;
                             }
                         } else {
-                            this.feeEstimate = route.total_fees;
+                            this.feeEstimate = route.total_fees || 0;
                         }
                     });
                 }
