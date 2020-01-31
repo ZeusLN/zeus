@@ -174,7 +174,9 @@ export default class ChannelsStore {
                 // handle error
                 const errorInfo = error.response && error.response.data;
                 this.errorMsgPeer =
-                    (errorInfo && errorInfo.error.message) || error.message;
+                    (errorInfo && errorInfo.error.message) ||
+                    (errorInfo && errorInfo.error) ||
+                    error.message;
                 this.errorPeerConnect = true;
                 this.connectingToPeer = false;
                 this.peerSuccess = false;
