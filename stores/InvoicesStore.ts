@@ -200,11 +200,20 @@ export default class InvoicesStore {
                 this.successProbability = data.success_prob
                     ? data.success_prob * 100
                     : 0;
-                this.feeEstimate =
-                    (data.routes &&
-                        data.routes[0] &&
-                        Number(data.routes[0].total_fees || 0)) ||
-                    0;
+
+                const routes = data.routes;
+                if (routes) {
+                    routes.forEach(route => {
+                        // expect lnd to pick the cheapest route
+                        if (this.feeEstimate) {
+                            if (route.total_fees < this.feeEstimate) {
+                                this.feeEstimate = route.total_fees;
+                            }
+                        } else {
+                            this.feeEstimate = route.total_fees;
+                        }
+                    });
+                }
             })
             .catch((error: any) => {
                 // handle error
