@@ -38,7 +38,7 @@ export default class InvoicesStore {
                     this.pay_req.destination &&
                     this.settingsStore.implementation === 'lnd'
                 ) {
-                    this.estimateFee(
+                    this.getRoutes(
                         this.pay_req.destination,
                         this.pay_req.getRequestAmount
                     );
@@ -187,12 +187,12 @@ export default class InvoicesStore {
     };
 
     @action
-    public estimateFee = (destination: string, amount: string) => {
+    public getRoutes = (destination: string, amount: string) => {
         this.loadingFeeEstimate = true;
         this.feeEstimate = null;
         this.successProbability = null;
 
-        return RESTUtils.estimateFee(this.settingsStore, [destination, amount])
+        return RESTUtils.getRoutes(this.settingsStore, [destination, amount])
             .then((response: any) => {
                 // handle success
                 const data = response.data;
