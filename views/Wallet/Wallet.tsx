@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text, View } from 'react-native';
+import { Linking, Text, View } from 'react-native';
 import { ButtonGroup } from 'react-native-elements';
 import Transactions from './Transactions';
 import Payments from './Payments';
@@ -19,6 +19,8 @@ import SettingsStore from './../../stores/SettingsStore';
 import FiatStore from './../../stores/FiatStore';
 import TransactionsStore from './../../stores/TransactionsStore';
 import UnitsStore from './../../stores/UnitsStore';
+
+import handleAnything from './../../utils/handleAnything';
 
 interface WalletProps {
     enterSetup: any;
@@ -59,6 +61,18 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         units: 'sats',
         selectedIndex: 0
     };
+
+    componentDidMount() {
+        Linking.getInitialURL()
+            .then(url => {
+                if (url) {
+                    handleAnything(url).then(([route, props]) => {
+                        this.props.navigation.navigate(route, props);
+                    });
+                }
+            })
+            .catch(err => console.error('An error occurred', err));
+    }
 
     UNSAFE_componentWillMount = () => {
         this.getSettingsAndRefresh();
