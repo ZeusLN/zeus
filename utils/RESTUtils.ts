@@ -29,7 +29,10 @@ const lndRoutes: any = {
         return `/v1/graph/node/${urlParams[0]}`;
     },
     getFees: '/v1/fees',
-    setFees: '/v1/chanpolicy'
+    setFees: '/v1/chanpolicy',
+    getRoutes: function(urlParams: Array<string>) {
+        return `/v1/graph/routes/${urlParams[0]}/${urlParams[1]}`;
+    }
 };
 
 const clightningRoutes: any = {
@@ -55,7 +58,8 @@ const clightningRoutes: any = {
     payLightningInvoice: '/v1/pay',
     getNodeInfo: 'N/A',
     getFees: '/v1/getFees/',
-    setFees: '/v1/channel/setChannelFee/'
+    setFees: '/v1/channel/setChannelFee/',
+    getRoutes: 'N/A'
 };
 
 interface Headers {
@@ -228,6 +232,8 @@ class RESTUtils {
         this.getRequest(settingsStore, 'getFees');
     setFees = (settingsStore: SettingsStore, data: any) =>
         this.postRequest(settingsStore, 'setFees', data);
+    getRoutes = (settingsStore: SettingsStore, urlParams?: Array<string>) =>
+        this.getRequest(settingsStore, 'getRoutes', null, urlParams);
 }
 
 const restUtils = new RESTUtils();

@@ -54,7 +54,10 @@ export default class PaymentRequest extends React.Component<
             pay_req,
             paymentRequest,
             getPayReqError,
-            loading
+            loading,
+            loadingFeeEstimate,
+            successProbability,
+            feeEstimate
         } = InvoicesStore;
         const { units, changeUnits, getAmount } = UnitsStore;
 
@@ -105,7 +108,9 @@ export default class PaymentRequest extends React.Component<
                     }
                 />
 
-                {loading && <ActivityIndicator size="large" color="#0000ff" />}
+                {(loading || loadingFeeEstimate) && (
+                    <ActivityIndicator size="large" color="#0000ff" />
+                )}
 
                 <ScrollView>
                     {!!getPayReqError && (
@@ -215,6 +220,56 @@ export default class PaymentRequest extends React.Component<
                                     </View>
                                 )}
                             </View>
+
+                            {(!!feeEstimate || feeEstimate === 0) && (
+                                <React.Fragment>
+                                    <TouchableOpacity
+                                        onPress={() => changeUnits()}
+                                    >
+                                        <Text
+                                            style={
+                                                theme === 'dark'
+                                                    ? styles.labelDark
+                                                    : styles.label
+                                            }
+                                        >
+                                            Fee Estimate:
+                                        </Text>
+                                        <Text
+                                            style={
+                                                theme === 'dark'
+                                                    ? styles.valueDark
+                                                    : styles.value
+                                            }
+                                        >
+                                            {units && getAmount(feeEstimate)}
+                                        </Text>
+                                    </TouchableOpacity>
+                                </React.Fragment>
+                            )}
+
+                            {!!successProbability && (
+                                <React.Fragment>
+                                    <Text
+                                        style={
+                                            theme === 'dark'
+                                                ? styles.labelDark
+                                                : styles.label
+                                        }
+                                    >
+                                        Success Probability:
+                                    </Text>
+                                    <Text
+                                        style={
+                                            theme === 'dark'
+                                                ? styles.valueDark
+                                                : styles.value
+                                        }
+                                    >
+                                        {`${successProbability}%`}
+                                    </Text>
+                                </React.Fragment>
+                            )}
 
                             {!!description && (
                                 <React.Fragment>
