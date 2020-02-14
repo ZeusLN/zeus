@@ -86,7 +86,7 @@ export default class AddEditNode extends React.Component<
         this.isComponentMounted = false;
     }
 
-    componentWillReceiveProps(nextProps: any) {
+    UNSAFE_componentWillReceiveProps(nextProps: any) {
         const { navigation } = nextProps;
         const node = navigation.getParam('node', null);
         const index = navigation.getParam('index', null);
@@ -119,6 +119,11 @@ export default class AddEditNode extends React.Component<
         const { SettingsStore, navigation } = this.props;
         const { host, port, macaroonHex, implementation, index } = this.state;
         const { setSettings, settings } = SettingsStore;
+        const {
+            lurkerMode,
+            passphrase,
+            fiat
+        } = settings;
 
         const node = {
             host,
@@ -136,26 +141,34 @@ export default class AddEditNode extends React.Component<
                 nodes,
                 theme: settings.theme,
                 selectedNode: settings.selectedNode,
-                onChainAddress: settings.onChainAddress
+                onChainAddress: settings.onChainAddress,
+                fiat,
+                lurkerMode,
+                passphrase
             })
-        );
+        ).then(() => {
+            this.setState({
+                saved: true
+            });
 
-        this.setState({
-            saved: true
+            if (nodes.length === 1) {
+                navigation.navigate('Wallet', { refresh: true });
+            } else {
+                navigation.navigate('Settings', { refresh: true });
+            }
         });
-
-        if (nodes.length === 1) {
-            navigation.navigate('Wallet', { refresh: true });
-        } else {
-            navigation.navigate('Settings', { refresh: true });
-        }
     };
 
     deleteNodeConfig = () => {
         const { SettingsStore, navigation } = this.props;
         const { setSettings, settings } = SettingsStore;
         const { index } = this.state;
-        let { nodes } = settings;
+        const {
+            nodes,
+            lurkerMode,
+            passphrase,
+            fiat
+        } = settings;
 
         let newNodes: any = [];
         for (let i = 0; nodes && i < nodes.length; i++) {
@@ -170,7 +183,10 @@ export default class AddEditNode extends React.Component<
                 theme: settings.theme,
                 selectedNode:
                     index === settings.selectedNode ? 0 : settings.selectedNode,
-                onChainAddress: settings.onChainAddress
+                onChainAddress: settings.onChainAddress,
+                fiat,
+                lurkerMode,
+                passphrase
             })
         ).then(() => {
             navigation.navigate('Wallet', { refresh: true });
@@ -181,14 +197,22 @@ export default class AddEditNode extends React.Component<
         const { SettingsStore, navigation } = this.props;
         const { setSettings, settings } = SettingsStore;
         const { index } = this.state;
-        const { nodes } = settings;
+        const {
+            nodes,
+            lurkerMode,
+            passphrase,
+            fiat
+        } = settings;
 
         setSettings(
             JSON.stringify({
                 nodes,
                 theme: settings.theme,
                 selectedNode: index,
-                onChainAddress: settings.onChainAddress
+                onChainAddress: settings.onChainAddress,
+                fiat,
+                lurkerMode,
+                passphrase
             })
         );
 
@@ -278,6 +302,7 @@ export default class AddEditNode extends React.Component<
                         REST Port
                     </Text>
                     <TextInput
+                        keyboardType="numeric"
                         placeholder={'443/8080'}
                         value={port}
                         onChangeText={(text: string) =>
@@ -329,7 +354,7 @@ export default class AddEditNode extends React.Component<
                                 Implementation
                             </Text>
                             <Picker
-                                selectedValue={implementation}
+                                selectedValue={implementation || 'lnd'}
                                 onValueChange={(itemValue: string) =>
                                     this.setState({
                                         implementation: itemValue,
@@ -524,7 +549,8 @@ export default class AddEditNode extends React.Component<
 
 const styles = StyleSheet.create({
     lightThemeStyle: {
-        flex: 1
+        flex: 1,
+        backgroundColor: 'white'
     },
     darkThemeStyle: {
         flex: 1,

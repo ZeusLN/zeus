@@ -2,11 +2,11 @@ import * as React from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import ActivityResult from 'react-native-activity-result-fork';
+import Permissions, { PERMISSIONS, RESULTS } from 'react-native-permissions';
 import {
     CameraKitCamera,
     CameraKitCameraScreen
 } from 'react-native-camera-kit';
-import Permissions from 'react-native-permissions';
 
 const QRINTENT = 'com.google.zxing.client.android.SCAN';
 
@@ -90,11 +90,13 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
         if (Platform.OS === 'android' && this.state.useInternalScanner) {
             // CameraKitCamera permissions don't work on Android at the moment
             // use react-native-permissions
-            await Permissions.request('camera').then((response: any) => {
-                this.setState({
-                    hasCameraPermission: response === 'authorized'
-                });
-            });
+            await Permissions.request(PERMISSIONS.ANDROID.CAMERA).then(
+                (response: any) => {
+                    this.setState({
+                        hasCameraPermission: response === RESULTS.GRANTED
+                    });
+                }
+            );
         }
     }
 

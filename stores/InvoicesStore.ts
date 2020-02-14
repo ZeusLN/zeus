@@ -1,4 +1,4 @@
-import { action, observable } from 'mobx';
+import { action, observable, reaction } from 'mobx';
 import axios from 'axios';
 import { Alert } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
@@ -22,8 +22,29 @@ export default class InvoicesStore {
     @observable invoicesCount: number;
     settingsStore: SettingsStore;
 
+    // lnd
+    @observable loadingFeeEstimate: boolean = false;
+    @observable feeEstimate: number | null;
+    @observable successProbability: number | null;
+
     constructor(settingsStore: SettingsStore) {
         this.settingsStore = settingsStore;
+
+        reaction(
+            () => this.pay_req,
+            () => {
+                if (
+                    this.pay_req &&
+                    this.pay_req.destination &&
+                    this.settingsStore.implementation === 'lnd'
+                ) {
+                    this.getRoutes(
+                        this.pay_req.destination,
+                        this.pay_req.getRequestAmount
+                    );
+                }
+            }
+        );
     }
 
     @action
@@ -42,7 +63,7 @@ export default class InvoicesStore {
                 this.invoices = this.invoices.map(
                     invoice => new Invoice(invoice)
                 );
-                this.invoices = this.invoices.reverse();
+                this.invoices = this.invoices.slice().reverse();
                 this.invoicesCount =
                     data.last_index_offset || this.invoices.length;
                 this.loading = false;
@@ -50,6 +71,7 @@ export default class InvoicesStore {
             .catch(() => {
                 // handle error
                 this.invoices = [];
+                this.invoicesCount = 0;
                 this.loading = false;
             });
     };
@@ -128,6 +150,7 @@ export default class InvoicesStore {
         this.pay_req = null;
         this.paymentRequest = paymentRequest;
         this.loading = true;
+        this.feeEstimate = null;
 
         return RESTUtils.decodePaymentRequest(this.settingsStore, [
             paymentRequest
@@ -160,6 +183,43 @@ export default class InvoicesStore {
                         error.response.data.error) ||
                     error.message;
                 this.pay_req = null;
+            });
+    };
+
+    @action
+    public getRoutes = (destination: string, amount: string) => {
+        this.loadingFeeEstimate = true;
+        this.feeEstimate = null;
+        this.successProbability = null;
+
+        return RESTUtils.getRoutes(this.settingsStore, [destination, amount])
+            .then((response: any) => {
+                // handle success
+                const data = response.data;
+                this.loadingFeeEstimate = false;
+                this.successProbability = data.success_prob
+                    ? data.success_prob * 100
+                    : 0;
+
+                const routes = data.routes;
+                if (routes) {
+                    routes.forEach(route => {
+                        // expect lnd to pick the cheapest route
+                        if (this.feeEstimate) {
+                            if (route.total_fees < this.feeEstimate) {
+                                this.feeEstimate = route.total_fees;
+                            }
+                        } else {
+                            this.feeEstimate = route.total_fees || 0;
+                        }
+                    });
+                }
+            })
+            .catch((error: any) => {
+                // handle error
+                this.loadingFeeEstimate = false;
+                this.feeEstimate = null;
+                this.successProbability = null;
             });
     };
 }

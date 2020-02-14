@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text, View } from 'react-native';
+import { Linking, Text, View } from 'react-native';
 import { ButtonGroup } from 'react-native-elements';
 import Transactions from './Transactions';
 import Payments from './Payments';
@@ -7,6 +7,7 @@ import Invoices from './Invoices';
 import Channels from './Channels';
 import MainPane from './MainPane';
 import { inject, observer } from 'mobx-react';
+import PrivacyUtils from './../../utils/PrivacyUtils';
 
 import BalanceStore from './../../stores/BalanceStore';
 import ChannelsStore from './../../stores/ChannelsStore';
@@ -15,8 +16,11 @@ import InvoicesStore from './../../stores/InvoicesStore';
 import NodeInfoStore from './../../stores/NodeInfoStore';
 import PaymentsStore from './../../stores/PaymentsStore';
 import SettingsStore from './../../stores/SettingsStore';
+import FiatStore from './../../stores/FiatStore';
 import TransactionsStore from './../../stores/TransactionsStore';
 import UnitsStore from './../../stores/UnitsStore';
+
+import handleAnything from './../../utils/handleAnything';
 
 interface WalletProps {
     enterSetup: any;
@@ -31,6 +35,7 @@ interface WalletProps {
     SettingsStore: SettingsStore;
     TransactionsStore: TransactionsStore;
     UnitsStore: UnitsStore;
+    FiatStore: FiatStore;
 }
 
 interface WalletState {
@@ -47,7 +52,8 @@ interface WalletState {
     'PaymentsStore',
     'SettingsStore',
     'TransactionsStore',
-    'UnitsStore'
+    'UnitsStore',
+    'FiatStore'
 )
 @observer
 export default class Wallet extends React.Component<WalletProps, WalletState> {
@@ -56,11 +62,23 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         selectedIndex: 0
     };
 
-    componentWillMount = () => {
+    componentDidMount() {
+        Linking.getInitialURL()
+            .then(url => {
+                if (url) {
+                    handleAnything(url).then(([route, props]) => {
+                        this.props.navigation.navigate(route, props);
+                    });
+                }
+            })
+            .catch(err => console.error('An error occurred', err));
+    }
+
+    UNSAFE_componentWillMount = () => {
         this.getSettingsAndRefresh();
     };
 
-    componentWillReceiveProps = (nextProps: any) => {
+    UNSAFE_componentWillReceiveProps = (nextProps: any) => {
         const { navigation } = nextProps;
         const refresh = navigation.getParam('refresh', null);
 
@@ -84,8 +102,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             ChannelsStore,
             InvoicesStore,
             PaymentsStore,
-            FeeStore
+            FeeStore,
+            SettingsStore,
+            FiatStore
         } = this.props;
+        const { settings } = SettingsStore;
+        const { fiat } = settings;
+
         NodeInfoStore.getNodeInfo();
         BalanceStore.getBlockchainBalance();
         BalanceStore.getLightningBalance();
@@ -94,6 +117,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         InvoicesStore.getInvoices();
         ChannelsStore.getChannels();
         FeeStore.getFees();
+
+        if (!!fiat && fiat !== 'Disabled') {
+            FiatStore.getFiatRates();
+        }
     };
 
     updateIndex = (selectedIndex: number) => {
@@ -126,12 +153,32 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { invoices, invoicesCount } = InvoicesStore;
         const { channels } = ChannelsStore;
         const { settings } = SettingsStore;
-        const { theme } = settings;
+        const { theme, lurkerMode } = settings;
+
+        const paymentsCount = (payments && payments.length) || 0;
+        const paymentsButtonCount = lurkerMode
+            ? PrivacyUtils.hideValue(paymentsCount, 2, true)
+            : paymentsCount;
+
+        const invoicesCountValue = invoicesCount || 0;
+        const invoicesButtonCount = lurkerMode
+            ? PrivacyUtils.hideValue(invoicesCountValue, 2, true)
+            : invoicesCountValue;
+
+        const transactionsCount = (transactions && transactions.length) || 0;
+        const transactionsButtonCount = lurkerMode
+            ? PrivacyUtils.hideValue(transactionsCount, 2, true)
+            : transactionsCount;
+
+        const channelsCount = (channels && channels.length) || 0;
+        const channelsButtonCount = lurkerMode
+            ? PrivacyUtils.hideValue(channelsCount, 2, true)
+            : channelsCount;
 
         const paymentsButton = () => (
             <React.Fragment>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
-                    {(payments && payments.length) || 0}
+                    {paymentsButtonCount}
                 </Text>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
                     Payments
@@ -142,7 +189,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const invoicesButton = () => (
             <React.Fragment>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
-                    {invoicesCount || 0}
+                    {invoicesButtonCount}
                 </Text>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
                     Invoices
@@ -153,7 +200,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const transactionsButton = () => (
             <React.Fragment>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
-                    {(transactions && transactions.length) || 0}
+                    {transactionsButtonCount}
                 </Text>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
                     On-chain
@@ -164,7 +211,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const channelsButton = () => (
             <React.Fragment>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
-                    {(channels && channels.length) || 0}
+                    {channelsButtonCount}
                 </Text>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
                     Channels

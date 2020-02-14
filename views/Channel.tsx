@@ -4,6 +4,7 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
@@ -14,6 +15,7 @@ import SetFeesForm from './../components/SetFeesForm';
 import Identicon from 'identicon.js';
 import { inject, observer } from 'mobx-react';
 const hash = require('object-hash');
+import PrivacyUtils from './../utils/PrivacyUtils';
 
 import ChannelsStore from './../stores/ChannelsStore';
 import FeeStore from './../stores/FeeStore';
@@ -30,6 +32,7 @@ interface ChannelProps {
 
 interface ChannelState {
     confirmCloseChannel: boolean;
+    satPerByte: string;
 }
 
 @inject('ChannelsStore', 'UnitsStore', 'FeeStore', 'SettingsStore')
@@ -39,17 +42,30 @@ export default class ChannelView extends React.Component<
     ChannelState
 > {
     state = {
-        confirmCloseChannel: false
+        confirmCloseChannel: false,
+        satPerByte: ''
     };
 
-    closeChannel = (channelPoint: string, channelId: string) => {
+    closeChannel = (
+        channelPoint: string,
+        channelId: string,
+        satPerByte?: string
+    ) => {
         const { ChannelsStore, navigation } = this.props;
 
         // lnd
         if (channelPoint) {
             const [funding_txid_str, output_index] = channelPoint.split(':');
 
-            ChannelsStore.closeChannel({ funding_txid_str, output_index });
+            if (satPerByte) {
+                ChannelsStore.closeChannel(
+                    { funding_txid_str, output_index },
+                    null,
+                    satPerByte
+                );
+            } else {
+                ChannelsStore.closeChannel({ funding_txid_str, output_index });
+            }
         } else if (channelId) {
             // c-lightning
             ChannelsStore.closeChannel(null, channelId);
@@ -66,12 +82,12 @@ export default class ChannelView extends React.Component<
             FeeStore,
             SettingsStore
         } = this.props;
-        const { confirmCloseChannel } = this.state;
+        const { confirmCloseChannel, satPerByte } = this.state;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { channelFees } = FeeStore;
         const { nodes } = ChannelsStore;
-        const { settings } = SettingsStore;
-        const { theme } = settings;
+        const { settings, implementation } = SettingsStore;
+        const { theme, lurkerMode } = settings;
 
         const channel: Channel = navigation.getParam('channel', null);
         const {
@@ -92,12 +108,52 @@ export default class ChannelView extends React.Component<
             channelId
         } = channel;
         const privateChannel = channel.private;
+
+        const channelName =
+            (nodes[remote_pubkey] && nodes[remote_pubkey].alias) ||
+            alias ||
+            channelId;
+
+        const channelDisplay = lurkerMode
+            ? PrivacyUtils.hideValue(channelName, 8)
+            : channelName;
+
         const data = new Identicon(
             hash.sha1(alias || remote_pubkey || channelId),
-            420
+            255
         ).toString();
 
         const channelFee = channelFees[channel_point];
+
+        const channelBalanceLocal = lurkerMode
+            ? PrivacyUtils.hideValue(getAmount(localBalance || 0), 8, true)
+            : getAmount(localBalance || 0);
+        const channelBalanceRemote = lurkerMode
+            ? PrivacyUtils.hideValue(getAmount(remoteBalance || 0), 8, true)
+            : getAmount(remoteBalance || 0);
+
+        const unsettledBalance = lurkerMode
+            ? PrivacyUtils.hideValue(getAmount(unsettled_balance), 8, true)
+            : getAmount(unsettled_balance);
+
+        const totalSatoshisReceived = lurkerMode
+            ? PrivacyUtils.hideValue(
+                  getAmount(total_satoshis_received || 0),
+                  8,
+                  true
+              )
+            : getAmount(total_satoshis_received || 0);
+        const totalSatoshisSent = lurkerMode
+            ? PrivacyUtils.hideValue(
+                  getAmount(total_satoshis_sent || 0),
+                  8,
+                  true
+              )
+            : getAmount(total_satoshis_sent || 0);
+
+        const capacityDisplay = lurkerMode
+            ? PrivacyUtils.hideValue(getAmount(capacity), 5, true)
+            : getAmount(capacity);
 
         const BackButton = () => (
             <Icon
@@ -133,10 +189,7 @@ export default class ChannelView extends React.Component<
                                     : styles.alias
                             }
                         >
-                            {(nodes[remote_pubkey] &&
-                                nodes[remote_pubkey].alias) ||
-                                alias ||
-                                channelId}
+                            {channelDisplay}
                         </Text>
                         {remote_pubkey && (
                             <Text
@@ -146,7 +199,9 @@ export default class ChannelView extends React.Component<
                                         : styles.pubkey
                                 }
                             >
-                                {remote_pubkey}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(remote_pubkey)
+                                    : remote_pubkey}
                             </Text>
                         )}
 
@@ -157,8 +212,8 @@ export default class ChannelView extends React.Component<
                     </View>
 
                     <BalanceSlider
-                        localBalance={localBalance}
-                        remoteBalance={remoteBalance}
+                        localBalance={lurkerMode ? 50 : localBalance}
+                        remoteBalance={lurkerMode ? 50 : remoteBalance}
                         theme={theme}
                     />
 
@@ -171,7 +226,7 @@ export default class ChannelView extends React.Component<
                                         : styles.balance
                                 }
                             >{`Local balance: ${units &&
-                                getAmount(localBalance || 0)}`}</Text>
+                                channelBalanceLocal}`}</Text>
                             <Text
                                 style={
                                     theme === 'dark'
@@ -179,7 +234,7 @@ export default class ChannelView extends React.Component<
                                         : styles.balance
                                 }
                             >{`Remote balance: ${units &&
-                                getAmount(remoteBalance || 0)}`}</Text>
+                                channelBalanceRemote}`}</Text>
                             {unsettled_balance && (
                                 <Text
                                     style={
@@ -188,7 +243,7 @@ export default class ChannelView extends React.Component<
                                             : styles.balance
                                     }
                                 >{`Unsettled balance: ${units &&
-                                    getAmount(unsettled_balance)}`}</Text>
+                                    unsettledBalance}`}</Text>
                             )}
                         </TouchableOpacity>
                     </View>
@@ -244,8 +299,7 @@ export default class ChannelView extends React.Component<
                                             : styles.value
                                     }
                                 >
-                                    {units &&
-                                        getAmount(total_satoshis_received || 0)}
+                                    {units && totalSatoshisReceived}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -270,8 +324,7 @@ export default class ChannelView extends React.Component<
                                             : styles.value
                                     }
                                 >
-                                    {units &&
-                                        getAmount(total_satoshis_sent || 0)}
+                                    {units && totalSatoshisSent}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -296,7 +349,7 @@ export default class ChannelView extends React.Component<
                                             : styles.value
                                     }
                                 >
-                                    {units && getAmount(capacity)}
+                                    {units && capacityDisplay}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -320,7 +373,13 @@ export default class ChannelView extends React.Component<
                                         : styles.value
                                 }
                             >
-                                {channelFee.base_fee_msat}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(
+                                          channelFee.base_fee_msat,
+                                          5,
+                                          true
+                                      )
+                                    : channelFee.base_fee_msat}
                             </Text>
                         </View>
                     )}
@@ -343,7 +402,13 @@ export default class ChannelView extends React.Component<
                                         : styles.value
                                 }
                             >
-                                {channelFee.fee_rate * 1000000}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(
+                                          channelFee.fee_rate * 1000000,
+                                          2,
+                                          true
+                                      )
+                                    : channelFee.fee_rate * 1000000}
                             </Text>
                         </View>
                     )}
@@ -389,7 +454,13 @@ export default class ChannelView extends React.Component<
                                         : styles.value
                                 }
                             >
-                                {commit_fee}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(
+                                          commit_fee,
+                                          4,
+                                          true
+                                      )
+                                    : commit_fee}
                             </Text>
                         </View>
                     )}
@@ -435,7 +506,13 @@ export default class ChannelView extends React.Component<
                                         : styles.value
                                 }
                             >
-                                {fee_per_kw}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(
+                                          fee_per_kw,
+                                          6,
+                                          true
+                                      )
+                                    : fee_per_kw}
                             </Text>
                         </View>
                     )}
@@ -484,23 +561,63 @@ export default class ChannelView extends React.Component<
                     </View>
 
                     {confirmCloseChannel && (
-                        <View style={styles.button}>
-                            <Button
-                                title="Confirm Channel Close"
-                                icon={{
-                                    name: 'delete-forever',
-                                    size: 25,
-                                    color: '#fff'
-                                }}
-                                onPress={() =>
-                                    this.closeChannel(channel_point, channelId)
-                                }
-                                buttonStyle={{
-                                    backgroundColor: 'red',
-                                    borderRadius: 30
-                                }}
-                            />
-                        </View>
+                        <React.Fragment>
+                            {(implementation === 'lnd' || !implementation) && (
+                                <React.Fragment>
+                                    <Text
+                                        style={{
+                                            color:
+                                                theme === 'dark'
+                                                    ? 'white'
+                                                    : 'black'
+                                        }}
+                                    >
+                                        (Optional) Sat per byte closing fee
+                                    </Text>
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        placeholder={'2'}
+                                        placeholderTextColor="darkgray"
+                                        value={satPerByte}
+                                        onChangeText={(text: string) => {
+                                            console.log(typeof text);
+                                            this.setState({
+                                                satPerByte: text
+                                            });
+                                        }}
+                                        numberOfLines={1}
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
+                                        style={
+                                            theme === 'dark'
+                                                ? styles.textInputDark
+                                                : styles.textInput
+                                        }
+                                    />
+                                </React.Fragment>
+                            )}
+                            <View style={styles.button}>
+                                <Button
+                                    title="Confirm Channel Close"
+                                    icon={{
+                                        name: 'delete-forever',
+                                        size: 25,
+                                        color: '#fff'
+                                    }}
+                                    onPress={() =>
+                                        this.closeChannel(
+                                            channel_point,
+                                            channelId,
+                                            satPerByte
+                                        )
+                                    }
+                                    buttonStyle={{
+                                        backgroundColor: 'red',
+                                        borderRadius: 30
+                                    }}
+                                />
+                            </View>
+                        </React.Fragment>
                     )}
                 </View>
             </ScrollView>
@@ -510,7 +627,8 @@ export default class ChannelView extends React.Component<
 
 const styles = StyleSheet.create({
     lightThemeStyle: {
-        flex: 1
+        flex: 1,
+        backgroundColor: 'white'
     },
     darkThemeStyle: {
         flex: 1,
@@ -579,5 +697,13 @@ const styles = StyleSheet.create({
     button: {
         paddingTop: 15,
         paddingBottom: 15
+    },
+    textInput: {
+        fontSize: 20,
+        color: 'black'
+    },
+    textInputDark: {
+        fontSize: 20,
+        color: 'white'
     }
 });

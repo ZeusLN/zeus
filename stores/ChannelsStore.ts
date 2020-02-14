@@ -107,7 +107,8 @@ export default class ChannelsStore {
     @action
     public closeChannel = (
         request?: CloseChannelRequest | null,
-        channelId?: string
+        channelId?: string | null,
+        satPerByte?: string
     ) => {
         const { implementation } = this.settingsStore;
         this.loading = true;
@@ -116,8 +117,14 @@ export default class ChannelsStore {
         if (implementation === 'c-lightning-REST' && channelId) {
             urlParams = [channelId];
         } else if (request) {
+            // lnd
             const { funding_txid_str, output_index } = request;
+
             urlParams = [funding_txid_str, output_index];
+
+            if (satPerByte) {
+                urlParams = [funding_txid_str, output_index, satPerByte];
+            }
         }
 
         RESTUtils.closeChannel(this.settingsStore, urlParams)
@@ -167,7 +174,9 @@ export default class ChannelsStore {
                 // handle error
                 const errorInfo = error.response && error.response.data;
                 this.errorMsgPeer =
-                    (errorInfo && errorInfo.error.message) || error.message;
+                    (errorInfo && errorInfo.error.message) ||
+                    (errorInfo && errorInfo.error) ||
+                    error.message;
                 this.errorPeerConnect = true;
                 this.connectingToPeer = false;
                 this.peerSuccess = false;
