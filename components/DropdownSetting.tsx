@@ -117,12 +117,10 @@ export default class DropdownSetting extends React.Component<
 const styles = StyleSheet.create({
     picker: {
         height: 50,
-        width: 100,
         color: 'black'
     },
     pickerDark: {
         height: 50,
-        width: 100,
         color: 'white'
     }
 });
