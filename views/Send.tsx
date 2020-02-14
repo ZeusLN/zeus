@@ -52,7 +52,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         this.validateAddress(clipboard, false);
     }
 
-    componentWillReceiveProps(nextProps: any) {
+    UNSAFE_componentWillReceiveProps(nextProps: any) {
         const { navigation } = nextProps;
         const destination = navigation.getParam('destination', null);
         const amount = navigation.getParam('amount', null);
@@ -187,6 +187,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 Amount (in satoshis)
                             </Text>
                             <TextInput
+                                keyboardType="numeric"
                                 value={amount}
                                 onChangeText={(text: string) =>
                                     this.setState({ amount: text })
@@ -206,6 +207,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 Fee (satoshis per byte)
                             </Text>
                             <TextInput
+                                keyboardType="numeric"
                                 placeholder="2"
                                 value={fee}
                                 onChangeText={(text: string) =>
@@ -284,7 +286,8 @@ export default class Send extends React.Component<SendProps, SendState> {
 
 const styles = StyleSheet.create({
     lightThemeStyle: {
-        flex: 1
+        flex: 1,
+        backgroundColor: 'white'
     },
     darkThemeStyle: {
         flex: 1,

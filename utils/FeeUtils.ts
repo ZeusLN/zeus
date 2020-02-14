@@ -58,6 +58,9 @@ class FeeUtils {
 
         return final;
     };
+    toFixed = (x: any) => {
+        return x.toFixed(8).replace(/\.?0+$/, '');
+    };
 }
 
 const feeUtils = new FeeUtils();

@@ -1,4 +1,4 @@
-import * as Keychain from 'react-native-keychain';
+import RNSecureKeyStore, { ACCESSIBLE } from 'react-native-secure-key-store';
 import { action, observable } from 'mobx';
 import axios from 'axios';
 import RESTUtils from '../utils/RESTUtils';
@@ -14,8 +14,10 @@ interface Settings {
     nodes?: Array<Node>;
     onChainAddress?: string;
     theme?: string;
+    lurkerMode?: boolean;
     selectedNode?: number;
     passphrase?: string;
+    fiat?: string;
 }
 
 export default class SettingsStore {
@@ -42,15 +44,19 @@ export default class SettingsStore {
                 // handle success
                 const data = response.data;
                 const configuration = data.configurations[0];
-                const { adminMacaroon, type, uri } = configuration;
+                const { adminMacaroon, macaroon, type, uri } = configuration;
 
-                if (type !== 'lnd-rest') {
+                if (type !== 'lnd-rest' && type !== 'clightning-rest') {
                     this.btcPayError =
-                        'Sorry, we only currently support BTCPay instances using lnd';
+                        'Sorry, we currently only support BTCPay instances using lnd or c-lightning';
                 } else {
                     const config = {
                         host: uri.split('https://')[1],
-                        macaroonHex: adminMacaroon
+                        macaroonHex: adminMacaroon || macaroon,
+                        implementation:
+                            type === 'clightning-rest'
+                                ? 'c-lightning-REST'
+                                : 'lnd'
                     };
 
                     return config;
@@ -68,10 +74,12 @@ export default class SettingsStore {
 
         try {
             // Retrieve the credentials
-            const credentials: any = await Keychain.getGenericPassword();
+            const credentials: any = await RNSecureKeyStore.get(
+                'zeus-settings'
+            );
             this.loading = false;
             if (credentials) {
-                this.settings = JSON.parse(credentials.password);
+                this.settings = JSON.parse(credentials);
                 const node: any =
                     this.settings.nodes &&
                     this.settings.nodes[this.settings.selectedNode || 0];
@@ -97,8 +105,11 @@ export default class SettingsStore {
         this.loading = true;
 
         // Store the credentials
-        await Keychain.setGenericPassword('settings', settings).then(() => {
+        await RNSecureKeyStore.set('zeus-settings', settings, {
+            accessible: ACCESSIBLE.WHEN_UNLOCKED
+        }).then(() => {
             this.loading = false;
+            return settings;
         });
     }
 

@@ -4,7 +4,8 @@ import {
     StyleSheet,
     Text,
     TextInput,
-    View
+    View,
+    ScrollView
 } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import { Button, ButtonGroup, Header, Icon } from 'react-native-elements';
@@ -150,7 +151,7 @@ export default class Receive extends React.Component<
                     }}
                 />
 
-                <View style={styles.content}>
+                <ScrollView style={styles.content}>
                     {selectedIndex === 0 && (
                         <View>
                             {!!payment_request && (
@@ -184,7 +185,7 @@ export default class Receive extends React.Component<
                             )}
                             {!!payment_request && (
                                 <CollapsedQR
-                                    value={payment_request}
+                                    value={payment_request.toUpperCase()}
                                     copyText="Copy Invoice"
                                     theme={theme}
                                 />
@@ -228,6 +229,7 @@ export default class Receive extends React.Component<
                                     : ''}
                             </Text>
                             <TextInput
+                                keyboardType="numeric"
                                 placeholder={'100'}
                                 value={value}
                                 onChangeText={(text: string) => {
@@ -257,6 +259,7 @@ export default class Receive extends React.Component<
                                 Expiration (in seconds)
                             </Text>
                             <TextInput
+                                keyboardType="numeric"
                                 placeholder={'3600 (one hour)'}
                                 value={expiry}
                                 onChangeText={(text: string) =>
@@ -341,7 +344,7 @@ export default class Receive extends React.Component<
                             </View>
                         </React.Fragment>
                     )}
-                </View>
+                </ScrollView>
             </View>
         );
     }
@@ -349,7 +352,8 @@ export default class Receive extends React.Component<
 
 const styles = StyleSheet.create({
     lightThemeStyle: {
-        flex: 1
+        flex: 1,
+        backgroundColor: 'white'
     },
     darkThemeStyle: {
         flex: 1,

@@ -52,7 +52,7 @@ export default class OpenChannel extends React.Component<
         suggestImport: ''
     };
 
-    async componentWillMount() {
+    async UNSAFE_componentWillMount() {
         const clipboard = await Clipboard.getString();
 
         if (NodeUriUtils.isValidNodeUri(clipboard)) {
@@ -82,7 +82,7 @@ export default class OpenChannel extends React.Component<
         });
     };
 
-    componentWillReceiveProps(nextProps: any) {
+    UNSAFE_componentWillReceiveProps(nextProps: any) {
         const { navigation } = nextProps;
         const node_pubkey_string = navigation.getParam(
             'node_pubkey_string',
@@ -263,6 +263,7 @@ export default class OpenChannel extends React.Component<
                         Local amount (in satoshis)
                     </Text>
                     <TextInput
+                        keyboardType="numeric"
                         placeholder={'20000 (min)'}
                         value={local_funding_amount}
                         onChangeText={(text: string) =>
@@ -284,6 +285,7 @@ export default class OpenChannel extends React.Component<
                         Number of Confirmations
                     </Text>
                     <TextInput
+                        keyboardType="numeric"
                         placeholder={'1'}
                         value={min_confs.toString()}
                         onChangeText={(text: string) =>
@@ -307,6 +309,7 @@ export default class OpenChannel extends React.Component<
                         Satoshis per byte
                     </Text>
                     <TextInput
+                        keyboardType="numeric"
                         placeholder="2"
                         value={sat_per_byte}
                         onChangeText={(text: string) => this.setFee(text)}
@@ -382,7 +385,8 @@ export default class OpenChannel extends React.Component<
 
 const styles = StyleSheet.create({
     lightThemeStyle: {
-        flex: 1
+        flex: 1,
+        backgroundColor: 'white'
     },
     darkThemeStyle: {
         flex: 1,
