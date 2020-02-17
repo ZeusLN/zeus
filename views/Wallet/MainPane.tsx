@@ -41,6 +41,11 @@ export default class MainPane extends React.Component<
         NativeModules.TorModule.startTor();
     }
 
+    stopTor() {
+        console.log('connectToTor react');
+        NativeModules.TorModule.stopTor();
+    }
+
     render() {
         const {
             NodeInfoStore,
@@ -375,6 +380,17 @@ export default class MainPane extends React.Component<
                             alignItems: 'center'
                         }}
                         onPress={() => this.connectToTor()}
+                    />
+                    <Button
+                        title="Stop Tor"
+                        buttonStyle={{
+                            backgroundColor: 'orange',
+                            borderRadius: 30
+                        }}
+                        containerStyle={{
+                            alignItems: 'center'
+                        }}
+                        onPress={() => this.stopTor()}
                     />
                     <Text
                         style={{

@@ -34,6 +34,13 @@ public class TorModule extends ReactContextBaseJavaModule {
       reactContext.startService(startIntent);
   }
 
+  @ReactMethod
+  public void stopTor() {
+      Intent startIntent = new Intent(reactContext.getApplicationContext(), TorService.class);
+      startIntent.setAction(TorService.STOP_SERVICE);
+      reactContext.startService(startIntent);
+  }
+
   TorModule(ReactApplicationContext context) {
       super(context);
       reactContext = context;

@@ -52,7 +52,7 @@ public class TorService extends Service {
                 .setGroup("Tor")
                 .setCategory(NotificationCompat.CATEGORY_PROGRESS)
                 .setGroupSummary(false)
-                .setSmallIcon(R.drawable.ic_samourai_and_tor_notif_icon)
+                .setSmallIcon(R.drawable.ic_tor_notif_icon)
                 .build();
 
         startForeground(TOR_SERVICE_NOTIFICATION_ID, notification);
@@ -215,14 +215,14 @@ public class TorService extends Service {
                 .setGroup("Tor")
                 .setCategory(NotificationCompat.CATEGORY_PROGRESS)
                 .setGroupSummary(false)
-                .setSmallIcon(R.drawable.ic_samourai_and_tor_notif_icon);
+                .setSmallIcon(R.drawable.ic_tor_notif_icon);
 
         switch (TorManager.getInstance(getApplicationContext()).state) {
             case CONNECTED: {
                 notification.setColorized(true);
                 notification.addAction(getStopAction("Stop"));
                 notification.addAction(getRestartAction());
-                notification.setColor(ContextCompat.getColor(this, R.color.green));
+                notification.setColor(ContextCompat.getColor(this, R.color.purple));
                 break;
             }
             case CONNECTING: {
