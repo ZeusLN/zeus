@@ -29,8 +29,16 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 
 import com.zeusln.zeus.CustomTorPackage;
+import android.os.Build;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 
 public class MainApplication extends Application implements ReactApplication {
+
+    public static String TOR_CHANNEL_ID = "TOR_CHANNEL";
+    public static String FOREGROUND_SERVICE_CHANNEL_ID = "FOREGROUND_SERVICE_CHANNEL_ID";
+
     private final ReactNativeHost mReactNativeHost =
         new ReactNativeHost(this) {
           @Override
@@ -59,8 +67,35 @@ public class MainApplication extends Application implements ReactApplication {
   @Override
   public void onCreate() {
       super.onCreate();
+      setUpChannels();
       SoLoader.init(this, /* native exopackage */ false);
       /* Add this row for https errors */
       OkHttpClientProvider.setOkHttpClientFactory(new CustomClientFactory());
   }
+
+  private void setUpChannels() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel serviceChannel = new NotificationChannel(
+                    TOR_CHANNEL_ID,
+                    "Tor service ",
+                    NotificationManager.IMPORTANCE_DEFAULT
+            );
+            serviceChannel.setSound(null, null);
+            NotificationManager manager = getSystemService(NotificationManager.class);
+
+            NotificationChannel refreshService = new NotificationChannel(
+                    FOREGROUND_SERVICE_CHANNEL_ID,
+                    "Zeus Service",
+                    NotificationManager.IMPORTANCE_DEFAULT
+            );
+            refreshService.setSound(null, null);
+            refreshService.setImportance(NotificationManager.IMPORTANCE_LOW);
+            refreshService.setLockscreenVisibility(Notification.VISIBILITY_SECRET);
+
+            if (manager != null) {
+                manager.createNotificationChannel(serviceChannel);
+                manager.createNotificationChannel(refreshService);
+            }
+        }
+    }
 }

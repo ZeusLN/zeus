@@ -19,22 +19,19 @@ import com.zeusln.zeus.TorService;
 import com.zeusln.zeus.TorManager;
 import android.content.Intent;
 import android.content.Context;
-import android.view.View;
-import android.app.Activity;
 
 public class TorModule extends ReactContextBaseJavaModule {
   private static ReactApplicationContext reactContext;
-  Activity context;
 
   public String getName() {
       return "TorModule";
   }
 
   @ReactMethod
-  public void startTor(View view) {
-      Intent startIntent = new Intent(context.getApplicationContext(), TorService.class);
+  public void startTor() {
+      Intent startIntent = new Intent(reactContext.getApplicationContext(), TorService.class);
       startIntent.setAction(TorService.START_SERVICE);
-      startService(startIntent);
+      reactContext.startService(startIntent);
   }
 
   TorModule(ReactApplicationContext context) {
