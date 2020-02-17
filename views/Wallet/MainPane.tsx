@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Image, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { Image, StyleSheet, Text, View, TouchableOpacity, NativeModules } from 'react-native';
 import { Badge, Button, Header } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import LinearGradient from 'react-native-linear-gradient';
@@ -35,6 +35,11 @@ export default class MainPane extends React.Component<
     state = {
         combinedBalance: false
     };
+
+    connectToTor() {
+        console.log('connectToTor react');
+        NativeModules.TorModule.startTor();
+    }
 
     render() {
         const {
@@ -359,6 +364,17 @@ export default class MainPane extends React.Component<
                             alignItems: 'center'
                         }}
                         onPress={() => navigation.navigate('Settings')}
+                    />
+                    <Button
+                        title="Connect to Tor"
+                        buttonStyle={{
+                            backgroundColor: 'green',
+                            borderRadius: 30
+                        }}
+                        containerStyle={{
+                            alignItems: 'center'
+                        }}
+                        onPress={() => this.connectToTor()}
                     />
                     <Text
                         style={{

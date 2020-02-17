@@ -132,7 +132,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 15
-        versionName "0.2.1-beta1"
+        versionName "0.2.1"
 
         ndk {
             abiFilters "armeabi-v7a", "x86", "arm64-v8a", "x86_64"
@@ -210,6 +210,15 @@ dependencies {
     implementation "com.facebook.react:react-native:+"  // From node_modules
     implementation 'androidx.appcompat:appcompat:1.1.0-rc01'
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0-alpha02'
+    implementation 'io.reactivex.rxjava2:rxandroid:2.1.0'
+
+    // implementation 'com.android.support:multidex:1.0.0'
+    // implementation 'com.android.support:support-v4:26.1.0'
+    // implementation 'com.android.support:appcompat-v7:26.1.0'
+    // implementation 'com.android.support:design:26.1.0'
+    // implementation 'com.android.support.constraint:constraint-layout:1.1.0'
+    // implementation 'com.android.support:recyclerview-v7:26.1.0'
+    // implementation 'androidx.core.app.NotificationCompat:1.1.0'
 
     if (enableHermes) {
         def hermesPath = "../../node_modules/hermes-engine/android/";
@@ -218,6 +227,8 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    implementation project(path: ':tor')
 }
 
 // Run this once to be able to run the application with BUCK

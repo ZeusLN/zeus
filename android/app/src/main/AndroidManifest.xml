@@ -11,6 +11,12 @@
       android:roundIcon="@mipmap/zeus_round"
       android:allowBackup="false"
       android:theme="@style/AppTheme">
+      <service
+          android:name=".TorService"
+          android:label="Tor Service"
+          android:enabled="true"
+          android:stopWithTask="true"
+      />
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"
