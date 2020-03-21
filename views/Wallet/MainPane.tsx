@@ -33,7 +33,8 @@ export default class MainPane extends React.Component<
     MainPaneState
 > {
     state = {
-        combinedBalance: false
+        combinedBalance: false,
+        torPort: null
     };
 
     connectToTor() {
@@ -42,8 +43,23 @@ export default class MainPane extends React.Component<
     }
 
     stopTor() {
-        console.log('connectToTor react');
+        console.log('stopTor react');
         NativeModules.TorModule.stopTor();
+    }
+
+    getCurrentPort() {
+        console.log('getProxy react');
+        NativeModules.TorModule.getCurrentPort((port) => {
+            console.log(typeof post);
+            
+            console.log(port);
+            this.setState({
+                torPort: port
+            });
+        },
+        (errMsg) => {
+            console.log(errMsg);
+        });
     }
 
     render() {
@@ -354,6 +370,16 @@ export default class MainPane extends React.Component<
                             ? NodeInfoStore.errorMsg
                             : 'Error connecting to your node. Please check your settings and try again.'}
                     </Text>
+                    {!!this.state.torPort && <Text
+                        style={{
+                            color: '#fff',
+                            fontSize: 20,
+                            marginTop: 20,
+                            marginBottom: 25
+                        }}
+                    >
+                        {this.state.torPort}
+                    </Text>}
                     <Button
                         icon={{
                             name: 'settings',
@@ -391,6 +417,17 @@ export default class MainPane extends React.Component<
                             alignItems: 'center'
                         }}
                         onPress={() => this.stopTor()}
+                    />
+                    <Button
+                        title="Get Proxy"
+                        buttonStyle={{
+                            backgroundColor: 'purple',
+                            borderRadius: 30
+                        }}
+                        containerStyle={{
+                            alignItems: 'center'
+                        }}
+                        onPress={() => this.getCurrentPort()}
                     />
                     <Text
                         style={{

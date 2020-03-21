@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Linking, Text, View } from 'react-native';
+import { Linking, Text, View, NativeEventEmitter, NativeModules } from 'react-native';
 import { ButtonGroup } from 'react-native-elements';
 import Transactions from './Transactions';
 import Payments from './Payments';
@@ -59,10 +59,12 @@ interface WalletState {
 export default class Wallet extends React.Component<WalletProps, WalletState> {
     state = {
         units: 'sats',
-        selectedIndex: 0
+        selectedIndex: 0,
+        torStatus: 'Disconnected',
+        torPort: null
     };
 
-    componentDidMount() {
+    componentDidMount(props: any) {
         Linking.getInitialURL()
             .then(url => {
                 if (url) {
@@ -72,6 +74,22 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 }
             })
             .catch(err => console.error('An error occurred', err));
+
+        const eventEmitter = new NativeEventEmitter(NativeModules.TorModule);
+        eventEmitter.addListener('TorStatusReminder', (event) => {
+            console.log('!!!!');
+            console.log(event.status) // "someValue"
+            console.log(event.currentPort);
+            this.setState({
+                torStatus: event.status,
+                torPort: event.currentPort
+            });
+
+            if (event.currentPort) {
+                props.settingsStore.setTorPort(event.currentPort);
+                this.refresh();
+            }
+        });
     }
 
     UNSAFE_componentWillMount = () => {

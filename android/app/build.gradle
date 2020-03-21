@@ -120,6 +120,7 @@ def jscFlavor = 'org.webkit:android-jsc:+'
 def enableHermes = project.ext.react.get("enableHermes", false);
 
 android {
+    useLibrary 'org.apache.http.legacy'
     compileSdkVersion rootProject.ext.compileSdkVersion
 
     compileOptions {
@@ -211,6 +212,12 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.1.0-rc01'
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0-alpha02'
     implementation 'io.reactivex.rxjava2:rxandroid:2.1.0'
+    implementation 'commons-io:commons-io:2.5'
+    implementation 'org.apache.commons:commons-lang3:3.3'
+    implementation 'info.guardianproject.netcipher:netcipher:2.0.0-alpha1'
+    implementation 'info.guardianproject.netcipher:netcipher-okhttp3:2.0.0-alpha1'
+
+    implementation 'com.squareup.okhttp3:okhttp:3.13.1'
 
     // implementation 'com.android.support:multidex:1.0.0'
     // implementation 'com.android.support:support-v4:26.1.0'

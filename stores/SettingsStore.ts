@@ -29,6 +29,12 @@ export default class SettingsStore {
     @observable macaroonHex: string;
     @observable implementation: string;
     @observable chainAddress: string | undefined;
+    @observable torPort: Number | null;
+
+    @action
+    public setTorPort = (data?: string) => {
+        this.torPort = data ? Number(data) : null;
+    };
 
     @action
     public fetchBTCPayConfig = (data: string) => {

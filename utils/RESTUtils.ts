@@ -1,5 +1,6 @@
 import axios from 'axios';
 import SettingsStore from './../stores/SettingsStore';
+import { NativeModules } from 'react-native';
 
 const lndRoutes: any = {
     getTransactions: '/v1/transactions',
@@ -85,13 +86,20 @@ class RESTUtils {
         cancelToken?: any,
         data?: any
     ) => {
-        return axios.request({
+        const { torPort } = settingsStore;
+        const params = {
             method,
             url,
             headers,
             cancelToken,
             data
-        });
+        };
+
+        if (torPort) {
+            NativeModules.TorModule.makeRestCall(params)
+        } else {
+            axios.request(params);
+        }
     };
 
     getHeaders = (implementation: string, macaroonHex: string) => {
@@ -136,7 +144,10 @@ class RESTUtils {
 
         const headers = this.getHeaders(implementation, macaroonHex);
         const url = this.getURL(host, port, route);
-        return this.axiosReq(headers, url, method, cancelToken, data);
+        const response = this.axiosReq(headers, url, method, cancelToken, data);
+        console.log('!@#!');
+        console.log(response);
+        return response;
     };
 
     getRequest = (

@@ -35,7 +35,7 @@ public class TorManager {
     }
 
     static TorManager instance;
-    private int currentPort = 0;
+    public int currentPort = 0;
 
     private Proxy proxy = null;
     public CONNECTION_STATES state = CONNECTION_STATES.IDLE;
