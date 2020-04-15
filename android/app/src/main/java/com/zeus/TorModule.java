@@ -20,7 +20,7 @@ import java.util.HashMap;
 
 import com.zeusln.zeus.TorService;
 import com.zeusln.zeus.TorManager;
-import com.zeusln.zeus.WebUtil;
+import com.zeusln.zeus.util.WebUtil;
 import android.content.Intent;
 import android.content.Context;
 
@@ -110,9 +110,13 @@ public class TorModule extends ReactContextBaseJavaModule {
           ReadableMap data = params.getMap("data");
           if (params.hasKey("method") && params.getString("method").equals("GET")) {
               Log.i("restDebug", "GET");
-              response = WebUtil.getInstance(reactContext).getURL(url);
-              Log.i("restDebug", response);
-              successCallback.invoke(response);
+              try {
+                  response = WebUtil.getInstance(reactContext.getApplicationContext()).getURL(url);
+                  Log.i("restDebug", response);
+                  successCallback.invoke(response);
+              } catch(Exception e) {
+                  Log.i("exception get", e.getMessage());
+              }
           } else if (params.hasKey("method") && params.getString("method").equals("POST")) {
               Log.i("restDebug", "POST");
               // response = WebUtil.getInstance(reactContext).postURL(url, data);

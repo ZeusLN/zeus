@@ -1,4 +1,4 @@
-package com.zeusln.zeus;
+package com.zeusln.zeus.util;
 
 import android.content.Context;
 import android.util.Log;
@@ -70,8 +70,9 @@ public class WebUtil {
         if (context == null) {
             return postURL(null, request, urlParameters);
         } else {
-            Log.i("WebUtil", "Tor required status:" + TorManager.getInstance(context).isRequired());
-            if (TorManager.getInstance(context).isRequired()) {
+            // Log.i("WebUtil", "Tor required status:" + TorManager.getInstance(context).isRequired());
+            // if (TorManager.getInstance(context).isRequired()) {
+            if (true) {
                 if (urlParameters.startsWith("tx=")) {
                     HashMap<String, String> args = new HashMap<String, String>();
                     args.put("tx", urlParameters.substring(3));
@@ -191,8 +192,9 @@ public class WebUtil {
             return _getURL(URL);
         } else {
             //if(TorUtil.getInstance(context).orbotIsRunning())    {
-            Log.i("WebUtil", "Tor required status:" + TorManager.getInstance(context).isRequired());
-            if (TorManager.getInstance(context).isRequired()) {
+            // Log.i("WebUtil", "Tor required status:" + TorManager.getInstance(context).isRequired());
+            // if (TorManager.getInstance(context).isRequired()) {
+            if (true) {
                 return tor_getURL(URL);
             } else {
                 return _getURL(URL);
@@ -338,7 +340,7 @@ public class WebUtil {
     public String tor_deleteURL(String URL, HashMap<String, String> args) throws Exception {
 
         // ? R.raw.debiancacerts
-        StrongHttpsClient httpclient = new StrongHttpsClient(context);
+        StrongHttpsClient httpclient = new StrongHttpsClient(context, null);
 
         httpclient.useProxy(true, strProxyType, strProxyIP, proxyPort);
 
