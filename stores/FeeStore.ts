@@ -70,7 +70,7 @@ export default class FeeStore {
                     this.weekEarned = data.week_fee_sum || 0;
                     this.monthEarned = data.month_fee_sum || 0;
                 } else {
-                    // c-lighting-REST
+                    // c-lightning-REST
                     this.totalEarned = data.feeCollected / 1000; // msatoshi_fees_collected
                 }
 
