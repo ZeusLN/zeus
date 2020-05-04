@@ -78,7 +78,7 @@ export default class TransactionsStore {
             });
     };
 
-    sendPayment = (payment_request: string, amount?: string) => {
+    sendPayment = (payment_request: string, amount?: string, pubkey?: string) => {
         const { implementation } = this.settingsStore;
 
         this.loading = true;
@@ -97,15 +97,22 @@ export default class TransactionsStore {
                 amount: Number(amount) * 1000
             };
         } else {
-            if (amount) {
+            if (pubkey) {
                 data = {
                     amt: amount,
-                    payment_request
+                    dest: pubkey
                 };
             } else {
-                data = {
-                    payment_request
-                };
+                if (amount) {
+                    data = {
+                        amt: amount,
+                        payment_request
+                    };
+                } else {
+                    data = {
+                        payment_request
+                    };
+                }
             }
         }
 
