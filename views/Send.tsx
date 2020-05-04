@@ -294,7 +294,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     color: theme === 'dark' ? 'white' : 'black'
                                 }}
                             >
-                                Sorry, c-lighting does not support sending keysend payments yet. You can still receive keysend payments if it's enabled on your node.
+                                Sorry, c-lightning does not support sending keysend payments yet. You can still receive keysend payments if it's enabled on your node.
                             </Text>
                         </React.Fragment>
                     )}
