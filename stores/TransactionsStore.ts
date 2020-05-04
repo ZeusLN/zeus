@@ -117,7 +117,9 @@ export default class TransactionsStore {
                 this.payment_route = data.payment_route;
                 this.payment_preimage = data.payment_preimage;
                 this.payment_hash = data.payment_hash;
-                this.payment_error = data.payment_error;
+                if (data.payment_error !== "") {
+                    this.payment_error = data.payment_error;
+                }
                 this.status = data.status;
             })
             .catch((error: any) => {
