@@ -4,6 +4,12 @@ import TransactionRequest from './../models/TransactionRequest';
 import ErrorUtils from './../utils/ErrorUtils';
 import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
+import { randomBytes } from 'react-native-randombytes';
+import { NativeModules } from 'react-native';
+const { RNRandomBytes } = NativeModules;
+
+const keySendPreimageType = '5482373484';
+const preimageByteLength = 32;
 
 export default class TransactionsStore {
     @observable loading: boolean = false;
@@ -98,9 +104,15 @@ export default class TransactionsStore {
             };
         } else {
             if (pubkey) {
+                let preimage;
+                RNRandomBytes.randomBytes(preimageByteLength), (err, bytes) => {
+                    preimage = bytes;
+                });
+
                 data = {
                     amt: amount,
-                    dest: pubkey
+                    dest: pubkey,
+                    dest_custom_records: [{ type: keySendPreimageType, value: secret }]
                 };
             } else {
                 if (amount) {
