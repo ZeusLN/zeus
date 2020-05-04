@@ -104,16 +104,15 @@ export default class TransactionsStore {
             };
         } else {
             if (pubkey) {
-                let preimage;
-                RNRandomBytes.randomBytes(preimageByteLength), (err, bytes) => {
-                    preimage = bytes;
-                });
+                RNRandomBytes.randomBytes(preimageByteLength, (err, preimage) => {
+                    const secret = preimage.toString('hex');
 
-                data = {
-                    amt: amount,
-                    dest: pubkey,
-                    dest_custom_records: [{ type: keySendPreimageType, value: secret }]
-                };
+                    data = {
+                        amt: amount,
+                        dest_string: pubkey,
+                        dest_custom_records: [{ type: keySendPreimageType, value: secret }]
+                    };
+                });
             } else {
                 if (amount) {
                     data = {

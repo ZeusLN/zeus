@@ -180,6 +180,20 @@
 			remoteGlobalIDString = 58B5119B1A9E6C1200147676;
 			remoteInfo = RCTText;
 		};
+		9700508B2460D71600AA6E33 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 970050862460D71500AA6E33 /* RNRandomBytes.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 73EEC9391BFE4B1D00D468EB;
+			remoteInfo = RNRandomBytes;
+		};
+		9700508D2460D71600AA6E33 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 970050862460D71500AA6E33 /* RNRandomBytes.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 163CDE4E2087CAD3001065FB;
+			remoteInfo = "RNRandomBytes-tvOS";
+		};
 		971EAC8C23DCF75600DB5FB3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 971EAC8723DCF75600DB5FB3 /* RNSecureKeyStore.xcodeproj */;
@@ -243,6 +257,7 @@
 		7FE4DFA6CD064723B106677B /* Octicons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Octicons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Octicons.ttf"; sourceTree = "<group>"; };
 		832341B01AAA6A8300B99B32 /* RCTText.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTText.xcodeproj; path = "../node_modules/react-native/Libraries/Text/RCTText.xcodeproj"; sourceTree = "<group>"; };
 		8838663EE1D7ACC9F9C59F45 /* Pods-zeusTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zeusTests.release.xcconfig"; path = "Target Support Files/Pods-zeusTests/Pods-zeusTests.release.xcconfig"; sourceTree = "<group>"; };
+		970050862460D71500AA6E33 /* RNRandomBytes.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RNRandomBytes.xcodeproj; path = "../node_modules/react-native-randombytes/RNRandomBytes.xcodeproj"; sourceTree = "<group>"; };
 		971EAC8723DCF75600DB5FB3 /* RNSecureKeyStore.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RNSecureKeyStore.xcodeproj; path = "../node_modules/react-native-secure-key-store/ios/RNSecureKeyStore.xcodeproj"; sourceTree = "<group>"; };
 		97F6D3D82204F5280030F13B /* zeus.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; name = zeus.jpg; path = zeus/zeus.jpg; sourceTree = "<group>"; };
 		97F6D46922054E640030F13B /* Octicons.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Octicons.ttf; sourceTree = "<group>"; };
@@ -446,6 +461,7 @@
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
 			isa = PBXGroup;
 			children = (
+				970050862460D71500AA6E33 /* RNRandomBytes.xcodeproj */,
 				971EAC8723DCF75600DB5FB3 /* RNSecureKeyStore.xcodeproj */,
 				5E91572D1DD0AC6500FF2AA8 /* RCTAnimation.xcodeproj */,
 				00C302A71ABCB8CE00DB3ED1 /* RCTActionSheet.xcodeproj */,
@@ -511,6 +527,15 @@
 				8838663EE1D7ACC9F9C59F45 /* Pods-zeusTests.release.xcconfig */,
 			);
 			path = Pods;
+			sourceTree = "<group>";
+		};
+		970050872460D71500AA6E33 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				9700508C2460D71600AA6E33 /* libRNRandomBytes.a */,
+				9700508E2460D71600AA6E33 /* libRNRandomBytes-tvOS.a */,
+			);
+			name = Products;
 			sourceTree = "<group>";
 		};
 		971EAC8823DCF75600DB5FB3 /* Products */ = {
@@ -747,6 +772,10 @@
 					ProjectRef = 139FDEE61B06529A00C62182 /* RCTWebSocket.xcodeproj */;
 				},
 				{
+					ProductGroup = 970050872460D71500AA6E33 /* Products */;
+					ProjectRef = 970050862460D71500AA6E33 /* RNRandomBytes.xcodeproj */;
+				},
+				{
 					ProductGroup = 971EAC8823DCF75600DB5FB3 /* Products */;
 					ProjectRef = 971EAC8723DCF75600DB5FB3 /* RNSecureKeyStore.xcodeproj */;
 				},
@@ -893,6 +922,20 @@
 			fileType = archive.ar;
 			path = libRCTText.a;
 			remoteRef = 832341B41AAA6A8300B99B32 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		9700508C2460D71600AA6E33 /* libRNRandomBytes.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libRNRandomBytes.a;
+			remoteRef = 9700508B2460D71600AA6E33 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		9700508E2460D71600AA6E33 /* libRNRandomBytes-tvOS.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = "libRNRandomBytes-tvOS.a";
+			remoteRef = 9700508D2460D71600AA6E33 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 		971EAC8D23DCF75600DB5FB3 /* libRNSecureKeyStore.a */ = {
