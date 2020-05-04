@@ -45,7 +45,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         };
     }
 
-    async componentWillMount() {
+    async UNSAFE_componentWillMount() {
         const clipboard = await Clipboard.getString();
 
         Clipboard.setString('');
@@ -106,6 +106,15 @@ export default class Send extends React.Component<SendProps, SendState> {
         navigation.navigate('SendingOnChain');
     };
 
+    sendKeySendPayment = () => {
+        const { TransactionsStore, navigation, SettingsStore } = this.props;
+        const { destination, amount} = this.state;
+
+        TransactionsStore.sendPayment(null, amount, destination);
+
+        navigation.navigate('SendingLightning');
+    };
+
     render() {
         const { SettingsStore, navigation } = this.props;
         const {
@@ -115,7 +124,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             amount,
             fee
         } = this.state;
-        const { settings } = SettingsStore;
+        const { implementation, settings } = SettingsStore;
         const { theme } = settings;
 
         const BackButton = () => (
@@ -144,7 +153,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     <Text
                         style={{ color: theme === 'dark' ? 'white' : 'black' }}
                     >
-                        Bitcoin address or Lightning payment request
+                        Bitcoin address, Lightning payment request, or keysend address (if enabled)
                     </Text>
                     <TextInput
                         placeholder={'lnbc1...'}
@@ -165,8 +174,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 color: theme === 'dark' ? 'white' : 'black'
                             }}
                         >
-                            Must be a valid Bitcoin address or Lightning payment
-                            request
+                            Must be a valid Bitcoin address, Lightning payment
+                            request, or keysend address
                         </Text>
                     )}
                     {transactionType && (
@@ -236,6 +245,57 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     }}
                                 />
                             </View>
+                        </React.Fragment>
+                    )}
+                    {transactionType === 'Keysend' && implementation === 'lnd' && (
+                        <React.Fragment>
+                            <Text
+                                style={{
+                                    color: theme === 'dark' ? 'white' : 'black'
+                                }}
+                            >
+                                Amount (in satoshis)
+                            </Text>
+                            <TextInput
+                                keyboardType="numeric"
+                                value={amount}
+                                onChangeText={(text: string) =>
+                                    this.setState({ amount: text })
+                                }
+                                style={
+                                    theme === 'dark'
+                                        ? styles.textInputDark
+                                        : styles.textInput
+                                }
+                                placeholderTextColor="gray"
+                            />
+                            <View style={styles.button}>
+                                <Button
+                                    title="Send"
+                                    icon={{
+                                        name: 'send',
+                                        size: 25,
+                                        color: 'white'
+                                    }}
+                                    onPress={() => this.sendKeySendPayment()}
+                                    style={styles.button}
+                                    buttonStyle={{
+                                        backgroundColor: 'orange',
+                                        borderRadius: 30
+                                    }}
+                                />
+                            </View>
+                        </React.Fragment>
+                    )}
+                    {transactionType === 'Keysend' && implementation === 'c-lightning-REST' &&(
+                        <React.Fragment>
+                            <Text
+                                style={{
+                                    color: theme === 'dark' ? 'white' : 'black'
+                                }}
+                            >
+                                Sorry, c-lighting does not support sending keysend payments yet. You can still receive keysend payments if it's enabled on your node.
+                            </Text>
                         </React.Fragment>
                     )}
                     {transactionType === 'Lightning' && (

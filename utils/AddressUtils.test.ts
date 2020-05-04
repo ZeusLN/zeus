@@ -97,6 +97,27 @@ describe('AddressUtils', () => {
             ).toBeTruthy();
         });
 
+        it('validates capitalized Lightning public keys properly', () => {
+            expect(
+                AddressUtils.isValidLightningPubKey('B')
+            ).toBeFalsy();
+            expect(
+                AddressUtils.isValidLightningPubKey(
+                    '0368fea53f886ddaf541212f78e2ef426fdfef82c2df8ec7e2e100b4088ac0ff1d'
+                )
+            ).toBeTruthy();
+            expect(
+                AddressUtils.isValidLightningPubKey(
+                    '02264ed0a325064edf66f20290003bede4c2122d8b27be396f700862dfdd925485'
+                )
+            ).toBeTruthy();
+            expect(
+                AddressUtils.isValidLightningPubKey(
+                    '02f26071c249ea5cd7c346afda799d58f113852f7ab6c80f6f7f2bedd7c52cd01a'
+                )
+            ).toBeTruthy();
+        });
+
         describe('processSendAddress', () => {
             it('process address inputed and scanned from the Send view', () => {
                 expect(

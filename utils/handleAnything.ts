@@ -17,6 +17,14 @@ export default async function(data: string): Promise<any> {
                 transactionType: 'On-chain'
             }
         ];
+    } else if (AddressUtils.isValidLightningPubKey(value)) {
+        return [
+            'Send',
+            {
+                destination: value,
+                transactionType: 'Keysend'
+            }
+        ];
     } else if (AddressUtils.isValidLightningPaymentRequest(value)) {
         invoicesStore.getPayReq(value);
         return ['PaymentRequest', {}];
