@@ -1,4 +1,6 @@
 rootProject.name = 'zeus'
+include ':react-native-randombytes'
+project(':react-native-randombytes').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-randombytes/android')
 include ':react-native-secure-key-store'
 project(':react-native-secure-key-store').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-secure-key-store/android')
 include ':realm'
