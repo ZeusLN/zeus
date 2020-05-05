@@ -108,7 +108,7 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     sendKeySendPayment = () => {
         const { TransactionsStore, navigation, SettingsStore } = this.props;
-        const { destination, amount} = this.state;
+        const { destination, amount } = this.state;
 
         TransactionsStore.sendPayment(null, amount, destination);
 
@@ -153,7 +153,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                     <Text
                         style={{ color: theme === 'dark' ? 'white' : 'black' }}
                     >
-                        Bitcoin address, Lightning payment request, or keysend address (if enabled)
+                        Bitcoin address, Lightning payment request, or keysend
+                        address (if enabled)
                     </Text>
                     <TextInput
                         placeholder={'lnbc1...'}
@@ -287,17 +288,22 @@ export default class Send extends React.Component<SendProps, SendState> {
                             </View>
                         </React.Fragment>
                     )}
-                    {transactionType === 'Keysend' && implementation === 'c-lightning-REST' &&(
-                        <React.Fragment>
-                            <Text
-                                style={{
-                                    color: theme === 'dark' ? 'white' : 'black'
-                                }}
-                            >
-                                Sorry, c-lightning does not support sending keysend payments yet. You can still receive keysend payments if it's enabled on your node.
-                            </Text>
-                        </React.Fragment>
-                    )}
+                    {transactionType === 'Keysend' &&
+                        implementation === 'c-lightning-REST' && (
+                            <React.Fragment>
+                                <Text
+                                    style={{
+                                        color:
+                                            theme === 'dark' ? 'white' : 'black'
+                                    }}
+                                >
+                                    Sorry, c-lightning does not support sending
+                                    keysend payments yet. You can still receive
+                                    keysend payments if it's enabled on your
+                                    node.
+                                </Text>
+                            </React.Fragment>
+                        )}
                     {transactionType === 'Lightning' && (
                         <View style={styles.button}>
                             <Button
