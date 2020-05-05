@@ -110,7 +110,7 @@ export default class TransactionsStore {
                     data = {
                         amt: amount,
                         dest_string: pubkey,
-                        dest_custom_records: [{ type: keySendPreimageType, value: secret }]
+                        dest_custom_records: { [keySendPreimageType]: secret }
                     };
                 });
             } else {
