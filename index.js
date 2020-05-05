@@ -5,6 +5,7 @@
 
 import {AppRegistry} from 'react-native';
 import 'react-native-gesture-handler';
+import './shim.js'
 import App from './App.tsx';
 import {name as appName} from './app.json';
 

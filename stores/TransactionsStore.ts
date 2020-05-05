@@ -5,8 +5,9 @@ import ErrorUtils from './../utils/ErrorUtils';
 import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
 import { randomBytes } from 'react-native-randombytes';
-import { NativeModules } from 'react-native';
-const { RNRandomBytes } = NativeModules;
+import { sha256 } from 'js-sha256';
+import Base64Utils from './../utils/Base64Utils';
+import { Buffer } from 'buffer';
 
 const keySendPreimageType = '5482373484';
 const preimageByteLength = 32;
@@ -84,7 +85,11 @@ export default class TransactionsStore {
             });
     };
 
-    sendPayment = (payment_request: string, amount?: string, pubkey?: string) => {
+    sendPayment = (
+        payment_request: string,
+        amount?: string,
+        pubkey?: string
+    ) => {
         const { implementation } = this.settingsStore;
 
         this.loading = true;
@@ -104,15 +109,19 @@ export default class TransactionsStore {
             };
         } else {
             if (pubkey) {
-                RNRandomBytes.randomBytes(preimageByteLength, (err, preimage) => {
-                    const secret = preimage.toString('hex');
+                const preimage = randomBytes(preimageByteLength);
+                const secret = preimage.toString('base64');
+                const payment_hash = Buffer.from(
+                    sha256(preimage),
+                    'hex'
+                ).toString('base64');
 
-                    data = {
-                        amt: amount,
-                        dest_string: pubkey,
-                        dest_custom_records: { [keySendPreimageType]: secret }
-                    };
-                });
+                data = {
+                    amt: amount,
+                    dest_string: pubkey,
+                    dest_custom_records: { [keySendPreimageType]: secret },
+                    payment_hash
+                };
             } else {
                 if (amount) {
                     data = {
@@ -135,7 +144,7 @@ export default class TransactionsStore {
                 this.payment_route = data.payment_route;
                 this.payment_preimage = data.payment_preimage;
                 this.payment_hash = data.payment_hash;
-                if (data.payment_error !== "") {
+                if (data.payment_error !== '') {
                     this.payment_error = data.payment_error;
                 }
                 this.status = data.status;
