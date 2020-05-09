@@ -6,6 +6,7 @@ import {
     StyleSheet,
     Text,
     View,
+    ScrollView,
     TextInput,
     TouchableOpacity
 } from 'react-native';
@@ -236,7 +237,7 @@ export default class AddEditNode extends React.Component<
         );
 
         return (
-            <View
+            <ScrollView
                 style={
                     savedTheme === 'dark'
                         ? styles.darkThemeStyle
@@ -528,7 +529,7 @@ export default class AddEditNode extends React.Component<
                         />
                     </View>
                 )}
-            </View>
+            </ScrollView>
         );
     }
 }
