@@ -8,7 +8,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { Button, Header, Icon } from 'react-native-elements';
+import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import Channel from './../models/Channel';
 import BalanceSlider from './../components/BalanceSlider';
 import SetFeesForm from './../components/SetFeesForm';
@@ -33,6 +33,7 @@ interface ChannelProps {
 interface ChannelState {
     confirmCloseChannel: boolean;
     satPerByte: string;
+    forceClose: boolean;
 }
 
 @inject('ChannelsStore', 'UnitsStore', 'FeeStore', 'SettingsStore')
@@ -43,13 +44,15 @@ export default class ChannelView extends React.Component<
 > {
     state = {
         confirmCloseChannel: false,
-        satPerByte: ''
+        satPerByte: '',
+        forceClose: false
     };
 
     closeChannel = (
         channelPoint: string,
         channelId: string,
-        satPerByte?: string
+        satPerByte?: string,
+        forceClose: boolean
     ) => {
         const { ChannelsStore, navigation } = this.props;
 
@@ -61,10 +64,16 @@ export default class ChannelView extends React.Component<
                 ChannelsStore.closeChannel(
                     { funding_txid_str, output_index },
                     null,
-                    satPerByte
+                    satPerByte,
+                    forceClose
                 );
             } else {
-                ChannelsStore.closeChannel({ funding_txid_str, output_index });
+                ChannelsStore.closeChannel(
+                    { funding_txid_str, output_index },
+                    null,
+                    null,
+                    forceClose
+                );
             }
         } else if (channelId) {
             // c-lightning
@@ -82,7 +91,7 @@ export default class ChannelView extends React.Component<
             FeeStore,
             SettingsStore
         } = this.props;
-        const { confirmCloseChannel, satPerByte } = this.state;
+        const { confirmCloseChannel, satPerByte, forceClose } = this.state;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { channelFees } = FeeStore;
         const { nodes } = ChannelsStore;
@@ -579,12 +588,11 @@ export default class ChannelView extends React.Component<
                                         placeholder={'2'}
                                         placeholderTextColor="darkgray"
                                         value={satPerByte}
-                                        onChangeText={(text: string) => {
-                                            console.log(typeof text);
+                                        onChangeText={(text: string) =>
                                             this.setState({
                                                 satPerByte: text
-                                            });
-                                        }}
+                                            })
+                                        }
                                         numberOfLines={1}
                                         autoCapitalize="none"
                                         autoCorrect={false}
@@ -594,6 +602,17 @@ export default class ChannelView extends React.Component<
                                                 : styles.textInput
                                         }
                                     />
+                                    {implementation === 'lnd' && (
+                                        <CheckBox
+                                            title="Force close"
+                                            checked={forceClose}
+                                            onPress={() =>
+                                                this.setState({
+                                                    forceClose: !forceClose
+                                                })
+                                            }
+                                        />
+                                    )}
                                 </React.Fragment>
                             )}
                             <View style={styles.button}>
@@ -608,7 +627,8 @@ export default class ChannelView extends React.Component<
                                         this.closeChannel(
                                             channel_point,
                                             channelId,
-                                            satPerByte
+                                            satPerByte,
+                                            forceClose
                                         )
                                     }
                                     buttonStyle={{

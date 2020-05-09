@@ -108,7 +108,8 @@ export default class ChannelsStore {
     public closeChannel = (
         request?: CloseChannelRequest | null,
         channelId?: string | null,
-        satPerByte?: string
+        satPerByte?: string,
+        forceClose?: boolean
     ) => {
         const { implementation } = this.settingsStore;
         this.loading = true;
@@ -120,10 +121,15 @@ export default class ChannelsStore {
             // lnd
             const { funding_txid_str, output_index } = request;
 
-            urlParams = [funding_txid_str, output_index];
+            urlParams = [funding_txid_str, output_index, forceClose];
 
             if (satPerByte) {
-                urlParams = [funding_txid_str, output_index, satPerByte];
+                urlParams = [
+                    funding_txid_str,
+                    output_index,
+                    forceClose,
+                    satPerByte
+                ];
             }
         }
 
