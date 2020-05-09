@@ -130,7 +130,12 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                                     theme: settings.theme,
                                                     selectedNode: index,
                                                     onChainAddress:
-                                                        settings.onChainAddress
+                                                        settings.onChainAddress,
+                                                    fiat: settings.fiat,
+                                                    lurkerMode:
+                                                        settings.lurkerMode,
+                                                    passphrase:
+                                                        settings.passphrase
                                                 })
                                             ).then(() => {
                                                 navigation.navigate('Wallet', {
