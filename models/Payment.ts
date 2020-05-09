@@ -28,6 +28,12 @@ export default class Payment extends BaseModel {
     // status: string;
     // payment_preimage: string;
     bolt11?: string;
+    htlcs?: Array<any>;
+
+    constructor(data?: any, nodes: any) {
+        super(data);
+        this.nodes = nodes;
+    }
 
     @computed public get getCreationTime(): string {
         return DateTimeUtils.listFormattedDate(
@@ -54,5 +60,35 @@ export default class Payment extends BaseModel {
         }
 
         return '0';
+    }
+
+    @computed public get enhancedPath(): Array<string> {
+        const enhancedPath = [];
+        this.path &&
+            this.path.forEach((hop: string) => {
+                const pubKey = hop;
+                const alias = this.nodes[pubKey];
+                const enhancedHop = alias ? alias : pubKey;
+                enhancedPath.push(enhancedHop);
+            });
+
+        this.htlcs &&
+            this.htlcs.forEach((htlc: any) => {
+                if (htlc.status === 'SUCCEEDED') {
+                    htlc.route.hops &&
+                        htlc.route.hops.forEach((hop: any) => {
+                            const pubKey = hop.pub_key;
+                            const alias =
+                                this.nodes[pubKey] && this.nodes[pubKey].alias;
+                            const nodeLabel = alias ? alias : pubKey;
+                            const enhancedHop = `${nodeLabel} [Forwarded: ${
+                                hop.amt_to_forward
+                            }, Fee: ${Number(hop.fee_msat) / 1000}]`;
+                            enhancedPath.push(enhancedHop);
+                        });
+                }
+            });
+
+        return enhancedPath;
     }
 }

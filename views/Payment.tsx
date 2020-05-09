@@ -43,7 +43,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
             getFee,
             payment_hash,
             payment_preimage,
-            path
+            enhancedPath
         } = payment;
         const date = getCreationTime;
         const lnurlpaytx = LnurlPayStore.load(payment_hash);
@@ -180,7 +180,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                         {lurkerMode ? PrivacyUtils.hideValue(date, 14) : date}
                     </Text>
 
-                    {path && (
+                    {enhancedPath.length > 0 && (
                         <Text
                             style={
                                 theme === 'dark'
@@ -188,20 +188,23 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                     : styles.label
                             }
                         >
-                            {path.length > 1 ? 'Paths:' : 'Path:'}
+                            Path:
                         </Text>
                     )}
-                    {path && (
+                    {enhancedPath.length > 0 && (
                         <Text
                             style={
                                 theme === 'dark'
                                     ? styles.valueDark
                                     : styles.value
                             }
+                            selectable
                         >
                             {lurkerMode
-                                ? PrivacyUtils.hideValue(path.join(', '))
-                                : path.join(', ')}
+                                ? PrivacyUtils.hideValue(
+                                      enhancedPath.join(', ')
+                                  )
+                                : enhancedPath.join(', ')}
                         </Text>
                     )}
                 </View>
