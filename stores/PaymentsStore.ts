@@ -1,6 +1,7 @@
 import { action, observable } from 'mobx';
 import Payment from './../models/Payment';
 import SettingsStore from './SettingsStore';
+import ChannelsStore from './ChannelsStore';
 import RESTUtils from './../utils/RESTUtils';
 
 export default class PaymentsStore {
@@ -10,8 +11,9 @@ export default class PaymentsStore {
     @observable payments: Array<Payment | any> = [];
     settingsStore: SettingsStore;
 
-    constructor(settingsStore: SettingsStore) {
+    constructor(settingsStore: SettingsStore, channelsStore: ChannelsStore) {
         this.settingsStore = settingsStore;
+        this.channelsStore = channelsStore;
     }
 
     @action
@@ -25,7 +27,10 @@ export default class PaymentsStore {
                 this.payments = payments
                     .slice()
                     .reverse()
-                    .map((payment: any) => new Payment(payment));
+                    .map(
+                        (payment: any) =>
+                            new Payment(payment, this.channelsStore.nodes)
+                    );
                 this.loading = false;
             })
             .catch(() => {

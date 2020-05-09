@@ -84,15 +84,14 @@ class RESTUtils {
         method: any,
         cancelToken?: any,
         data?: any
-    ) => {
-        return axios.request({
+    ) =>
+        axios.request({
             method,
             url,
             headers,
             cancelToken,
             data
         });
-    };
 
     getHeaders = (implementation: string, macaroonHex: string) => {
         if (implementation === 'c-lightning-REST') {

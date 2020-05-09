@@ -38,7 +38,7 @@ export default class Receive extends React.Component<
     state = {
         selectedIndex: 0,
         memo: '',
-        value: '',
+        value: '100',
         expiry: '3600'
     };
 
@@ -362,8 +362,7 @@ const styles = StyleSheet.create({
     },
     content: {
         paddingLeft: 20,
-        paddingRight: 20,
-        alignItems: 'center'
+        paddingRight: 20
     },
     button: {
         paddingTop: 15,
