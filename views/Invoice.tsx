@@ -112,7 +112,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                         </React.Fragment>
                     )}
 
-                    {receipt && (
+                    {!!receipt && (
                         <React.Fragment>
                             <Text
                                 style={
@@ -165,7 +165,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                         </React.Fragment>
                     )}
 
-                    {creation_date && (
+                    {!!creation_date && (
                         <React.Fragment>
                             <Text
                                 style={
@@ -193,7 +193,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                         </React.Fragment>
                     )}
 
-                    {expirationDate && (
+                    {!!expirationDate && (
                         <React.Fragment>
                             <Text
                                 style={
@@ -218,7 +218,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                         </React.Fragment>
                     )}
 
-                    {privateInvoice && (
+                    {!!privateInvoice && (
                         <React.Fragment>
                             <Text
                                 style={
@@ -241,7 +241,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                         </React.Fragment>
                     )}
 
-                    {fallback_addr && (
+                    {!!fallback_addr && (
                         <React.Fragment>
                             <Text
                                 style={
@@ -266,7 +266,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                         </React.Fragment>
                     )}
 
-                    {cltv_expiry && (
+                    {!!cltv_expiry && (
                         <React.Fragment>
                             <Text
                                 style={
@@ -289,7 +289,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                         </React.Fragment>
                     )}
 
-                    {r_hash && (
+                    {!!r_hash && (
                         <React.Fragment>
                             <Text
                                 style={
@@ -314,7 +314,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                         </React.Fragment>
                     )}
 
-                    {r_preimage && (
+                    {!!r_preimage && (
                         <React.Fragment>
                             <Text
                                 style={
@@ -339,7 +339,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                         </React.Fragment>
                     )}
 
-                    {description_hash && (
+                    {!!description_hash && (
                         <React.Fragment>
                             <Text
                                 style={
