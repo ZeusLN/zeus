@@ -41,7 +41,7 @@ export default class NodeInfo extends React.Component<
         selectedIndex: 0
     };
 
-    componentWillMount() {
+    UNSAFE_componentWillMount() {
         const { NodeInfoStore, FeeStore } = this.props;
         NodeInfoStore.getNodeInfo();
         FeeStore.getFees();

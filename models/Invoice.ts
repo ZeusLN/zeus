@@ -103,6 +103,12 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get expirationDate(): Date | string {
-        return this.expiry || DateTimeUtils.listFormattedDate(this.expires_at);
+        if (this.expiry) {
+            return `${this.expiry} seconds`;
+        }
+
+        return this.expires_at
+            ? DateTimeUtils.listFormattedDate(this.expires_at)
+            : 'Never';
     }
 }
