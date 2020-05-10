@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "react-native start",
-    "postinstall": "rn-nodeify --install --hack",
+    "postinstall": "rn-nodeify --install --hack; npx jetify",
     "patch": "git apply patches/RCTHTTPRequestHandler.mm.patch",
     "patch-android-release": "git apply patches/rnck-build.gradle.patch",
     "test": "jest",
@@ -93,6 +93,7 @@
     "eslint": "^6.5.1",
     "hermes-engine": "^0.3.0",
     "jest": "24.9.0",
+    "jetifier": "^1.6.5",
     "metro-react-native-babel-preset": "^0.58.0",
     "prettier": "1.18.2",
     "react-test-renderer": "16.6.3",
