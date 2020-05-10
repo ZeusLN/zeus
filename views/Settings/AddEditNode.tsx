@@ -6,6 +6,7 @@ import {
     StyleSheet,
     Text,
     View,
+    ScrollView,
     TextInput,
     TouchableOpacity
 } from 'react-native';
@@ -119,11 +120,7 @@ export default class AddEditNode extends React.Component<
         const { SettingsStore, navigation } = this.props;
         const { host, port, macaroonHex, implementation, index } = this.state;
         const { setSettings, settings } = SettingsStore;
-        const {
-            lurkerMode,
-            passphrase,
-            fiat
-        } = settings;
+        const { lurkerMode, passphrase, fiat } = settings;
 
         const node = {
             host,
@@ -163,12 +160,7 @@ export default class AddEditNode extends React.Component<
         const { SettingsStore, navigation } = this.props;
         const { setSettings, settings } = SettingsStore;
         const { index } = this.state;
-        const {
-            nodes,
-            lurkerMode,
-            passphrase,
-            fiat
-        } = settings;
+        const { nodes, lurkerMode, passphrase, fiat } = settings;
 
         let newNodes: any = [];
         for (let i = 0; nodes && i < nodes.length; i++) {
@@ -197,12 +189,7 @@ export default class AddEditNode extends React.Component<
         const { SettingsStore, navigation } = this.props;
         const { setSettings, settings } = SettingsStore;
         const { index } = this.state;
-        const {
-            nodes,
-            lurkerMode,
-            passphrase,
-            fiat
-        } = settings;
+        const { nodes, lurkerMode, passphrase, fiat } = settings;
 
         setSettings(
             JSON.stringify({
@@ -250,7 +237,7 @@ export default class AddEditNode extends React.Component<
         );
 
         return (
-            <View
+            <ScrollView
                 style={
                     savedTheme === 'dark'
                         ? styles.darkThemeStyle
@@ -542,7 +529,7 @@ export default class AddEditNode extends React.Component<
                         />
                     </View>
                 )}
-            </View>
+            </ScrollView>
         );
     }
 }

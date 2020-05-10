@@ -15,11 +15,12 @@ const lndRoutes: any = {
     openChannel: '/v1/channels',
     connectPeer: '/v1/peers',
     listNode: '/v1/network/listNode',
-    closeChannel: function(urlParams: Array<string>) {
-        if (urlParams.length === 3) {
-            return `/v1/channels/${urlParams[0]}/${urlParams[1]}?sat_per_byte=${urlParams[2]}`;
+    closeChannel: function(urlParams: Array<string | boolean>) {
+        if (urlParams.length === 4) {
+            return `/v1/channels/${urlParams[0]}/${urlParams[1]}?force=${urlParams[2]}&sat_per_byte=${urlParams[3]}`;
         }
-        return `/v1/channels/${urlParams[0]}/${urlParams[1]}`;
+
+        return `/v1/channels/${urlParams[0]}/${urlParams[1]}?force=${urlParams[2]}`;
     },
     decodePaymentRequest: function(urlParams: Array<string>) {
         return `/v1/payreq/${urlParams[0]}`;
@@ -84,15 +85,14 @@ class RESTUtils {
         method: any,
         cancelToken?: any,
         data?: any
-    ) => {
-        return axios.request({
+    ) =>
+        axios.request({
             method,
             url,
             headers,
             cancelToken,
             data
         });
-    };
 
     getHeaders = (implementation: string, macaroonHex: string) => {
         if (implementation === 'c-lightning-REST') {

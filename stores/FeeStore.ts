@@ -1,6 +1,7 @@
 import { action, observable } from 'mobx';
 import axios from 'axios';
 import RESTUtils from './../utils/RESTUtils';
+import Base64Utils from './../utils/Base64Utils';
 import SettingsStore from './SettingsStore';
 
 export default class FeeStore {
@@ -70,7 +71,7 @@ export default class FeeStore {
                     this.weekEarned = data.week_fee_sum || 0;
                     this.monthEarned = data.month_fee_sum || 0;
                 } else {
-                    // c-lighting-REST
+                    // c-lightning-REST
                     this.totalEarned = data.feeCollected / 1000; // msatoshi_fees_collected
                 }
 
@@ -122,7 +123,7 @@ export default class FeeStore {
                     chan_point: {
                         output_index: Number(output_index),
                         funding_txid_str: funding_txid,
-                        funding_txid_bytes: btoa(funding_txid) // must encode in base64
+                        funding_txid_bytes: Base64Utils.btoa(funding_txid) // must encode in base64
                     }
                 };
             } else {
