@@ -64,7 +64,8 @@ export default class Payment extends BaseModel {
 
     @computed public get enhancedPath(): Array<string> {
         const enhancedPath = [];
-        this.path &&
+        !this.htlcs &&
+            this.path &&
             this.path.forEach((hop: string) => {
                 const pubKey = hop;
                 const alias = this.nodes[pubKey];
@@ -83,7 +84,9 @@ export default class Payment extends BaseModel {
                             const nodeLabel = alias ? alias : pubKey;
                             const enhancedHop = `${nodeLabel} [Forwarded: ${
                                 hop.amt_to_forward
-                            }, Fee: ${Number(hop.fee_msat) / 1000}]`;
+                            }, Fee: ${
+                                hop.fee_msat ? Number(hop.fee_msat) / 1000 : 0
+                            }]`;
                             enhancedPath.push(enhancedHop);
                         });
                 }
