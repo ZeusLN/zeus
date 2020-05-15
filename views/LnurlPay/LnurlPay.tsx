@@ -119,10 +119,8 @@ export default class LnurlPay extends React.Component<
                             payment_hash,
                             domain,
                             lnurl.lnurlText,
-                            {
-                                metadata: lnurl.metadata,
-                                descriptionHash: description_hash
-                            },
+                            lnurl.metadata,
+                            description_hash,
                             successAction
                         );
                         navigation.navigate('PaymentRequest');

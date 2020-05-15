@@ -26,6 +26,17 @@ interface PaymentProps {
 @inject('UnitsStore', 'SettingsStore', 'LnurlPayStore')
 @observer
 export default class PaymentView extends React.Component<PaymentProps> {
+    state = {
+        lnurlpaytx: null
+    };
+
+    async componentDidMount() {
+        let lnurlpaytx = await LnurlPayStore.load(payment_hash);
+        if (lnurlpaytx) {
+            this.setState({ lnurlpaytx });
+        }
+    }
+
     render() {
         const {
             navigation,
@@ -46,7 +57,6 @@ export default class PaymentView extends React.Component<PaymentProps> {
             enhancedPath
         } = payment;
         const date = getCreationTime;
-        const lnurlpaytx = LnurlPayStore.load(payment_hash);
 
         const BackButton = () => (
             <Icon
@@ -63,6 +73,8 @@ export default class PaymentView extends React.Component<PaymentProps> {
         const fee = lurkerMode
             ? PrivacyUtils.hideValue(getAmount(getFee), 3, true)
             : getAmount(getFee);
+
+        const lnurlpaytx = this.state.lnurlpaytx;
 
         return (
             <ScrollView
