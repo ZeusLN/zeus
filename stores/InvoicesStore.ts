@@ -145,7 +145,7 @@ export default class InvoicesStore {
                 } else {
                     this.creatingInvoiceError = true;
                     this.creatingInvoice = false;
-                    this.error_msg = "Error creating invoice";
+                    this.error_msg = 'Error creating invoice';
                 }
             })
             .catch((error: any) => {

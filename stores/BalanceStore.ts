@@ -53,7 +53,8 @@ export default class BalanceStore {
                     const balance = new Balance(response.json());
                     this.unconfirmedBlockchainBalance =
                         balance.unconfirmedBalance || 0;
-                    this.confirmedBlockchainBalance = balance.confirmedBalance || 0;
+                    this.confirmedBlockchainBalance =
+                        balance.confirmedBalance || 0;
                     this.totalBlockchainBalance = balance.getTotalBalance || 0;
                     this.loading = false;
                 } else {
@@ -75,7 +76,8 @@ export default class BalanceStore {
                     // handle success
                     const balance = new Balance(response.json());
                     this.pendingOpenBalance = balance.pending_open_balance || 0;
-                    this.lightningBalance = balance.getTotalLightningBalance || 0;
+                    this.lightningBalance =
+                        balance.getTotalLightningBalance || 0;
                     this.loading = false;
                 } else {
                     this.resetLightningBalance();
