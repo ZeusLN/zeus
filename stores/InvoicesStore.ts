@@ -218,7 +218,7 @@ export default class InvoicesStore {
 
                     const routes = data.routes;
                     if (routes) {
-                        routes.forEach(route => {
+                        routes.forEach((route: any) => {
                             // expect lnd to pick the cheapest route
                             if (this.feeEstimate) {
                                 if (route.total_fees < this.feeEstimate) {

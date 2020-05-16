@@ -152,14 +152,7 @@ class RESTUtils {
         request: string,
         urlParams?: Array<string>
     ) => {
-        return this.request(
-            settingsStore,
-            request,
-            'delete',
-            null,
-            null,
-            urlParams
-        );
+        return this.request(settingsStore, request, 'delete', null, urlParams);
     };
 
     getTransactions = (settingsStore: SettingsStore) =>
@@ -191,8 +184,7 @@ class RESTUtils {
     decodePaymentRequest = (
         settingsStore: SettingsStore,
         urlParams?: Array<string>
-    ) =>
-        this.getRequest(settingsStore, 'decodePaymentRequest', null, urlParams);
+    ) => this.getRequest(settingsStore, 'decodePaymentRequest', urlParams);
     payLightningInvoice = (settingsStore: SettingsStore, data: any) =>
         this.postRequest(settingsStore, 'payLightningInvoice', data);
     closeChannel = (settingsStore: SettingsStore, urlParams?: Array<string>) =>
@@ -204,7 +196,7 @@ class RESTUtils {
     setFees = (settingsStore: SettingsStore, data: any) =>
         this.postRequest(settingsStore, 'setFees', data);
     getRoutes = (settingsStore: SettingsStore, urlParams?: Array<string>) =>
-        this.getRequest(settingsStore, 'getRoutes', null, urlParams);
+        this.getRequest(settingsStore, 'getRoutes', urlParams);
 }
 
 const restUtils = new RESTUtils();

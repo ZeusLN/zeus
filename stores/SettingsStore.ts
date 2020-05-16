@@ -29,6 +29,7 @@ export default class SettingsStore {
     @observable port: string;
     @observable macaroonHex: string;
     @observable implementation: string;
+    @observable sslVerification: boolean | undefined;
     @observable chainAddress: string | undefined;
 
     @action
