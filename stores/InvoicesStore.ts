@@ -52,27 +52,35 @@ export default class InvoicesStore {
         this.payment_request = '';
     };
 
+    resetInvoices = () => {
+        this.invoices = [];
+        this.invoicesCount = 0;
+        this.loading = false;
+    };
+
     @action
     public getInvoices = () => {
         this.loading = true;
         RESTUtils.getInvoices(this.settingsStore)
             .then((response: any) => {
-                // handle success
-                const data = response.data;
-                this.invoices = data.payments || data.invoices;
-                this.invoices = this.invoices.map(
-                    invoice => new Invoice(invoice)
-                );
-                this.invoices = this.invoices.slice().reverse();
-                this.invoicesCount =
-                    data.last_index_offset || this.invoices.length;
-                this.loading = false;
+                const status = response.info().status;
+                if (status == 200) {
+                    // handle success
+                    const data = response.json();
+                    this.invoices = data.payments || data.invoices;
+                    this.invoices = this.invoices.map(
+                        invoice => new Invoice(invoice)
+                    );
+                    this.invoices = this.invoices.slice().reverse();
+                    this.invoicesCount =
+                        data.last_index_offset || this.invoices.length;
+                    this.loading = false;
+                } else {
+                    this.resetInvoices();
+                }
             })
             .catch(() => {
-                // handle error
-                this.invoices = [];
-                this.invoicesCount = 0;
-                this.loading = false;
+                this.resetInvoices();
             });
     };
 
@@ -109,36 +117,42 @@ export default class InvoicesStore {
 
         RESTUtils.createInvoice(this.settingsStore, data)
             .then((response: any) => {
-                // handle success
-                const data = new Invoice(response.data);
-                this.payment_request = data.getPaymentRequest;
-                this.creatingInvoice = false;
+                const status = response.info().status;
+                if (status == 200) {
+                    // handle success
+                    const data = new Invoice(response.json());
+                    this.payment_request = data.getPaymentRequest;
+                    this.creatingInvoice = false;
 
-                if (lnurl) {
-                    axios
-                        .get(lnurl.callback, {
-                            params: {
-                                k1: lnurl.k1,
-                                pr: this.payment_request
-                            }
-                        })
-                        .catch((err: any) => ({
-                            status: 'ERROR',
-                            reason: err.response.data
-                        }))
-                        .then((response: any) => {
-                            if (response.data.status === 'ERROR') {
-                                Alert.alert(response.data.reason);
-                            }
-                        });
+                    if (lnurl) {
+                        axios
+                            .get(lnurl.callback, {
+                                params: {
+                                    k1: lnurl.k1,
+                                    pr: this.payment_request
+                                }
+                            })
+                            .catch((err: any) => ({
+                                status: 'ERROR',
+                                reason: err.response.data
+                            }))
+                            .then((response: any) => {
+                                if (response.data.status === 'ERROR') {
+                                    Alert.alert(response.data.reason);
+                                }
+                            });
+                    }
+                } else {
+                    this.creatingInvoiceError = true;
+                    this.creatingInvoice = false;
+                    this.error_msg = "Error creating invoice";
                 }
             })
             .catch((error: any) => {
                 // handle error
-                const errorInfo = error.response.data;
                 this.creatingInvoiceError = true;
                 this.creatingInvoice = false;
-                this.error_msg = errorInfo.error.message || errorInfo.error;
+                this.error_msg = error.toString();
             });
     };
 
@@ -156,6 +170,8 @@ export default class InvoicesStore {
             paymentRequest
         ])
             .then((response: any) => {
+                const status = response.info().status;
+                if (status !== 200) return;
                 // handle success
                 this.pay_req = new Invoice(response.data);
 
@@ -194,6 +210,8 @@ export default class InvoicesStore {
 
         return RESTUtils.getRoutes(this.settingsStore, [destination, amount])
             .then((response: any) => {
+                const status = response.info().status;
+                if (status !== 200) return;
                 // handle success
                 const data = response.data;
                 this.loadingFeeEstimate = false;

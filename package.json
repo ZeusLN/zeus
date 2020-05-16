@@ -67,6 +67,7 @@
     "react-navigation-stack": "^2.0.16",
     "readable-stream": "^1.0.33",
     "realm": "^3.6.0",
+    "rn-fetch-blob": "^0.12.0",
     "sha.js": "^2.4.11",
     "stream-browserify": "^1.0.0",
     "string_decoder": "^0.10.31",

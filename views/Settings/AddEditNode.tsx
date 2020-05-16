@@ -10,7 +10,7 @@ import {
     TextInput,
     TouchableOpacity
 } from 'react-native';
-import { Button, Header, Icon } from 'react-native-elements';
+import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import SettingsStore from './../../stores/SettingsStore';
@@ -25,6 +25,7 @@ interface AddEditNodeState {
     port: string | number;
     macaroonHex: string;
     implementation: string;
+    sslVerification: boolean;
     saved: boolean;
     active: boolean;
     index: number;
@@ -47,7 +48,8 @@ export default class AddEditNode extends React.Component<
         index: 0,
         active: false,
         newEntry: false,
-        implementation: 'lnd'
+        implementation: 'lnd',
+        sslVerification: false
     };
 
     async componentDidMount() {
@@ -62,13 +64,14 @@ export default class AddEditNode extends React.Component<
         const newEntry = navigation.getParam('newEntry', null);
 
         if (node) {
-            const { host, port, macaroonHex, implementation } = node;
+            const { host, port, macaroonHex, implementation, sslVerification } = node;
 
             this.setState({
                 host,
                 port,
                 macaroonHex,
                 implementation,
+                sslVerification,
                 index,
                 active,
                 saved,
@@ -95,13 +98,14 @@ export default class AddEditNode extends React.Component<
         const newEntry = navigation.getParam('newEntry', null);
 
         if (node) {
-            const { host, port, macaroonHex, implementation } = node;
+            const { host, port, macaroonHex, implementation, sslVerification } = node;
 
             this.setState({
                 host,
                 port,
                 macaroonHex,
                 implementation,
+                sslVerification,
                 index,
                 active:
                     index === this.props.SettingsStore.settings.selectedNode,
@@ -118,7 +122,7 @@ export default class AddEditNode extends React.Component<
 
     saveNodeConfiguration = () => {
         const { SettingsStore, navigation } = this.props;
-        const { host, port, macaroonHex, implementation, index } = this.state;
+        const { host, port, macaroonHex, implementation, sslVerification, index } = this.state;
         const { setSettings, settings } = SettingsStore;
         const { lurkerMode, passphrase, fiat } = settings;
 
@@ -126,7 +130,8 @@ export default class AddEditNode extends React.Component<
             host,
             port,
             macaroonHex,
-            implementation
+            implementation,
+            sslVerification
         };
 
         let nodes: any = settings.nodes || [];
@@ -220,7 +225,8 @@ export default class AddEditNode extends React.Component<
             active,
             index,
             newEntry,
-            implementation
+            implementation,
+            sslVerification
         } = this.state;
         const { loading, settings } = SettingsStore;
         const savedTheme = settings.theme;
@@ -416,6 +422,23 @@ export default class AddEditNode extends React.Component<
                             </TouchableOpacity>
                         </View>
                     )}
+
+                    <View
+                        style={{
+                            marginTop: 5
+                        }}
+                    >
+                        <CheckBox
+                            title="SSL Verification"
+                            checked={sslVerification}
+                            onPress={() =>
+                                this.setState({
+                                    sslVerification: !sslVerification,
+                                    saved: false
+                                })
+                            }
+                        />
+                    </View>
                 </View>
 
                 <View style={styles.button}>

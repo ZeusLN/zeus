@@ -31,21 +31,21 @@ export default class NodeInfoStore {
         this.loading = true;
         RESTUtils.getMyNodeInfo(this.settingsStore)
             .then((response: any) => {
-                // handle success
-                const nodeInfo = new NodeInfo(response.data);
-                this.nodeInfo = nodeInfo;
-                this.testnet = nodeInfo.isTestNet;
-                this.regtest = nodeInfo.isRegTest;
-                this.loading = false;
-                this.error = false;
+                const status = response.info().status;
+                if (status == 200) {
+                    // handle success
+                    const nodeInfo = new NodeInfo(response.data);
+                    this.nodeInfo = nodeInfo;
+                    this.testnet = nodeInfo.isTestNet;
+                    this.regtest = nodeInfo.isRegTest;
+                    this.loading = false;
+                    this.error = false;
+                }
             })
             .catch((error: any) => {
                 // handle error
-                const data = error.response && error.response.data;
+                this.errorMsg = error.toString();
                 this.error = true;
-                if (data && data.error) {
-                    this.errorMsg = data.error;
-                }
                 this.loading = false;
                 this.nodeInfo = {};
             });
