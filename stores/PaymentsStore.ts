@@ -10,6 +10,7 @@ export default class PaymentsStore {
     @observable error_msg: string;
     @observable payments: Array<Payment | any> = [];
     settingsStore: SettingsStore;
+    channelsStore: ChannelsStore;
 
     constructor(settingsStore: SettingsStore, channelsStore: ChannelsStore) {
         this.settingsStore = settingsStore;

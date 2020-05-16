@@ -107,7 +107,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     sendKeySendPayment = () => {
-        const { TransactionsStore, navigation, SettingsStore } = this.props;
+        const { TransactionsStore, navigation } = this.props;
         const { destination, amount } = this.state;
 
         TransactionsStore.sendPayment(null, amount, destination);

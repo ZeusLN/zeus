@@ -150,7 +150,7 @@ export default class FeeStore {
         }
 
         RESTUtils.setFees(this.settingsStore, data)
-            .then(() => {
+            .then((response: any) => {
                 const status = response.info().status;
                 if (status == 200) {
                     // handle success

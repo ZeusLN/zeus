@@ -1,12 +1,10 @@
 import { action, reaction, observable } from 'mobx';
 import Transaction from './../models/Transaction';
 import TransactionRequest from './../models/TransactionRequest';
-import ErrorUtils from './../utils/ErrorUtils';
 import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
 import { randomBytes } from 'react-native-randombytes';
 import { sha256 } from 'js-sha256';
-import Base64Utils from './../utils/Base64Utils';
 import { Buffer } from 'buffer';
 
 const keySendPreimageType = '5482373484';
@@ -91,7 +89,7 @@ export default class TransactionsStore {
     };
 
     sendPayment = (
-        payment_request: string,
+        payment_request?: string | null,
         amount?: string,
         pubkey?: string
     ) => {
@@ -161,10 +159,7 @@ export default class TransactionsStore {
                 // handle error
                 this.error = true;
                 this.loading = false;
-                this.error_msg =
-                    errorInfo.error.toString() ||
-                    ErrorUtils.errorToUserFriendly(code) ||
-                    'Error sending payment';
+                this.error_msg = error.toString() || 'Error sending payment';
             });
     };
 }

@@ -57,7 +57,7 @@ export default class ChannelsStore {
                     this.channels.forEach((channel: Channel) => {
                         if (!this.nodes[channel.remote_pubkey]) {
                             this.getNodeInfo(channel.remote_pubkey).then(
-                                nodeInfo => {
+                                (nodeInfo: any) => {
                                     this.nodes[
                                         channel.remote_pubkey
                                     ] = nodeInfo;
@@ -117,8 +117,8 @@ export default class ChannelsStore {
     public closeChannel = (
         request?: CloseChannelRequest | null,
         channelId?: string | null,
-        satPerByte?: string,
-        forceClose?: boolean
+        satPerByte?: string | null,
+        forceClose?: boolean | string | null
     ) => {
         const { implementation } = this.settingsStore;
         this.loading = true;
@@ -184,7 +184,7 @@ export default class ChannelsStore {
         }
 
         RESTUtils.connectPeer(this.settingsStore, data)
-            .then(() => {
+            .then((response: any) => {
                 const status = response.info().status;
                 if (status == 200) {
                     // handle success
@@ -242,7 +242,7 @@ export default class ChannelsStore {
                 }
             })
             .catch((error: any) => {
-                const errorInfo = error.toString();
+                this.errorMsgChannel = error.toString();
                 this.output_index = null;
                 this.funding_txid_str = null;
                 this.errorOpenChannel = true;

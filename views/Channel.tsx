@@ -51,8 +51,8 @@ export default class ChannelView extends React.Component<
     closeChannel = (
         channelPoint: string,
         channelId: string,
-        satPerByte?: string,
-        forceClose: boolean
+        satPerByte?: string | null,
+        forceClose?: boolean | null
     ) => {
         const { ChannelsStore, navigation } = this.props;
 
