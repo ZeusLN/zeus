@@ -119,7 +119,7 @@ export default class SettingsStore {
     public getNewAddress = () => {
         return RESTUtils.getNewAddress(this).then((response: any) => {
             // handle success
-            const data = response.data;
+            const data = response.json();
             const newAddress = data.address;
             this.chainAddress = newAddress;
             const newSettings = {
