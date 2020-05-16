@@ -195,6 +195,7 @@ android {
 }
 
 dependencies {
+    implementation project(':rn-fetch-blob')
     implementation project(':react-native-randombytes')
     implementation project(':react-native-secure-key-store')
     implementation project(':realm')

@@ -82,25 +82,34 @@ export default class ChannelsStore {
         );
     };
 
+    getChannelsError = () => {
+        // handle error
+        this.channels = [];
+        this.error = true;
+        this.loading = false;
+    };
+
     @action
     public getChannels = () => {
         this.channels = [];
         this.loading = true;
         RESTUtils.getChannels(this.settingsStore)
             .then((response: any) => {
-                const data = response.data;
-                const channels = data.channels || data;
-                this.channels = channels.map(
-                    (channel: any) => new Channel(channel)
-                );
-                this.error = false;
-                this.loading = false;
+                const status = response.info().status;
+                if (status == 200) {
+                    const data = response.json();
+                    const channels = data.channels || data;
+                    this.channels = channels.map(
+                        (channel: any) => new Channel(channel)
+                    );
+                    this.error = false;
+                    this.loading = false;
+                } else {
+                    this.getChannelsError();
+                }
             })
             .catch(() => {
-                // handle error
-                this.channels = [];
-                this.error = true;
-                this.loading = false;
+                this.getChannelsError();
             });
     };
 
@@ -135,11 +144,18 @@ export default class ChannelsStore {
 
         RESTUtils.closeChannel(this.settingsStore, urlParams)
             .then((response: any) => {
-                const data = response.data;
-                const { chan_close } = data;
-                this.closeChannelSuccess = chan_close.success;
-                this.error = false;
-                this.loading = false;
+                const status = response.info().status;
+                if (status == 200) {
+                    const data = response.data;
+                    const { chan_close } = data;
+                    this.closeChannelSuccess = chan_close.success;
+                    this.error = false;
+                    this.loading = false;
+                } else {
+                  this.channels = [];
+                  this.error = true;
+                  this.loading = false;
+                }
             })
             .catch(() => {
                 this.channels = [];
@@ -169,6 +185,8 @@ export default class ChannelsStore {
 
         RESTUtils.connectPeer(this.settingsStore, data)
             .then(() => {
+                const status = response.info().status;
+                if (status !== 200) return;
                 // handle success
                 this.errorPeerConnect = false;
                 this.connectingToPeer = false;
@@ -214,14 +232,17 @@ export default class ChannelsStore {
 
         RESTUtils.openChannel(this.settingsStore, openChannelReq)
             .then((response: any) => {
-                const data = response.data;
-                this.output_index = data.output_index;
-                this.funding_txid_str = data.funding_txid_str;
-                this.errorOpenChannel = false;
-                this.openingChannel = false;
-                this.errorMsgChannel = null;
-                this.channelRequest = null;
-                this.channelSuccess = true;
+                const status = response.info().status;
+                if (status == 200) {
+                    const data = response.data;
+                    this.output_index = data.output_index;
+                    this.funding_txid_str = data.funding_txid_str;
+                    this.errorOpenChannel = false;
+                    this.openingChannel = false;
+                    this.errorMsgChannel = null;
+                    this.channelRequest = null;
+                    this.channelSuccess = true;
+                }
             })
             .catch((error: any) => {
                 const errorInfo = error.response.data;

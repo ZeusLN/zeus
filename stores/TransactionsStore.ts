@@ -47,14 +47,17 @@ export default class TransactionsStore {
         this.loading = true;
         RESTUtils.getTransactions(this.settingsStore)
             .then((response: any) => {
-                // handle success
-                const data = response.data;
-                const transactions = data.transactions || data.outputs;
-                this.transactions = transactions
-                    .slice()
-                    .reverse()
-                    .map((tx: any) => new Transaction(tx));
-                this.loading = false;
+                const status = response.info().status;
+                if (status == 200) {
+                    // handle success
+                    const data = response.json();
+                    const transactions = data.transactions || data.outputs;
+                    this.transactions = transactions
+                        .slice()
+                        .reverse()
+                        .map((tx: any) => new Transaction(tx));
+                    this.loading = false;
+                }
             })
             .catch(() => {
                 // handle error
@@ -71,15 +74,17 @@ export default class TransactionsStore {
         this.loading = true;
         RESTUtils.sendCoins(this.settingsStore, transactionRequest)
             .then((response: any) => {
-                // handle success
-                const data = response.data || response;
-                this.txid = data.txid;
-                this.loading = false;
+                const status = response.info().status;
+                if (status == 200) {
+                    // handle success
+                    const data = response.json();
+                    this.txid = data.txid;
+                    this.loading = false;
+                }
             })
             .catch((error: any) => {
                 // handle error
-                const errorInfo = error.response.data;
-                this.error_msg = errorInfo.error.message || errorInfo.error;
+                this.error_msg = error.toString();
                 this.error = true;
                 this.loading = false;
             });
@@ -138,28 +143,27 @@ export default class TransactionsStore {
 
         RESTUtils.payLightningInvoice(this.settingsStore, data)
             .then((response: any) => {
-                // handle success
-                const data = response.data;
-                this.loading = false;
-                this.payment_route = data.payment_route;
-                this.payment_preimage = data.payment_preimage;
-                this.payment_hash = data.payment_hash;
-                if (data.payment_error !== '') {
-                    this.payment_error = data.payment_error;
+                const status = response.info().status;
+                if (status == 200) {
+                    // handle success
+                    const data = response.json();
+                    this.loading = false;
+                    this.payment_route = data.payment_route;
+                    this.payment_preimage = data.payment_preimage;
+                    this.payment_hash = data.payment_hash;
+                    if (data.payment_error !== '') {
+                        this.payment_error = data.payment_error;
+                    }
+                    this.status = data.status;
                 }
-                this.status = data.status;
             })
             .catch((error: any) => {
                 // handle error
-                const errorInfo = error.response.data;
-                const code = errorInfo.code;
                 this.error = true;
                 this.loading = false;
                 this.error_msg =
-                    errorInfo.error.message ||
+                    errorInfo.error.toString() ||
                     ErrorUtils.errorToUserFriendly(code) ||
-                    errorInfo.message ||
-                    errorInfo.error ||
                     'Error sending payment';
             });
     };

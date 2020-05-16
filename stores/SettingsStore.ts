@@ -8,6 +8,7 @@ interface Node {
     port?: string;
     macaroonHex?: string;
     implementation?: string;
+    sslVerification?: boolean;
 }
 
 interface Settings {
@@ -88,6 +89,7 @@ export default class SettingsStore {
                     this.port = node.port;
                     this.macaroonHex = node.macaroonHex;
                     this.implementation = node.implementation;
+                    this.sslVerification = node.sslVerification;
                 }
                 this.chainAddress = this.settings.onChainAddress;
                 return this.settings;

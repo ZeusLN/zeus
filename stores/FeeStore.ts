@@ -50,37 +50,50 @@ export default class FeeStore {
             });
     };
 
+    resetFees = () => {
+        this.fees = {};
+        this.loading = false;
+    };
+
+    feesError = () => {
+        this.loading = false;
+        this.setFeesError = true;
+    };
+
     @action
     public getFees = () => {
         this.loading = true;
         RESTUtils.getFees(this.settingsStore)
             .then((response: any) => {
-                // handle success
-                const data = response.data;
+                const status = response.info().status;
+                if (status == 200) {
+                    // handle success
+                    const data = response.json();
 
-                // lnd
-                if (data.channel_fees) {
-                    const channelFees: any = {};
-                    data.channel_fees.forEach((channelFee: any) => {
-                        channelFees[channelFee.chan_point] = channelFee;
-                    });
+                    // lnd
+                    if (data.channel_fees) {
+                        const channelFees: any = {};
+                        data.channel_fees.forEach((channelFee: any) => {
+                            channelFees[channelFee.chan_point] = channelFee;
+                        });
 
-                    this.channelFees = channelFees;
+                        this.channelFees = channelFees;
 
-                    this.dayEarned = data.day_fee_sum || 0;
-                    this.weekEarned = data.week_fee_sum || 0;
-                    this.monthEarned = data.month_fee_sum || 0;
+                        this.dayEarned = data.day_fee_sum || 0;
+                        this.weekEarned = data.week_fee_sum || 0;
+                        this.monthEarned = data.month_fee_sum || 0;
+                    } else {
+                        // c-lightning-REST
+                        this.totalEarned = data.feeCollected / 1000; // msatoshi_fees_collected
+                    }
+
+                    this.loading = false;
                 } else {
-                    // c-lightning-REST
-                    this.totalEarned = data.feeCollected / 1000; // msatoshi_fees_collected
+                    this.resetFees();
                 }
-
-                this.loading = false;
             })
             .catch(() => {
-                // handle error
-                this.fees = {};
-                this.loading = false;
+                this.resetFees();
             });
     };
 
@@ -138,14 +151,17 @@ export default class FeeStore {
 
         RESTUtils.setFees(this.settingsStore, data)
             .then(() => {
-                // handle success
-                this.loading = false;
-                this.setFeesSuccess = true;
+                const status = response.info().status;
+                if (status == 200) {
+                    // handle success
+                    this.loading = false;
+                    this.setFeesSuccess = true;
+                } else {
+                    this.feesError();
+                }
             })
             .catch(() => {
-                // handle error
-                this.loading = false;
-                this.setFeesError = true;
+                this.feesError();
             });
     };
 }
