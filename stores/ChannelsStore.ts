@@ -152,9 +152,9 @@ export default class ChannelsStore {
                     this.error = false;
                     this.loading = false;
                 } else {
-                  this.channels = [];
-                  this.error = true;
-                  this.loading = false;
+                    this.channels = [];
+                    this.error = true;
+                    this.loading = false;
                 }
             })
             .catch(() => {

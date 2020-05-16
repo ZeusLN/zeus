@@ -64,7 +64,13 @@ export default class AddEditNode extends React.Component<
         const newEntry = navigation.getParam('newEntry', null);
 
         if (node) {
-            const { host, port, macaroonHex, implementation, sslVerification } = node;
+            const {
+                host,
+                port,
+                macaroonHex,
+                implementation,
+                sslVerification
+            } = node;
 
             this.setState({
                 host,
@@ -98,7 +104,13 @@ export default class AddEditNode extends React.Component<
         const newEntry = navigation.getParam('newEntry', null);
 
         if (node) {
-            const { host, port, macaroonHex, implementation, sslVerification } = node;
+            const {
+                host,
+                port,
+                macaroonHex,
+                implementation,
+                sslVerification
+            } = node;
 
             this.setState({
                 host,
@@ -122,7 +134,14 @@ export default class AddEditNode extends React.Component<
 
     saveNodeConfiguration = () => {
         const { SettingsStore, navigation } = this.props;
-        const { host, port, macaroonHex, implementation, sslVerification, index } = this.state;
+        const {
+            host,
+            port,
+            macaroonHex,
+            implementation,
+            sslVerification,
+            index
+        } = this.state;
         const { setSettings, settings } = SettingsStore;
         const { lurkerMode, passphrase, fiat } = settings;
 
