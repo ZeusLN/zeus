@@ -105,7 +105,13 @@ class RESTUtils {
         data?: any,
         urlParams?: Array<string>
     ) => {
-        const { host, port, macaroonHex, implementation, sslVerification } = settingsStore;
+        const {
+            host,
+            port,
+            macaroonHex,
+            implementation,
+            sslVerification
+        } = settingsStore;
 
         let route: string;
         if (urlParams) {
@@ -130,13 +136,7 @@ class RESTUtils {
         request: string,
         urlParams?: Array<string>
     ) => {
-        return this.request(
-            settingsStore,
-            request,
-            'get',
-            null,
-            urlParams
-        );
+        return this.request(settingsStore, request, 'get', null, urlParams);
     };
 
     postRequest = (
@@ -167,15 +167,9 @@ class RESTUtils {
     getChannels = (settingsStore: SettingsStore) =>
         this.getRequest(settingsStore, 'getChannels');
     getBlockchainBalance = (settingsStore: SettingsStore) =>
-        this.getRequest(
-            settingsStore,
-            'getBlockchainBalance'
-        );
+        this.getRequest(settingsStore, 'getBlockchainBalance');
     getLightningBalance = (settingsStore: SettingsStore) =>
-        this.getRequest(
-            settingsStore,
-            'getLightningBalance'
-        );
+        this.getRequest(settingsStore, 'getLightningBalance');
     sendCoins = (settingsStore: SettingsStore, data: any) =>
         this.postRequest(settingsStore, 'sendCoins', data);
     getMyNodeInfo = (settingsStore: SettingsStore) =>
@@ -204,11 +198,7 @@ class RESTUtils {
     closeChannel = (settingsStore: SettingsStore, urlParams?: Array<string>) =>
         this.deleteRequest(settingsStore, 'closeChannel', urlParams);
     getNodeInfo = (settingsStore: SettingsStore, urlParams?: Array<string>) =>
-        this.getRequest(
-            settingsStore,
-            'getNodeInfo',
-            urlParams
-        );
+        this.getRequest(settingsStore, 'getNodeInfo', urlParams);
     getFees = (settingsStore: SettingsStore) =>
         this.getRequest(settingsStore, 'getFees');
     setFees = (settingsStore: SettingsStore, data: any) =>
