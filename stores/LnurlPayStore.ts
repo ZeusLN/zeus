@@ -40,11 +40,11 @@ export default class LnurlPayStore {
         }
     }
 
-    deleteOld = () => {
+    deleteOld = async () => {
         // delete all lnurlpay keys older than 30 days
         const daysago30 = new Date().getTime() + 1000 * 60 * 60 * 24 * 30;
         const allKeys = await AsyncStorage.getAllKeys();
-        var toRemove = [];
+        const toRemove = [];
         for (let i = 0; i < allKeys.length; i++) {
             let key = allKeys[i];
             if (key.slice(0, 9) === 'lnurlpay:') {
@@ -62,7 +62,7 @@ export default class LnurlPayStore {
     };
 
     @action
-    public load = (paymentHash: string): LnurlPayTransaction => {
+    public load = async (paymentHash: string): LnurlPayTransaction => {
         let lnurlpaytx = await AsyncStorage.getItem('lnurlpay:' + paymentHash);
         if (lnurlpaytx) {
             lnurlpaytx = JSON.parse(lnurlpaytx);
