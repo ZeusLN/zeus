@@ -34,7 +34,7 @@ export default class NodeInfoStore {
                 const status = response.info().status;
                 if (status == 200) {
                     // handle success
-                    const nodeInfo = new NodeInfo(response.data);
+                    const nodeInfo = new NodeInfo(response.json());
                     this.nodeInfo = nodeInfo;
                     this.testnet = nodeInfo.isTestNet;
                     this.regtest = nodeInfo.isRegTest;

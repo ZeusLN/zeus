@@ -76,7 +76,7 @@ export default class ChannelsStore {
         return RESTUtils.getNodeInfo(this.settingsStore, [pubkey]).then(
             (response: any) => {
                 // handle success
-                const data = response.data;
+                const data = response.json();
                 return data.node;
             }
         );
@@ -146,7 +146,7 @@ export default class ChannelsStore {
             .then((response: any) => {
                 const status = response.info().status;
                 if (status == 200) {
-                    const data = response.data;
+                    const data = response.json();
                     const { chan_close } = data;
                     this.closeChannelSuccess = chan_close.success;
                     this.error = false;
@@ -186,21 +186,18 @@ export default class ChannelsStore {
         RESTUtils.connectPeer(this.settingsStore, data)
             .then(() => {
                 const status = response.info().status;
-                if (status !== 200) return;
-                // handle success
-                this.errorPeerConnect = false;
-                this.connectingToPeer = false;
-                this.errorMsgPeer = null;
-                this.channelRequest = request;
-                this.peerSuccess = true;
+                if (status == 200) {
+                    // handle success
+                    this.errorPeerConnect = false;
+                    this.connectingToPeer = false;
+                    this.errorMsgPeer = null;
+                    this.channelRequest = request;
+                    this.peerSuccess = true;
+                }
             })
             .catch((error: any) => {
                 // handle error
-                const errorInfo = error.response && error.response.data;
-                this.errorMsgPeer =
-                    (errorInfo && errorInfo.error.message) ||
-                    (errorInfo && errorInfo.error) ||
-                    error.message;
+                this.errorMsgPeer = error.toString();
                 this.errorPeerConnect = true;
                 this.connectingToPeer = false;
                 this.peerSuccess = false;
@@ -234,7 +231,7 @@ export default class ChannelsStore {
             .then((response: any) => {
                 const status = response.info().status;
                 if (status == 200) {
-                    const data = response.data;
+                    const data = response.json();
                     this.output_index = data.output_index;
                     this.funding_txid_str = data.funding_txid_str;
                     this.errorOpenChannel = false;
@@ -245,9 +242,7 @@ export default class ChannelsStore {
                 }
             })
             .catch((error: any) => {
-                const errorInfo = error.response.data;
-                this.errorMsgChannel =
-                    errorInfo.error.message || errorInfo.error;
+                const errorInfo = error.toString();
                 this.output_index = null;
                 this.funding_txid_str = null;
                 this.errorOpenChannel = true;

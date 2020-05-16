@@ -171,33 +171,30 @@ export default class InvoicesStore {
         ])
             .then((response: any) => {
                 const status = response.info().status;
-                if (status !== 200) return;
-                // handle success
-                this.pay_req = new Invoice(response.data);
+                if (status == 200) {
+                    // handle success
+                    this.pay_req = new Invoice(response.json());
 
-                // check description_hash if asked for
-                if (
-                    descriptionPreimage &&
-                    this.pay_req.description_hash !==
-                        hashjs
-                            .sha256()
-                            .update(descriptionPreimage)
-                            .digest('hex')
-                ) {
-                    throw new Error('wrong description_hash!');
+                    // check description_hash if asked for
+                    if (
+                        descriptionPreimage &&
+                        this.pay_req.description_hash !==
+                            hashjs
+                                .sha256()
+                                .update(descriptionPreimage)
+                                .digest('hex')
+                    ) {
+                        throw new Error('wrong description_hash!');
+                    }
+
+                    this.loading = false;
+                    this.getPayReqError = null;
                 }
-
-                this.loading = false;
-                this.getPayReqError = null;
             })
             .catch((error: any) => {
                 // handle error
                 this.loading = false;
-                this.getPayReqError =
-                    (error.response &&
-                        error.response.data &&
-                        error.response.data.error) ||
-                    error.message;
+                this.getPayReqError = error.toString();
                 this.pay_req = null;
             });
     };
@@ -211,29 +208,30 @@ export default class InvoicesStore {
         return RESTUtils.getRoutes(this.settingsStore, [destination, amount])
             .then((response: any) => {
                 const status = response.info().status;
-                if (status !== 200) return;
-                // handle success
-                const data = response.data;
-                this.loadingFeeEstimate = false;
-                this.successProbability = data.success_prob
-                    ? data.success_prob * 100
-                    : 0;
+                if (status == 200) {
+                    // handle success
+                    const data = response.json();
+                    this.loadingFeeEstimate = false;
+                    this.successProbability = data.success_prob
+                        ? data.success_prob * 100
+                        : 0;
 
-                const routes = data.routes;
-                if (routes) {
-                    routes.forEach(route => {
-                        // expect lnd to pick the cheapest route
-                        if (this.feeEstimate) {
-                            if (route.total_fees < this.feeEstimate) {
-                                this.feeEstimate = route.total_fees;
+                    const routes = data.routes;
+                    if (routes) {
+                        routes.forEach(route => {
+                            // expect lnd to pick the cheapest route
+                            if (this.feeEstimate) {
+                                if (route.total_fees < this.feeEstimate) {
+                                    this.feeEstimate = route.total_fees;
+                                }
+                            } else {
+                                this.feeEstimate = route.total_fees || 0;
                             }
-                        } else {
-                            this.feeEstimate = route.total_fees || 0;
-                        }
-                    });
+                        });
+                    }
                 }
             })
-            .catch((error: any) => {
+            .catch(() => {
                 // handle error
                 this.loadingFeeEstimate = false;
                 this.feeEstimate = null;
