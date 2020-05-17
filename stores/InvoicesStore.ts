@@ -154,7 +154,7 @@ export default class InvoicesStore {
                             }));
                     }
                 } else {
-                    const errorInfo = response.json().data;
+                    const errorInfo = response.json();
                     this.creatingInvoiceError = true;
                     this.creatingInvoice = false;
                     this.error_msg = errorInfo.error.message || errorInfo.error;

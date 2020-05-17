@@ -47,9 +47,9 @@ export default class NodeInfoStore {
                     this.loading = false;
                     this.error = false;
                 } else {
-                    const data = response.json().data;
+                    const data = response.json();
                     if (data && data.error) {
-                        this.errorMsg = data.error;
+                        this.errorMsg = data.error.message || data.error;
                     }
                     this.getNodeInfoError();
                 }

@@ -189,7 +189,7 @@ export default class ChannelsStore {
                     this.channelRequest = request;
                     this.peerSuccess = true;
                 } else {
-                    const errorInfo = response.json().data;
+                    const errorInfo = response.json();
                     this.errorMsgPeer =
                         (errorInfo && errorInfo.error.message) ||
                         (errorInfo && errorInfo.error) ||
@@ -262,7 +262,7 @@ export default class ChannelsStore {
                     this.channelRequest = null;
                     this.channelSuccess = true;
                 } else {
-                    const errorInfo = response.json().data;
+                    const errorInfo = response.json();
                     this.errorMsgChannel =
                         errorInfo.error.message || errorInfo.error;
                     this.openChannelError();
