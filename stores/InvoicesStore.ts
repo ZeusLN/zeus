@@ -125,16 +125,12 @@ export default class InvoicesStore {
                     this.creatingInvoice = false;
 
                     if (lnurl) {
-                        const params = {
-                            k1: lnurl.k1,
-                            pr: this.payment_request
-                        };
                         RNFetchBlob.config({
                             trusty: !sslVerification || true
                         })
                             .fetch(
                                 'get',
-                                lnurl.callback,
+                                `${lnurl.callback}?k1=${lnurl.k1}&pr=${this.payment_request}`,
                                 null,
                                 JSON.stringify(params)
                             )

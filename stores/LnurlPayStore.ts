@@ -118,7 +118,7 @@ export default class LnurlPayStore {
         RNFetchBlob.config({
             trusty: !sslVerification || true
         })
-            .fetch('get', url, null, JSON.stringify(params))
+            .fetch('get', url)
             .then((response: any) => {
                 const status = response.info().status;
                 if (status == 200) {
