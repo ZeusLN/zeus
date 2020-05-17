@@ -70,15 +70,13 @@ Zeus is proud to be integrated on the following platforms:
 [enable Developer mode and USB Debugging](https://developer.android.com/studio/debug/dev-options)
 , then make sure it is connected to your computer by running `adb devices`
 3. install node dependencies with `npm i`
-4. apply patches with `npm run patch`
-5. open up your Android simulator or connect your phone and run `react-native run-android`
+4. open up your Android simulator or connect your phone and run `react-native run-android`
 
 ### iOS
 1. install and setup react-native and its related dependencies under **"Building Projects with Native Code"** on
 [react-native's Getting Started page](https://facebook.github.io/react-native/docs/getting-started.html)
 2. install node dependencies with `npm i`
-3. apply patches with `npm run patch`
-4. open `ios/zeus.xcodeproj` in Xcode and hit Run
+3. open `ios/zeus.xcodeproj` in Xcode and hit Run
 
 ## Contributing
 
