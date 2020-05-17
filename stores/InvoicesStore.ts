@@ -1,5 +1,5 @@
 import { action, observable, reaction } from 'mobx';
-import axios from 'axios';
+import RNFetchBlob from 'rn-fetch-blob';
 import { Alert } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import hashjs from 'hash.js';
@@ -91,7 +91,7 @@ export default class InvoicesStore {
         expiry: string = '3600',
         lnurl?: LNURLWithdrawParams
     ) => {
-        const { implementation } = this.settingsStore;
+        const { implementation, sslVerification } = this.settingsStore;
         this.payment_request = null;
         this.creatingInvoice = true;
         this.creatingInvoiceError = false;
@@ -125,22 +125,37 @@ export default class InvoicesStore {
                     this.creatingInvoice = false;
 
                     if (lnurl) {
-                        axios
-                            .get(lnurl.callback, {
-                                params: {
-                                    k1: lnurl.k1,
-                                    pr: this.payment_request
+                        const params = {
+                            k1: lnurl.k1,
+                            pr: this.payment_request
+                        };
+                        RNFetchBlob.config({
+                            trusty: !sslVerification || true
+                        })
+                            .fetch(
+                                'get',
+                                lnurl.callback,
+                                null,
+                                JSON.stringify(params)
+                            )
+                            .then((response: any) => {
+                                const status = response.info().status;
+                                if (status == 200) {
+                                    const data = response.json();
+                                    if (data.status === 'ERROR') {
+                                        Alert.alert(data.reason);
+                                    }
+                                } else {
+                                    return {
+                                        status: 'ERROR',
+                                        reason: 'LNURL error'
+                                    };
                                 }
                             })
                             .catch((err: any) => ({
                                 status: 'ERROR',
-                                reason: err.response.data
-                            }))
-                            .then((response: any) => {
-                                if (response.data.status === 'ERROR') {
-                                    Alert.alert(response.data.reason);
-                                }
-                            });
+                                reason: err.toString()
+                            }));
                     }
                 } else {
                     const errorInfo = response.json().data;
