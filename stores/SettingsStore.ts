@@ -66,11 +66,12 @@ export default class SettingsStore {
                         return config;
                     }
                 } else {
+                    this.btcPayError = 'Error getting BTCPay configuration';
                 }
             })
-            .catch(() => {
+            .catch((err: any) => {
                 // handle error
-                this.btcPayError = 'Error getting BTCPay configuration';
+                this.btcPayError = `Error getting BTCPay configuration: ${err.toString()}`;
             });
     };
 
