@@ -5,7 +5,6 @@
   "scripts": {
     "start": "react-native start",
     "postinstall": "rn-nodeify --install --hack; npx jetify",
-    "patch": "git apply patches/RCTHTTPRequestHandler.mm.patch",
     "patch-android-release": "git apply patches/rnck-build.gradle.patch",
     "test": "jest",
     "tsc": "tsc",
