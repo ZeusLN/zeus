@@ -83,7 +83,7 @@ export default class TransactionsStore {
                     this.txid = data.txid;
                     this.loading = false;
                 } else {
-                    const errorInfo = response.json().data;
+                    const errorInfo = response.json();
                     this.error_msg = errorInfo.error.message || errorInfo.error;
                     this.error = true;
                     this.loading = false;
