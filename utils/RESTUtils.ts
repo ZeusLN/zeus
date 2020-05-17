@@ -79,7 +79,7 @@ class RESTUtils {
     ) =>
         RNFetchBlob.config({
             trusty: !sslVerification || true
-        }).fetch(method, url, headers, data);
+        }).fetch(method, url, headers, data ? JSON.stringify(data) : data);
 
     getHeaders = (implementation: string, macaroonHex: string) => {
         if (implementation === 'c-lightning-REST') {
@@ -135,25 +135,16 @@ class RESTUtils {
         settingsStore: SettingsStore,
         request: string,
         urlParams?: Array<string>
-    ) => {
-        return this.request(settingsStore, request, 'get', null, urlParams);
-    };
+    ) => this.request(settingsStore, request, 'get', null, urlParams);
 
-    postRequest = (
-        settingsStore: SettingsStore,
-        request: string,
-        data?: any
-    ) => {
-        return this.request(settingsStore, request, 'post', data);
-    };
+    postRequest = (settingsStore: SettingsStore, request: string, data?: any) =>
+        this.request(settingsStore, request, 'post', data);
 
     deleteRequest = (
         settingsStore: SettingsStore,
         request: string,
         urlParams?: Array<string>
-    ) => {
-        return this.request(settingsStore, request, 'delete', null, urlParams);
-    };
+    ) => this.request(settingsStore, request, 'delete', null, urlParams);
 
     getTransactions = (settingsStore: SettingsStore) =>
         this.getRequest(settingsStore, 'getTransactions');
