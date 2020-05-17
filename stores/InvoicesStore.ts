@@ -143,16 +143,17 @@ export default class InvoicesStore {
                             });
                     }
                 } else {
+                    const errorInfo = response.json().data;
                     this.creatingInvoiceError = true;
                     this.creatingInvoice = false;
-                    this.error_msg = 'Error creating invoice';
+                    this.error_msg = errorInfo.error.message || errorInfo.error;
                 }
             })
             .catch((error: any) => {
                 // handle error
                 this.creatingInvoiceError = true;
                 this.creatingInvoice = false;
-                this.error_msg = error.toString();
+                this.error_msg = error.toString() || 'Error creating invoice';
             });
     };
 
@@ -189,14 +190,26 @@ export default class InvoicesStore {
 
                     this.loading = false;
                     this.getPayReqError = null;
+                } else {
+                    this.loading = false;
+                    this.pay_req = null;
+                    const error = response.json();
+                    this.getPayReqError =
+                        (error.data && error.data.error) || error.message;
                 }
             })
             .catch((error: any) => {
                 // handle error
                 this.loading = false;
-                this.getPayReqError = error.toString();
                 this.pay_req = null;
+                this.getPayReqError = error.toString();
             });
+    };
+
+    getRoutesError = () => {
+        this.loadingFeeEstimate = false;
+        this.feeEstimate = null;
+        this.successProbability = null;
     };
 
     @action
@@ -229,13 +242,12 @@ export default class InvoicesStore {
                             }
                         });
                     }
+                } else {
+                    this.getRoutesError();
                 }
             })
             .catch(() => {
-                // handle error
-                this.loadingFeeEstimate = false;
-                this.feeEstimate = null;
-                this.successProbability = null;
+                this.getRoutesError();
             });
     };
 }
