@@ -1,5 +1,5 @@
 import { action, observable } from 'mobx';
-import axios from 'axios';
+import RNFetchBlob from 'rn-fetch-blob';
 import RESTUtils from './../utils/RESTUtils';
 import Base64Utils from './../utils/Base64Utils';
 import SettingsStore from './SettingsStore';
@@ -23,28 +23,25 @@ export default class FeeStore {
     settingsStore: SettingsStore;
 
     constructor(settingsStore: SettingsStore) {
-        this.getOnchainFeesToken = axios.CancelToken.source().token;
         this.settingsStore = settingsStore;
     }
 
     @action
     public getOnchainFees = () => {
         this.loading = true;
-        axios
-            .request({
-                method: 'get',
-                url: 'https://whatthefee.io/data.json',
-                // url: `https://whatthefee.io/data.json?c=1555717500`,
-                cancelToken: this.getOnchainFeesToken
-            })
+        RNFetchBlob.fetch('get', 'https://whatthefee.io/data.json')
             .then((response: any) => {
-                // handle success
-                this.loading = false;
-                const data = response.data;
-                this.dataFrame = data;
+                const status = response.info().status;
+                if (status == 200) {
+                    const data = response.json();
+                    this.loading = false;
+                    this.dataFrame = data;
+                } else {
+                    this.dataFrame = {};
+                    this.loading = false;
+                }
             })
             .catch(() => {
-                // handle error
                 this.dataFrame = {};
                 this.loading = false;
             });

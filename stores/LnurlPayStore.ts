@@ -1,5 +1,5 @@
 import { action } from 'mobx';
-import axios from 'axios';
+import RNFetchBlob from 'rn-fetch-blob';
 import Realm from 'realm';
 import { when } from 'mobx';
 import { LNURLPaySuccessAction } from 'js-lnurl';
@@ -94,7 +94,7 @@ export default class LnurlPayStore {
     }
 
     checkPending = () => {
-        const { host, port, macaroonHex } = this.settingsStore;
+        const { host, port, macaroonHex, sslVerification } = this.settingsStore;
 
         // remove all pending stored lnurl-pay transactions if we can't find them on lnd
         // and remove their pending status if we find them as completed
@@ -107,25 +107,40 @@ export default class LnurlPayStore {
             return;
         }
 
-        axios
-            .request({
-                method: 'get',
-                url: `https://${host}${
-                    port ? ':' + port : ''
-                }/v1/payments?include_incomplete=true`,
-                headers: {
-                    'Grpc-Metadata-macaroon': macaroonHex
-                }
-            })
+        const url = `https://${host}${
+            port ? ':' + port : ''
+        }/v1/payments?include_incomplete=true`;
+
+        const headers = {
+            'Grpc-Metadata-macaroon': macaroonHex
+        };
+
+        RNFetchBlob.config({
+            trusty: !sslVerification || true
+        })
+            .fetch('get', url, null, JSON.stringify(params))
             .then((response: any) => {
-                let { payments } = response.data;
-                for (let i = 0; i < pending.length; i++) {
-                    this.resolvePendingHash(payments, pending[i].paymentHash);
+                const status = response.info().status;
+                if (status == 200) {
+                    const data = response.json();
+                    let { payments } = data;
+                    for (let i = 0; i < pending.length; i++) {
+                        this.resolvePendingHash(
+                            payments,
+                            pending[i].paymentHash
+                        );
+                    }
+                } else {
+                    const error = response.json();
+                    const { message } = error;
+                    console.log(
+                        `error checking pending lnurl-pay transactions: ${err.message}`
+                    );
                 }
             })
             .catch(err => {
                 console.log(
-                    `error checking pending lnurl-pay transactions: ${err.message}`
+                    `error checking pending lnurl-pay transactions: ${err.toString()}`
                 );
             });
     };

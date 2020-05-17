@@ -1,6 +1,6 @@
 import RNSecureKeyStore, { ACCESSIBLE } from 'react-native-secure-key-store';
 import { action, observable } from 'mobx';
-import axios from 'axios';
+import RNFetchBlob from 'rn-fetch-blob';
 import RESTUtils from '../utils/RESTUtils';
 
 interface Node {
@@ -37,31 +37,35 @@ export default class SettingsStore {
         const configRoute = data.split('config=')[1];
         this.btcPayError = null;
 
-        return axios
-            .request({
-                method: 'get',
-                url: configRoute
-            })
+        return RNFetchBlob.fetch('get', configRoute)
             .then((response: any) => {
-                // handle success
-                const data = response.data;
-                const configuration = data.configurations[0];
-                const { adminMacaroon, macaroon, type, uri } = configuration;
+                const status = response.info().status;
+                if (status == 200) {
+                    const data = response.json();
+                    const configuration = data.configurations[0];
+                    const {
+                        adminMacaroon,
+                        macaroon,
+                        type,
+                        uri
+                    } = configuration;
 
-                if (type !== 'lnd-rest' && type !== 'clightning-rest') {
-                    this.btcPayError =
-                        'Sorry, we currently only support BTCPay instances using lnd or c-lightning';
+                    if (type !== 'lnd-rest' && type !== 'clightning-rest') {
+                        this.btcPayError =
+                            'Sorry, we currently only support BTCPay instances using lnd or c-lightning';
+                    } else {
+                        const config = {
+                            host: uri.split('https://')[1],
+                            macaroonHex: adminMacaroon || macaroon,
+                            implementation:
+                                type === 'clightning-rest'
+                                    ? 'c-lightning-REST'
+                                    : 'lnd'
+                        };
+
+                        return config;
+                    }
                 } else {
-                    const config = {
-                        host: uri.split('https://')[1],
-                        macaroonHex: adminMacaroon || macaroon,
-                        implementation:
-                            type === 'clightning-rest'
-                                ? 'c-lightning-REST'
-                                : 'lnd'
-                    };
-
-                    return config;
                 }
             })
             .catch(() => {
