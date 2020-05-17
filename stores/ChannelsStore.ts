@@ -83,7 +83,6 @@ export default class ChannelsStore {
     };
 
     getChannelsError = () => {
-        // handle error
         this.channels = [];
         this.error = true;
         this.loading = false;
@@ -152,15 +151,11 @@ export default class ChannelsStore {
                     this.error = false;
                     this.loading = false;
                 } else {
-                    this.channels = [];
-                    this.error = true;
-                    this.loading = false;
+                    this.getChannelsError();
                 }
             })
             .catch(() => {
-                this.channels = [];
-                this.error = true;
-                this.loading = false;
+                this.getChannelsError();
             });
     };
 
@@ -193,6 +188,23 @@ export default class ChannelsStore {
                     this.errorMsgPeer = null;
                     this.channelRequest = request;
                     this.peerSuccess = true;
+                } else {
+                    const errorInfo = response.json().data;
+                    this.errorMsgPeer =
+                        (errorInfo && errorInfo.error.message) ||
+                        (errorInfo && errorInfo.error) ||
+                        error.message;
+                    this.errorPeerConnect = true;
+                    this.connectingToPeer = false;
+                    this.peerSuccess = false;
+                    this.channelSuccess = false;
+
+                    if (
+                        this.errorMsgPeer &&
+                        this.errorMsgPeer.includes('already connected to peer')
+                    ) {
+                        this.channelRequest = request;
+                    }
                 }
             })
             .catch((error: any) => {
@@ -210,6 +222,16 @@ export default class ChannelsStore {
                     this.channelRequest = request;
                 }
             });
+    };
+
+    openChannelError = () => {
+        this.output_index = null;
+        this.funding_txid_str = null;
+        this.errorOpenChannel = true;
+        this.openingChannel = false;
+        this.channelRequest = null;
+        this.peerSuccess = false;
+        this.channelSuccess = false;
     };
 
     openChannel = (request: OpenChannelRequest) => {
@@ -239,17 +261,16 @@ export default class ChannelsStore {
                     this.errorMsgChannel = null;
                     this.channelRequest = null;
                     this.channelSuccess = true;
+                } else {
+                    const errorInfo = response.json().data;
+                    this.errorMsgChannel =
+                        errorInfo.error.message || errorInfo.error;
+                    this.openChannelError();
                 }
             })
             .catch((error: any) => {
                 this.errorMsgChannel = error.toString();
-                this.output_index = null;
-                this.funding_txid_str = null;
-                this.errorOpenChannel = true;
-                this.openingChannel = false;
-                this.channelRequest = null;
-                this.peerSuccess = false;
-                this.channelSuccess = false;
+                this.openChannelError();
             });
     };
 }

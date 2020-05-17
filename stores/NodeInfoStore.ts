@@ -25,6 +25,12 @@ export default class NodeInfoStore {
         );
     }
 
+    getNodeInfoError = () => {
+        this.error = true;
+        this.loading = false;
+        this.nodeInfo = {};
+    };
+
     @action
     public getNodeInfo = () => {
         this.errorMsg = '';
@@ -40,14 +46,18 @@ export default class NodeInfoStore {
                     this.regtest = nodeInfo.isRegTest;
                     this.loading = false;
                     this.error = false;
+                } else {
+                    const data = response.json().data;
+                    if (data && data.error) {
+                        this.errorMsg = data.error;
+                    }
+                    this.getNodeInfoError();
                 }
             })
             .catch((error: any) => {
                 // handle error
                 this.errorMsg = error.toString();
-                this.error = true;
-                this.loading = false;
-                this.nodeInfo = {};
+                this.getNodeInfoError();
             });
     };
 }

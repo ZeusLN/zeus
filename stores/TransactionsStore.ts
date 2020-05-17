@@ -3,6 +3,7 @@ import Transaction from './../models/Transaction';
 import TransactionRequest from './../models/TransactionRequest';
 import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
+import ErrorUtils from './../utils/ErrorUtils';
 import { randomBytes } from 'react-native-randombytes';
 import { sha256 } from 'js-sha256';
 import { Buffer } from 'buffer';
@@ -55,6 +56,9 @@ export default class TransactionsStore {
                         .reverse()
                         .map((tx: any) => new Transaction(tx));
                     this.loading = false;
+                } else {
+                    this.transactions = [];
+                    this.loading = false;
                 }
             })
             .catch(() => {
@@ -77,6 +81,11 @@ export default class TransactionsStore {
                     // handle success
                     const data = response.json();
                     this.txid = data.txid;
+                    this.loading = false;
+                } else {
+                    const errorInfo = response.json().data;
+                    this.error_msg = errorInfo.error.message || errorInfo.error;
+                    this.error = true;
                     this.loading = false;
                 }
             })
@@ -106,10 +115,16 @@ export default class TransactionsStore {
 
         let data;
         if (implementation === 'c-lightning-REST') {
-            data = {
-                invoice: payment_request,
-                amount: Number(amount) * 1000
-            };
+            if (amount) {
+                data = {
+                    invoice: payment_request,
+                    amount: Number(amount) * 1000
+                };
+            } else {
+                data = {
+                    invoice: payment_request
+                };
+            }
         } else {
             if (pubkey) {
                 const preimage = randomBytes(preimageByteLength);
@@ -153,6 +168,16 @@ export default class TransactionsStore {
                         this.payment_error = data.payment_error;
                     }
                     this.status = data.status;
+                } else {
+                    const errorInfo = response.json();
+                    this.error_msg =
+                        errorInfo.error.message ||
+                        ErrorUtils.errorToUserFriendly(code) ||
+                        errorInfo.message ||
+                        errorInfo.error ||
+                        'Error sending payment';
+                    this.error = true;
+                    this.loading = false;
                 }
             })
             .catch((error: any) => {
