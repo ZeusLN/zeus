@@ -67,15 +67,12 @@ export default class LnurlPay extends React.Component<
         const { sslVerification } = SettingsStore;
         const { domain, amount } = this.state;
         const lnurl = navigation.getParam('lnurlParams');
-
-        const params = {
-            amount: parseFloat(amount) * 1000
-        };
+        const amountParam = parseFloat(amount) * 1000;
 
         RNFetchBlob.config({
             trusty: !sslVerification || true
         })
-            .fetch('get', lnurl.callback, null, JSON.stringify(params))
+            .fetch('get', `${lnurl.callback}?amount=${amountParam}`, null)
             .catch((err: any) => ({
                 status: 'ERROR',
                 reason: err.response_data
