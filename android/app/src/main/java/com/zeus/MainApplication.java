@@ -10,7 +10,6 @@ import com.facebook.react.shell.MainReactPackage;
 import com.facebook.react.ReactApplication;
 import io.realm.react.RealmReactPackage;
 import com.BV.LinearGradient.LinearGradientPackage;
-import com.facebook.react.modules.network.OkHttpClientProvider;
 import com.wix.RNCameraKit.RNCameraKitPackage;
 import com.swmansion.gesturehandler.react.RNGestureHandlerPackage;
 import com.oblador.vectoricons.VectorIconsPackage;
@@ -21,7 +20,6 @@ import android.content.Context;
 import com.reactlibrary.securekeystore.RNSecureKeyStorePackage;
 
 import com.facebook.soloader.SoLoader;
-import com.zeusln.zeus.extensions.CustomClientFactory;
 import com.microsoft.ActivityResultPackage;
 
 import java.lang.reflect.InvocationTargetException;
@@ -57,7 +55,5 @@ public class MainApplication extends Application implements ReactApplication {
   public void onCreate() {
     super.onCreate();
     SoLoader.init(this, /* native exopackage */ false);
-    /* Add this row for https errors */
-    OkHttpClientProvider.setOkHttpClientFactory(new CustomClientFactory());
   }
 }
