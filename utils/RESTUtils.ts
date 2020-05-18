@@ -69,6 +69,9 @@ interface Headers {
     'Grpc-Metadata-macaroon'?: string;
 }
 
+// keep track of all active calls so we can cancel when appropriate
+const calls: any = {};
+
 class RESTUtils {
     restReq = (
         headers: Headers,
@@ -76,10 +79,20 @@ class RESTUtils {
         method: any,
         data?: any,
         sslVerification?: boolean
-    ) =>
-        RNFetchBlob.config({
-            trusty: !sslVerification || true
+    ) => {
+        // use body data as an identifier too, we don't want to cancel when we
+        // are making multiples calls to get all the node names, for example
+        const id = data ? `${url}${JSON.stringify(data)}` : url;
+        if (calls[id]) {
+            calls[id].cancel();
+        }
+
+        calls[id] = RNFetchBlob.config({
+            trusty: !sslVerification
         }).fetch(method, url, headers, data ? JSON.stringify(data) : data);
+
+        return calls[id];
+    };
 
     getHeaders = (implementation: string, macaroonHex: string) => {
         if (implementation === 'c-lightning-REST') {
