@@ -26,9 +26,14 @@ import Settings from './views/Settings';
 import AddEditNode from './views/Settings/AddEditNode';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 
+import Onboarding from './views/Onboarding';
+
 const AppScenes = {
     Lockscreen: {
         screen: Lockscreen
+    },
+    Onboarding: {
+        screen: Onboarding
     },
     Wallet: {
         screen: Wallet

@@ -47,7 +47,7 @@ export default class Lockscreen extends React.Component<
             if (settings && settings.passphrase) {
                 this.setState({ passphrase: settings.passphrase });
             } else {
-                navigation.navigate('Wallet');
+                navigation.navigate('Onboarding');
             }
         });
     }
