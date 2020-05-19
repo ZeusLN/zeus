@@ -122,7 +122,7 @@ export default class PaymentRequest extends React.Component<
                                         : styles.label
                                 }
                             >
-                                Error loading invoice: ${getPayReqError}
+                                Error loading invoice: {getPayReqError}
                             </Text>
                         </View>
                     )}

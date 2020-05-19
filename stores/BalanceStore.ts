@@ -29,25 +29,40 @@ export default class BalanceStore {
         );
     }
 
+    resetBlockchainBalance = () => {
+        this.unconfirmedBlockchainBalance = 0;
+        this.confirmedBlockchainBalance = 0;
+        this.totalBlockchainBalance = 0;
+        this.loading = false;
+    };
+
+    resetLightningBalance = () => {
+        this.pendingOpenBalance = 0;
+        this.lightningBalance = 0;
+        this.loading = false;
+    };
+
     @action
     public getBlockchainBalance = () => {
         this.loading = true;
         RESTUtils.getBlockchainBalance(this.settingsStore)
             .then((response: any) => {
-                // handle success
-                const balance = new Balance(response.data);
-                this.unconfirmedBlockchainBalance =
-                    balance.unconfirmedBalance || 0;
-                this.confirmedBlockchainBalance = balance.confirmedBalance || 0;
-                this.totalBlockchainBalance = balance.getTotalBalance || 0;
-                this.loading = false;
+                const status = response.info().status;
+                if (status == 200) {
+                    // handle success
+                    const balance = new Balance(response.json());
+                    this.unconfirmedBlockchainBalance =
+                        balance.unconfirmedBalance || 0;
+                    this.confirmedBlockchainBalance =
+                        balance.confirmedBalance || 0;
+                    this.totalBlockchainBalance = balance.getTotalBalance || 0;
+                    this.loading = false;
+                } else {
+                    this.resetBlockchainBalance();
+                }
             })
             .catch(() => {
-                // handle error
-                this.unconfirmedBlockchainBalance = 0;
-                this.confirmedBlockchainBalance = 0;
-                this.totalBlockchainBalance = 0;
-                this.loading = false;
+                this.resetBlockchainBalance();
             });
     };
 
@@ -56,17 +71,20 @@ export default class BalanceStore {
         this.loading = true;
         RESTUtils.getLightningBalance(this.settingsStore)
             .then((response: any) => {
-                // handle success
-                const balance = new Balance(response.data);
-                this.pendingOpenBalance = balance.pending_open_balance || 0;
-                this.lightningBalance = balance.getTotalLightningBalance || 0;
-                this.loading = false;
+                const status = response.info().status;
+                if (status == 200) {
+                    // handle success
+                    const balance = new Balance(response.json());
+                    this.pendingOpenBalance = balance.pending_open_balance || 0;
+                    this.lightningBalance =
+                        balance.getTotalLightningBalance || 0;
+                    this.loading = false;
+                } else {
+                    this.resetLightningBalance();
+                }
             })
             .catch(() => {
-                // handle error
-                this.pendingOpenBalance = 0;
-                this.lightningBalance = 0;
-                this.loading = false;
+                this.resetLightningBalance();
             });
     };
 }

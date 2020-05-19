@@ -1,4 +1,4 @@
-import axios from 'axios';
+import RNFetchBlob from 'rn-fetch-blob';
 import SettingsStore from './../stores/SettingsStore';
 
 const lndRoutes: any = {
@@ -69,30 +69,30 @@ interface Headers {
     'Grpc-Metadata-macaroon'?: string;
 }
 
-const getTransactionsToken = axios.CancelToken.source().token;
-const getChannelsToken = axios.CancelToken.source().token;
-const getBlockchainBalanceToken = axios.CancelToken.source().token;
-const getLightningBalanceToken = axios.CancelToken.source().token;
-const getMyNodeInfoToken = axios.CancelToken.source().token;
-const getInvoicesToken = axios.CancelToken.source().token;
-const getPaymentsToken = axios.CancelToken.source().token;
-const getNodeInfoToken = axios.CancelToken.source().token;
+// keep track of all active calls so we can cancel when appropriate
+const calls: any = {};
 
 class RESTUtils {
-    axiosReq = (
+    restReq = (
         headers: Headers,
         url: string,
         method: any,
-        cancelToken?: any,
-        data?: any
-    ) =>
-        axios.request({
-            method,
-            url,
-            headers,
-            cancelToken,
-            data
-        });
+        data?: any,
+        sslVerification?: boolean
+    ) => {
+        // use body data as an identifier too, we don't want to cancel when we
+        // are making multiples calls to get all the node names, for example
+        const id = data ? `${url}${JSON.stringify(data)}` : url;
+        if (calls[id]) {
+            calls[id].cancel();
+        }
+
+        calls[id] = RNFetchBlob.config({
+            trusty: !sslVerification
+        }).fetch(method, url, headers, data ? JSON.stringify(data) : data);
+
+        return calls[id];
+    };
 
     getHeaders = (implementation: string, macaroonHex: string) => {
         if (implementation === 'c-lightning-REST') {
@@ -115,11 +115,16 @@ class RESTUtils {
         settingsStore: SettingsStore,
         request: string,
         method: string,
-        cancelToken?: any,
         data?: any,
         urlParams?: Array<string>
     ) => {
-        const { host, port, macaroonHex, implementation } = settingsStore;
+        const {
+            host,
+            port,
+            macaroonHex,
+            implementation,
+            sslVerification
+        } = settingsStore;
 
         let route: string;
         if (urlParams) {
@@ -136,74 +141,42 @@ class RESTUtils {
 
         const headers = this.getHeaders(implementation, macaroonHex);
         const url = this.getURL(host, port, route);
-        return this.axiosReq(headers, url, method, cancelToken, data);
+        return this.restReq(headers, url, method, data, sslVerification);
     };
 
     getRequest = (
         settingsStore: SettingsStore,
         request: string,
-        cancelToken?: any,
         urlParams?: Array<string>
-    ) => {
-        return this.request(
-            settingsStore,
-            request,
-            'get',
-            cancelToken,
-            null,
-            urlParams
-        );
-    };
+    ) => this.request(settingsStore, request, 'get', null, urlParams);
 
-    postRequest = (
-        settingsStore: SettingsStore,
-        request: string,
-        data?: any
-    ) => {
-        return this.request(settingsStore, request, 'post', null, data);
-    };
+    postRequest = (settingsStore: SettingsStore, request: string, data?: any) =>
+        this.request(settingsStore, request, 'post', data);
 
     deleteRequest = (
         settingsStore: SettingsStore,
         request: string,
         urlParams?: Array<string>
-    ) => {
-        return this.request(
-            settingsStore,
-            request,
-            'delete',
-            null,
-            null,
-            urlParams
-        );
-    };
+    ) => this.request(settingsStore, request, 'delete', null, urlParams);
 
     getTransactions = (settingsStore: SettingsStore) =>
-        this.getRequest(settingsStore, 'getTransactions', getTransactionsToken);
+        this.getRequest(settingsStore, 'getTransactions');
     getChannels = (settingsStore: SettingsStore) =>
-        this.getRequest(settingsStore, 'getChannels', getChannelsToken);
+        this.getRequest(settingsStore, 'getChannels');
     getBlockchainBalance = (settingsStore: SettingsStore) =>
-        this.getRequest(
-            settingsStore,
-            'getBlockchainBalance',
-            getBlockchainBalanceToken
-        );
+        this.getRequest(settingsStore, 'getBlockchainBalance');
     getLightningBalance = (settingsStore: SettingsStore) =>
-        this.getRequest(
-            settingsStore,
-            'getLightningBalance',
-            getLightningBalanceToken
-        );
+        this.getRequest(settingsStore, 'getLightningBalance');
     sendCoins = (settingsStore: SettingsStore, data: any) =>
         this.postRequest(settingsStore, 'sendCoins', data);
     getMyNodeInfo = (settingsStore: SettingsStore) =>
-        this.getRequest(settingsStore, 'getMyNodeInfo', getMyNodeInfoToken);
+        this.getRequest(settingsStore, 'getMyNodeInfo');
     getInvoices = (settingsStore: SettingsStore) =>
-        this.getRequest(settingsStore, 'getInvoices', getInvoicesToken);
+        this.getRequest(settingsStore, 'getInvoices');
     createInvoice = (settingsStore: SettingsStore, data: any) =>
         this.postRequest(settingsStore, 'createInvoice', data);
     getPayments = (settingsStore: SettingsStore) =>
-        this.getRequest(settingsStore, 'getPayments', getPaymentsToken);
+        this.getRequest(settingsStore, 'getPayments');
     getNewAddress = (settingsStore: SettingsStore) =>
         this.getRequest(settingsStore, 'getNewAddress');
     openChannel = (settingsStore: SettingsStore, data: any) =>
@@ -215,25 +188,19 @@ class RESTUtils {
     decodePaymentRequest = (
         settingsStore: SettingsStore,
         urlParams?: Array<string>
-    ) =>
-        this.getRequest(settingsStore, 'decodePaymentRequest', null, urlParams);
+    ) => this.getRequest(settingsStore, 'decodePaymentRequest', urlParams);
     payLightningInvoice = (settingsStore: SettingsStore, data: any) =>
         this.postRequest(settingsStore, 'payLightningInvoice', data);
     closeChannel = (settingsStore: SettingsStore, urlParams?: Array<string>) =>
         this.deleteRequest(settingsStore, 'closeChannel', urlParams);
     getNodeInfo = (settingsStore: SettingsStore, urlParams?: Array<string>) =>
-        this.getRequest(
-            settingsStore,
-            'getNodeInfo',
-            getNodeInfoToken,
-            urlParams
-        );
+        this.getRequest(settingsStore, 'getNodeInfo', urlParams);
     getFees = (settingsStore: SettingsStore) =>
         this.getRequest(settingsStore, 'getFees');
     setFees = (settingsStore: SettingsStore, data: any) =>
         this.postRequest(settingsStore, 'setFees', data);
     getRoutes = (settingsStore: SettingsStore, urlParams?: Array<string>) =>
-        this.getRequest(settingsStore, 'getRoutes', null, urlParams);
+        this.getRequest(settingsStore, 'getRoutes', urlParams);
 }
 
 const restUtils = new RESTUtils();

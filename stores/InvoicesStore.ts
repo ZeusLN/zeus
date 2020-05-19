@@ -1,5 +1,5 @@
 import { action, observable, reaction } from 'mobx';
-import axios from 'axios';
+import RNFetchBlob from 'rn-fetch-blob';
 import { Alert } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import hashjs from 'hash.js';
@@ -52,27 +52,35 @@ export default class InvoicesStore {
         this.payment_request = '';
     };
 
+    resetInvoices = () => {
+        this.invoices = [];
+        this.invoicesCount = 0;
+        this.loading = false;
+    };
+
     @action
     public getInvoices = () => {
         this.loading = true;
         RESTUtils.getInvoices(this.settingsStore)
             .then((response: any) => {
-                // handle success
-                const data = response.data;
-                this.invoices = data.payments || data.invoices;
-                this.invoices = this.invoices.map(
-                    invoice => new Invoice(invoice)
-                );
-                this.invoices = this.invoices.slice().reverse();
-                this.invoicesCount =
-                    data.last_index_offset || this.invoices.length;
-                this.loading = false;
+                const status = response.info().status;
+                if (status == 200) {
+                    // handle success
+                    const data = response.json();
+                    this.invoices = data.payments || data.invoices;
+                    this.invoices = this.invoices.map(
+                        invoice => new Invoice(invoice)
+                    );
+                    this.invoices = this.invoices.slice().reverse();
+                    this.invoicesCount =
+                        data.last_index_offset || this.invoices.length;
+                    this.loading = false;
+                } else {
+                    this.resetInvoices();
+                }
             })
             .catch(() => {
-                // handle error
-                this.invoices = [];
-                this.invoicesCount = 0;
-                this.loading = false;
+                this.resetInvoices();
             });
     };
 
@@ -83,7 +91,7 @@ export default class InvoicesStore {
         expiry: string = '3600',
         lnurl?: LNURLWithdrawParams
     ) => {
-        const { implementation } = this.settingsStore;
+        const { implementation, sslVerification } = this.settingsStore;
         this.payment_request = null;
         this.creatingInvoice = true;
         this.creatingInvoiceError = false;
@@ -109,36 +117,54 @@ export default class InvoicesStore {
 
         RESTUtils.createInvoice(this.settingsStore, data)
             .then((response: any) => {
-                // handle success
-                const data = new Invoice(response.data);
-                this.payment_request = data.getPaymentRequest;
-                this.creatingInvoice = false;
+                const status = response.info().status;
+                if (status == 200) {
+                    // handle success
+                    const data = new Invoice(response.json());
+                    this.payment_request = data.getPaymentRequest;
+                    this.creatingInvoice = false;
 
-                if (lnurl) {
-                    axios
-                        .get(lnurl.callback, {
-                            params: {
-                                k1: lnurl.k1,
-                                pr: this.payment_request
-                            }
+                    if (lnurl) {
+                        RNFetchBlob.config({
+                            trusty: !sslVerification || true
                         })
-                        .catch((err: any) => ({
-                            status: 'ERROR',
-                            reason: err.response.data
-                        }))
-                        .then((response: any) => {
-                            if (response.data.status === 'ERROR') {
-                                Alert.alert(response.data.reason);
-                            }
-                        });
+                            .fetch(
+                                'get',
+                                `${lnurl.callback}?k1=${lnurl.k1}&pr=${this.payment_request}`,
+                                null,
+                                JSON.stringify(params)
+                            )
+                            .then((response: any) => {
+                                const status = response.info().status;
+                                if (status == 200) {
+                                    const data = response.json();
+                                    if (data.status === 'ERROR') {
+                                        Alert.alert(data.reason);
+                                    }
+                                } else {
+                                    return {
+                                        status: 'ERROR',
+                                        reason: 'LNURL error'
+                                    };
+                                }
+                            })
+                            .catch((err: any) => ({
+                                status: 'ERROR',
+                                reason: err.toString()
+                            }));
+                    }
+                } else {
+                    const errorInfo = response.json();
+                    this.creatingInvoiceError = true;
+                    this.creatingInvoice = false;
+                    this.error_msg = errorInfo.error.message || errorInfo.error;
                 }
             })
             .catch((error: any) => {
                 // handle error
-                const errorInfo = error.response.data;
                 this.creatingInvoiceError = true;
                 this.creatingInvoice = false;
-                this.error_msg = errorInfo.error.message || errorInfo.error;
+                this.error_msg = error.toString() || 'Error creating invoice';
             });
     };
 
@@ -156,34 +182,45 @@ export default class InvoicesStore {
             paymentRequest
         ])
             .then((response: any) => {
-                // handle success
-                this.pay_req = new Invoice(response.data);
+                const status = response.info().status;
+                if (status == 200) {
+                    // handle success
+                    this.pay_req = new Invoice(response.json());
 
-                // check description_hash if asked for
-                if (
-                    descriptionPreimage &&
-                    this.pay_req.description_hash !==
-                        hashjs
-                            .sha256()
-                            .update(descriptionPreimage)
-                            .digest('hex')
-                ) {
-                    throw new Error('wrong description_hash!');
+                    // check description_hash if asked for
+                    if (
+                        descriptionPreimage &&
+                        this.pay_req.description_hash !==
+                            hashjs
+                                .sha256()
+                                .update(descriptionPreimage)
+                                .digest('hex')
+                    ) {
+                        throw new Error('wrong description_hash!');
+                    }
+
+                    this.loading = false;
+                    this.getPayReqError = null;
+                } else {
+                    this.loading = false;
+                    this.pay_req = null;
+                    const error = response.json();
+                    this.getPayReqError =
+                        (error.data && error.data.error) || error.message;
                 }
-
-                this.loading = false;
-                this.getPayReqError = null;
             })
             .catch((error: any) => {
                 // handle error
                 this.loading = false;
-                this.getPayReqError =
-                    (error.response &&
-                        error.response.data &&
-                        error.response.data.error) ||
-                    error.message;
                 this.pay_req = null;
+                this.getPayReqError = error.toString();
             });
+    };
+
+    getRoutesError = () => {
+        this.loadingFeeEstimate = false;
+        this.feeEstimate = null;
+        this.successProbability = null;
     };
 
     @action
@@ -194,32 +231,34 @@ export default class InvoicesStore {
 
         return RESTUtils.getRoutes(this.settingsStore, [destination, amount])
             .then((response: any) => {
-                // handle success
-                const data = response.data;
-                this.loadingFeeEstimate = false;
-                this.successProbability = data.success_prob
-                    ? data.success_prob * 100
-                    : 0;
+                const status = response.info().status;
+                if (status == 200) {
+                    // handle success
+                    const data = response.json();
+                    this.loadingFeeEstimate = false;
+                    this.successProbability = data.success_prob
+                        ? data.success_prob * 100
+                        : 0;
 
-                const routes = data.routes;
-                if (routes) {
-                    routes.forEach(route => {
-                        // expect lnd to pick the cheapest route
-                        if (this.feeEstimate) {
-                            if (route.total_fees < this.feeEstimate) {
-                                this.feeEstimate = route.total_fees;
+                    const routes = data.routes;
+                    if (routes) {
+                        routes.forEach((route: any) => {
+                            // expect lnd to pick the cheapest route
+                            if (this.feeEstimate) {
+                                if (route.total_fees < this.feeEstimate) {
+                                    this.feeEstimate = route.total_fees;
+                                }
+                            } else {
+                                this.feeEstimate = route.total_fees || 0;
                             }
-                        } else {
-                            this.feeEstimate = route.total_fees || 0;
-                        }
-                    });
+                        });
+                    }
+                } else {
+                    this.getRoutesError();
                 }
             })
-            .catch((error: any) => {
-                // handle error
-                this.loadingFeeEstimate = false;
-                this.feeEstimate = null;
-                this.successProbability = null;
+            .catch(() => {
+                this.getRoutesError();
             });
     };
 }

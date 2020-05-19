@@ -112,9 +112,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         NodeInfoStore.getNodeInfo();
         BalanceStore.getBlockchainBalance();
         BalanceStore.getLightningBalance();
-        TransactionsStore.getTransactions();
         PaymentsStore.getPayments();
         InvoicesStore.getInvoices();
+        TransactionsStore.getTransactions();
         ChannelsStore.getChannels();
         FeeStore.getFees();
 

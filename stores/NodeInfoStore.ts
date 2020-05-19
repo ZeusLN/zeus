@@ -25,29 +25,39 @@ export default class NodeInfoStore {
         );
     }
 
+    getNodeInfoError = () => {
+        this.error = true;
+        this.loading = false;
+        this.nodeInfo = {};
+    };
+
     @action
     public getNodeInfo = () => {
         this.errorMsg = '';
         this.loading = true;
         RESTUtils.getMyNodeInfo(this.settingsStore)
             .then((response: any) => {
-                // handle success
-                const nodeInfo = new NodeInfo(response.data);
-                this.nodeInfo = nodeInfo;
-                this.testnet = nodeInfo.isTestNet;
-                this.regtest = nodeInfo.isRegTest;
-                this.loading = false;
-                this.error = false;
+                const status = response.info().status;
+                if (status == 200) {
+                    // handle success
+                    const nodeInfo = new NodeInfo(response.json());
+                    this.nodeInfo = nodeInfo;
+                    this.testnet = nodeInfo.isTestNet;
+                    this.regtest = nodeInfo.isRegTest;
+                    this.loading = false;
+                    this.error = false;
+                } else {
+                    const data = response.json();
+                    if (data && data.error) {
+                        this.errorMsg = data.error.message || data.error;
+                    }
+                    this.getNodeInfoError();
+                }
             })
             .catch((error: any) => {
                 // handle error
-                const data = error.response && error.response.data;
-                this.error = true;
-                if (data && data.error) {
-                    this.errorMsg = data.error;
-                }
-                this.loading = false;
-                this.nodeInfo = {};
+                this.errorMsg = error.toString();
+                this.getNodeInfoError();
             });
     };
 }

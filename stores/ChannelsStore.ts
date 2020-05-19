@@ -57,7 +57,7 @@ export default class ChannelsStore {
                     this.channels.forEach((channel: Channel) => {
                         if (!this.nodes[channel.remote_pubkey]) {
                             this.getNodeInfo(channel.remote_pubkey).then(
-                                nodeInfo => {
+                                (nodeInfo: any) => {
                                     this.nodes[
                                         channel.remote_pubkey
                                     ] = nodeInfo;
@@ -76,10 +76,16 @@ export default class ChannelsStore {
         return RESTUtils.getNodeInfo(this.settingsStore, [pubkey]).then(
             (response: any) => {
                 // handle success
-                const data = response.data;
+                const data = response.json();
                 return data.node;
             }
         );
+    };
+
+    getChannelsError = () => {
+        this.channels = [];
+        this.error = true;
+        this.loading = false;
     };
 
     @action
@@ -88,19 +94,21 @@ export default class ChannelsStore {
         this.loading = true;
         RESTUtils.getChannels(this.settingsStore)
             .then((response: any) => {
-                const data = response.data;
-                const channels = data.channels || data;
-                this.channels = channels.map(
-                    (channel: any) => new Channel(channel)
-                );
-                this.error = false;
-                this.loading = false;
+                const status = response.info().status;
+                if (status == 200) {
+                    const data = response.json();
+                    const channels = data.channels || data;
+                    this.channels = channels.map(
+                        (channel: any) => new Channel(channel)
+                    );
+                    this.error = false;
+                    this.loading = false;
+                } else {
+                    this.getChannelsError();
+                }
             })
             .catch(() => {
-                // handle error
-                this.channels = [];
-                this.error = true;
-                this.loading = false;
+                this.getChannelsError();
             });
     };
 
@@ -108,8 +116,8 @@ export default class ChannelsStore {
     public closeChannel = (
         request?: CloseChannelRequest | null,
         channelId?: string | null,
-        satPerByte?: string,
-        forceClose?: boolean
+        satPerByte?: string | null,
+        forceClose?: boolean | string | null
     ) => {
         const { implementation } = this.settingsStore;
         this.loading = true;
@@ -135,16 +143,19 @@ export default class ChannelsStore {
 
         RESTUtils.closeChannel(this.settingsStore, urlParams)
             .then((response: any) => {
-                const data = response.data;
-                const { chan_close } = data;
-                this.closeChannelSuccess = chan_close.success;
-                this.error = false;
-                this.loading = false;
+                const status = response.info().status;
+                if (status == 200) {
+                    const data = response.json();
+                    const { chan_close } = data;
+                    this.closeChannelSuccess = chan_close.success;
+                    this.error = false;
+                    this.loading = false;
+                } else {
+                    this.getChannelsError();
+                }
             })
             .catch(() => {
-                this.channels = [];
-                this.error = true;
-                this.loading = false;
+                this.getChannelsError();
             });
     };
 
@@ -168,21 +179,37 @@ export default class ChannelsStore {
         }
 
         RESTUtils.connectPeer(this.settingsStore, data)
-            .then(() => {
-                // handle success
-                this.errorPeerConnect = false;
-                this.connectingToPeer = false;
-                this.errorMsgPeer = null;
-                this.channelRequest = request;
-                this.peerSuccess = true;
+            .then((response: any) => {
+                const status = response.info().status;
+                if (status == 200) {
+                    // handle success
+                    this.errorPeerConnect = false;
+                    this.connectingToPeer = false;
+                    this.errorMsgPeer = null;
+                    this.channelRequest = request;
+                    this.peerSuccess = true;
+                } else {
+                    const errorInfo = response.json();
+                    this.errorMsgPeer =
+                        (errorInfo && errorInfo.error.message) ||
+                        (errorInfo && errorInfo.error) ||
+                        error.message;
+                    this.errorPeerConnect = true;
+                    this.connectingToPeer = false;
+                    this.peerSuccess = false;
+                    this.channelSuccess = false;
+
+                    if (
+                        this.errorMsgPeer &&
+                        this.errorMsgPeer.includes('already connected to peer')
+                    ) {
+                        this.channelRequest = request;
+                    }
+                }
             })
             .catch((error: any) => {
                 // handle error
-                const errorInfo = error.response && error.response.data;
-                this.errorMsgPeer =
-                    (errorInfo && errorInfo.error.message) ||
-                    (errorInfo && errorInfo.error) ||
-                    error.message;
+                this.errorMsgPeer = error.toString();
                 this.errorPeerConnect = true;
                 this.connectingToPeer = false;
                 this.peerSuccess = false;
@@ -195,6 +222,16 @@ export default class ChannelsStore {
                     this.channelRequest = request;
                 }
             });
+    };
+
+    openChannelError = () => {
+        this.output_index = null;
+        this.funding_txid_str = null;
+        this.errorOpenChannel = true;
+        this.openingChannel = false;
+        this.channelRequest = null;
+        this.peerSuccess = false;
+        this.channelSuccess = false;
     };
 
     openChannel = (request: OpenChannelRequest) => {
@@ -214,26 +251,26 @@ export default class ChannelsStore {
 
         RESTUtils.openChannel(this.settingsStore, openChannelReq)
             .then((response: any) => {
-                const data = response.data;
-                this.output_index = data.output_index;
-                this.funding_txid_str = data.funding_txid_str;
-                this.errorOpenChannel = false;
-                this.openingChannel = false;
-                this.errorMsgChannel = null;
-                this.channelRequest = null;
-                this.channelSuccess = true;
+                const status = response.info().status;
+                if (status == 200) {
+                    const data = response.json();
+                    this.output_index = data.output_index;
+                    this.funding_txid_str = data.funding_txid_str;
+                    this.errorOpenChannel = false;
+                    this.openingChannel = false;
+                    this.errorMsgChannel = null;
+                    this.channelRequest = null;
+                    this.channelSuccess = true;
+                } else {
+                    const errorInfo = response.json();
+                    this.errorMsgChannel =
+                        errorInfo.error.message || errorInfo.error;
+                    this.openChannelError();
+                }
             })
             .catch((error: any) => {
-                const errorInfo = error.response.data;
-                this.errorMsgChannel =
-                    errorInfo.error.message || errorInfo.error;
-                this.output_index = null;
-                this.funding_txid_str = null;
-                this.errorOpenChannel = true;
-                this.openingChannel = false;
-                this.channelRequest = null;
-                this.peerSuccess = false;
-                this.channelSuccess = false;
+                this.errorMsgChannel = error.toString();
+                this.openChannelError();
             });
     };
 }
