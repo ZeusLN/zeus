@@ -1,5 +1,5 @@
 import * as React from 'react';
-import axios from 'axios';
+import RNFetchBlob from 'rn-fetch-blob';
 import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
@@ -58,64 +58,82 @@ export default class LnurlPay extends React.Component<
     }
 
     sendValues() {
-        const { navigation, InvoicesStore, LnurlPayStore } = this.props;
+        const {
+            navigation,
+            InvoicesStore,
+            LnurlPayStore,
+            SettingsStore
+        } = this.props;
+        const { sslVerification } = SettingsStore;
         const { domain, amount } = this.state;
         const lnurl = navigation.getParam('lnurlParams');
+        const amountParam = parseFloat(amount) * 1000;
 
-        axios
-            .get(lnurl.callback, {
-                params: { amount: parseFloat(amount) * 1000 }
-            })
+        RNFetchBlob.config({
+            trusty: !sslVerification || true
+        })
+            .fetch('get', `${lnurl.callback}?amount=${amountParam}`, null)
             .catch((err: any) => ({
                 status: 'ERROR',
                 reason: err.response_data
             }))
             .then(async (response: any) => {
-                if (response.data.status === 'ERROR') {
-                    Alert.alert(response.data.reason);
-                    return;
-                }
+                const status = response.info().status;
+                if (status == 200) {
+                    const data = response.json();
 
-                const pr = response.data.pr;
-                const successAction = response.data.successAction || {
-                    tag: 'noop'
-                };
-
-                InvoicesStore.getPayReq(pr, lnurl.metadata).then(() => {
-                    if (!!InvoicesStore.getPayReqError) {
-                        Alert.alert(
-                            `Got an invalid invoice!`,
-                            InvoicesStore.getPayReqError,
-                            [],
-                            {
-                                onDismiss: () => {
-                                    navigation.navigate('Wallet');
-                                }
-                            }
-                        );
+                    if (data.status === 'ERROR') {
+                        Alert.alert(data.reason);
                         return;
                     }
 
-                    const payment_hash: string =
-                        (InvoicesStore.pay_req &&
-                            InvoicesStore.pay_req.payment_hash) ||
-                        '';
-                    const description_hash: string =
-                        (InvoicesStore.pay_req &&
-                            InvoicesStore.pay_req.description_hash) ||
-                        '';
-                    LnurlPayStore.keep(
-                        payment_hash,
-                        domain,
-                        lnurl.lnurlText,
-                        {
-                            metadata: lnurl.metadata,
-                            descriptionHash: description_hash
-                        },
-                        successAction
-                    );
-                    navigation.navigate('PaymentRequest');
-                });
+                    const pr = data.pr;
+                    const successAction = data.successAction || {
+                        tag: 'noop'
+                    };
+
+                    InvoicesStore.getPayReq(pr, lnurl.metadata).then(() => {
+                        if (!!InvoicesStore.getPayReqError) {
+                            Alert.alert(
+                                `Got an invalid invoice!`,
+                                InvoicesStore.getPayReqError,
+                                [],
+                                {
+                                    onDismiss: () => {
+                                        navigation.navigate('Wallet');
+                                    }
+                                }
+                            );
+                            return;
+                        }
+
+                        const payment_hash: string =
+                            (InvoicesStore.pay_req &&
+                                InvoicesStore.pay_req.payment_hash) ||
+                            '';
+                        const description_hash: string =
+                            (InvoicesStore.pay_req &&
+                                InvoicesStore.pay_req.description_hash) ||
+                            '';
+                        LnurlPayStore.keep(
+                            payment_hash,
+                            domain,
+                            lnurl.lnurlText,
+                            {
+                                metadata: lnurl.metadata,
+                                descriptionHash: description_hash
+                            },
+                            successAction
+                        );
+                        navigation.navigate('PaymentRequest');
+                    });
+                } else {
+                    const error = response.json();
+                    return {
+                        status: 'ERROR',
+                        reason: error.response_data
+                    };
+                }
             });
     }
 

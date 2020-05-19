@@ -1,6 +1,6 @@
 import RNSecureKeyStore, { ACCESSIBLE } from 'react-native-secure-key-store';
 import { action, observable } from 'mobx';
-import axios from 'axios';
+import RNFetchBlob from 'rn-fetch-blob';
 import RESTUtils from '../utils/RESTUtils';
 
 interface Node {
@@ -8,6 +8,7 @@ interface Node {
     port?: string;
     macaroonHex?: string;
     implementation?: string;
+    sslVerification?: boolean;
 }
 
 interface Settings {
@@ -28,6 +29,7 @@ export default class SettingsStore {
     @observable port: string;
     @observable macaroonHex: string;
     @observable implementation: string;
+    @observable sslVerification: boolean | undefined;
     @observable chainAddress: string | undefined;
 
     @action
@@ -35,36 +37,41 @@ export default class SettingsStore {
         const configRoute = data.split('config=')[1];
         this.btcPayError = null;
 
-        return axios
-            .request({
-                method: 'get',
-                url: configRoute
-            })
+        return RNFetchBlob.fetch('get', configRoute)
             .then((response: any) => {
-                // handle success
-                const data = response.data;
-                const configuration = data.configurations[0];
-                const { adminMacaroon, macaroon, type, uri } = configuration;
+                const status = response.info().status;
+                if (status == 200) {
+                    const data = response.json();
+                    const configuration = data.configurations[0];
+                    const {
+                        adminMacaroon,
+                        macaroon,
+                        type,
+                        uri
+                    } = configuration;
 
-                if (type !== 'lnd-rest' && type !== 'clightning-rest') {
-                    this.btcPayError =
-                        'Sorry, we currently only support BTCPay instances using lnd or c-lightning';
+                    if (type !== 'lnd-rest' && type !== 'clightning-rest') {
+                        this.btcPayError =
+                            'Sorry, we currently only support BTCPay instances using lnd or c-lightning';
+                    } else {
+                        const config = {
+                            host: uri.split('https://')[1],
+                            macaroonHex: adminMacaroon || macaroon,
+                            implementation:
+                                type === 'clightning-rest'
+                                    ? 'c-lightning-REST'
+                                    : 'lnd'
+                        };
+
+                        return config;
+                    }
                 } else {
-                    const config = {
-                        host: uri.split('https://')[1],
-                        macaroonHex: adminMacaroon || macaroon,
-                        implementation:
-                            type === 'clightning-rest'
-                                ? 'c-lightning-REST'
-                                : 'lnd'
-                    };
-
-                    return config;
+                    this.btcPayError = 'Error getting BTCPay configuration';
                 }
             })
-            .catch(() => {
+            .catch((err: any) => {
                 // handle error
-                this.btcPayError = 'Error getting BTCPay configuration';
+                this.btcPayError = `Error getting BTCPay configuration: ${err.toString()}`;
             });
     };
 
@@ -88,6 +95,7 @@ export default class SettingsStore {
                     this.port = node.port;
                     this.macaroonHex = node.macaroonHex;
                     this.implementation = node.implementation;
+                    this.sslVerification = node.sslVerification;
                 }
                 this.chainAddress = this.settings.onChainAddress;
                 return this.settings;
@@ -117,7 +125,7 @@ export default class SettingsStore {
     public getNewAddress = () => {
         return RESTUtils.getNewAddress(this).then((response: any) => {
             // handle success
-            const data = response.data;
+            const data = response.json();
             const newAddress = data.address;
             this.chainAddress = newAddress;
             const newSettings = {
