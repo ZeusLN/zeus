@@ -24,6 +24,7 @@ import Lockscreen from './views/Lockscreen';
 // Settings views
 import Settings from './views/Settings';
 import AddEditNode from './views/Settings/AddEditNode';
+import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 
 const AppScenes = {
     Lockscreen: {
@@ -43,6 +44,9 @@ const AppScenes = {
     },
     AddEditNode: {
         screen: AddEditNode
+    },
+    CertInstallInstructions: {
+        screen: CertInstallInstructions
     },
     Transaction: {
         screen: Transaction

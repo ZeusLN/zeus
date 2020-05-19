@@ -468,42 +468,36 @@ export default class AddEditNode extends React.Component<
                             <Text>
                                 To use SSL Verification with a self-signed
                                 certificate you must manually install the
-                                certificate to your phone.
+                                certificate to your phone. Press the button
+                                below for installation instructions.
                             </Text>
-                        )}
-                        {sslVerification &&
-                            !saved &&
-                            Platform.OS === 'android' && (
-                                <Text style={{ paddingTop: 10 }}>
-                                    To install a certificate on Android, copy
-                                    the certificate file to device. Then go to
-                                    Settings > Security > Install from storage.
-                                    It should detect the certificate and let you
-                                    add install it to the device.
-                                </Text>
-                            )}
-                        {sslVerification && !saved && Platform.OS === 'ios' && (
-                            <View>
-                                <Text style={{ paddingTop: 10 }}>
-                                    To install a certificate on iOS you must
-                                    email the file to yourself, once you select
-                                    the file in your email you will be prompted
-                                    to install it as a profile.
-                                </Text>
-                                <Text style={{ paddingTop: 10 }}>
-                                    Alternatively, you can provision a profile
-                                    with the certificate for your phone in
-                                    XCode.
-                                </Text>
-                                <Text style={{ paddingTop: 10 }}>
-                                    You can access the certificate at any time
-                                    in Settings > General > Profiles and remove
-                                    it if required.
-                                </Text>
-                            </View>
                         )}
                     </View>
                 </View>
+
+                {sslVerification && !saved && (
+                    <View style={{ paddingTop: 10 }}>
+                        <Button
+                            title={'Certificate Install Instructions'}
+                            icon={{
+                                name: 'lock',
+                                size: 25,
+                                color: 'white'
+                            }}
+                            onPress={() =>
+                                navigation.navigate('CertInstallInstructions')
+                            }
+                            style={styles.button}
+                            buttonStyle={{
+                                backgroundColor: 'purple',
+                                borderRadius: 30
+                            }}
+                            titleStyle={{
+                                color: 'white'
+                            }}
+                        />
+                    </View>
+                )}
 
                 <View style={styles.button}>
                     <Button
