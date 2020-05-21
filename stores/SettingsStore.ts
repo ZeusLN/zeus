@@ -6,7 +6,9 @@ import RESTUtils from '../utils/RESTUtils';
 interface Node {
     host?: string;
     port?: string;
+    url?: string;
     macaroonHex?: string;
+    accessKey?: string;
     implementation?: string;
     sslVerification?: boolean;
 }
@@ -27,7 +29,9 @@ export default class SettingsStore {
     @observable btcPayError: string | null;
     @observable host: string;
     @observable port: string;
+    @observable url: string;
     @observable macaroonHex: string;
+    @observable accessKey: string;
     @observable implementation: string;
     @observable sslVerification: boolean | undefined;
     @observable chainAddress: string | undefined;
@@ -75,6 +79,10 @@ export default class SettingsStore {
             });
     };
 
+    hasCredentials() {
+        return this.macaroonHex || this.accessKey ? true : false;
+    }
+
     @action
     public async getSettings() {
         this.loading = true;
@@ -93,7 +101,9 @@ export default class SettingsStore {
                 if (node) {
                     this.host = node.host;
                     this.port = node.port;
+                    this.url = node.url;
                     this.macaroonHex = node.macaroonHex;
+                    this.accessKey = node.accessKey;
                     this.implementation = node.implementation || 'lnd';
                     this.sslVerification = node.sslVerification || false;
                 }
@@ -123,14 +133,12 @@ export default class SettingsStore {
 
     @action
     public getNewAddress = () => {
-        return RESTUtils.getNewAddress(this).then((response: any) => {
+        return RESTUtils.getNewAddress(this).then((data: any) => {
             // handle success
-            const data = response.json();
-            const newAddress = data.address;
-            this.chainAddress = newAddress;
+            this.chainAddress = data.address;
             const newSettings = {
                 ...this.settings,
-                onChainAddress: newAddress
+                onChainAddress: data.address
             };
 
             this.setSettings(JSON.stringify(newSettings));
