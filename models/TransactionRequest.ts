@@ -5,10 +5,6 @@ export default interface TransactionRequest {
     addr?: string;
     sat_per_byte?: string | null; // optional
     amount?: string;
-    // c-lightning
-    address?: string;
-    feeRate?: string;
-    satoshis?: string;
 }
 
 export type SendPaymentRequest =
