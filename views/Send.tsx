@@ -35,9 +35,10 @@ export default class Send extends React.Component<SendProps, SendState> {
         const destination = navigation.getParam('destination', null);
         const amount = navigation.getParam('amount', null);
         const transactionType = navigation.getParam('transactionType', null);
+        const isValid = navigation.getParam('isValid', null);
 
         this.state = {
-            isValid: false,
+            isValid: isValid || false,
             transactionType: transactionType,
             destination: destination || '',
             amount: amount || '',
@@ -49,7 +50,9 @@ export default class Send extends React.Component<SendProps, SendState> {
         const clipboard = await Clipboard.getString();
 
         Clipboard.setString('');
-        this.validateAddress(clipboard, false);
+        if (!!clipboard) {
+            this.validateAddress(clipboard, false);
+        }
     }
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
