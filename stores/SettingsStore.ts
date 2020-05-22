@@ -94,8 +94,8 @@ export default class SettingsStore {
                     this.host = node.host;
                     this.port = node.port;
                     this.macaroonHex = node.macaroonHex;
-                    this.implementation = node.implementation;
-                    this.sslVerification = node.sslVerification;
+                    this.implementation = node.implementation || 'lnd';
+                    this.sslVerification = node.sslVerification || false;
                 }
                 this.chainAddress = this.settings.onChainAddress;
                 return this.settings;
