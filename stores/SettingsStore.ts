@@ -9,11 +9,11 @@ interface Node {
     macaroonHex?: string;
     implementation?: string;
     sslVerification?: boolean;
+    onChainAddress?: string;
 }
 
 interface Settings {
     nodes?: Array<Node>;
-    onChainAddress?: string;
     theme?: string;
     lurkerMode?: boolean;
     selectedNode?: number;
@@ -96,8 +96,8 @@ export default class SettingsStore {
                     this.macaroonHex = node.macaroonHex;
                     this.implementation = node.implementation;
                     this.sslVerification = node.sslVerification;
+                    this.chainAddress = node.onChainAddress;
                 }
-                this.chainAddress = this.settings.onChainAddress;
                 return this.settings;
             } else {
                 console.log('No credentials stored');
@@ -127,13 +127,14 @@ export default class SettingsStore {
             // handle success
             const data = response.json();
             const newAddress = data.address;
-            this.chainAddress = newAddress;
-            const newSettings = {
-                ...this.settings,
-                onChainAddress: newAddress
-            };
+            this.settings.nodes[
+                this.settings.selectedNode || 0
+            ].onChainAddress = newAddress;
+            const newSettings = this.settings;
 
-            this.setSettings(JSON.stringify(newSettings));
+            this.setSettings(JSON.stringify(newSettings)).then(() => {
+                this.getSettings();
+            });
         });
     };
 }
