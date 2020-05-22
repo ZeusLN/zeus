@@ -287,7 +287,9 @@ export default class Settings extends React.Component<
                 {showPassphraseForm && (
                     <Text
                         style={{
-                            color: savedTheme === 'dark' ? 'white' : 'black'
+                            color: savedTheme === 'dark' ? 'white' : 'black',
+                            paddingLeft: 10,
+                            paddingTop: 10
                         }}
                     >
                         New Passphrase
@@ -318,7 +320,8 @@ export default class Settings extends React.Component<
                 {showPassphraseForm && (
                     <Text
                         style={{
-                            color: savedTheme === 'dark' ? 'white' : 'black'
+                            color: savedTheme === 'dark' ? 'white' : 'black',
+                            paddingLeft: 10
                         }}
                     >
                         Confirm New Passphrase
@@ -430,11 +433,13 @@ const styles = StyleSheet.create({
     },
     textInput: {
         fontSize: 20,
-        color: 'black'
+        color: 'black',
+        paddingLeft: 10
     },
     textInputDark: {
         fontSize: 20,
-        color: 'white'
+        color: 'white',
+        paddingLeft: 10
     },
     error: {
         color: 'red'
@@ -454,8 +459,7 @@ const styles = StyleSheet.create({
         color: 'white'
     },
     button: {
-        paddingTop: 10,
-        paddingBottom: 10
+        paddingTop: 10
     },
     lurkerField: {
         paddingTop: 15,
