@@ -133,7 +133,7 @@ export default class SettingsStore {
 
     @action
     public getNewAddress = () => {
-        return RESTUtils.getNewAddress(this).then((data: any) => {
+        return RESTUtils.getNewAddress().then((data: any) => {
             // handle success
             this.chainAddress = data.address;
             const newSettings = {
