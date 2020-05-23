@@ -226,7 +226,7 @@ class Spark {
             transactions: outputs
         }));
     getChannels = () =>
-        await this.rpc('listpeers').then(({ peers }) => ({
+        this.rpc('listpeers').then(({ peers }) => ({
             channels: peers
                 .filter(peer => peer.channels.length)
                 .map(peer => {
@@ -325,8 +325,8 @@ class Spark {
             expiry: data.expiry,
             exposeprivatechannels: true
         });
-    getPayments = () => {};
-    getNewAddress = () => {};
+    getPayments = () => this.rpc('listsendpays');
+    getNewAddress = () => this.rpc('newaddr');
     openChannel = (data: OpenChannelRequest) =>
         this.rpc('fundchannel', {
             id: data.node_pubkey_string,

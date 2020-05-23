@@ -187,7 +187,6 @@ export default class InvoicesStore {
 
         return RESTUtils.getRoutes([destination, amount])
             .then((data: any) => {
-                const data = response.json();
                 this.loadingFeeEstimate = false;
                 this.successProbability = data.success_prob
                     ? data.success_prob * 100
