@@ -108,7 +108,7 @@ export default class FeeTable extends React.Component<
 
             rows = df.index.map((index: number, i: number) => {
                 const cells = df.data[i].map((cell: any, k: number) => {
-                    const value = this.repr(cell);
+                    const value = FeeUtils.roundFee(this.repr(cell));
                     return (
                         <TouchableOpacity
                             key={`cell-${k}`}

@@ -17,7 +17,6 @@ import TransactionsStore from './../stores/TransactionsStore';
 import SettingsStore from './../stores/SettingsStore';
 
 import FeeTable from './../components/FeeTable';
-import FeeUtils from './../utils/FeeUtils';
 
 interface SendProps {
     exitSetup: any;
@@ -126,7 +125,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     setFee = (text: string) => {
-        this.setState({ fee: FeeUtils.roundFee(text) });
+        this.setState({ fee: text });
     };
 
     render() {
