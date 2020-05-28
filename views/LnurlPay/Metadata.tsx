@@ -16,11 +16,17 @@ export default class LnurlPayMetadata extends React.Component<
         const { settings } = SettingsStore;
         const { theme } = settings;
 
-        const text: string = JSON.parse(metadata)
+        var keypairs: Array<Array<string>>;
+        try {
+            keypairs = JSON.parse(metadata);
+        } catch (err) {
+            keypairs = [];
+        }
+        const text: string = keypairs
             .filter(([typ, _]: any) => typ === 'text/plain')
             .map(([_, content]: any) => content)[0];
 
-        const image: string = JSON.parse(metadata)
+        const image: string = keypairs
             .filter(([typ, _]: any) => typ.slice(0, 6) === 'image/')
             .map(([typ, content]: any) => `data:${typ},${content}`)[0];
 

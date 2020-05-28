@@ -1,5 +1,5 @@
 import RNFetchBlob from 'rn-fetch-blob';
-import { stores } from '../stores/Stores';
+import stores from '../stores/Stores';
 import TransactionRequest from './../models/TransactionRequest';
 import Channel from './../models/Channel';
 import OpenChannelRequest from './../models/OpenChannelRequest';
@@ -193,32 +193,44 @@ class CLightningREST extends LND {
 }
 
 class Spark {
-    rpc = (rpcmethod, params) => {
+    rpc = (rpcmethod, params = {}) => {
         let { url, accessKey, sslVerification } = stores.settingsStore;
 
         const id = rpcmethod + JSON.stringify(params);
         if (calls[id]) {
-            calls[id].cancel();
+            return calls[id];
         }
 
         url = url.slice(-4) === '/rpc' ? url : url + '/rpc';
 
         calls[id] = RNFetchBlob.config({
             trusty: !sslVerification
-        }).fetch('POST', url, { 'X-Access': accessKey }, params);
-
-        return calls[id].then(response => {
-            if (response.status < 300) {
-                return response.json();
-            } else {
-                try {
-                    let errorInfo = response.json();
+        })
+            .fetch(
+                'POST',
+                url,
+                { 'X-Access': accessKey },
+                JSON.stringify({ method: rpcmethod, params: params })
+            )
+            .then(response => {
+                delete calls[id];
+                const status = response.info().status;
+                if (status < 300) {
+                    return response.json();
+                } else {
+                    var errorInfo;
+                    try {
+                        errorInfo = response.json();
+                    } catch (err) {
+                        throw new Error(
+                            'response was (' + status + ')' + response.text()
+                        );
+                    }
                     throw new Error(errorInfo.message);
-                } catch (err) {
-                    throw new Error('response: ' + response.text());
                 }
-            }
-        });
+            });
+
+        return calls[id];
     };
 
     getTransactions = () =>
@@ -287,10 +299,10 @@ class Spark {
         this.rpc('listfunds').then(({ channels }) => ({
             balance: channels
                 .filter(o => o.state === 'CHANNELD_NORMAL')
-                .reduce((acc, o) => acc + o.value, 0),
+                .reduce((acc, o) => acc + o.channel_sat, 0),
             pending_open_balance: channels
                 .filter(o => o.state === 'CHANNELD_AWAITING_LOCKIN')
-                .reduce((acc, o) => acc + o.value, 0)
+                .reduce((acc, o) => acc + o.channel_sat, 0)
         }));
     sendCoins = (data: TransactionRequest) =>
         this.rpc('withdraw', {
@@ -325,7 +337,10 @@ class Spark {
             expiry: data.expiry,
             exposeprivatechannels: true
         });
-    getPayments = () => this.rpc('listsendpays');
+    getPayments = () =>
+        this.rpc('listsendpays').then(({ payments }) => ({
+            payments: payments.sort((a, b) => a.created_at - b.created_at)
+        }));
     getNewAddress = () => this.rpc('newaddr');
     openChannel = (data: OpenChannelRequest) =>
         this.rpc('fundchannel', {
@@ -338,30 +353,33 @@ class Spark {
         this.rpc('connect', [data.addr.pubkey, data.addr.host]);
     listNode = () => {};
     decodePaymentRequest = (urlParams?: Array<string>) =>
-        this.rpc('decodepay', urlParams[0]);
+        this.rpc('decodepay', [urlParams[0]]);
     payLightningInvoice = (data: any) =>
         this.rpc('pay', {
             bolt11: data.payment_request,
             msatoshi: data.amt ? Number(data.amt * 1000) : undefined
         });
     closeChannel = (urlParams?: Array<string>) =>
-        this.rpc('close', urlParams[0]);
+        this.rpc('close', [urlParams[0]]);
     getNodeInfo = (urlParams?: Array<string>) =>
-        this.rpc('listnodes', urlParams[0]).then(({ nodes: [node] }) => ({
-            node: {
-                last_update: node.last_timestamp,
-                pub_key: node.nodeid,
-                alias: node.alias,
-                color: node.color,
-                addresses: node.addresses.map(addr => ({
-                    network: 'tcp',
-                    addr:
-                        addr.type === 'ipv6'
-                            ? `[${addr.address}]:${addr.port}`
-                            : `${addr.address}:${addr.port}`
-                }))
-            }
-        }));
+        this.rpc('listnodes', [urlParams[0]]).then(({ nodes }) => {
+            const node = nodes[0];
+            return {
+                node: node && {
+                    last_update: node.last_timestamp,
+                    pub_key: node.nodeid,
+                    alias: node.alias,
+                    color: node.color,
+                    addresses: node.addresses.map(addr => ({
+                        network: 'tcp',
+                        addr:
+                            addr.type === 'ipv6'
+                                ? `[${addr.address}]:${addr.port}`
+                                : `${addr.address}:${addr.port}`
+                    }))
+                }
+            };
+        });
     getFees = async () => {
         const info = await this.rpc('getinfo');
 

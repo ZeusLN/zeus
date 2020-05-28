@@ -145,7 +145,9 @@ export default class AddEditNode extends React.Component<
         const {
             host,
             port,
+            url,
             macaroonHex,
+            accessKey,
             implementation,
             sslVerification,
             index
@@ -156,7 +158,9 @@ export default class AddEditNode extends React.Component<
         const node = {
             host,
             port,
+            url,
             macaroonHex,
+            accessKey,
             implementation,
             sslVerification
         };
@@ -247,7 +251,9 @@ export default class AddEditNode extends React.Component<
         const {
             host,
             port,
+            url,
             macaroonHex,
+            accessKey,
             saved,
             active,
             index,
@@ -307,7 +313,10 @@ export default class AddEditNode extends React.Component<
                                 placeholder={'http://192.168.1.2:9737'}
                                 value={url}
                                 onChangeText={(text: string) =>
-                                    this.setState({ url: text, saved: false })
+                                    this.setState({
+                                        url: text.trim(),
+                                        saved: false
+                                    })
                                 }
                                 numberOfLines={1}
                                 style={
@@ -334,7 +343,7 @@ export default class AddEditNode extends React.Component<
                                 value={accessKey}
                                 onChangeText={(text: string) =>
                                     this.setState({
-                                        accessKey: text,
+                                        accessKey: text.trim(),
                                         saved: false
                                     })
                                 }
@@ -364,7 +373,10 @@ export default class AddEditNode extends React.Component<
                                 placeholder={'localhost'}
                                 value={host}
                                 onChangeText={(text: string) =>
-                                    this.setState({ host: text, saved: false })
+                                    this.setState({
+                                        host: text.trim(),
+                                        saved: false
+                                    })
                                 }
                                 numberOfLines={1}
                                 style={
@@ -391,7 +403,10 @@ export default class AddEditNode extends React.Component<
                                 placeholder={'443/8080'}
                                 value={port}
                                 onChangeText={(text: string) =>
-                                    this.setState({ port: text, saved: false })
+                                    this.setState({
+                                        port: text.trim(),
+                                        saved: false
+                                    })
                                 }
                                 numberOfLines={1}
                                 style={
@@ -418,7 +433,7 @@ export default class AddEditNode extends React.Component<
                                 value={macaroonHex}
                                 onChangeText={(text: string) =>
                                     this.setState({
-                                        macaroonHex: text,
+                                        macaroonHex: text.trim(),
                                         saved: false
                                     })
                                 }

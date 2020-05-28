@@ -67,33 +67,32 @@ export default class LnurlPay extends React.Component<
             LnurlPayStore,
             SettingsStore
         } = this.props;
-        const { sslVerification } = SettingsStore;
         const { domain, amount } = this.state;
         const lnurl = navigation.getParam('lnurlParams');
         const u = url.parse(lnurl.callback);
         const qs = querystring.parse(u.query);
         qs.amount = parseInt(parseFloat(amount) * 1000);
-        u.search = querystring.stringify(u);
-        u.query = querystring.stringify(u);
+        u.search = querystring.stringify(qs);
+        u.query = querystring.stringify(qs);
 
-        RNFetchBlob.config({
-            trusty: !sslVerification || true
-        })
-            .fetch('get', url.format(u), null)
+        RNFetchBlob.fetch('get', url.format(u), null)
             .then((response: any) => {
-                if (response.info().status <= 300) {
-                    return { status: 'ERROR', error: response.text() };
+                try {
+                    const data = response.json();
+                    return data;
+                } catch (err) {
+                    return { status: 'ERROR', reason: response.text() };
                 }
-                return response.json();
             })
             .catch((err: any) => ({
                 status: 'ERROR',
-                error: err.message
+                reason: err.message
             }))
             .then((data: any) => {
                 if (data.status === 'ERROR') {
                     Alert.alert(
-                        `${domain} says:`.data.reason,
+                        `[error] ${domain} says:`,
+                        data.reason,
                         [{ text: 'OK', onPress: () => void 0 }],
                         { cancelable: false }
                     );

@@ -63,10 +63,14 @@ export default class LnurlPayStore {
 
     @action
     public load = async (paymentHash: string): LnurlPayTransaction => {
-        let lnurlpaytx = await AsyncStorage.getItem('lnurlpay:' + paymentHash);
+        let lnurlpaytx: LnurlPayTransaction = await AsyncStorage.getItem(
+            'lnurlpay:' + paymentHash
+        );
         if (lnurlpaytx) {
             lnurlpaytx = JSON.parse(lnurlpaytx);
-            let metadata = await AsyncStorage.getItem(lnurlpaytx.metadata_hash);
+            let metadata: LnurlPayMetadataEntry = await AsyncStorage.getItem(
+                'lnurlpay:' + lnurlpaytx.metadata_hash
+            );
             if (metadata) {
                 lnurlpaytx.metadata = JSON.parse(metadata);
             }
@@ -86,21 +90,23 @@ export default class LnurlPayStore {
     ) => {
         const now = new Date().getTime();
 
+        const transactionData: LnurlPayTransaction = {
+            paymentHash,
+            domain,
+            lnurl,
+            successAction,
+            time: now,
+            metadata_hash: descriptionHash
+        };
+
+        const metadataEntry: LnurlPayMetadataEntry = {
+            metadata,
+            last_stored: now
+        };
+
         AsyncStorage.multiSet([
-            [
-                'lnurlpay:' + paymentHash,
-                JSON.stringify({
-                    paymentHash,
-                    domain,
-                    lnurl,
-                    successAction,
-                    time: now
-                })
-            ],
-            [
-                'lnurlpay:' + descriptionHash,
-                JSON.stringify({ metadata, last_stored: now })
-            ]
+            ['lnurlpay:' + paymentHash, JSON.stringify(transactionData)],
+            ['lnurlpay:' + descriptionHash, JSON.stringify(metadataEntry)]
         ]);
 
         this.paymentHash = paymentHash;
