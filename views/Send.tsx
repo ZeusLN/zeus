@@ -47,9 +47,13 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     async UNSAFE_componentWillMount() {
         const clipboard = await Clipboard.getString();
+        this.validateAddress(clipboard);
+    }
 
-        Clipboard.setString('');
-        this.validateAddress(clipboard, false);
+    componentDidMount() {
+        if (this.state.destination) {
+            this.validateAddress(this.state.destination);
+        }
     }
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
@@ -70,7 +74,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         });
     }
 
-    validateAddress = (text: string, apply: boolean = true) => {
+    validateAddress = (text: string) => {
         const { navigation } = this.props;
         handleAnything(text)
             .then(([route, props]) => {

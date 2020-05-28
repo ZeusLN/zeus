@@ -31,7 +31,9 @@ export default class PaymentView extends React.Component<PaymentProps> {
     };
 
     async componentDidMount() {
-        let lnurlpaytx = await LnurlPayStore.load(payment_hash);
+        const { navigation, LnurlPayStore } = this.props;
+        const payment: Payment = navigation.getParam('payment', null);
+        let lnurlpaytx = await LnurlPayStore.load(payment.payment_hash);
         if (lnurlpaytx) {
             this.setState({ lnurlpaytx });
         }
