@@ -197,15 +197,20 @@ class CLightningREST extends LND {
 }
 
 class Spark {
-    rpc = (rpcmethod, params = {}) => {
+    rpc = (rpcmethod, params = {}, range = null) => {
         let { url, accessKey, sslVerification } = stores.settingsStore;
 
-        const id = rpcmethod + JSON.stringify(params);
+        const id = rpcmethod + JSON.stringify(params) + JSON.stringify(range);
         if (calls[id]) {
             return calls[id];
         }
 
         url = url.slice(-4) === '/rpc' ? url : url + '/rpc';
+
+        const headers = { 'X-Access': accessKey };
+        if (range) {
+            headers['Range'] = `${range.unit}=${range.slice}`;
+        }
 
         calls[id] = RNFetchBlob.config({
             trusty: !sslVerification
@@ -213,7 +218,7 @@ class Spark {
             .fetch(
                 'POST',
                 url,
-                { 'X-Access': accessKey },
+                headers,
                 JSON.stringify({ method: rpcmethod, params: params })
             )
             .then(response => {
@@ -316,23 +321,25 @@ class Spark {
         });
     getMyNodeInfo = () => this.rpc('getinfo');
     getInvoices = () =>
-        this.rpc('listinvoices').then(({ invoices }) => ({
-            invoices: invoices.map(inv => ({
-                memo: inv.description,
-                r_preimage: inv.payment_preimage,
-                r_hash: inv.payment_hash,
-                value: parseInt(inv.msatoshi / 1000),
-                value_msat: inv.msatoshi,
-                settled: inv.status === 'paid',
-                creation_date: inv.expires_at,
-                settle_date: inv.paid_at,
-                payment_request: inv.bolt11,
-                expiry: inv.expires_at,
-                amt_paid: parseInt(inv.msatoshi_received / 1000),
-                amt_paid_sat: parseInt(inv.msatoshi_received / 1000),
-                amt_paid_msat: inv.msatoshi_received
-            }))
-        }));
+        this.rpc('listinvoices', {}, { unit: 'invoices', slice: '-100' }).then(
+            ({ invoices }) => ({
+                invoices: invoices.map(inv => ({
+                    memo: inv.description,
+                    r_preimage: inv.payment_preimage,
+                    r_hash: inv.payment_hash,
+                    value: parseInt(inv.msatoshi / 1000),
+                    value_msat: inv.msatoshi,
+                    settled: inv.status === 'paid',
+                    creation_date: inv.expires_at,
+                    settle_date: inv.paid_at,
+                    payment_request: inv.bolt11,
+                    expiry: inv.expires_at,
+                    amt_paid: parseInt(inv.msatoshi_received / 1000),
+                    amt_paid_sat: parseInt(inv.msatoshi_received / 1000),
+                    amt_paid_msat: inv.msatoshi_received
+                }))
+            })
+        );
     createInvoice = (data: any) =>
         this.rpc('invoice', {
             description: data.memo,
@@ -341,7 +348,8 @@ class Spark {
             expiry: data.expiry,
             exposeprivatechannels: true
         });
-    getPayments = () => this.rpc('listsendpays');
+    getPayments = () =>
+        this.rpc('listsendpays', {}, { unit: 'payments', slice: '-100' });
     getNewAddress = () => this.rpc('newaddr');
     openChannel = (data: OpenChannelRequest) =>
         this.rpc('fundchannel', {
