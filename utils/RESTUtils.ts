@@ -26,26 +26,29 @@ class LND {
         // are making multiples calls to get all the node names, for example
         const id = data ? `${url}${JSON.stringify(data)}` : url;
         if (calls[id]) {
-            calls[id].cancel();
+            return calls[id];
         }
 
         calls[id] = RNFetchBlob.config({
             trusty: !sslVerification
-        }).fetch(method, url, headers, data ? JSON.stringify(data) : data);
+        })
+            .fetch(method, url, headers, data ? JSON.stringify(data) : data)
+            .then(response => {
+                delete calls[id];
+                if (response.info().status < 300) {
+                    return response.json();
+                } else {
+                    const errorInfo = response.json();
+                    throw new Error(
+                        errorInfo.error.message ||
+                            ErrorUtils.errorToUserFriendly(errorInfo.code) ||
+                            errorInfo.message ||
+                            errorInfo.error
+                    );
+                }
+            });
 
-        return calls[id].then(response => {
-            if (response.info().status < 300) {
-                return response.json();
-            } else {
-                const errorInfo = response.json();
-                throw new Error(
-                    errorInfo.error.message ||
-                        ErrorUtils.errorToUserFriendly(errorInfo.code) ||
-                        errorInfo.message ||
-                        errorInfo.error
-                );
-            }
-        });
+        return calls[id];
     };
 
     getHeaders = (macaroonHex: string) => {
@@ -72,10 +75,10 @@ class LND {
         return this.restReq(headers, url, method, data, sslVerification);
     };
 
-    getRequest = (route: string) => this.route(route, 'get', null);
+    getRequest = (route: string) => this.request(route, 'get', null);
     postRequest = (route: string, data?: any) =>
-        this.route(route, 'post', data);
-    deleteRequest = (route: string) => this.route(route, 'delete', null);
+        this.request(route, 'post', data);
+    deleteRequest = (route: string) => this.request(route, 'delete', null);
 
     getTransactions = () => this.getRequest('/v1/transactions');
     getChannels = () => this.getRequest('/v1/channels');
@@ -313,21 +316,27 @@ class Spark {
     getMyNodeInfo = () => this.rpc('getinfo');
     getInvoices = () =>
         this.rpc('listinvoices').then(({ invoices }) => ({
-            invoices: invoices.map(inv => ({
-                memo: inv.description,
-                r_preimage: inv.payment_preimage,
-                r_hash: inv.payment_hash,
-                value: parseInt(inv.msatoshi / 1000),
-                value_msat: inv.msatoshi,
-                settled: inv.status === 'paid',
-                creation_date: inv.expires_at,
-                settle_date: inv.paid_at,
-                payment_request: inv.bolt11,
-                expiry: inv.expires_at,
-                amt_paid: parseInt(inv.msatoshi_received / 1000),
-                amt_paid_sat: parseInt(inv.msatoshi_received / 1000),
-                amt_paid_msat: inv.msatoshi_received
-            }))
+            invoices: invoices
+                .sort((a, b) =>
+                    [a.paid_at, a.expires_at] < [b.paid_at, b.expires_at]
+                        ? -1
+                        : 1
+                )
+                .map(inv => ({
+                    memo: inv.description,
+                    r_preimage: inv.payment_preimage,
+                    r_hash: inv.payment_hash,
+                    value: parseInt(inv.msatoshi / 1000),
+                    value_msat: inv.msatoshi,
+                    settled: inv.status === 'paid',
+                    creation_date: inv.expires_at,
+                    settle_date: inv.paid_at,
+                    payment_request: inv.bolt11,
+                    expiry: inv.expires_at,
+                    amt_paid: parseInt(inv.msatoshi_received / 1000),
+                    amt_paid_sat: parseInt(inv.msatoshi_received / 1000),
+                    amt_paid_msat: inv.msatoshi_received
+                }))
         }));
     createInvoice = (data: any) =>
         this.rpc('invoice', {
@@ -484,7 +493,7 @@ class RESTUtils {
             case 'spark':
                 return this.spark;
             default:
-                throw new Error('no implementation ' + implementation);
+                throw new Error('no implementation "' + implementation + '"');
         }
     };
 
