@@ -51,7 +51,9 @@ export default async function(data: string): Promise<any> {
                     break;
                 default:
                     throw new Error(
-                        params.reason || `Unsupported lnurl type: ${params.tag}`
+                        params.status === 'ERROR'
+                            ? `${params.domain} says: ${params.reason}`
+                            : `Unsupported lnurl type: ${params.tag}`
                     );
             }
         });

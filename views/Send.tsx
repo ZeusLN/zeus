@@ -24,6 +24,7 @@ interface SendState {
     destination: string;
     amount: string;
     fee: string;
+    error_msg: string;
 }
 
 @inject('InvoicesStore', 'NodeInfoStore', 'TransactionsStore', 'SettingsStore')
@@ -80,11 +81,12 @@ export default class Send extends React.Component<SendProps, SendState> {
             .then(([route, props]) => {
                 navigation.navigate(route, props);
             })
-            .catch(() => {
+            .catch(err => {
                 this.setState({
                     transactionType: null,
                     isValid: false,
-                    destination: apply ? text : this.state.destination
+                    destination: text,
+                    error_msg: err.message
                 });
             });
     };
@@ -117,7 +119,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             transactionType,
             destination,
             amount,
-            fee
+            fee,
+            error_msg
         } = this.state;
         const { implementation, settings } = SettingsStore;
         const { theme } = settings;
@@ -336,6 +339,17 @@ export default class Send extends React.Component<SendProps, SendState> {
                             }}
                         />
                     </View>
+                    {!!error_msg && (
+                        <React.Fragment>
+                            <Text
+                                style={{
+                                    color: theme === 'dark' ? 'white' : 'black'
+                                }}
+                            >
+                                {error_msg}
+                            </Text>
+                        </React.Fragment>
+                    )}
                 </View>
             </View>
         );
