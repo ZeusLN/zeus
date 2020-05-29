@@ -317,27 +317,21 @@ class Spark {
     getMyNodeInfo = () => this.rpc('getinfo');
     getInvoices = () =>
         this.rpc('listinvoices').then(({ invoices }) => ({
-            invoices: invoices
-                .sort((a, b) =>
-                    [a.paid_at, a.expires_at] < [b.paid_at, b.expires_at]
-                        ? -1
-                        : 1
-                )
-                .map(inv => ({
-                    memo: inv.description,
-                    r_preimage: inv.payment_preimage,
-                    r_hash: inv.payment_hash,
-                    value: parseInt(inv.msatoshi / 1000),
-                    value_msat: inv.msatoshi,
-                    settled: inv.status === 'paid',
-                    creation_date: inv.expires_at,
-                    settle_date: inv.paid_at,
-                    payment_request: inv.bolt11,
-                    expiry: inv.expires_at,
-                    amt_paid: parseInt(inv.msatoshi_received / 1000),
-                    amt_paid_sat: parseInt(inv.msatoshi_received / 1000),
-                    amt_paid_msat: inv.msatoshi_received
-                }))
+            invoices: invoices.map(inv => ({
+                memo: inv.description,
+                r_preimage: inv.payment_preimage,
+                r_hash: inv.payment_hash,
+                value: parseInt(inv.msatoshi / 1000),
+                value_msat: inv.msatoshi,
+                settled: inv.status === 'paid',
+                creation_date: inv.expires_at,
+                settle_date: inv.paid_at,
+                payment_request: inv.bolt11,
+                expiry: inv.expires_at,
+                amt_paid: parseInt(inv.msatoshi_received / 1000),
+                amt_paid_sat: parseInt(inv.msatoshi_received / 1000),
+                amt_paid_msat: inv.msatoshi_received
+            }))
         }));
     createInvoice = (data: any) =>
         this.rpc('invoice', {
@@ -347,10 +341,7 @@ class Spark {
             expiry: data.expiry,
             exposeprivatechannels: true
         });
-    getPayments = () =>
-        this.rpc('listsendpays').then(({ payments }) => ({
-            payments: payments.sort((a, b) => a.created_at - b.created_at)
-        }));
+    getPayments = () => this.rpc('listsendpays');
     getNewAddress = () => this.rpc('newaddr');
     openChannel = (data: OpenChannelRequest) =>
         this.rpc('fundchannel', {
