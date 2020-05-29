@@ -71,6 +71,7 @@ class LND {
         } = stores.settingsStore;
 
         const headers = this.getHeaders(macaroonHex);
+        headers['Content-Type'] = 'application/json';
         const url = this.getURL(host, port, route);
         return this.restReq(headers, url, method, data, sslVerification);
     };
