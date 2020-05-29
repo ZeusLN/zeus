@@ -42,7 +42,7 @@ export default class LnurlPayStore {
 
     deleteOld = async () => {
         // delete all lnurlpay keys older than 30 days
-        const daysago30 = new Date().getTime() + 1000 * 60 * 60 * 24 * 30;
+        const daysago30 = new Date().getTime() - 1000 * 60 * 60 * 24 * 30;
         const allKeys = await AsyncStorage.getAllKeys();
         const toRemove = [];
         for (let i = 0; i < allKeys.length; i++) {

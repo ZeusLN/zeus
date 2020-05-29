@@ -97,29 +97,34 @@ export default class InvoicesStore {
             expiry
         })
             .then((data: any) => {
-                this.payment_request = data.getPaymentRequest;
+                const invoice = new Invoice(data);
+                this.payment_request = invoice.getPaymentRequest;
                 this.creatingInvoice = false;
 
                 if (lnurl) {
-                    RNFetchBlob.config({
-                        trusty: !sslVerification || true
-                    })
-                        .fetch(
-                            'get',
-                            `${lnurl.callback}?k1=${lnurl.k1}&pr=${this.payment_request}`,
-                            null,
-                            JSON.stringify(params)
-                        )
+                    RNFetchBlob.fetch(
+                        'get',
+                        `${lnurl.callback}?k1=${lnurl.k1}&pr=${this.payment_request}`
+                    )
+                        .then((response: any) => {
+                            try {
+                                const data = response.json();
+                                return data;
+                            } catch (err) {
+                                return {
+                                    status: 'ERROR',
+                                    reason: response.text()
+                                };
+                            }
+                        })
                         .catch((err: any) => ({
                             status: 'ERROR',
-                            reason: err.toString()
+                            reason: err.message
                         }))
-                        .then((response: any) => {
-                            const data = response.json();
+                        .then((data: any) => {
                             if (data.status === 'ERROR') {
-                                const u = new URL(lnurl.callback);
                                 Alert.alert(
-                                    `${u.host} lnurl error:`,
+                                    `[error] ${lnurl.domain} says:`,
                                     data.reason,
                                     [{ text: 'OK', onPress: () => void 0 }],
                                     { cancelable: false }

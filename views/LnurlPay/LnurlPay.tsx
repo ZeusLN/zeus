@@ -3,7 +3,6 @@ import RNFetchBlob from 'rn-fetch-blob';
 import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
-import { getDomain } from 'js-lnurl';
 import querystring from 'querystring-es3';
 import url from 'url';
 import InvoicesStore from './../../stores/InvoicesStore';
@@ -52,11 +51,10 @@ export default class LnurlPay extends React.Component<
     stateFromProps(props: LnurlPayProps) {
         const { navigation } = props;
         const lnurl = navigation.getParam('lnurlParams');
-        const domain = getDomain(lnurl.callback);
 
         return {
             amount: Math.floor(lnurl.minSendable / 1000).toString(),
-            domain
+            domain: lnurl.domain
         };
     }
 

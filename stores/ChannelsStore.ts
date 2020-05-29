@@ -146,15 +146,6 @@ export default class ChannelsStore {
     public connectPeer = (request: OpenChannelRequest) => {
         this.connectingToPeer = true;
 
-        let data;
-        if (implementation === 'c-lightning-REST') {
-            data = {
-                id: `${request.node_pubkey_string}@${request.host}`
-            };
-        } else {
-            data = JSON.stringify();
-        }
-
         RESTUtils.connectPeer({
             addr: {
                 pubkey: request.node_pubkey_string,
