@@ -11,6 +11,7 @@
     "prettier": "prettier --check --write '**/*.ts*'"
   },
   "dependencies": {
+    "@react-native-community/async-storage": "^1.10.1",
     "@react-native-community/masked-view": "^0.1.6",
     "@tradle/react-native-http": "^2.0.1",
     "assert": "^1.5.0",
@@ -26,7 +27,8 @@
     "hash.js": "1.1.7",
     "https-browserify": "0.0.1",
     "identicon.js": "2.3.3",
-    "js-lnurl": "0.0.8",
+    "inherits": "^2.0.4",
+    "js-lnurl": "^0.2.2",
     "js-sha256": "^0.9.0",
     "jsc-android": "^241213.1.0",
     "lodash": "4.17.15",
@@ -64,7 +66,6 @@
     "react-navigation": "^4.0.10",
     "react-navigation-stack": "^2.0.16",
     "readable-stream": "^1.0.33",
-    "realm": "^3.6.0",
     "rn-fetch-blob": "^0.12.0",
     "sha.js": "^2.4.11",
     "stream-browserify": "^1.0.0",

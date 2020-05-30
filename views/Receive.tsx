@@ -157,6 +157,7 @@ export default class Receive extends React.Component<
                             {!!payment_request && (
                                 <Text style={{ color: 'green', padding: 20 }}>
                                     Successfully created invoice
+                                    {!!lnurl && ` and sent to ${lnurl.domain}`}
                                 </Text>
                             )}
                             {creatingInvoiceError && (
@@ -277,9 +278,12 @@ export default class Receive extends React.Component<
 
                             <View style={styles.button}>
                                 <Button
-                                    title={`Create${
-                                        lnurl ? ' and submit ' : ' '
-                                    }invoice`}
+                                    title={
+                                        'Create invoice' +
+                                        (!!lnurl
+                                            ? ` and submit to ${lnurl.domain}`
+                                            : '')
+                                    }
                                     icon={{
                                         name: 'create',
                                         size: 25,
