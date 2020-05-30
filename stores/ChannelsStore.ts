@@ -31,7 +31,7 @@ export default class ChannelsStore {
         reaction(
             () => this.settingsStore.settings,
             () => {
-                if (this.settingsStore.macaroonHex) {
+                if (this.settingsStore.hasCredentials()) {
                     this.getChannels();
                 }
             }
@@ -73,13 +73,9 @@ export default class ChannelsStore {
     @action
     getNodeInfo = (pubkey: string) => {
         this.loading = true;
-        return RESTUtils.getNodeInfo(this.settingsStore, [pubkey]).then(
-            (response: any) => {
-                // handle success
-                const data = response.json();
-                return data.node;
-            }
-        );
+        return RESTUtils.getNodeInfo([pubkey]).then((data: any) => {
+            return data.node;
+        });
     };
 
     getChannelsError = () => {
@@ -92,20 +88,13 @@ export default class ChannelsStore {
     public getChannels = () => {
         this.channels = [];
         this.loading = true;
-        RESTUtils.getChannels(this.settingsStore)
-            .then((response: any) => {
-                const status = response.info().status;
-                if (status == 200) {
-                    const data = response.json();
-                    const channels = data.channels || data;
-                    this.channels = channels.map(
-                        (channel: any) => new Channel(channel)
-                    );
-                    this.error = false;
-                    this.loading = false;
-                } else {
-                    this.getChannelsError();
-                }
+        RESTUtils.getChannels()
+            .then((data: any) => {
+                this.channels = data.channels.map(
+                    (channel: any) => new Channel(channel)
+                );
+                this.error = false;
+                this.loading = false;
             })
             .catch(() => {
                 this.getChannelsError();
@@ -119,11 +108,11 @@ export default class ChannelsStore {
         satPerByte?: string | null,
         forceClose?: boolean | string | null
     ) => {
-        const { implementation } = this.settingsStore;
         this.loading = true;
 
         let urlParams: Array<string> = [];
-        if (implementation === 'c-lightning-REST' && channelId) {
+        if (channelId) {
+            // c-lightning
             urlParams = [channelId];
         } else if (request) {
             // lnd
@@ -141,18 +130,12 @@ export default class ChannelsStore {
             }
         }
 
-        RESTUtils.closeChannel(this.settingsStore, urlParams)
-            .then((response: any) => {
-                const status = response.info().status;
-                if (status == 200) {
-                    const data = response.json();
-                    const { chan_close } = data;
-                    this.closeChannelSuccess = chan_close.success;
-                    this.error = false;
-                    this.loading = false;
-                } else {
-                    this.getChannelsError();
-                }
+        RESTUtils.closeChannel(urlParams)
+            .then((data: any) => {
+                const { chan_close } = data;
+                this.closeChannelSuccess = chan_close.success;
+                this.error = false;
+                this.loading = false;
             })
             .catch(() => {
                 this.getChannelsError();
@@ -161,51 +144,20 @@ export default class ChannelsStore {
 
     @action
     public connectPeer = (request: OpenChannelRequest) => {
-        const { implementation } = this.settingsStore;
         this.connectingToPeer = true;
 
-        let data;
-        if (implementation === 'c-lightning-REST') {
-            data = {
-                id: `${request.node_pubkey_string}@${request.host}`
-            };
-        } else {
-            data = JSON.stringify({
-                addr: {
-                    pubkey: request.node_pubkey_string,
-                    host: request.host
-                }
-            });
-        }
-
-        RESTUtils.connectPeer(this.settingsStore, data)
-            .then((response: any) => {
-                const status = response.info().status;
-                if (status == 200) {
-                    // handle success
-                    this.errorPeerConnect = false;
-                    this.connectingToPeer = false;
-                    this.errorMsgPeer = null;
-                    this.channelRequest = request;
-                    this.peerSuccess = true;
-                } else {
-                    const errorInfo = response.json();
-                    this.errorMsgPeer =
-                        (errorInfo && errorInfo.error.message) ||
-                        (errorInfo && errorInfo.error) ||
-                        error.message;
-                    this.errorPeerConnect = true;
-                    this.connectingToPeer = false;
-                    this.peerSuccess = false;
-                    this.channelSuccess = false;
-
-                    if (
-                        this.errorMsgPeer &&
-                        this.errorMsgPeer.includes('already connected to peer')
-                    ) {
-                        this.channelRequest = request;
-                    }
-                }
+        RESTUtils.connectPeer({
+            addr: {
+                pubkey: request.node_pubkey_string,
+                host: request.host
+            }
+        })
+            .then((data: any) => {
+                this.errorPeerConnect = false;
+                this.connectingToPeer = false;
+                this.errorMsgPeer = null;
+                this.channelRequest = request;
+                this.peerSuccess = true;
             })
             .catch((error: any) => {
                 // handle error
@@ -224,53 +176,32 @@ export default class ChannelsStore {
             });
     };
 
-    openChannelError = () => {
-        this.output_index = null;
-        this.funding_txid_str = null;
-        this.errorOpenChannel = true;
-        this.openingChannel = false;
-        this.channelRequest = null;
-        this.peerSuccess = false;
-        this.channelSuccess = false;
-    };
-
     openChannel = (request: OpenChannelRequest) => {
-        const { implementation } = this.settingsStore;
         delete request.host;
 
         this.peerSuccess = false;
         this.channelSuccess = false;
         this.openingChannel = true;
 
-        let openChannelReq;
-        if (implementation === 'c-lightning-REST') {
-            openChannelReq = request;
-        } else {
-            openChannelReq = JSON.stringify(request);
-        }
-
-        RESTUtils.openChannel(this.settingsStore, openChannelReq)
-            .then((response: any) => {
-                const status = response.info().status;
-                if (status == 200) {
-                    const data = response.json();
-                    this.output_index = data.output_index;
-                    this.funding_txid_str = data.funding_txid_str;
-                    this.errorOpenChannel = false;
-                    this.openingChannel = false;
-                    this.errorMsgChannel = null;
-                    this.channelRequest = null;
-                    this.channelSuccess = true;
-                } else {
-                    const errorInfo = response.json();
-                    this.errorMsgChannel =
-                        errorInfo.error.message || errorInfo.error;
-                    this.openChannelError();
-                }
+        RESTUtils.openChannel(request)
+            .then((data: any) => {
+                this.output_index = data.output_index;
+                this.funding_txid_str = data.funding_txid_str;
+                this.errorOpenChannel = false;
+                this.openingChannel = false;
+                this.errorMsgChannel = null;
+                this.channelRequest = null;
+                this.channelSuccess = true;
             })
             .catch((error: any) => {
                 this.errorMsgChannel = error.toString();
-                this.openChannelError();
+                this.output_index = null;
+                this.funding_txid_str = null;
+                this.errorOpenChannel = true;
+                this.openingChannel = false;
+                this.channelRequest = null;
+                this.peerSuccess = false;
+                this.channelSuccess = false;
             });
     };
 }
