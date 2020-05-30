@@ -1,5 +1,6 @@
 import stores from '../stores/Stores';
 import AddressUtils from './../utils/AddressUtils';
+import LndConnectUtils from './../utils/LndConnectUtils';
 import { getParams as getlnurlParams, findlnurl } from 'js-lnurl';
 
 const { nodeInfoStore, invoicesStore } = stores;
@@ -28,6 +29,15 @@ export default async function(data: string): Promise<any> {
     } else if (AddressUtils.isValidLightningPaymentRequest(value)) {
         invoicesStore.getPayReq(value);
         return ['PaymentRequest', {}];
+    } else if (value.contains('lndconnect')) {
+        const node = LndConnectUtils.processLndConnectUrl(value);
+        return [
+            'AddEditNode',
+            {
+                node,
+                newEntry: true
+            }
+        ];
     } else if (findlnurl(value) !== null) {
         const raw: string = findlnurl(value) || '';
         return getlnurlParams(raw).then((params: any) => {
