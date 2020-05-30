@@ -60,34 +60,20 @@ export default class FeeStore {
     @action
     public getFees = () => {
         this.loading = true;
-        RESTUtils.getFees(this.settingsStore)
-            .then((response: any) => {
-                const status = response.info().status;
-                if (status == 200) {
-                    // handle success
-                    const data = response.json();
+        RESTUtils.getFees()
+            .then((data: any) => {
+                const channelFees: any = {};
+                data.channel_fees.forEach((channelFee: any) => {
+                    channelFees[channelFee.chan_point] = channelFee;
+                });
 
-                    // lnd
-                    if (data.channel_fees) {
-                        const channelFees: any = {};
-                        data.channel_fees.forEach((channelFee: any) => {
-                            channelFees[channelFee.chan_point] = channelFee;
-                        });
+                this.channelFees = channelFees;
+                this.dayEarned = data.day_fee_sum || 0;
+                this.weekEarned = data.week_fee_sum || 0;
+                this.monthEarned = data.month_fee_sum || 0;
+                this.totalEarned = data.total_fee_sum || 0;
 
-                        this.channelFees = channelFees;
-
-                        this.dayEarned = data.day_fee_sum || 0;
-                        this.weekEarned = data.week_fee_sum || 0;
-                        this.monthEarned = data.month_fee_sum || 0;
-                    } else {
-                        // c-lightning-REST
-                        this.totalEarned = data.feeCollected / 1000; // msatoshi_fees_collected
-                    }
-
-                    this.loading = false;
-                } else {
-                    this.resetFees();
-                }
+                this.loading = false;
             })
             .catch(() => {
                 this.resetFees();
@@ -107,55 +93,31 @@ export default class FeeStore {
         this.setFeesError = false;
         this.setFeesSuccess = false;
 
-        let data;
-        if (implementation === 'c-lightning-REST') {
-            if (channelId) {
-                data = {
-                    id: channelId,
-                    base: newBaseFeeMsat,
-                    ppm: Number(newFeeRateMiliMsat) / 1000000
-                };
-            } else {
-                data = {
-                    id: 'all',
-                    base: newBaseFeeMsat,
-                    ppm: Number(newFeeRateMiliMsat) / 1000000
-                };
-            }
-        } else {
+        const data = {
+            base_fee_msat: newBaseFeeMsat,
+            fee_rate: newFeeRateMiliMsat / 1000000,
+            time_lock_delta: 4
+        };
+
+        if (channelId) {
+            // c-lightning
+            data.channelId = channelId;
+        } else if (channelPoint) {
             // lnd
-            if (channelPoint) {
-                const [funding_txid, output_index] = channelPoint.split(':');
-                data = {
-                    base_fee_msat: newBaseFeeMsat,
-                    fee_rate: newFeeRateMiliMsat / 1000000,
-                    time_lock_delta: 4,
-                    chan_point: {
-                        output_index: Number(output_index),
-                        funding_txid_str: funding_txid,
-                        funding_txid_bytes: Base64Utils.btoa(funding_txid) // must encode in base64
-                    }
-                };
-            } else {
-                data = {
-                    base_fee_msat: newBaseFeeMsat,
-                    fee_rate: newFeeRateMiliMsat / 1000000,
-                    time_lock_delta: 4,
-                    global: true
-                };
-            }
+            const [funding_txid, output_index] = channelPoint.split(':');
+            data.chan_point = {
+                output_index: Number(output_index),
+                funding_txid_str: funding_txid,
+                funding_txid_bytes: Base64Utils.btoa(funding_txid) // must encode in base64
+            };
+        } else {
+            data.global = true;
         }
 
-        RESTUtils.setFees(this.settingsStore, data)
-            .then((response: any) => {
-                const status = response.info().status;
-                if (status == 200) {
-                    // handle success
-                    this.loading = false;
-                    this.setFeesSuccess = true;
-                } else {
-                    this.feesError();
-                }
+        RESTUtils.setFees(data)
+            .then((data: any) => {
+                this.loading = false;
+                this.setFeesSuccess = true;
             })
             .catch(() => {
                 this.feesError();

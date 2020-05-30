@@ -18,7 +18,7 @@ export default class NodeInfoStore {
         reaction(
             () => this.settingsStore.settings,
             () => {
-                if (this.settingsStore.macaroonHex) {
+                if (this.settingsStore.hasCredentials()) {
                     this.getNodeInfo();
                 }
             }
@@ -35,24 +35,14 @@ export default class NodeInfoStore {
     public getNodeInfo = () => {
         this.errorMsg = '';
         this.loading = true;
-        RESTUtils.getMyNodeInfo(this.settingsStore)
-            .then((response: any) => {
-                const status = response.info().status;
-                if (status == 200) {
-                    // handle success
-                    const nodeInfo = new NodeInfo(response.json());
-                    this.nodeInfo = nodeInfo;
-                    this.testnet = nodeInfo.isTestNet;
-                    this.regtest = nodeInfo.isRegTest;
-                    this.loading = false;
-                    this.error = false;
-                } else {
-                    const data = response.json();
-                    if (data && data.error) {
-                        this.errorMsg = data.error.message || data.error;
-                    }
-                    this.getNodeInfoError();
-                }
+        RESTUtils.getMyNodeInfo()
+            .then((data: any) => {
+                const nodeInfo = new NodeInfo(data);
+                this.nodeInfo = nodeInfo;
+                this.testnet = nodeInfo.isTestNet;
+                this.regtest = nodeInfo.isRegTest;
+                this.loading = false;
+                this.error = false;
             })
             .catch((error: any) => {
                 // handle error
