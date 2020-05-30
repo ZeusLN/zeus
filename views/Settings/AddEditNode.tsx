@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
     ActionSheetIOS,
+    Clipboard,
     Picker,
     Platform,
     StyleSheet,
@@ -12,6 +13,7 @@ import {
 } from 'react-native';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import LndConnectUtils from './../../utils/LndConnectUtils';
 
 import SettingsStore from './../../stores/SettingsStore';
 
@@ -21,15 +23,18 @@ interface AddEditNodeProps {
 }
 
 interface AddEditNodeState {
-    host: string;
-    port: string | number;
-    macaroonHex: string;
+    host: string; // lnd
+    port: string | number; // lnd
+    macaroonHex: string; // lnd
+    url: string; // spark
+    accessKey: string; // spark
     implementation: string;
     sslVerification: boolean;
     saved: boolean;
     active: boolean;
     index: number;
     newEntry: boolean;
+    suggestImport: string;
 }
 
 @inject('SettingsStore')
@@ -49,7 +54,41 @@ export default class AddEditNode extends React.Component<
         active: false,
         newEntry: false,
         implementation: 'lnd',
-        sslVerification: false
+        sslVerification: false,
+        suggestImport: ''
+    };
+
+    async UNSAFE_componentWillMount() {
+        const clipboard = await Clipboard.getString();
+
+        if (clipboard.includes('lndconnect://')) {
+            this.setState({
+                suggestImport: clipboard
+            });
+        }
+    }
+
+    importClipboard = () => {
+        const {
+            host,
+            port,
+            macaroonHex
+        } = LndConnectUtils.processLndConnectUrl(this.state.suggestImport);
+
+        this.setState({
+            host,
+            port,
+            macaroonHex,
+            suggestImport: ''
+        });
+
+        Clipboard.setString('');
+    };
+
+    clearImportSuggestion = () => {
+        this.setState({
+            suggestImport: ''
+        });
     };
 
     async componentDidMount() {
@@ -68,6 +107,8 @@ export default class AddEditNode extends React.Component<
                 host,
                 port,
                 macaroonHex,
+                url,
+                accessKey,
                 implementation,
                 sslVerification
             } = node;
@@ -76,7 +117,9 @@ export default class AddEditNode extends React.Component<
                 host,
                 port,
                 macaroonHex,
-                implementation,
+                url,
+                accessKey,
+                implementation: implementation || 'lnd',
                 sslVerification,
                 index,
                 active,
@@ -108,6 +151,8 @@ export default class AddEditNode extends React.Component<
                 host,
                 port,
                 macaroonHex,
+                url,
+                accessKey,
                 implementation,
                 sslVerification
             } = node;
@@ -137,7 +182,9 @@ export default class AddEditNode extends React.Component<
         const {
             host,
             port,
+            url,
             macaroonHex,
+            accessKey,
             implementation,
             sslVerification,
             index
@@ -148,7 +195,9 @@ export default class AddEditNode extends React.Component<
         const node = {
             host,
             port,
+            url,
             macaroonHex,
+            accessKey,
             implementation,
             sslVerification
         };
@@ -239,13 +288,16 @@ export default class AddEditNode extends React.Component<
         const {
             host,
             port,
+            url,
             macaroonHex,
+            accessKey,
             saved,
             active,
             index,
             newEntry,
             implementation,
-            sslVerification
+            sslVerification,
+            suggestImport
         } = this.state;
         const { loading, settings } = SettingsStore;
         const savedTheme = settings.theme;
@@ -281,77 +333,199 @@ export default class AddEditNode extends React.Component<
                             : 'rgba(92, 99,216, 1)'
                     }
                 />
+                {!!suggestImport && (
+                    <View style={styles.clipboardImport}>
+                        <Text style={{ color: 'white' }}>
+                            Detected the following lndconnect string in your
+                            clipboard:
+                        </Text>
+                        <Text style={{ color: 'white', padding: 15 }}>
+                            {`${suggestImport.substring(0, 100)}...`}
+                        </Text>
+                        <Text style={{ color: 'white' }}>
+                            Would you like to import it?
+                        </Text>
+                        <View style={styles.button}>
+                            <Button
+                                title="Import"
+                                onPress={() => this.importClipboard()}
+                                titleStyle={{
+                                    color: 'rgba(92, 99,216, 1)'
+                                }}
+                                buttonStyle={{
+                                    backgroundColor: 'white',
+                                    borderRadius: 30
+                                }}
+                            />
+                        </View>
+                        <View style={styles.button}>
+                            <Button
+                                title="Cancel"
+                                onPress={() => this.clearImportSuggestion()}
+                                titleStyle={{
+                                    color: 'rgba(92, 99,216, 1)'
+                                }}
+                                buttonStyle={{
+                                    backgroundColor: 'white',
+                                    borderRadius: 30
+                                }}
+                            />
+                        </View>
+                    </View>
+                )}
 
                 <View style={styles.form}>
-                    <Text
-                        style={{
-                            color: savedTheme === 'dark' ? 'white' : 'black'
-                        }}
-                    >
-                        Host
-                    </Text>
-                    <TextInput
-                        placeholder={'localhost'}
-                        value={host}
-                        onChangeText={(text: string) =>
-                            this.setState({ host: text, saved: false })
-                        }
-                        numberOfLines={1}
-                        style={
-                            savedTheme === 'dark'
-                                ? styles.textInputDark
-                                : styles.textInput
-                        }
-                        editable={!loading}
-                        placeholderTextColor="gray"
-                    />
+                    {implementation === 'spark' ? (
+                        <>
+                            <Text
+                                style={{
+                                    color:
+                                        savedTheme === 'dark'
+                                            ? 'white'
+                                            : 'black'
+                                }}
+                            >
+                                Host
+                            </Text>
+                            <TextInput
+                                placeholder={'http://192.168.1.2:9737'}
+                                value={url}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        url: text.trim(),
+                                        saved: false
+                                    })
+                                }
+                                numberOfLines={1}
+                                style={
+                                    savedTheme === 'dark'
+                                        ? styles.textInputDark
+                                        : styles.textInput
+                                }
+                                editable={!loading}
+                                placeholderTextColor="gray"
+                            />
 
-                    <Text
-                        style={{
-                            color: savedTheme === 'dark' ? 'white' : 'black'
-                        }}
-                    >
-                        REST Port
-                    </Text>
-                    <TextInput
-                        keyboardType="numeric"
-                        placeholder={'443/8080'}
-                        value={port}
-                        onChangeText={(text: string) =>
-                            this.setState({ port: text, saved: false })
-                        }
-                        numberOfLines={1}
-                        style={
-                            savedTheme === 'dark'
-                                ? styles.textInputDark
-                                : styles.textInput
-                        }
-                        editable={!loading}
-                        placeholderTextColor="gray"
-                    />
+                            <Text
+                                style={{
+                                    color:
+                                        savedTheme === 'dark'
+                                            ? 'white'
+                                            : 'black'
+                                }}
+                            >
+                                Access Key
+                            </Text>
+                            <TextInput
+                                placeholder={'...'}
+                                value={accessKey}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        accessKey: text.trim(),
+                                        saved: false
+                                    })
+                                }
+                                numberOfLines={1}
+                                style={
+                                    savedTheme === 'dark'
+                                        ? styles.textInputDark
+                                        : styles.textInput
+                                }
+                                editable={!loading}
+                                placeholderTextColor="gray"
+                            />
+                        </>
+                    ) : (
+                        <>
+                            <Text
+                                style={{
+                                    color:
+                                        savedTheme === 'dark'
+                                            ? 'white'
+                                            : 'black'
+                                }}
+                            >
+                                Host
+                            </Text>
+                            <TextInput
+                                placeholder={'localhost'}
+                                value={host}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        host: text.trim(),
+                                        saved: false
+                                    })
+                                }
+                                numberOfLines={1}
+                                style={
+                                    savedTheme === 'dark'
+                                        ? styles.textInputDark
+                                        : styles.textInput
+                                }
+                                editable={!loading}
+                                placeholderTextColor="gray"
+                            />
 
-                    <Text
-                        style={{
-                            color: savedTheme === 'dark' ? 'white' : 'black'
-                        }}
-                    >
-                        Macaroon (Hex format)
-                    </Text>
-                    <TextInput
-                        placeholder={'0A...'}
-                        value={macaroonHex}
-                        onChangeText={(text: string) =>
-                            this.setState({ macaroonHex: text, saved: false })
-                        }
-                        numberOfLines={1}
-                        style={
-                            savedTheme === 'dark'
-                                ? styles.textInputDark
-                                : styles.textInput
-                        }
-                        editable={!loading}
-                        placeholderTextColor="gray"
-                    />
+                            <Text
+                                style={{
+                                    color:
+                                        savedTheme === 'dark'
+                                            ? 'white'
+                                            : 'black'
+                                }}
+                            >
+                                REST Port
+                            </Text>
+                            <TextInput
+                                keyboardType="numeric"
+                                placeholder={'443/8080'}
+                                value={port}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        port: text.trim(),
+                                        saved: false
+                                    })
+                                }
+                                numberOfLines={1}
+                                style={
+                                    savedTheme === 'dark'
+                                        ? styles.textInputDark
+                                        : styles.textInput
+                                }
+                                editable={!loading}
+                                placeholderTextColor="gray"
+                            />
+
+                            <Text
+                                style={{
+                                    color:
+                                        savedTheme === 'dark'
+                                            ? 'white'
+                                            : 'black'
+                                }}
+                            >
+                                Macaroon (Hex format)
+                            </Text>
+                            <TextInput
+                                placeholder={'0A...'}
+                                value={macaroonHex}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        macaroonHex: text.trim(),
+                                        saved: false
+                                    })
+                                }
+                                numberOfLines={1}
+                                style={
+                                    savedTheme === 'dark'
+                                        ? styles.textInputDark
+                                        : styles.textInput
+                                }
+                                editable={!loading}
+                                placeholderTextColor="gray"
+                            />
+                        </>
+                    )}
 
                     {Platform.OS !== 'ios' && (
                         <View>
@@ -366,7 +540,7 @@ export default class AddEditNode extends React.Component<
                                 Implementation
                             </Text>
                             <Picker
-                                selectedValue={implementation || 'lnd'}
+                                selectedValue={implementation}
                                 onValueChange={(itemValue: string) =>
                                     this.setState({
                                         implementation: itemValue,
@@ -383,6 +557,10 @@ export default class AddEditNode extends React.Component<
                                 <Picker.Item
                                     label="c-lightning-REST"
                                     value="c-lightning-REST"
+                                />
+                                <Picker.Item
+                                    label="Spark (c-lightning)"
+                                    value="spark"
                                 />
                             </Picker>
                         </View>
@@ -407,7 +585,8 @@ export default class AddEditNode extends React.Component<
                                             options: [
                                                 'Cancel',
                                                 'lnd',
-                                                'c-lightning-REST'
+                                                'c-lightning-REST',
+                                                'Spark (c-lightning)'
                                             ],
                                             cancelButtonIndex: 0
                                         },
@@ -421,6 +600,11 @@ export default class AddEditNode extends React.Component<
                                                 this.setState({
                                                     implementation:
                                                         'c-lightning-REST',
+                                                    saved: false
+                                                });
+                                            } else if (buttonIndex === 3) {
+                                                this.setState({
+                                                    implementation: 'spark',
                                                     saved: false
                                                 });
                                             }
@@ -659,5 +843,10 @@ const styles = StyleSheet.create({
         paddingBottom: 10,
         width: 350,
         alignSelf: 'center'
+    },
+    clipboardImport: {
+        padding: 10,
+        backgroundColor: 'rgba(92, 99,216, 1)',
+        color: 'white'
     }
 });

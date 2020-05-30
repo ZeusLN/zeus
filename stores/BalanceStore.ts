@@ -2,7 +2,6 @@ import { action, reaction, observable } from 'mobx';
 import Transaction from './../models/Transaction';
 import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
-import Balance from './../models/Balance';
 
 export default class BalanceStore {
     @observable public totalBlockchainBalance: number | string = 0;
@@ -21,7 +20,7 @@ export default class BalanceStore {
         reaction(
             () => this.settingsStore.settings,
             () => {
-                if (this.settingsStore.macaroonHex) {
+                if (this.settingsStore.hasCredentials()) {
                     this.getBlockchainBalance();
                     this.getLightningBalance();
                 }
@@ -45,21 +44,16 @@ export default class BalanceStore {
     @action
     public getBlockchainBalance = () => {
         this.loading = true;
-        RESTUtils.getBlockchainBalance(this.settingsStore)
-            .then((response: any) => {
-                const status = response.info().status;
-                if (status == 200) {
-                    // handle success
-                    const balance = new Balance(response.json());
-                    this.unconfirmedBlockchainBalance =
-                        balance.unconfirmedBalance || 0;
-                    this.confirmedBlockchainBalance =
-                        balance.confirmedBalance || 0;
-                    this.totalBlockchainBalance = balance.getTotalBalance || 0;
-                    this.loading = false;
-                } else {
-                    this.resetBlockchainBalance();
-                }
+        RESTUtils.getBlockchainBalance()
+            .then((data: any) => {
+                this.unconfirmedBlockchainBalance = Number(
+                    data.unconfirmed_balance
+                );
+                this.confirmedBlockchainBalance = Number(
+                    data.confirmed_balance
+                );
+                this.totalBlockchainBalance = Number(data.total_balance);
+                this.loading = false;
             })
             .catch(() => {
                 this.resetBlockchainBalance();
@@ -69,19 +63,11 @@ export default class BalanceStore {
     @action
     public getLightningBalance = () => {
         this.loading = true;
-        RESTUtils.getLightningBalance(this.settingsStore)
-            .then((response: any) => {
-                const status = response.info().status;
-                if (status == 200) {
-                    // handle success
-                    const balance = new Balance(response.json());
-                    this.pendingOpenBalance = balance.pending_open_balance || 0;
-                    this.lightningBalance =
-                        balance.getTotalLightningBalance || 0;
-                    this.loading = false;
-                } else {
-                    this.resetLightningBalance();
-                }
+        RESTUtils.getLightningBalance()
+            .then((data: any) => {
+                this.pendingOpenBalance = Number(data.pending_open_balance);
+                this.lightningBalance = Number(data.balance);
+                this.loading = false;
             })
             .catch(() => {
                 this.resetLightningBalance();

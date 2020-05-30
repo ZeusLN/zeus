@@ -76,7 +76,8 @@ Zeus is proud to be integrated on the following platforms:
 1. install and setup react-native and its related dependencies under **"Building Projects with Native Code"** on
 [react-native's Getting Started page](https://facebook.github.io/react-native/docs/getting-started.html)
 2. install node dependencies with `npm i`
-3. open `ios/zeus.xcodeproj` in Xcode and hit Run
+3. `cd ios && pod install`
+4. open `ios/zeus.xcodeproj` in Xcode and hit Run
 
 ## Contributing
 
