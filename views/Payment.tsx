@@ -145,22 +145,30 @@ export default class PaymentView extends React.Component<PaymentProps> {
                         </View>
                     )}
 
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.labelDark : styles.label
-                        }
-                    >
-                        Payment Hash
-                    </Text>
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.valueDark : styles.value
-                        }
-                    >
-                        {lurkerMode
-                            ? PrivacyUtils.hideValue(payment_hash)
-                            : payment_hash}
-                    </Text>
+                    {typeof payment_hash === 'string' && (
+                        <>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Payment Hash
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(payment_hash)
+                                    : payment_hash}
+                            </Text>
+                        </>
+                    )}
 
                     <Text
                         style={

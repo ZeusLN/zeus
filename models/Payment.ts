@@ -38,7 +38,7 @@ export default class Payment extends BaseModel {
 
     @computed public get getCreationTime(): string {
         return DateTimeUtils.listFormattedDate(
-            this.creation_date || this.created_at || 0
+            this.creation_date || this.created_at || this.timestamp || 0
         );
     }
 

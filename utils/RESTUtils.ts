@@ -239,11 +239,10 @@ class LndHub extends LND {
         });
 
     getPayments = () => this.getRequest('/gettxs');
-    getLightningBalance = () => this.getRequest('/balance').then(
-        ({ BTC }) => ({
+    getLightningBalance = () =>
+        this.getRequest('/balance').then(({ BTC }) => ({
             balance: BTC.AvailableBalance
-        })
-    );
+        }));
 
     /*
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
