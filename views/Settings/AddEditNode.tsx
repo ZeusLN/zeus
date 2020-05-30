@@ -42,7 +42,7 @@ interface AddEditNodeState {
     suggestImport: string;
 }
 
-const DEFAULT_LNDHUB = 'https://lndhub.herokuapp.com';
+const DEFAULT_LNDHUB = 'lndhub.herokuapp.com';
 
 @inject('SettingsStore')
 @observer

@@ -4,6 +4,7 @@ import TransactionRequest from './../models/TransactionRequest';
 import Channel from './../models/Channel';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import CloseChannelRequest from './../models/CloseChannelRequest';
+import LoginRequest from './../models/LoginRequest';
 import ErrorUtils from './../utils/ErrorUtils';
 interface Headers {
     macaroon?: string;
@@ -65,14 +66,16 @@ class LND {
     request = (route: string, method: string, data?: any) => {
         const {
             host,
+            lndhubUrl,
             port,
             macaroonHex,
+            accessToken,
             sslVerification
         } = stores.settingsStore;
 
-        const headers = this.getHeaders(macaroonHex);
+        const headers = this.getHeaders(macaroonHex || accessToken);
         headers['Content-Type'] = 'application/json';
-        const url = this.getURL(host, port, route);
+        const url = this.getURL(host || lndhubUrl, port, route);
         return this.restReq(headers, url, method, data, sslVerification);
     };
 
@@ -118,7 +121,7 @@ class LND {
 
     // LndHub
     createAccount = (host: string, sslVerification: boolean) => {
-        const url: string = `${host}/create`;
+        const url: string = `https://${host}/create`;
         return this.restReq(
             {
                 'Access-Control-Allow-Origin': '*',
@@ -215,43 +218,34 @@ class CLightningREST extends LND {
 }
 
 class LndHub extends LND {
-    getHeaders = () => {
+    getHeaders = (accessToken: string) => {
+        if (accessToken) {
+            return {
+                Authorization: `Bearer ${accessToken}`,
+                'Access-Control-Allow-Origin': '*',
+                'Content-Type': 'application/json'
+            };
+        }
         return {
             'Access-Control-Allow-Origin': '*',
             'Content-Type': 'application/json'
         };
     };
 
-    /*
-    getTransactions = () =>
-        this.getRequest('/v1/listFunds').then(data => ({
-            transactions: data.outputs
-        }));
-    getChannels = () =>
-        this.getRequest('/v1/channel/listChannels').then(data => ({
-            channels: data
-        }));
-    getBlockchainBalance = () =>
-        this.getRequest('/v1/getBalance').then(
-            ({ totalBalance, confBalance, unconfBalance }) => ({
-                total_balance: totalBalance,
-                confirmed_balance: confBalance,
-                unconfirmed_balance: unconfBalance
-            })
-        );
-    getLightningBalance = () =>
-        this.getRequest('/v1/channel/localremotebal').then(
-            ({ localBalance, pendingBalance }) => ({
-                balance: localBalance,
-                pending_open_balance: pendingBalance
-            })
-        );
-    sendCoins = (data: TransactionRequest) =>
-        this.postRequest('/v1/withdraw', {
-            address: data.addr,
-            feeRate: `${Number(data.sat_per_byte) * 1000}perkb`,
-            satoshis: data.amount
+    login = (data: LoginRequest) =>
+        this.postRequest('/auth?type=auth', {
+            login: data.login,
+            password: data.password
         });
+
+    getPayments = () => this.getRequest('/gettxs');
+    getLightningBalance = () => this.getRequest('/balance').then(
+        ({ BTC }) => ({
+            balance: BTC.AvailableBalance
+        })
+    );
+
+    /*
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
     getInvoices = () => this.getRequest('/v1/invoice/listInvoices/');
     createInvoice = (data: any) =>
@@ -264,13 +258,6 @@ class LndHub extends LND {
         });
     getPayments = () => this.getRequest('/v1/pay/listPayments');
     getNewAddress = () => this.getRequest('/v1/newaddr');
-    openChannel = (data: OpenChannelRequest) =>
-        this.postRequest('/v1/channel/openChannel/', data);
-    connectPeer = (data: any) =>
-        this.postRequest('/v1/peer/connect', {
-            id: `${data.addr.pubkey}@${data.addr.host}`
-        });
-    listNode = () => this.getRequest('/v1/network/listNode');
     decodePaymentRequest = (urlParams?: Array<string>) =>
         this.getRequest(`/v1/pay/decodePay/${urlParams[0]}`);
     payLightningInvoice = (data: any) =>
@@ -278,20 +265,6 @@ class LndHub extends LND {
             invoice: data.payment_request,
             amount: Number(data.amt && data.amt * 1000)
         });
-    closeChannel = (urlParams?: Array<string>) =>
-        this.deleteRequest(`/v1/channel/closeChannel/${urlParams[0]}/`);
-    getNodeInfo = () => this.getRequest('N/A');
-    getFees = () =>
-        this.getRequest('/v1/getFees/').then(({ feeCollected }) => ({
-            total_fee_sum: parseInt(feeCollected / 1000)
-        }));
-    setFees = (data: any) =>
-        this.postRequest('/v1/channel/setChannelFee/', {
-            id: data.global ? 'all' : data.channelId,
-            base: data.base_fee_msat,
-            ppm: data.fee_rate
-        });
-    getRoutes = () => this.getRequest('N/A');
     */
 }
 
@@ -622,7 +595,9 @@ class RESTUtils {
     getFees = (...args) => this.call('getFees', args);
     setFees = (...args) => this.call('setFees', args);
     getRoutes = (...args) => this.call('getRoutes', args);
+    // lndhub
     createAccount = (...args) => this.call('createAccount', args);
+    login = (...args) => this.call('login', args);
 }
 
 const restUtils = new RESTUtils();
