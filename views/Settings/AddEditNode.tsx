@@ -26,6 +26,9 @@ interface AddEditNodeState {
     macaroonHex: string; // lnd
     url: string; // spark
     accessKey: string; // spark
+    username: string; // lndhub
+    password: string; // lndhub
+    existingAccount: boolean; // lndhub
     implementation: string;
     sslVerification: boolean;
     saved: boolean;
@@ -51,7 +54,8 @@ export default class AddEditNode extends React.Component<
         active: false,
         newEntry: false,
         implementation: 'lnd',
-        sslVerification: false
+        sslVerification: false,
+        existingAccount: false
     };
 
     async componentDidMount() {
@@ -72,6 +76,8 @@ export default class AddEditNode extends React.Component<
                 macaroonHex,
                 url,
                 accessKey,
+                username,
+                password,
                 implementation,
                 sslVerification
             } = node;
@@ -82,6 +88,8 @@ export default class AddEditNode extends React.Component<
                 macaroonHex,
                 url,
                 accessKey,
+                username,
+                password,
                 implementation: implementation || 'lnd',
                 sslVerification,
                 index,
@@ -116,6 +124,8 @@ export default class AddEditNode extends React.Component<
                 macaroonHex,
                 url,
                 accessKey,
+                username,
+                password,
                 implementation,
                 sslVerification
             } = node;
@@ -124,6 +134,9 @@ export default class AddEditNode extends React.Component<
                 host,
                 port,
                 macaroonHex,
+                accessKey,
+                username,
+                password,
                 implementation,
                 sslVerification,
                 index,
@@ -148,6 +161,8 @@ export default class AddEditNode extends React.Component<
             url,
             macaroonHex,
             accessKey,
+            username,
+            password,
             implementation,
             sslVerification,
             index
@@ -161,6 +176,8 @@ export default class AddEditNode extends React.Component<
             url,
             macaroonHex,
             accessKey,
+            username,
+            password,
             implementation,
             sslVerification
         };
@@ -254,14 +271,17 @@ export default class AddEditNode extends React.Component<
             url,
             macaroonHex,
             accessKey,
+            username,
+            password,
             saved,
             active,
             index,
             newEntry,
             implementation,
-            sslVerification
+            sslVerification,
+            existingAccount
         } = this.state;
-        const { loading, settings } = SettingsStore;
+        const { loading, settings, createAccount } = SettingsStore;
         const savedTheme = settings.theme;
 
         const BackButton = () => (
@@ -273,6 +293,382 @@ export default class AddEditNode extends React.Component<
                 color="#fff"
                 underlayColor="transparent"
             />
+        );
+
+        const NodeInterface = () => (
+            <>
+                {Platform.OS !== 'ios' && (
+                    <View>
+                        <Text
+                            style={{
+                                color:
+                                    savedTheme === 'dark'
+                                        ? 'white'
+                                        : 'black'
+                            }}
+                        >
+                            Node interface
+                        </Text>
+                        <Picker
+                            selectedValue={implementation}
+                            onValueChange={(itemValue: string) =>
+                                this.setState({
+                                    implementation: itemValue,
+                                    saved: false
+                                })
+                            }
+                            style={
+                                savedTheme === 'dark'
+                                    ? styles.pickerDark
+                                    : styles.picker
+                            }
+                        >
+                            <Picker.Item label="lnd" value="lnd" />
+                            <Picker.Item
+                                label="c-lightning-REST"
+                                value="c-lightning-REST"
+                            />
+                            <Picker.Item
+                                label="Spark (c-lightning)"
+                                value="spark"
+                            />
+                            <Picker.Item
+                                label="LNDHub"
+                                value="lndhub"
+                            />
+                        </Picker>
+                    </View>
+                )}
+
+                {Platform.OS === 'ios' && (
+                    <View>
+                        <Text
+                            style={{
+                                color:
+                                    savedTheme === 'dark'
+                                        ? 'white'
+                                        : 'black'
+                            }}
+                        >
+                            Node interface
+                        </Text>
+                        <TouchableOpacity
+                            onPress={() =>
+                                ActionSheetIOS.showActionSheetWithOptions(
+                                    {
+                                        options: [
+                                            'Cancel',
+                                            'lnd',
+                                            'c-lightning-REST',
+                                            'Spark (c-lightning)',
+                                            'LNDHub'
+                                        ],
+                                        cancelButtonIndex: 0
+                                    },
+                                    buttonIndex => {
+                                        if (buttonIndex === 1) {
+                                            this.setState({
+                                                implementation: 'lnd',
+                                                saved: false
+                                            });
+                                        } else if (buttonIndex === 2) {
+                                            this.setState({
+                                                implementation:
+                                                    'c-lightning-REST',
+                                                saved: false
+                                            });
+                                        } else if (buttonIndex === 3) {
+                                            this.setState({
+                                                implementation: 'spark',
+                                                saved: false
+                                            });
+                                        } else if (buttonIndex === 4) {
+                                            this.setState({
+                                                implementation: 'lndhub',
+                                                saved: false
+                                            });
+                                        }
+                                    }
+                                )
+                            }
+                        >
+                            <Text
+                                style={{
+                                    color:
+                                        savedTheme === 'dark'
+                                            ? 'white'
+                                            : 'black'
+                                }}
+                            >
+                                {implementation}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+            </>
+        );
+
+        const SparkForm = () => (
+            <>
+                <Text
+                    style={{
+                        color:
+                            savedTheme === 'dark'
+                                ? 'white'
+                                : 'black'
+                    }}
+                >
+                    Host
+                </Text>
+                <TextInput
+                    placeholder={'http://192.168.1.2:9737'}
+                    value={url}
+                    onChangeText={(text: string) =>
+                        this.setState({
+                            url: text.trim(),
+                            saved: false
+                        })
+                    }
+                    numberOfLines={1}
+                    style={
+                        savedTheme === 'dark'
+                            ? styles.textInputDark
+                            : styles.textInput
+                    }
+                    editable={!loading}
+                    placeholderTextColor="gray"
+                />
+
+                <Text
+                    style={{
+                        color:
+                            savedTheme === 'dark'
+                                ? 'white'
+                                : 'black'
+                    }}
+                >
+                    Access Key
+                </Text>
+                <TextInput
+                    placeholder={'...'}
+                    value={accessKey}
+                    onChangeText={(text: string) =>
+                        this.setState({
+                            accessKey: text.trim(),
+                            saved: false
+                        })
+                    }
+                    numberOfLines={1}
+                    style={
+                        savedTheme === 'dark'
+                            ? styles.textInputDark
+                            : styles.textInput
+                    }
+                    editable={!loading}
+                    placeholderTextColor="gray"
+                />
+            </>
+        );
+
+        const LndHubForm = () => (
+            <>
+                <Text
+                    style={{
+                        color:
+                            savedTheme === 'dark'
+                                ? 'white'
+                                : 'black'
+                    }}
+                >
+                    Host
+                </Text>
+                <TextInput
+                    placeholder={'http://192.168.1.2:9737'}
+                    value={url}
+                    onChangeText={(text: string) =>
+                        this.setState({
+                            url: text.trim(),
+                            saved: false
+                        })
+                    }
+                    numberOfLines={1}
+                    style={
+                        savedTheme === 'dark'
+                            ? styles.textInputDark
+                            : styles.textInput
+                    }
+                    editable={!loading}
+                    placeholderTextColor="gray"
+                />
+
+                <View
+                    style={{
+                        marginTop: 5
+                    }}
+                >
+                    <CheckBox
+                        title="Existing Account"
+                        checked={existingAccount}
+                        onPress={() =>
+                            this.setState({
+                                existingAccount: !existingAccount
+                            })
+                        }
+                    />
+                </View>
+
+                {existingAccount && <>
+                    <Text
+                        style={{
+                            color:
+                                savedTheme === 'dark'
+                                    ? 'white'
+                                    : 'black'
+                        }}
+                    >
+                        Username
+                    </Text>
+                    <TextInput
+                        placeholder={'...'}
+                        value={username}
+                        onChangeText={(text: string) =>
+                            this.setState({
+                                username: text.trim(),
+                                saved: false
+                            })
+                        }
+                        numberOfLines={1}
+                        style={
+                            savedTheme === 'dark'
+                                ? styles.textInputDark
+                                : styles.textInput
+                        }
+                        editable={!loading}
+                        placeholderTextColor="gray"
+                    />
+
+                    <Text
+                        style={{
+                            color:
+                                savedTheme === 'dark'
+                                    ? 'white'
+                                    : 'black'
+                        }}
+                    >
+                        Password
+                    </Text>
+                    <TextInput
+                        placeholder={'...'}
+                        value={password}
+                        onChangeText={(text: string) =>
+                            this.setState({
+                                password: text.trim(),
+                                saved: false
+                            })
+                        }
+                        numberOfLines={1}
+                        style={
+                            savedTheme === 'dark'
+                                ? styles.textInputDark
+                                : styles.textInput
+                        }
+                        editable={!loading}
+                        placeholderTextColor="gray"
+                    />
+                </>}
+            </>
+        );
+
+        const DefaultForm = () => (
+            <>
+                <Text
+                    style={{
+                        color:
+                            savedTheme === 'dark'
+                                ? 'white'
+                                : 'black'
+                    }}
+                >
+                    Host
+                </Text>
+                <TextInput
+                    placeholder={'localhost'}
+                    value={host}
+                    onChangeText={(text: string) =>
+                        this.setState({
+                            host: text.trim(),
+                            saved: false
+                        })
+                    }
+                    numberOfLines={1}
+                    style={
+                        savedTheme === 'dark'
+                            ? styles.textInputDark
+                            : styles.textInput
+                    }
+                    editable={!loading}
+                    placeholderTextColor="gray"
+                />
+
+                <Text
+                    style={{
+                        color:
+                            savedTheme === 'dark'
+                                ? 'white'
+                                : 'black'
+                    }}
+                >
+                    REST Port
+                </Text>
+                <TextInput
+                    keyboardType="numeric"
+                    placeholder={'443/8080'}
+                    value={port}
+                    onChangeText={(text: string) =>
+                        this.setState({
+                            port: text.trim(),
+                            saved: false
+                        })
+                    }
+                    numberOfLines={1}
+                    style={
+                        savedTheme === 'dark'
+                            ? styles.textInputDark
+                            : styles.textInput
+                    }
+                    editable={!loading}
+                    placeholderTextColor="gray"
+                />
+
+                <Text
+                    style={{
+                        color:
+                            savedTheme === 'dark'
+                                ? 'white'
+                                : 'black'
+                    }}
+                >
+                    Macaroon (Hex format)
+                </Text>
+                <TextInput
+                    placeholder={'0A...'}
+                    value={macaroonHex}
+                    onChangeText={(text: string) =>
+                        this.setState({
+                            macaroonHex: text.trim(),
+                            saved: false
+                        })
+                    }
+                    numberOfLines={1}
+                    style={
+                        savedTheme === 'dark'
+                            ? styles.textInputDark
+                            : styles.textInput
+                    }
+                    editable={!loading}
+                    placeholderTextColor="gray"
+                />
+            </>
         );
 
         return (
@@ -297,256 +693,11 @@ export default class AddEditNode extends React.Component<
                 />
 
                 <View style={styles.form}>
-                    {implementation === 'spark' ? (
-                        <>
-                            <Text
-                                style={{
-                                    color:
-                                        savedTheme === 'dark'
-                                            ? 'white'
-                                            : 'black'
-                                }}
-                            >
-                                Host
-                            </Text>
-                            <TextInput
-                                placeholder={'http://192.168.1.2:9737'}
-                                value={url}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        url: text.trim(),
-                                        saved: false
-                                    })
-                                }
-                                numberOfLines={1}
-                                style={
-                                    savedTheme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
-                                editable={!loading}
-                                placeholderTextColor="gray"
-                            />
+                    <NodeInterface />
 
-                            <Text
-                                style={{
-                                    color:
-                                        savedTheme === 'dark'
-                                            ? 'white'
-                                            : 'black'
-                                }}
-                            >
-                                Access Key
-                            </Text>
-                            <TextInput
-                                placeholder={'...'}
-                                value={accessKey}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        accessKey: text.trim(),
-                                        saved: false
-                                    })
-                                }
-                                numberOfLines={1}
-                                style={
-                                    savedTheme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
-                                editable={!loading}
-                                placeholderTextColor="gray"
-                            />
-                        </>
-                    ) : (
-                        <>
-                            <Text
-                                style={{
-                                    color:
-                                        savedTheme === 'dark'
-                                            ? 'white'
-                                            : 'black'
-                                }}
-                            >
-                                Host
-                            </Text>
-                            <TextInput
-                                placeholder={'localhost'}
-                                value={host}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        host: text.trim(),
-                                        saved: false
-                                    })
-                                }
-                                numberOfLines={1}
-                                style={
-                                    savedTheme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
-                                editable={!loading}
-                                placeholderTextColor="gray"
-                            />
-
-                            <Text
-                                style={{
-                                    color:
-                                        savedTheme === 'dark'
-                                            ? 'white'
-                                            : 'black'
-                                }}
-                            >
-                                REST Port
-                            </Text>
-                            <TextInput
-                                keyboardType="numeric"
-                                placeholder={'443/8080'}
-                                value={port}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        port: text.trim(),
-                                        saved: false
-                                    })
-                                }
-                                numberOfLines={1}
-                                style={
-                                    savedTheme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
-                                editable={!loading}
-                                placeholderTextColor="gray"
-                            />
-
-                            <Text
-                                style={{
-                                    color:
-                                        savedTheme === 'dark'
-                                            ? 'white'
-                                            : 'black'
-                                }}
-                            >
-                                Macaroon (Hex format)
-                            </Text>
-                            <TextInput
-                                placeholder={'0A...'}
-                                value={macaroonHex}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        macaroonHex: text.trim(),
-                                        saved: false
-                                    })
-                                }
-                                numberOfLines={1}
-                                style={
-                                    savedTheme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
-                                editable={!loading}
-                                placeholderTextColor="gray"
-                            />
-                        </>
-                    )}
-
-                    {Platform.OS !== 'ios' && (
-                        <View>
-                            <Text
-                                style={{
-                                    color:
-                                        savedTheme === 'dark'
-                                            ? 'white'
-                                            : 'black'
-                                }}
-                            >
-                                Implementation
-                            </Text>
-                            <Picker
-                                selectedValue={implementation}
-                                onValueChange={(itemValue: string) =>
-                                    this.setState({
-                                        implementation: itemValue,
-                                        saved: false
-                                    })
-                                }
-                                style={
-                                    savedTheme === 'dark'
-                                        ? styles.pickerDark
-                                        : styles.picker
-                                }
-                            >
-                                <Picker.Item label="lnd" value="lnd" />
-                                <Picker.Item
-                                    label="c-lightning-REST"
-                                    value="c-lightning-REST"
-                                />
-                                <Picker.Item
-                                    label="Spark (c-lightning)"
-                                    value="spark"
-                                />
-                            </Picker>
-                        </View>
-                    )}
-
-                    {Platform.OS === 'ios' && (
-                        <View>
-                            <Text
-                                style={{
-                                    color:
-                                        savedTheme === 'dark'
-                                            ? 'white'
-                                            : 'black'
-                                }}
-                            >
-                                Node implementation
-                            </Text>
-                            <TouchableOpacity
-                                onPress={() =>
-                                    ActionSheetIOS.showActionSheetWithOptions(
-                                        {
-                                            options: [
-                                                'Cancel',
-                                                'lnd',
-                                                'c-lightning-REST',
-                                                'Spark (c-lightning)'
-                                            ],
-                                            cancelButtonIndex: 0
-                                        },
-                                        buttonIndex => {
-                                            if (buttonIndex === 1) {
-                                                this.setState({
-                                                    implementation: 'lnd',
-                                                    saved: false
-                                                });
-                                            } else if (buttonIndex === 2) {
-                                                this.setState({
-                                                    implementation:
-                                                        'c-lightning-REST',
-                                                    saved: false
-                                                });
-                                            } else if (buttonIndex === 2) {
-                                                this.setState({
-                                                    implementation: 'spark',
-                                                    saved: false
-                                                });
-                                            }
-                                        }
-                                    )
-                                }
-                            >
-                                <Text
-                                    style={{
-                                        color:
-                                            savedTheme === 'dark'
-                                                ? 'white'
-                                                : 'black'
-                                    }}
-                                >
-                                    {implementation}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                    {implementation === 'spark' && <SparkForm/>}
+                    {implementation === 'lndhub' && <LndHubForm/>}
+                    {(implementation === 'lnd' || implementation === 'c-lightning-REST') && <DefaultForm/>}
 
                     <View
                         style={{
@@ -580,6 +731,25 @@ export default class AddEditNode extends React.Component<
                         )}
                     </View>
                 </View>
+
+                {(!existingAccount && implementation === 'lndhub') && <View style={styles.button}>
+                      <Button
+                          title="Create LNDHub account"
+                          onPress={() =>
+                              createAccount(host, sslVerification).then(data => {
+                                  console.log('!!!');
+                                  console.log(data);
+                              }).catch(err => {
+                                  console.log('aen');
+                                  console.log(err);
+                              })
+                          }
+                          buttonStyle={{
+                              backgroundColor: 'lightblue',
+                              borderRadius: 30
+                          }}
+                      />
+                  </View>}
 
                 {sslVerification && !saved && (
                     <View style={{ paddingTop: 10 }}>
