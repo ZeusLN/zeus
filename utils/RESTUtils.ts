@@ -115,6 +115,24 @@ class LND {
     setFees = (data: any) => this.postRequest('/v1/chanpolicy', data);
     getRoutes = (urlParams?: Array<string>) =>
         this.getRequest(`/v1/graph/routes/${urlParams[0]}/${urlParams[1]}`);
+
+    // LndHub
+    createAccount = (host: string, sslVerification: boolean) => {
+        const url: string = `${host}/create`;
+        return this.restReq({
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Content-Type': 'application/json'
+            },
+            url,
+            method: 'POST',
+            data: {
+                partnerid: 'bluewallet',
+                accounttype: 'common'
+            },
+            sslVerification
+        });
+    };
 }
 
 class CLightningREST extends LND {
@@ -194,6 +212,87 @@ class CLightningREST extends LND {
             ppm: data.fee_rate
         });
     getRoutes = () => this.getRequest('N/A');
+}
+
+class LndHub extends LND {
+    getHeaders = () => {
+        return {
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'application/json'
+        };
+    };
+
+    /*
+    getTransactions = () =>
+        this.getRequest('/v1/listFunds').then(data => ({
+            transactions: data.outputs
+        }));
+    getChannels = () =>
+        this.getRequest('/v1/channel/listChannels').then(data => ({
+            channels: data
+        }));
+    getBlockchainBalance = () =>
+        this.getRequest('/v1/getBalance').then(
+            ({ totalBalance, confBalance, unconfBalance }) => ({
+                total_balance: totalBalance,
+                confirmed_balance: confBalance,
+                unconfirmed_balance: unconfBalance
+            })
+        );
+    getLightningBalance = () =>
+        this.getRequest('/v1/channel/localremotebal').then(
+            ({ localBalance, pendingBalance }) => ({
+                balance: localBalance,
+                pending_open_balance: pendingBalance
+            })
+        );
+    sendCoins = (data: TransactionRequest) =>
+        this.postRequest('/v1/withdraw', {
+            address: data.addr,
+            feeRate: `${Number(data.sat_per_byte) * 1000}perkb`,
+            satoshis: data.amount
+        });
+    getMyNodeInfo = () => this.getRequest('/v1/getinfo');
+    getInvoices = () => this.getRequest('/v1/invoice/listInvoices/');
+    createInvoice = (data: any) =>
+        this.postRequest('/v1/invoice/genInvoice/', {
+            description: data.memo,
+            label: 'zeus.' + parseInt(Math.random() * 1000000),
+            amount: Number(data.value) * 1000,
+            expiry: data.expiry,
+            private: true
+        });
+    getPayments = () => this.getRequest('/v1/pay/listPayments');
+    getNewAddress = () => this.getRequest('/v1/newaddr');
+    openChannel = (data: OpenChannelRequest) =>
+        this.postRequest('/v1/channel/openChannel/', data);
+    connectPeer = (data: any) =>
+        this.postRequest('/v1/peer/connect', {
+            id: `${data.addr.pubkey}@${data.addr.host}`
+        });
+    listNode = () => this.getRequest('/v1/network/listNode');
+    decodePaymentRequest = (urlParams?: Array<string>) =>
+        this.getRequest(`/v1/pay/decodePay/${urlParams[0]}`);
+    payLightningInvoice = (data: any) =>
+        this.postRequest('/v1/pay', {
+            invoice: data.payment_request,
+            amount: Number(data.amt && data.amt * 1000)
+        });
+    closeChannel = (urlParams?: Array<string>) =>
+        this.deleteRequest(`/v1/channel/closeChannel/${urlParams[0]}/`);
+    getNodeInfo = () => this.getRequest('N/A');
+    getFees = () =>
+        this.getRequest('/v1/getFees/').then(({ feeCollected }) => ({
+            total_fee_sum: parseInt(feeCollected / 1000)
+        }));
+    setFees = (data: any) =>
+        this.postRequest('/v1/channel/setChannelFee/', {
+            id: data.global ? 'all' : data.channelId,
+            base: data.base_fee_msat,
+            ppm: data.fee_rate
+        });
+    getRoutes = () => this.getRequest('N/A');
+    */
 }
 
 class Spark {
@@ -480,20 +579,21 @@ class RESTUtils {
     constructor() {
         this.spark = new Spark();
         this.clightningREST = new CLightningREST();
+        this.lndHub = new LndHub();
         this.lnd = new LND();
     }
 
     getClass = () => {
         const { implementation } = stores.settingsStore;
         switch (implementation) {
-            case 'lnd':
-                return this.lnd;
             case 'c-lightning-REST':
                 return this.clightningREST;
             case 'spark':
                 return this.spark;
+            case 'lndhub':
+                return this.lndHub;
             default:
-                throw new Error('no implementation "' + implementation + '"');
+                return this.lnd;
         }
     };
 
@@ -522,6 +622,7 @@ class RESTUtils {
     getFees = (...args) => this.call('getFees', args);
     setFees = (...args) => this.call('setFees', args);
     getRoutes = (...args) => this.call('getRoutes', args);
+    createAccount = (...args) => this.call('createAccount', args);
 }
 
 const restUtils = new RESTUtils();

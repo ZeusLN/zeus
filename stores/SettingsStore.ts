@@ -35,6 +35,8 @@ export default class SettingsStore {
     @observable implementation: string;
     @observable sslVerification: boolean | undefined;
     @observable chainAddress: string | undefined;
+    // LNDHub
+    @observable public createAccountError: string;
 
     @action
     public fetchBTCPayConfig = (data: string) => {
@@ -143,5 +145,26 @@ export default class SettingsStore {
 
             this.setSettings(JSON.stringify(newSettings));
         });
+    };
+
+    // LNDHub
+    @action
+    public createAccount = (host: string, sslVerification: boolean) => {
+        this.createAccountError = '';
+        this.loading = true;
+        RESTUtils.createAccount(host, sslVerification)
+            .then((data: any) => {
+                this.username = data.login;
+                this.password = data.password;
+                this.error = false;
+                return data;
+            })
+            .catch((error: any) => {
+                // handle error
+                this.createAccountError = error.toString();
+                console.log('err');
+                console.log(error);
+                this.loading = false;
+            });
     };
 }
