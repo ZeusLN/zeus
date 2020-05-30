@@ -11,7 +11,6 @@ import {
 import { inject, observer } from 'mobx-react';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import FeeTable from './../components/FeeTable';
-import FeeUtils from './../utils/FeeUtils';
 import NodeUriUtils from './../utils/NodeUriUtils';
 
 import ChannelsStore from './../stores/ChannelsStore';
@@ -107,7 +106,7 @@ export default class OpenChannel extends React.Component<
     }
 
     setFee = (text: string) => {
-        this.setState({ sat_per_byte: FeeUtils.roundFee(text) });
+        this.setState({ sat_per_byte: text });
     };
 
     render() {
@@ -381,11 +380,7 @@ export default class OpenChannel extends React.Component<
                         />
                     </View>
                     <View style={styles.button}>
-                        <FeeTable
-                            setFee={this.setFee}
-                            SettingsStore={SettingsStore}
-                            FeeStore={FeeStore}
-                        />
+                        <FeeTable setFee={this.setFee} />
                     </View>
                 </View>
             </ScrollView>

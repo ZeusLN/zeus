@@ -1,5 +1,12 @@
 import * as React from 'react';
-import { StyleSheet, Text, TextInput, View, Clipboard } from 'react-native';
+import {
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+    ScrollView,
+    Clipboard
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
 import handleAnything from './../utils/handleAnything';
@@ -8,6 +15,8 @@ import InvoicesStore from './../stores/InvoicesStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
 import TransactionsStore from './../stores/TransactionsStore';
 import SettingsStore from './../stores/SettingsStore';
+
+import FeeTable from './../components/FeeTable';
 
 interface SendProps {
     exitSetup: any;
@@ -113,6 +122,10 @@ export default class Send extends React.Component<SendProps, SendState> {
         navigation.navigate('SendingLightning');
     };
 
+    setFee = (text: string) => {
+        this.setState({ fee: text });
+    };
+
     render() {
         const { SettingsStore, navigation } = this.props;
         const {
@@ -136,7 +149,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         );
 
         return (
-            <View
+            <ScrollView
                 style={
                     theme === 'dark'
                         ? styles.darkThemeStyle
@@ -340,6 +353,13 @@ export default class Send extends React.Component<SendProps, SendState> {
                             }}
                         />
                     </View>
+
+                    {transactionType === 'On-chain' && (
+                        <View style={styles.feeTableButton}>
+                            <FeeTable setFee={this.setFee} />
+                        </View>
+                    )}
+
                     {!!error_msg && (
                         <React.Fragment>
                             <Text
@@ -352,7 +372,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         </React.Fragment>
                     )}
                 </View>
-            </View>
+            </ScrollView>
         );
     }
 }
@@ -380,11 +400,15 @@ const styles = StyleSheet.create({
         paddingBottom: 10
     },
     content: {
-        paddingLeft: 20,
-        paddingRight: 20
+        padding: 20
     },
     button: {
+        alignItems: 'center',
+        paddingTop: 15
+    },
+    feeTableButton: {
         paddingTop: 15,
-        paddingBottom: 15
+        alignItems: 'center',
+        minHeight: 75
     }
 });
