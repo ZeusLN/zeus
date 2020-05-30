@@ -3,6 +3,9 @@ import { action, observable } from 'mobx';
 import RNFetchBlob from 'rn-fetch-blob';
 import RESTUtils from '../utils/RESTUtils';
 
+// lndhub
+import LoginRequest from './../models/LoginRequest';
+
 interface Node {
     host?: string;
     port?: string;
@@ -38,6 +41,8 @@ export default class SettingsStore {
     // LNDHub
     @observable public createAccountError: string;
     @observable public createAccountSuccess: string;
+    @observable public accessToken: string;
+    @observable public refreshToken: string;
 
     @action
     public fetchBTCPayConfig = (data: string) => {
@@ -105,6 +110,9 @@ export default class SettingsStore {
                     this.host = node.host;
                     this.port = node.port;
                     this.url = node.url;
+                    this.username = node.username;
+                    this.password = node.password;
+                    this.lndhubUrl = node.lndhubUrl;
                     this.macaroonHex = node.macaroonHex;
                     this.accessKey = node.accessKey;
                     this.implementation = node.implementation || 'lnd';
@@ -168,6 +176,27 @@ export default class SettingsStore {
                 this.loading = false;
                 this.createAccountError =
                     'Error creating LNDHub account. Please check the host and try again.';
+            });
+    };
+
+    // LNDHub
+    @action
+    public login = (request: LoginRequest) => {
+        this.createAccountSuccess = '';
+        this.createAccountError = '';
+        this.loading = true;
+        return RESTUtils.login({
+            login: request.login,
+            password: request.password
+        })
+            .then((data: any) => {
+                this.loading = false;
+                this.accessToken = data.access_token;
+                this.refreshToken = data.refresh_token;
+            })
+            .catch(() => {
+                // handle error
+                this.loading = false;
             });
     };
 }
