@@ -526,6 +526,30 @@ export default class ChannelView extends React.Component<
                         </View>
                     )}
 
+                    {implementation === 'lnd' && (
+                        <View style={styles.button}>
+                            <Button
+                                title="Keysend"
+                                icon={{
+                                    name: 'send',
+                                    size: 25,
+                                    color: '#fff'
+                                }}
+                                onPress={() =>
+                                    navigation.navigate('Send', {
+                                        destination: remote_pubkey,
+                                        transactionType: 'Keysend',
+                                        isValid: true
+                                    })
+                                }
+                                buttonStyle={{
+                                    backgroundColor: 'grey',
+                                    borderRadius: 30
+                                }}
+                            />
+                        </View>
+                    )}
+
                     <SetFeesForm
                         baseFeeMsat={
                             channelFee &&
