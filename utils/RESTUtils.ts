@@ -119,19 +119,19 @@ class LND {
     // LndHub
     createAccount = (host: string, sslVerification: boolean) => {
         const url: string = `${host}/create`;
-        return this.restReq({
-            headers: {
+        return this.restReq(
+            {
                 'Access-Control-Allow-Origin': '*',
                 'Content-Type': 'application/json'
             },
             url,
-            method: 'POST',
-            data: {
+            'POST',
+            {
                 partnerid: 'bluewallet',
                 accounttype: 'common'
             },
             sslVerification
-        });
+        );
     };
 }
 
