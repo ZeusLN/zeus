@@ -36,9 +36,10 @@ export default class Send extends React.Component<SendProps, SendState> {
         const destination = navigation.getParam('destination', null);
         const amount = navigation.getParam('amount', null);
         const transactionType = navigation.getParam('transactionType', null);
+        const isValid = navigation.getParam('isValid', null);
 
         this.state = {
-            isValid: false,
+            isValid: isValid || false,
             transactionType: transactionType,
             destination: destination || '',
             amount: amount || '',
