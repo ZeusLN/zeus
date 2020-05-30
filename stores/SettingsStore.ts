@@ -25,7 +25,7 @@ interface Settings {
 
 export default class SettingsStore {
     @observable settings: Settings = {};
-    @observable loading: boolean = false;
+    @observable public loading: boolean = false;
     @observable btcPayError: string | null;
     @observable host: string;
     @observable port: string;
@@ -37,6 +37,7 @@ export default class SettingsStore {
     @observable chainAddress: string | undefined;
     // LNDHub
     @observable public createAccountError: string;
+    @observable public createAccountSuccess: string;
 
     @action
     public fetchBTCPayConfig = (data: string) => {
@@ -152,21 +153,21 @@ export default class SettingsStore {
     // LNDHub
     @action
     public createAccount = (host: string, sslVerification: boolean) => {
+        this.createAccountSuccess = '';
         this.createAccountError = '';
         this.loading = true;
-        RESTUtils.createAccount(host, sslVerification)
+        return RESTUtils.createAccount(host, sslVerification)
             .then((data: any) => {
-                this.username = data.login;
-                this.password = data.password;
-                this.error = false;
+                this.loading = false;
+                this.createAccountSuccess =
+                    'Successfully created LNDHub account. Record the username and password somewhere so you can restore your funds if something happens to your device. Then hit Save Node Config to continue.';
                 return data;
             })
-            .catch((error: any) => {
+            .catch(() => {
                 // handle error
-                this.createAccountError = error.toString();
-                console.log('err');
-                console.log(error);
                 this.loading = false;
+                this.createAccountError =
+                    'Error creating LNDHub account. Please check the host and try again.';
             });
     };
 }

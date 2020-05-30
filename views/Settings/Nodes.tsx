@@ -56,8 +56,14 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                     <FlatList
                         data={nodes}
                         renderItem={({ item, index }) => {
-                            const displayName = item.url
+                            const displayName = item.lndhubUrl
+                                ? item.lndhubUrl
+                                      .replace('https://', '')
+                                      .replace('http://', '')
+                                : item.url
                                 ? item.url
+                                      .replace('https://', '')
+                                      .replace('http://', '')
                                 : item.port
                                 ? `${item.host}:${item.port}`
                                 : item.host;

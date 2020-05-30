@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    ActivityIndicator,
     ActionSheetIOS,
     Clipboard,
     Picker,
@@ -28,6 +29,7 @@ interface AddEditNodeState {
     macaroonHex: string; // lnd
     url: string; // spark
     accessKey: string; // spark
+    lndhubUrl: string; // lndhub
     username: string; // lndhub
     password: string; // lndhub
     existingAccount: boolean; // lndhub
@@ -39,6 +41,8 @@ interface AddEditNodeState {
     newEntry: boolean;
     suggestImport: string;
 }
+
+const DEFAULT_LNDHUB = 'https://lndhub.herokuapp.com';
 
 @inject('SettingsStore')
 @observer
@@ -58,8 +62,9 @@ export default class AddEditNode extends React.Component<
         newEntry: false,
         implementation: 'lnd',
         sslVerification: false,
-        existingAccount: false
-        suggestImport: ''
+        existingAccount: false,
+        suggestImport: '',
+        lndhubUrl: DEFAULT_LNDHUB
     };
 
     async UNSAFE_componentWillMount() {
@@ -112,6 +117,8 @@ export default class AddEditNode extends React.Component<
                 port,
                 macaroonHex,
                 url,
+                lndhubUrl,
+                existingAccount,
                 accessKey,
                 username,
                 password,
@@ -124,6 +131,8 @@ export default class AddEditNode extends React.Component<
                 port,
                 macaroonHex,
                 url,
+                lndhubUrl,
+                existingAccount,
                 accessKey,
                 username,
                 password,
@@ -196,6 +205,8 @@ export default class AddEditNode extends React.Component<
             host,
             port,
             url,
+            lndhubUrl,
+            existingAccount,
             macaroonHex,
             accessKey,
             username,
@@ -211,6 +222,8 @@ export default class AddEditNode extends React.Component<
             host,
             port,
             url,
+            lndhubUrl,
+            existingAccount,
             macaroonHex,
             accessKey,
             username,
@@ -306,6 +319,7 @@ export default class AddEditNode extends React.Component<
             host,
             port,
             url,
+            lndhubUrl,
             macaroonHex,
             accessKey,
             username,
@@ -319,7 +333,13 @@ export default class AddEditNode extends React.Component<
             existingAccount,
             suggestImport
         } = this.state;
-        const { loading, settings, createAccount } = SettingsStore;
+        const {
+            loading,
+            createAccountError,
+            createAccountSuccess,
+            settings,
+            createAccount
+        } = SettingsStore;
         const savedTheme = settings.theme;
 
         const BackButton = () => (
@@ -339,10 +359,7 @@ export default class AddEditNode extends React.Component<
                     <View>
                         <Text
                             style={{
-                                color:
-                                    savedTheme === 'dark'
-                                        ? 'white'
-                                        : 'black'
+                                color: savedTheme === 'dark' ? 'white' : 'black'
                             }}
                         >
                             Node interface
@@ -370,10 +387,7 @@ export default class AddEditNode extends React.Component<
                                 label="Spark (c-lightning)"
                                 value="spark"
                             />
-                            <Picker.Item
-                                label="LNDHub"
-                                value="lndhub"
-                            />
+                            <Picker.Item label="LNDHub" value="lndhub" />
                         </Picker>
                     </View>
                 )}
@@ -382,10 +396,7 @@ export default class AddEditNode extends React.Component<
                     <View>
                         <Text
                             style={{
-                                color:
-                                    savedTheme === 'dark'
-                                        ? 'white'
-                                        : 'black'
+                                color: savedTheme === 'dark' ? 'white' : 'black'
                             }}
                         >
                             Node interface
@@ -450,10 +461,7 @@ export default class AddEditNode extends React.Component<
             <>
                 <Text
                     style={{
-                        color:
-                            savedTheme === 'dark'
-                                ? 'white'
-                                : 'black'
+                        color: savedTheme === 'dark' ? 'white' : 'black'
                     }}
                 >
                     Host
@@ -479,10 +487,7 @@ export default class AddEditNode extends React.Component<
 
                 <Text
                     style={{
-                        color:
-                            savedTheme === 'dark'
-                                ? 'white'
-                                : 'black'
+                        color: savedTheme === 'dark' ? 'white' : 'black'
                     }}
                 >
                     Access Key
@@ -512,20 +517,17 @@ export default class AddEditNode extends React.Component<
             <>
                 <Text
                     style={{
-                        color:
-                            savedTheme === 'dark'
-                                ? 'white'
-                                : 'black'
+                        color: savedTheme === 'dark' ? 'white' : 'black'
                     }}
                 >
                     Host
                 </Text>
                 <TextInput
-                    placeholder={'http://192.168.1.2:9737'}
-                    value={url}
+                    placeholder={'https://lndhub.herokuapp.com'}
+                    value={lndhubUrl}
                     onChangeText={(text: string) =>
                         this.setState({
-                            url: text.trim(),
+                            lndhubUrl: text.trim(),
                             saved: false
                         })
                     }
@@ -538,6 +540,33 @@ export default class AddEditNode extends React.Component<
                     editable={!loading}
                     placeholderTextColor="gray"
                 />
+                {lndhubUrl === DEFAULT_LNDHUB && (
+                    <>
+                        <Text
+                            style={{
+                                color: 'orange',
+                                paddingTop: 5
+                            }}
+                        >
+                            With any instance of LNDHub the administrator can
+                            track your balances, transactions, the IP addresses
+                            you connect with, and even run off with your funds.
+                        </Text>
+                        <Text
+                            style={{
+                                color: 'orange',
+                                paddingTop: 5,
+                                paddingBottom: 5
+                            }}
+                        >
+                            While we don't expect that of the admins of this
+                            instance, the Blue Wallet team (creators of LNDHub),
+                            if you have a friend who you trust and who runs an
+                            lnd node you may want to consider asking them to set
+                            up an LNDHub instance for you to connect to.
+                        </Text>
+                    </>
+                )}
 
                 <View
                     style={{
@@ -555,65 +584,61 @@ export default class AddEditNode extends React.Component<
                     />
                 </View>
 
-                {existingAccount && <>
-                    <Text
-                        style={{
-                            color:
+                {existingAccount && (
+                    <>
+                        <Text
+                            style={{
+                                color: savedTheme === 'dark' ? 'white' : 'black'
+                            }}
+                        >
+                            Username
+                        </Text>
+                        <TextInput
+                            placeholder={'...'}
+                            value={username}
+                            onChangeText={(text: string) =>
+                                this.setState({
+                                    username: text.trim(),
+                                    saved: false
+                                })
+                            }
+                            numberOfLines={1}
+                            style={
                                 savedTheme === 'dark'
-                                    ? 'white'
-                                    : 'black'
-                        }}
-                    >
-                        Username
-                    </Text>
-                    <TextInput
-                        placeholder={'...'}
-                        value={username}
-                        onChangeText={(text: string) =>
-                            this.setState({
-                                username: text.trim(),
-                                saved: false
-                            })
-                        }
-                        numberOfLines={1}
-                        style={
-                            savedTheme === 'dark'
-                                ? styles.textInputDark
-                                : styles.textInput
-                        }
-                        editable={!loading}
-                        placeholderTextColor="gray"
-                    />
+                                    ? styles.textInputDark
+                                    : styles.textInput
+                            }
+                            editable={!loading}
+                            placeholderTextColor="gray"
+                        />
 
-                    <Text
-                        style={{
-                            color:
+                        <Text
+                            style={{
+                                color: savedTheme === 'dark' ? 'white' : 'black'
+                            }}
+                        >
+                            Password
+                        </Text>
+                        <TextInput
+                            placeholder={'...'}
+                            value={password}
+                            onChangeText={(text: string) =>
+                                this.setState({
+                                    password: text.trim(),
+                                    saved: false
+                                })
+                            }
+                            numberOfLines={1}
+                            style={
                                 savedTheme === 'dark'
-                                    ? 'white'
-                                    : 'black'
-                        }}
-                    >
-                        Password
-                    </Text>
-                    <TextInput
-                        placeholder={'...'}
-                        value={password}
-                        onChangeText={(text: string) =>
-                            this.setState({
-                                password: text.trim(),
-                                saved: false
-                            })
-                        }
-                        numberOfLines={1}
-                        style={
-                            savedTheme === 'dark'
-                                ? styles.textInputDark
-                                : styles.textInput
-                        }
-                        editable={!loading}
-                        placeholderTextColor="gray"
-                    />
-                </>}
+                                    ? styles.textInputDark
+                                    : styles.textInput
+                            }
+                            editable={!loading}
+                            placeholderTextColor="gray"
+                        />
+                    </>
+                )}
             </>
         );
 
@@ -621,10 +646,7 @@ export default class AddEditNode extends React.Component<
             <>
                 <Text
                     style={{
-                        color:
-                            savedTheme === 'dark'
-                                ? 'white'
-                                : 'black'
+                        color: savedTheme === 'dark' ? 'white' : 'black'
                     }}
                 >
                     Host
@@ -650,10 +672,7 @@ export default class AddEditNode extends React.Component<
 
                 <Text
                     style={{
-                        color:
-                            savedTheme === 'dark'
-                                ? 'white'
-                                : 'black'
+                        color: savedTheme === 'dark' ? 'white' : 'black'
                     }}
                 >
                     REST Port
@@ -680,10 +699,7 @@ export default class AddEditNode extends React.Component<
 
                 <Text
                     style={{
-                        color:
-                            savedTheme === 'dark'
-                                ? 'white'
-                                : 'black'
+                        color: savedTheme === 'dark' ? 'white' : 'black'
                     }}
                 >
                     Macaroon (Hex format)
@@ -770,12 +786,37 @@ export default class AddEditNode extends React.Component<
                     </View>
                 )}
 
+                {loading && (
+                    <View style={{ padding: 10 }}>
+                        <ActivityIndicator size="large" color="#0000ff" />
+                    </View>
+                )}
+
                 <View style={styles.form}>
+                    {createAccountError !== '' &&
+                        implementation === 'lndhub' &&
+                        !loading && (
+                            <Text style={{ color: 'red', marginBottom: 5 }}>
+                                {createAccountError}
+                            </Text>
+                        )}
+
+                    {createAccountSuccess !== '' &&
+                        implementation === 'lndhub' &&
+                        !loading && (
+                            <Text style={{ color: 'green', marginBottom: 5 }}>
+                                {createAccountSuccess}
+                            </Text>
+                        )}
+
                     <NodeInterface />
 
-                    {implementation === 'spark' && <SparkForm/>}
-                    {implementation === 'lndhub' && <LndHubForm/>}
-                    {(implementation === 'lnd' || implementation === 'c-lightning-REST') && <DefaultForm/>}
+                    {implementation === 'spark' && <SparkForm />}
+                    {implementation === 'lndhub' && <LndHubForm />}
+                    {(implementation === 'lnd' ||
+                        implementation === 'c-lightning-REST') && (
+                        <DefaultForm />
+                    )}
 
                     <View
                         style={{
@@ -810,24 +851,30 @@ export default class AddEditNode extends React.Component<
                     </View>
                 </View>
 
-                {(!existingAccount && implementation === 'lndhub') && <View style={styles.button}>
-                      <Button
-                          title="Create LNDHub account"
-                          onPress={() =>
-                              createAccount(host, sslVerification).then(data => {
-                                  console.log('!!!');
-                                  console.log(data);
-                              }).catch(err => {
-                                  console.log('aen');
-                                  console.log(err);
-                              })
-                          }
-                          buttonStyle={{
-                              backgroundColor: 'lightblue',
-                              borderRadius: 30
-                          }}
-                      />
-                  </View>}
+                {!existingAccount && implementation === 'lndhub' && (
+                    <View style={styles.button}>
+                        <Button
+                            title="Create LNDHub account"
+                            onPress={() => {
+                                createAccount(lndhubUrl, sslVerification).then(
+                                    (data: any) => {
+                                        if (data) {
+                                            this.setState({
+                                                username: data.login,
+                                                password: data.password,
+                                                existingAccount: true
+                                            });
+                                        }
+                                    }
+                                );
+                            }}
+                            buttonStyle={{
+                                backgroundColor: 'lightblue',
+                                borderRadius: 30
+                            }}
+                        />
+                    </View>
+                )}
 
                 {sslVerification && !saved && (
                     <View style={{ paddingTop: 10 }}>
