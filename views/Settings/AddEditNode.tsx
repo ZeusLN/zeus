@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
     ActionSheetIOS,
+    Clipboard,
     Picker,
     Platform,
     StyleSheet,
@@ -12,6 +13,7 @@ import {
 } from 'react-native';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import LndConnectUtils from './../../utils/LndConnectUtils';
 
 import SettingsStore from './../../stores/SettingsStore';
 
@@ -30,6 +32,7 @@ interface AddEditNodeState {
     active: boolean;
     index: number;
     newEntry: boolean;
+    suggestImport: string;
 }
 
 @inject('SettingsStore')
@@ -49,7 +52,41 @@ export default class AddEditNode extends React.Component<
         active: false,
         newEntry: false,
         implementation: 'lnd',
-        sslVerification: false
+        sslVerification: false,
+        suggestImport: ''
+    };
+
+    async UNSAFE_componentWillMount() {
+        const clipboard = await Clipboard.getString();
+
+        if (clipboard.includes('lndconnect://')) {
+            this.setState({
+                suggestImport: clipboard
+            });
+        }
+    }
+
+    importClipboard = () => {
+        const {
+            host,
+            port,
+            macaroonHex
+        } = LndConnectUtils.processLndConnectUrl(this.state.suggestImport);
+
+        this.setState({
+            host,
+            port,
+            macaroonHex,
+            suggestImport: ''
+        });
+
+        Clipboard.setString('');
+    };
+
+    clearImportSuggestion = () => {
+        this.setState({
+            suggestImport: ''
+        });
     };
 
     async componentDidMount() {
@@ -245,7 +282,8 @@ export default class AddEditNode extends React.Component<
             index,
             newEntry,
             implementation,
-            sslVerification
+            sslVerification,
+            suggestImport
         } = this.state;
         const { loading, settings } = SettingsStore;
         const savedTheme = settings.theme;
@@ -281,6 +319,46 @@ export default class AddEditNode extends React.Component<
                             : 'rgba(92, 99,216, 1)'
                     }
                 />
+                {!!suggestImport && (
+                    <View style={styles.clipboardImport}>
+                        <Text style={{ color: 'white' }}>
+                            Detected the following lndconnect string in your
+                            clipboard:
+                        </Text>
+                        <Text style={{ color: 'white', padding: 15 }}>
+                            {`${suggestImport.substring(0, 100)}...`}
+                        </Text>
+                        <Text style={{ color: 'white' }}>
+                            Would you like to import it?
+                        </Text>
+                        <View style={styles.button}>
+                            <Button
+                                title="Import"
+                                onPress={() => this.importClipboard()}
+                                titleStyle={{
+                                    color: 'rgba(92, 99,216, 1)'
+                                }}
+                                buttonStyle={{
+                                    backgroundColor: 'white',
+                                    borderRadius: 30
+                                }}
+                            />
+                        </View>
+                        <View style={styles.button}>
+                            <Button
+                                title="Cancel"
+                                onPress={() => this.clearImportSuggestion()}
+                                titleStyle={{
+                                    color: 'rgba(92, 99,216, 1)'
+                                }}
+                                buttonStyle={{
+                                    backgroundColor: 'white',
+                                    borderRadius: 30
+                                }}
+                            />
+                        </View>
+                    </View>
+                )}
 
                 <View style={styles.form}>
                     <Text
@@ -659,5 +737,10 @@ const styles = StyleSheet.create({
         paddingBottom: 10,
         width: 350,
         alignSelf: 'center'
+    },
+    clipboardImport: {
+        padding: 10,
+        backgroundColor: 'rgba(92, 99,216, 1)',
+        color: 'white'
     }
 });
