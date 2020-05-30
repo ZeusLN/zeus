@@ -524,7 +524,7 @@ export default class AddEditNode extends React.Component<
                                                         'c-lightning-REST',
                                                     saved: false
                                                 });
-                                            } else if (buttonIndex === 2) {
+                                            } else if (buttonIndex === 3) {
                                                 this.setState({
                                                     implementation: 'spark',
                                                     saved: false
