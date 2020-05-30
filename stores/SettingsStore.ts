@@ -11,11 +11,11 @@ interface Node {
     accessKey?: string;
     implementation?: string;
     sslVerification?: boolean;
+    onChainAddress?: string;
 }
 
 interface Settings {
     nodes?: Array<Node>;
-    onChainAddress?: string;
     theme?: string;
     lurkerMode?: boolean;
     selectedNode?: number;
@@ -106,8 +106,8 @@ export default class SettingsStore {
                     this.accessKey = node.accessKey;
                     this.implementation = node.implementation || 'lnd';
                     this.sslVerification = node.sslVerification || false;
+                    this.chainAddress = node.onChainAddress;
                 }
-                this.chainAddress = this.settings.onChainAddress;
                 return this.settings;
             } else {
                 console.log('No credentials stored');
@@ -135,13 +135,15 @@ export default class SettingsStore {
     public getNewAddress = () => {
         return RESTUtils.getNewAddress().then((data: any) => {
             // handle success
-            this.chainAddress = data.address;
-            const newSettings = {
-                ...this.settings,
-                onChainAddress: data.address
-            };
+            const newAddress = data.address;
+            this.settings.nodes[
+                this.settings.selectedNode || 0
+            ].onChainAddress = newAddress;
+            const newSettings = this.settings;
 
-            this.setSettings(JSON.stringify(newSettings));
+            this.setSettings(JSON.stringify(newSettings)).then(() => {
+                this.getSettings();
+            });
         });
     };
 }
