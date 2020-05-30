@@ -24,6 +24,7 @@ interface SendState {
     destination: string;
     amount: string;
     fee: string;
+    error_msg: string;
 }
 
 @inject('InvoicesStore', 'NodeInfoStore', 'TransactionsStore', 'SettingsStore')
@@ -35,9 +36,10 @@ export default class Send extends React.Component<SendProps, SendState> {
         const destination = navigation.getParam('destination', null);
         const amount = navigation.getParam('amount', null);
         const transactionType = navigation.getParam('transactionType', null);
+        const isValid = navigation.getParam('isValid', null);
 
         this.state = {
-            isValid: false,
+            isValid: isValid || false,
             transactionType: transactionType,
             destination: destination || '',
             amount: amount || '',
@@ -47,9 +49,13 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     async UNSAFE_componentWillMount() {
         const clipboard = await Clipboard.getString();
+        this.validateAddress(clipboard);
+    }
 
-        Clipboard.setString('');
-        this.validateAddress(clipboard, false);
+    componentDidMount() {
+        if (this.state.destination) {
+            this.validateAddress(this.state.destination);
+        }
     }
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
@@ -70,39 +76,31 @@ export default class Send extends React.Component<SendProps, SendState> {
         });
     }
 
-    validateAddress = (text: string, apply: boolean = true) => {
+    validateAddress = (text: string) => {
         const { navigation } = this.props;
         handleAnything(text)
             .then(([route, props]) => {
                 navigation.navigate(route, props);
             })
-            .catch(() => {
+            .catch(err => {
                 this.setState({
                     transactionType: null,
                     isValid: false,
-                    destination: apply ? text : this.state.destination
+                    destination: text,
+                    error_msg: err.message
                 });
             });
     };
 
     sendCoins = () => {
-        const { TransactionsStore, navigation, SettingsStore } = this.props;
+        const { TransactionsStore, navigation } = this.props;
         const { destination, amount, fee } = this.state;
-        const { implementation } = SettingsStore;
 
-        if (implementation === 'c-lightning-REST') {
-            TransactionsStore.sendCoins({
-                address: destination,
-                feeRate: `${Number(fee) * 1000}perkb`, // satoshis per kilobyte
-                satoshis: amount
-            });
-        } else {
-            TransactionsStore.sendCoins({
-                addr: destination,
-                sat_per_byte: fee,
-                amount
-            });
-        }
+        TransactionsStore.sendCoins({
+            addr: destination,
+            sat_per_byte: fee,
+            amount
+        });
         navigation.navigate('SendingOnChain');
     };
 
@@ -122,7 +120,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             transactionType,
             destination,
             amount,
-            fee
+            fee,
+            error_msg
         } = this.state;
         const { implementation, settings } = SettingsStore;
         const { theme } = settings;
@@ -288,22 +287,19 @@ export default class Send extends React.Component<SendProps, SendState> {
                             </View>
                         </React.Fragment>
                     )}
-                    {transactionType === 'Keysend' &&
-                        implementation === 'c-lightning-REST' && (
-                            <React.Fragment>
-                                <Text
-                                    style={{
-                                        color:
-                                            theme === 'dark' ? 'white' : 'black'
-                                    }}
-                                >
-                                    Sorry, c-lightning does not support sending
-                                    keysend payments yet. You can still receive
-                                    keysend payments if it's enabled on your
-                                    node.
-                                </Text>
-                            </React.Fragment>
-                        )}
+                    {transactionType === 'Keysend' && implementation !== 'lnd' && (
+                        <React.Fragment>
+                            <Text
+                                style={{
+                                    color: theme === 'dark' ? 'white' : 'black'
+                                }}
+                            >
+                                Sorry, c-lightning does not support sending
+                                keysend payments yet. You can still receive
+                                keysend payments if it's enabled on your node.
+                            </Text>
+                        </React.Fragment>
+                    )}
                     {transactionType === 'Lightning' && (
                         <View style={styles.button}>
                             <Button
@@ -344,6 +340,17 @@ export default class Send extends React.Component<SendProps, SendState> {
                             }}
                         />
                     </View>
+                    {!!error_msg && (
+                        <React.Fragment>
+                            <Text
+                                style={{
+                                    color: theme === 'dark' ? 'white' : 'black'
+                                }}
+                            >
+                                {error_msg}
+                            </Text>
+                        </React.Fragment>
+                    )}
                 </View>
             </View>
         );
