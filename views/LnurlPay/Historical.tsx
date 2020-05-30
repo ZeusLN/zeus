@@ -21,13 +21,9 @@ export default class LnurlPayHistorical extends React.Component<
     LnurlPayHistoricalProps,
     LnurlPayHistoricalState
 > {
-    constructor(props: any) {
-        super(props);
-
-        this.state = {
-            showLnurlSuccess: false
-        };
-    }
+    state = {
+        showLnurlSuccess: false
+    };
 
     render() {
         const { navigation, lnurlpaytx, preimage, SettingsStore } = this.props;

@@ -41,15 +41,25 @@ export default class OpenChannel extends React.Component<
     OpenChannelProps,
     OpenChannelState
 > {
-    state = {
-        node_pubkey_string: '',
-        local_funding_amount: '',
-        min_confs: 1,
-        sat_per_byte: '2',
-        private: false,
-        host: '',
-        suggestImport: ''
-    };
+    constructor(props: any) {
+        super(props);
+        const { navigation } = props;
+        const node_pubkey_string = navigation.getParam(
+            'node_pubkey_string',
+            null
+        );
+        const host = navigation.getParam('host', null);
+
+        this.state = {
+            node_pubkey_string: node_pubkey_string || '',
+            local_funding_amount: '',
+            min_confs: 1,
+            sat_per_byte: '2',
+            private: false,
+            host: host || '',
+            suggestImport: ''
+        };
+    }
 
     async UNSAFE_componentWillMount() {
         const clipboard = await Clipboard.getString();

@@ -36,7 +36,8 @@ export default class InvoicesStore {
                 if (
                     this.pay_req &&
                     this.pay_req.destination &&
-                    this.settingsStore.implementation === 'lnd'
+                    (this.settingsStore.implementation === 'lnd' ||
+                        this.settingsStore.implementation === 'spark')
                 ) {
                     this.getRoutes(
                         this.pay_req.destination,
@@ -61,23 +62,16 @@ export default class InvoicesStore {
     @action
     public getInvoices = () => {
         this.loading = true;
-        RESTUtils.getInvoices(this.settingsStore)
-            .then((response: any) => {
-                const status = response.info().status;
-                if (status == 200) {
-                    // handle success
-                    const data = response.json();
-                    this.invoices = data.payments || data.invoices;
-                    this.invoices = this.invoices.map(
-                        invoice => new Invoice(invoice)
-                    );
-                    this.invoices = this.invoices.slice().reverse();
-                    this.invoicesCount =
-                        data.last_index_offset || this.invoices.length;
-                    this.loading = false;
-                } else {
-                    this.resetInvoices();
-                }
+        RESTUtils.getInvoices()
+            .then((data: any) => {
+                this.invoices = data.payments || data.invoices;
+                this.invoices = this.invoices.map(
+                    invoice => new Invoice(invoice)
+                );
+                this.invoices = this.invoices.slice().reverse();
+                this.invoicesCount =
+                    data.last_index_offset || this.invoices.length;
+                this.loading = false;
             })
             .catch(() => {
                 this.resetInvoices();
@@ -91,73 +85,52 @@ export default class InvoicesStore {
         expiry: string = '3600',
         lnurl?: LNURLWithdrawParams
     ) => {
-        const { implementation, sslVerification } = this.settingsStore;
+        const { sslVerification } = this.settingsStore;
         this.payment_request = null;
         this.creatingInvoice = true;
         this.creatingInvoiceError = false;
         this.error_msg = null;
 
-        let data;
-        if (implementation === 'c-lightning-REST') {
-            // amount(msats), label, description
-            data = {
-                description: memo,
-                label: memo,
-                amount: Number(value) * 1000,
-                expiry,
-                private: true
-            };
-        } else {
-            data = {
-                memo,
-                value,
-                expiry
-            };
-        }
+        RESTUtils.createInvoice({
+            memo,
+            value,
+            expiry
+        })
+            .then((data: any) => {
+                const invoice = new Invoice(data);
+                this.payment_request = invoice.getPaymentRequest;
+                this.creatingInvoice = false;
 
-        RESTUtils.createInvoice(this.settingsStore, data)
-            .then((response: any) => {
-                const status = response.info().status;
-                if (status == 200) {
-                    // handle success
-                    const data = new Invoice(response.json());
-                    this.payment_request = data.getPaymentRequest;
-                    this.creatingInvoice = false;
-
-                    if (lnurl) {
-                        RNFetchBlob.config({
-                            trusty: !sslVerification || true
+                if (lnurl) {
+                    RNFetchBlob.fetch(
+                        'get',
+                        `${lnurl.callback}?k1=${lnurl.k1}&pr=${this.payment_request}`
+                    )
+                        .then((response: any) => {
+                            try {
+                                const data = response.json();
+                                return data;
+                            } catch (err) {
+                                return {
+                                    status: 'ERROR',
+                                    reason: response.text()
+                                };
+                            }
                         })
-                            .fetch(
-                                'get',
-                                `${lnurl.callback}?k1=${lnurl.k1}&pr=${this.payment_request}`,
-                                null,
-                                JSON.stringify(params)
-                            )
-                            .then((response: any) => {
-                                const status = response.info().status;
-                                if (status == 200) {
-                                    const data = response.json();
-                                    if (data.status === 'ERROR') {
-                                        Alert.alert(data.reason);
-                                    }
-                                } else {
-                                    return {
-                                        status: 'ERROR',
-                                        reason: 'LNURL error'
-                                    };
-                                }
-                            })
-                            .catch((err: any) => ({
-                                status: 'ERROR',
-                                reason: err.toString()
-                            }));
-                    }
-                } else {
-                    const errorInfo = response.json();
-                    this.creatingInvoiceError = true;
-                    this.creatingInvoice = false;
-                    this.error_msg = errorInfo.error.message || errorInfo.error;
+                        .catch((err: any) => ({
+                            status: 'ERROR',
+                            reason: err.message
+                        }))
+                        .then((data: any) => {
+                            if (data.status === 'ERROR') {
+                                Alert.alert(
+                                    `[error] ${lnurl.domain} says:`,
+                                    data.reason,
+                                    [{ text: 'OK', onPress: () => void 0 }],
+                                    { cancelable: false }
+                                );
+                            }
+                        });
                 }
             })
             .catch((error: any) => {
@@ -178,36 +151,24 @@ export default class InvoicesStore {
         this.loading = true;
         this.feeEstimate = null;
 
-        return RESTUtils.decodePaymentRequest(this.settingsStore, [
-            paymentRequest
-        ])
-            .then((response: any) => {
-                const status = response.info().status;
-                if (status == 200) {
-                    // handle success
-                    this.pay_req = new Invoice(response.json());
+        return RESTUtils.decodePaymentRequest([paymentRequest])
+            .then((data: any) => {
+                this.pay_req = new Invoice(data);
 
-                    // check description_hash if asked for
-                    if (
-                        descriptionPreimage &&
-                        this.pay_req.description_hash !==
-                            hashjs
-                                .sha256()
-                                .update(descriptionPreimage)
-                                .digest('hex')
-                    ) {
-                        throw new Error('wrong description_hash!');
-                    }
-
-                    this.loading = false;
-                    this.getPayReqError = null;
-                } else {
-                    this.loading = false;
-                    this.pay_req = null;
-                    const error = response.json();
-                    this.getPayReqError =
-                        (error.data && error.data.error) || error.message;
+                // check description_hash if asked for
+                if (
+                    descriptionPreimage &&
+                    this.pay_req.description_hash !==
+                        hashjs
+                            .sha256()
+                            .update(descriptionPreimage)
+                            .digest('hex')
+                ) {
+                    throw new Error('wrong description_hash!');
                 }
+
+                this.loading = false;
+                this.getPayReqError = null;
             })
             .catch((error: any) => {
                 // handle error
@@ -229,32 +190,25 @@ export default class InvoicesStore {
         this.feeEstimate = null;
         this.successProbability = null;
 
-        return RESTUtils.getRoutes(this.settingsStore, [destination, amount])
-            .then((response: any) => {
-                const status = response.info().status;
-                if (status == 200) {
-                    // handle success
-                    const data = response.json();
-                    this.loadingFeeEstimate = false;
-                    this.successProbability = data.success_prob
-                        ? data.success_prob * 100
-                        : 0;
+        return RESTUtils.getRoutes([destination, amount])
+            .then((data: any) => {
+                this.loadingFeeEstimate = false;
+                this.successProbability = data.success_prob
+                    ? data.success_prob * 100
+                    : 0;
 
-                    const routes = data.routes;
-                    if (routes) {
-                        routes.forEach((route: any) => {
-                            // expect lnd to pick the cheapest route
-                            if (this.feeEstimate) {
-                                if (route.total_fees < this.feeEstimate) {
-                                    this.feeEstimate = route.total_fees;
-                                }
-                            } else {
-                                this.feeEstimate = route.total_fees || 0;
+                const routes = data.routes;
+                if (routes) {
+                    routes.forEach((route: any) => {
+                        // expect lnd to pick the cheapest route
+                        if (this.feeEstimate) {
+                            if (route.total_fees < this.feeEstimate) {
+                                this.feeEstimate = route.total_fees;
                             }
-                        });
-                    }
-                } else {
-                    this.getRoutesError();
+                        } else {
+                            this.feeEstimate = route.total_fees || 0;
+                        }
+                    });
                 }
             })
             .catch(() => {

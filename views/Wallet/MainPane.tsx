@@ -167,7 +167,7 @@ export default class MainPane extends React.Component<
 
         const NodeInfoBadge = () => (
             <View style={styles.nodeInfo}>
-                {host && host.includes('.onion') && (
+                {host && host.includes('.onion') ? (
                     <TouchableOpacity
                         onPress={() => navigation.navigate('NodeInfo')}
                     >
@@ -176,8 +176,8 @@ export default class MainPane extends React.Component<
                             source={TorIcon}
                         />
                     </TouchableOpacity>
-                )}
-                {host && !host.includes('.onion') && (
+                ) : null}
+                {host && !host.includes('.onion') ? (
                     <Badge
                         onPress={() => navigation.navigate('NodeInfo')}
                         value={infoValue}
@@ -187,7 +187,7 @@ export default class MainPane extends React.Component<
                             marginLeft: 5
                         }}
                     />
-                )}
+                ) : null}
             </View>
         );
 
