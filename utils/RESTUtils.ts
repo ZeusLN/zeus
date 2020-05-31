@@ -245,6 +245,13 @@ class LndHub extends LND {
         }));
     getInvoices = () => this.getRequest('/getuserinvoices?limit=200');
 
+    createInvoice = (data: any) =>
+        this.postRequest('/addinvoice', {
+            amt: data.value,
+            memo: data.memo
+        });
+    getNewAddress = () => this.getRequest('/getbtc');
+
     /*
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
     getInvoices = () => this.getRequest('/v1/invoice/listInvoices/');
