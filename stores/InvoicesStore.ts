@@ -64,7 +64,7 @@ export default class InvoicesStore {
         this.loading = true;
         RESTUtils.getInvoices()
             .then((data: any) => {
-                this.invoices = data.payments || data.invoices;
+                this.invoices = data.payments || data.invoices || data;
                 this.invoices = this.invoices.map(
                     invoice => new Invoice(invoice)
                 );
