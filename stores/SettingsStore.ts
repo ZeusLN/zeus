@@ -145,8 +145,7 @@ export default class SettingsStore {
     @action
     public getNewAddress = () => {
         return RESTUtils.getNewAddress().then((data: any) => {
-            // handle success
-            const newAddress = data.address;
+            const newAddress = data.address || data[0].address;
             this.settings.nodes[
                 this.settings.selectedNode || 0
             ].onChainAddress = newAddress;
