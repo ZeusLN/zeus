@@ -117,14 +117,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (implementation === 'lndhub') {
             login({ login: username, password }).then(() => {
-                PaymentsStore.getPayments();
                 BalanceStore.getLightningBalance();
-                // NodeInfoStore.getNodeInfo();
-                // PaymentsStore.getPayments();
-                // InvoicesStore.getInvoices();
-                // TransactionsStore.getTransactions();
-                // ChannelsStore.getChannels();
-                // FeeStore.getFees();
+                PaymentsStore.getPayments();
+                InvoicesStore.getInvoices();
             });
         } else {
             NodeInfoStore.getNodeInfo();

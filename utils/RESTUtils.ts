@@ -243,6 +243,7 @@ class LndHub extends LND {
         this.getRequest('/balance').then(({ BTC }) => ({
             balance: BTC.AvailableBalance
         }));
+    getInvoices = () => this.getRequest('/getuserinvoices?limit=200');
 
     /*
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');

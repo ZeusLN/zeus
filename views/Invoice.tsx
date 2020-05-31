@@ -10,6 +10,7 @@ import { Header, Icon } from 'react-native-elements';
 import Invoice from './../models/Invoice';
 import { inject, observer } from 'mobx-react';
 import PrivacyUtils from './../utils/PrivacyUtils';
+import CollapsedQR from './../components/CollapsedQR';
 
 import UnitsStore from './../stores/UnitsStore';
 import SettingsStore from './../stores/SettingsStore';
@@ -40,7 +41,8 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
             description_hash,
             r_preimage,
             cltv_expiry,
-            expirationDate
+            expirationDate,
+            payment_request
         } = invoice;
         const privateInvoice = invoice.private;
 
@@ -289,7 +291,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                         </React.Fragment>
                     )}
 
-                    {!!r_hash && (
+                    {!!r_hash && typeof r_hash === 'string' && (
                         <React.Fragment>
                             <Text
                                 style={
@@ -362,6 +364,40 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                     : description_hash}
                             </Text>
                         </React.Fragment>
+                    )}
+
+                    {!!payment_request && (
+                        <React.Fragment>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Payment request:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(payment_request)
+                                    : payment_request}
+                            </Text>
+                        </React.Fragment>
+                    )}
+
+                    {!!payment_request && (
+                        <CollapsedQR
+                            value={payment_request}
+                            theme={theme}
+                            copyText="Copy Payment Request"
+                            hideText
+                        />
                     )}
                 </View>
             </ScrollView>
