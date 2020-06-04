@@ -52,6 +52,7 @@ export default class Invoice extends BaseModel {
     public amt?: number;
     public ispaid?: boolean;
     public expire_time?: number;
+    public millisatoshis?: string;
 
     @computed public get getMemo(): string {
         return this.memo || this.description || 'No memo';
@@ -85,6 +86,10 @@ export default class Invoice extends BaseModel {
         if (this.msatoshi) {
             const msatoshi = this.msatoshi.toString();
             return Number(msatoshi.replace('msat', '')) / 1000;
+        }
+        if (this.millisatoshis) {
+            const msatoshi = this.millisatoshis;
+            return Number(msatoshi) / 1000;
         }
         return Number(this.num_satoshis || 0);
     }
