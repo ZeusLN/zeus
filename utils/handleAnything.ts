@@ -3,10 +3,11 @@ import AddressUtils from './../utils/AddressUtils';
 import LndConnectUtils from './../utils/LndConnectUtils';
 import { getParams as getlnurlParams, findlnurl } from 'js-lnurl';
 
-const { nodeInfoStore, invoicesStore } = stores;
+const { nodeInfoStore, invoicesStore, settingsStore } = stores;
 
 export default async function(data: string): Promise<any> {
     const { testnet } = nodeInfoStore;
+    const { implementation } = settingsStore;
     const { value, amount } = AddressUtils.processSendAddress(data);
 
     if (AddressUtils.isValidBitcoinAddress(value, testnet)) {
@@ -27,7 +28,11 @@ export default async function(data: string): Promise<any> {
             }
         ];
     } else if (AddressUtils.isValidLightningPaymentRequest(value)) {
-        invoicesStore.getPayReq(value);
+        if (implementation === 'lndhub') {
+            invoicesStore.getPayReqLocal(value);
+        } else {
+            invoicesStore.getPayReq(value);
+        }
         return ['PaymentRequest', {}];
     } else if (value.includes('lndconnect')) {
         const node = LndConnectUtils.processLndConnectUrl(value);

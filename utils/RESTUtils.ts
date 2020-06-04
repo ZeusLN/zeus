@@ -251,28 +251,11 @@ class LndHub extends LND {
             memo: data.memo
         });
     getNewAddress = () => this.getRequest('/getbtc');
-
-    /*
-    getMyNodeInfo = () => this.getRequest('/v1/getinfo');
-    getInvoices = () => this.getRequest('/v1/invoice/listInvoices/');
-    createInvoice = (data: any) =>
-        this.postRequest('/v1/invoice/genInvoice/', {
-            description: data.memo,
-            label: 'zeus.' + parseInt(Math.random() * 1000000),
-            amount: Number(data.value) * 1000,
-            expiry: data.expiry,
-            private: true
-        });
-    getPayments = () => this.getRequest('/v1/pay/listPayments');
-    getNewAddress = () => this.getRequest('/v1/newaddr');
-    decodePaymentRequest = (urlParams?: Array<string>) =>
-        this.getRequest(`/v1/pay/decodePay/${urlParams[0]}`);
     payLightningInvoice = (data: any) =>
-        this.postRequest('/v1/pay', {
+        this.postRequest('/payinvoice', {
             invoice: data.payment_request,
             amount: Number(data.amt && data.amt * 1000)
         });
-    */
 }
 
 class Spark {
