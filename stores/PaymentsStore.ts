@@ -17,6 +17,12 @@ export default class PaymentsStore {
         this.channelsStore = channelsStore;
     }
 
+    reset = () => {
+        this.resetPayments();
+        this.error = false;
+        this.error_msg = '';
+    };
+
     resetPayments = () => {
         this.payments = [];
         this.loading = false;

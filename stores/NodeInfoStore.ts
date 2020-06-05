@@ -25,6 +25,15 @@ export default class NodeInfoStore {
         );
     }
 
+    reset = () => {
+        this.error = false;
+        this.loading = false;
+        this.nodeInfo = {};
+        this.regtest = false;
+        this.testnet = false;
+        this.errorMsg = '';
+    };
+
     getNodeInfoError = () => {
         this.error = true;
         this.loading = false;

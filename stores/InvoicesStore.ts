@@ -49,6 +49,24 @@ export default class InvoicesStore {
         );
     }
 
+    reset = () => {
+        this.paymentRequest = '';
+        this.loading = false;
+        this.error = false;
+        this.error_msg = null;
+        this.getPayReqError = null;
+        this.invoices = [];
+        this.invoice = null;
+        this.pay_req = null;
+        this.payment_request = null;
+        this.creatingInvoice = false;
+        this.creatingInvoiceError = false;
+        this.invoicesCount = 0;
+        this.loadingFeeEstimate = false;
+        this.feeEstimate = null;
+        this.successProbability = null;
+    };
+
     @action
     public resetPaymentReq = () => {
         this.payment_request = '';
