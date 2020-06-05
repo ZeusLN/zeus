@@ -70,6 +70,24 @@ export default class ChannelsStore {
         );
     }
 
+    reset = () => {
+        this.loading = false;
+        this.error = false;
+        this.errorPeerConnect = false;
+        this.errorMsgChannel = null;
+        this.errorMsgPeer = null;
+        this.nodes = {};
+        this.channels = [];
+        this.output_index = null;
+        this.funding_txid_str = null;
+        this.openingChannel = false;
+        this.connectingToPeer = false;
+        this.errorOpenChannel = false;
+        this.peerSuccess = false;
+        this.channelSuccess = false;
+        this.channelRequest = null;
+    };
+
     @action
     getNodeInfo = (pubkey: string) => {
         this.loading = true;

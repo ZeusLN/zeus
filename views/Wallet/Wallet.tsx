@@ -88,7 +88,23 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     };
 
     async getSettingsAndRefresh() {
-        const { SettingsStore } = this.props;
+        const {
+            SettingsStore,
+            NodeInfoStore,
+            BalanceStore,
+            PaymentsStore,
+            InvoicesStore,
+            TransactionsStore,
+            ChannelsStore
+        } = this.props;
+
+        NodeInfoStore.reset();
+        BalanceStore.reset();
+        PaymentsStore.reset();
+        InvoicesStore.reset();
+        TransactionsStore.reset();
+        ChannelsStore.reset();
+
         await SettingsStore.getSettings().then(() => {
             this.refresh();
         });
@@ -166,7 +182,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { payments } = PaymentsStore;
         const { invoices, invoicesCount } = InvoicesStore;
         const { channels } = ChannelsStore;
-        const { settings } = SettingsStore;
+        const { settings, implementation } = SettingsStore;
         const { theme, lurkerMode } = settings;
 
         const paymentsCount = (payments && payments.length) || 0;
@@ -245,6 +261,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             { element: invoicesButton }
         ];
 
+        const selectedButtons =
+            implementation === 'lndhub' ? lndHubButtons : buttons;
+
         return (
             <View style={{ flex: 1 }}>
                 <MainPane
@@ -259,11 +278,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     <ButtonGroup
                         onPress={this.updateIndex}
                         selectedIndex={selectedIndex}
-                        buttons={
-                            implementation === 'lndhub'
-                                ? lndHubButtons
-                                : buttons
-                        }
+                        buttons={selectedButtons}
                         containerStyle={{
                             height: 50,
                             marginTop: 0,
@@ -282,7 +297,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     <ButtonGroup
                         onPress={this.updateIndex}
                         selectedIndex={selectedIndex}
-                        buttons={buttons}
+                        buttons={selectedButtons}
                         containerStyle={{
                             height: 50,
                             marginTop: 0,
