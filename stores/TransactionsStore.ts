@@ -127,7 +127,13 @@ export default class TransactionsStore {
                 if (data.payment_error !== '') {
                     this.payment_error = data.payment_error;
                 }
-                this.status = data.status;
+                // lndhub
+                if (data.error) {
+                    this.error = true;
+                    this.error_msg = data.message;
+                } else {
+                    this.status = data.status || 'complete';
+                }
             })
             .catch((err: Error) => {
                 this.error = true;
