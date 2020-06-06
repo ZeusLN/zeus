@@ -3,6 +3,7 @@ import {
     ActivityIndicator,
     ActionSheetIOS,
     Clipboard,
+    Modal,
     Picker,
     Platform,
     StyleSheet,
@@ -40,6 +41,8 @@ interface AddEditNodeState {
     index: number;
     newEntry: boolean;
     suggestImport: string;
+    showLndHubModal: boolean;
+    showSslModal: boolean;
 }
 
 const DEFAULT_LNDHUB = 'lndhub.herokuapp.com';
@@ -64,7 +67,9 @@ export default class AddEditNode extends React.Component<
         sslVerification: false,
         existingAccount: false,
         suggestImport: '',
-        lndhubUrl: DEFAULT_LNDHUB
+        lndhubUrl: DEFAULT_LNDHUB,
+        showLndHubModal: false,
+        showSslModal: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -331,7 +336,9 @@ export default class AddEditNode extends React.Component<
             implementation,
             sslVerification,
             existingAccount,
-            suggestImport
+            suggestImport,
+            showLndHubModal,
+            showSslModal
         } = this.state;
         const {
             loading,
@@ -540,33 +547,6 @@ export default class AddEditNode extends React.Component<
                     editable={!loading}
                     placeholderTextColor="gray"
                 />
-                {lndhubUrl === DEFAULT_LNDHUB && (
-                    <>
-                        <Text
-                            style={{
-                                color: 'orange',
-                                paddingTop: 5
-                            }}
-                        >
-                            With any instance of LNDHub the administrator can
-                            track your balances, transactions, the IP addresses
-                            you connect with, and even run off with your funds.
-                        </Text>
-                        <Text
-                            style={{
-                                color: 'orange',
-                                paddingTop: 5,
-                                paddingBottom: 5
-                            }}
-                        >
-                            While we don't expect that of the admins of this
-                            instance, the Blue Wallet team (creators of LNDHub),
-                            if you have a friend who you trust and who runs an
-                            lnd node you may want to consider asking them to set
-                            up an LNDHub instance for you to connect to.
-                        </Text>
-                    </>
-                )}
 
                 <View
                     style={{
@@ -792,6 +772,136 @@ export default class AddEditNode extends React.Component<
                     </View>
                 )}
 
+                <Modal
+                    animationType="slide"
+                    transparent={true}
+                    visible={showLndHubModal || showSslModal}
+                >
+                    <View style={styles.centeredView}>
+                        <View style={styles.modal}>
+                            {showLndHubModal && (
+                                <>
+                                    <Text style={{ fontSize: 40 }}>
+                                        Warning
+                                    </Text>
+                                    <Text style={{ paddingTop: 20 }}>
+                                        With any instance of LNDHub the operator
+                                        can track your balances, transactions,
+                                        the IP addresses you connect with, and
+                                        even run off with your funds.
+                                    </Text>
+                                    <Text
+                                        style={{ paddingTop: 20, margin: 10 }}
+                                    >
+                                        While we don't expect that of the admins
+                                        of this instance, the Blue Wallet team
+                                        (creators of LNDHub), if you have a
+                                        friend who you trust and who runs an lnd
+                                        node you may want to consider asking
+                                        them to set up an LNDHub instance for
+                                        you to connect to.
+                                    </Text>
+                                    <View style={styles.button}>
+                                        <Button
+                                            title={
+                                                'I understand, create my account'
+                                            }
+                                            onPress={() => {
+                                                createAccount(
+                                                    lndhubUrl,
+                                                    sslVerification
+                                                ).then((data: any) => {
+                                                    if (data) {
+                                                        this.setState({
+                                                            username:
+                                                                data.login,
+                                                            password:
+                                                                data.password,
+                                                            existingAccount: true
+                                                        });
+                                                    }
+                                                });
+                                            }}
+                                            style={styles.button}
+                                            buttonStyle={{
+                                                borderRadius: 30
+                                            }}
+                                        />
+                                    </View>
+                                    <View style={styles.button}>
+                                        <Button
+                                            title={'Cancel'}
+                                            onPress={() =>
+                                                this.setState({
+                                                    showLndHubModal: false
+                                                })
+                                            }
+                                            style={styles.button}
+                                            buttonStyle={{
+                                                borderRadius: 30,
+                                                backgroundColor: 'grey'
+                                            }}
+                                        />
+                                    </View>
+                                </>
+                            )}
+                            {showSslModal && (
+                                <>
+                                    <Text style={{ fontSize: 40 }}>
+                                        Warning
+                                    </Text>
+                                    <Text
+                                        style={{ paddingTop: 20, margin: 10 }}
+                                    >
+                                        Opting not to use SSL Verification may
+                                        leave you vulnerable to a
+                                        man-in-the-middle attack. Do so at your
+                                        own discretion.
+                                    </Text>
+                                    <Text
+                                        style={{ paddingTop: 20, margin: 10 }}
+                                    >
+                                        If you're not verifying your connection
+                                        with a VPN or Tor v3 hidden service
+                                        configuration, we highly advise you
+                                        install your node's certificate to this
+                                        device.
+                                    </Text>
+                                    <View style={styles.button}>
+                                        <Button
+                                            title={
+                                                'I understand, save my node config'
+                                            }
+                                            onPress={() =>
+                                                this.saveNodeConfiguration()
+                                            }
+                                            style={styles.button}
+                                            buttonStyle={{
+                                                borderRadius: 30
+                                            }}
+                                        />
+                                    </View>
+                                    <View style={styles.button}>
+                                        <Button
+                                            title={'Cancel'}
+                                            onPress={() =>
+                                                this.setState({
+                                                    showSslHubModal: false
+                                                })
+                                            }
+                                            style={styles.button}
+                                            buttonStyle={{
+                                                borderRadius: 30,
+                                                backgroundColor: 'grey'
+                                            }}
+                                        />
+                                    </View>
+                                </>
+                            )}
+                        </View>
+                    </View>
+                </Modal>
+
                 <View style={styles.form}>
                     {createAccountError !== '' &&
                         implementation === 'lndhub' &&
@@ -833,13 +943,6 @@ export default class AddEditNode extends React.Component<
                                 })
                             }
                         />
-                        {!sslVerification && !saved && (
-                            <Text style={{ color: 'red' }}>
-                                WARNING: opting not to use SSL Verification may
-                                leave you vulnerable to a man-in-the-middle
-                                attack. Do so at your own discretion.
-                            </Text>
-                        )}
                         {sslVerification && !saved && (
                             <Text>
                                 To use SSL Verification with a self-signed
@@ -855,19 +958,9 @@ export default class AddEditNode extends React.Component<
                     <View style={styles.button}>
                         <Button
                             title="Create LNDHub account"
-                            onPress={() => {
-                                createAccount(lndhubUrl, sslVerification).then(
-                                    (data: any) => {
-                                        if (data) {
-                                            this.setState({
-                                                username: data.login,
-                                                password: data.password,
-                                                existingAccount: true
-                                            });
-                                        }
-                                    }
-                                );
-                            }}
+                            onPress={() =>
+                                this.setState({ showLndHubModal: true })
+                            }
                             buttonStyle={{
                                 backgroundColor: 'lightblue',
                                 borderRadius: 30
@@ -908,7 +1001,13 @@ export default class AddEditNode extends React.Component<
                             size: 25,
                             color: saved ? 'black' : 'white'
                         }}
-                        onPress={() => this.saveNodeConfiguration()}
+                        onPress={() => {
+                            if (!saved && !sslVerification) {
+                                this.setState({ showSslModal: true });
+                            } else {
+                                this.saveNodeConfiguration();
+                            }
+                        }}
                         style={styles.button}
                         buttonStyle={{
                             backgroundColor: saved
@@ -1065,5 +1164,26 @@ const styles = StyleSheet.create({
         padding: 10,
         backgroundColor: 'rgba(92, 99,216, 1)',
         color: 'white'
+    },
+    modal: {
+        margin: 20,
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 35,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5
+    },
+    centeredView: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 22
     }
 });
