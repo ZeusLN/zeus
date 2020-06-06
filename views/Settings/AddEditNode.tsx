@@ -803,9 +803,7 @@ export default class AddEditNode extends React.Component<
                                     </Text>
                                     <View style={styles.button}>
                                         <Button
-                                            title={
-                                                'I understand, create my account'
-                                            }
+                                            title="I understand, create my account"
                                             onPress={() => {
                                                 createAccount(
                                                     lndhubUrl,
@@ -830,7 +828,7 @@ export default class AddEditNode extends React.Component<
                                     </View>
                                     <View style={styles.button}>
                                         <Button
-                                            title={'Cancel'}
+                                            title="Cancel"
                                             onPress={() =>
                                                 this.setState({
                                                     showLndHubModal: false
@@ -869,9 +867,33 @@ export default class AddEditNode extends React.Component<
                                     </Text>
                                     <View style={styles.button}>
                                         <Button
-                                            title={
-                                                'I understand, save my node config'
-                                            }
+                                            title="Certificate Install Instructions"
+                                            icon={{
+                                                name: 'lock',
+                                                size: 25,
+                                                color: 'white'
+                                            }}
+                                            onPress={() => {
+                                                this.setState({
+                                                    showSslModal: false
+                                                });
+                                                navigation.navigate(
+                                                    'CertInstallInstructions'
+                                                );
+                                            }}
+                                            style={styles.button}
+                                            buttonStyle={{
+                                                backgroundColor: 'purple',
+                                                borderRadius: 30
+                                            }}
+                                            titleStyle={{
+                                                color: 'white'
+                                            }}
+                                        />
+                                    </View>
+                                    <View style={styles.button}>
+                                        <Button
+                                            title="I understand, save my node config"
                                             onPress={() =>
                                                 this.saveNodeConfiguration()
                                             }
@@ -883,7 +905,7 @@ export default class AddEditNode extends React.Component<
                                     </View>
                                     <View style={styles.button}>
                                         <Button
-                                            title={'Cancel'}
+                                            title="Cancel"
                                             onPress={() =>
                                                 this.setState({
                                                     showSslHubModal: false
