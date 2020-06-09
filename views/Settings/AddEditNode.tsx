@@ -804,7 +804,7 @@ export default class AddEditNode extends React.Component<
                                         even run off with your funds.
                                     </Text>
                                     <Text
-                                        style={{ paddingTop: 20, margin: 10 }}
+                                        style={{ paddingTop: 20 }}
                                     >
                                         While we don't expect that of the admins
                                         of this instance, the Blue Wallet team
@@ -866,7 +866,7 @@ export default class AddEditNode extends React.Component<
                                         Warning
                                     </Text>
                                     <Text
-                                        style={{ paddingTop: 20, margin: 10 }}
+                                        style={{ paddingTop: 20 }}
                                     >
                                         Opting not to use SSL Verification may
                                         leave you vulnerable to a
@@ -874,7 +874,7 @@ export default class AddEditNode extends React.Component<
                                         own discretion.
                                     </Text>
                                     <Text
-                                        style={{ paddingTop: 20, margin: 10 }}
+                                        style={{ paddingTop: 20 }}
                                     >
                                         If you're not verifying your connection
                                         with a VPN or Tor v3 hidden service
