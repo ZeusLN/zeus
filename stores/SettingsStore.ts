@@ -3,6 +3,9 @@ import { action, observable } from 'mobx';
 import RNFetchBlob from 'rn-fetch-blob';
 import RESTUtils from '../utils/RESTUtils';
 
+// lndhub
+import LoginRequest from './../models/LoginRequest';
+
 interface Node {
     host?: string;
     port?: string;
@@ -25,7 +28,7 @@ interface Settings {
 
 export default class SettingsStore {
     @observable settings: Settings = {};
-    @observable loading: boolean = false;
+    @observable public loading: boolean = false;
     @observable btcPayError: string | null;
     @observable host: string;
     @observable port: string;
@@ -35,6 +38,11 @@ export default class SettingsStore {
     @observable implementation: string;
     @observable sslVerification: boolean | undefined;
     @observable chainAddress: string | undefined;
+    // LNDHub
+    @observable public createAccountError: string;
+    @observable public createAccountSuccess: string;
+    @observable public accessToken: string;
+    @observable public refreshToken: string;
 
     @action
     public fetchBTCPayConfig = (data: string) => {
@@ -102,6 +110,9 @@ export default class SettingsStore {
                     this.host = node.host;
                     this.port = node.port;
                     this.url = node.url;
+                    this.username = node.username;
+                    this.password = node.password;
+                    this.lndhubUrl = node.lndhubUrl;
                     this.macaroonHex = node.macaroonHex;
                     this.accessKey = node.accessKey;
                     this.implementation = node.implementation || 'lnd';
@@ -134,8 +145,7 @@ export default class SettingsStore {
     @action
     public getNewAddress = () => {
         return RESTUtils.getNewAddress().then((data: any) => {
-            // handle success
-            const newAddress = data.address;
+            const newAddress = data.address || data[0].address;
             this.settings.nodes[
                 this.settings.selectedNode || 0
             ].onChainAddress = newAddress;
@@ -145,5 +155,47 @@ export default class SettingsStore {
                 this.getSettings();
             });
         });
+    };
+
+    // LNDHub
+    @action
+    public createAccount = (host: string, sslVerification: boolean) => {
+        this.createAccountSuccess = '';
+        this.createAccountError = '';
+        this.loading = true;
+        return RESTUtils.createAccount(host, sslVerification)
+            .then((data: any) => {
+                this.loading = false;
+                this.createAccountSuccess =
+                    'Successfully created LNDHub account. Record the username and password somewhere so you can restore your funds if something happens to your device. Then hit Save Node Config to continue.';
+                return data;
+            })
+            .catch(() => {
+                // handle error
+                this.loading = false;
+                this.createAccountError =
+                    'Error creating LNDHub account. Please check the host and try again.';
+            });
+    };
+
+    // LNDHub
+    @action
+    public login = (request: LoginRequest) => {
+        this.createAccountSuccess = '';
+        this.createAccountError = '';
+        this.loading = true;
+        return RESTUtils.login({
+            login: request.login,
+            password: request.password
+        })
+            .then((data: any) => {
+                this.loading = false;
+                this.accessToken = data.access_token;
+                this.refreshToken = data.refresh_token;
+            })
+            .catch(() => {
+                // handle error
+                this.loading = false;
+            });
     };
 }

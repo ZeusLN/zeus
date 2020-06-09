@@ -1,7 +1,9 @@
 import * as React from 'react';
 import {
+    ActivityIndicator,
     ActionSheetIOS,
     Clipboard,
+    Modal,
     Picker,
     Platform,
     StyleSheet,
@@ -28,6 +30,10 @@ interface AddEditNodeState {
     macaroonHex: string; // lnd
     url: string; // spark
     accessKey: string; // spark
+    lndhubUrl: string; // lndhub
+    username: string; // lndhub
+    password: string; // lndhub
+    existingAccount: boolean; // lndhub
     implementation: string;
     sslVerification: boolean;
     saved: boolean;
@@ -35,7 +41,11 @@ interface AddEditNodeState {
     index: number;
     newEntry: boolean;
     suggestImport: string;
+    showLndHubModal: boolean;
+    showSslModal: boolean;
 }
+
+const DEFAULT_LNDHUB = 'lndhub.herokuapp.com';
 
 @inject('SettingsStore')
 @observer
@@ -55,7 +65,11 @@ export default class AddEditNode extends React.Component<
         newEntry: false,
         implementation: 'lnd',
         sslVerification: false,
-        suggestImport: ''
+        existingAccount: false,
+        suggestImport: '',
+        lndhubUrl: DEFAULT_LNDHUB,
+        showLndHubModal: false,
+        showSslModal: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -108,7 +122,11 @@ export default class AddEditNode extends React.Component<
                 port,
                 macaroonHex,
                 url,
+                lndhubUrl,
+                existingAccount,
                 accessKey,
+                username,
+                password,
                 implementation,
                 sslVerification
             } = node;
@@ -118,7 +136,11 @@ export default class AddEditNode extends React.Component<
                 port,
                 macaroonHex,
                 url,
+                lndhubUrl,
+                existingAccount,
                 accessKey,
+                username,
+                password,
                 implementation: implementation || 'lnd',
                 sslVerification,
                 index,
@@ -153,6 +175,8 @@ export default class AddEditNode extends React.Component<
                 macaroonHex,
                 url,
                 accessKey,
+                username,
+                password,
                 implementation,
                 sslVerification
             } = node;
@@ -161,6 +185,9 @@ export default class AddEditNode extends React.Component<
                 host,
                 port,
                 macaroonHex,
+                accessKey,
+                username,
+                password,
                 implementation,
                 sslVerification,
                 index,
@@ -183,8 +210,12 @@ export default class AddEditNode extends React.Component<
             host,
             port,
             url,
+            lndhubUrl,
+            existingAccount,
             macaroonHex,
             accessKey,
+            username,
+            password,
             implementation,
             sslVerification,
             index
@@ -196,8 +227,12 @@ export default class AddEditNode extends React.Component<
             host,
             port,
             url,
+            lndhubUrl,
+            existingAccount,
             macaroonHex,
             accessKey,
+            username,
+            password,
             implementation,
             sslVerification
         };
@@ -289,17 +324,29 @@ export default class AddEditNode extends React.Component<
             host,
             port,
             url,
+            lndhubUrl,
             macaroonHex,
             accessKey,
+            username,
+            password,
             saved,
             active,
             index,
             newEntry,
             implementation,
             sslVerification,
-            suggestImport
+            existingAccount,
+            suggestImport,
+            showLndHubModal,
+            showSslModal
         } = this.state;
-        const { loading, settings } = SettingsStore;
+        const {
+            loading,
+            createAccountError,
+            createAccountSuccess,
+            settings,
+            createAccount
+        } = SettingsStore;
         const savedTheme = settings.theme;
 
         const BackButton = () => (
@@ -311,6 +358,364 @@ export default class AddEditNode extends React.Component<
                 color="#fff"
                 underlayColor="transparent"
             />
+        );
+
+        const NodeInterface = () => (
+            <>
+                {Platform.OS !== 'ios' && (
+                    <View>
+                        <Text
+                            style={{
+                                color: savedTheme === 'dark' ? 'white' : 'black'
+                            }}
+                        >
+                            Node interface
+                        </Text>
+                        <Picker
+                            selectedValue={implementation}
+                            onValueChange={(itemValue: string) => {
+                                if (itemValue === 'lndhub') {
+                                    this.setState({
+                                        implementation: itemValue,
+                                        saved: false,
+                                        sslVerification: true
+                                    });
+                                } else {
+                                    this.setState({
+                                        implementation: itemValue,
+                                        saved: false,
+                                        sslVerification: false
+                                    });
+                                }
+                            }}
+                            style={
+                                savedTheme === 'dark'
+                                    ? styles.pickerDark
+                                    : styles.picker
+                            }
+                        >
+                            <Picker.Item label="lnd" value="lnd" />
+                            <Picker.Item
+                                label="c-lightning-REST"
+                                value="c-lightning-REST"
+                            />
+                            <Picker.Item
+                                label="Spark (c-lightning)"
+                                value="spark"
+                            />
+                            <Picker.Item label="LNDHub" value="lndhub" />
+                        </Picker>
+                    </View>
+                )}
+
+                {Platform.OS === 'ios' && (
+                    <View>
+                        <Text
+                            style={{
+                                color: savedTheme === 'dark' ? 'white' : 'black'
+                            }}
+                        >
+                            Node interface
+                        </Text>
+                        <TouchableOpacity
+                            onPress={() =>
+                                ActionSheetIOS.showActionSheetWithOptions(
+                                    {
+                                        options: [
+                                            'Cancel',
+                                            'lnd',
+                                            'c-lightning-REST',
+                                            'Spark (c-lightning)',
+                                            'LNDHub'
+                                        ],
+                                        cancelButtonIndex: 0
+                                    },
+                                    buttonIndex => {
+                                        if (buttonIndex === 1) {
+                                            this.setState({
+                                                implementation: 'lnd',
+                                                saved: false,
+                                                sslVerification: false
+                                            });
+                                        } else if (buttonIndex === 2) {
+                                            this.setState({
+                                                implementation:
+                                                    'c-lightning-REST',
+                                                saved: false,
+                                                sslVerification: false
+                                            });
+                                        } else if (buttonIndex === 3) {
+                                            this.setState({
+                                                implementation: 'spark',
+                                                saved: false,
+                                                sslVerification: false
+                                            });
+                                        } else if (buttonIndex === 4) {
+                                            this.setState({
+                                                implementation: 'lndhub',
+                                                saved: false,
+                                                sslVerification: true
+                                            });
+                                        }
+                                    }
+                                )
+                            }
+                        >
+                            <Text
+                                style={{
+                                    color:
+                                        savedTheme === 'dark'
+                                            ? 'white'
+                                            : 'black'
+                                }}
+                            >
+                                {implementation}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+            </>
+        );
+
+        const SparkForm = () => (
+            <>
+                <Text
+                    style={{
+                        color: savedTheme === 'dark' ? 'white' : 'black'
+                    }}
+                >
+                    Host
+                </Text>
+                <TextInput
+                    placeholder={'http://192.168.1.2:9737'}
+                    value={url}
+                    onChangeText={(text: string) =>
+                        this.setState({
+                            url: text.trim(),
+                            saved: false
+                        })
+                    }
+                    numberOfLines={1}
+                    style={
+                        savedTheme === 'dark'
+                            ? styles.textInputDark
+                            : styles.textInput
+                    }
+                    editable={!loading}
+                    placeholderTextColor="gray"
+                />
+
+                <Text
+                    style={{
+                        color: savedTheme === 'dark' ? 'white' : 'black'
+                    }}
+                >
+                    Access Key
+                </Text>
+                <TextInput
+                    placeholder={'...'}
+                    value={accessKey}
+                    onChangeText={(text: string) =>
+                        this.setState({
+                            accessKey: text.trim(),
+                            saved: false
+                        })
+                    }
+                    numberOfLines={1}
+                    style={
+                        savedTheme === 'dark'
+                            ? styles.textInputDark
+                            : styles.textInput
+                    }
+                    editable={!loading}
+                    placeholderTextColor="gray"
+                />
+            </>
+        );
+
+        const LndHubForm = () => (
+            <>
+                <Text
+                    style={{
+                        color: savedTheme === 'dark' ? 'white' : 'black'
+                    }}
+                >
+                    Host
+                </Text>
+                <TextInput
+                    placeholder={'https://lndhub.herokuapp.com'}
+                    value={lndhubUrl}
+                    onChangeText={(text: string) =>
+                        this.setState({
+                            lndhubUrl: text.trim(),
+                            saved: false
+                        })
+                    }
+                    numberOfLines={1}
+                    style={
+                        savedTheme === 'dark'
+                            ? styles.textInputDark
+                            : styles.textInput
+                    }
+                    editable={!loading}
+                    placeholderTextColor="gray"
+                />
+
+                <View
+                    style={{
+                        marginTop: 5
+                    }}
+                >
+                    <CheckBox
+                        title="Existing Account"
+                        checked={existingAccount}
+                        onPress={() =>
+                            this.setState({
+                                existingAccount: !existingAccount
+                            })
+                        }
+                    />
+                </View>
+
+                {existingAccount && (
+                    <>
+                        <Text
+                            style={{
+                                color: savedTheme === 'dark' ? 'white' : 'black'
+                            }}
+                        >
+                            Username
+                        </Text>
+                        <TextInput
+                            placeholder={'...'}
+                            value={username}
+                            onChangeText={(text: string) =>
+                                this.setState({
+                                    username: text.trim(),
+                                    saved: false
+                                })
+                            }
+                            numberOfLines={1}
+                            style={
+                                savedTheme === 'dark'
+                                    ? styles.textInputDark
+                                    : styles.textInput
+                            }
+                            editable={!loading}
+                            placeholderTextColor="gray"
+                        />
+
+                        <Text
+                            style={{
+                                color: savedTheme === 'dark' ? 'white' : 'black'
+                            }}
+                        >
+                            Password
+                        </Text>
+                        <TextInput
+                            placeholder={'...'}
+                            value={password}
+                            onChangeText={(text: string) =>
+                                this.setState({
+                                    password: text.trim(),
+                                    saved: false
+                                })
+                            }
+                            numberOfLines={1}
+                            style={
+                                savedTheme === 'dark'
+                                    ? styles.textInputDark
+                                    : styles.textInput
+                            }
+                            editable={!loading}
+                            placeholderTextColor="gray"
+                        />
+                    </>
+                )}
+            </>
+        );
+
+        const DefaultForm = () => (
+            <>
+                <Text
+                    style={{
+                        color: savedTheme === 'dark' ? 'white' : 'black'
+                    }}
+                >
+                    Host
+                </Text>
+                <TextInput
+                    placeholder={'localhost'}
+                    value={host}
+                    onChangeText={(text: string) =>
+                        this.setState({
+                            host: text.trim(),
+                            saved: false
+                        })
+                    }
+                    numberOfLines={1}
+                    style={
+                        savedTheme === 'dark'
+                            ? styles.textInputDark
+                            : styles.textInput
+                    }
+                    editable={!loading}
+                    placeholderTextColor="gray"
+                />
+
+                <Text
+                    style={{
+                        color: savedTheme === 'dark' ? 'white' : 'black'
+                    }}
+                >
+                    REST Port
+                </Text>
+                <TextInput
+                    keyboardType="numeric"
+                    placeholder={'443/8080'}
+                    value={port}
+                    onChangeText={(text: string) =>
+                        this.setState({
+                            port: text.trim(),
+                            saved: false
+                        })
+                    }
+                    numberOfLines={1}
+                    style={
+                        savedTheme === 'dark'
+                            ? styles.textInputDark
+                            : styles.textInput
+                    }
+                    editable={!loading}
+                    placeholderTextColor="gray"
+                />
+
+                <Text
+                    style={{
+                        color: savedTheme === 'dark' ? 'white' : 'black'
+                    }}
+                >
+                    Macaroon (Hex format)
+                </Text>
+                <TextInput
+                    placeholder={'0A...'}
+                    value={macaroonHex}
+                    onChangeText={(text: string) =>
+                        this.setState({
+                            macaroonHex: text.trim(),
+                            saved: false
+                        })
+                    }
+                    numberOfLines={1}
+                    style={
+                        savedTheme === 'dark'
+                            ? styles.textInputDark
+                            : styles.textInput
+                    }
+                    editable={!loading}
+                    placeholderTextColor="gray"
+                />
+            </>
         );
 
         return (
@@ -374,256 +779,193 @@ export default class AddEditNode extends React.Component<
                     </View>
                 )}
 
-                <View style={styles.form}>
-                    {implementation === 'spark' ? (
-                        <>
-                            <Text
-                                style={{
-                                    color:
-                                        savedTheme === 'dark'
-                                            ? 'white'
-                                            : 'black'
-                                }}
-                            >
-                                Host
-                            </Text>
-                            <TextInput
-                                placeholder={'http://192.168.1.2:9737'}
-                                value={url}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        url: text.trim(),
-                                        saved: false
-                                    })
-                                }
-                                numberOfLines={1}
-                                style={
-                                    savedTheme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
-                                editable={!loading}
-                                placeholderTextColor="gray"
-                            />
+                {loading && (
+                    <View style={{ padding: 10 }}>
+                        <ActivityIndicator size="large" color="#0000ff" />
+                    </View>
+                )}
 
-                            <Text
-                                style={{
-                                    color:
-                                        savedTheme === 'dark'
-                                            ? 'white'
-                                            : 'black'
-                                }}
-                            >
-                                Access Key
-                            </Text>
-                            <TextInput
-                                placeholder={'...'}
-                                value={accessKey}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        accessKey: text.trim(),
-                                        saved: false
-                                    })
-                                }
-                                numberOfLines={1}
-                                style={
-                                    savedTheme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
-                                editable={!loading}
-                                placeholderTextColor="gray"
-                            />
-                        </>
-                    ) : (
-                        <>
-                            <Text
-                                style={{
-                                    color:
-                                        savedTheme === 'dark'
-                                            ? 'white'
-                                            : 'black'
-                                }}
-                            >
-                                Host
-                            </Text>
-                            <TextInput
-                                placeholder={'localhost'}
-                                value={host}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        host: text.trim(),
-                                        saved: false
-                                    })
-                                }
-                                numberOfLines={1}
-                                style={
-                                    savedTheme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
-                                editable={!loading}
-                                placeholderTextColor="gray"
-                            />
+                <Modal
+                    animationType="slide"
+                    transparent={true}
+                    visible={showLndHubModal || showSslModal}
+                >
+                    <View style={styles.centeredView}>
+                        <View style={styles.modal}>
+                            {showLndHubModal && (
+                                <>
+                                    <Text style={{ fontSize: 40 }}>
+                                        Warning
+                                    </Text>
+                                    <Text style={{ paddingTop: 20 }}>
+                                        With any instance of LNDHub the operator
+                                        can track your balances, transactions,
+                                        the IP addresses you connect with, and
+                                        even run off with your funds.
+                                    </Text>
+                                    <Text
+                                        style={{
+                                            paddingTop: 20,
+                                            paddingBottom: 20
+                                        }}
+                                    >
+                                        If you have a friend who you trust and
+                                        who runs an lnd node you may want to
+                                        consider asking them to set up an LNDHub
+                                        instance for you to connect to.
+                                    </Text>
+                                    <View style={styles.button}>
+                                        <Button
+                                            title="I understand, create my account"
+                                            onPress={() => {
+                                                createAccount(
+                                                    lndhubUrl,
+                                                    sslVerification
+                                                ).then((data: any) => {
+                                                    if (data) {
+                                                        this.setState({
+                                                            username:
+                                                                data.login,
+                                                            password:
+                                                                data.password,
+                                                            existingAccount: true
+                                                        });
+                                                    }
 
-                            <Text
-                                style={{
-                                    color:
-                                        savedTheme === 'dark'
-                                            ? 'white'
-                                            : 'black'
-                                }}
-                            >
-                                REST Port
-                            </Text>
-                            <TextInput
-                                keyboardType="numeric"
-                                placeholder={'443/8080'}
-                                value={port}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        port: text.trim(),
-                                        saved: false
-                                    })
-                                }
-                                numberOfLines={1}
-                                style={
-                                    savedTheme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
-                                editable={!loading}
-                                placeholderTextColor="gray"
-                            />
-
-                            <Text
-                                style={{
-                                    color:
-                                        savedTheme === 'dark'
-                                            ? 'white'
-                                            : 'black'
-                                }}
-                            >
-                                Macaroon (Hex format)
-                            </Text>
-                            <TextInput
-                                placeholder={'0A...'}
-                                value={macaroonHex}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        macaroonHex: text.trim(),
-                                        saved: false
-                                    })
-                                }
-                                numberOfLines={1}
-                                style={
-                                    savedTheme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
-                                editable={!loading}
-                                placeholderTextColor="gray"
-                            />
-                        </>
-                    )}
-
-                    {Platform.OS !== 'ios' && (
-                        <View>
-                            <Text
-                                style={{
-                                    color:
-                                        savedTheme === 'dark'
-                                            ? 'white'
-                                            : 'black'
-                                }}
-                            >
-                                Implementation
-                            </Text>
-                            <Picker
-                                selectedValue={implementation}
-                                onValueChange={(itemValue: string) =>
-                                    this.setState({
-                                        implementation: itemValue,
-                                        saved: false
-                                    })
-                                }
-                                style={
-                                    savedTheme === 'dark'
-                                        ? styles.pickerDark
-                                        : styles.picker
-                                }
-                            >
-                                <Picker.Item label="lnd" value="lnd" />
-                                <Picker.Item
-                                    label="c-lightning-REST"
-                                    value="c-lightning-REST"
-                                />
-                                <Picker.Item
-                                    label="Spark (c-lightning)"
-                                    value="spark"
-                                />
-                            </Picker>
-                        </View>
-                    )}
-
-                    {Platform.OS === 'ios' && (
-                        <View>
-                            <Text
-                                style={{
-                                    color:
-                                        savedTheme === 'dark'
-                                            ? 'white'
-                                            : 'black'
-                                }}
-                            >
-                                Node implementation
-                            </Text>
-                            <TouchableOpacity
-                                onPress={() =>
-                                    ActionSheetIOS.showActionSheetWithOptions(
-                                        {
-                                            options: [
-                                                'Cancel',
-                                                'lnd',
-                                                'c-lightning-REST',
-                                                'Spark (c-lightning)'
-                                            ],
-                                            cancelButtonIndex: 0
-                                        },
-                                        buttonIndex => {
-                                            if (buttonIndex === 1) {
-                                                this.setState({
-                                                    implementation: 'lnd',
-                                                    saved: false
+                                                    this.setState({
+                                                        showLndHubModal: false
+                                                    });
                                                 });
-                                            } else if (buttonIndex === 2) {
+                                            }}
+                                            style={styles.button}
+                                            buttonStyle={{
+                                                borderRadius: 30
+                                            }}
+                                        />
+                                    </View>
+                                    <View style={styles.button}>
+                                        <Button
+                                            title="Cancel"
+                                            onPress={() =>
                                                 this.setState({
-                                                    implementation:
-                                                        'c-lightning-REST',
-                                                    saved: false
-                                                });
-                                            } else if (buttonIndex === 3) {
-                                                this.setState({
-                                                    implementation: 'spark',
-                                                    saved: false
-                                                });
+                                                    showLndHubModal: false
+                                                })
                                             }
-                                        }
-                                    )
-                                }
-                            >
-                                <Text
-                                    style={{
-                                        color:
-                                            savedTheme === 'dark'
-                                                ? 'white'
-                                                : 'black'
-                                    }}
-                                >
-                                    {implementation}
-                                </Text>
-                            </TouchableOpacity>
+                                            style={styles.button}
+                                            buttonStyle={{
+                                                borderRadius: 30,
+                                                backgroundColor: 'grey'
+                                            }}
+                                        />
+                                    </View>
+                                </>
+                            )}
+                            {showSslModal && (
+                                <>
+                                    <Text style={{ fontSize: 40 }}>
+                                        Warning
+                                    </Text>
+                                    <Text style={{ paddingTop: 20 }}>
+                                        Opting not to use SSL Verification may
+                                        leave you vulnerable to a
+                                        man-in-the-middle attack. Do so at your
+                                        own discretion.
+                                    </Text>
+                                    <Text
+                                        style={{
+                                            paddingTop: 20,
+                                            paddingBottom: 20
+                                        }}
+                                    >
+                                        If you're not verifying your connection
+                                        with a VPN or Tor v3 hidden service
+                                        configuration, we strongly advise you
+                                        install your node's certificate on this
+                                        device.
+                                    </Text>
+                                    <View style={styles.button}>
+                                        <Button
+                                            title="Certificate Install Instructions"
+                                            icon={{
+                                                name: 'lock',
+                                                size: 25,
+                                                color: 'white'
+                                            }}
+                                            onPress={() => {
+                                                this.setState({
+                                                    showSslModal: false
+                                                });
+                                                navigation.navigate(
+                                                    'CertInstallInstructions'
+                                                );
+                                            }}
+                                            style={styles.button}
+                                            buttonStyle={{
+                                                backgroundColor: 'purple',
+                                                borderRadius: 30
+                                            }}
+                                            titleStyle={{
+                                                color: 'white'
+                                            }}
+                                        />
+                                    </View>
+                                    <View style={styles.button}>
+                                        <Button
+                                            title="I understand, save my node config"
+                                            onPress={() =>
+                                                this.saveNodeConfiguration()
+                                            }
+                                            style={styles.button}
+                                            buttonStyle={{
+                                                borderRadius: 30
+                                            }}
+                                        />
+                                    </View>
+                                    <View style={styles.button}>
+                                        <Button
+                                            title="Cancel"
+                                            onPress={() =>
+                                                this.setState({
+                                                    showSslModal: false
+                                                })
+                                            }
+                                            style={styles.button}
+                                            buttonStyle={{
+                                                borderRadius: 30,
+                                                backgroundColor: 'grey'
+                                            }}
+                                        />
+                                    </View>
+                                </>
+                            )}
                         </View>
+                    </View>
+                </Modal>
+
+                <View style={styles.form}>
+                    {createAccountError !== '' &&
+                        implementation === 'lndhub' &&
+                        !loading && (
+                            <Text style={{ color: 'red', marginBottom: 5 }}>
+                                {createAccountError}
+                            </Text>
+                        )}
+
+                    {createAccountSuccess !== '' &&
+                        implementation === 'lndhub' &&
+                        !loading && (
+                            <Text style={{ color: 'green', marginBottom: 5 }}>
+                                {createAccountSuccess}
+                            </Text>
+                        )}
+
+                    <NodeInterface />
+
+                    {implementation === 'spark' && <SparkForm />}
+                    {implementation === 'lndhub' && <LndHubForm />}
+                    {(implementation === 'lnd' ||
+                        implementation === 'c-lightning-REST') && (
+                        <DefaultForm />
                     )}
 
                     <View
@@ -641,43 +983,34 @@ export default class AddEditNode extends React.Component<
                                 })
                             }
                         />
-                        {!sslVerification && !saved && (
-                            <Text style={{ color: 'red' }}>
-                                WARNING: opting not to use SSL Verification may
-                                leave you vulnerable to a man-in-the-middle
-                                attack. Do so at your own discretion.
-                            </Text>
-                        )}
-                        {sslVerification && !saved && (
-                            <Text>
-                                To use SSL Verification with a self-signed
-                                certificate you must manually install the
-                                certificate to your phone. Press the button
-                                below for installation instructions.
-                            </Text>
-                        )}
                     </View>
                 </View>
 
-                {sslVerification && !saved && (
-                    <View style={{ paddingTop: 10 }}>
+                {!existingAccount && implementation === 'lndhub' && (
+                    <View style={styles.button}>
                         <Button
-                            title={'Certificate Install Instructions'}
-                            icon={{
-                                name: 'lock',
-                                size: 25,
-                                color: 'white'
+                            title="Create LNDHub account"
+                            onPress={() => {
+                                if (lndhubUrl === DEFAULT_LNDHUB) {
+                                    this.setState({ showLndHubModal: true });
+                                } else {
+                                    createAccount(
+                                        lndhubUrl,
+                                        sslVerification
+                                    ).then((data: any) => {
+                                        if (data) {
+                                            this.setState({
+                                                username: data.login,
+                                                password: data.password,
+                                                existingAccount: true
+                                            });
+                                        }
+                                    });
+                                }
                             }}
-                            onPress={() =>
-                                navigation.navigate('CertInstallInstructions')
-                            }
-                            style={styles.button}
                             buttonStyle={{
-                                backgroundColor: 'purple',
+                                backgroundColor: 'lightblue',
                                 borderRadius: 30
-                            }}
-                            titleStyle={{
-                                color: 'white'
                             }}
                         />
                     </View>
@@ -691,7 +1024,13 @@ export default class AddEditNode extends React.Component<
                             size: 25,
                             color: saved ? 'black' : 'white'
                         }}
-                        onPress={() => this.saveNodeConfiguration()}
+                        onPress={() => {
+                            if (!saved && !sslVerification) {
+                                this.setState({ showSslModal: true });
+                            } else {
+                                this.saveNodeConfiguration();
+                            }
+                        }}
                         style={styles.button}
                         buttonStyle={{
                             backgroundColor: saved
@@ -848,5 +1187,26 @@ const styles = StyleSheet.create({
         padding: 10,
         backgroundColor: 'rgba(92, 99,216, 1)',
         color: 'white'
+    },
+    modal: {
+        margin: 20,
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 35,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5
+    },
+    centeredView: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 22
     }
 });
