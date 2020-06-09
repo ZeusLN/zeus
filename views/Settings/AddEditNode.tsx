@@ -804,15 +804,15 @@ export default class AddEditNode extends React.Component<
                                         even run off with your funds.
                                     </Text>
                                     <Text
-                                        style={{ paddingTop: 20 }}
+                                        style={{
+                                            paddingTop: 20,
+                                            paddingBottom: 20
+                                        }}
                                     >
-                                        While we don't expect that of the admins
-                                        of this instance, the Blue Wallet team
-                                        (creators of LNDHub), if you have a
-                                        friend who you trust and who runs an lnd
-                                        node you may want to consider asking
-                                        them to set up an LNDHub instance for
-                                        you to connect to.
+                                        If you have a friend who you trust and
+                                        who runs an lnd node you may want to
+                                        consider asking them to set up an LNDHub
+                                        instance for you to connect to.
                                     </Text>
                                     <View style={styles.button}>
                                         <Button
@@ -865,21 +865,22 @@ export default class AddEditNode extends React.Component<
                                     <Text style={{ fontSize: 40 }}>
                                         Warning
                                     </Text>
-                                    <Text
-                                        style={{ paddingTop: 20 }}
-                                    >
+                                    <Text style={{ paddingTop: 20 }}>
                                         Opting not to use SSL Verification may
                                         leave you vulnerable to a
                                         man-in-the-middle attack. Do so at your
                                         own discretion.
                                     </Text>
                                     <Text
-                                        style={{ paddingTop: 20 }}
+                                        style={{
+                                            paddingTop: 20,
+                                            paddingBottom: 20
+                                        }}
                                     >
                                         If you're not verifying your connection
                                         with a VPN or Tor v3 hidden service
-                                        configuration, we highly advise you
-                                        install your node's certificate to this
+                                        configuration, we strongly advise you
+                                        install your node's certificate on this
                                         device.
                                     </Text>
                                     <View style={styles.button}>
@@ -989,9 +990,24 @@ export default class AddEditNode extends React.Component<
                     <View style={styles.button}>
                         <Button
                             title="Create LNDHub account"
-                            onPress={() =>
-                                this.setState({ showLndHubModal: true })
-                            }
+                            onPress={() => {
+                                if (lndhubUrl === DEFAULT_LNDHUB) {
+                                    this.setState({ showLndHubModal: true });
+                                } else {
+                                    createAccount(
+                                        lndhubUrl,
+                                        sslVerification
+                                    ).then((data: any) => {
+                                        if (data) {
+                                            this.setState({
+                                                username: data.login,
+                                                password: data.password,
+                                                existingAccount: true
+                                            });
+                                        }
+                                    });
+                                }
+                            }}
                             buttonStyle={{
                                 backgroundColor: 'lightblue',
                                 borderRadius: 30
