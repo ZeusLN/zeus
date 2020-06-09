@@ -373,12 +373,21 @@ export default class AddEditNode extends React.Component<
                         </Text>
                         <Picker
                             selectedValue={implementation}
-                            onValueChange={(itemValue: string) =>
-                                this.setState({
-                                    implementation: itemValue,
-                                    saved: false
-                                })
-                            }
+                            onValueChange={(itemValue: string) => {
+                                if (itemValue === 'lndhub') {
+                                    this.setState({
+                                        implementation: itemValue,
+                                        saved: false,
+                                        sslVerification: true
+                                    });
+                                } else {
+                                    this.setState({
+                                        implementation: itemValue,
+                                        saved: false,
+                                        sslVerification: false
+                                    });
+                                }
+                            }}
                             style={
                                 savedTheme === 'dark'
                                     ? styles.pickerDark
@@ -425,23 +434,27 @@ export default class AddEditNode extends React.Component<
                                         if (buttonIndex === 1) {
                                             this.setState({
                                                 implementation: 'lnd',
-                                                saved: false
+                                                saved: false,
+                                                sslVerification: false
                                             });
                                         } else if (buttonIndex === 2) {
                                             this.setState({
                                                 implementation:
                                                     'c-lightning-REST',
-                                                saved: false
+                                                saved: false,
+                                                sslVerification: false
                                             });
                                         } else if (buttonIndex === 3) {
                                             this.setState({
                                                 implementation: 'spark',
-                                                saved: false
+                                                saved: false,
+                                                sslVerification: false
                                             });
                                         } else if (buttonIndex === 4) {
                                             this.setState({
                                                 implementation: 'lndhub',
-                                                saved: false
+                                                saved: false,
+                                                sslVerification: true
                                             });
                                         }
                                     }
@@ -818,6 +831,10 @@ export default class AddEditNode extends React.Component<
                                                             existingAccount: true
                                                         });
                                                     }
+
+                                                    this.setState({
+                                                        showLndHubModal: false
+                                                    });
                                                 });
                                             }}
                                             style={styles.button}
@@ -908,7 +925,7 @@ export default class AddEditNode extends React.Component<
                                             title="Cancel"
                                             onPress={() =>
                                                 this.setState({
-                                                    showSslHubModal: false
+                                                    showSslModal: false
                                                 })
                                             }
                                             style={styles.button}
@@ -965,14 +982,6 @@ export default class AddEditNode extends React.Component<
                                 })
                             }
                         />
-                        {sslVerification && !saved && (
-                            <Text>
-                                To use SSL Verification with a self-signed
-                                certificate you must manually install the
-                                certificate to your phone. Press the button
-                                below for installation instructions.
-                            </Text>
-                        )}
                     </View>
                 </View>
 
@@ -986,30 +995,6 @@ export default class AddEditNode extends React.Component<
                             buttonStyle={{
                                 backgroundColor: 'lightblue',
                                 borderRadius: 30
-                            }}
-                        />
-                    </View>
-                )}
-
-                {sslVerification && !saved && (
-                    <View style={{ paddingTop: 10 }}>
-                        <Button
-                            title={'Certificate Install Instructions'}
-                            icon={{
-                                name: 'lock',
-                                size: 25,
-                                color: 'white'
-                            }}
-                            onPress={() =>
-                                navigation.navigate('CertInstallInstructions')
-                            }
-                            style={styles.button}
-                            buttonStyle={{
-                                backgroundColor: 'purple',
-                                borderRadius: 30
-                            }}
-                            titleStyle={{
-                                color: 'white'
                             }}
                         />
                     </View>
