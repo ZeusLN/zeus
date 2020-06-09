@@ -40,6 +40,21 @@ export default class TransactionsStore {
         );
     }
 
+    reset = () => {
+        this.loading = false;
+        this.error = false;
+        this.error_msg = null;
+        this.transactions = [];
+        this.transaction = null;
+        this.payment_route = null;
+        this.payment_preimage = null;
+        this.payment_hash = null;
+        this.payment_error = null;
+        this.onchain_address = '';
+        this.txid = null;
+        this.status = null;
+    };
+
     @action
     public getTransactions = () => {
         this.loading = true;
@@ -127,7 +142,13 @@ export default class TransactionsStore {
                 if (data.payment_error !== '') {
                     this.payment_error = data.payment_error;
                 }
-                this.status = data.status;
+                // lndhub
+                if (data.error) {
+                    this.error = true;
+                    this.error_msg = data.message;
+                } else {
+                    this.status = data.status || 'complete';
+                }
             })
             .catch((err: Error) => {
                 this.error = true;

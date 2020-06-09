@@ -6,6 +6,7 @@ import hashjs from 'hash.js';
 import Invoice from './../models/Invoice';
 import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
+import bolt11 from 'bolt11';
 
 export default class InvoicesStore {
     @observable paymentRequest: string;
@@ -48,6 +49,24 @@ export default class InvoicesStore {
         );
     }
 
+    reset = () => {
+        this.paymentRequest = '';
+        this.loading = false;
+        this.error = false;
+        this.error_msg = null;
+        this.getPayReqError = null;
+        this.invoices = [];
+        this.invoice = null;
+        this.pay_req = null;
+        this.payment_request = null;
+        this.creatingInvoice = false;
+        this.creatingInvoiceError = false;
+        this.invoicesCount = 0;
+        this.loadingFeeEstimate = false;
+        this.feeEstimate = null;
+        this.successProbability = null;
+    };
+
     @action
     public resetPaymentReq = () => {
         this.payment_request = '';
@@ -64,7 +83,7 @@ export default class InvoicesStore {
         this.loading = true;
         RESTUtils.getInvoices()
             .then((data: any) => {
-                this.invoices = data.payments || data.invoices;
+                this.invoices = data.payments || data.invoices || data;
                 this.invoices = this.invoices.map(
                     invoice => new Invoice(invoice)
                 );
@@ -176,6 +195,24 @@ export default class InvoicesStore {
                 this.pay_req = null;
                 this.getPayReqError = error.toString();
             });
+    };
+
+    @action
+    public getPayReqLocal = (paymentRequest: string) => {
+        this.pay_req = null;
+        this.paymentRequest = paymentRequest;
+        this.loading = true;
+        this.getPayReqError = '';
+
+        try {
+            const invoice = bolt11.decode(paymentRequest);
+            this.pay_req = new Invoice(invoice);
+            this.loading = false;
+            return this.pay_req;
+        } catch (err) {
+            this.loading = false;
+            this.getPayReqError = err.toString();
+        }
     };
 
     getRoutesError = () => {

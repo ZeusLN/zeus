@@ -4,6 +4,7 @@ import TransactionRequest from './../models/TransactionRequest';
 import Channel from './../models/Channel';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import CloseChannelRequest from './../models/CloseChannelRequest';
+import LoginRequest from './../models/LoginRequest';
 import ErrorUtils from './../utils/ErrorUtils';
 interface Headers {
     macaroon?: string;
@@ -65,14 +66,16 @@ class LND {
     request = (route: string, method: string, data?: any) => {
         const {
             host,
+            lndhubUrl,
             port,
             macaroonHex,
+            accessToken,
             sslVerification
         } = stores.settingsStore;
 
-        const headers = this.getHeaders(macaroonHex);
+        const headers = this.getHeaders(macaroonHex || accessToken);
         headers['Content-Type'] = 'application/json';
-        const url = this.getURL(host, port, route);
+        const url = this.getURL(host || lndhubUrl, port, route);
         return this.restReq(headers, url, method, data, sslVerification);
     };
 
@@ -115,6 +118,24 @@ class LND {
     setFees = (data: any) => this.postRequest('/v1/chanpolicy', data);
     getRoutes = (urlParams?: Array<string>) =>
         this.getRequest(`/v1/graph/routes/${urlParams[0]}/${urlParams[1]}`);
+
+    // LndHub
+    createAccount = (host: string, sslVerification: boolean) => {
+        const url: string = `https://${host}/create`;
+        return this.restReq(
+            {
+                'Access-Control-Allow-Origin': '*',
+                'Content-Type': 'application/json'
+            },
+            url,
+            'POST',
+            {
+                partnerid: 'bluewallet',
+                accounttype: 'common'
+            },
+            sslVerification
+        );
+    };
 }
 
 class CLightningREST extends LND {
@@ -194,6 +215,47 @@ class CLightningREST extends LND {
             ppm: data.fee_rate
         });
     getRoutes = () => this.getRequest('N/A');
+}
+
+class LndHub extends LND {
+    getHeaders = (accessToken: string) => {
+        if (accessToken) {
+            return {
+                Authorization: `Bearer ${accessToken}`,
+                'Access-Control-Allow-Origin': '*',
+                'Content-Type': 'application/json'
+            };
+        }
+        return {
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'application/json'
+        };
+    };
+
+    login = (data: LoginRequest) =>
+        this.postRequest('/auth?type=auth', {
+            login: data.login,
+            password: data.password
+        });
+
+    getPayments = () => this.getRequest('/gettxs');
+    getLightningBalance = () =>
+        this.getRequest('/balance').then(({ BTC }) => ({
+            balance: BTC.AvailableBalance
+        }));
+    getInvoices = () => this.getRequest('/getuserinvoices?limit=200');
+
+    createInvoice = (data: any) =>
+        this.postRequest('/addinvoice', {
+            amt: data.value,
+            memo: data.memo
+        });
+    getNewAddress = () => this.getRequest('/getbtc');
+    payLightningInvoice = (data: any) =>
+        this.postRequest('/payinvoice', {
+            invoice: data.payment_request,
+            amount: Number(data.amt && data.amt * 1000)
+        });
 }
 
 class Spark {
@@ -480,20 +542,21 @@ class RESTUtils {
     constructor() {
         this.spark = new Spark();
         this.clightningREST = new CLightningREST();
+        this.lndHub = new LndHub();
         this.lnd = new LND();
     }
 
     getClass = () => {
         const { implementation } = stores.settingsStore;
         switch (implementation) {
-            case 'lnd':
-                return this.lnd;
             case 'c-lightning-REST':
                 return this.clightningREST;
             case 'spark':
                 return this.spark;
+            case 'lndhub':
+                return this.lndHub;
             default:
-                throw new Error('no implementation "' + implementation + '"');
+                return this.lnd;
         }
     };
 
@@ -522,6 +585,9 @@ class RESTUtils {
     getFees = (...args) => this.call('getFees', args);
     setFees = (...args) => this.call('setFees', args);
     getRoutes = (...args) => this.call('getRoutes', args);
+    // lndhub
+    createAccount = (...args) => this.call('createAccount', args);
+    login = (...args) => this.call('login', args);
 }
 
 const restUtils = new RESTUtils();

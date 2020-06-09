@@ -88,7 +88,23 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     };
 
     async getSettingsAndRefresh() {
-        const { SettingsStore } = this.props;
+        const {
+            SettingsStore,
+            NodeInfoStore,
+            BalanceStore,
+            PaymentsStore,
+            InvoicesStore,
+            TransactionsStore,
+            ChannelsStore
+        } = this.props;
+
+        NodeInfoStore.reset();
+        BalanceStore.reset();
+        PaymentsStore.reset();
+        InvoicesStore.reset();
+        TransactionsStore.reset();
+        ChannelsStore.reset();
+
         await SettingsStore.getSettings().then(() => {
             this.refresh();
         });
@@ -106,17 +122,31 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             SettingsStore,
             FiatStore
         } = this.props;
-        const { settings } = SettingsStore;
+        const {
+            settings,
+            implementation,
+            username,
+            password,
+            login
+        } = SettingsStore;
         const { fiat } = settings;
 
-        NodeInfoStore.getNodeInfo();
-        BalanceStore.getBlockchainBalance();
-        BalanceStore.getLightningBalance();
-        PaymentsStore.getPayments();
-        InvoicesStore.getInvoices();
-        TransactionsStore.getTransactions();
-        ChannelsStore.getChannels();
-        FeeStore.getFees();
+        if (implementation === 'lndhub') {
+            login({ login: username, password }).then(() => {
+                BalanceStore.getLightningBalance();
+                PaymentsStore.getPayments();
+                InvoicesStore.getInvoices();
+            });
+        } else {
+            NodeInfoStore.getNodeInfo();
+            BalanceStore.getBlockchainBalance();
+            BalanceStore.getLightningBalance();
+            PaymentsStore.getPayments();
+            InvoicesStore.getInvoices();
+            TransactionsStore.getTransactions();
+            ChannelsStore.getChannels();
+            FeeStore.getFees();
+        }
 
         if (!!fiat && fiat !== 'Disabled') {
             FiatStore.getFiatRates();
@@ -152,7 +182,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { payments } = PaymentsStore;
         const { invoices, invoicesCount } = InvoicesStore;
         const { channels } = ChannelsStore;
-        const { settings } = SettingsStore;
+        const { settings, implementation } = SettingsStore;
         const { theme, lurkerMode } = settings;
 
         const paymentsCount = (payments && payments.length) || 0;
@@ -226,6 +256,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             { element: channelsButton }
         ];
 
+        const lndHubButtons = [
+            { element: paymentsButton },
+            { element: invoicesButton }
+        ];
+
+        const selectedButtons =
+            implementation === 'lndhub' ? lndHubButtons : buttons;
+
         return (
             <View style={{ flex: 1 }}>
                 <MainPane
@@ -240,7 +278,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     <ButtonGroup
                         onPress={this.updateIndex}
                         selectedIndex={selectedIndex}
-                        buttons={buttons}
+                        buttons={selectedButtons}
                         containerStyle={{
                             height: 50,
                             marginTop: 0,
@@ -259,7 +297,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     <ButtonGroup
                         onPress={this.updateIndex}
                         selectedIndex={selectedIndex}
-                        buttons={buttons}
+                        buttons={selectedButtons}
                         containerStyle={{
                             height: 50,
                             marginTop: 0,

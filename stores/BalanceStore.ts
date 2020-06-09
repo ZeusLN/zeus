@@ -9,7 +9,6 @@ export default class BalanceStore {
     @observable public unconfirmedBlockchainBalance: number | string = 0;
     @observable public loading: boolean = false;
     @observable public error: boolean = false;
-    @observable public transactions: Array<Transaction> = [];
     @observable public pendingOpenBalance: number | string = 0;
     @observable public lightningBalance: number | string = 0;
     settingsStore: SettingsStore;
@@ -27,6 +26,12 @@ export default class BalanceStore {
             }
         );
     }
+
+    reset = () => {
+        this.resetLightningBalance();
+        this.resetBlockchainBalance();
+        this.error = false;
+    };
 
     resetBlockchainBalance = () => {
         this.unconfirmedBlockchainBalance = 0;
