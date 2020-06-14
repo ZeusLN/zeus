@@ -17,6 +17,12 @@ export default class PaymentsStore {
         this.channelsStore = channelsStore;
     }
 
+    reset = () => {
+        this.resetPayments();
+        this.error = false;
+        this.error_msg = '';
+    };
+
     resetPayments = () => {
         this.payments = [];
         this.loading = false;
@@ -25,24 +31,17 @@ export default class PaymentsStore {
     @action
     public getPayments = () => {
         this.loading = true;
-        RESTUtils.getPayments(this.settingsStore)
-            .then((response: any) => {
-                const status = response.info().status;
-                if (status == 200) {
-                    // handle success
-                    const data = response.json();
-                    const payments = data.transaction || data.payments;
-                    this.payments = payments
-                        .slice()
-                        .reverse()
-                        .map(
-                            (payment: any) =>
-                                new Payment(payment, this.channelsStore.nodes)
-                        );
-                    this.loading = false;
-                } else {
-                    this.resetPayments();
-                }
+        RESTUtils.getPayments()
+            .then((data: any) => {
+                const payments = data.transaction || data.payments || data;
+                this.payments = payments
+                    .slice()
+                    .reverse()
+                    .map(
+                        (payment: any) =>
+                            new Payment(payment, this.channelsStore.nodes)
+                    );
+                this.loading = false;
             })
             .catch(() => {
                 this.resetPayments();

@@ -68,7 +68,7 @@ export default class LnurlPaySuccess extends React.Component<
                                         color || theme === 'dark'
                                             ? 'white'
                                             : 'black',
-                                    fontSize: 40
+                                    fontSize: 18
                                 }}
                             >
                                 {description}: {url}
@@ -91,7 +91,7 @@ export default class LnurlPaySuccess extends React.Component<
                                         color || theme === 'dark'
                                             ? 'white'
                                             : 'black',
-                                    fontSize: 40
+                                    fontSize: 18
                                 }}
                             >
                                 {description}:{' '}
@@ -102,7 +102,7 @@ export default class LnurlPaySuccess extends React.Component<
                                         color || theme === 'dark'
                                             ? 'white'
                                             : 'black',
-                                    fontSize: 40
+                                    fontSize: 18
                                 }}
                             >
                                 {plaintext}

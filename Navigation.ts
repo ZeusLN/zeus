@@ -25,6 +25,7 @@ import Lockscreen from './views/Lockscreen';
 import Settings from './views/Settings';
 import AddEditNode from './views/Settings/AddEditNode';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
+import About from './views/Settings/About';
 
 import Onboarding from './views/Onboarding';
 
@@ -52,6 +53,9 @@ const AppScenes = {
     },
     CertInstallInstructions: {
         screen: CertInstallInstructions
+    },
+    About: {
+        screen: About
     },
     Transaction: {
         screen: Transaction

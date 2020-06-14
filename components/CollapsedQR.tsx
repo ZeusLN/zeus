@@ -8,6 +8,7 @@ interface CollapsedQRProps {
     theme: any;
     value: string;
     copyText?: string;
+    hideText?: boolean;
 }
 
 interface CollapsedQRState {
@@ -30,15 +31,19 @@ export default class CollapsedQR extends React.Component<
 
     render() {
         const { collapsed } = this.state;
-        const { theme, value, copyText } = this.props;
+        const { theme, value, copyText, hideText } = this.props;
 
         return (
             <React.Fragment>
-                <Text
-                    style={theme === 'dark' ? styles.valueDark : styles.value}
-                >
-                    {value}
-                </Text>
+                {!hideText && (
+                    <Text
+                        style={
+                            theme === 'dark' ? styles.valueDark : styles.value
+                        }
+                    >
+                        {value}
+                    </Text>
+                )}
                 {!collapsed && (
                     <View style={styles.qrPadding}>
                         <QRCode value={value} size={200} />

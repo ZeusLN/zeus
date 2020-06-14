@@ -1,11 +1,13 @@
 import stores from '../stores/Stores';
 import AddressUtils from './../utils/AddressUtils';
+import LndConnectUtils from './../utils/LndConnectUtils';
 import { getParams as getlnurlParams, findlnurl } from 'js-lnurl';
 
-const { nodeInfoStore, invoicesStore } = stores;
+const { nodeInfoStore, invoicesStore, settingsStore } = stores;
 
 export default async function(data: string): Promise<any> {
     const { testnet } = nodeInfoStore;
+    const { implementation } = settingsStore;
     const { value, amount } = AddressUtils.processSendAddress(data);
 
     if (AddressUtils.isValidBitcoinAddress(value, testnet)) {
@@ -26,8 +28,21 @@ export default async function(data: string): Promise<any> {
             }
         ];
     } else if (AddressUtils.isValidLightningPaymentRequest(value)) {
-        invoicesStore.getPayReq(value);
+        if (implementation === 'lndhub') {
+            invoicesStore.getPayReqLocal(value);
+        } else {
+            invoicesStore.getPayReq(value);
+        }
         return ['PaymentRequest', {}];
+    } else if (value.includes('lndconnect')) {
+        const node = LndConnectUtils.processLndConnectUrl(value);
+        return [
+            'AddEditNode',
+            {
+                node,
+                newEntry: true
+            }
+        ];
     } else if (findlnurl(value) !== null) {
         const raw: string = findlnurl(value) || '';
         return getlnurlParams(raw).then((params: any) => {
@@ -51,7 +66,9 @@ export default async function(data: string): Promise<any> {
                     break;
                 default:
                     throw new Error(
-                        params.reason || `Unsupported lnurl type: ${params.tag}`
+                        params.status === 'ERROR'
+                            ? `${params.domain} says: ${params.reason}`
+                            : `Unsupported lnurl type: ${params.tag}`
                     );
             }
         });
