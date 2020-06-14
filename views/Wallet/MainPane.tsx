@@ -52,7 +52,7 @@ export default class MainPane extends React.Component<
             lightningBalance,
             pendingOpenBalance
         } = BalanceStore;
-        const { host, settings } = SettingsStore;
+        const { host, settings, implementation } = SettingsStore;
         const { theme, lurkerMode } = settings;
         const loading = NodeInfoStore.loading || BalanceStore.loading;
 
@@ -61,8 +61,8 @@ export default class MainPane extends React.Component<
         const combinedBalanceValue =
             Number(totalBlockchainBalance) + Number(lightningBalance);
 
-        const BalanceView = () => (
-            <React.Fragment>
+        const LightningBalance = () => (
+            <>
                 <Text style={styles.lightningBalance}>
                     {units &&
                         (lurkerMode
@@ -87,6 +87,12 @@ export default class MainPane extends React.Component<
                         pending open
                     </Text>
                 ) : null}
+            </>
+        );
+
+        const BalanceView = () => (
+            <React.Fragment>
+                <LightningBalance />
                 <Text style={styles.blockchainBalance}>
                     {units &&
                         (lurkerMode
@@ -165,9 +171,36 @@ export default class MainPane extends React.Component<
             infoValue = 'Regtest';
         }
 
+        const DefaultBalance = () => (
+            <>
+                <TouchableOpacity
+                    onPress={() => changeUnits()}
+                    onLongPress={() =>
+                        this.setState({
+                            combinedBalance: !combinedBalance
+                        })
+                    }
+                >
+                    {combinedBalance ? (
+                        <BalanceViewCombined />
+                    ) : (
+                        <BalanceView />
+                    )}
+                </TouchableOpacity>
+            </>
+        );
+
+        const LndHubBalance = () => (
+            <>
+                <TouchableOpacity onPress={() => changeUnits()}>
+                    <LightningBalance />
+                </TouchableOpacity>
+            </>
+        );
+
         const NodeInfoBadge = () => (
             <View style={styles.nodeInfo}>
-                {host && host.includes('.onion') && (
+                {host && host.includes('.onion') ? (
                     <TouchableOpacity
                         onPress={() => navigation.navigate('NodeInfo')}
                     >
@@ -176,8 +209,8 @@ export default class MainPane extends React.Component<
                             source={TorIcon}
                         />
                     </TouchableOpacity>
-                )}
-                {host && !host.includes('.onion') && (
+                ) : null}
+                {host && !host.includes('.onion') ? (
                     <Badge
                         onPress={() => navigation.navigate('NodeInfo')}
                         value={infoValue}
@@ -187,7 +220,7 @@ export default class MainPane extends React.Component<
                             marginLeft: 5
                         }}
                     />
-                )}
+                ) : null}
             </View>
         );
 
@@ -238,20 +271,11 @@ export default class MainPane extends React.Component<
                                 borderBottomWidth: 0
                             }}
                         />
-                        <TouchableOpacity
-                            onPress={() => changeUnits()}
-                            onLongPress={() =>
-                                this.setState({
-                                    combinedBalance: !combinedBalance
-                                })
-                            }
-                        >
-                            {combinedBalance ? (
-                                <BalanceViewCombined />
-                            ) : (
-                                <BalanceView />
-                            )}
-                        </TouchableOpacity>
+                        {implementation === 'lndhub' ? (
+                            <LndHubBalance />
+                        ) : (
+                            <DefaultBalance />
+                        )}
                         <View style={styles.buttons}>
                             <Button
                                 title="Send"

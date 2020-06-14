@@ -8,7 +8,6 @@ import com.facebook.react.bridge.JavaScriptExecutorFactory;
 import com.facebook.react.shell.MainReactPackage;
 
 import com.facebook.react.ReactApplication;
-import io.realm.react.RealmReactPackage;
 import com.BV.LinearGradient.LinearGradientPackage;
 import com.wix.RNCameraKit.RNCameraKitPackage;
 import com.swmansion.gesturehandler.react.RNGestureHandlerPackage;

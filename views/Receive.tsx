@@ -88,7 +88,12 @@ export default class Receive extends React.Component<
             creatingInvoiceError,
             error_msg
         } = InvoicesStore;
-        const { settings, loading, chainAddress } = SettingsStore;
+        const {
+            settings,
+            loading,
+            chainAddress,
+            implementation
+        } = SettingsStore;
         const { theme } = settings;
         const address = chainAddress;
 
@@ -157,6 +162,7 @@ export default class Receive extends React.Component<
                             {!!payment_request && (
                                 <Text style={{ color: 'green', padding: 20 }}>
                                     Successfully created invoice
+                                    {!!lnurl && ` and sent to ${lnurl.domain}`}
                                 </Text>
                             )}
                             {creatingInvoiceError && (
@@ -251,35 +257,45 @@ export default class Receive extends React.Component<
                                 placeholderTextColor="gray"
                             />
 
-                            <Text
-                                style={{
-                                    color: theme === 'dark' ? 'white' : 'black'
-                                }}
-                            >
-                                Expiration (in seconds)
-                            </Text>
-                            <TextInput
-                                keyboardType="numeric"
-                                placeholder={'3600 (one hour)'}
-                                value={expiry}
-                                onChangeText={(text: string) =>
-                                    this.setState({ expiry: text })
-                                }
-                                numberOfLines={1}
-                                editable={true}
-                                style={
-                                    theme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
-                                placeholderTextColor="gray"
-                            />
+                            {implementation !== 'lndhub' && (
+                                <>
+                                    <Text
+                                        style={{
+                                            color:
+                                                theme === 'dark'
+                                                    ? 'white'
+                                                    : 'black'
+                                        }}
+                                    >
+                                        Expiration (in seconds)
+                                    </Text>
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        placeholder={'3600 (one hour)'}
+                                        value={expiry}
+                                        onChangeText={(text: string) =>
+                                            this.setState({ expiry: text })
+                                        }
+                                        numberOfLines={1}
+                                        editable={true}
+                                        style={
+                                            theme === 'dark'
+                                                ? styles.textInputDark
+                                                : styles.textInput
+                                        }
+                                        placeholderTextColor="gray"
+                                    />
+                                </>
+                            )}
 
                             <View style={styles.button}>
                                 <Button
-                                    title={`Create${
-                                        lnurl ? ' and submit ' : ' '
-                                    }invoice`}
+                                    title={
+                                        'Create invoice' +
+                                        (!!lnurl
+                                            ? ` and submit to ${lnurl.domain}`
+                                            : '')
+                                    }
                                     icon={{
                                         name: 'create',
                                         size: 25,
@@ -327,21 +343,27 @@ export default class Receive extends React.Component<
                                     theme={theme}
                                 />
                             )}
-                            <View style={styles.button}>
-                                <Button
-                                    title="Get New Address"
-                                    icon={{
-                                        name: 'fiber-new',
-                                        size: 25,
-                                        color: 'white'
-                                    }}
-                                    onPress={() => this.getNewAddress()}
-                                    buttonStyle={{
-                                        backgroundColor: 'orange',
-                                        borderRadius: 30
-                                    }}
-                                />
-                            </View>
+                            {!(implementation === 'lndhub' && address) && (
+                                <View style={styles.button}>
+                                    <Button
+                                        title={
+                                            implementation === 'lndhub'
+                                                ? 'Get Address'
+                                                : 'Get New Address'
+                                        }
+                                        icon={{
+                                            name: 'fiber-new',
+                                            size: 25,
+                                            color: 'white'
+                                        }}
+                                        onPress={() => this.getNewAddress()}
+                                        buttonStyle={{
+                                            backgroundColor: 'orange',
+                                            borderRadius: 30
+                                        }}
+                                    />
+                                </View>
+                            )}
                         </React.Fragment>
                     )}
                 </ScrollView>

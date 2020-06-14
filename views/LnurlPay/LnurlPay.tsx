@@ -3,7 +3,8 @@ import RNFetchBlob from 'rn-fetch-blob';
 import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
-import { getDomain } from 'js-lnurl';
+import querystring from 'querystring-es3';
+import url from 'url';
 import InvoicesStore from './../../stores/InvoicesStore';
 import LnurlPayStore from './../../stores/LnurlPayStore';
 import SettingsStore from './../../stores/SettingsStore';
@@ -38,22 +39,22 @@ export default class LnurlPay extends React.Component<
                 domain: ''
             };
 
-            Alert.alert(`Invalid lnurl params!`, err.message, [], {
-                onDismiss: () => {
-                    props.navigation.navigate('Wallet');
-                }
-            });
+            Alert.alert(
+                `Invalid lnurl params!`,
+                err.message,
+                [{ text: 'OK', onPress: () => void 0 }],
+                { cancelable: false }
+            );
         }
     }
 
     stateFromProps(props: LnurlPayProps) {
         const { navigation } = props;
         const lnurl = navigation.getParam('lnurlParams');
-        const domain = getDomain(lnurl.callback);
 
         return {
             amount: Math.floor(lnurl.minSendable / 1000).toString(),
-            domain
+            domain: lnurl.domain
         };
     }
 
@@ -64,76 +65,73 @@ export default class LnurlPay extends React.Component<
             LnurlPayStore,
             SettingsStore
         } = this.props;
-        const { sslVerification } = SettingsStore;
         const { domain, amount } = this.state;
         const lnurl = navigation.getParam('lnurlParams');
-        const amountParam = parseFloat(amount) * 1000;
+        const u = url.parse(lnurl.callback);
+        const qs = querystring.parse(u.query);
+        qs.amount = parseInt(parseFloat(amount) * 1000);
+        u.search = querystring.stringify(qs);
+        u.query = querystring.stringify(qs);
 
-        RNFetchBlob.config({
-            trusty: !sslVerification || true
-        })
-            .fetch('get', `${lnurl.callback}?amount=${amountParam}`, null)
+        RNFetchBlob.fetch('get', url.format(u), null)
+            .then((response: any) => {
+                try {
+                    const data = response.json();
+                    return data;
+                } catch (err) {
+                    return { status: 'ERROR', reason: response.text() };
+                }
+            })
             .catch((err: any) => ({
                 status: 'ERROR',
-                reason: err.response_data
+                reason: err.message
             }))
-            .then(async (response: any) => {
-                const status = response.info().status;
-                if (status == 200) {
-                    const data = response.json();
+            .then((data: any) => {
+                if (data.status === 'ERROR') {
+                    Alert.alert(
+                        `[error] ${domain} says:`,
+                        data.reason,
+                        [{ text: 'OK', onPress: () => void 0 }],
+                        { cancelable: false }
+                    );
+                    return;
+                }
 
-                    if (data.status === 'ERROR') {
-                        Alert.alert(data.reason);
+                const pr = data.pr;
+                const successAction = data.successAction || {
+                    tag: 'noop'
+                };
+
+                InvoicesStore.getPayReq(pr, lnurl.metadata).then(() => {
+                    if (!!InvoicesStore.getPayReqError) {
+                        Alert.alert(
+                            `Got an invalid invoice!`,
+                            InvoicesStore.getPayReqError,
+                            [{ text: 'OK', onPress: () => void 0 }],
+                            { cancelable: false }
+                        );
                         return;
                     }
 
-                    const pr = data.pr;
-                    const successAction = data.successAction || {
-                        tag: 'noop'
-                    };
+                    const payment_hash: string =
+                        (InvoicesStore.pay_req &&
+                            InvoicesStore.pay_req.payment_hash) ||
+                        '';
+                    const description_hash: string =
+                        (InvoicesStore.pay_req &&
+                            InvoicesStore.pay_req.description_hash) ||
+                        '';
 
-                    InvoicesStore.getPayReq(pr, lnurl.metadata).then(() => {
-                        if (!!InvoicesStore.getPayReqError) {
-                            Alert.alert(
-                                `Got an invalid invoice!`,
-                                InvoicesStore.getPayReqError,
-                                [],
-                                {
-                                    onDismiss: () => {
-                                        navigation.navigate('Wallet');
-                                    }
-                                }
-                            );
-                            return;
-                        }
-
-                        const payment_hash: string =
-                            (InvoicesStore.pay_req &&
-                                InvoicesStore.pay_req.payment_hash) ||
-                            '';
-                        const description_hash: string =
-                            (InvoicesStore.pay_req &&
-                                InvoicesStore.pay_req.description_hash) ||
-                            '';
-                        LnurlPayStore.keep(
-                            payment_hash,
-                            domain,
-                            lnurl.lnurlText,
-                            {
-                                metadata: lnurl.metadata,
-                                descriptionHash: description_hash
-                            },
-                            successAction
-                        );
-                        navigation.navigate('PaymentRequest');
-                    });
-                } else {
-                    const error = response.json();
-                    return {
-                        status: 'ERROR',
-                        reason: error.response_data
-                    };
-                }
+                    LnurlPayStore.keep(
+                        payment_hash,
+                        domain,
+                        lnurl.lnurlText,
+                        lnurl.metadata,
+                        description_hash,
+                        successAction
+                    );
+                    navigation.navigate('PaymentRequest');
+                });
             });
     }
 
