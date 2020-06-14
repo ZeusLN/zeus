@@ -94,11 +94,9 @@ export default class FeeTable extends React.Component<
                 df.columns.map((columnName: number, index: number) => (
                     <DataTable.Cell
                         style={{
-                            backgroundColor:
-                                theme === 'dark' ? 'black' : 'white',
+                            backgroundColor: 'white',
                             minWidth: 53,
-                            height: 53,
-                            color: theme === 'dark' ? 'white' : 'black'
+                            height: 53
                         }}
                         key={`item-${index}`}
                     >
