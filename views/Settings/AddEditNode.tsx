@@ -504,247 +504,6 @@ export default class AddEditNode extends React.Component<
             </>
         );
 
-        const SparkForm = () => (
-            <>
-                <Text
-                    style={{
-                        color: savedTheme === 'dark' ? 'white' : 'black'
-                    }}
-                >
-                    Host
-                </Text>
-                <TextInput
-                    placeholder={'http://192.168.1.2:9737'}
-                    value={url}
-                    onChangeText={(text: string) =>
-                        this.setState({
-                            url: text.trim(),
-                            saved: false
-                        })
-                    }
-                    numberOfLines={1}
-                    style={
-                        savedTheme === 'dark'
-                            ? styles.textInputDark
-                            : styles.textInput
-                    }
-                    editable={!loading}
-                    placeholderTextColor="gray"
-                />
-
-                <Text
-                    style={{
-                        color: savedTheme === 'dark' ? 'white' : 'black'
-                    }}
-                >
-                    Access Key
-                </Text>
-                <TextInput
-                    placeholder={'...'}
-                    value={accessKey}
-                    onChangeText={(text: string) =>
-                        this.setState({
-                            accessKey: text.trim(),
-                            saved: false
-                        })
-                    }
-                    numberOfLines={1}
-                    style={
-                        savedTheme === 'dark'
-                            ? styles.textInputDark
-                            : styles.textInput
-                    }
-                    editable={!loading}
-                    placeholderTextColor="gray"
-                />
-            </>
-        );
-
-        const LndHubForm = () => (
-            <>
-                <Text
-                    style={{
-                        color: savedTheme === 'dark' ? 'white' : 'black'
-                    }}
-                >
-                    Host
-                </Text>
-                <TextInput
-                    placeholder={DEFAULT_LNDHUB}
-                    value={lndhubUrl}
-                    onChangeText={(text: string) =>
-                        this.setState({
-                            lndhubUrl: text.trim(),
-                            saved: false
-                        })
-                    }
-                    numberOfLines={1}
-                    style={
-                        savedTheme === 'dark'
-                            ? styles.textInputDark
-                            : styles.textInput
-                    }
-                    editable={!loading}
-                    placeholderTextColor="gray"
-                />
-
-                <View
-                    style={{
-                        marginTop: 5
-                    }}
-                >
-                    <CheckBox
-                        title="Existing Account"
-                        checked={existingAccount}
-                        onPress={() =>
-                            this.setState({
-                                existingAccount: !existingAccount
-                            })
-                        }
-                    />
-                </View>
-
-                {existingAccount && (
-                    <>
-                        <Text
-                            style={{
-                                color: savedTheme === 'dark' ? 'white' : 'black'
-                            }}
-                        >
-                            Username
-                        </Text>
-                        <TextInput
-                            placeholder={'...'}
-                            value={username}
-                            onChangeText={(text: string) =>
-                                this.setState({
-                                    username: text.trim(),
-                                    saved: false
-                                })
-                            }
-                            numberOfLines={1}
-                            style={
-                                savedTheme === 'dark'
-                                    ? styles.textInputDark
-                                    : styles.textInput
-                            }
-                            editable={!loading}
-                            placeholderTextColor="gray"
-                        />
-
-                        <Text
-                            style={{
-                                color: savedTheme === 'dark' ? 'white' : 'black'
-                            }}
-                        >
-                            Password
-                        </Text>
-                        <TextInput
-                            placeholder={'...'}
-                            value={password}
-                            onChangeText={(text: string) =>
-                                this.setState({
-                                    password: text.trim(),
-                                    saved: false
-                                })
-                            }
-                            numberOfLines={1}
-                            style={
-                                savedTheme === 'dark'
-                                    ? styles.textInputDark
-                                    : styles.textInput
-                            }
-                            editable={!loading}
-                            placeholderTextColor="gray"
-                        />
-                    </>
-                )}
-            </>
-        );
-
-        const DefaultForm = () => (
-            <>
-                <Text
-                    style={{
-                        color: savedTheme === 'dark' ? 'white' : 'black'
-                    }}
-                >
-                    Host
-                </Text>
-                <TextInput
-                    placeholder={'localhost'}
-                    value={host}
-                    onChangeText={(text: string) =>
-                        this.setState({
-                            host: text.trim(),
-                            saved: false
-                        })
-                    }
-                    numberOfLines={1}
-                    style={
-                        savedTheme === 'dark'
-                            ? styles.textInputDark
-                            : styles.textInput
-                    }
-                    editable={!loading}
-                    placeholderTextColor="gray"
-                />
-
-                <Text
-                    style={{
-                        color: savedTheme === 'dark' ? 'white' : 'black'
-                    }}
-                >
-                    REST Port
-                </Text>
-                <TextInput
-                    keyboardType="numeric"
-                    placeholder={'443/8080'}
-                    value={port}
-                    onChangeText={(text: string) =>
-                        this.setState({
-                            port: text.trim(),
-                            saved: false
-                        })
-                    }
-                    numberOfLines={1}
-                    style={
-                        savedTheme === 'dark'
-                            ? styles.textInputDark
-                            : styles.textInput
-                    }
-                    editable={!loading}
-                    placeholderTextColor="gray"
-                />
-
-                <Text
-                    style={{
-                        color: savedTheme === 'dark' ? 'white' : 'black'
-                    }}
-                >
-                    Macaroon (Hex format)
-                </Text>
-                <TextInput
-                    placeholder={'0A...'}
-                    value={macaroonHex}
-                    onChangeText={(text: string) =>
-                        this.setState({
-                            macaroonHex: text.trim(),
-                            saved: false
-                        })
-                    }
-                    numberOfLines={1}
-                    style={
-                        savedTheme === 'dark'
-                            ? styles.textInputDark
-                            : styles.textInput
-                    }
-                    editable={!loading}
-                    placeholderTextColor="gray"
-                />
-            </>
-        );
-
         return (
             <ScrollView
                 style={
@@ -963,11 +722,240 @@ export default class AddEditNode extends React.Component<
 
                     <NodeInterface />
 
-                    {implementation === 'spark' && <SparkForm />}
-                    {implementation === 'lndhub' && <LndHubForm />}
+                    {implementation === 'spark' && <>
+                        <Text
+                            style={{
+                                color: savedTheme === 'dark' ? 'white' : 'black'
+                            }}
+                        >
+                            Host
+                        </Text>
+                        <TextInput
+                            placeholder={'http://192.168.1.2:9737'}
+                            value={url}
+                            onChangeText={(text: string) =>
+                                this.setState({
+                                    url: text.trim(),
+                                    saved: false
+                                })
+                            }
+                            numberOfLines={1}
+                            style={
+                                savedTheme === 'dark'
+                                    ? styles.textInputDark
+                                    : styles.textInput
+                            }
+                            editable={!loading}
+                            placeholderTextColor="gray"
+                        />
+
+                        <Text
+                            style={{
+                                color: savedTheme === 'dark' ? 'white' : 'black'
+                            }}
+                        >
+                            Access Key
+                        </Text>
+                        <TextInput
+                            placeholder={'...'}
+                            value={accessKey}
+                            onChangeText={(text: string) =>
+                                this.setState({
+                                    accessKey: text.trim(),
+                                    saved: false
+                                })
+                            }
+                            numberOfLines={1}
+                            style={
+                                savedTheme === 'dark'
+                                    ? styles.textInputDark
+                                    : styles.textInput
+                            }
+                            editable={!loading}
+                            placeholderTextColor="gray"
+                        />
+                    </>}
+                    {implementation === 'lndhub' && <>
+                        <Text
+                            style={{
+                                color: savedTheme === 'dark' ? 'white' : 'black'
+                            }}
+                        >
+                            Host
+                        </Text>
+                        <TextInput
+                            placeholder={DEFAULT_LNDHUB}
+                            value={lndhubUrl}
+                            onChangeText={(text: string) =>
+                                this.setState({
+                                    lndhubUrl: text.trim(),
+                                    saved: false
+                                })
+                            }
+                            numberOfLines={1}
+                            style={
+                                savedTheme === 'dark'
+                                    ? styles.textInputDark
+                                    : styles.textInput
+                            }
+                            editable={!loading}
+                            placeholderTextColor="gray"
+                        />
+
+                        <View
+                            style={{
+                                marginTop: 5
+                            }}
+                        >
+                            <CheckBox
+                                title="Existing Account"
+                                checked={existingAccount}
+                                onPress={() =>
+                                    this.setState({
+                                        existingAccount: !existingAccount
+                                    })
+                                }
+                            />
+                        </View>
+
+                        {existingAccount && (
+                            <>
+                                <Text
+                                    style={{
+                                        color: savedTheme === 'dark' ? 'white' : 'black'
+                                    }}
+                                >
+                                    Username
+                                </Text>
+                                <TextInput
+                                    placeholder={'...'}
+                                    value={username}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            username: text.trim(),
+                                            saved: false
+                                        })
+                                    }
+                                    numberOfLines={1}
+                                    style={
+                                        savedTheme === 'dark'
+                                            ? styles.textInputDark
+                                            : styles.textInput
+                                    }
+                                    editable={!loading}
+                                    placeholderTextColor="gray"
+                                />
+
+                                <Text
+                                    style={{
+                                        color: savedTheme === 'dark' ? 'white' : 'black'
+                                    }}
+                                >
+                                    Password
+                                </Text>
+                                <TextInput
+                                    placeholder={'...'}
+                                    value={password}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            password: text.trim(),
+                                            saved: false
+                                        })
+                                    }
+                                    numberOfLines={1}
+                                    style={
+                                        savedTheme === 'dark'
+                                            ? styles.textInputDark
+                                            : styles.textInput
+                                    }
+                                    editable={!loading}
+                                    placeholderTextColor="gray"
+                                />
+                            </>
+                        )}
+                    </>}
                     {(implementation === 'lnd' ||
                         implementation === 'c-lightning-REST') && (
-                        <DefaultForm />
+                          <>
+                              <Text
+                                  style={{
+                                      color: savedTheme === 'dark' ? 'white' : 'black'
+                                  }}
+                              >
+                                  Host
+                              </Text>
+                              <TextInput
+                                  placeholder={'localhost'}
+                                  value={host}
+                                  onChangeText={(text: string) =>
+                                      this.setState({
+                                          host: text.trim(),
+                                          saved: false
+                                      })
+                                  }
+                                  numberOfLines={1}
+                                  style={
+                                      savedTheme === 'dark'
+                                          ? styles.textInputDark
+                                          : styles.textInput
+                                  }
+                                  editable={!loading}
+                                  placeholderTextColor="gray"
+                              />
+
+                              <Text
+                                  style={{
+                                      color: savedTheme === 'dark' ? 'white' : 'black'
+                                  }}
+                              >
+                                  REST Port
+                              </Text>
+                              <TextInput
+                                  keyboardType="numeric"
+                                  placeholder={'443/8080'}
+                                  value={port}
+                                  onChangeText={(text: string) =>
+                                      this.setState({
+                                          port: text.trim(),
+                                          saved: false
+                                      })
+                                  }
+                                  numberOfLines={1}
+                                  style={
+                                      savedTheme === 'dark'
+                                          ? styles.textInputDark
+                                          : styles.textInput
+                                  }
+                                  editable={!loading}
+                                  placeholderTextColor="gray"
+                              />
+
+                              <Text
+                                  style={{
+                                      color: savedTheme === 'dark' ? 'white' : 'black'
+                                  }}
+                              >
+                                  Macaroon (Hex format)
+                              </Text>
+                              <TextInput
+                                  placeholder={'0A...'}
+                                  value={macaroonHex}
+                                  onChangeText={(text: string) =>
+                                      this.setState({
+                                          macaroonHex: text.trim(),
+                                          saved: false
+                                      })
+                                  }
+                                  numberOfLines={1}
+                                  style={
+                                      savedTheme === 'dark'
+                                          ? styles.textInputDark
+                                          : styles.textInput
+                                  }
+                                  editable={!loading}
+                                  placeholderTextColor="gray"
+                              />
+                          </>
                     )}
 
                     <View
