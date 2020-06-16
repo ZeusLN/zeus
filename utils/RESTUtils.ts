@@ -136,6 +136,10 @@ class LND {
             sslVerification
         );
     };
+
+    supportsOnchainSends = () => true;
+    supportsKeysend = () => true;
+    supportsChannelManagement = () => true;
 }
 
 class CLightningREST extends LND {
@@ -256,6 +260,10 @@ class LndHub extends LND {
             invoice: data.payment_request,
             amount: Number(data.amt && data.amt * 1000)
         });
+
+    supportsOnchainSends = () => false;
+    supportsKeysend = () => false;
+    supportsChannelManagement = () => false;
 }
 
 class Spark {
@@ -588,6 +596,10 @@ class RESTUtils {
     // lndhub
     createAccount = (...args) => this.call('createAccount', args);
     login = (...args) => this.call('login', args);
+
+    supportsOnchainSends = () => this.call('supportsOnchainSends');
+    supportsKeysend = () => this.call('supportsKeysend');
+    supportsChannelManagement = () => this.call('supportsChannelManagement');
 }
 
 const restUtils = new RESTUtils();
