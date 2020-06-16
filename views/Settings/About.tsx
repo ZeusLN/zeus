@@ -73,6 +73,19 @@ export default class About extends React.Component<AboutProps, {}> {
                             : styles.lightThemeText
                     }
                 >
+                    Special thanks to all of Zeus' contributors and all of the
+                    people that contributed to or helped enable the software
+                    that Zeus is built upon including fiatjaf, Suheb, shesek,
+                    Zap, Blue Wallet, Ride the Lightning, Blockstream, and last
+                    but not least, Lightning Labs.
+                </Text>
+                <Text
+                    style={
+                        savedTheme === 'dark'
+                            ? styles.darkThemeText
+                            : styles.lightThemeText
+                    }
+                >
                     Zeus was created and is maintained by Evan Kaloudis.
                 </Text>
                 <View style={styles.button}>
