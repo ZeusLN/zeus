@@ -32,6 +32,10 @@ interface OnboardingState {
     index: number;
 }
 
+interface ButtonProps {
+    title: string;
+}
+
 @inject('SettingsStore')
 @observer
 export default class Onboarding extends React.Component<
@@ -46,12 +50,14 @@ export default class Onboarding extends React.Component<
         this.setState({
             index: this.state.index + 1
         });
+        this.refs._scrollView.scrollTo(0);
     };
 
     goBack = () => {
         this.setState({
             index: this.state.index - 1
         });
+        this.refs._scrollView.scrollTo(0);
     };
 
     skipOnboarding = () => {
@@ -73,16 +79,16 @@ export default class Onboarding extends React.Component<
         const { navigation, SettingsStore } = this.props;
         let ScreenHeight = Dimensions.get('window').height;
         const { settings } = SettingsStore;
+        const nodes = settings.nodes;
         const { index } = this.state;
 
         const image = Background;
 
-        const nodeIndex: number =
-            (settings.nodes && settings.nodes.length) || 0;
+        const nodeIndex: number = (nodes && nodes.length) || 0;
 
-        const ContinueButton = () => (
+        const ContinueButton = (props: ButtonProps) => (
             <Button
-                title={'Continue'}
+                title={props.title || 'Continue'}
                 buttonStyle={{
                     backgroundColor: 'navy',
                     borderRadius: 30,
@@ -101,7 +107,7 @@ export default class Onboarding extends React.Component<
             <Button
                 title={'Go Back'}
                 buttonStyle={{
-                    backgroundColor: 'maroon',
+                    backgroundColor: 'grey',
                     borderRadius: 30,
                     width: 350,
                     alignSelf: 'center'
@@ -114,9 +120,9 @@ export default class Onboarding extends React.Component<
             />
         );
 
-        const SkipOnboardingButton = () => (
+        const SkipTourButton = (props: ButtonProps) => (
             <Button
-                title={'Skip Onboarding'}
+                title={props.title || 'Skip Tour'}
                 buttonStyle={{
                     backgroundColor: 'green',
                     borderRadius: 30,
@@ -133,7 +139,7 @@ export default class Onboarding extends React.Component<
 
         const ScanQRButton = () => (
             <Button
-                title="Scan lndconnect"
+                title="Scan lndconnect QR"
                 icon={{
                     name: 'crop-free',
                     size: 25,
@@ -175,12 +181,72 @@ export default class Onboarding extends React.Component<
                 >
                     The best way to connect to your lightning node on the go
                 </Text>
-                <ContinueButton />
+                <ContinueButton title="Get started" />
+                <ScanQRButton />
+                <SkipTourButton />
+            </View>
+        );
+
+        const Intro = () => (
+            <View style={{ paddingTop: 40, padding: 8 }}>
+                <Text
+                    style={{
+                        fontSize: 40,
+                        alignSelf: 'center'
+                    }}
+                >
+                    Full node control
+                </Text>
+                <Text
+                    style={{
+                        padding: 20,
+                        fontSize: 18,
+                        alignSelf: 'center'
+                    }}
+                >
+                    Running a full node has a lot of great advantages. You have
+                    full control of your lightning channels and verify your own
+                    transactions without the help of any third party.
+                </Text>
+                <Text
+                    style={{
+                        paddingBottom: 20,
+                        paddingRight: 20,
+                        paddingLeft: 20,
+                        fontSize: 18,
+                        alignSelf: 'center'
+                    }}
+                >
+                    Zeus gives you an interface to manage your channels, send
+                    and receive bitcoin both on lightning and on-chain, and use
+                    some of lightning's latest features.
+                </Text>
+                <Text
+                    style={{
+                        paddingBottom: 20,
+                        paddingRight: 20,
+                        paddingLeft: 20,
+                        fontSize: 18,
+                        alignSelf: 'center'
+                    }}
+                >
+                    Zeus has support for connecting to lnd nodes and to
+                    c-lightning nodes running the c-lightning-REST or Spark
+                    interfaces.
+                </Text>
                 <Button
                     title="Connect to an lnd node"
                     onPress={() =>
-                        navigation.navigate('LNDConnectConfigQRScanner', {
-                            nodeIndex
+                        navigation.navigate('AddEditNode', {
+                            newEntry: true,
+                            node: {
+                                implementation: 'lnd'
+                            },
+                            index:
+                                (nodes &&
+                                    nodes.length &&
+                                    Number(nodes.length)) ||
+                                0
                         })
                     }
                     buttonStyle={{
@@ -195,8 +261,16 @@ export default class Onboarding extends React.Component<
                 <Button
                     title="Connect to a c-lightning-REST node"
                     onPress={() =>
-                        navigation.navigate('LNDConnectConfigQRScanner', {
-                            nodeIndex
+                        navigation.navigate('AddEditNode', {
+                            newEntry: true,
+                            node: {
+                                implementation: 'c-lightning-REST'
+                            },
+                            index:
+                                (nodes &&
+                                    nodes.length &&
+                                    Number(nodes.length)) ||
+                                0
                         })
                     }
                     buttonStyle={{
@@ -210,8 +284,16 @@ export default class Onboarding extends React.Component<
                 <Button
                     title="Connect to a c-lightning Spark node"
                     onPress={() =>
-                        navigation.navigate('LNDConnectConfigQRScanner', {
-                            nodeIndex
+                        navigation.navigate('AddEditNode', {
+                            newEntry: true,
+                            node: {
+                                implementation: 'spark'
+                            },
+                            index:
+                                (nodes &&
+                                    nodes.length &&
+                                    Number(nodes.length)) ||
+                                0
                         })
                     }
                     buttonStyle={{
@@ -222,11 +304,70 @@ export default class Onboarding extends React.Component<
                     }}
                     style={styles.button}
                 />
+                <ScanQRButton />
+                <Text
+                    style={{
+                        fontSize: 40,
+                        paddingTop: 20,
+                        alignSelf: 'center'
+                    }}
+                >
+                    No node?
+                </Text>
+                <Text
+                    style={{
+                        padding: 20,
+                        fontSize: 18,
+                        alignSelf: 'center'
+                    }}
+                >
+                    LNDHub is a custodial solution for lightning. You use the
+                    admin's channels so you don't have to worry about managing
+                    them yourself. You'll be able to pay and create lightning
+                    interfaces without having a node of your own.
+                </Text>
+                <Text
+                    style={{
+                        paddingBottom: 20,
+                        paddingRight: 20,
+                        paddingLeft: 20,
+                        fontSize: 18,
+                        alignSelf: 'center'
+                    }}
+                >
+                    There are trade-offs though: you won't be able to send
+                    payments on-chain, and the administrator of the LNDHub
+                    instance will have full control of your funds and records of
+                    your transactions. Not your keys, not your coins.
+                </Text>
+                <Text
+                    style={{
+                        paddingBottom: 20,
+                        paddingRight: 20,
+                        paddingLeft: 20,
+                        fontSize: 18,
+                        alignSelf: 'center'
+                    }}
+                >
+                    You can connect to the public instance or find a friend you
+                    trust with a LNDHub enabled node. Consider being the Uncle
+                    Jim in your family and setting up LNDHub on your lnd node.
+                </Text>
                 <Button
                     title="Connect to an LNDHub instance"
                     onPress={() =>
-                        navigation.navigate('LNDConnectConfigQRScanner', {
-                            nodeIndex
+                        navigation.navigate('AddEditNode', {
+                            newEntry: true,
+                            node: {
+                                implementation: 'lndhub',
+                                lndhubUrl: 'lndhub.herokuapp.com',
+                                sslVerification: true
+                            },
+                            index:
+                                (nodes &&
+                                    nodes.length &&
+                                    Number(nodes.length)) ||
+                                0
                         })
                     }
                     buttonStyle={{
@@ -238,34 +379,9 @@ export default class Onboarding extends React.Component<
                     }}
                     style={styles.button}
                 />
-                <ScanQRButton />
-                <SkipOnboardingButton />
-            </View>
-        );
-
-        const Intro = () => (
-            <View style={{ paddingTop: 240, padding: 8, height: ScreenHeight }}>
-                <Text
-                    style={{
-                        fontSize: 40,
-                        alignSelf: 'center'
-                    }}
-                >
-                    Features
-                </Text>
-                <Text
-                    style={{
-                        padding: 20,
-                        fontSize: 20,
-                        alignSelf: 'center'
-                    }}
-                >
-                    The best way to connect to your lightning node on the go
-                </Text>
-                <ContinueButton />
-                <ScanQRButton />
+                <ContinueButton title="See integrations" />
                 <BackButton />
-                <SkipOnboardingButton />
+                <SkipTourButton />
             </View>
         );
 
@@ -343,43 +459,17 @@ export default class Onboarding extends React.Component<
                         source={btcPay}
                     />
                 </TouchableHighlight>
-                <ContinueButton />
                 <BackButton />
-                <SkipOnboardingButton />
-            </View>
-        );
-
-        const Alternatives = () => (
-            <View style={{ paddingTop: 240, padding: 8, height: ScreenHeight }}>
-                <Text
-                    style={{
-                        fontSize: 40,
-                        padding: 20,
-                        alignSelf: 'center'
-                    }}
-                >
-                    Alternative ways to run a node
-                </Text>
-                <Text
-                    style={{
-                        padding: 20,
-                        fontSize: 20,
-                        alignSelf: 'center'
-                    }}
-                >
-                    The best way to connect to your lightning node on the go
-                </Text>
-                <SkipOnboardingButton />
+                <SkipTourButton title="Complete tour" />
             </View>
         );
 
         return (
-            <ScrollView style={styles.onboardingStyle}>
+            <ScrollView style={styles.onboardingStyle} ref="_scrollView">
                 <ImageBackground source={image} style={styles.backgroundImage}>
                     {index == 0 && <Welcome />}
                     {index == 1 && <Intro />}
                     {index == 2 && <Integrations />}
-                    {index == 3 && <Alternatives />}
                 </ImageBackground>
             </ScrollView>
         );

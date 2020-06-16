@@ -543,7 +543,7 @@ export default class AddEditNode extends React.Component<
                     Host
                 </Text>
                 <TextInput
-                    placeholder={'https://lndhub.herokuapp.com'}
+                    placeholder={DEFAULT_LNDHUB}
                     value={lndhubUrl}
                     onChangeText={(text: string) =>
                         this.setState({
