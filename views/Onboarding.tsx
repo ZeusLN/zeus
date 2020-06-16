@@ -179,7 +179,7 @@ export default class Onboarding extends React.Component<
                         alignSelf: 'center'
                     }}
                 >
-                    The best way to connect to your lightning node on the go
+                    A lightning experience fit for the gods
                 </Text>
                 <ContinueButton title="Get started" />
                 <ScanQRButton />
@@ -197,39 +197,22 @@ export default class Onboarding extends React.Component<
                 >
                     Full node control
                 </Text>
-                <Text
-                    style={{
-                        padding: 20,
-                        fontSize: 18,
-                        alignSelf: 'center'
-                    }}
-                >
-                    Running a full node has a lot of great advantages. You have
-                    full control of your lightning channels and verify your own
-                    transactions without the help of any third party.
+                <Text style={styles.leadingGraph}>
+                    You're not really using bitcoin without using a full node.
                 </Text>
-                <Text
-                    style={{
-                        paddingBottom: 20,
-                        paddingRight: 20,
-                        paddingLeft: 20,
-                        fontSize: 18,
-                        alignSelf: 'center'
-                    }}
-                >
+                <Text style={styles.defaultGraph}>
+                    Running a full node has a lot of great advantages. You get
+                    great gains in terms of security and privacy when you cut
+                    out the middle man and verify your own transactions. In the
+                    context of the lightning network you have full control of
+                    your lightning channels and liquidity.
+                </Text>
+                <Text style={styles.defaultGraph}>
                     Zeus gives you an interface to manage your channels, send
                     and receive bitcoin both on lightning and on-chain, and use
                     some of lightning's latest features.
                 </Text>
-                <Text
-                    style={{
-                        paddingBottom: 20,
-                        paddingRight: 20,
-                        paddingLeft: 20,
-                        fontSize: 18,
-                        alignSelf: 'center'
-                    }}
-                >
+                <Text style={styles.defaultGraph}>
                     Zeus has support for connecting to lnd nodes and to
                     c-lightning nodes running the c-lightning-REST or Spark
                     interfaces.
@@ -305,56 +288,42 @@ export default class Onboarding extends React.Component<
                     style={styles.button}
                 />
                 <ScanQRButton />
+                <View style={{ padding: 20 }} />
+                <ContinueButton title="I don't have a node" />
+                <BackButton />
+                <SkipTourButton />
+            </View>
+        );
+        const LNDHub = () => (
+            <View>
                 <Text
                     style={{
                         fontSize: 40,
-                        paddingTop: 20,
+                        paddingTop: 60,
                         alignSelf: 'center'
                     }}
                 >
                     No node?
                 </Text>
-                <Text
-                    style={{
-                        padding: 20,
-                        fontSize: 18,
-                        alignSelf: 'center'
-                    }}
-                >
+                <Text style={styles.leadingGraph}>
                     LNDHub is a custodial solution for lightning. You use the
                     admin's channels so you don't have to worry about managing
                     them yourself. You'll be able to pay and create lightning
                     interfaces without having a node of your own.
                 </Text>
-                <Text
-                    style={{
-                        paddingBottom: 20,
-                        paddingRight: 20,
-                        paddingLeft: 20,
-                        fontSize: 18,
-                        alignSelf: 'center'
-                    }}
-                >
+                <Text style={styles.defaultGraph}>
                     There are trade-offs though: you won't be able to send
                     payments on-chain, and the administrator of the LNDHub
                     instance will have full control of your funds and records of
                     your transactions. Not your keys, not your coins.
                 </Text>
-                <Text
-                    style={{
-                        paddingBottom: 20,
-                        paddingRight: 20,
-                        paddingLeft: 20,
-                        fontSize: 18,
-                        alignSelf: 'center'
-                    }}
-                >
+                <Text style={styles.defaultGraph}>
                     You can connect to the public instance or find a friend you
                     trust with a LNDHub enabled node. Consider being the Uncle
                     Jim in your family and setting up LNDHub on your lnd node.
                 </Text>
                 <Button
-                    title="Connect to an LNDHub instance"
+                    title="Connect with LNDHub"
                     onPress={() =>
                         navigation.navigate('AddEditNode', {
                             newEntry: true,
@@ -371,8 +340,8 @@ export default class Onboarding extends React.Component<
                         })
                     }
                     buttonStyle={{
-                        backgroundColor: 'lightblue',
-                        borderRadius: 30
+                        borderRadius: 30,
+                        backgroundColor: 'lightblue'
                     }}
                     titleStyle={{
                         color: 'white'
@@ -469,7 +438,8 @@ export default class Onboarding extends React.Component<
                 <ImageBackground source={image} style={styles.backgroundImage}>
                     {index == 0 && <Welcome />}
                     {index == 1 && <Intro />}
-                    {index == 2 && <Integrations />}
+                    {index == 2 && <LNDHub />}
+                    {index == 3 && <Integrations />}
                 </ImageBackground>
             </ScrollView>
         );
@@ -493,6 +463,18 @@ const styles = StyleSheet.create({
     integrationImage: {
         width: 200,
         height: 200,
+        alignSelf: 'center'
+    },
+    leadingGraph: {
+        padding: 20,
+        fontSize: 18,
+        alignSelf: 'center'
+    },
+    defaultGraph: {
+        paddingBottom: 20,
+        paddingRight: 20,
+        paddingLeft: 20,
+        fontSize: 18,
         alignSelf: 'center'
     }
 });

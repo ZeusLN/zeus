@@ -6,6 +6,7 @@ import { version } from './../../package.json';
 
 import SettingsStore from './../../stores/SettingsStore';
 import UrlUtils from './../../utils/UrlUtils';
+import RESTUtils from './../../utils/RESTUtils';
 
 interface AboutProps {
     navigation: any;
@@ -72,7 +73,20 @@ export default class About extends React.Component<AboutProps, {}> {
                             : styles.lightThemeText
                     }
                 >
-                    Zeus was created by and is maintained by Evan Kaloudis.
+                    Special thanks to all of Zeus' contributors and all of the
+                    people that contributed to or helped enable the software
+                    that Zeus is built upon including fiatjaf, Suheb, shesek,
+                    Zap, Blue Wallet, Ride the Lightning, Blockstream, and last
+                    but not least, Lightning Labs.
+                </Text>
+                <Text
+                    style={
+                        savedTheme === 'dark'
+                            ? styles.darkThemeText
+                            : styles.lightThemeText
+                    }
+                >
+                    Zeus was created and is maintained by Evan Kaloudis.
                 </Text>
                 <View style={styles.button}>
                     <Button
@@ -96,50 +110,54 @@ export default class About extends React.Component<AboutProps, {}> {
                         }}
                     />
                 </View>
-                <View style={styles.button}>
-                    <Button
-                        title="Connect to our node"
-                        icon={{
-                            name: 'computer',
-                            size: 25,
-                            color: 'white'
-                        }}
-                        onPress={() =>
-                            navigation.navigate('OpenChannel', {
-                                node_pubkey_string:
-                                    '03e1210c8d4b236a53191bb172701d76ec06dfa869a1afffcfd8f4e07d9129d898',
-                                host:
-                                    'zg6ziy65wqhiczqfqupx26j5yjot5iuxftqtiyvika3xoydc5hx2mtyd.onion:9735'
-                            })
-                        }
-                        buttonStyle={{
-                            backgroundColor: 'grey',
-                            borderRadius: 30
-                        }}
-                    />
-                </View>
-                <View style={styles.button}>
-                    <Button
-                        title="Send keysend donation"
-                        icon={{
-                            name: 'send',
-                            size: 25,
-                            color: 'white'
-                        }}
-                        onPress={() =>
-                            navigation.navigate('Send', {
-                                destination:
-                                    '03e1210c8d4b236a53191bb172701d76ec06dfa869a1afffcfd8f4e07d9129d898',
-                                transactionType: 'Keysend',
-                                isValid: true
-                            })
-                        }
-                        buttonStyle={{
-                            backgroundColor: 'grey',
-                            borderRadius: 30
-                        }}
-                    />
-                </View>
+                {RESTUtils.supportsChannelManagement() && (
+                    <View style={styles.button}>
+                        <Button
+                            title="Connect to our node"
+                            icon={{
+                                name: 'computer',
+                                size: 25,
+                                color: 'white'
+                            }}
+                            onPress={() =>
+                                navigation.navigate('OpenChannel', {
+                                    node_pubkey_string:
+                                        '03e1210c8d4b236a53191bb172701d76ec06dfa869a1afffcfd8f4e07d9129d898',
+                                    host:
+                                        'zg6ziy65wqhiczqfqupx26j5yjot5iuxftqtiyvika3xoydc5hx2mtyd.onion:9735'
+                                })
+                            }
+                            buttonStyle={{
+                                backgroundColor: 'grey',
+                                borderRadius: 30
+                            }}
+                        />
+                    </View>
+                )}
+                {RESTUtils.supportsKeysend() && (
+                    <View style={styles.button}>
+                        <Button
+                            title="Send keysend donation"
+                            icon={{
+                                name: 'send',
+                                size: 25,
+                                color: 'white'
+                            }}
+                            onPress={() =>
+                                navigation.navigate('Send', {
+                                    destination:
+                                        '03e1210c8d4b236a53191bb172701d76ec06dfa869a1afffcfd8f4e07d9129d898',
+                                    transactionType: 'Keysend',
+                                    isValid: true
+                                })
+                            }
+                            buttonStyle={{
+                                backgroundColor: 'grey',
+                                borderRadius: 30
+                            }}
+                        />
+                    </View>
+                )}
                 <View style={styles.button}>
                     <Button
                         title="Follow @ZeusLN on Twitter"
