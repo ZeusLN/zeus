@@ -360,6 +360,33 @@ export default class AddEditNode extends React.Component<
             />
         );
 
+        const CertInstallInstructions = () => (
+            <View style={styles.button}>
+                <Button
+                    title="Certificate Install Instructions"
+                    icon={{
+                        name: 'lock',
+                        size: 25,
+                        color: 'white'
+                    }}
+                    onPress={() => {
+                        this.setState({
+                            showSslModal: false
+                        });
+                        navigation.navigate('CertInstallInstructions');
+                    }}
+                    style={styles.button}
+                    buttonStyle={{
+                        backgroundColor: 'purple',
+                        borderRadius: 30
+                    }}
+                    titleStyle={{
+                        color: 'white'
+                    }}
+                />
+            </View>
+        );
+
         const NodeInterface = () => (
             <>
                 {Platform.OS !== 'ios' && (
@@ -883,32 +910,7 @@ export default class AddEditNode extends React.Component<
                                         install your node's certificate on this
                                         device.
                                     </Text>
-                                    <View style={styles.button}>
-                                        <Button
-                                            title="Certificate Install Instructions"
-                                            icon={{
-                                                name: 'lock',
-                                                size: 25,
-                                                color: 'white'
-                                            }}
-                                            onPress={() => {
-                                                this.setState({
-                                                    showSslModal: false
-                                                });
-                                                navigation.navigate(
-                                                    'CertInstallInstructions'
-                                                );
-                                            }}
-                                            style={styles.button}
-                                            buttonStyle={{
-                                                backgroundColor: 'purple',
-                                                borderRadius: 30
-                                            }}
-                                            titleStyle={{
-                                                color: 'white'
-                                            }}
-                                        />
-                                    </View>
+                                    <CertInstallInstructions />
                                     <View style={styles.button}>
                                         <Button
                                             title="I understand, save my node config"
@@ -1015,6 +1017,8 @@ export default class AddEditNode extends React.Component<
                         />
                     </View>
                 )}
+
+                {!saved && sslVerification && <CertInstallInstructions />}
 
                 <View style={styles.button}>
                     <Button
