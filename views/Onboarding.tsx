@@ -48,17 +48,37 @@ export default class Onboarding extends React.Component<
         });
     };
 
+    goBack = () => {
+        this.setState({
+            index: this.state.index - 1
+        });
+    };
+
     skipOnboarding = () => {
         this.props.navigation.navigate('AddEditNode');
     };
 
+    UNSAFE_componentWillReceiveProps(nextProps: any) {
+        const { navigation } = nextProps;
+        const reset = navigation.getParam('reset', null);
+
+        if (reset) {
+            this.setState({
+                index: 0
+            });
+        }
+    }
+
     render() {
         const { navigation, SettingsStore } = this.props;
         let ScreenHeight = Dimensions.get('window').height;
-        // const { loading, settings } = SettingsStore;
+        const { settings } = SettingsStore;
         const { index } = this.state;
 
         const image = Background;
+
+        const nodeIndex: number =
+            (settings.nodes && settings.nodes.length) || 0;
 
         const ContinueButton = () => (
             <Button
@@ -77,6 +97,23 @@ export default class Onboarding extends React.Component<
             />
         );
 
+        const BackButton = () => (
+            <Button
+                title={'Go Back'}
+                buttonStyle={{
+                    backgroundColor: 'maroon',
+                    borderRadius: 30,
+                    width: 350,
+                    alignSelf: 'center'
+                }}
+                titleStyle={{
+                    color: 'white'
+                }}
+                onPress={() => this.goBack()}
+                style={styles.button}
+            />
+        );
+
         const SkipOnboardingButton = () => (
             <Button
                 title={'Skip Onboarding'}
@@ -90,6 +127,30 @@ export default class Onboarding extends React.Component<
                     color: 'white'
                 }}
                 onPress={() => this.skipOnboarding()}
+                style={styles.button}
+            />
+        );
+
+        const ScanQRButton = () => (
+            <Button
+                title="Scan lndconnect"
+                icon={{
+                    name: 'crop-free',
+                    size: 25,
+                    color: 'white'
+                }}
+                onPress={() =>
+                    navigation.navigate('LNDConnectConfigQRScanner', {
+                        nodeIndex
+                    })
+                }
+                buttonStyle={{
+                    backgroundColor: 'black',
+                    borderRadius: 30
+                }}
+                titleStyle={{
+                    color: 'white'
+                }}
                 style={styles.button}
             />
         );
@@ -115,6 +176,69 @@ export default class Onboarding extends React.Component<
                     The best way to connect to your lightning node on the go
                 </Text>
                 <ContinueButton />
+                <Button
+                    title="Connect to an lnd node"
+                    onPress={() =>
+                        navigation.navigate('LNDConnectConfigQRScanner', {
+                            nodeIndex
+                        })
+                    }
+                    buttonStyle={{
+                        backgroundColor: 'purple',
+                        borderRadius: 30
+                    }}
+                    titleStyle={{
+                        color: 'white'
+                    }}
+                    style={styles.button}
+                />
+                <Button
+                    title="Connect to a c-lightning-REST node"
+                    onPress={() =>
+                        navigation.navigate('LNDConnectConfigQRScanner', {
+                            nodeIndex
+                        })
+                    }
+                    buttonStyle={{
+                        borderRadius: 30
+                    }}
+                    titleStyle={{
+                        color: 'white'
+                    }}
+                    style={styles.button}
+                />
+                <Button
+                    title="Connect to a c-lightning Spark node"
+                    onPress={() =>
+                        navigation.navigate('LNDConnectConfigQRScanner', {
+                            nodeIndex
+                        })
+                    }
+                    buttonStyle={{
+                        borderRadius: 30
+                    }}
+                    titleStyle={{
+                        color: 'white'
+                    }}
+                    style={styles.button}
+                />
+                <Button
+                    title="Connect to an LNDHub instance"
+                    onPress={() =>
+                        navigation.navigate('LNDConnectConfigQRScanner', {
+                            nodeIndex
+                        })
+                    }
+                    buttonStyle={{
+                        backgroundColor: 'lightblue',
+                        borderRadius: 30
+                    }}
+                    titleStyle={{
+                        color: 'white'
+                    }}
+                    style={styles.button}
+                />
+                <ScanQRButton />
                 <SkipOnboardingButton />
             </View>
         );
@@ -139,6 +263,8 @@ export default class Onboarding extends React.Component<
                     The best way to connect to your lightning node on the go
                 </Text>
                 <ContinueButton />
+                <ScanQRButton />
+                <BackButton />
                 <SkipOnboardingButton />
             </View>
         );
@@ -218,6 +344,7 @@ export default class Onboarding extends React.Component<
                     />
                 </TouchableHighlight>
                 <ContinueButton />
+                <BackButton />
                 <SkipOnboardingButton />
             </View>
         );
