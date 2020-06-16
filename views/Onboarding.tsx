@@ -197,39 +197,22 @@ export default class Onboarding extends React.Component<
                 >
                     Full node control
                 </Text>
-                <Text
-                    style={{
-                        padding: 20,
-                        fontSize: 18,
-                        alignSelf: 'center'
-                    }}
-                >
-                    Running a full node has a lot of great advantages. You have
-                    full control of your lightning channels and verify your own
-                    transactions without the help of any third party.
+                <Text style={styles.leadingGraph}>
+                    You're not really using bitcoin without using a full node.
                 </Text>
-                <Text
-                    style={{
-                        paddingBottom: 20,
-                        paddingRight: 20,
-                        paddingLeft: 20,
-                        fontSize: 18,
-                        alignSelf: 'center'
-                    }}
-                >
+                <Text style={styles.defaultGraph}>
+                    Running a full node has a lot of great advantages. You get
+                    great gains in terms of security and privacy when you cut
+                    out the middle man and verify your own transactions. In the
+                    context of the lightning network you have full control of
+                    your lightning channels and liquidity.
+                </Text>
+                <Text style={styles.defaultGraph}>
                     Zeus gives you an interface to manage your channels, send
                     and receive bitcoin both on lightning and on-chain, and use
                     some of lightning's latest features.
                 </Text>
-                <Text
-                    style={{
-                        paddingBottom: 20,
-                        paddingRight: 20,
-                        paddingLeft: 20,
-                        fontSize: 18,
-                        alignSelf: 'center'
-                    }}
-                >
+                <Text style={styles.defaultGraph}>
                     Zeus has support for connecting to lnd nodes and to
                     c-lightning nodes running the c-lightning-REST or Spark
                     interfaces.
@@ -322,41 +305,19 @@ export default class Onboarding extends React.Component<
                 >
                     No node?
                 </Text>
-                <Text
-                    style={{
-                        padding: 20,
-                        fontSize: 18,
-                        alignSelf: 'center'
-                    }}
-                >
+                <Text style={styles.leadingGraph}>
                     LNDHub is a custodial solution for lightning. You use the
                     admin's channels so you don't have to worry about managing
                     them yourself. You'll be able to pay and create lightning
                     interfaces without having a node of your own.
                 </Text>
-                <Text
-                    style={{
-                        paddingBottom: 20,
-                        paddingRight: 20,
-                        paddingLeft: 20,
-                        fontSize: 18,
-                        alignSelf: 'center'
-                    }}
-                >
+                <Text style={styles.defaultGraph}>
                     There are trade-offs though: you won't be able to send
                     payments on-chain, and the administrator of the LNDHub
                     instance will have full control of your funds and records of
                     your transactions. Not your keys, not your coins.
                 </Text>
-                <Text
-                    style={{
-                        paddingBottom: 20,
-                        paddingRight: 20,
-                        paddingLeft: 20,
-                        fontSize: 18,
-                        alignSelf: 'center'
-                    }}
-                >
+                <Text style={styles.defaultGraph}>
                     You can connect to the public instance or find a friend you
                     trust with a LNDHub enabled node. Consider being the Uncle
                     Jim in your family and setting up LNDHub on your lnd node.
@@ -502,6 +463,18 @@ const styles = StyleSheet.create({
     integrationImage: {
         width: 200,
         height: 200,
+        alignSelf: 'center'
+    },
+    leadingGraph: {
+        padding: 20,
+        fontSize: 18,
+        alignSelf: 'center'
+    },
+    defaultGraph: {
+        paddingBottom: 20,
+        paddingRight: 20,
+        paddingLeft: 20,
+        fontSize: 18,
         alignSelf: 'center'
     }
 });
