@@ -179,7 +179,7 @@ export default class Onboarding extends React.Component<
                         alignSelf: 'center'
                     }}
                 >
-                    The best way to connect to your lightning node on the go
+                    A lightning experience fit for the gods
                 </Text>
                 <ContinueButton title="Get started" />
                 <ScanQRButton />
@@ -305,10 +305,18 @@ export default class Onboarding extends React.Component<
                     style={styles.button}
                 />
                 <ScanQRButton />
+                <View style={{ padding: 20 }} />
+                <ContinueButton title="I don't have a node" />
+                <BackButton />
+                <SkipTourButton />
+            </View>
+        );
+        const LNDHub = () => (
+            <View>
                 <Text
                     style={{
                         fontSize: 40,
-                        paddingTop: 20,
+                        paddingTop: 60,
                         alignSelf: 'center'
                     }}
                 >
@@ -354,7 +362,7 @@ export default class Onboarding extends React.Component<
                     Jim in your family and setting up LNDHub on your lnd node.
                 </Text>
                 <Button
-                    title="Connect to an LNDHub instance"
+                    title="Connect with LNDHub"
                     onPress={() =>
                         navigation.navigate('AddEditNode', {
                             newEntry: true,
@@ -371,8 +379,8 @@ export default class Onboarding extends React.Component<
                         })
                     }
                     buttonStyle={{
-                        backgroundColor: 'lightblue',
-                        borderRadius: 30
+                        borderRadius: 30,
+                        backgroundColor: 'lightblue'
                     }}
                     titleStyle={{
                         color: 'white'
@@ -469,7 +477,8 @@ export default class Onboarding extends React.Component<
                 <ImageBackground source={image} style={styles.backgroundImage}>
                     {index == 0 && <Welcome />}
                     {index == 1 && <Intro />}
-                    {index == 2 && <Integrations />}
+                    {index == 2 && <LNDHub />}
+                    {index == 3 && <Integrations />}
                 </ImageBackground>
             </ScrollView>
         );
