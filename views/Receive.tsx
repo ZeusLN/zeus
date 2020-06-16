@@ -5,7 +5,8 @@ import {
     Text,
     TextInput,
     View,
-    ScrollView
+    ScrollView,
+    TouchableOpacity
 } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import { Button, ButtonGroup, Header, Icon } from 'react-native-elements';
@@ -14,12 +15,16 @@ import { inject, observer } from 'mobx-react';
 
 import InvoicesStore from './../stores/InvoicesStore';
 import SettingsStore from './../stores/SettingsStore';
+import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
+import FiatStore from './../stores/FiatStore';
 
 interface ReceiveProps {
     exitSetup: any;
     navigation: any;
     InvoicesStore: InvoicesStore;
     SettingsStore: SettingsStore;
+    UnitsStore: UnitsStore;
+    FiatStore: FiatStore;
 }
 
 interface ReceiveState {
@@ -29,7 +34,7 @@ interface ReceiveState {
     expiry: string;
 }
 
-@inject('InvoicesStore', 'SettingsStore')
+@inject('InvoicesStore', 'SettingsStore', 'UnitsStore', 'FiatStore')
 @observer
 export default class Receive extends React.Component<
     ReceiveProps,
@@ -79,8 +84,17 @@ export default class Receive extends React.Component<
     };
 
     render() {
-        const { InvoicesStore, SettingsStore, navigation } = this.props;
+        const {
+            InvoicesStore,
+            SettingsStore,
+            UnitsStore,
+            FiatStore,
+            navigation
+        } = this.props;
         const { selectedIndex, memo, value, expiry } = this.state;
+        const { units, changeUnits } = UnitsStore;
+        const { fiatRates } = FiatStore;
+
         const {
             createInvoice,
             payment_request,
@@ -94,8 +108,25 @@ export default class Receive extends React.Component<
             chainAddress,
             implementation
         } = SettingsStore;
-        const { theme } = settings;
+        const { theme, fiat } = settings;
         const address = chainAddress;
+
+        const rate =
+            (fiatRates && fiatRates[fiat] && fiatRates[fiat]['15m']) || 0;
+        const symbol = fiatRates && fiatRates[fiat] && fiatRates[fiat].symbol;
+
+        let satAmount;
+        switch (units) {
+            case 'sats':
+                satAmount = value;
+                break;
+            case 'btc':
+                satAmount = Number(value) * satoshisPerBTC;
+                break;
+            case 'fiat':
+                satAmount = Number(Number(value) * rate).toFixed(0);
+                break;
+        }
 
         const lnurl: LNURLWithdrawParams | undefined = navigation.getParam(
             'lnurlParams'
@@ -219,21 +250,26 @@ export default class Receive extends React.Component<
                                 placeholderTextColor="gray"
                             />
 
-                            <Text
-                                style={{
-                                    color: theme === 'dark' ? 'white' : 'black'
-                                }}
-                            >
-                                Amount (in Satoshis)
-                                {lnurl &&
-                                lnurl.minWithdrawable !== lnurl.maxWithdrawable
-                                    ? ` (${Math.ceil(
-                                          lnurl.minWithdrawable / 1000
-                                      )}--${Math.floor(
-                                          lnurl.maxWithdrawable / 1000
-                                      )})`
-                                    : ''}
-                            </Text>
+                            <TouchableOpacity onPress={() => changeUnits()}>
+                                <Text
+                                    style={{
+                                        color:
+                                            theme === 'dark' ? 'white' : 'black'
+                                    }}
+                                >
+                                    Amount (in {units === 'fiat' ? fiat : units}
+                                    )
+                                    {lnurl &&
+                                    lnurl.minWithdrawable !==
+                                        lnurl.maxWithdrawable
+                                        ? ` (${Math.ceil(
+                                              lnurl.minWithdrawable / 1000
+                                          )}--${Math.floor(
+                                              lnurl.maxWithdrawable / 1000
+                                          )})`
+                                        : ''}
+                                </Text>
+                            </TouchableOpacity>
                             <TextInput
                                 keyboardType="numeric"
                                 placeholder={'100'}
@@ -256,6 +292,20 @@ export default class Receive extends React.Component<
                                 }
                                 placeholderTextColor="gray"
                             />
+                            {units !== 'sats' && (
+                                <TouchableOpacity onPress={() => changeUnits()}>
+                                    <Text
+                                        style={{
+                                            color:
+                                                theme === 'dark'
+                                                    ? 'white'
+                                                    : 'black'
+                                        }}
+                                    >
+                                        {satAmount} satoshis
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
 
                             {implementation !== 'lndhub' && (
                                 <>
@@ -304,7 +354,7 @@ export default class Receive extends React.Component<
                                     onPress={() =>
                                         createInvoice(
                                             memo,
-                                            value,
+                                            satsAmount,
                                             expiry,
                                             lnurl
                                         )
