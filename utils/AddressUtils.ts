@@ -1,15 +1,15 @@
 import { satoshisPerBTC } from './../stores/UnitsStore';
 
 const btcNonBech = /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
-const btcBech = /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,39}$/;
+const btcBech = /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/;
 
 const lnInvoice = /^(lnbcrt|lntb|lnbc|LNBCRT|LNTB|LNBC)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
 const lnPubKey = /^[a-f0-9]{66}$/;
 
 /* testnet */
 const btcNonBechTestnet = /^[2][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
-const btcBechTestnet = /^(bc1|[2])[a-zA-HJ-NP-Z0-9]{25,39}$/;
-const btcBechPubkeyScriptHashTestnet = /^(tb1|[2])[a-zA-HJ-NP-Z0-9]{25,39}$/;
+const btcBechTestnet = /^(bc1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
+const btcBechPubkeyScriptHashTestnet = /^(tb1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
 
 class AddressUtils {
     processSendAddress = (input: string) => {
