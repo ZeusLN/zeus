@@ -405,7 +405,7 @@ export default class Settings extends React.Component<
                 </View>
                 <View style={styles.button}>
                     <Button
-                        title={'About Zeus'}
+                        title="About Zeus"
                         buttonStyle={{
                             backgroundColor: 'black',
                             borderRadius: 30,
@@ -413,6 +413,21 @@ export default class Settings extends React.Component<
                             alignSelf: 'center'
                         }}
                         onPress={() => navigation.navigate('About')}
+                        style={styles.button}
+                    />
+                </View>
+                <View style={styles.button}>
+                    <Button
+                        title="Intro Tour"
+                        buttonStyle={{
+                            backgroundColor: 'orange',
+                            borderRadius: 30,
+                            width: 350,
+                            alignSelf: 'center'
+                        }}
+                        onPress={() =>
+                            navigation.navigate('Onboarding', { reset: true })
+                        }
                         style={styles.button}
                     />
                 </View>
