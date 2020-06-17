@@ -354,7 +354,7 @@ export default class Receive extends React.Component<
                                     onPress={() =>
                                         createInvoice(
                                             memo,
-                                            satsAmount,
+                                            satAmount.toString(),
                                             expiry,
                                             lnurl
                                         )
