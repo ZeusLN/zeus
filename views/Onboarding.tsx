@@ -87,78 +87,82 @@ export default class Onboarding extends React.Component<
         const nodeIndex: number = (nodes && nodes.length) || 0;
 
         const ContinueButton = (props: ButtonProps) => (
-            <Button
-                title={props.title || 'Continue'}
-                buttonStyle={{
-                    backgroundColor: 'navy',
-                    borderRadius: 30,
-                    width: 350,
-                    alignSelf: 'center'
-                }}
-                titleStyle={{
-                    color: 'white'
-                }}
-                onPress={() => this.continue()}
-                style={styles.button}
-            />
+            <View style={styles.button}>
+                <Button
+                    title={props.title || 'Continue'}
+                    buttonStyle={{
+                        backgroundColor: 'navy',
+                        borderRadius: 30,
+                        width: 350,
+                        alignSelf: 'center'
+                    }}
+                    titleStyle={{
+                        color: 'white'
+                    }}
+                    onPress={() => this.continue()}
+                />
+            </View>
         );
 
         const BackButton = () => (
-            <Button
-                title={'Go Back'}
-                buttonStyle={{
-                    backgroundColor: 'grey',
-                    borderRadius: 30,
-                    width: 350,
-                    alignSelf: 'center'
-                }}
-                titleStyle={{
-                    color: 'white'
-                }}
-                onPress={() => this.goBack()}
-                style={styles.button}
-            />
+            <View style={styles.button}>
+                <Button
+                    title={'Go Back'}
+                    buttonStyle={{
+                        backgroundColor: 'grey',
+                        borderRadius: 30,
+                        width: 350,
+                        alignSelf: 'center'
+                    }}
+                    titleStyle={{
+                        color: 'white'
+                    }}
+                    onPress={() => this.goBack()}
+                />
+            </View>
         );
 
         const SkipTourButton = (props: ButtonProps) => (
-            <Button
-                title={props.title || 'Skip Tour'}
-                buttonStyle={{
-                    backgroundColor: 'green',
-                    borderRadius: 30,
-                    width: 350,
-                    alignSelf: 'center'
-                }}
-                titleStyle={{
-                    color: 'white'
-                }}
-                onPress={() => this.skipOnboarding()}
-                style={styles.button}
-            />
+            <View style={styles.button}>
+                <Button
+                    title={props.title || 'Skip Tour'}
+                    buttonStyle={{
+                        backgroundColor: 'green',
+                        borderRadius: 30,
+                        width: 350,
+                        alignSelf: 'center'
+                    }}
+                    titleStyle={{
+                        color: 'white'
+                    }}
+                    onPress={() => this.skipOnboarding()}
+                />
+            </View>
         );
 
         const ScanQRButton = () => (
-            <Button
-                title="Scan lndconnect QR"
-                icon={{
-                    name: 'crop-free',
-                    size: 25,
-                    color: 'white'
-                }}
-                onPress={() =>
-                    navigation.navigate('LNDConnectConfigQRScanner', {
-                        nodeIndex
-                    })
-                }
-                buttonStyle={{
-                    backgroundColor: 'black',
-                    borderRadius: 30
-                }}
-                titleStyle={{
-                    color: 'white'
-                }}
-                style={styles.button}
-            />
+            <View style={styles.button}>
+                <Button
+                    title="Scan lndconnect QR"
+                    icon={{
+                        name: 'crop-free',
+                        size: 25,
+                        color: 'white'
+                    }}
+                    onPress={() =>
+                        navigation.navigate('LNDConnectConfigQRScanner', {
+                            nodeIndex
+                        })
+                    }
+                    buttonStyle={{
+                        backgroundColor: 'black',
+                        borderRadius: 30
+                    }}
+                    titleStyle={{
+                        color: 'white'
+                    }}
+                />
+            </View>
         );
 
         const Welcome = () => (
@@ -217,78 +221,83 @@ export default class Onboarding extends React.Component<
                     c-lightning nodes running the c-lightning-REST or Spark
                     interfaces.
                 </Text>
-                <Button
-                    title="Connect to an lnd node"
-                    onPress={() =>
-                        navigation.navigate('AddEditNode', {
-                            newEntry: true,
-                            node: {
-                                implementation: 'lnd'
-                            },
-                            index:
-                                (nodes &&
-                                    nodes.length &&
-                                    Number(nodes.length)) ||
-                                0
-                        })
-                    }
-                    buttonStyle={{
-                        backgroundColor: 'purple',
-                        borderRadius: 30
-                    }}
-                    titleStyle={{
-                        color: 'white'
-                    }}
-                    style={styles.button}
-                />
-                <Button
-                    title="Connect to a c-lightning-REST node"
-                    onPress={() =>
-                        navigation.navigate('AddEditNode', {
-                            newEntry: true,
-                            node: {
-                                implementation: 'c-lightning-REST'
-                            },
-                            index:
-                                (nodes &&
-                                    nodes.length &&
-                                    Number(nodes.length)) ||
-                                0
-                        })
-                    }
-                    buttonStyle={{
-                        borderRadius: 30
-                    }}
-                    titleStyle={{
-                        color: 'white'
-                    }}
-                    style={styles.button}
-                />
-                <Button
-                    title="Connect to a c-lightning Spark node"
-                    onPress={() =>
-                        navigation.navigate('AddEditNode', {
-                            newEntry: true,
-                            node: {
-                                implementation: 'spark'
-                            },
-                            index:
-                                (nodes &&
-                                    nodes.length &&
-                                    Number(nodes.length)) ||
-                                0
-                        })
-                    }
-                    buttonStyle={{
-                        borderRadius: 30
-                    }}
-                    titleStyle={{
-                        color: 'white'
-                    }}
-                    style={styles.button}
-                />
+                <View style={styles.button}>
+                    <Button
+                        title="Connect to an lnd node"
+                        onPress={() =>
+                            navigation.navigate('AddEditNode', {
+                                newEntry: true,
+                                node: {
+                                    implementation: 'lnd'
+                                },
+                                index:
+                                    (nodes &&
+                                        nodes.length &&
+                                        Number(nodes.length)) ||
+                                    0
+                            })
+                        }
+                        buttonStyle={{
+                            backgroundColor: 'purple',
+                            borderRadius: 30
+                        }}
+                        titleStyle={{
+                            color: 'white'
+                        }}
+                    />
+                </View>
+                <View style={styles.button}>
+                    <Button
+                        title="Connect to a c-lightning-REST node"
+                        onPress={() =>
+                            navigation.navigate('AddEditNode', {
+                                newEntry: true,
+                                node: {
+                                    implementation: 'c-lightning-REST'
+                                },
+                                index:
+                                    (nodes &&
+                                        nodes.length &&
+                                        Number(nodes.length)) ||
+                                    0
+                            })
+                        }
+                        buttonStyle={{
+                            borderRadius: 30
+                        }}
+                        titleStyle={{
+                            color: 'white'
+                        }}
+                    />
+                </View>
+                <View style={styles.button}>
+                    <Button
+                        title="Connect to a c-lightning Spark node"
+                        onPress={() =>
+                            navigation.navigate('AddEditNode', {
+                                newEntry: true,
+                                node: {
+                                    implementation: 'spark'
+                                },
+                                index:
+                                    (nodes &&
+                                        nodes.length &&
+                                        Number(nodes.length)) ||
+                                    0
+                            })
+                        }
+                        buttonStyle={{
+                            borderRadius: 30
+                        }}
+                        titleStyle={{
+                            color: 'white'
+                        }}
+                    />
+                </View>
                 <ScanQRButton />
+
                 <View style={{ padding: 20 }} />
+
                 <ContinueButton title="I don't have a node" />
                 <BackButton />
                 <SkipTourButton />
@@ -322,32 +331,33 @@ export default class Onboarding extends React.Component<
                     trust with a LNDHub enabled node. Consider being the Uncle
                     Jim in your family and setting up LNDHub on your lnd node.
                 </Text>
-                <Button
-                    title="Connect with LNDHub"
-                    onPress={() =>
-                        navigation.navigate('AddEditNode', {
-                            newEntry: true,
-                            node: {
-                                implementation: 'lndhub',
-                                lndhubUrl: 'lndhub.herokuapp.com',
-                                sslVerification: true
-                            },
-                            index:
-                                (nodes &&
-                                    nodes.length &&
-                                    Number(nodes.length)) ||
-                                0
-                        })
-                    }
-                    buttonStyle={{
-                        borderRadius: 30,
-                        backgroundColor: 'lightblue'
-                    }}
-                    titleStyle={{
-                        color: 'white'
-                    }}
-                    style={styles.button}
-                />
+                <View style={styles.button}>
+                    <Button
+                        title="Connect with LNDHub"
+                        onPress={() =>
+                            navigation.navigate('AddEditNode', {
+                                newEntry: true,
+                                node: {
+                                    implementation: 'lndhub',
+                                    lndhubUrl: 'lndhub.herokuapp.com',
+                                    sslVerification: true
+                                },
+                                index:
+                                    (nodes &&
+                                        nodes.length &&
+                                        Number(nodes.length)) ||
+                                    0
+                            })
+                        }
+                        buttonStyle={{
+                            borderRadius: 30,
+                            backgroundColor: 'lightblue'
+                        }}
+                        titleStyle={{
+                            color: 'white'
+                        }}
+                    />
+                </View>
                 <ContinueButton title="See integrations" />
                 <BackButton />
                 <SkipTourButton />
@@ -428,8 +438,8 @@ export default class Onboarding extends React.Component<
                         source={btcPay}
                     />
                 </TouchableHighlight>
-                <BackButton />
                 <SkipTourButton title="Complete tour" />
+                <BackButton />
             </View>
         );
 
@@ -453,7 +463,9 @@ const styles = StyleSheet.create({
     },
     button: {
         paddingTop: 10,
-        paddingBottom: 10
+        paddingBottom: 10,
+        width: 350,
+        alignSelf: 'center'
     },
     backgroundImage: {
         flex: 1,
