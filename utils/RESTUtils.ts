@@ -12,6 +12,8 @@ interface Headers {
     'Grpc-Metadata-macaroon'?: string;
 }
 
+export const DEFAULT_LNDHUB = 'https://lndhub.herokuapp.com';
+
 // keep track of all active calls so we can cancel when appropriate
 const calls: any = {};
 
@@ -59,7 +61,9 @@ class LND {
     };
 
     getURL = (host: string, port: string | number, route: string) => {
-        const baseUrl = `https://${host}${port ? ':' + port : ''}`;
+        const baseUrl = this.supportsCustomHostProtocol()
+            ? `${host}${port ? ':' + port : ''}`
+            : `https://${host}${port ? ':' + port : ''}`;
         return `${baseUrl}${route}`;
     };
 
@@ -121,7 +125,7 @@ class LND {
 
     // LndHub
     createAccount = (host: string, sslVerification: boolean) => {
-        const url: string = `https://${host}/create`;
+        const url: string = `${host}/create`;
         return this.restReq(
             {
                 'Access-Control-Allow-Origin': '*',
@@ -140,6 +144,7 @@ class LND {
     supportsOnchainSends = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
+    supportsCustomHostProtocol = () => false;
 }
 
 class CLightningREST extends LND {
@@ -264,6 +269,7 @@ class LndHub extends LND {
     supportsOnchainSends = () => false;
     supportsKeysend = () => false;
     supportsChannelManagement = () => false;
+    supportsCustomHostProtocol = () => true;
 }
 
 class Spark {
@@ -600,6 +606,8 @@ class RESTUtils {
     supportsOnchainSends = () => this.call('supportsOnchainSends');
     supportsKeysend = () => this.call('supportsKeysend');
     supportsChannelManagement = () => this.call('supportsChannelManagement');
+    // let users specify http/https
+    supportsCustomHostProtocol = () => this.call('supportsCustomHostProtocol ');
 }
 
 const restUtils = new RESTUtils();
