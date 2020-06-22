@@ -41,7 +41,7 @@ class LND {
                 } else {
                     const errorInfo = response.json();
                     throw new Error(
-                        errorInfo.error.message ||
+                        (errorInfo.error && errorInfo.error.message) ||
                             ErrorUtils.errorToUserFriendly(errorInfo.code) ||
                             errorInfo.message ||
                             errorInfo.error
