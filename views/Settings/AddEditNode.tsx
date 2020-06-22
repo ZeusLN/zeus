@@ -16,6 +16,7 @@ import {
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import LndConnectUtils from './../../utils/LndConnectUtils';
+import CollapsedQR from './../../components/CollapsedQR';
 
 import SettingsStore from './../../stores/SettingsStore';
 
@@ -884,6 +885,14 @@ export default class AddEditNode extends React.Component<
                                         editable={!loading}
                                         placeholderTextColor="gray"
                                     />
+                                    {saved && lndhubUrl === DEFAULT_LNDHUB && (
+                                        <CollapsedQR
+                                            showText="Show account QR"
+                                            collapseText="Hide account QR"
+                                            value={`lndhub://${username}:${password}`}
+                                            hideText
+                                        />
+                                    )}
                                 </>
                             )}
                         </>
