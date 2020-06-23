@@ -17,6 +17,7 @@ import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import LndConnectUtils from './../../utils/LndConnectUtils';
 import CollapsedQR from './../../components/CollapsedQR';
+import { DEFAULT_LNDHUB } from './../../utils/RESTUtils';
 
 import SettingsStore from './../../stores/SettingsStore';
 
@@ -45,8 +46,6 @@ interface AddEditNodeState {
     showLndHubModal: boolean;
     showSslModal: boolean;
 }
-
-const DEFAULT_LNDHUB = 'lndhub.herokuapp.com';
 
 @inject('SettingsStore')
 @observer
