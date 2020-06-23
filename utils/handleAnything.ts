@@ -43,6 +43,21 @@ export default async function(data: string): Promise<any> {
                 newEntry: true
             }
         ];
+    } else if (AddressUtils.isValidLNDHubAddress(value)) {
+        const { username, password } = AddressUtils.processLNDHubAddress(value);
+        const node = {
+            implementation: 'lndhub',
+            username,
+            password,
+            sslVerification: true
+        };
+        return [
+            'AddEditNode',
+            {
+                node,
+                newEntry: true
+            }
+        ];
     } else if (findlnurl(value) !== null) {
         const raw: string = findlnurl(value) || '';
         return getlnurlParams(raw).then((params: any) => {

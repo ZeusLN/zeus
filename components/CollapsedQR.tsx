@@ -7,6 +7,8 @@ import CopyButton from './CopyButton';
 interface CollapsedQRProps {
     theme: any;
     value: string;
+    showText?: string;
+    collapseText?: string;
     copyText?: string;
     hideText?: boolean;
 }
@@ -31,7 +33,14 @@ export default class CollapsedQR extends React.Component<
 
     render() {
         const { collapsed } = this.state;
-        const { theme, value, copyText, hideText } = this.props;
+        const {
+            theme,
+            value,
+            showText,
+            copyText,
+            collapseText,
+            hideText
+        } = this.props;
 
         return (
             <React.Fragment>
@@ -50,7 +59,11 @@ export default class CollapsedQR extends React.Component<
                     </View>
                 )}
                 <Button
-                    title={collapsed ? 'Show QR' : 'Hide QR'}
+                    title={
+                        collapsed
+                            ? showText || 'Show QR'
+                            : collapseText || 'Hide QR'
+                    }
                     icon={{
                         name: 'qrcode',
                         type: 'font-awesome',

@@ -16,6 +16,7 @@ import {
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import LndConnectUtils from './../../utils/LndConnectUtils';
+import CollapsedQR from './../../components/CollapsedQR';
 import { DEFAULT_LNDHUB } from './../../utils/RESTUtils';
 
 import SettingsStore from './../../stores/SettingsStore';
@@ -74,7 +75,10 @@ export default class AddEditNode extends React.Component<
     async UNSAFE_componentWillMount() {
         const clipboard = await Clipboard.getString();
 
-        if (clipboard.includes('lndconnect://')) {
+        if (
+            clipboard.includes('lndconnect://') ||
+            clipboard.includes('lndhub://')
+        ) {
             this.setState({
                 suggestImport: clipboard
             });
@@ -82,18 +86,33 @@ export default class AddEditNode extends React.Component<
     }
 
     importClipboard = () => {
-        const {
-            host,
-            port,
-            macaroonHex
-        } = LndConnectUtils.processLndConnectUrl(this.state.suggestImport);
+        const { suggestImport } = this.state;
 
-        this.setState({
-            host,
-            port,
-            macaroonHex,
-            suggestImport: ''
-        });
+        if (suggestImport.includes('lndconnect://')) {
+            const {
+                host,
+                port,
+                macaroonHex
+            } = LndConnectUtils.processLndConnectUrl(suggestImport);
+
+            this.setState({
+                host,
+                port,
+                macaroonHex,
+                suggestImport: ''
+            });
+        } else if (suggestImport.includes('lndhub://')) {
+            const { username, password } = AddressUtils.processLNDHubAddress(
+                suggestImport
+            );
+
+            this.setState({
+                username,
+                password,
+                implementation: 'lndhub',
+                suggestImport: ''
+            });
+        }
 
         Clipboard.setString('');
     };
@@ -525,11 +544,13 @@ export default class AddEditNode extends React.Component<
                 {!!suggestImport && (
                     <View style={styles.clipboardImport}>
                         <Text style={{ color: 'white' }}>
-                            Detected the following lndconnect string in your
+                            Detected the following connection string in your
                             clipboard:
                         </Text>
                         <Text style={{ color: 'white', padding: 15 }}>
-                            {`${suggestImport.substring(0, 100)}...`}
+                            {suggestImport.length > 100
+                                ? `${suggestImport.substring(0, 100)}...`
+                                : suggestImport}
                         </Text>
                         <Text style={{ color: 'white' }}>
                             Would you like to import it?
@@ -883,6 +904,14 @@ export default class AddEditNode extends React.Component<
                                         editable={!loading}
                                         placeholderTextColor="gray"
                                     />
+                                    {saved && lndhubUrl === DEFAULT_LNDHUB && (
+                                        <CollapsedQR
+                                            showText="Show account QR"
+                                            collapseText="Hide account QR"
+                                            value={`lndhub://${username}:${password}`}
+                                            hideText
+                                        />
+                                    )}
                                 </>
                             )}
                         </>
@@ -1084,49 +1113,77 @@ export default class AddEditNode extends React.Component<
                     </View>
                 )}
 
-                <View style={styles.button}>
-                    <Button
-                        title="Scan lndconnect config"
-                        icon={{
-                            name: 'crop-free',
-                            size: 25,
-                            color: savedTheme === 'dark' ? 'black' : 'white'
-                        }}
-                        onPress={() =>
-                            navigation.navigate('LNDConnectConfigQRScanner', {
-                                index
-                            })
-                        }
-                        buttonStyle={{
-                            backgroundColor:
-                                savedTheme === 'dark' ? 'white' : 'black',
-                            borderRadius: 30
-                        }}
-                        titleStyle={{
-                            color: savedTheme === 'dark' ? 'black' : 'white'
-                        }}
-                    />
-                </View>
+                {implementation !== 'lndhub' && (
+                    <View style={styles.button}>
+                        <Button
+                            title="Scan lndconnect config"
+                            icon={{
+                                name: 'crop-free',
+                                size: 25,
+                                color: savedTheme === 'dark' ? 'black' : 'white'
+                            }}
+                            onPress={() =>
+                                navigation.navigate(
+                                    'LNDConnectConfigQRScanner',
+                                    {
+                                        index
+                                    }
+                                )
+                            }
+                            buttonStyle={{
+                                backgroundColor:
+                                    savedTheme === 'dark' ? 'white' : 'black',
+                                borderRadius: 30
+                            }}
+                            titleStyle={{
+                                color: savedTheme === 'dark' ? 'black' : 'white'
+                            }}
+                        />
+                    </View>
+                )}
 
-                <View style={styles.button}>
-                    <Button
-                        title="Scan BTCPay config"
-                        icon={{
-                            name: 'crop-free',
-                            size: 25,
-                            color: 'white'
-                        }}
-                        onPress={() =>
-                            navigation.navigate('BTCPayConfigQRScanner', {
-                                index
-                            })
-                        }
-                        buttonStyle={{
-                            backgroundColor: 'rgba(5, 146, 35, 1)',
-                            borderRadius: 30
-                        }}
-                    />
-                </View>
+                {implementation !== 'lndhub' && (
+                    <View style={styles.button}>
+                        <Button
+                            title="Scan BTCPay config"
+                            icon={{
+                                name: 'crop-free',
+                                size: 25,
+                                color: 'white'
+                            }}
+                            onPress={() =>
+                                navigation.navigate('BTCPayConfigQRScanner', {
+                                    index
+                                })
+                            }
+                            buttonStyle={{
+                                backgroundColor: 'rgba(5, 146, 35, 1)',
+                                borderRadius: 30
+                            }}
+                        />
+                    </View>
+                )}
+
+                {implementation === 'lndhub' && (
+                    <View style={styles.button}>
+                        <Button
+                            title="Scan LNDHub QR"
+                            icon={{
+                                name: 'crop-free',
+                                size: 25,
+                                color: 'white'
+                            }}
+                            onPress={() =>
+                                navigation.navigate('LNDHubQRScanner', {
+                                    index
+                                })
+                            }
+                            buttonStyle={{
+                                borderRadius: 30
+                            }}
+                        />
+                    </View>
+                )}
 
                 {saved && (
                     <View style={styles.button}>
