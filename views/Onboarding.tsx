@@ -13,6 +13,7 @@ import {
 import { Button, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import UrlUtils from './../utils/UrlUtils';
+import { DEFAULT_LNDHUB } from './../utils/RESTUtils';
 
 const Background = require('./../images/onboarding/background.jpg');
 
@@ -339,7 +340,7 @@ export default class Onboarding extends React.Component<
                                 newEntry: true,
                                 node: {
                                     implementation: 'lndhub',
-                                    lndhubUrl: 'lndhub.herokuapp.com',
+                                    lndhubUrl: DEFAULT_LNDHUB,
                                     sslVerification: true
                                 },
                                 index:
