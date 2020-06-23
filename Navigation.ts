@@ -18,6 +18,7 @@ import Payment from './views/Payment';
 import Invoice from './views/Invoice';
 import BTCPayConfigQRScanner from './views/BTCPayConfigQRScanner';
 import LNDConnectConfigQRScanner from './views/LNDConnectConfigQRScanner';
+import LNDHubQRScanner from './views/LNDHubQRScanner';
 import NodeInfo from './views/NodeInfo';
 import Lockscreen from './views/Lockscreen';
 
@@ -95,6 +96,9 @@ const AppScenes = {
     },
     LNDConnectConfigQRScanner: {
         screen: LNDConnectConfigQRScanner
+    },
+    LNDHubQRScanner: {
+        screen: LNDHubQRScanner
     },
     NodeInfo: {
         screen: NodeInfo

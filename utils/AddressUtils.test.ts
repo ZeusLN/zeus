@@ -142,5 +142,38 @@ describe('AddressUtils', () => {
                 });
             });
         });
+
+        describe('isValidLNDHubAddress', () => {
+            it('validates LNDHub account addreses properly', () => {
+                expect(
+                    AddressUtils.isValidLNDHubAddress(
+                        'bitcoin:34K6tvoWM7k2ujeXVuimv29WyAsqzhWofb?amount=0.00170003'
+                    )
+                ).toBeFalsy();
+                expect(
+                    AddressUtils.isValidLNDHubAddress(
+                        'lndhub://9a1e4e972f732352c75e:4a1e4e172f732352c75e'
+                    )
+                ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLNDHubAddress(
+                        'lndhub://9ae:9a1e4e972f732352c75e'
+                    )
+                ).toBeFalsy();
+            });
+        });
+
+        describe('processLNDHubAddress', () => {
+            it('processes LNDHub account addreses properly', () => {
+                expect(
+                    AddressUtils.processLNDHubAddress(
+                        'lndhub://9a1e4e972f732352c75e:4a1e4e172f732352c75e'
+                    )
+                ).toEqual({
+                    username: '9a1e4e972f732352c75e',
+                    password: '4a1e4e172f732352c75e'
+                });
+            });
+        });
     });
 });
