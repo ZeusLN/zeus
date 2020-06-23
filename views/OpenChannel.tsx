@@ -332,13 +332,15 @@ export default class OpenChannel extends React.Component<
                         editable={!openingChannel}
                     />
 
-                    <CheckBox
-                        title="Private"
-                        checked={privateChannel}
-                        onPress={() =>
-                            this.setState({ private: !privateChannel })
-                        }
-                    />
+                    <View style={{ padding: 10 }}>
+                        <CheckBox
+                            title="Private"
+                            checked={privateChannel}
+                            onPress={() =>
+                                this.setState({ private: !privateChannel })
+                            }
+                        />
+                    </View>
 
                     <View style={styles.button}>
                         <Button
@@ -349,7 +351,6 @@ export default class OpenChannel extends React.Component<
                                 color: 'white'
                             }}
                             onPress={() => connectPeer(this.state)}
-                            style={{ padding: 10 }}
                             buttonStyle={{
                                 backgroundColor:
                                     theme === 'dark'
@@ -407,13 +408,16 @@ const styles = StyleSheet.create({
         color: 'white'
     },
     content: {
-        alignItems: 'center',
         paddingTop: 20,
-        paddingBottom: 20
+        paddingBottom: 20,
+        paddingLeft: 5,
+        paddingRight: 5
     },
     button: {
         paddingTop: 10,
-        paddingBottom: 10
+        paddingBottom: 10,
+        width: 250,
+        alignSelf: 'center'
     },
     clipboardImport: {
         padding: 10,
