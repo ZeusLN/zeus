@@ -1,5 +1,12 @@
 import * as React from 'react';
-import { StyleSheet, Text, TextInput, View, Clipboard } from 'react-native';
+import {
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+    ScrollView,
+    Clipboard
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
 import handleAnything from './../utils/handleAnything';
@@ -8,6 +15,10 @@ import InvoicesStore from './../stores/InvoicesStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
 import TransactionsStore from './../stores/TransactionsStore';
 import SettingsStore from './../stores/SettingsStore';
+
+import FeeTable from './../components/FeeTable';
+
+import RESTUtils from './../utils/RESTUtils';
 
 interface SendProps {
     exitSetup: any;
@@ -24,6 +35,7 @@ interface SendState {
     destination: string;
     amount: string;
     fee: string;
+    error_msg: string;
 }
 
 @inject('InvoicesStore', 'NodeInfoStore', 'TransactionsStore', 'SettingsStore')
@@ -35,9 +47,10 @@ export default class Send extends React.Component<SendProps, SendState> {
         const destination = navigation.getParam('destination', null);
         const amount = navigation.getParam('amount', null);
         const transactionType = navigation.getParam('transactionType', null);
+        const isValid = navigation.getParam('isValid', null);
 
         this.state = {
-            isValid: false,
+            isValid: isValid || false,
             transactionType: transactionType,
             destination: destination || '',
             amount: amount || '',
@@ -45,21 +58,30 @@ export default class Send extends React.Component<SendProps, SendState> {
         };
     }
 
-    async componentWillMount() {
+    async UNSAFE_componentWillMount() {
         const clipboard = await Clipboard.getString();
+        this.validateAddress(clipboard);
+    }
 
-        Clipboard.setString('');
-        this.validateAddress(clipboard, false);
+    componentDidMount() {
+        if (this.state.destination) {
+            this.validateAddress(this.state.destination);
+        }
     }
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
-        const { navigation } = nextProps;
+        const { navigation, SettingsStore } = nextProps;
+        const { implementation } = SettingsStore;
         const destination = navigation.getParam('destination', null);
         const amount = navigation.getParam('amount', null);
         const transactionType = navigation.getParam('transactionType', null);
 
         if (transactionType === 'Lightning') {
-            this.props.InvoicesStore.getPayReq(destination);
+            if (implementation === 'lndhub') {
+                this.props.InvoicesStore.getPayReqLocal(destination);
+            } else {
+                this.props.InvoicesStore.getPayReq(destination);
+            }
         }
 
         this.setState({
@@ -70,40 +92,45 @@ export default class Send extends React.Component<SendProps, SendState> {
         });
     }
 
-    validateAddress = (text: string, apply: boolean = true) => {
+    validateAddress = (text: string) => {
         const { navigation } = this.props;
         handleAnything(text)
             .then(([route, props]) => {
                 navigation.navigate(route, props);
             })
-            .catch(() => {
+            .catch(err => {
                 this.setState({
                     transactionType: null,
                     isValid: false,
-                    destination: apply ? text : this.state.destination
+                    destination: text,
+                    error_msg: err.message
                 });
             });
     };
 
     sendCoins = () => {
-        const { TransactionsStore, navigation, SettingsStore } = this.props;
+        const { TransactionsStore, navigation } = this.props;
         const { destination, amount, fee } = this.state;
-        const { implementation } = SettingsStore;
 
-        if (implementation === 'c-lightning-REST') {
-            TransactionsStore.sendCoins({
-                address: destination,
-                feeRate: `${Number(fee) * 1000}perkb`, // satoshis per kilobyte
-                satoshis: amount
-            });
-        } else {
-            TransactionsStore.sendCoins({
-                addr: destination,
-                sat_per_byte: fee,
-                amount
-            });
-        }
+        TransactionsStore.sendCoins({
+            addr: destination,
+            sat_per_byte: fee,
+            amount
+        });
         navigation.navigate('SendingOnChain');
+    };
+
+    sendKeySendPayment = () => {
+        const { TransactionsStore, navigation } = this.props;
+        const { destination, amount } = this.state;
+
+        TransactionsStore.sendPayment(null, amount, destination);
+
+        navigation.navigate('SendingLightning');
+    };
+
+    setFee = (text: string) => {
+        this.setState({ fee: text });
     };
 
     render() {
@@ -113,9 +140,10 @@ export default class Send extends React.Component<SendProps, SendState> {
             transactionType,
             destination,
             amount,
-            fee
+            fee,
+            error_msg
         } = this.state;
-        const { settings } = SettingsStore;
+        const { implementation, settings } = SettingsStore;
         const { theme } = settings;
 
         const BackButton = () => (
@@ -127,8 +155,17 @@ export default class Send extends React.Component<SendProps, SendState> {
             />
         );
 
+        const paymentOptions = ['Lightning payment request'];
+
+        if (RESTUtils.supportsOnchainSends()) {
+            paymentOptions.push('Bitcoin address');
+        }
+        if (RESTUtils.supportsKeysend()) {
+            paymentOptions.push('keysend address (if enabled)');
+        }
+
         return (
-            <View
+            <ScrollView
                 style={
                     theme === 'dark'
                         ? styles.darkThemeStyle
@@ -144,14 +181,14 @@ export default class Send extends React.Component<SendProps, SendState> {
                     <Text
                         style={{ color: theme === 'dark' ? 'white' : 'black' }}
                     >
-                        Bitcoin address or Lightning payment request
+                        {paymentOptions.join(', ')}
                     </Text>
                     <TextInput
                         placeholder={'lnbc1...'}
                         value={destination}
-                        onChangeText={(text: string) =>
-                            this.validateAddress(text)
-                        }
+                        onChangeText={(text: string) => {
+                            this.validateAddress(text);
+                        }}
                         style={
                             theme === 'dark'
                                 ? styles.textInputDark
@@ -165,8 +202,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 color: theme === 'dark' ? 'white' : 'black'
                             }}
                         >
-                            Must be a valid Bitcoin address or Lightning payment
-                            request
+                            Must be a valid {paymentOptions.join(', ')}
                         </Text>
                     )}
                     {transactionType && (
@@ -177,7 +213,82 @@ export default class Send extends React.Component<SendProps, SendState> {
                             }}
                         >{`${transactionType} Transaction`}</Text>
                     )}
-                    {transactionType === 'On-chain' && (
+                    {transactionType === 'On-chain' &&
+                        !RESTUtils.supportsOnchainSends() && (
+                            <Text
+                                style={{
+                                    color: theme === 'dark' ? 'white' : 'black'
+                                }}
+                            >
+                                On-chain sends are not supported on{' '}
+                                {implementation}
+                            </Text>
+                        )}
+                    {transactionType === 'On-chain' &&
+                        RESTUtils.supportsOnchainSends() && (
+                            <React.Fragment>
+                                <Text
+                                    style={{
+                                        color:
+                                            theme === 'dark' ? 'white' : 'black'
+                                    }}
+                                >
+                                    Amount (in satoshis)
+                                </Text>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    value={amount}
+                                    onChangeText={(text: string) =>
+                                        this.setState({ amount: text })
+                                    }
+                                    style={
+                                        theme === 'dark'
+                                            ? styles.textInputDark
+                                            : styles.textInput
+                                    }
+                                    placeholderTextColor="gray"
+                                />
+                                <Text
+                                    style={{
+                                        color:
+                                            theme === 'dark' ? 'white' : 'black'
+                                    }}
+                                >
+                                    Fee (satoshis per byte)
+                                </Text>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    placeholder="2"
+                                    value={fee}
+                                    onChangeText={(text: string) =>
+                                        this.setState({ fee: text })
+                                    }
+                                    style={
+                                        theme === 'dark'
+                                            ? styles.textInputDark
+                                            : styles.textInput
+                                    }
+                                    placeholderTextColor="gray"
+                                />
+                                <View style={styles.button}>
+                                    <Button
+                                        title="Send Coins"
+                                        icon={{
+                                            name: 'send',
+                                            size: 25,
+                                            color: 'white'
+                                        }}
+                                        onPress={() => this.sendCoins()}
+                                        style={styles.button}
+                                        buttonStyle={{
+                                            backgroundColor: 'orange',
+                                            borderRadius: 30
+                                        }}
+                                    />
+                                </View>
+                            </React.Fragment>
+                        )}
+                    {transactionType === 'Keysend' && implementation === 'lnd' && (
                         <React.Fragment>
                             <Text
                                 style={{
@@ -199,36 +310,15 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 }
                                 placeholderTextColor="gray"
                             />
-                            <Text
-                                style={{
-                                    color: theme === 'dark' ? 'white' : 'black'
-                                }}
-                            >
-                                Fee (satoshis per byte)
-                            </Text>
-                            <TextInput
-                                keyboardType="numeric"
-                                placeholder="2"
-                                value={fee}
-                                onChangeText={(text: string) =>
-                                    this.setState({ fee: text })
-                                }
-                                style={
-                                    theme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
-                                placeholderTextColor="gray"
-                            />
                             <View style={styles.button}>
                                 <Button
-                                    title="Send Coins"
+                                    title="Send"
                                     icon={{
                                         name: 'send',
                                         size: 25,
                                         color: 'white'
                                     }}
-                                    onPress={() => this.sendCoins()}
+                                    onPress={() => this.sendKeySendPayment()}
                                     style={styles.button}
                                     buttonStyle={{
                                         backgroundColor: 'orange',
@@ -238,6 +328,20 @@ export default class Send extends React.Component<SendProps, SendState> {
                             </View>
                         </React.Fragment>
                     )}
+                    {transactionType === 'Keysend' &&
+                        !RESTUtils.supportsKeysend() && (
+                            <React.Fragment>
+                                <Text
+                                    style={{
+                                        color:
+                                            theme === 'dark' ? 'white' : 'black'
+                                    }}
+                                >
+                                    Sorry, {implementation} does not support
+                                    sending keysend payments at the moment.
+                                </Text>
+                            </React.Fragment>
+                        )}
                     {transactionType === 'Lightning' && (
                         <View style={styles.button}>
                             <Button
@@ -278,8 +382,26 @@ export default class Send extends React.Component<SendProps, SendState> {
                             }}
                         />
                     </View>
+
+                    {transactionType === 'On-chain' && (
+                        <View style={styles.feeTableButton}>
+                            <FeeTable setFee={this.setFee} />
+                        </View>
+                    )}
+
+                    {!!error_msg && (
+                        <React.Fragment>
+                            <Text
+                                style={{
+                                    color: theme === 'dark' ? 'white' : 'black'
+                                }}
+                            >
+                                {error_msg}
+                            </Text>
+                        </React.Fragment>
+                    )}
                 </View>
-            </View>
+            </ScrollView>
         );
     }
 }
@@ -307,11 +429,15 @@ const styles = StyleSheet.create({
         paddingBottom: 10
     },
     content: {
-        paddingLeft: 20,
-        paddingRight: 20
+        padding: 20
     },
     button: {
+        alignItems: 'center',
+        paddingTop: 15
+    },
+    feeTableButton: {
         paddingTop: 15,
-        paddingBottom: 15
+        alignItems: 'center',
+        minHeight: 75
     }
 });

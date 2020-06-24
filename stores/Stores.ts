@@ -32,7 +32,10 @@ class Stores {
         this.transactionsStore = new TransactionsStore(this.settingsStore);
         this.walletStore = new BalanceStore(this.settingsStore);
         this.unitsStore = new UnitsStore(this.settingsStore, this.fiatStore);
-        this.paymentsStore = new PaymentsStore(this.settingsStore);
+        this.paymentsStore = new PaymentsStore(
+            this.settingsStore,
+            this.channelsStore
+        );
         this.feeStore = new FeeStore(this.settingsStore);
         this.lnurlPayStore = new LnurlPayStore(
             this.settingsStore,

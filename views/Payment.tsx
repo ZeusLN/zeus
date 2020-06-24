@@ -26,6 +26,19 @@ interface PaymentProps {
 @inject('UnitsStore', 'SettingsStore', 'LnurlPayStore')
 @observer
 export default class PaymentView extends React.Component<PaymentProps> {
+    state = {
+        lnurlpaytx: null
+    };
+
+    async componentDidMount() {
+        const { navigation, LnurlPayStore } = this.props;
+        const payment: Payment = navigation.getParam('payment', null);
+        let lnurlpaytx = await LnurlPayStore.load(payment.payment_hash);
+        if (lnurlpaytx) {
+            this.setState({ lnurlpaytx });
+        }
+    }
+
     render() {
         const {
             navigation,
@@ -43,10 +56,9 @@ export default class PaymentView extends React.Component<PaymentProps> {
             getFee,
             payment_hash,
             payment_preimage,
-            path
+            enhancedPath
         } = payment;
         const date = getCreationTime;
-        const lnurlpaytx = LnurlPayStore.load(payment_hash);
 
         const BackButton = () => (
             <Icon
@@ -63,6 +75,8 @@ export default class PaymentView extends React.Component<PaymentProps> {
         const fee = lurkerMode
             ? PrivacyUtils.hideValue(getAmount(getFee), 3, true)
             : getAmount(getFee);
+
+        const lnurlpaytx = this.state.lnurlpaytx;
 
         return (
             <ScrollView
@@ -131,22 +145,30 @@ export default class PaymentView extends React.Component<PaymentProps> {
                         </View>
                     )}
 
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.labelDark : styles.label
-                        }
-                    >
-                        Payment Hash
-                    </Text>
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.valueDark : styles.value
-                        }
-                    >
-                        {lurkerMode
-                            ? PrivacyUtils.hideValue(payment_hash)
-                            : payment_hash}
-                    </Text>
+                    {typeof payment_hash === 'string' && (
+                        <>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Payment Hash
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(payment_hash)
+                                    : payment_hash}
+                            </Text>
+                        </>
+                    )}
 
                     <Text
                         style={
@@ -180,7 +202,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                         {lurkerMode ? PrivacyUtils.hideValue(date, 14) : date}
                     </Text>
 
-                    {path && (
+                    {enhancedPath.length > 0 && (
                         <Text
                             style={
                                 theme === 'dark'
@@ -188,20 +210,23 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                     : styles.label
                             }
                         >
-                            {path.length > 1 ? 'Paths:' : 'Path:'}
+                            Path:
                         </Text>
                     )}
-                    {path && (
+                    {enhancedPath.length > 0 && (
                         <Text
                             style={
                                 theme === 'dark'
                                     ? styles.valueDark
                                     : styles.value
                             }
+                            selectable
                         >
                             {lurkerMode
-                                ? PrivacyUtils.hideValue(path.join(', '))
-                                : path.join(', ')}
+                                ? PrivacyUtils.hideValue(
+                                      enhancedPath.join(', ')
+                                  )
+                                : enhancedPath.join(', ')}
                         </Text>
                     )}
                 </View>

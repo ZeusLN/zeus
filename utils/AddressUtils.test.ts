@@ -95,6 +95,30 @@ describe('AddressUtils', () => {
                     'LNBC1PWXMPG5PP5PFC6HQ9CN2059N8Q6N0QHLXLYK6Y38F7YXSG0CDQ0S3S8XRYAJ6QDPH235HQURFDCSYUET9WFSK5J6PYQ58G6TSWP5KUTNDV55JSAF5X5MRS2GCQZYSXQYZ5VQ54GLTEY50RA8UTDYA5XJ5YR9D30S4P627FTZ4FJP78KY2SLKA2GSKVP096JJEFQ3D5UJHNQWRRH70ESPXYH09KDMQ8Q64N3JAJ8LDEGQ5M4DDP'
                 )
             ).toBeTruthy();
+            expect(
+                AddressUtils.isValidLightningPaymentRequest(
+                    'lnbc10u1p0tr3zzpp5fh8qgluv6qv8p0a25x8zltrdggddeywdd278qqaz0h7nvcxpugpqdp6f35kw6r5de5kueeqf4skuettdykkuettdusyqgrnwfmzuerjv4skgtnr0gxqyjw5qcqp2rzjqdxjmlgn3dxl7t5098l03dctjxhg0vuyaw9c9999fmfwtrc37ggf6zvcfvqq9vgqqyqqqqrrqqqqqvsqxgjy4m2cx6ntrf6jj3582vf3ek5ax5xgm4gp3skdj5t9appt6d7jtyxjdluqsk9r93m9u67sn0h4gvn4ql3aax6uptanklsr2msu3rv8sp25v7fq'
+                )
+            ).toBeTruthy();
+        });
+
+        it('validates capitalized Lightning public keys properly', () => {
+            expect(AddressUtils.isValidLightningPubKey('B')).toBeFalsy();
+            expect(
+                AddressUtils.isValidLightningPubKey(
+                    '0368fea53f886ddaf541212f78e2ef426fdfef82c2df8ec7e2e100b4088ac0ff1d'
+                )
+            ).toBeTruthy();
+            expect(
+                AddressUtils.isValidLightningPubKey(
+                    '02264ed0a325064edf66f20290003bede4c2122d8b27be396f700862dfdd925485'
+                )
+            ).toBeTruthy();
+            expect(
+                AddressUtils.isValidLightningPubKey(
+                    '02f26071c249ea5cd7c346afda799d58f113852f7ab6c80f6f7f2bedd7c52cd01a'
+                )
+            ).toBeTruthy();
         });
 
         describe('processSendAddress', () => {
@@ -115,6 +139,39 @@ describe('AddressUtils', () => {
                 ).toEqual({
                     value: '34K6tvoWM7k2ujeXVuimv29WyAsqzhWofb',
                     amount: undefined
+                });
+            });
+        });
+
+        describe('isValidLNDHubAddress', () => {
+            it('validates LNDHub account addreses properly', () => {
+                expect(
+                    AddressUtils.isValidLNDHubAddress(
+                        'bitcoin:34K6tvoWM7k2ujeXVuimv29WyAsqzhWofb?amount=0.00170003'
+                    )
+                ).toBeFalsy();
+                expect(
+                    AddressUtils.isValidLNDHubAddress(
+                        'lndhub://9a1e4e972f732352c75e:4a1e4e172f732352c75e'
+                    )
+                ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLNDHubAddress(
+                        'lndhub://9ae:9a1e4e972f732352c75e'
+                    )
+                ).toBeFalsy();
+            });
+        });
+
+        describe('processLNDHubAddress', () => {
+            it('processes LNDHub account addreses properly', () => {
+                expect(
+                    AddressUtils.processLNDHubAddress(
+                        'lndhub://9a1e4e972f732352c75e:4a1e4e172f732352c75e'
+                    )
+                ).toEqual({
+                    username: '9a1e4e972f732352c75e',
+                    password: '4a1e4e172f732352c75e'
                 });
             });
         });

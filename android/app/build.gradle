@@ -132,20 +132,14 @@ android {
         applicationId "com.zeusln.zeus"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 15
-        versionName "0.2.1"
+        versionCode 16
+        versionName "0.2.2"
 
         ndk {
             abiFilters "armeabi-v7a", "x86", "arm64-v8a", "x86_64"
        }
     }
     signingConfigs {
-        debug {
-            storeFile file('debug.keystore')
-            storePassword 'android'
-            keyAlias 'androiddebugkey'
-            keyPassword 'android'
-        }
         release {
             if (project.hasProperty('MYAPP_RELEASE_STORE_FILE')) {
                 storeFile file(MYAPP_RELEASE_STORE_FILE)
@@ -194,16 +188,15 @@ android {
         // pickFirst '**/x86_64/libc++_shared.so'
         // pickFirst '**/x86/libjsc.so'
         // pickFirst '**/armeabi-v7a/libjsc.so'
-        pickFirst '**/armeabi-v7a/librealmreact.so'
-        pickFirst '**/x86/librealmreact.so'
         // exclude ARMEABI native so file, ARMEABI has been removed in NDK r17.
         exclude "lib/armeabi/**"
     }
 }
 
 dependencies {
+    implementation project(':rn-fetch-blob')
+    implementation project(':react-native-randombytes')
     implementation project(':react-native-secure-key-store')
-    implementation project(':realm')
     implementation project(':react-native-linear-gradient')
     implementation "androidx.core:core:1.1.0"
     implementation project(':rncamerakit')

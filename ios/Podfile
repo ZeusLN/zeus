@@ -38,14 +38,16 @@ target 'zeus' do
 
   pod 'BVLinearGradient', :path => '../node_modules/react-native-linear-gradient'
 
-  pod 'RealmJS', :path => '../node_modules/realm'
   pod 'react-native-camera-kit', :path => '../node_modules/react-native-camera-kit'
 
-  pod 'RNSecureKeyStore', :path => '../node_modules/react-native-secure-key-store'
+  pod 'react-native-randombytes', :path => '../node_modules/react-native-randombytes'
+
+  # pod 'RNSecureKeyStore', :path => '../node_modules/react-native-secure-key-store'
+
+  pod 'rn-fetch-blob', :path => '../node_modules/rn-fetch-blob'
 
   target 'zeusTests' do
     inherit! :search_paths
-      pod 'Realm/Headers'
     # Pods for testing
   end
 

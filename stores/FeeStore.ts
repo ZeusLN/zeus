@@ -1,6 +1,7 @@
 import { action, observable } from 'mobx';
-import axios from 'axios';
+import RNFetchBlob from 'rn-fetch-blob';
 import RESTUtils from './../utils/RESTUtils';
+import Base64Utils from './../utils/Base64Utils';
 import SettingsStore from './SettingsStore';
 
 export default class FeeStore {
@@ -22,64 +23,60 @@ export default class FeeStore {
     settingsStore: SettingsStore;
 
     constructor(settingsStore: SettingsStore) {
-        this.getOnchainFeesToken = axios.CancelToken.source().token;
         this.settingsStore = settingsStore;
     }
 
     @action
     public getOnchainFees = () => {
         this.loading = true;
-        axios
-            .request({
-                method: 'get',
-                url: 'https://whatthefee.io/data.json',
-                // url: `https://whatthefee.io/data.json?c=1555717500`,
-                cancelToken: this.getOnchainFeesToken
-            })
+        RNFetchBlob.fetch('get', 'https://whatthefee.io/data.json')
             .then((response: any) => {
-                // handle success
-                this.loading = false;
-                const data = response.data;
-                this.dataFrame = data;
+                const status = response.info().status;
+                if (status == 200) {
+                    const data = response.json();
+                    this.loading = false;
+                    this.dataFrame = data;
+                } else {
+                    this.dataFrame = {};
+                    this.loading = false;
+                }
             })
             .catch(() => {
-                // handle error
                 this.dataFrame = {};
                 this.loading = false;
             });
     };
 
+    resetFees = () => {
+        this.fees = {};
+        this.loading = false;
+    };
+
+    feesError = () => {
+        this.loading = false;
+        this.setFeesError = true;
+    };
+
     @action
     public getFees = () => {
         this.loading = true;
-        RESTUtils.getFees(this.settingsStore)
-            .then((response: any) => {
-                // handle success
-                const data = response.data;
+        RESTUtils.getFees()
+            .then((data: any) => {
+                const channelFees: any = {};
+                data.channel_fees.forEach((channelFee: any) => {
+                    channelFees[channelFee.chan_point] = channelFee;
+                });
 
-                // lnd
-                if (data.channel_fees) {
-                    const channelFees: any = {};
-                    data.channel_fees.forEach((channelFee: any) => {
-                        channelFees[channelFee.chan_point] = channelFee;
-                    });
-
-                    this.channelFees = channelFees;
-
-                    this.dayEarned = data.day_fee_sum || 0;
-                    this.weekEarned = data.week_fee_sum || 0;
-                    this.monthEarned = data.month_fee_sum || 0;
-                } else {
-                    // c-lighting-REST
-                    this.totalEarned = data.feeCollected / 1000; // msatoshi_fees_collected
-                }
+                this.channelFees = channelFees;
+                this.dayEarned = data.day_fee_sum || 0;
+                this.weekEarned = data.week_fee_sum || 0;
+                this.monthEarned = data.month_fee_sum || 0;
+                this.totalEarned = data.total_fee_sum || 0;
 
                 this.loading = false;
             })
             .catch(() => {
-                // handle error
-                this.fees = {};
-                this.loading = false;
+                this.resetFees();
             });
     };
 
@@ -96,55 +93,34 @@ export default class FeeStore {
         this.setFeesError = false;
         this.setFeesSuccess = false;
 
-        let data;
-        if (implementation === 'c-lightning-REST') {
-            if (channelId) {
-                data = {
-                    id: channelId,
-                    base: newBaseFeeMsat,
-                    ppm: Number(newFeeRateMiliMsat) / 1000000
-                };
-            } else {
-                data = {
-                    id: 'all',
-                    base: newBaseFeeMsat,
-                    ppm: Number(newFeeRateMiliMsat) / 1000000
-                };
-            }
-        } else {
+        const data = {
+            base_fee_msat: newBaseFeeMsat,
+            fee_rate: newFeeRateMiliMsat / 1000000,
+            time_lock_delta: 4
+        };
+
+        if (channelId) {
+            // c-lightning
+            data.channelId = channelId;
+        } else if (channelPoint) {
             // lnd
-            if (channelPoint) {
-                const [funding_txid, output_index] = channelPoint.split(':');
-                data = {
-                    base_fee_msat: newBaseFeeMsat,
-                    fee_rate: newFeeRateMiliMsat / 1000000,
-                    time_lock_delta: 4,
-                    chan_point: {
-                        output_index: Number(output_index),
-                        funding_txid_str: funding_txid,
-                        funding_txid_bytes: btoa(funding_txid) // must encode in base64
-                    }
-                };
-            } else {
-                data = {
-                    base_fee_msat: newBaseFeeMsat,
-                    fee_rate: newFeeRateMiliMsat / 1000000,
-                    time_lock_delta: 4,
-                    global: true
-                };
-            }
+            const [funding_txid, output_index] = channelPoint.split(':');
+            data.chan_point = {
+                output_index: Number(output_index),
+                funding_txid_str: funding_txid,
+                funding_txid_bytes: Base64Utils.btoa(funding_txid) // must encode in base64
+            };
+        } else {
+            data.global = true;
         }
 
-        RESTUtils.setFees(this.settingsStore, data)
-            .then(() => {
-                // handle success
+        RESTUtils.setFees(data)
+            .then((data: any) => {
                 this.loading = false;
                 this.setFeesSuccess = true;
             })
             .catch(() => {
-                // handle error
-                this.loading = false;
-                this.setFeesError = true;
+                this.feesError();
             });
     };
 }

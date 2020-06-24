@@ -56,9 +56,18 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                     <FlatList
                         data={nodes}
                         renderItem={({ item, index }) => {
-                            const displayName = item.port
-                                ? `${item.host}:${item.port}`
-                                : item.host;
+                            const displayName =
+                                item.implementation === 'lndhub'
+                                    ? item.lndhubUrl
+                                          .replace('https://', '')
+                                          .replace('http://', '')
+                                    : item.url
+                                    ? item.url
+                                          .replace('https://', '')
+                                          .replace('http://', '')
+                                    : item.port
+                                    ? `${item.host}:${item.port}`
+                                    : item.host;
 
                             const title = lurkerMode
                                 ? PrivacyUtils.hideValue(displayName, 8)
@@ -68,7 +77,11 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                 : item.implementation || 'lnd';
 
                             const data = new Identicon(
-                                hash.sha1(title),
+                                hash.sha1(
+                                    item.implementation === 'lndhub'
+                                        ? `${title}-${item.username}`
+                                        : title
+                                ),
                                 255
                             ).toString();
 
@@ -130,7 +143,12 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                                     theme: settings.theme,
                                                     selectedNode: index,
                                                     onChainAddress:
-                                                        settings.onChainAddress
+                                                        settings.onChainAddress,
+                                                    fiat: settings.fiat,
+                                                    lurkerMode:
+                                                        settings.lurkerMode,
+                                                    passphrase:
+                                                        settings.passphrase
                                                 })
                                             ).then(() => {
                                                 navigation.navigate('Wallet', {

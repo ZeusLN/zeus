@@ -5,7 +5,8 @@ import {
     Text,
     TextInput,
     View,
-    ScrollView
+    ScrollView,
+    TouchableOpacity
 } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import { Button, ButtonGroup, Header, Icon } from 'react-native-elements';
@@ -14,12 +15,16 @@ import { inject, observer } from 'mobx-react';
 
 import InvoicesStore from './../stores/InvoicesStore';
 import SettingsStore from './../stores/SettingsStore';
+import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
+import FiatStore from './../stores/FiatStore';
 
 interface ReceiveProps {
     exitSetup: any;
     navigation: any;
     InvoicesStore: InvoicesStore;
     SettingsStore: SettingsStore;
+    UnitsStore: UnitsStore;
+    FiatStore: FiatStore;
 }
 
 interface ReceiveState {
@@ -29,7 +34,7 @@ interface ReceiveState {
     expiry: string;
 }
 
-@inject('InvoicesStore', 'SettingsStore')
+@inject('InvoicesStore', 'SettingsStore', 'UnitsStore', 'FiatStore')
 @observer
 export default class Receive extends React.Component<
     ReceiveProps,
@@ -38,7 +43,7 @@ export default class Receive extends React.Component<
     state = {
         selectedIndex: 0,
         memo: '',
-        value: '',
+        value: '100',
         expiry: '3600'
     };
 
@@ -79,8 +84,17 @@ export default class Receive extends React.Component<
     };
 
     render() {
-        const { InvoicesStore, SettingsStore, navigation } = this.props;
+        const {
+            InvoicesStore,
+            SettingsStore,
+            UnitsStore,
+            FiatStore,
+            navigation
+        } = this.props;
         const { selectedIndex, memo, value, expiry } = this.state;
+        const { units, changeUnits } = UnitsStore;
+        const { fiatRates } = FiatStore;
+
         const {
             createInvoice,
             payment_request,
@@ -88,9 +102,31 @@ export default class Receive extends React.Component<
             creatingInvoiceError,
             error_msg
         } = InvoicesStore;
-        const { settings, loading, chainAddress } = SettingsStore;
-        const { theme } = settings;
+        const {
+            settings,
+            loading,
+            chainAddress,
+            implementation
+        } = SettingsStore;
+        const { theme, fiat } = settings;
         const address = chainAddress;
+
+        const rate =
+            (fiatRates && fiatRates[fiat] && fiatRates[fiat]['15m']) || 0;
+        const symbol = fiatRates && fiatRates[fiat] && fiatRates[fiat].symbol;
+
+        let satAmount;
+        switch (units) {
+            case 'sats':
+                satAmount = value;
+                break;
+            case 'btc':
+                satAmount = Number(value) * satoshisPerBTC;
+                break;
+            case 'fiat':
+                satAmount = Number(Number(value) * rate).toFixed(0);
+                break;
+        }
 
         const lnurl: LNURLWithdrawParams | undefined = navigation.getParam(
             'lnurlParams'
@@ -157,6 +193,7 @@ export default class Receive extends React.Component<
                             {!!payment_request && (
                                 <Text style={{ color: 'green', padding: 20 }}>
                                     Successfully created invoice
+                                    {!!lnurl && ` and sent to ${lnurl.domain}`}
                                 </Text>
                             )}
                             {creatingInvoiceError && (
@@ -213,21 +250,26 @@ export default class Receive extends React.Component<
                                 placeholderTextColor="gray"
                             />
 
-                            <Text
-                                style={{
-                                    color: theme === 'dark' ? 'white' : 'black'
-                                }}
-                            >
-                                Amount (in Satoshis)
-                                {lnurl &&
-                                lnurl.minWithdrawable !== lnurl.maxWithdrawable
-                                    ? ` (${Math.ceil(
-                                          lnurl.minWithdrawable / 1000
-                                      )}--${Math.floor(
-                                          lnurl.maxWithdrawable / 1000
-                                      )})`
-                                    : ''}
-                            </Text>
+                            <TouchableOpacity onPress={() => changeUnits()}>
+                                <Text
+                                    style={{
+                                        color:
+                                            theme === 'dark' ? 'white' : 'black'
+                                    }}
+                                >
+                                    Amount (in {units === 'fiat' ? fiat : units}
+                                    )
+                                    {lnurl &&
+                                    lnurl.minWithdrawable !==
+                                        lnurl.maxWithdrawable
+                                        ? ` (${Math.ceil(
+                                              lnurl.minWithdrawable / 1000
+                                          )}--${Math.floor(
+                                              lnurl.maxWithdrawable / 1000
+                                          )})`
+                                        : ''}
+                                </Text>
+                            </TouchableOpacity>
                             <TextInput
                                 keyboardType="numeric"
                                 placeholder={'100'}
@@ -250,36 +292,60 @@ export default class Receive extends React.Component<
                                 }
                                 placeholderTextColor="gray"
                             />
+                            {units !== 'sats' && (
+                                <TouchableOpacity onPress={() => changeUnits()}>
+                                    <Text
+                                        style={{
+                                            color:
+                                                theme === 'dark'
+                                                    ? 'white'
+                                                    : 'black'
+                                        }}
+                                    >
+                                        {satAmount} satoshis
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
 
-                            <Text
-                                style={{
-                                    color: theme === 'dark' ? 'white' : 'black'
-                                }}
-                            >
-                                Expiration (in seconds)
-                            </Text>
-                            <TextInput
-                                keyboardType="numeric"
-                                placeholder={'3600 (one hour)'}
-                                value={expiry}
-                                onChangeText={(text: string) =>
-                                    this.setState({ expiry: text })
-                                }
-                                numberOfLines={1}
-                                editable={true}
-                                style={
-                                    theme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
-                                placeholderTextColor="gray"
-                            />
+                            {implementation !== 'lndhub' && (
+                                <>
+                                    <Text
+                                        style={{
+                                            color:
+                                                theme === 'dark'
+                                                    ? 'white'
+                                                    : 'black'
+                                        }}
+                                    >
+                                        Expiration (in seconds)
+                                    </Text>
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        placeholder={'3600 (one hour)'}
+                                        value={expiry}
+                                        onChangeText={(text: string) =>
+                                            this.setState({ expiry: text })
+                                        }
+                                        numberOfLines={1}
+                                        editable={true}
+                                        style={
+                                            theme === 'dark'
+                                                ? styles.textInputDark
+                                                : styles.textInput
+                                        }
+                                        placeholderTextColor="gray"
+                                    />
+                                </>
+                            )}
 
                             <View style={styles.button}>
                                 <Button
-                                    title={`Create${
-                                        lnurl ? ' and submit ' : ' '
-                                    }invoice`}
+                                    title={
+                                        'Create invoice' +
+                                        (!!lnurl
+                                            ? ` and submit to ${lnurl.domain}`
+                                            : '')
+                                    }
                                     icon={{
                                         name: 'create',
                                         size: 25,
@@ -288,7 +354,7 @@ export default class Receive extends React.Component<
                                     onPress={() =>
                                         createInvoice(
                                             memo,
-                                            value,
+                                            satAmount.toString(),
                                             expiry,
                                             lnurl
                                         )
@@ -327,21 +393,27 @@ export default class Receive extends React.Component<
                                     theme={theme}
                                 />
                             )}
-                            <View style={styles.button}>
-                                <Button
-                                    title="Get New Address"
-                                    icon={{
-                                        name: 'fiber-new',
-                                        size: 25,
-                                        color: 'white'
-                                    }}
-                                    onPress={() => this.getNewAddress()}
-                                    buttonStyle={{
-                                        backgroundColor: 'orange',
-                                        borderRadius: 30
-                                    }}
-                                />
-                            </View>
+                            {!(implementation === 'lndhub' && address) && (
+                                <View style={styles.button}>
+                                    <Button
+                                        title={
+                                            implementation === 'lndhub'
+                                                ? 'Get Address'
+                                                : 'Get New Address'
+                                        }
+                                        icon={{
+                                            name: 'fiber-new',
+                                            size: 25,
+                                            color: 'white'
+                                        }}
+                                        onPress={() => this.getNewAddress()}
+                                        buttonStyle={{
+                                            backgroundColor: 'orange',
+                                            borderRadius: 30
+                                        }}
+                                    />
+                                </View>
+                            )}
                         </React.Fragment>
                     )}
                 </ScrollView>
@@ -362,8 +434,7 @@ const styles = StyleSheet.create({
     },
     content: {
         paddingLeft: 20,
-        paddingRight: 20,
-        alignItems: 'center'
+        paddingRight: 20
     },
     button: {
         paddingTop: 15,
