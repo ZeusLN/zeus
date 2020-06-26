@@ -104,7 +104,6 @@ export default class InvoicesStore {
         expiry: string = '3600',
         lnurl?: LNURLWithdrawParams
     ) => {
-        const { sslVerification } = this.settingsStore;
         this.payment_request = null;
         this.creatingInvoice = true;
         this.creatingInvoiceError = false;
