@@ -341,7 +341,7 @@ export default class Onboarding extends React.Component<
                                 node: {
                                     implementation: 'lndhub',
                                     lndhubUrl: DEFAULT_LNDHUB,
-                                    sslVerification: true
+                                    certVerification: true
                                 },
                                 index:
                                     (nodes &&

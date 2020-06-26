@@ -37,7 +37,7 @@ interface AddEditNodeState {
     password: string; // lndhub
     existingAccount: boolean; // lndhub
     implementation: string;
-    sslVerification: boolean;
+    certVerification: boolean;
     saved: boolean;
     active: boolean;
     index: number;
@@ -64,7 +64,7 @@ export default class AddEditNode extends React.Component<
         active: false,
         newEntry: false,
         implementation: 'lnd',
-        sslVerification: false,
+        certVerification: false,
         existingAccount: false,
         suggestImport: '',
         lndhubUrl: DEFAULT_LNDHUB,
@@ -146,7 +146,7 @@ export default class AddEditNode extends React.Component<
                 username,
                 password,
                 implementation,
-                sslVerification
+                certVerification
             } = node;
 
             this.setState({
@@ -160,7 +160,7 @@ export default class AddEditNode extends React.Component<
                 username,
                 password,
                 implementation: implementation || 'lnd',
-                sslVerification,
+                certVerification,
                 index,
                 active,
                 saved,
@@ -196,7 +196,7 @@ export default class AddEditNode extends React.Component<
                 username,
                 password,
                 implementation,
-                sslVerification
+                certVerification
             } = node;
 
             this.setState({
@@ -207,7 +207,7 @@ export default class AddEditNode extends React.Component<
                 username,
                 password,
                 implementation,
-                sslVerification,
+                certVerification,
                 index,
                 active:
                     index === this.props.SettingsStore.settings.selectedNode,
@@ -235,7 +235,7 @@ export default class AddEditNode extends React.Component<
             username,
             password,
             implementation,
-            sslVerification,
+            certVerification,
             index
         } = this.state;
         const { setSettings, settings } = SettingsStore;
@@ -252,7 +252,7 @@ export default class AddEditNode extends React.Component<
             username,
             password,
             implementation,
-            sslVerification
+            certVerification
         };
 
         let nodes: any = settings.nodes || [];
@@ -352,7 +352,7 @@ export default class AddEditNode extends React.Component<
             index,
             newEntry,
             implementation,
-            sslVerification,
+            certVerification,
             existingAccount,
             suggestImport,
             showLndHubModal,
@@ -422,13 +422,13 @@ export default class AddEditNode extends React.Component<
                                     this.setState({
                                         implementation: itemValue,
                                         saved: false,
-                                        sslVerification: true
+                                        certVerification: true
                                     });
                                 } else {
                                     this.setState({
                                         implementation: itemValue,
                                         saved: false,
-                                        sslVerification: false
+                                        certVerification: false
                                     });
                                 }
                             }}
@@ -479,26 +479,26 @@ export default class AddEditNode extends React.Component<
                                             this.setState({
                                                 implementation: 'lnd',
                                                 saved: false,
-                                                sslVerification: false
+                                                certVerification: false
                                             });
                                         } else if (buttonIndex === 2) {
                                             this.setState({
                                                 implementation:
                                                     'c-lightning-REST',
                                                 saved: false,
-                                                sslVerification: false
+                                                certVerification: false
                                             });
                                         } else if (buttonIndex === 3) {
                                             this.setState({
                                                 implementation: 'spark',
                                                 saved: false,
-                                                sslVerification: false
+                                                certVerification: false
                                             });
                                         } else if (buttonIndex === 4) {
                                             this.setState({
                                                 implementation: 'lndhub',
                                                 saved: false,
-                                                sslVerification: true
+                                                certVerification: true
                                             });
                                         }
                                     }
@@ -625,7 +625,7 @@ export default class AddEditNode extends React.Component<
                                             onPress={() => {
                                                 createAccount(
                                                     lndhubUrl,
-                                                    sslVerification
+                                                    certVerification
                                                 ).then((data: any) => {
                                                     if (data) {
                                                         this.setState({
@@ -719,7 +719,7 @@ export default class AddEditNode extends React.Component<
                 </Modal>
 
                 <View style={styles.form}>
-                    {createAccountError !== '' &&
+                    {!!createAccountError &&
                         implementation === 'lndhub' &&
                         !loading && (
                             <Text style={{ color: 'red', marginBottom: 5 }}>
@@ -727,7 +727,7 @@ export default class AddEditNode extends React.Component<
                             </Text>
                         )}
 
-                    {createAccountSuccess !== '' &&
+                    {!!createAccountSuccess &&
                         implementation === 'lndhub' &&
                         !loading && (
                             <Text style={{ color: 'green', marginBottom: 5 }}>
@@ -902,6 +902,7 @@ export default class AddEditNode extends React.Component<
                                                 : styles.textInput
                                         }
                                         editable={!loading}
+                                        secureTextEntry={saved}
                                         placeholderTextColor="gray"
                                     />
                                     {saved && lndhubUrl === DEFAULT_LNDHUB && (
@@ -1016,10 +1017,10 @@ export default class AddEditNode extends React.Component<
                     >
                         <CheckBox
                             title="Certificate Verification"
-                            checked={sslVerification}
+                            checked={certVerification}
                             onPress={() =>
                                 this.setState({
-                                    sslVerification: !sslVerification,
+                                    certVerification: !certVerification,
                                     saved: false
                                 })
                             }
@@ -1037,7 +1038,7 @@ export default class AddEditNode extends React.Component<
                                 } else {
                                     createAccount(
                                         lndhubUrl,
-                                        sslVerification
+                                        certVerification
                                     ).then((data: any) => {
                                         if (data) {
                                             this.setState({
@@ -1066,7 +1067,7 @@ export default class AddEditNode extends React.Component<
                             color: saved ? 'black' : 'white'
                         }}
                         onPress={() => {
-                            if (!saved && !sslVerification) {
+                            if (!saved && !certVerification) {
                                 this.setState({ showSslModal: true });
                             } else {
                                 this.saveNodeConfiguration();
@@ -1086,7 +1087,7 @@ export default class AddEditNode extends React.Component<
                     />
                 </View>
 
-                {!saved && sslVerification && <CertInstallInstructions />}
+                {!saved && certVerification && <CertInstallInstructions />}
 
                 {saved && !newEntry && (
                     <View style={styles.button}>

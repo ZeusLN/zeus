@@ -49,7 +49,7 @@ export default async function(data: string): Promise<any> {
             implementation: 'lndhub',
             username,
             password,
-            sslVerification: true
+            certVerification: true
         };
         return [
             'AddEditNode',
