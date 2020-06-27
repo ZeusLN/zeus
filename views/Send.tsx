@@ -60,7 +60,9 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     async UNSAFE_componentWillMount() {
         const clipboard = await Clipboard.getString();
-        this.validateAddress(clipboard);
+        if (!this.state.destination) {
+            this.validateAddress(clipboard);
+        }
     }
 
     componentDidMount() {
