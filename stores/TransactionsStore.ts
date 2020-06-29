@@ -140,6 +140,7 @@ export default class TransactionsStore {
                 this.payment_preimage = data.payment_preimage;
                 this.payment_hash = data.payment_hash;
                 if (data.payment_error !== '') {
+                    this.error = true;
                     this.payment_error = data.payment_error;
                 }
                 // lndhub
