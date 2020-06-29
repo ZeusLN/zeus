@@ -5,7 +5,8 @@ import {
     TextInput,
     View,
     ScrollView,
-    Clipboard
+    Clipboard,
+    TouchableOpacity
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
@@ -15,6 +16,8 @@ import InvoicesStore from './../stores/InvoicesStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
 import TransactionsStore from './../stores/TransactionsStore';
 import SettingsStore from './../stores/SettingsStore';
+import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
+import FiatStore from './../stores/FiatStore';
 
 import FeeTable from './../components/FeeTable';
 
@@ -27,6 +30,8 @@ interface SendProps {
     NodeInfoStore: NodeInfoStore;
     TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;
+    FiatStore: FiatStore;
+    UnitsStore: UnitsStore;
 }
 
 interface SendState {
@@ -38,7 +43,14 @@ interface SendState {
     error_msg: string;
 }
 
-@inject('InvoicesStore', 'NodeInfoStore', 'TransactionsStore', 'SettingsStore')
+@inject(
+    'InvoicesStore',
+    'NodeInfoStore',
+    'TransactionsStore',
+    'SettingsStore',
+    'UnitsStore',
+    'FiatStore'
+)
 @observer
 export default class Send extends React.Component<SendProps, SendState> {
     constructor(props: any) {
@@ -110,14 +122,14 @@ export default class Send extends React.Component<SendProps, SendState> {
             });
     };
 
-    sendCoins = () => {
+    sendCoins = (satAmount: string | number) => {
         const { TransactionsStore, navigation } = this.props;
-        const { destination, amount, fee } = this.state;
+        const { destination, fee } = this.state;
 
         TransactionsStore.sendCoins({
             addr: destination,
             sat_per_byte: fee,
-            amount
+            amount: satAmount.toString()
         });
         navigation.navigate('SendingOnChain');
     };
@@ -136,7 +148,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     render() {
-        const { SettingsStore, navigation } = this.props;
+        const { SettingsStore, UnitsStore, FiatStore, navigation } = this.props;
         const {
             isValid,
             transactionType,
@@ -146,7 +158,26 @@ export default class Send extends React.Component<SendProps, SendState> {
             error_msg
         } = this.state;
         const { implementation, settings } = SettingsStore;
-        const { theme } = settings;
+        const { theme, fiat } = settings;
+        const { units, changeUnits } = UnitsStore;
+        const { fiatRates } = FiatStore;
+
+        const rate =
+            (fiatRates && fiatRates[fiat] && fiatRates[fiat]['15m']) || 0;
+        const symbol = fiatRates && fiatRates[fiat] && fiatRates[fiat].symbol;
+
+        let satAmount;
+        switch (units) {
+            case 'sats':
+                satAmount = amount;
+                break;
+            case 'btc':
+                satAmount = Number(amount) * satoshisPerBTC;
+                break;
+            case 'fiat':
+                satAmount = Number(Number(amount) * rate).toFixed(0);
+                break;
+        }
 
         const BackButton = () => (
             <Icon
@@ -229,14 +260,19 @@ export default class Send extends React.Component<SendProps, SendState> {
                     {transactionType === 'On-chain' &&
                         RESTUtils.supportsOnchainSends() && (
                             <React.Fragment>
-                                <Text
-                                    style={{
-                                        color:
-                                            theme === 'dark' ? 'white' : 'black'
-                                    }}
-                                >
-                                    Amount (in satoshis)
-                                </Text>
+                                <TouchableOpacity onPress={() => changeUnits()}>
+                                    <Text
+                                        style={{
+                                            color:
+                                                theme === 'dark'
+                                                    ? 'white'
+                                                    : 'black'
+                                        }}
+                                    >
+                                        Amount (in{' '}
+                                        {units === 'fiat' ? fiat : units})
+                                    </Text>
+                                </TouchableOpacity>
                                 <TextInput
                                     keyboardType="numeric"
                                     value={amount}
@@ -250,6 +286,22 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     }
                                     placeholderTextColor="gray"
                                 />
+                                {units !== 'sats' && (
+                                    <TouchableOpacity
+                                        onPress={() => changeUnits()}
+                                    >
+                                        <Text
+                                            style={{
+                                                color:
+                                                    theme === 'dark'
+                                                        ? 'white'
+                                                        : 'black'
+                                            }}
+                                        >
+                                            {satAmount} satoshis
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
                                 <Text
                                     style={{
                                         color:
@@ -280,7 +332,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             size: 25,
                                             color: 'white'
                                         }}
-                                        onPress={() => this.sendCoins()}
+                                        onPress={() =>
+                                            this.sendCoins(satAmount)
+                                        }
                                         style={styles.button}
                                         buttonStyle={{
                                             backgroundColor: 'orange',
@@ -292,13 +346,17 @@ export default class Send extends React.Component<SendProps, SendState> {
                         )}
                     {transactionType === 'Keysend' && implementation === 'lnd' && (
                         <React.Fragment>
-                            <Text
-                                style={{
-                                    color: theme === 'dark' ? 'white' : 'black'
-                                }}
-                            >
-                                Amount (in satoshis)
-                            </Text>
+                            <TouchableOpacity onPress={() => changeUnits()}>
+                                <Text
+                                    style={{
+                                        color:
+                                            theme === 'dark' ? 'white' : 'black'
+                                    }}
+                                >
+                                    Amount (in {units === 'fiat' ? fiat : units}
+                                    )
+                                </Text>
+                            </TouchableOpacity>
                             <TextInput
                                 keyboardType="numeric"
                                 value={amount}
@@ -312,6 +370,20 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 }
                                 placeholderTextColor="gray"
                             />
+                            {units !== 'sats' && (
+                                <TouchableOpacity onPress={() => changeUnits()}>
+                                    <Text
+                                        style={{
+                                            color:
+                                                theme === 'dark'
+                                                    ? 'white'
+                                                    : 'black'
+                                        }}
+                                    >
+                                        {satAmount} satoshis
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
                             <View style={styles.button}>
                                 <Button
                                     title="Send"
