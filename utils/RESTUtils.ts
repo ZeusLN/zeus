@@ -23,7 +23,7 @@ class LND {
         url: string,
         method: any,
         data?: any,
-        sslVerification?: boolean
+        certVerification?: boolean
     ) => {
         // use body data as an identifier too, we don't want to cancel when we
         // are making multiples calls to get all the node names, for example
@@ -33,7 +33,7 @@ class LND {
         }
 
         calls[id] = RNFetchBlob.config({
-            trusty: !sslVerification
+            trusty: !certVerification
         })
             .fetch(method, url, headers, data ? JSON.stringify(data) : data)
             .then(response => {
@@ -74,13 +74,13 @@ class LND {
             port,
             macaroonHex,
             accessToken,
-            sslVerification
+            certVerification
         } = stores.settingsStore;
 
         const headers = this.getHeaders(macaroonHex || accessToken);
         headers['Content-Type'] = 'application/json';
         const url = this.getURL(host || lndhubUrl, port, route);
-        return this.restReq(headers, url, method, data, sslVerification);
+        return this.restReq(headers, url, method, data, certVerification);
     };
 
     getRequest = (route: string) => this.request(route, 'get', null);
@@ -124,7 +124,7 @@ class LND {
         this.getRequest(`/v1/graph/routes/${urlParams[0]}/${urlParams[1]}`);
 
     // LndHub
-    createAccount = (host: string, sslVerification: boolean) => {
+    createAccount = (host: string, certVerification: boolean) => {
         const url: string = `${host}/create`;
         return this.restReq(
             {
@@ -137,7 +137,7 @@ class LND {
                 partnerid: 'bluewallet',
                 accounttype: 'common'
             },
-            sslVerification
+            certVerification
         );
     };
 
@@ -274,7 +274,7 @@ class LndHub extends LND {
 
 class Spark {
     rpc = (rpcmethod, params = {}, range = null) => {
-        let { url, accessKey, sslVerification } = stores.settingsStore;
+        let { url, accessKey, certVerification } = stores.settingsStore;
 
         const id = rpcmethod + JSON.stringify(params) + JSON.stringify(range);
         if (calls[id]) {
@@ -289,7 +289,7 @@ class Spark {
         }
 
         calls[id] = RNFetchBlob.config({
-            trusty: !sslVerification
+            trusty: !certVerification
         })
             .fetch(
                 'POST',

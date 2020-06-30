@@ -13,7 +13,7 @@ interface Node {
     macaroonHex?: string;
     accessKey?: string;
     implementation?: string;
-    sslVerification?: boolean;
+    certVerification?: boolean;
     onChainAddress?: string;
 }
 
@@ -36,7 +36,7 @@ export default class SettingsStore {
     @observable macaroonHex: string;
     @observable accessKey: string;
     @observable implementation: string;
-    @observable sslVerification: boolean | undefined;
+    @observable certVerification: boolean | undefined;
     @observable chainAddress: string | undefined;
     // LNDHub
     @observable public createAccountError: string;
@@ -116,7 +116,7 @@ export default class SettingsStore {
                     this.macaroonHex = node.macaroonHex;
                     this.accessKey = node.accessKey;
                     this.implementation = node.implementation || 'lnd';
-                    this.sslVerification = node.sslVerification || false;
+                    this.certVerification = node.certVerification || false;
                     this.chainAddress = node.onChainAddress;
                 }
                 return this.settings;
@@ -159,11 +159,11 @@ export default class SettingsStore {
 
     // LNDHub
     @action
-    public createAccount = (host: string, sslVerification: boolean) => {
+    public createAccount = (host: string, certVerification: boolean) => {
         this.createAccountSuccess = '';
         this.createAccountError = '';
         this.loading = true;
-        return RESTUtils.createAccount(host, sslVerification)
+        return RESTUtils.createAccount(host, certVerification)
             .then((data: any) => {
                 this.loading = false;
                 this.createAccountSuccess =
