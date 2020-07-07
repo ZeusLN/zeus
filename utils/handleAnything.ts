@@ -49,7 +49,8 @@ export default async function(data: string): Promise<any> {
             implementation: 'lndhub',
             username,
             password,
-            certVerification: true
+            certVerification: true,
+            existingAccount: true
         };
         return [
             'AddEditNode',
