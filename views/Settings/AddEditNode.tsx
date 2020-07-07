@@ -255,9 +255,13 @@ export default class AddEditNode extends React.Component<
             certVerification
         };
 
-        let nodes: any = settings.nodes || [];
-
-        nodes[index] = node;
+        let nodes: any;
+        if (settings.nodes) {
+            nodes = settings.nodes;
+            nodes[index] = node;
+        } else {
+            nodes = [node];
+        }
 
         setSettings(
             JSON.stringify({
