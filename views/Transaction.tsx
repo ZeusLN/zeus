@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { forEach } from 'lodash';
+import { forEach, isNull } from 'lodash';
 import {
     StyleSheet,
     ScrollView,
@@ -160,7 +160,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                         </Text>
                     </TouchableOpacity>
 
-                    {block_hash && (
+                    {!!block_hash && (
                         <View>
                             <Text
                                 style={
@@ -188,7 +188,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                         </View>
                     )}
 
-                    {block_height && (
+                    {!!block_height && (
                         <Text
                             style={
                                 theme === 'dark'
@@ -199,7 +199,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                             Block Height:
                         </Text>
                     )}
-                    {block_height && (
+                    {!!block_height && (
                         <TouchableOpacity
                             onPress={() =>
                                 UrlUtils.goToBlockExplorerBlockHeight(
@@ -220,7 +220,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                         </TouchableOpacity>
                     )}
 
-                    {num_confirmations && (
+                    {!isNull(num_confirmations) && (
                         <View>
                             <Text
                                 style={
@@ -249,7 +249,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                         </View>
                     )}
 
-                    {status && (
+                    {!!status && (
                         <View>
                             <Text
                                 style={
@@ -272,7 +272,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                         </View>
                     )}
 
-                    {date && (
+                    {!!date && (
                         <View>
                             <Text
                                 style={
