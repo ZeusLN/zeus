@@ -1104,15 +1104,15 @@ export default class AddEditNode extends React.Component<
                             icon={{
                                 name: 'blur-circular',
                                 size: 25,
-                                color: active ? 'white' : 'orange'
+                                color: active ? 'white' : 'purple'
                             }}
                             onPress={() => this.setNodeConfigurationAsActive()}
                             buttonStyle={{
-                                backgroundColor: active ? 'orange' : 'white',
+                                backgroundColor: active ? 'purple' : 'white',
                                 borderRadius: 30
                             }}
                             titleStyle={{
-                                color: active ? 'white' : 'orange'
+                                color: active ? 'white' : 'purple'
                             }}
                         />
                     </View>
