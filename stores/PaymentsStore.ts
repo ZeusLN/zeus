@@ -10,20 +10,30 @@ export default class PaymentsStore {
     @observable error_msg: string;
     @observable payments: Array<Payment | any> = [];
     settingsStore: SettingsStore;
+    channelsStore: ChannelsStore;
 
     constructor(settingsStore: SettingsStore, channelsStore: ChannelsStore) {
         this.settingsStore = settingsStore;
         this.channelsStore = channelsStore;
     }
 
+    reset = () => {
+        this.resetPayments();
+        this.error = false;
+        this.error_msg = '';
+    };
+
+    resetPayments = () => {
+        this.payments = [];
+        this.loading = false;
+    };
+
     @action
     public getPayments = () => {
         this.loading = true;
-        RESTUtils.getPayments(this.settingsStore)
-            .then((response: any) => {
-                // handle success
-                const data = response.data;
-                const payments = data.transaction || data.payments;
+        RESTUtils.getPayments()
+            .then((data: any) => {
+                const payments = data.transaction || data.payments || data;
                 this.payments = payments
                     .slice()
                     .reverse()
@@ -34,9 +44,7 @@ export default class PaymentsStore {
                 this.loading = false;
             })
             .catch(() => {
-                // handle error
-                this.payments = [];
-                this.loading = false;
+                this.resetPayments();
             });
     };
 }

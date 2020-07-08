@@ -1,5 +1,5 @@
 import { action, observable } from 'mobx';
-import axios from 'axios';
+import RNFetchBlob from 'rn-fetch-blob';
 import SettingsStore from './SettingsStore';
 
 export default class FiatStore {
@@ -12,27 +12,25 @@ export default class FiatStore {
     settingsStore: SettingsStore;
 
     constructor(settingsStore: SettingsStore) {
-        this.getFiatRatesToken = axios.CancelToken.source().token;
         this.settingsStore = settingsStore;
     }
 
     @action
     public getFiatRates = () => {
         this.loading = true;
-        axios
-            .request({
-                method: 'get',
-                url: 'https://blockchain.info/ticker',
-                cancelToken: this.getFiatRatesToken
-            })
+        RNFetchBlob.fetch('get', 'https://blockchain.info/ticker')
             .then((response: any) => {
-                // handle success
-                this.loading = false;
-                const data = response.data;
-                this.fiatRates = data;
+                const status = response.info().status;
+                if (status == 200) {
+                    const data = response.json();
+                    this.loading = false;
+                    this.fiatRates = data;
+                } else {
+                    this.fiatRates = {};
+                    this.loading = false;
+                }
             })
             .catch(() => {
-                // handle error
                 this.fiatRates = {};
                 this.loading = false;
             });

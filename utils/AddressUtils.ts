@@ -1,15 +1,18 @@
 import { satoshisPerBTC } from './../stores/UnitsStore';
 
 const btcNonBech = /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
-const btcBech = /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,39}$/;
+const btcBech = /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/;
 
 const lnInvoice = /^(lnbcrt|lntb|lnbc|LNBCRT|LNTB|LNBC)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
 const lnPubKey = /^[a-f0-9]{66}$/;
 
 /* testnet */
 const btcNonBechTestnet = /^[2][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
-const btcBechTestnet = /^(bc1|[2])[a-zA-HJ-NP-Z0-9]{25,39}$/;
-const btcBechPubkeyScriptHashTestnet = /^(tb1|[2])[a-zA-HJ-NP-Z0-9]{25,39}$/;
+const btcBechTestnet = /^(bc1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
+const btcBechPubkeyScriptHashTestnet = /^(tb1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
+
+/* lndhub */
+const lndHubAddress = /^(lndhub:\/\/)[a-hA-H-0-9]{18,24}(:)[a-hA-H-0-9]{18,24}$/;
 
 class AddressUtils {
     processSendAddress = (input: string) => {
@@ -38,6 +41,17 @@ class AddressUtils {
         return { value, amount };
     };
 
+    processLNDHubAddress = (input: string) => {
+        if (!this.isValidLNDHubAddress(input)) {
+            throw new Error('Could not process invalid LNDHub account address');
+        }
+
+        const value = input.replace('lndhub://', '');
+
+        const [username, password] = value.split(':');
+        return { username, password };
+    };
+
     isValidBitcoinAddress = (input: string, testnet: boolean) => {
         if (testnet) {
             return (
@@ -53,6 +67,8 @@ class AddressUtils {
     isValidLightningPaymentRequest = (input: string) => lnInvoice.test(input);
 
     isValidLightningPubKey = (input: string) => lnPubKey.test(input);
+
+    isValidLNDHubAddress = (input: string) => lndHubAddress.test(input);
 }
 
 const addressUtils = new AddressUtils();

@@ -1,12 +1,10 @@
 import { action, reaction, observable } from 'mobx';
 import Transaction from './../models/Transaction';
 import TransactionRequest from './../models/TransactionRequest';
-import ErrorUtils from './../utils/ErrorUtils';
 import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
 import { randomBytes } from 'react-native-randombytes';
 import { sha256 } from 'js-sha256';
-import Base64Utils from './../utils/Base64Utils';
 import { Buffer } from 'buffer';
 
 const keySendPreimageType = '5482373484';
@@ -35,22 +33,34 @@ export default class TransactionsStore {
         reaction(
             () => this.settingsStore.settings,
             () => {
-                if (this.settingsStore.macaroonHex) {
+                if (this.settingsStore.hasCredentials()) {
                     this.getTransactions();
                 }
             }
         );
     }
 
+    reset = () => {
+        this.loading = false;
+        this.error = false;
+        this.error_msg = null;
+        this.transactions = [];
+        this.transaction = null;
+        this.payment_route = null;
+        this.payment_preimage = null;
+        this.payment_hash = null;
+        this.payment_error = null;
+        this.onchain_address = '';
+        this.txid = null;
+        this.status = null;
+    };
+
     @action
     public getTransactions = () => {
         this.loading = true;
-        RESTUtils.getTransactions(this.settingsStore)
-            .then((response: any) => {
-                // handle success
-                const data = response.data;
-                const transactions = data.transactions || data.outputs;
-                this.transactions = transactions
+        RESTUtils.getTransactions()
+            .then((data: any) => {
+                this.transactions = data.transactions
                     .slice()
                     .reverse()
                     .map((tx: any) => new Transaction(tx));
@@ -69,29 +79,24 @@ export default class TransactionsStore {
         this.error_msg = null;
         this.txid = null;
         this.loading = true;
-        RESTUtils.sendCoins(this.settingsStore, transactionRequest)
-            .then((response: any) => {
-                // handle success
-                const data = response.data || response;
+        RESTUtils.sendCoins(transactionRequest)
+            .then((data: any) => {
                 this.txid = data.txid;
                 this.loading = false;
             })
             .catch((error: any) => {
                 // handle error
-                const errorInfo = error.response.data;
-                this.error_msg = errorInfo.error.message || errorInfo.error;
+                this.error_msg = error.message;
                 this.error = true;
                 this.loading = false;
             });
     };
 
     sendPayment = (
-        payment_request: string,
+        payment_request?: string | null,
         amount?: string,
         pubkey?: string
     ) => {
-        const { implementation } = this.settingsStore;
-
         this.loading = true;
         this.error_msg = null;
         this.error = false;
@@ -102,65 +107,54 @@ export default class TransactionsStore {
         this.status = null;
 
         let data;
-        if (implementation === 'c-lightning-REST') {
+        if (pubkey) {
+            const preimage = randomBytes(preimageByteLength);
+            const secret = preimage.toString('base64');
+            const payment_hash = Buffer.from(sha256(preimage), 'hex').toString(
+                'base64'
+            );
+
             data = {
-                invoice: payment_request,
-                amount: Number(amount) * 1000
+                amt: amount,
+                dest_string: pubkey,
+                dest_custom_records: { [keySendPreimageType]: secret },
+                payment_hash
             };
         } else {
-            if (pubkey) {
-                const preimage = randomBytes(preimageByteLength);
-                const secret = preimage.toString('base64');
-                const payment_hash = Buffer.from(
-                    sha256(preimage),
-                    'hex'
-                ).toString('base64');
-
+            if (amount) {
                 data = {
                     amt: amount,
-                    dest_string: pubkey,
-                    dest_custom_records: { [keySendPreimageType]: secret },
-                    payment_hash
+                    payment_request
                 };
             } else {
-                if (amount) {
-                    data = {
-                        amt: amount,
-                        payment_request
-                    };
-                } else {
-                    data = {
-                        payment_request
-                    };
-                }
+                data = {
+                    payment_request
+                };
             }
         }
 
-        RESTUtils.payLightningInvoice(this.settingsStore, data)
-            .then((response: any) => {
-                // handle success
-                const data = response.data;
+        RESTUtils.payLightningInvoice(data)
+            .then((data: any) => {
                 this.loading = false;
                 this.payment_route = data.payment_route;
                 this.payment_preimage = data.payment_preimage;
                 this.payment_hash = data.payment_hash;
                 if (data.payment_error !== '') {
+                    this.error = true;
                     this.payment_error = data.payment_error;
                 }
-                this.status = data.status;
+                // lndhub
+                if (data.error) {
+                    this.error = true;
+                    this.error_msg = data.message;
+                } else {
+                    this.status = data.status || 'complete';
+                }
             })
-            .catch((error: any) => {
-                // handle error
-                const errorInfo = error.response.data;
-                const code = errorInfo.code;
+            .catch((err: Error) => {
                 this.error = true;
                 this.loading = false;
-                this.error_msg =
-                    errorInfo.error.message ||
-                    ErrorUtils.errorToUserFriendly(code) ||
-                    errorInfo.message ||
-                    errorInfo.error ||
-                    'Error sending payment';
+                this.error_msg = err.message || 'Error sending payment';
             });
     };
 }

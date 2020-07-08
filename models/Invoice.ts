@@ -48,13 +48,18 @@ export default class Invoice extends BaseModel {
     public timestamp?: string | number;
     public destination?: string;
     public num_satoshis?: string | number;
+    // lndhub
+    public amt?: number;
+    public ispaid?: boolean;
+    public expire_time?: number;
+    public millisatoshis?: string;
 
     @computed public get getMemo(): string {
         return this.memo || this.description || 'No memo';
     }
 
     @computed public get isPaid(): boolean {
-        return this.status === 'paid' || this.settled;
+        return this.status === 'paid' || this.settled || this.ispaid;
     }
 
     @computed public get key(): string {
@@ -71,7 +76,9 @@ export default class Invoice extends BaseModel {
             const msatoshi = this.msatoshi.toString();
             return Number(msatoshi.replace('msat', '')) / 1000;
         }
-        return this.settled ? Number(this.amt_paid_sat) : Number(this.value);
+        return this.settled
+            ? Number(this.amt_paid_sat)
+            : Number(this.value) || Number(this.amt);
     }
 
     // return amount in satoshis
@@ -79,6 +86,10 @@ export default class Invoice extends BaseModel {
         if (this.msatoshi) {
             const msatoshi = this.msatoshi.toString();
             return Number(msatoshi.replace('msat', '')) / 1000;
+        }
+        if (this.millisatoshis) {
+            const msatoshi = this.millisatoshis;
+            return Number(msatoshi) / 1000;
         }
         return Number(this.num_satoshis || 0);
     }
@@ -88,13 +99,13 @@ export default class Invoice extends BaseModel {
         return this.isPaid
             ? this.settleDate
             : DateTimeUtils.listFormattedDate(
-                  this.expires_at || this.creation_date
+                  this.expires_at || this.creation_date || this.timestamp
               );
     }
 
     @computed public get settleDate(): Date {
         return DateTimeUtils.listFormattedDate(
-            this.settle_date || this.paid_at
+            this.settle_date || this.paid_at || this.timestamp
         );
     }
 
@@ -103,8 +114,8 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get expirationDate(): Date | string {
-        if (this.expiry) {
-            return `${this.expiry} seconds`;
+        if (this.expiry || this.expire_time) {
+            return `${this.expiry || this.expire_time} seconds`;
         }
 
         return this.expires_at

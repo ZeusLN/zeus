@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.zeusln.zeus">
+    package="app.zeusln.zeus">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
@@ -10,7 +10,8 @@
       android:icon="@mipmap/zeus"
       android:roundIcon="@mipmap/zeus_round"
       android:allowBackup="false"
-      android:theme="@style/AppTheme">
+      android:theme="@style/AppTheme"
+      android:networkSecurityConfig="@xml/network_security_config">
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"
@@ -30,9 +31,9 @@
             <data android:scheme="LIGHTNING" />
             <data android:scheme="lnurl" />
             <data android:scheme="LNURL" />
+            <data android:scheme="lndconnect" />
         </intent-filter>
       </activity>
-      <activity android:name="com.facebook.react.devsupport.DevSettingsActivity" />
     </application>
 
 </manifest>

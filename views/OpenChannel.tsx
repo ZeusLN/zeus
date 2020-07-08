@@ -11,7 +11,6 @@ import {
 import { inject, observer } from 'mobx-react';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import FeeTable from './../components/FeeTable';
-import FeeUtils from './../utils/FeeUtils';
 import NodeUriUtils from './../utils/NodeUriUtils';
 
 import ChannelsStore from './../stores/ChannelsStore';
@@ -42,15 +41,25 @@ export default class OpenChannel extends React.Component<
     OpenChannelProps,
     OpenChannelState
 > {
-    state = {
-        node_pubkey_string: '',
-        local_funding_amount: '',
-        min_confs: 1,
-        sat_per_byte: '2',
-        private: false,
-        host: '',
-        suggestImport: ''
-    };
+    constructor(props: any) {
+        super(props);
+        const { navigation } = props;
+        const node_pubkey_string = navigation.getParam(
+            'node_pubkey_string',
+            null
+        );
+        const host = navigation.getParam('host', null);
+
+        this.state = {
+            node_pubkey_string: node_pubkey_string || '',
+            local_funding_amount: '',
+            min_confs: 1,
+            sat_per_byte: '2',
+            private: false,
+            host: host || '',
+            suggestImport: ''
+        };
+    }
 
     async UNSAFE_componentWillMount() {
         const clipboard = await Clipboard.getString();
@@ -97,7 +106,7 @@ export default class OpenChannel extends React.Component<
     }
 
     setFee = (text: string) => {
-        this.setState({ sat_per_byte: FeeUtils.roundFee(text) });
+        this.setState({ sat_per_byte: text });
     };
 
     render() {
@@ -323,13 +332,15 @@ export default class OpenChannel extends React.Component<
                         editable={!openingChannel}
                     />
 
-                    <CheckBox
-                        title="Private"
-                        checked={privateChannel}
-                        onPress={() =>
-                            this.setState({ private: !privateChannel })
-                        }
-                    />
+                    <View style={{ padding: 10 }}>
+                        <CheckBox
+                            title="Private"
+                            checked={privateChannel}
+                            onPress={() =>
+                                this.setState({ private: !privateChannel })
+                            }
+                        />
+                    </View>
 
                     <View style={styles.button}>
                         <Button
@@ -340,7 +351,6 @@ export default class OpenChannel extends React.Component<
                                 color: 'white'
                             }}
                             onPress={() => connectPeer(this.state)}
-                            style={{ padding: 10 }}
                             buttonStyle={{
                                 backgroundColor:
                                     theme === 'dark'
@@ -371,11 +381,7 @@ export default class OpenChannel extends React.Component<
                         />
                     </View>
                     <View style={styles.button}>
-                        <FeeTable
-                            setFee={this.setFee}
-                            SettingsStore={SettingsStore}
-                            FeeStore={FeeStore}
-                        />
+                        <FeeTable setFee={this.setFee} />
                     </View>
                 </View>
             </ScrollView>
@@ -402,13 +408,16 @@ const styles = StyleSheet.create({
         color: 'white'
     },
     content: {
-        alignItems: 'center',
         paddingTop: 20,
-        paddingBottom: 20
+        paddingBottom: 20,
+        paddingLeft: 5,
+        paddingRight: 5
     },
     button: {
         paddingTop: 10,
-        paddingBottom: 10
+        paddingBottom: 10,
+        width: 250,
+        alignSelf: 'center'
     },
     clipboardImport: {
         padding: 10,

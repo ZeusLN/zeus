@@ -31,6 +31,7 @@ export default class BalanceSlider extends React.Component<
                     }
                     trackStyle={styles.trackStyle}
                     thumbStyle={styles.thumbStyle}
+                    disabled
                 />
             </View>
         );

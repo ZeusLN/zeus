@@ -32,6 +32,7 @@
 				<string>LIGHTNING</string>
 				<string>lnurl</string>
 				<string>LNURL</string>
+				<string>lndconnect</string>
 			</array>
 		</dict>
 	</array>

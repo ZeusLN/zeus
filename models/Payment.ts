@@ -29,15 +29,16 @@ export default class Payment extends BaseModel {
     // payment_preimage: string;
     bolt11?: string;
     htlcs?: Array<any>;
+    nodes?: any;
 
-    constructor(data?: any, nodes: any) {
+    constructor(data?: any, nodes?: any) {
         super(data);
         this.nodes = nodes;
     }
 
     @computed public get getCreationTime(): string {
         return DateTimeUtils.listFormattedDate(
-            this.creation_date || this.created_at || 0
+            this.creation_date || this.created_at || this.timestamp || 0
         );
     }
 
@@ -62,8 +63,8 @@ export default class Payment extends BaseModel {
         return '0';
     }
 
-    @computed public get enhancedPath(): Array<string> {
-        const enhancedPath = [];
+    @computed public get enhancedPath(): any[] {
+        const enhancedPath: any[] = [];
         !this.htlcs &&
             this.path &&
             this.path.forEach((hop: string) => {
