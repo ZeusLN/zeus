@@ -1,4 +1,4 @@
-package com.zeusln.zeus;
+package app.zeusln.zeus;
 
 import android.app.Application;
 import android.util.Log;
