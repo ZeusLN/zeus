@@ -29,20 +29,11 @@ export default class SendingLightning extends React.Component<
     {}
 > {
     componentDidMount = () => {
-        const { TransactionsStore, LnurlPayStore } = this.props;
         const {
             payment_route,
             payment_hash,
             payment_error
         } = TransactionsStore;
-        const { acknowledge, clear } = LnurlPayStore;
-
-        when(() => payment_route).then(() => {
-            acknowledge(payment_hash);
-        });
-        when(() => payment_error).then(() => {
-            clear(payment_hash);
-        });
     };
 
     getBackgroundColor() {
@@ -113,7 +104,7 @@ export default class SendingLightning extends React.Component<
                             Error: {payment_error || error_msg}
                         </Text>
                     )}
-                    {(payment_route || status === 'complete') && (
+                    {(payment_route || status === 'complete') && !error && (
                         <Text
                             style={{
                                 color: 'white',
@@ -144,7 +135,7 @@ export default class SendingLightning extends React.Component<
                             }}
                         >{`Payment Hash: ${payment_hash}`}</Text>
                     )}
-                    {success && (
+                    {success && !error && (
                         <Button
                             title=""
                             icon={{

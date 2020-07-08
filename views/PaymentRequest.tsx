@@ -75,10 +75,8 @@ export default class PaymentRequest extends React.Component<
         const { theme } = settings;
 
         // c-lightning can only pay custom amounts if the amount is not specified
-        const canPayCustomAmount = !(
-            implementation === 'c-lightning-REST' &&
-            (!!requestAmount || requestAmount !== 0)
-        );
+        const canPayCustomAmount =
+            implementation === 'lnd' || !requestAmount || requestAmount === 0;
 
         const BackButton = () => (
             <Icon
@@ -122,7 +120,7 @@ export default class PaymentRequest extends React.Component<
                                         : styles.label
                                 }
                             >
-                                Error loading invoice: ${getPayReqError}
+                                Error loading invoice: {getPayReqError}
                             </Text>
                         </View>
                     )}

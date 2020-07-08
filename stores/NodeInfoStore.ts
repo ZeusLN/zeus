@@ -18,21 +18,35 @@ export default class NodeInfoStore {
         reaction(
             () => this.settingsStore.settings,
             () => {
-                if (this.settingsStore.macaroonHex) {
+                if (this.settingsStore.hasCredentials()) {
                     this.getNodeInfo();
                 }
             }
         );
     }
 
+    reset = () => {
+        this.error = false;
+        this.loading = false;
+        this.nodeInfo = {};
+        this.regtest = false;
+        this.testnet = false;
+        this.errorMsg = '';
+    };
+
+    getNodeInfoError = () => {
+        this.error = true;
+        this.loading = false;
+        this.nodeInfo = {};
+    };
+
     @action
     public getNodeInfo = () => {
         this.errorMsg = '';
         this.loading = true;
-        RESTUtils.getMyNodeInfo(this.settingsStore)
-            .then((response: any) => {
-                // handle success
-                const nodeInfo = new NodeInfo(response.data);
+        RESTUtils.getMyNodeInfo()
+            .then((data: any) => {
+                const nodeInfo = new NodeInfo(data);
                 this.nodeInfo = nodeInfo;
                 this.testnet = nodeInfo.isTestNet;
                 this.regtest = nodeInfo.isRegTest;
@@ -41,13 +55,8 @@ export default class NodeInfoStore {
             })
             .catch((error: any) => {
                 // handle error
-                const data = error.response && error.response.data;
-                this.error = true;
-                if (data && data.error) {
-                    this.errorMsg = data.error;
-                }
-                this.loading = false;
-                this.nodeInfo = {};
+                this.errorMsg = error.toString();
+                this.getNodeInfoError();
             });
     };
 }

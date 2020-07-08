@@ -12,9 +12,9 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 *Disclaimer*: Zeus and Lightning in general are software projects in their early development stages. Please be wary when using Lightning and do not fund your node with more money than you are willing to lose.
 
 ### App Store links
-* [Google Play](https://play.google.com/store/apps/details?id=com.zeusln.zeus)
+* [Google Play](https://play.google.com/store/apps/details?id=app.zeusln.zeus)
 * [Apple TestFlight](https://testflight.apple.com/join/gpVFzEHN)
-* [F-Droid](https://f-droid.org/packages/com.zeusln.zeus/)
+* [F-Droid](https://f-droid.org/packages/app.zeusln.zeus/)
 
 ### Get in touch with us
 * Come chat with us on
@@ -70,14 +70,13 @@ Zeus is proud to be integrated on the following platforms:
 [enable Developer mode and USB Debugging](https://developer.android.com/studio/debug/dev-options)
 , then make sure it is connected to your computer by running `adb devices`
 3. install node dependencies with `npm i`
-4. apply patches with `npm run patch`
-5. open up your Android simulator or connect your phone and run `react-native run-android`
+4. open up your Android simulator or connect your phone and run `react-native run-android`
 
 ### iOS
 1. install and setup react-native and its related dependencies under **"Building Projects with Native Code"** on
 [react-native's Getting Started page](https://facebook.github.io/react-native/docs/getting-started.html)
 2. install node dependencies with `npm i`
-3. apply patches with `npm run patch`
+3. `cd ios && pod install`
 4. open `ios/zeus.xcodeproj` in Xcode and hit Run
 
 ## Contributing
@@ -89,7 +88,7 @@ If you are making cosmetic changes please test on both Android and iOS as things
 ## Donations
 
 If you'd like to help us with the cost of running Zeus project (iOS developer account, Google Play developer account, hosting) you can send a payment to us via PayNym
-[+holymorning7d1](http://my.paynym.is/+holymorning7d1) or via [tippin.me](https://tippin.me/@ZeusLN).
+[+holymorning7d1](http://my.paynym.is/+holymorning7d1), via [tippin.me](https://tippin.me/@ZeusLN), or via keysend. Our node can be found at ```03e1210c8d4b236a53191bb172701d76ec06dfa869a1afffcfd8f4e07d9129d898@zg6ziy65wqhiczqfqupx26j5yjot5iuxftqtiyvika3xoydc5hx2mtyd.onion:9735```.
 
 Thank you.
 

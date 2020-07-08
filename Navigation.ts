@@ -18,16 +18,24 @@ import Payment from './views/Payment';
 import Invoice from './views/Invoice';
 import BTCPayConfigQRScanner from './views/BTCPayConfigQRScanner';
 import LNDConnectConfigQRScanner from './views/LNDConnectConfigQRScanner';
+import LNDHubQRScanner from './views/LNDHubQRScanner';
 import NodeInfo from './views/NodeInfo';
 import Lockscreen from './views/Lockscreen';
 
 // Settings views
 import Settings from './views/Settings';
 import AddEditNode from './views/Settings/AddEditNode';
+import CertInstallInstructions from './views/Settings/CertInstallInstructions';
+import About from './views/Settings/About';
+
+import Onboarding from './views/Onboarding';
 
 const AppScenes = {
     Lockscreen: {
         screen: Lockscreen
+    },
+    Onboarding: {
+        screen: Onboarding
     },
     Wallet: {
         screen: Wallet
@@ -43,6 +51,12 @@ const AppScenes = {
     },
     AddEditNode: {
         screen: AddEditNode
+    },
+    CertInstallInstructions: {
+        screen: CertInstallInstructions
+    },
+    About: {
+        screen: About
     },
     Transaction: {
         screen: Transaction
@@ -82,6 +96,9 @@ const AppScenes = {
     },
     LNDConnectConfigQRScanner: {
         screen: LNDConnectConfigQRScanner
+    },
+    LNDHubQRScanner: {
+        screen: LNDHubQRScanner
     },
     NodeInfo: {
         screen: NodeInfo
