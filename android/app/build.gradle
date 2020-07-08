@@ -128,15 +128,12 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.zeusln.zeus"
+        applicationId "app.zeusln.zeus"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 17
         versionName "0.3.0"
-
-        ndk {
-            abiFilters "armeabi-v7a", "x86", "arm64-v8a", "x86_64"
-       }
+        multiDexEnabled true
     }
     signingConfigs {
         release {
@@ -193,13 +190,13 @@ android {
 }
 
 dependencies {
+    implementation fileTree(dir: "libs", include: ["*.jar"])
+    implementation 'com.android.support:multidex:1.0.3'
     implementation project(':rn-fetch-blob')
     implementation project(':react-native-randombytes')
     implementation project(':react-native-secure-key-store')
     implementation project(':react-native-linear-gradient')
     implementation "androidx.core:core:1.1.0"
-    implementation project(':rncamerakit')
-    implementation fileTree(dir: "libs", include: ["*.jar"])
     implementation "com.facebook.react:react-native:+"  // From node_modules
     implementation 'androidx.appcompat:appcompat:1.1.0-rc01'
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0-alpha02'
