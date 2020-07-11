@@ -102,16 +102,28 @@ export default class AddEditNode extends React.Component<
                 suggestImport: ''
             });
         } else if (suggestImport.includes('lndhub://')) {
-            const { username, password } = AddressUtils.processLNDHubAddress(
-                suggestImport
-            );
-
-            this.setState({
+            const {
                 username,
                 password,
-                implementation: 'lndhub',
-                suggestImport: ''
-            });
+                host
+            } = AddressUtils.processLNDHubAddress(suggestImport);
+
+            if (host) {
+                this.setState({
+                    username,
+                    password,
+                    lndhubUrl: host,
+                    implementation: 'lndhub',
+                    suggestImport: ''
+                });
+            } else {
+                this.setState({
+                    username,
+                    password,
+                    implementation: 'lndhub',
+                    suggestImport: ''
+                });
+            }
         }
 
         Clipboard.setString('');
