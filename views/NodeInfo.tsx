@@ -11,7 +11,7 @@ import CollapsedQR from './../components/CollapsedQR';
 import SetFeesForm from './../components/SetFeesForm';
 import { inject, observer } from 'mobx-react';
 import { isNil } from 'lodash';
-import { version } from './../package.json';
+import { version, googlePlay } from './../package.json';
 import PrivacyUtils from './../utils/PrivacyUtils';
 
 import NodeInfoStore from './../stores/NodeInfoStore';
@@ -279,7 +279,7 @@ export default class NodeInfo extends React.Component<
                 <Text
                     style={theme === 'dark' ? styles.valueDark : styles.value}
                 >
-                    {`v${version}`}
+                    {googlePlay ? `v${version}-play` : `v${version}`}
                 </Text>
 
                 {!!nodeInfo.synced_to_chain && (

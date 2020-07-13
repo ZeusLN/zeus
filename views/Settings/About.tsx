@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Platform, StyleSheet, Text, View, ScrollView } from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import { version } from './../../package.json';
+import { version, googlePlay } from './../../package.json';
 
 import SettingsStore from './../../stores/SettingsStore';
 import UrlUtils from './../../utils/UrlUtils';
@@ -53,7 +53,7 @@ export default class About extends React.Component<AboutProps, {}> {
                             : styles.lightThemeTextLarge
                     }
                 >
-                    Version: {version}
+                    Version: {googlePlay ? `v${version}-play` : `v${version}`}
                 </Text>
                 <Text
                     style={
@@ -134,7 +134,7 @@ export default class About extends React.Component<AboutProps, {}> {
                         />
                     </View>
                 )}
-                {RESTUtils.supportsKeysend() && (
+                {!googlePlay && RESTUtils.supportsKeysend() && (
                     <View style={styles.button}>
                         <Button
                             title="Send keysend donation"
