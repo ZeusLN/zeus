@@ -12,7 +12,7 @@ import SettingsStore from './../../stores/SettingsStore';
 
 const TorIcon = require('./../../images/tor.png');
 
-import { version } from './../../package.json';
+import { version, googlePlay } from './../../package.json';
 
 interface MainPaneProps {
     navigation: any;
@@ -392,7 +392,7 @@ export default class MainPane extends React.Component<
                             marginBottom: -40
                         }}
                     >
-                        {`v${version}`}
+                        {googlePlay ? `v${version}-play` : `v${version}`}
                     </Text>
                 </View>
             );
