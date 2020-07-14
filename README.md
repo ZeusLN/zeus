@@ -79,6 +79,13 @@ Zeus is proud to be integrated on the following platforms:
 3. `cd ios && pod install`
 4. open `ios/zeus.xcodeproj` in Xcode and hit Run
 
+## Google Play Releases
+
+Google Play releases aren't fully featured due to Google policies. To get the fully featured version of Zeus on Android you must download the APK from the [Zeus website](https://zeusln.app), GitHub, or F-Droid. Google Play releases are managed on the `play-releases` branch. Commits used for Google Play builds will be marked in the release notes.
+
+### Current features not included on Google Play releases
+* Keysend donation button
+
 ## Contributing
 
 Please be sure to run `tsc` to check for type errors, `npm run test` to run all tests, and `npm run prettier` to run the prettier
