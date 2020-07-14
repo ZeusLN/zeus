@@ -2,7 +2,7 @@
   "name": "zeus",
   "version": "0.3.0",
   "private": true,
-  "playStore": true,
+  "playStore": false,
   "scripts": {
     "start": "react-native start",
     "postinstall": "rn-nodeify --install --hack; npx jetify",
