@@ -6,6 +6,8 @@ import OpenChannelRequest from './../models/OpenChannelRequest';
 import CloseChannelRequest from './../models/CloseChannelRequest';
 import LoginRequest from './../models/LoginRequest';
 import ErrorUtils from './../utils/ErrorUtils';
+import JsonUtils from './../utils/JsonUtils';
+
 interface Headers {
     macaroon?: string;
     encodingtype?: string;
@@ -39,7 +41,11 @@ class LND {
             .then(response => {
                 delete calls[id];
                 if (response.info().status < 300) {
-                    return response.json();
+                    const isWebsocket = url.includes('/v2/');
+                    const parser = isWebsocket ? JsonUtils.parseWebsocketJson : JSON.parse;
+                    return response.data
+                        ? parser(response.data)
+                        : response.json();
                 } else {
                     const errorInfo = response.json();
                     throw new Error(
@@ -54,81 +60,20 @@ class LND {
         return calls[id];
     };
 
-    wsReq = (
-        route: string,
-        method: string,
-        data?: any
-    ) => {
-        const {
-            host,
-            lndhubUrl,
-            port,
-            macaroonHex,
-            accessToken,
-            certVerification
-        } = stores.settingsStore;
-
-        const auth = macaroonHex || accessToken;
-        const headers = this.getHeaders(auth, true);
-        const methodRoute = `${route}?method=${method}`
-        const url = this.getURL(host || lndhubUrl, port, methodRoute, true);
-
-        return new Promise(function(resolve, reject) {
-            const ws = new WebSocket(url, {
-                headers,
-                rejectUnauthorized: certVerification
-            });
-
-            ws.onopen = () => {
-                // connection opened
-                ws.send(JSON.stringify(data)); // send a message
-            };
-
-            ws.onmessage = (e) => {
-                // a message was received
-                const data = JSON.parse(e.data);
-                if (data.error) {
-                    reject(data.error);
-                } else {
-                    resolve(JSON.parse(e.data));
-                }
-            };
-
-            ws.onerror = (e) => {
-                // an error occurred
-                reject(e.message);
-            };
-
-            ws.onclose = (e) => {
-                // connection closed
-                console.log(e.code, e.reason);
-            };
-        });
-    };
-
-    getHeaders = (macaroonHex: string, ws?: boolean) => {
-        if (ws) {
-            return {
-                'macaroon': macaroonHex
-            };
-        }
+    getHeaders = (macaroonHex: string) => {
         return {
             'Grpc-Metadata-macaroon': macaroonHex
         };
     };
 
-    getURL = (host: string, port: string | number, route: string, ws?: boolean) => {
-        let baseUrl = this.supportsCustomHostProtocol()
+    getURL = (host: string, port: string | number, route: string) => {
+        const baseUrl = this.supportsCustomHostProtocol()
             ? `${host}${port ? ':' + port : ''}`
             : `https://${host}${port ? ':' + port : ''}`;
-
-        if (ws) {
-            baseUrl = baseUrl.replace('https', 'wss');
-        }
         return `${baseUrl}${route}`;
     };
 
-    request = (route: string, method: string, data?: any, ws?: boolean) => {
+    request = (route: string, method: string, data?: any) => {
         const {
             host,
             lndhubUrl,
@@ -138,8 +83,7 @@ class LND {
             certVerification
         } = stores.settingsStore;
 
-        const auth = macaroonHex || accessToken;
-        const headers = this.getHeaders(auth);
+        const headers = this.getHeaders(macaroonHex || accessToken);
         headers['Content-Type'] = 'application/json';
         const url = this.getURL(host || lndhubUrl, port, route);
         return this.restReq(headers, url, method, data, certVerification);
@@ -170,7 +114,7 @@ class LND {
     payLightningInvoice = (data: any) =>
         this.postRequest('/v1/channels/transactions', data);
     payLightningInvoiceV2 = (data: any) =>
-        this.wsReq('/v2/router/send', 'POST', data);
+        this.postRequest('/v2/router/send', data);
     closeChannel = (urlParams?: Array<string>) => {
         if (urlParams.length === 4) {
             return `/v1/channels/${urlParams[0]}/${urlParams[1]}?force=${urlParams[2]}&sat_per_byte=${urlParams[3]}`;
@@ -658,7 +602,8 @@ class RESTUtils {
     listNode = (...args) => this.call('listNode', args);
     decodePaymentRequest = (...args) => this.call('decodePaymentRequest', args);
     payLightningInvoice = (...args) => this.call('payLightningInvoice', args);
-    payLightningInvoiceV2 = (...args) => this.call('payLightningInvoiceV2', args);
+    payLightningInvoiceV2 = (...args) =>
+        this.call('payLightningInvoiceV2', args);
     closeChannel = (...args) => this.call('closeChannel', args);
     getNodeInfo = (...args) => this.call('getNodeInfo', args);
     getFees = (...args) => this.call('getFees', args);
