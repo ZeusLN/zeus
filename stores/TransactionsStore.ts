@@ -154,9 +154,13 @@ export default class TransactionsStore {
                 this.payment_route = result.payment_route;
                 this.payment_preimage = result.payment_preimage;
                 this.payment_hash = result.payment_hash;
-                if (data.payment_error !== '' && result.status !== 'SUCCEEDED') {
+                if (
+                    data.payment_error !== '' &&
+                    result.status !== 'SUCCEEDED'
+                ) {
                     this.error = true;
-                    this.payment_error = result.payment_error || result.failure_reason;
+                    this.payment_error =
+                        result.payment_error || result.failure_reason;
                 }
                 // lndhub
                 if (result.error) {

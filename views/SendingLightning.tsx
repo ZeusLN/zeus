@@ -47,7 +47,11 @@ export default class SendingLightning extends React.Component<
 
         if (error) {
             return 'darkred';
-        } else if (payment_route || status === 'complete' || status === 'SUCCEEDED') {
+        } else if (
+            payment_route ||
+            status === 'complete' ||
+            status === 'SUCCEEDED'
+        ) {
             return 'green';
         } else if (payment_error) {
             return 'lightcoral';
@@ -74,7 +78,8 @@ export default class SendingLightning extends React.Component<
             status
         } = TransactionsStore;
         const backgroundColor = this.getBackgroundColor();
-        const success = payment_route || status === 'complete' || status === 'SUCCEEDED';
+        const success =
+            payment_route || status === 'complete' || status === 'SUCCEEDED';
 
         return (
             <View
