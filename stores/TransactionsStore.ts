@@ -137,6 +137,7 @@ export default class TransactionsStore {
         if (max_parts) {
             data.max_parts = max_parts;
             data.timeout_seconds = '20';
+            data.fee_limit_sat = 1000;
         }
 
         const payFunc = max_parts
@@ -145,20 +146,21 @@ export default class TransactionsStore {
 
         payFunc(data)
             .then((data: any) => {
+                const result = data.result || data;
                 this.loading = false;
-                this.payment_route = data.payment_route;
-                this.payment_preimage = data.payment_preimage;
-                this.payment_hash = data.payment_hash;
-                if (data.payment_error !== '') {
+                this.payment_route = result.payment_route;
+                this.payment_preimage = result.payment_preimage;
+                this.payment_hash = result.payment_hash;
+                if (data.payment_error !== '' && result.status !== 'SUCCEEDED') {
                     this.error = true;
-                    this.payment_error = data.payment_error;
+                    this.payment_error = result.payment_error || result.failure_reason;
                 }
                 // lndhub
-                if (data.error) {
+                if (result.error) {
                     this.error = true;
-                    this.error_msg = data.message;
+                    this.error_msg = result.message;
                 } else {
-                    this.status = data.status || 'complete';
+                    this.status = result.status || 'complete';
                 }
             })
             .catch((err: Error) => {
