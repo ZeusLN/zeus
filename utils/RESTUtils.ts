@@ -42,7 +42,9 @@ class LND {
                 delete calls[id];
                 if (response.info().status < 300) {
                     const isWebsocket = url.includes('/v2/');
-                    const parser = isWebsocket ? JsonUtils.parseWebsocketJson : JSON.parse;
+                    const parser = isWebsocket
+                        ? JsonUtils.parseWebsocketJson
+                        : JSON.parse;
                     return response.data
                         ? parser(response.data)
                         : response.json();
