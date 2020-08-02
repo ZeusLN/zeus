@@ -107,6 +107,8 @@ class LND {
         this.getRequest(`/v1/payreq/${urlParams[0]}`, urlParams);
     payLightningInvoice = (data: any) =>
         this.postRequest('/v1/channels/transactions', data);
+    payLightningInvoiceV2 = (data: any) =>
+        this.postRequest('/v2/router/send', data);
     closeChannel = (urlParams?: Array<string>) => {
         if (urlParams.length === 4) {
             return `/v1/channels/${urlParams[0]}/${urlParams[1]}?force=${urlParams[2]}&sat_per_byte=${urlParams[3]}`;
@@ -594,6 +596,7 @@ class RESTUtils {
     listNode = (...args) => this.call('listNode', args);
     decodePaymentRequest = (...args) => this.call('decodePaymentRequest', args);
     payLightningInvoice = (...args) => this.call('payLightningInvoice', args);
+    payLightningInvoiceV2 = (...args) => this.call('payLightningInvoiceV2', args);
     closeChannel = (...args) => this.call('closeChannel', args);
     getNodeInfo = (...args) => this.call('getNodeInfo', args);
     getFees = (...args) => this.call('getFees', args);

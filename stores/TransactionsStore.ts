@@ -95,7 +95,8 @@ export default class TransactionsStore {
     sendPayment = (
         payment_request?: string | null,
         amount?: string,
-        pubkey?: string
+        pubkey?: string,
+        max_parts?: string
     ) => {
         this.loading = true;
         this.error_msg = null;
@@ -133,7 +134,16 @@ export default class TransactionsStore {
             }
         }
 
-        RESTUtils.payLightningInvoice(data)
+        if (max_parts) {
+            data.max_parts = max_parts;
+            data.timeout_seconds = '20';
+        }
+
+        const payFunc = max_parts
+            ? RESTUtils.payLightningInvoiceV2
+            : RESTUtils.payLightningInvoice;
+
+        payFunc(data)
             .then((data: any) => {
                 this.loading = false;
                 this.payment_route = data.payment_route;
