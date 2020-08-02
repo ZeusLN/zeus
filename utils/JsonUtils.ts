@@ -19,7 +19,7 @@ class JsonUtils {
                 closeCount++;
             }
 
-            if (openCount > 0 && closeCount > 0 && openCount === closeCount) {
+            if (openCount > 0 && openCount === closeCount) {
                 const newString = sanitizedInput.substring(i + 1, length);
                 if (newString === '') {
                     return JSON.parse(sanitizedInput);
