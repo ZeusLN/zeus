@@ -32,6 +32,8 @@ interface InvoiceState {
     customAmount: string;
     enableMultiPathPayment: boolean;
     maxParts: string;
+    timeoutSeconds: string;
+    feeLimitSat: string;
 }
 
 @inject(
@@ -50,7 +52,9 @@ export default class PaymentRequest extends React.Component<
         setCustomAmount: false,
         customAmount: '',
         enableMultiPathPayment: false,
-        maxParts: '2'
+        maxParts: '2',
+        timeoutSeconds: '20',
+        feeLimitSat: '10'
     };
 
     render() {
@@ -67,7 +71,9 @@ export default class PaymentRequest extends React.Component<
             setCustomAmount,
             customAmount,
             enableMultiPathPayment,
-            maxParts
+            maxParts,
+            timeoutSeconds,
+            feeLimitSat
         } = this.state;
         const {
             pay_req,
@@ -503,6 +509,58 @@ export default class PaymentRequest extends React.Component<
                                         : styles.label
                                 }
                             >
+                                Timeout (seconds):
+                            </Text>
+                            <TextInput
+                                keyboardType="numeric"
+                                placeholder="20"
+                                value={timeoutSeconds}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        timeoutSeconds: text
+                                    })
+                                }
+                                numberOfLines={1}
+                                style={
+                                    theme === 'dark'
+                                        ? styles.textInputDark
+                                        : styles.textInput
+                                }
+                                placeholderTextColor="gray"
+                            />
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Fee limit (satoshis):
+                            </Text>
+                            <TextInput
+                                keyboardType="numeric"
+                                placeholder="100"
+                                value={feeLimitSat}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        feeLimitSat: text
+                                    })
+                                }
+                                numberOfLines={1}
+                                style={
+                                    theme === 'dark'
+                                        ? styles.textInputDark
+                                        : styles.textInput
+                                }
+                                placeholderTextColor="gray"
+                            />
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
                                 {`NOTE: Multi-path payments are available in lnd v0.11.0 and later. You are on v${nodeInfo.version}.`}
                             </Text>
                         </View>
@@ -519,7 +577,7 @@ export default class PaymentRequest extends React.Component<
                                 }}
                                 onPress={() => {
                                     if (
-                                        maxParts &&
+                                        enableMultiPathPayment &&
                                         setCustomAmount &&
                                         customAmount
                                     ) {
@@ -527,14 +585,18 @@ export default class PaymentRequest extends React.Component<
                                             paymentRequest,
                                             customAmount,
                                             null,
-                                            maxParts
+                                            maxParts,
+                                            timeoutSeconds,
+                                            feeLimitSat
                                         );
-                                    } else if (maxParts) {
+                                    } else if (enableMultiPathPayment) {
                                         TransactionsStore.sendPayment(
                                             paymentRequest,
                                             null,
                                             null,
-                                            maxParts
+                                            maxParts,
+                                            timeoutSeconds,
+                                            feeLimitSat
                                         );
                                     } else if (
                                         setCustomAmount &&

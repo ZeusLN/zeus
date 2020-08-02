@@ -96,7 +96,9 @@ export default class TransactionsStore {
         payment_request?: string | null,
         amount?: string,
         pubkey?: string,
-        max_parts?: string
+        max_parts?: string,
+        timeout_seconds?: string,
+        fee_limit_sat?: string
     ) => {
         this.loading = true;
         this.error_msg = null;
@@ -134,10 +136,11 @@ export default class TransactionsStore {
             }
         }
 
+        // multi-path payments
         if (max_parts) {
             data.max_parts = max_parts;
-            data.timeout_seconds = '20';
-            data.fee_limit_sat = 1000;
+            data.timeout_seconds = timeout_seconds;
+            data.fee_limit_sat = Number(fee_limit_sat);
         }
 
         const payFunc = max_parts
