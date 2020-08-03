@@ -1,6 +1,6 @@
 # Bounties
 
-The Zeus team is putting up the tasks listed below for bounty. To inquire about status of or discuss any of the bounties please email zeusln (at) tutanota (dot) com. Thank you.
+The Zeus team is putting up the tasks listed below for bounty. Working code must be merged for a user to collect the bounty. To inquire about status of a bounty, to contribute to a bounty, or to proprose a new bounty please email zeusln (at) tutanota (dot) com. Thank you.
 
 ## Tor on Android
 Payout: 20,000,000 sats (0.2 BTC)
