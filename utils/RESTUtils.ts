@@ -6,8 +6,6 @@ import OpenChannelRequest from './../models/OpenChannelRequest';
 import CloseChannelRequest from './../models/CloseChannelRequest';
 import LoginRequest from './../models/LoginRequest';
 import ErrorUtils from './../utils/ErrorUtils';
-import JsonUtils from './../utils/JsonUtils';
-
 interface Headers {
     macaroon?: string;
     encodingtype?: string;
@@ -41,13 +39,7 @@ class LND {
             .then(response => {
                 delete calls[id];
                 if (response.info().status < 300) {
-                    const isWebsocket = url.includes('/v2/');
-                    const parser = isWebsocket
-                        ? JsonUtils.parseWebsocketJson
-                        : JSON.parse;
-                    return response.data
-                        ? parser(response.data)
-                        : response.json();
+                    return response.json();
                 } else {
                     const errorInfo = response.json();
                     throw new Error(
@@ -62,20 +54,7 @@ class LND {
         return calls[id];
     };
 
-    getHeaders = (macaroonHex: string) => {
-        return {
-            'Grpc-Metadata-macaroon': macaroonHex
-        };
-    };
-
-    getURL = (host: string, port: string | number, route: string) => {
-        const baseUrl = this.supportsCustomHostProtocol()
-            ? `${host}${port ? ':' + port : ''}`
-            : `https://${host}${port ? ':' + port : ''}`;
-        return `${baseUrl}${route}`;
-    };
-
-    request = (route: string, method: string, data?: any) => {
+    wsReq = (route: string, method: string, data?: any) => {
         const {
             host,
             lndhubUrl,
@@ -85,7 +64,86 @@ class LND {
             certVerification
         } = stores.settingsStore;
 
-        const headers = this.getHeaders(macaroonHex || accessToken);
+        const auth = macaroonHex || accessToken;
+        const headers = this.getHeaders(auth, true);
+        const methodRoute = `${route}?method=${method}`;
+        const url = this.getURL(host || lndhubUrl, port, methodRoute, true);
+
+        return new Promise(function(resolve, reject) {
+            const ws = new WebSocket(url, null, {
+                headers
+                // rejectUnauthorized: certVerification
+            });
+
+            // keep pulling in responses until the socket closes
+            let resp;
+
+            ws.addEventListener('open', () => {
+                // connection opened
+                ws.send(JSON.stringify(data)); // send a message
+            });
+
+            ws.addEventListener('message', e => {
+                // a message was received
+                const data = JSON.parse(e.data);
+                if (data.error) {
+                    reject(data.error);
+                } else {
+                    resp = e.data;
+                }
+            });
+
+            ws.addEventListener('error', e => {
+                // an error occurred
+                reject(e.message);
+            });
+
+            ws.addEventListener('close', e => {
+                // connection closed
+                resolve(JSON.parse(resp));
+            });
+        });
+    };
+
+    getHeaders = (macaroonHex: string, ws?: boolean) => {
+        if (ws) {
+            return {
+                'Grpc-Metadata-Macaroon': macaroonHex
+            };
+        }
+        return {
+            'Grpc-Metadata-macaroon': macaroonHex
+        };
+    };
+
+    getURL = (
+        host: string,
+        port: string | number,
+        route: string,
+        ws?: boolean
+    ) => {
+        let baseUrl = this.supportsCustomHostProtocol()
+            ? `${host}${port ? ':' + port : ''}`
+            : `https://${host}${port ? ':' + port : ''}`;
+
+        if (ws) {
+            baseUrl = baseUrl.replace('https', 'wss');
+        }
+        return `${baseUrl}${route}`;
+    };
+
+    request = (route: string, method: string, data?: any, ws?: boolean) => {
+        const {
+            host,
+            lndhubUrl,
+            port,
+            macaroonHex,
+            accessToken,
+            certVerification
+        } = stores.settingsStore;
+
+        const auth = macaroonHex || accessToken;
+        const headers = this.getHeaders(auth);
         headers['Content-Type'] = 'application/json';
         const url = this.getURL(host || lndhubUrl, port, route);
         return this.restReq(headers, url, method, data, certVerification);
@@ -116,7 +174,7 @@ class LND {
     payLightningInvoice = (data: any) =>
         this.postRequest('/v1/channels/transactions', data);
     payLightningInvoiceV2 = (data: any) =>
-        this.postRequest('/v2/router/send', data);
+        this.wsReq('/v2/router/send', 'POST', data);
     closeChannel = (urlParams?: Array<string>) => {
         if (urlParams.length === 4) {
             return `/v1/channels/${urlParams[0]}/${urlParams[1]}?force=${urlParams[2]}&sat_per_byte=${urlParams[3]}`;
