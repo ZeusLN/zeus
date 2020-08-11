@@ -23,6 +23,23 @@ interface PaymentProps {
     LnurlPayStore: LnurlPayStore;
 }
 
+const PaymentPath = ({ path }) => {
+    if (path.length === 1) {
+        return path[0];
+    }
+
+    let multiPathDisplay: any = [];
+    for (let i = 0; i < path.length; i++) {
+        multiPathDisplay.push(`Part ${i + 1}/${path.length}`);
+        for (let j = 0; j < path[i].length; j++) {
+            multiPathDisplay.push(path[i][j]);
+        }
+        multiPathDisplay.push('');
+    }
+
+    return multiPathDisplay.join('\n');
+};
+
 @inject('UnitsStore', 'SettingsStore', 'LnurlPayStore')
 @observer
 export default class PaymentView extends React.Component<PaymentProps> {
@@ -222,11 +239,11 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             }
                             selectable
                         >
-                            {lurkerMode
-                                ? PrivacyUtils.hideValue(
-                                      enhancedPath.join(', ')
-                                  )
-                                : enhancedPath.join(', ')}
+                            {lurkerMode ? (
+                                PrivacyUtils.hideValue(enhancedPath.join(', '))
+                            ) : (
+                                <PaymentPath path={enhancedPath} />
+                            )}
                         </Text>
                     )}
                 </View>

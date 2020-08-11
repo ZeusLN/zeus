@@ -6,6 +6,8 @@ import OpenChannelRequest from './../models/OpenChannelRequest';
 import CloseChannelRequest from './../models/CloseChannelRequest';
 import LoginRequest from './../models/LoginRequest';
 import ErrorUtils from './../utils/ErrorUtils';
+import VersionUtils from './../utils/VersionUtils';
+
 interface Headers {
     macaroon?: string;
     encodingtype?: string;
@@ -54,20 +56,13 @@ class LND {
         return calls[id];
     };
 
-    getHeaders = (macaroonHex: string) => {
-        return {
-            'Grpc-Metadata-macaroon': macaroonHex
-        };
+    supports = (supportedVersion: string) => {
+        const { nodeInfo } = stores.nodeInfoStore;
+        const { version } = nodeInfo;
+        return VersionUtils.isSupportedVersion(version, supportedVersion);
     };
 
-    getURL = (host: string, port: string | number, route: string) => {
-        const baseUrl = this.supportsCustomHostProtocol()
-            ? `${host}${port ? ':' + port : ''}`
-            : `https://${host}${port ? ':' + port : ''}`;
-        return `${baseUrl}${route}`;
-    };
-
-    request = (route: string, method: string, data?: any) => {
+    wsReq = (route: string, method: string, data?: any) => {
         const {
             host,
             lndhubUrl,
@@ -77,7 +72,86 @@ class LND {
             certVerification
         } = stores.settingsStore;
 
-        const headers = this.getHeaders(macaroonHex || accessToken);
+        const auth = macaroonHex || accessToken;
+        const headers = this.getHeaders(auth, true);
+        const methodRoute = `${route}?method=${method}`;
+        const url = this.getURL(host || lndhubUrl, port, methodRoute, true);
+
+        return new Promise(function(resolve, reject) {
+            const ws = new WebSocket(url, null, {
+                headers
+                // rejectUnauthorized: certVerification
+            });
+
+            // keep pulling in responses until the socket closes
+            let resp;
+
+            ws.addEventListener('open', () => {
+                // connection opened
+                ws.send(JSON.stringify(data)); // send a message
+            });
+
+            ws.addEventListener('message', e => {
+                // a message was received
+                const data = JSON.parse(e.data);
+                if (data.error) {
+                    reject(data.error);
+                } else {
+                    resp = e.data;
+                }
+            });
+
+            ws.addEventListener('error', e => {
+                // an error occurred
+                reject(e.message);
+            });
+
+            ws.addEventListener('close', e => {
+                // connection closed
+                resolve(JSON.parse(resp));
+            });
+        });
+    };
+
+    getHeaders = (macaroonHex: string, ws?: boolean) => {
+        if (ws) {
+            return {
+                'Grpc-Metadata-Macaroon': macaroonHex
+            };
+        }
+        return {
+            'Grpc-Metadata-macaroon': macaroonHex
+        };
+    };
+
+    getURL = (
+        host: string,
+        port: string | number,
+        route: string,
+        ws?: boolean
+    ) => {
+        let baseUrl = this.supportsCustomHostProtocol()
+            ? `${host}${port ? ':' + port : ''}`
+            : `https://${host}${port ? ':' + port : ''}`;
+
+        if (ws) {
+            baseUrl = baseUrl.replace('https', 'wss');
+        }
+        return `${baseUrl}${route}`;
+    };
+
+    request = (route: string, method: string, data?: any, ws?: boolean) => {
+        const {
+            host,
+            lndhubUrl,
+            port,
+            macaroonHex,
+            accessToken,
+            certVerification
+        } = stores.settingsStore;
+
+        const auth = macaroonHex || accessToken;
+        const headers = this.getHeaders(auth);
         headers['Content-Type'] = 'application/json';
         const url = this.getURL(host || lndhubUrl, port, route);
         return this.restReq(headers, url, method, data, certVerification);
@@ -107,6 +181,8 @@ class LND {
         this.getRequest(`/v1/payreq/${urlParams[0]}`, urlParams);
     payLightningInvoice = (data: any) =>
         this.postRequest('/v1/channels/transactions', data);
+    payLightningInvoiceV2 = (data: any) =>
+        this.wsReq('/v2/router/send', 'POST', data);
     closeChannel = (urlParams?: Array<string>) => {
         if (urlParams.length === 4) {
             return `/v1/channels/${urlParams[0]}/${urlParams[1]}?force=${urlParams[2]}&sat_per_byte=${urlParams[3]}`;
@@ -145,6 +221,7 @@ class LND {
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
     supportsCustomHostProtocol = () => false;
+    supportsMPP = () => this.supports('v0.11.0');
 }
 
 class CLightningREST extends LND {
@@ -224,6 +301,8 @@ class CLightningREST extends LND {
             ppm: data.fee_rate
         });
     getRoutes = () => this.getRequest('N/A');
+
+    supportsMPP = () => false;
 }
 
 class LndHub extends LND {
@@ -270,6 +349,7 @@ class LndHub extends LND {
     supportsKeysend = () => false;
     supportsChannelManagement = () => false;
     supportsCustomHostProtocol = () => true;
+    supportsMPP = () => false;
 }
 
 class Spark {
@@ -550,6 +630,8 @@ class Spark {
             ]
         };
     };
+
+    supportsMPP = () => false;
 }
 
 class RESTUtils {
@@ -594,6 +676,8 @@ class RESTUtils {
     listNode = (...args) => this.call('listNode', args);
     decodePaymentRequest = (...args) => this.call('decodePaymentRequest', args);
     payLightningInvoice = (...args) => this.call('payLightningInvoice', args);
+    payLightningInvoiceV2 = (...args) =>
+        this.call('payLightningInvoiceV2', args);
     closeChannel = (...args) => this.call('closeChannel', args);
     getNodeInfo = (...args) => this.call('getNodeInfo', args);
     getFees = (...args) => this.call('getFees', args);
@@ -607,7 +691,8 @@ class RESTUtils {
     supportsKeysend = () => this.call('supportsKeysend');
     supportsChannelManagement = () => this.call('supportsChannelManagement');
     // let users specify http/https
-    supportsCustomHostProtocol = () => this.call('supportsCustomHostProtocol ');
+    supportsCustomHostProtocol = () => this.call('supportsCustomHostProtocol');
+    supportsMPP = () => this.call('supportsMPP');
 }
 
 const restUtils = new RESTUtils();
