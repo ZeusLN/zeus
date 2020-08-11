@@ -6,6 +6,8 @@ import OpenChannelRequest from './../models/OpenChannelRequest';
 import CloseChannelRequest from './../models/CloseChannelRequest';
 import LoginRequest from './../models/LoginRequest';
 import ErrorUtils from './../utils/ErrorUtils';
+import VersionUtils from './../utils/VersionUtils';
+
 interface Headers {
     macaroon?: string;
     encodingtype?: string;
@@ -52,6 +54,12 @@ class LND {
             });
 
         return calls[id];
+    };
+
+    supports = (supportedVersion: string) => {
+        const { nodeInfo } = stores.nodeInfoStore;
+        const { version } = nodeInfo;
+        return VersionUtils.isSupportedVersion(version, supportedVersion);
     };
 
     wsReq = (route: string, method: string, data?: any) => {
@@ -213,6 +221,7 @@ class LND {
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
     supportsCustomHostProtocol = () => false;
+    supportsMPP = () => this.supports('v0.11.0');
 }
 
 class CLightningREST extends LND {
@@ -292,6 +301,8 @@ class CLightningREST extends LND {
             ppm: data.fee_rate
         });
     getRoutes = () => this.getRequest('N/A');
+
+    supportsMPP = () => false;
 }
 
 class LndHub extends LND {
@@ -338,6 +349,7 @@ class LndHub extends LND {
     supportsKeysend = () => false;
     supportsChannelManagement = () => false;
     supportsCustomHostProtocol = () => true;
+    supportsMPP = () => false;
 }
 
 class Spark {
@@ -618,6 +630,8 @@ class Spark {
             ]
         };
     };
+
+    supportsMPP = () => false;
 }
 
 class RESTUtils {
@@ -677,7 +691,8 @@ class RESTUtils {
     supportsKeysend = () => this.call('supportsKeysend');
     supportsChannelManagement = () => this.call('supportsChannelManagement');
     // let users specify http/https
-    supportsCustomHostProtocol = () => this.call('supportsCustomHostProtocol ');
+    supportsCustomHostProtocol = () => this.call('supportsCustomHostProtocol');
+    supportsMPP = () => this.call('supportsMPP');
 }
 
 const restUtils = new RESTUtils();

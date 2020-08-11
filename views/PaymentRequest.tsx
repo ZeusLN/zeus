@@ -16,6 +16,7 @@ import TransactionsStore from './../stores/TransactionsStore';
 import UnitsStore from './../stores/UnitsStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
 import SettingsStore from './../stores/SettingsStore';
+import RESTUtils from './../utils/RESTUtils';
 
 interface InvoiceProps {
     exitSetup: any;
@@ -436,7 +437,7 @@ export default class PaymentRequest extends React.Component<
                         </View>
                     )}
 
-                    {!!pay_req && isLnd && (
+                    {!!pay_req && RESTUtils.supportsMPP() && (
                         <View style={styles.button}>
                             <Button
                                 title={
@@ -554,15 +555,6 @@ export default class PaymentRequest extends React.Component<
                                 }
                                 placeholderTextColor="gray"
                             />
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
-                                {`NOTE: Multi-path payments are available in lnd v0.11.0 and later. You are on v${nodeInfo.version}.`}
-                            </Text>
                         </View>
                     )}
 
