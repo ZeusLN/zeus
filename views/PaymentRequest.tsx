@@ -436,7 +436,7 @@ export default class PaymentRequest extends React.Component<
                         </View>
                     )}
 
-                    {isLnd && (
+                    {!!pay_req && isLnd && (
                         <View style={styles.button}>
                             <Button
                                 title={
