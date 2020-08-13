@@ -134,6 +134,24 @@ describe('AddressUtils', () => {
 
                 expect(
                     AddressUtils.processSendAddress(
+                        'bitcoin:34K6tvoWM7k2ujeXVuimv29WyAsqzhWofb?label=test&amount=0.00170003'
+                    )
+                ).toEqual({
+                    value: '34K6tvoWM7k2ujeXVuimv29WyAsqzhWofb',
+                    amount: '170003' // amount in sats
+                });
+
+                expect(
+                    AddressUtils.processSendAddress(
+                        'bitcoin:34K6tvoWM7k2ujeXVuimv29WyAsqzhWofb?amount=0.00170003&label=testw&randomparams=rm2'
+                    )
+                ).toEqual({
+                    value: '34K6tvoWM7k2ujeXVuimv29WyAsqzhWofb',
+                    amount: '170003' // amount in sats
+                });
+
+                expect(
+                    AddressUtils.processSendAddress(
                         'bitcoin:34K6tvoWM7k2ujeXVuimv29WyAsqzhWofb'
                     )
                 ).toEqual({
