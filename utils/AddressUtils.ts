@@ -23,8 +23,8 @@ class AddressUtils {
 
         // handle BTCPay invoices with amounts embedded
         if (input.includes('bitcoin:') && input.includes('amount=')) {
-            const btcAddressAndAmt = input.split('bitcoin:')[1];
-            const [btcAddress, params] = btcAddressAndAmt.split('?');
+            const btcAddressAndParams = input.split('bitcoin:')[1];
+            const [btcAddress, params] = btcAddressAndParams.split('?');
 
             let result = {};
             params.split('&').forEach(function(part) {
