@@ -2,6 +2,7 @@ import LND from '../backends/LND';
 import CLightningREST from '../backends/CLightningREST';
 import LNDHub from '../backends/LNDHub';
 import Spark from '../backends/Spark';
+import Eclair from '../backends/Eclair';
 
 export const DEFAULT_LNDHUB = 'https://lndhub.herokuapp.com';
 
@@ -11,17 +12,22 @@ class RESTUtils {
         this.clightningREST = new CLightningREST();
         this.lndHub = new LndHub();
         this.lnd = new LND();
+        this.eclair = new Eclair();
     }
 
     getClass = () => {
         const { implementation } = stores.settingsStore;
         switch (implementation) {
-            case 'c-lightning-REST':
-                return this.clightningREST;
+            case 'lnd':
+                return this.lnd;
             case 'spark':
                 return this.spark;
             case 'lndhub':
                 return this.lndHub;
+            case 'eclair':
+                return this.eclair;
+            case 'c-lightning-REST':
+                return this.clightningREST;
             default:
                 return this.lnd;
         }

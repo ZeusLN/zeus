@@ -44,4 +44,5 @@ export class LndHub extends LND {
     supportsKeysend = () => false;
     supportsChannelManagement = () => false;
     supportsCustomHostProtocol = () => true;
+    supportsMPP = () => false;
 }
