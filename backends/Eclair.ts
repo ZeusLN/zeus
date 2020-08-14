@@ -340,7 +340,65 @@ export class Eclair {
 
         return this.api('updaterelayfe', params);
     };
-    getRoutes = () => ({});
+    getRoutes = (urlParams?: Array<string>) => {
+        this.api('findroutetonode', {
+            nodeId: urlParams[0],
+            amountMsat: urlParams[1]
+        })
+            .then(nodeIds =>
+                Promise.all(
+                    nodeIds
+                        .slice(1) // discard ourselves since our channel will be free
+                        .map(nodeId => this.api('allupdates', { nodeId }))
+                )
+            )
+            .then(nodesUpdates => {
+                // we will match each hop in the route from end to beginning
+                // with their previous hop using the channel updates scid
+                const route = [];
+                let nextHopChannels = nodesUpdates.pop();
+                while (nodesUpdates.length > 0) {
+                    let hopChannels = nodesUpdates.pop();
+                    let found = false;
+                    for (let i = 0; i < hopChannels.length; i++) {
+                        let chan = hopChannels[i];
+                        for (let j = 0; j < nextHopChannels.length; j++) {
+                            let nextChan = nextHopChannels[j];
+                            if (
+                                chan.shortChannelId === nextChan.shortChannelId
+                            ) {
+                                route.unshift(chan);
+                                hopChannels.splice(i, 1);
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (found) break;
+                    }
+                    if (!found) {
+                        // an error
+                        return {};
+                    }
+                    nextHopChannels = hopChannels;
+                }
+
+                // we finally have all the chan updates for the route, calculate the fee
+                return {
+                    routes: [
+                        {
+                            total_fees: route.reduce(
+                                (acc, r) =>
+                                    acc +
+                                    r.feeBaseMsat +
+                                    (acc * r.feeProportionalMillionths) /
+                                        1000000,
+                                0
+                            )
+                        }
+                    ]
+                };
+            });
+    };
 
     supportsOnchainSends = () => true;
     supportsKeysend = () => false;
