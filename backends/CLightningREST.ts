@@ -77,4 +77,5 @@ export class CLightningREST extends LND {
             ppm: data.fee_rate
         });
     getRoutes = () => this.getRequest('N/A');
+    supportsMPP = () => false;
 }

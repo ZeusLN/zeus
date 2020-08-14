@@ -68,6 +68,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             destination: destination || '',
             amount: amount || '',
             fee: '2'
+            confirmationTarget: '60'
         };
     }
 
@@ -125,12 +126,13 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     sendCoins = (satAmount: string | number) => {
         const { TransactionsStore, navigation } = this.props;
-        const { destination, fee } = this.state;
+        const { destination, fee, confirmationTarget } = this.state;
 
         TransactionsStore.sendCoins({
             addr: destination,
             sat_per_byte: fee,
-            amount: satAmount.toString()
+            amount: satAmount.toString(),
+            target_conf: Number(confirmationTarget // eclair-only
         });
         navigation.navigate('SendingOnChain');
     };
@@ -147,7 +149,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     setFee = (text: string) => {
         this.setState({ fee: text });
     };
-
+    
     render() {
         const { SettingsStore, UnitsStore, FiatStore, navigation } = this.props;
         const {
@@ -156,7 +158,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             destination,
             amount,
             fee,
-            error_msg
+confirmationTarget,
+            error_msg,
         } = this.state;
         const { implementation, settings } = SettingsStore;
         const { theme, fiat } = settings;
@@ -471,8 +474,23 @@ export default class Send extends React.Component<SendProps, SendState> {
                         />
                     </View>
 
-                    {transactionType === 'On-chain' && (
-                        <View style={styles.feeTableButton}>
+                    {transactionType === 'On-chain' && (implementation === 'eclair'
+            ? <View style={styles.feeTableButton}>
+                            <TextInput
+                                keyboardType="numeric"
+                                value={confirmationTarget}
+                                onChangeText={(text: string) =>
+                                    this.setState({ confirmationTarget: text })
+                                }
+                                style={
+                                    theme === 'dark'
+                                        ? styles.textInputDark
+                                        : styles.textInput
+                                }
+                                placeholderTextColor="gray"
+                            />
+                        </View>
+            : <View style={styles.feeTableButton}>
                             <FeeTable setFee={this.setFee} />
                         </View>
                     )}

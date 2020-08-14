@@ -167,7 +167,7 @@ export class Spark {
             amount: data.satoshis,
             feerate: `${Number(data.sat_per_byte) * 1000}perkb`,
             announce: !data.private
-        });
+        }).then(({ txid }) => ({ funding_txid_str: txid }));
     connectPeer = (data: any) =>
         this.rpc('connect', [data.addr.pubkey, data.addr.host]);
     listNode = () => {};
@@ -179,7 +179,10 @@ export class Spark {
             msatoshi: data.amt ? Number(data.amt * 1000) : undefined
         });
     closeChannel = (urlParams?: Array<string>) =>
-        this.rpc('close', [urlParams[0]]);
+        this.rpc('close', {
+            id: urlParams[0],
+            unilateraltimeout: urlParams[1] ? 60 : 0
+        }).then(() => ({ chan_close: { success: true } }));
     getNodeInfo = (urlParams?: Array<string>) =>
         this.rpc('listnodes', [urlParams[0]]).then(({ nodes }) => {
             const node = nodes[0];
@@ -239,7 +242,7 @@ export class Spark {
 
         return {
             channel_fees: listpeers
-                .filter()
+                .filter(({ channels }) => channels && channels.length)
                 .map(
                     ({
                         channels: [
@@ -263,7 +266,7 @@ export class Spark {
         this.rpc('setchannelfee', {
             id: data.global ? 'all' : data.channelId,
             base: data.base_fee_msat,
-            ppm: newFeeRateMiliMsat
+            ppm: data.fee_rate * 1000000
         });
     getRoutes = async (urlParams?: Array<string>) => {
         const msatoshi = Number(urlParams[1]) * 1000;
@@ -284,4 +287,10 @@ export class Spark {
             ]
         };
     };
+
+    supportsOnchainSends = () => true;
+    supportsKeysend = () => false;
+    supportsChannelManagement = () => true;
+    supportsCustomHostProtocol = () => false;
+    supportsMPP = () => false;
 }
