@@ -469,6 +469,10 @@ export default class PaymentRequest extends React.Component<
                         </View>
                     )}
 
+                    <View>
+                        <Text>{RESTUtils.supportsMPP()}</Text>
+                    </View>
+
                     {!!pay_req && RESTUtils.supportsMPP() && (
                         <View style={styles.button}>
                             <Button

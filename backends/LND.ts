@@ -14,7 +14,7 @@ interface Headers {
 // keep track of all active calls so we can cancel when appropriate
 const calls: any = {};
 
-class LND {
+export default class LND {
     restReq = (
         headers: Headers,
         url: string,

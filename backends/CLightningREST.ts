@@ -1,6 +1,6 @@
 import LND from './LND';
 
-export class CLightningREST extends LND {
+export default class CLightningREST extends LND {
     getHeaders = (macaroonHex: string) => {
         return {
             macaroon: macaroonHex,

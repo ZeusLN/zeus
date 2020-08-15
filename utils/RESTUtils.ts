@@ -1,10 +1,10 @@
+import stores from '../stores/Stores';
+
 import LND from '../backends/LND';
 import CLightningREST from '../backends/CLightningREST';
-import LNDHub from '../backends/LNDHub';
+import LndHub from '../backends/LndHub';
 import Spark from '../backends/Spark';
 import Eclair from '../backends/Eclair';
-
-export const DEFAULT_LNDHUB = 'https://lndhub.herokuapp.com';
 
 class RESTUtils {
     constructor() {
