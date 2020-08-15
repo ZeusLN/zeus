@@ -6,7 +6,7 @@ import OpenChannelRequest from './../models/OpenChannelRequest';
 // keep track of all active calls so we can cancel when appropriate
 const calls: any = {};
 
-export class Spark {
+export default class Spark {
     rpc = (rpcmethod, params = {}, range = null) => {
         let { url, accessKey, certVerification } = stores.settingsStore;
 

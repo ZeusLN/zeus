@@ -1,6 +1,8 @@
 import LND from './LND';
 
-export class LndHub extends LND {
+export const DEFAULT_LNDHUB = 'https://lndhub.herokuapp.com';
+
+export default class LndHub extends LND {
     getHeaders = (accessToken: string) => {
         if (accessToken) {
             return {

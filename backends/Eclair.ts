@@ -3,13 +3,14 @@ import querystring from 'querystring-es3';
 import stores from '../stores/Stores';
 import TransactionRequest from './../models/TransactionRequest';
 import OpenChannelRequest from './../models/OpenChannelRequest';
+import Base64Utils from './../utils/Base64Utils';
 
 // keep track of all active calls so we can cancel when appropriate
 const calls: any = {};
 
-export class Eclair {
+export default class Eclair {
     api = (method, params = {}) => {
-        const { url, password, certVerification } = stores.settingsStore;
+        let { url, password, certVerification } = stores.settingsStore;
 
         const id = method + JSON.stringify(params);
         if (calls[id]) {
@@ -25,7 +26,8 @@ export class Eclair {
                 'POST',
                 url + method,
                 {
-                    Authorization: 'Basic ' + btoa(':' + password)
+                    Authorization: 'Basic ' + Base64Utils.btoa(':' + password),
+                    'Content-Type': 'application/x-www-form-urlencoded'
                 },
                 querystring.stringify(params)
             )
@@ -52,9 +54,13 @@ export class Eclair {
     };
 
     getTransactions = () =>
-        this.api('onchaintransactions', { count: 100 }).then(transactions => ({
+        Promise.all([
+            this.api('onchaintransactions', { count: 100 }),
+            this.api('getinfo')
+        ]).then(([transactions, { blockHeight }]) => ({
             transactions: transactions.map(tx => ({
                 amount: tx.amount,
+                block_height: blockHeight - tx.confirmations,
                 block_hash: tx.blockHash,
                 total_fees: tx.fees,
                 dest_addresses: [tx.address],
@@ -68,27 +74,27 @@ export class Eclair {
         this.api('channels').then(channels => ({
             channels: channels.map(chan => {
                 return {
-                    active: channel.state === 'NORMAL',
-                    remote_pubkey: channel.data.remoteParams.nodeId,
+                    active: chan.state === 'NORMAL',
+                    remote_pubkey: chan.data.commitments.remoteParams.nodeId,
                     channel_point: null,
-                    chan_id: channel.channelId,
+                    chan_id: chan.channelId,
                     capacity: Number(
-                        channel.data.commitments.localCommit.spec.toLocal +
-                            channel.data.commitments.localCommit.spec.toRemote
+                        chan.data.commitments.localCommit.spec.toLocal +
+                            chan.data.commitments.localCommit.spec.toRemote
                     ).toString(),
                     local_balance: Number(
-                        channel.data.commitments.localCommit.spec.toLocal
+                        chan.data.commitments.localCommit.spec.toLocal
                     ).toString(),
                     remote_balance: Number(
-                        channel.data.commitments.localCommit.spec.toRemote
+                        chan.data.commitments.localCommit.spec.toRemote
                     ).toString(),
                     total_satoshis_sent: null,
                     total_satoshis_received: null,
                     num_updates: null,
-                    csv_delay: channel.data.commitments.localParams.toSelfDelay,
+                    csv_delay: chan.data.commitments.localParams.toSelfDelay,
                     private: false,
-                    local_chan_reserve_sat: channel.data.commitments.localParams.channelReserve.toString(),
-                    remote_chan_reserve_sat: channel.data.commitments.remoteParams.channelReserve.toString(),
+                    local_chan_reserve_sat: chan.data.commitments.localParams.channelReserve.toString(),
+                    remote_chan_reserve_sat: chan.data.commitments.remoteParams.channelReserve.toString(),
                     close_address: null
                 };
             })
@@ -146,7 +152,7 @@ export class Eclair {
             })
         );
     getInvoices = () => {
-        const since = new Date().getTime() / 1000 - 60 * 60 * 24 * 90; // 90 days ago
+        const since = parseInt(new Date().getTime() / 1000) - 60 * 60 * 24 * 90; // 90 days ago
         return Promise.all([
             this.api('listinvoices', { from: since }),
             this.api('listpendinginvoices', { from: since })
@@ -158,7 +164,7 @@ export class Eclair {
             }
 
             return {
-                invoices: invoices.map(mapInvoice)
+                invoices: all.map(mapInvoice(isPending))
             };
         });
     };
@@ -167,7 +173,7 @@ export class Eclair {
             description: data.memo,
             amountMsat: Number(data.value) * 1000,
             expireIn: data.expiry
-        }).then(mapInvoice);
+        }).then(mapInvoice(null));
     getPayments = () =>
         this.api('audit').then(({ sent }) => ({
             payments: sent.map(
@@ -209,7 +215,7 @@ export class Eclair {
         this.api('connect', { uri: data.addr.pubkey + '@' + data.addr.host });
     listNode = () => {};
     decodePaymentRequest = (urlParams?: Array<string>) =>
-        this.api('parseinvoice', [urlParams[0]]).then(
+        this.api('parseinvoice', { invoice: [urlParams[0]] }).then(
             ({
                 serialized,
                 description,
@@ -229,21 +235,20 @@ export class Eclair {
                 timestamp
             })
         );
-    payLightningInvoice = (data: any) =>
-        this.api('payinvoice', {
-            invoice: data.payment_request,
-            amountMsat: data.amt ? Number(data.amt * 1000) : undefined
-        })
+    payLightningInvoice = (data: any) => {
+        const params = { invoice: data.payment_request };
+        if (data.amt) params.amountMsat = Number(data.amt * 1000);
+        return this.api('payinvoice', params)
             .then(payId => this.api('getsentinfo', { id: payId }))
             .then(attempts => {
-                if (attempts.length) {
+                if (attempts.length === 0) {
                     return {
                         status: 'failed',
                         payment_error: 'no routes found'
                     };
                 }
 
-                const last = attempts.slice(-1);
+                const last = attempts.slice(-1)[0];
                 if (last.status.type === 'failed') {
                     return {
                         payment_hash: last.paymentHash,
@@ -256,9 +261,11 @@ export class Eclair {
                 return {
                     payment_hash: last.paymentHash,
                     payment_route: last.status.route,
-                    status: 'complete'
+                    status: 'SUCCEEDED',
+                    payment_error: ''
                 };
             });
+    };
     closeChannel = (urlParams?: Array<string>) => {
         let method = 'close';
         if (urlParams[1]) method = 'forceclose';
@@ -312,10 +319,13 @@ export class Eclair {
             channel_fees: channels.map(channel => ({
                 chan_id: channel.channelId,
                 channel_point: null,
-                base_fee_msat: channel.data.channelUpdate.feeBaseMsat,
-                fee_rate:
-                    channel.data.channelUpdate.feeProportionalMillionths /
-                    1000000
+                base_fee_msat: channel.data.channelUpdate
+                    ? channel.data.channelUpdate.feeBaseMsat
+                    : null,
+                fee_rate: channel.data.channelUpdate
+                    ? channel.data.channelUpdate.feeProportionalMillionths /
+                      1000000
+                    : null
             })),
             total_fee_sum: parseInt(allTimes / 1000),
             day_fee_sum: parseInt(lastDay / 1000),
@@ -336,9 +346,9 @@ export class Eclair {
         }
 
         params.feeBaseMsat = data.base_fee_msat;
-        params.feeBaseMsat = data.fee_rate * 1000000;
+        params.feeProportionalMillionths = data.fee_rate * 1000000;
 
-        return this.api('updaterelayfe', params);
+        return this.api('updaterelayfee', params);
     };
     getRoutes = (urlParams?: Array<string>) => {
         this.api('findroutetonode', {
@@ -407,23 +417,26 @@ export class Eclair {
     supportsMPP = () => false;
 }
 
-const mapInvoice = ({
+const mapInvoice = isPending => ({
     description,
     serialized,
     paymentHash,
     expiry,
     amount
-}) => ({
-    memo: description,
-    r_hash: paymentHash,
-    value: parseInt(amount / 1000),
-    value_msat: amount,
-    settled: !isPending[paymentHash],
-    creation_date: null,
-    settle_date: null,
-    payment_request: serialized,
-    expiry,
-    amt_paid: isPending[paymentHash] ? 0 : parseInt(amount / 1000),
-    amt_paid_sat: isPending[paymentHash] ? 0 : parseInt(amount / 1000),
-    amt_paid_msat: isPending[paymentHash] ? 0 : amount
-});
+}) => {
+    if (!isPending) isPending = { [paymentHash]: true };
+    return {
+        memo: description,
+        r_hash: paymentHash,
+        value: parseInt(amount / 1000),
+        value_msat: amount,
+        settled: !isPending[paymentHash],
+        creation_date: null,
+        settle_date: null,
+        payment_request: serialized,
+        expiry,
+        amt_paid: isPending[paymentHash] ? 0 : parseInt(amount / 1000),
+        amt_paid_sat: isPending[paymentHash] ? 0 : parseInt(amount / 1000),
+        amt_paid_msat: isPending[paymentHash] ? 0 : amount
+    };
+};

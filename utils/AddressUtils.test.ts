@@ -175,7 +175,7 @@ describe('AddressUtils', () => {
                 ).toBeTruthy();
                 expect(
                     AddressUtils.isValidLNDHubAddress(
-                        'lndhub://9a1e4e972f732352c75e:4a1e4e172f732352c75e@https://test-domain.org:4324'
+                        'lndhub://123:9b9537fe3de0dc2a9c6b5b6475dd4047d5a4cf16e531fd4a3e37efb68c99b5d6@https://lntxbot.bigsun.xyz'
                     )
                 ).toBeTruthy();
                 expect(

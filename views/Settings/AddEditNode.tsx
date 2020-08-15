@@ -16,10 +16,9 @@ import {
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import LndConnectUtils from './../../utils/LndConnectUtils';
-import CollapsedQR from './../../components/CollapsedQR';
 import { DEFAULT_LNDHUB } from './../../utils/RESTUtils';
 import { localeString } from './../../utils/LocaleUtils';
-
+import CollapsedQR from './../../components/CollapsedQR';
 import SettingsStore from './../../stores/SettingsStore';
 
 interface AddEditNodeProps {
@@ -31,11 +30,11 @@ interface AddEditNodeState {
     host: string; // lnd
     port: string | number; // lnd
     macaroonHex: string; // lnd
-    url: string; // spark
+    url: string; // spark, eclair
     accessKey: string; // spark
     lndhubUrl: string; // lndhub
     username: string; // lndhub
-    password: string; // lndhub
+    password: string; // lndhub, eclair
     existingAccount: boolean; // lndhub
     implementation: string;
     certVerification: boolean;
@@ -137,9 +136,20 @@ export default class AddEditNode extends React.Component<
     };
 
     async componentDidMount() {
-        const { navigation } = this.props;
-
         this.isComponentMounted = true;
+        this.initFromProps(this.props);
+    }
+
+    componentWillUnmount() {
+        this.isComponentMounted = false;
+    }
+
+    UNSAFE_componentWillReceiveProps(nextProps: any) {
+        this.initFromProps(nextProps);
+    }
+
+    initFromProps(props) {
+        const { navigation } = props;
 
         const node = navigation.getParam('node', null);
         const index = navigation.getParam('index', null);
@@ -188,53 +198,6 @@ export default class AddEditNode extends React.Component<
         }
     }
 
-    componentWillUnmount() {
-        this.isComponentMounted = false;
-    }
-
-    UNSAFE_componentWillReceiveProps(nextProps: any) {
-        const { navigation } = nextProps;
-        const node = navigation.getParam('node', null);
-        const index = navigation.getParam('index', null);
-        const active = navigation.getParam('active', null);
-        const newEntry = navigation.getParam('newEntry', null);
-
-        if (node) {
-            const {
-                host,
-                port,
-                macaroonHex,
-                url,
-                accessKey,
-                username,
-                password,
-                implementation,
-                certVerification
-            } = node;
-
-            this.setState({
-                host,
-                port,
-                macaroonHex,
-                accessKey,
-                username,
-                password,
-                implementation,
-                certVerification,
-                index,
-                active:
-                    index === this.props.SettingsStore.settings.selectedNode,
-                newEntry
-            });
-        } else {
-            this.setState({
-                index,
-                active,
-                newEntry
-            });
-        }
-    }
-
     saveNodeConfiguration = () => {
         const { SettingsStore, navigation } = this.props;
         const {
@@ -253,6 +216,13 @@ export default class AddEditNode extends React.Component<
         } = this.state;
         const { setSettings, settings } = SettingsStore;
         const { lurkerMode, passphrase, fiat } = settings;
+
+        if (
+            implementation === 'lndhub' &&
+            (!lndhubUrl || !username || !password)
+        ) {
+            throw new Error('lndhub settings missing.');
+        }
 
         const node = {
             host,
@@ -469,6 +439,7 @@ export default class AddEditNode extends React.Component<
                                 value="spark"
                             />
                             <Picker.Item label="LNDHub" value="lndhub" />
+                            <Picker.Item label="Eclair" value="eclair" />
                         </Picker>
                     </View>
                 )}
@@ -493,7 +464,8 @@ export default class AddEditNode extends React.Component<
                                             'lnd',
                                             'c-lightning-REST',
                                             'Spark (c-lightning)',
-                                            'LNDHub'
+                                            'LNDHub',
+                                            'Eclair'
                                         ],
                                         cancelButtonIndex: 0
                                     },
@@ -522,6 +494,12 @@ export default class AddEditNode extends React.Component<
                                                 implementation: 'lndhub',
                                                 saved: false,
                                                 certVerification: true
+                                            });
+                                        } else if (buttonIndex === 5) {
+                                            this.setState({
+                                                implementation: 'eclair',
+                                                saved: false,
+                                                certVerification: false
                                             });
                                         }
                                     }
@@ -770,7 +748,8 @@ export default class AddEditNode extends React.Component<
 
                     <NodeInterface />
 
-                    {implementation === 'spark' && (
+                    {(implementation === 'spark' ||
+                        implementation == 'eclair') && (
                         <>
                             <Text
                                 style={{
@@ -811,19 +790,27 @@ export default class AddEditNode extends React.Component<
                                             : 'black'
                                 }}
                             >
-                                {localeString(
-                                    'views.Settings.AddEditNode.accessKey'
-                                )}
+                                {implementation === 'spark'
+                                    ? localeString(
+                                          'views.Settings.AddEditNode.accessKey'
+                                      )
+                                    : localeString(
+                                          'views.Settings.AddEditNode.password'
+                                      )}
                             </Text>
                             <TextInput
                                 placeholder={'...'}
                                 value={accessKey}
-                                onChangeText={(text: string) =>
+                                onChangeText={(text: string) => {
+                                    let param =
+                                        implementation === 'spark'
+                                            ? 'accessKey'
+                                            : 'password';
                                     this.setState({
-                                        accessKey: text.trim(),
+                                        [param]: text.trim(),
                                         saved: false
-                                    })
-                                }
+                                    });
+                                }}
                                 numberOfLines={1}
                                 style={
                                     savedTheme === 'dark'
@@ -950,7 +937,7 @@ export default class AddEditNode extends React.Component<
                                         secureTextEntry={saved}
                                         placeholderTextColor="gray"
                                     />
-                                    {saved && lndhubUrl === DEFAULT_LNDHUB && (
+                                    {saved && (
                                         <CollapsedQR
                                             showText={localeString(
                                                 'views.Settings.AddEditNode.showAccountQR'
@@ -958,7 +945,12 @@ export default class AddEditNode extends React.Component<
                                             collapseText={localeString(
                                                 'views.Settings.AddEditNode.hideAccountQR'
                                             )}
-                                            value={`lndhub://${username}:${password}`}
+                                            value={
+                                                `lndhub://${username}:${password}` +
+                                                (lndhubUrl === DEFAULT_LNDHUB
+                                                    ? ''
+                                                    : `@${lndhubUrl}`)
+                                            }
                                             hideText
                                         />
                                     )}
@@ -1185,7 +1177,8 @@ export default class AddEditNode extends React.Component<
                     </View>
                 )}
 
-                {implementation !== 'lndhub' && (
+                {(implementation === 'lnd' ||
+                    implementation === 'c-lightning-REST') && (
                     <View style={styles.button}>
                         <Button
                             title={localeString(
@@ -1216,7 +1209,8 @@ export default class AddEditNode extends React.Component<
                     </View>
                 )}
 
-                {implementation !== 'lndhub' && (
+                {(implementation === 'lnd' ||
+                    implementation === 'c-lightning-REST') && (
                     <View style={styles.button}>
                         <Button
                             title={localeString(

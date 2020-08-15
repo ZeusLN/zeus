@@ -67,7 +67,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             transactionType: transactionType,
             destination: destination || '',
             amount: amount || '',
-            fee: '2'
+            fee: '2',
             confirmationTarget: '60'
         };
     }
@@ -132,7 +132,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             addr: destination,
             sat_per_byte: fee,
             amount: satAmount.toString(),
-            target_conf: Number(confirmationTarget // eclair-only
+            target_conf: Number(confirmationTarget) // eclair-only
         });
         navigation.navigate('SendingOnChain');
     };
@@ -149,7 +149,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     setFee = (text: string) => {
         this.setState({ fee: text });
     };
-    
+
     render() {
         const { SettingsStore, UnitsStore, FiatStore, navigation } = this.props;
         const {
@@ -158,8 +158,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             destination,
             amount,
             fee,
-confirmationTarget,
-            error_msg,
+            confirmationTarget,
+            error_msg
         } = this.state;
         const { implementation, settings } = SettingsStore;
         const { theme, fiat } = settings;
@@ -474,26 +474,30 @@ confirmationTarget,
                         />
                     </View>
 
-                    {transactionType === 'On-chain' && (implementation === 'eclair'
-            ? <View style={styles.feeTableButton}>
-                            <TextInput
-                                keyboardType="numeric"
-                                value={confirmationTarget}
-                                onChangeText={(text: string) =>
-                                    this.setState({ confirmationTarget: text })
-                                }
-                                style={
-                                    theme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
-                                placeholderTextColor="gray"
-                            />
-                        </View>
-            : <View style={styles.feeTableButton}>
-                            <FeeTable setFee={this.setFee} />
-                        </View>
-                    )}
+                    {transactionType === 'On-chain' &&
+                        (implementation === 'eclair' ? (
+                            <View style={styles.feeTableButton}>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    value={confirmationTarget}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            confirmationTarget: text
+                                        })
+                                    }
+                                    style={
+                                        theme === 'dark'
+                                            ? styles.textInputDark
+                                            : styles.textInput
+                                    }
+                                    placeholderTextColor="gray"
+                                />
+                            </View>
+                        ) : (
+                            <View style={styles.feeTableButton}>
+                                <FeeTable setFee={this.setFee} />
+                            </View>
+                        ))}
 
                     {!!error_msg && (
                         <React.Fragment>
