@@ -185,11 +185,12 @@ class LND {
         this.wsReq('/v2/router/send', 'POST', data);
     closeChannel = (urlParams?: Array<string>) => {
         if (urlParams.length === 4) {
-            return `/v1/channels/${urlParams[0]}/${urlParams[1]}?force=${urlParams[2]}&sat_per_byte=${urlParams[3]}`;
+            return this.deleteRequest(
+                `/v1/channels/${urlParams[0]}/${urlParams[1]}?force=${urlParams[2]}&sat_per_byte=${urlParams[3]}`
+            );
         }
         return this.deleteRequest(
-            '`/v1/channels/${urlParams[0]}/${urlParams[1]}?force=${urlParams[2]}`;',
-            urlParams
+            `/v1/channels/${urlParams[0]}/${urlParams[1]}?force=${urlParams[2]}`
         );
     };
     getNodeInfo = (urlParams?: Array<string>) =>
