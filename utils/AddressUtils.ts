@@ -12,7 +12,7 @@ const btcBechTestnet = /^(bc1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
 const btcBechPubkeyScriptHashTestnet = /^(tb1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
 
 /* lndhub */
-const lndHubAddress = /^(lndhub:\/\/)[a-hA-H-0-9]{18,24}(:)[a-hA-H-0-9]{18,24}$/;
+const lndHubAddress = /^(lndhub:\/\/)[a-hA-H-0-9]{18,24}(:)[a-hA-H-0-9]{18,24}@?[a-zA-Z0-9\-_:\/.]+$/;
 
 class AddressUtils {
     processSendAddress = (input: string) => {
@@ -47,9 +47,10 @@ class AddressUtils {
         }
 
         const value = input.replace('lndhub://', '');
+        const [userPass, host] = value.split('@');
+        const [username, password] = userPass.split(':');
 
-        const [username, password] = value.split(':');
-        return { username, password };
+        return { username, password, host };
     };
 
     isValidBitcoinAddress = (input: string, testnet: boolean) => {

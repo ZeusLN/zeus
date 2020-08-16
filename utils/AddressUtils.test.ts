@@ -157,6 +157,11 @@ describe('AddressUtils', () => {
                 ).toBeTruthy();
                 expect(
                     AddressUtils.isValidLNDHubAddress(
+                        'lndhub://9a1e4e972f732352c75e:4a1e4e172f732352c75e@https://test-domain.org:4324'
+                    )
+                ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLNDHubAddress(
                         'lndhub://9ae:9a1e4e972f732352c75e'
                     )
                 ).toBeFalsy();
@@ -172,6 +177,15 @@ describe('AddressUtils', () => {
                 ).toEqual({
                     username: '9a1e4e972f732352c75e',
                     password: '4a1e4e172f732352c75e'
+                });
+                expect(
+                    AddressUtils.processLNDHubAddress(
+                        'lndhub://9a1e4e972f732352c75e:4a1e4e172f732352c75e@https://test-domain.org:4324'
+                    )
+                ).toEqual({
+                    username: '9a1e4e972f732352c75e',
+                    password: '4a1e4e172f732352c75e',
+                    host: 'https://test-domain.org:4324'
                 });
             });
         });
