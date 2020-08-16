@@ -199,6 +199,7 @@ class LND {
     setFees = (data: any) => this.postRequest('/v1/chanpolicy', data);
     getRoutes = (urlParams?: Array<string>) =>
         this.getRequest(`/v1/graph/routes/${urlParams[0]}/${urlParams[1]}`);
+    getForwardingHistory = (data: any) => this.postRequest('/v1/switch', data);
 
     // LndHub
     createAccount = (host: string, certVerification: boolean) => {
@@ -684,6 +685,7 @@ class RESTUtils {
     getFees = (...args) => this.call('getFees', args);
     setFees = (...args) => this.call('setFees', args);
     getRoutes = (...args) => this.call('getRoutes', args);
+    getForwardingHistory = (...args) => this.call('getForwardingHistory', args);
     // lndhub
     createAccount = (...args) => this.call('createAccount', args);
     login = (...args) => this.call('login', args);

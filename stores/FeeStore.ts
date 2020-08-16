@@ -2,6 +2,7 @@ import { action, observable } from 'mobx';
 import RNFetchBlob from 'rn-fetch-blob';
 import RESTUtils from './../utils/RESTUtils';
 import Base64Utils from './../utils/Base64Utils';
+import ForwardEvent from './../models/ForwardEvent';
 import SettingsStore from './SettingsStore';
 
 export default class FeeStore {
@@ -17,6 +18,10 @@ export default class FeeStore {
     @observable public weekEarned: string | number;
     @observable public monthEarned: string | number;
     @observable public totalEarned: string | number;
+
+    @observable public forwardingEvents: Array<any> = [];
+    @observable public lastOffsetIndex: number;
+    @observable public forwardingHistoryError: boolean = false;
 
     getOnchainFeesToken: any;
 
@@ -71,7 +76,7 @@ export default class FeeStore {
                 this.dayEarned = data.day_fee_sum || 0;
                 this.weekEarned = data.week_fee_sum || 0;
                 this.monthEarned = data.month_fee_sum || 0;
-                this.totalEarned = data.total_fee_sum || 0;
+                // this.totalEarned = data.total_fee_sum || 0; DEPRECATED
 
                 this.loading = false;
             })
@@ -121,6 +126,27 @@ export default class FeeStore {
             })
             .catch(() => {
                 this.feesError();
+            });
+    };
+
+    forwardingError = () => {
+        this.loading = false;
+        this.forwardingHistoryError = true;
+    };
+
+    @action
+    public getForwardingHistory = params => {
+        this.loading = true;
+        RESTUtils.getForwardingHistory(params)
+            .then((data: any) => {
+                this.forwardingEvents = data.forwarding_events
+                    .map((event: any) => new ForwardEvent(event))
+                    .reverse();
+                this.lastOffsetIndex = data.last_offset_index;
+                this.loading = false;
+            })
+            .catch(() => {
+                this.forwardingError();
             });
     };
 }
