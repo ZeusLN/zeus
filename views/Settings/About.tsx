@@ -77,8 +77,8 @@ export default class About extends React.Component<AboutProps, {}> {
                     people that contributed to or helped enable the software
                     that Zeus is built upon including the Human Rights
                     Foundation, Matt Odell, Jameson Lopp, fiatjaf, Suheb,
-                    shesek, Zap, Blue Wallet, Ride the Lightning, Blockstream,
-                    and Lightning Labs.
+                    shesek, k3tan, Zap, Blue Wallet, Ride the Lightning,
+                    Blockstream, and Lightning Labs.
                 </Text>
                 <Text
                     style={
