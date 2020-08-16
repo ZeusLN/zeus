@@ -44,14 +44,28 @@ export default async function(data: string): Promise<any> {
             }
         ];
     } else if (AddressUtils.isValidLNDHubAddress(value)) {
-        const { username, password } = AddressUtils.processLNDHubAddress(value);
-        const node = {
-            implementation: 'lndhub',
-            username,
-            password,
-            certVerification: true,
-            existingAccount: true
-        };
+        const { username, password, host } = AddressUtils.processLNDHubAddress(
+            value
+        );
+        let node;
+        if (host) {
+            node = {
+                implementation: 'lndhub',
+                username,
+                password,
+                lndhubUrl: host,
+                certVerification: true,
+                existingAccount: true
+            };
+        } else {
+            node = {
+                implementation: 'lndhub',
+                username,
+                password,
+                certVerification: true,
+                existingAccount: true
+            };
+        }
         return [
             'AddEditNode',
             {
