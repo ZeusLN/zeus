@@ -12,7 +12,7 @@ const btcBechTestnet = /^(bc1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
 const btcBechPubkeyScriptHashTestnet = /^(tb1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
 
 /* lndhub */
-const lndHubAddress = /^(lndhub:\/\/)[a-hA-H-0-9]{18,24}(:)[a-hA-H-0-9]{18,24}$/;
+const lndHubAddress = /^(lndhub:\/\/)[a-hA-H-0-9]{18,24}(:)[a-hA-H-0-9]{18,24}@?[a-zA-Z0-9\-_:\/.]+$/;
 
 class AddressUtils {
     processSendAddress = (input: string) => {
@@ -22,11 +22,18 @@ class AddressUtils {
         // payment requests prefixed with 'lightning:'
 
         // handle BTCPay invoices with amounts embedded
-        if (input.includes('bitcoin:') && input.includes('?amount=')) {
-            const btcAddressAndAmt = input.split('bitcoin:')[1];
-            const amountSplit = btcAddressAndAmt.split('?amount=');
-            value = amountSplit[0];
-            amount = Number(amountSplit[1]) * satoshisPerBTC;
+        if (input.includes('bitcoin:') && input.includes('amount=')) {
+            const btcAddressAndParams = input.split('bitcoin:')[1];
+            const [btcAddress, params] = btcAddressAndParams.split('?');
+
+            let result = {};
+            params.split('&').forEach(function(part) {
+                const item = part.split('=');
+                result[item[0]] = decodeURIComponent(item[1]);
+            });
+
+            value = btcAddress;
+            amount = Number(result.amount) * satoshisPerBTC;
             amount = amount.toString();
         } else if (input.includes('bitcoin:')) {
             value = input.split('bitcoin:')[1];
@@ -47,9 +54,10 @@ class AddressUtils {
         }
 
         const value = input.replace('lndhub://', '');
+        const [userPass, host] = value.split('@');
+        const [username, password] = userPass.split(':');
 
-        const [username, password] = value.split(':');
-        return { username, password };
+        return { username, password, host };
     };
 
     isValidBitcoinAddress = (input: string, testnet: boolean) => {

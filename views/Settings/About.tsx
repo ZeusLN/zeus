@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Platform, StyleSheet, Text, View, ScrollView } from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import { version } from './../../package.json';
+import { version, playStore } from './../../package.json';
 
 import SettingsStore from './../../stores/SettingsStore';
 import UrlUtils from './../../utils/UrlUtils';
@@ -53,7 +53,7 @@ export default class About extends React.Component<AboutProps, {}> {
                             : styles.lightThemeTextLarge
                     }
                 >
-                    Version: {version}
+                    Version: {playStore ? `v${version}-play` : `v${version}`}
                 </Text>
                 <Text
                     style={
@@ -75,9 +75,10 @@ export default class About extends React.Component<AboutProps, {}> {
                 >
                     Special thanks to all of Zeus' contributors and all of the
                     people that contributed to or helped enable the software
-                    that Zeus is built upon including fiatjaf, Suheb, shesek,
-                    Zap, Blue Wallet, Ride the Lightning, Blockstream, and last
-                    but not least, Lightning Labs.
+                    that Zeus is built upon including the Human Rights
+                    Foundation, Matt Odell, Jameson Lopp, fiatjaf, Suheb,
+                    shesek, Zap, Blue Wallet, Ride the Lightning, Blockstream,
+                    and Lightning Labs.
                 </Text>
                 <Text
                     style={
@@ -134,7 +135,7 @@ export default class About extends React.Component<AboutProps, {}> {
                         />
                     </View>
                 )}
-                {RESTUtils.supportsKeysend() && (
+                {!playStore && RESTUtils.supportsKeysend() && (
                     <View style={styles.button}>
                         <Button
                             title="Send keysend donation"

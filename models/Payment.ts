@@ -76,6 +76,7 @@ export default class Payment extends BaseModel {
 
         this.htlcs &&
             this.htlcs.forEach((htlc: any) => {
+                const route: any[] = [];
                 if (htlc.status === 'SUCCEEDED') {
                     htlc.route.hops &&
                         htlc.route.hops.forEach((hop: any) => {
@@ -88,9 +89,10 @@ export default class Payment extends BaseModel {
                             }, Fee: ${
                                 hop.fee_msat ? Number(hop.fee_msat) / 1000 : 0
                             }]`;
-                            enhancedPath.push(enhancedHop);
+                            route.push(enhancedHop);
                         });
                 }
+                enhancedPath.push(route);
             });
 
         return enhancedPath;

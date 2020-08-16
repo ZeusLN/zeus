@@ -14,7 +14,7 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 ### App Store links
 * [Google Play](https://play.google.com/store/apps/details?id=app.zeusln.zeus)
 * [Apple TestFlight](https://testflight.apple.com/join/gpVFzEHN)
-* [F-Droid](https://f-droid.org/packages/app.zeusln.zeus/)
+* [F-Droid](https://f-droid.org/packages/com.zeusln.zeus/)
 
 ### Get in touch with us
 * Come chat with us on
@@ -78,6 +78,13 @@ Zeus is proud to be integrated on the following platforms:
 2. install node dependencies with `npm i`
 3. `cd ios && pod install`
 4. open `ios/zeus.xcodeproj` in Xcode and hit Run
+
+## Google Play Releases
+
+Google Play releases aren't fully featured due to Google policies. To get the fully featured version of Zeus on Android you must download the APK from the [Zeus website](https://zeusln.app), GitHub, or F-Droid. Google Play releases are managed on the `play-releases` branch. Commits used for Google Play builds will be marked in the release notes.
+
+#### Current features not included on Google Play releases
+* Keysend donation button
 
 ## Contributing
 
