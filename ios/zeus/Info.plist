@@ -42,24 +42,16 @@
 	<true/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<key>NSExceptionDomains</key>
-		<dict>
-			<key>localhost</key>
-			<dict>
-				<key>NSAllowsArbitraryLoads</key>
-				<true/>
-				<key>NSIncludesSubdomains</key>
-				<true/>
-				<key>NSTemporaryExceptionAllowsInsecureHTTPLoads</key>
-				<true/>
-				<key>NSTemporaryExceptionAllowsInsecureHTTPSLoads</key>
-				<false/>
-				<key>NSTemporaryExceptionMinimumTLSVersion</key>
-				<string>1.0</string>
-				<key>NSTemporaryExceptionRequiresForwardSecrecy</key>
-				<false/>
-			</dict>
-		</dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSTemporaryExceptionAllowsInsecureHTTPLoads</key>
+		<true/>
+		<key>NSTemporaryExceptionAllowsInsecureHTTPSLoads</key>
+		<true/>
+		<key>NSTemporaryExceptionMinimumTLSVersion</key>
+		<string>1.0</string>
+		<key>NSTemporaryExceptionRequiresForwardSecrecy</key>
+		<false/>
 	</dict>
 	<key>NSAppleMusicUsageDescription</key>
 	<string>Not Used</string>

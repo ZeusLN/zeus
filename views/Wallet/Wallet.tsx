@@ -148,6 +148,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             FeeStore.getFees();
         }
 
+        if (implementation === 'lnd') {
+            FeeStore.getForwardingHistory();
+        }
+
         if (!!fiat && fiat !== 'Disabled') {
             FiatStore.getFiatRates();
         }

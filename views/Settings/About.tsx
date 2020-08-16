@@ -75,9 +75,10 @@ export default class About extends React.Component<AboutProps, {}> {
                 >
                     Special thanks to all of Zeus' contributors and all of the
                     people that contributed to or helped enable the software
-                    that Zeus is built upon including fiatjaf, Suheb, shesek,
-                    Zap, Blue Wallet, Ride the Lightning, Blockstream, and last
-                    but not least, Lightning Labs.
+                    that Zeus is built upon including the Human Rights
+                    Foundation, Matt Odell, Jameson Lopp, fiatjaf, Suheb,
+                    shesek, Zap, Blue Wallet, Ride the Lightning, Blockstream,
+                    and Lightning Labs.
                 </Text>
                 <Text
                     style={
