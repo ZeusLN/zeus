@@ -24,6 +24,7 @@ interface Settings {
     selectedNode?: number;
     passphrase?: string;
     fiat?: string;
+    onChainAddress?: string;
 }
 
 export default class SettingsStore {
@@ -39,6 +40,9 @@ export default class SettingsStore {
     @observable certVerification: boolean | undefined;
     @observable chainAddress: string | undefined;
     // LNDHub
+    @observable username: string;
+    @observable password: string;
+    @observable lndhubUrl: string;
     @observable public createAccountError: string;
     @observable public createAccountSuccess: string;
     @observable public accessToken: string;

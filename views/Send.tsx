@@ -66,7 +66,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             transactionType: transactionType,
             destination: destination || '',
             amount: amount || '',
-            fee: '2'
+            fee: '2',
+            error_msg: ''
         };
     }
 
@@ -160,10 +161,9 @@ export default class Send extends React.Component<SendProps, SendState> {
         const { implementation, settings } = SettingsStore;
         const { theme, fiat } = settings;
         const { units, changeUnits } = UnitsStore;
-        const { fiatRates }:any = FiatStore;
+        const { fiatRates }: any = FiatStore;
 
-        const rate =
-            (fiatRates && fiatRates[fiat] && fiatRates[fiat]['15m']) || 0;
+        const rate = fiat && fiatRates ? fiatRates[fiat]['15m'] : 0;
 
         let satAmount: string | number;
         switch (units) {

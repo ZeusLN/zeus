@@ -21,7 +21,7 @@ const nodl = require('./../images/onboarding/nodl.png');
 const raspiBlitz = require('./../images/onboarding/RaspiBlitz.png');
 const myNode = require('./../images/onboarding/myNode.png');
 
-import SettingsStore from './../../stores/SettingsStore';
+import SettingsStore from './../stores/SettingsStore';
 
 interface OnboardingProps {
     navigation: any;

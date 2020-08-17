@@ -108,11 +108,7 @@ export default class OpenChannel extends React.Component<
     };
 
     render() {
-        const {
-            ChannelsStore,
-            SettingsStore,
-            navigation
-        } = this.props;
+        const { ChannelsStore, SettingsStore, navigation } = this.props;
         const {
             node_pubkey_string,
             local_funding_amount,

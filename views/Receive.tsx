@@ -111,10 +111,9 @@ export default class Receive extends React.Component<
         const { theme, fiat } = settings;
         const address = chainAddress;
 
-        const rate =
-            (fiatRates && fiatRates[fiat] && fiatRates[fiat]['15m']) || 0;
+        const rate = fiat && fiatRates ? fiatRates[fiat]['15m'] : 0;
 
-        let satAmount: string|number;
+        let satAmount: string | number;
         switch (units) {
             case 'sats':
                 satAmount = value;

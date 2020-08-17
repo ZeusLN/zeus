@@ -68,9 +68,13 @@ export default class AddEditNode extends React.Component<
         certVerification: false,
         existingAccount: false,
         suggestImport: '',
+        url: '',
         lndhubUrl: DEFAULT_LNDHUB,
         showLndHubModal: false,
-        showSslModal: false
+        showSslModal: false,
+        username: '',
+        password: '',
+        accessKey: ''
     };
 
     async UNSAFE_componentWillMount() {
@@ -928,6 +932,7 @@ export default class AddEditNode extends React.Component<
                                             showText="Show account QR"
                                             collapseText="Hide account QR"
                                             value={`lndhub://${username}:${password}`}
+                                            theme={savedTheme}
                                             hideText
                                         />
                                     )}

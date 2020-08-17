@@ -23,7 +23,7 @@ interface PaymentProps {
     LnurlPayStore: LnurlPayStore;
 }
 
-const PaymentPath = ({ path }) => {
+const PaymentPath = ({ path }: any) => {
     if (path.length === 1) {
         return path[0];
     }
@@ -57,11 +57,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
     }
 
     render() {
-        const {
-            navigation,
-            UnitsStore,
-            SettingsStore,
-        } = this.props;
+        const { navigation, UnitsStore, SettingsStore } = this.props;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { settings } = SettingsStore;
         const { theme, lurkerMode } = settings;

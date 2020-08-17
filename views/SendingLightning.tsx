@@ -27,14 +27,6 @@ export default class SendingLightning extends React.Component<
     SendingLightningProps,
     {}
 > {
-    componentDidMount = () => {
-        const {
-            payment_route,
-            payment_hash,
-            payment_error
-        } = TransactionsStore;
-    };
-
     getBackgroundColor() {
         const { TransactionsStore } = this.props;
         const {

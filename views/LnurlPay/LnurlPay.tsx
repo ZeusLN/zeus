@@ -59,11 +59,7 @@ export default class LnurlPay extends React.Component<
     }
 
     sendValues() {
-        const {
-            navigation,
-            InvoicesStore,
-            LnurlPayStore
-        } = this.props;
+        const { navigation, InvoicesStore, LnurlPayStore } = this.props;
         const { domain, amount } = this.state;
         const lnurl = navigation.getParam('lnurlParams');
         const u = url.parse(lnurl.callback);

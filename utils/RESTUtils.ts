@@ -1,9 +1,7 @@
 import RNFetchBlob from 'rn-fetch-blob';
 import stores from '../stores/Stores';
 import TransactionRequest from './../models/TransactionRequest';
-import Channel from './../models/Channel';
 import OpenChannelRequest from './../models/OpenChannelRequest';
-import CloseChannelRequest from './../models/CloseChannelRequest';
 import LoginRequest from './../models/LoginRequest';
 import ErrorUtils from './../utils/ErrorUtils';
 import VersionUtils from './../utils/VersionUtils';
@@ -11,6 +9,7 @@ import VersionUtils from './../utils/VersionUtils';
 interface Headers {
     macaroon?: string;
     encodingtype?: string;
+    'Grpc-Metadata-Macaroon'?: string;
     'Grpc-Metadata-macaroon'?: string;
 }
 
@@ -38,7 +37,7 @@ class LND {
             trusty: !certVerification
         })
             .fetch(method, url, headers, data ? JSON.stringify(data) : data)
-            .then(response => {
+            .then((response: any) => {
                 delete calls[id];
                 if (response.info().status < 300) {
                     return response.json();
@@ -68,8 +67,7 @@ class LND {
             lndhubUrl,
             port,
             macaroonHex,
-            accessToken,
-            certVerification
+            accessToken
         } = stores.settingsStore;
 
         const auth = macaroonHex || accessToken;
@@ -78,20 +76,20 @@ class LND {
         const url = this.getURL(host || lndhubUrl, port, methodRoute, true);
 
         return new Promise(function(resolve, reject) {
-            const ws = new WebSocket(url, null, {
+            const ws: any = new WebSocket(url, null, {
                 headers
                 // rejectUnauthorized: certVerification
             });
 
             // keep pulling in responses until the socket closes
-            let resp;
+            let resp: any;
 
             ws.addEventListener('open', () => {
                 // connection opened
                 ws.send(JSON.stringify(data)); // send a message
             });
 
-            ws.addEventListener('message', e => {
+            ws.addEventListener('message', (e: any) => {
                 // a message was received
                 const data = JSON.parse(e.data);
                 if (data.error) {
@@ -101,12 +99,12 @@ class LND {
                 }
             });
 
-            ws.addEventListener('error', e => {
+            ws.addEventListener('error', (e: any) => {
                 // an error occurred
                 reject(e.message);
             });
 
-            ws.addEventListener('close', e => {
+            ws.addEventListener('close', () => {
                 // connection closed
                 resolve(JSON.parse(resp));
             });
@@ -140,7 +138,7 @@ class LND {
         return `${baseUrl}${route}`;
     };
 
-    request = (route: string, method: string, data?: any, ws?: boolean) => {
+    request = (route: string, method: string, data?: any) => {
         const {
             host,
             lndhubUrl,
@@ -151,7 +149,7 @@ class LND {
         } = stores.settingsStore;
 
         const auth = macaroonHex || accessToken;
-        const headers = this.getHeaders(auth);
+        const headers: any = this.getHeaders(auth);
         headers['Content-Type'] = 'application/json';
         const url = this.getURL(host || lndhubUrl, port, route);
         return this.restReq(headers, url, method, data, certVerification);
@@ -184,7 +182,7 @@ class LND {
     payLightningInvoiceV2 = (data: any) =>
         this.wsReq('/v2/router/send', 'POST', data);
     closeChannel = (urlParams?: Array<string>) => {
-        if (urlParams.length === 4) {
+        if (urlParams && urlParams.length === 4) {
             return this.deleteRequest(
                 `/v1/channels/${urlParams[0]}/${urlParams[1]}?force=${urlParams[2]}&sat_per_byte=${urlParams[3]}`
             );
@@ -235,16 +233,16 @@ class CLightningREST extends LND {
     };
 
     getTransactions = () =>
-        this.getRequest('/v1/listFunds').then(data => ({
+        this.getRequest('/v1/listFunds').then((data: any) => ({
             transactions: data.outputs
         }));
     getChannels = () =>
-        this.getRequest('/v1/channel/listChannels').then(data => ({
+        this.getRequest('/v1/channel/listChannels').then((data: any) => ({
             channels: data
         }));
     getBlockchainBalance = () =>
         this.getRequest('/v1/getBalance').then(
-            ({ totalBalance, confBalance, unconfBalance }) => ({
+            ({ totalBalance, confBalance, unconfBalance }: any) => ({
                 total_balance: totalBalance,
                 confirmed_balance: confBalance,
                 unconfirmed_balance: unconfBalance
@@ -252,7 +250,7 @@ class CLightningREST extends LND {
         );
     getLightningBalance = () =>
         this.getRequest('/v1/channel/localremotebal').then(
-            ({ localBalance, pendingBalance }) => ({
+            ({ localBalance, pendingBalance }: any) => ({
                 balance: localBalance,
                 pending_open_balance: pendingBalance
             })
@@ -268,7 +266,7 @@ class CLightningREST extends LND {
     createInvoice = (data: any) =>
         this.postRequest('/v1/invoice/genInvoice/', {
             description: data.memo,
-            label: 'zeus.' + parseInt(Math.random() * 1000000),
+            label: 'zeus.' + (Math.random() * 1000000).toString(),
             amount: Number(data.value) * 1000,
             expiry: data.expiry,
             private: true
@@ -293,8 +291,8 @@ class CLightningREST extends LND {
         this.deleteRequest(`/v1/channel/closeChannel/${urlParams[0]}/`);
     getNodeInfo = () => this.getRequest('N/A');
     getFees = () =>
-        this.getRequest('/v1/getFees/').then(({ feeCollected }) => ({
-            total_fee_sum: parseInt(feeCollected / 1000)
+        this.getRequest('/v1/getFees/').then(({ feeCollected }: any) => ({
+            total_fee_sum: feeCollected / 1000
         }));
     setFees = (data: any) =>
         this.postRequest('/v1/channel/setChannelFee/', {
@@ -330,7 +328,7 @@ class LndHub extends LND {
 
     getPayments = () => this.getRequest('/gettxs');
     getLightningBalance = () =>
-        this.getRequest('/balance').then(({ BTC }) => ({
+        this.getRequest('/balance').then(({ BTC }: any) => ({
             balance: BTC.AvailableBalance
         }));
     getInvoices = () => this.getRequest('/getuserinvoices?limit=200');
@@ -355,7 +353,7 @@ class LndHub extends LND {
 }
 
 class Spark {
-    rpc = (rpcmethod, params = {}, range = null) => {
+    rpc = (rpcmethod: string, params = {}, range: any = null) => {
         let { url, accessKey, certVerification } = stores.settingsStore;
 
         const id = rpcmethod + JSON.stringify(params) + JSON.stringify(range);
@@ -365,7 +363,7 @@ class Spark {
 
         url = url.slice(-4) === '/rpc' ? url : url + '/rpc';
 
-        const headers = { 'X-Access': accessKey };
+        const headers: any = { 'X-Access': accessKey };
         if (range) {
             headers['Range'] = `${range.unit}=${range.slice}`;
         }
@@ -401,17 +399,18 @@ class Spark {
     };
 
     getTransactions = () =>
-        this.rpc('listfunds').then(({ outputs }) => ({
+        this.rpc('listfunds').then(({ outputs }: any) => ({
             transactions: outputs
         }));
     getChannels = () =>
-        this.rpc('listpeers').then(({ peers }) => ({
+        this.rpc('listpeers').then(({ peers }: any) => ({
             channels: peers
-                .filter(peer => peer.channels.length)
-                .map(peer => {
+                .filter((peer: any) => peer.channels.length)
+                .map((peer: any) => {
                     let channel =
                         peer.channels.find(
-                            c => c.state !== 'ONCHAIN' && c.state !== 'CLOSED'
+                            (c: any) =>
+                                c.state !== 'ONCHAIN' && c.state !== 'CLOSED'
                         ) || peer.channels[0];
 
                     return {
@@ -448,13 +447,13 @@ class Spark {
                 })
         }));
     getBlockchainBalance = () =>
-        this.rpc('listfunds').then(({ outputs }) => {
+        this.rpc('listfunds').then(({ outputs }: any) => {
             const unconf = outputs
-                .filter(o => o.status !== 'confirmed')
-                .reduce((acc, o) => acc + o.value, 0);
+                .filter((o: any) => o.status !== 'confirmed')
+                .reduce((acc: any, o: any) => acc + o.value, 0);
             const conf = outputs
-                .filter(o => o.status === 'confirmed')
-                .reduce((acc, o) => acc + o.value, 0);
+                .filter((o: any) => o.status === 'confirmed')
+                .reduce((acc: any, o: any) => acc + o.value, 0);
 
             return {
                 total_balance: conf + unconf,
@@ -463,13 +462,13 @@ class Spark {
             };
         });
     getLightningBalance = () =>
-        this.rpc('listfunds').then(({ channels }) => ({
+        this.rpc('listfunds').then(({ channels }: any) => ({
             balance: channels
-                .filter(o => o.state === 'CHANNELD_NORMAL')
-                .reduce((acc, o) => acc + o.channel_sat, 0),
+                .filter((o: any) => o.state === 'CHANNELD_NORMAL')
+                .reduce((acc: any, o: any) => acc + o.channel_sat, 0),
             pending_open_balance: channels
-                .filter(o => o.state === 'CHANNELD_AWAITING_LOCKIN')
-                .reduce((acc, o) => acc + o.channel_sat, 0)
+                .filter((o: any) => o.state === 'CHANNELD_AWAITING_LOCKIN')
+                .reduce((acc: any, o: any) => acc + o.channel_sat, 0)
         }));
     sendCoins = (data: TransactionRequest) =>
         this.rpc('withdraw', {
@@ -480,8 +479,8 @@ class Spark {
     getMyNodeInfo = () => this.rpc('getinfo');
     getInvoices = () =>
         this.rpc('listinvoices', {}, { unit: 'invoices', slice: '-100' }).then(
-            ({ invoices }) => ({
-                invoices: invoices.map(inv => ({
+            ({ invoices }: any) => ({
+                invoices: invoices.map((inv: any) => ({
                     memo: inv.description,
                     r_preimage: inv.payment_preimage,
                     r_hash: inv.payment_hash,
@@ -529,7 +528,7 @@ class Spark {
     closeChannel = (urlParams?: Array<string>) =>
         this.rpc('close', [urlParams[0]]);
     getNodeInfo = (urlParams?: Array<string>) =>
-        this.rpc('listnodes', [urlParams[0]]).then(({ nodes }) => {
+        this.rpc('listnodes', [urlParams[0]]).then(({ nodes }: any) => {
             const node = nodes[0];
             return {
                 node: node && {
@@ -537,7 +536,7 @@ class Spark {
                     pub_key: node.nodeid,
                     alias: node.alias,
                     color: node.color,
-                    addresses: node.addresses.map(addr => ({
+                    addresses: node.addresses.map((addr: any) => ({
                         network: 'tcp',
                         addr:
                             addr.type === 'ipv6'
@@ -556,7 +555,9 @@ class Spark {
             this.rpc('listchannels', { source: info.id })
         ]);
 
-        let lastDay, lastWeek, lastMonth;
+        let lastDay = 0,
+            lastWeek = 0,
+            lastMonth = 0;
         const now = new Date().getTime() / 1000;
         const oneDayAgo = now - 60 * 60 * 24;
         const oneWeekAgo = now - 60 * 60 * 24 * 7;
@@ -575,7 +576,7 @@ class Spark {
             } else break;
         }
 
-        const channels = {};
+        const channels: any = {};
         for (let i = 0; i < listchannels.channels.length; i++) {
             const channel = listchannels.channels[i];
             channels[channel.short_channel_id] = {
@@ -657,37 +658,42 @@ class RESTUtils {
         }
     };
 
-    call = (funcName, args) => {
+    call = (funcName: string, args?: any) => {
         const cls = this.getClass();
         return cls[funcName].apply(cls, args);
     };
 
-    getTransactions = (...args) => this.call('getTransactions', args);
-    getChannels = (...args) => this.call('getChannels', args);
-    getBlockchainBalance = (...args) => this.call('getBlockchainBalance', args);
-    getLightningBalance = (...args) => this.call('getLightningBalance', args);
-    sendCoins = (...args) => this.call('sendCoins', args);
-    getMyNodeInfo = (...args) => this.call('getMyNodeInfo', args);
-    getInvoices = (...args) => this.call('getInvoices', args);
-    createInvoice = (...args) => this.call('createInvoice', args);
-    getPayments = (...args) => this.call('getPayments', args);
-    getNewAddress = (...args) => this.call('getNewAddress', args);
-    openChannel = (...args) => this.call('openChannel', args);
-    connectPeer = (...args) => this.call('connectPeer', args);
-    listNode = (...args) => this.call('listNode', args);
-    decodePaymentRequest = (...args) => this.call('decodePaymentRequest', args);
-    payLightningInvoice = (...args) => this.call('payLightningInvoice', args);
-    payLightningInvoiceV2 = (...args) =>
+    getTransactions = (...args: any[]) => this.call('getTransactions', args);
+    getChannels = (...args: any[]) => this.call('getChannels', args);
+    getBlockchainBalance = (...args: any[]) =>
+        this.call('getBlockchainBalance', args);
+    getLightningBalance = (...args: any[]) =>
+        this.call('getLightningBalance', args);
+    sendCoins = (...args: any[]) => this.call('sendCoins', args);
+    getMyNodeInfo = (...args: any[]) => this.call('getMyNodeInfo', args);
+    getInvoices = (...args: any[]) => this.call('getInvoices', args);
+    createInvoice = (...args: any[]) => this.call('createInvoice', args);
+    getPayments = (...args: any[]) => this.call('getPayments', args);
+    getNewAddress = (...args: any[]) => this.call('getNewAddress', args);
+    openChannel = (...args: any[]) => this.call('openChannel', args);
+    connectPeer = (...args: any[]) => this.call('connectPeer', args);
+    listNode = (...args: any[]) => this.call('listNode', args);
+    decodePaymentRequest = (...args: any[]) =>
+        this.call('decodePaymentRequest', args);
+    payLightningInvoice = (...args: any[]) =>
+        this.call('payLightningInvoice', args);
+    payLightningInvoiceV2 = (...args: any[]) =>
         this.call('payLightningInvoiceV2', args);
-    closeChannel = (...args) => this.call('closeChannel', args);
-    getNodeInfo = (...args) => this.call('getNodeInfo', args);
-    getFees = (...args) => this.call('getFees', args);
-    setFees = (...args) => this.call('setFees', args);
-    getRoutes = (...args) => this.call('getRoutes', args);
-    getForwardingHistory = (...args) => this.call('getForwardingHistory', args);
+    closeChannel = (...args: any[]) => this.call('closeChannel', args);
+    getNodeInfo = (...args: any[]) => this.call('getNodeInfo', args);
+    getFees = (...args: any[]) => this.call('getFees', args);
+    setFees = (...args: any[]) => this.call('setFees', args);
+    getRoutes = (...args: any[]) => this.call('getRoutes', args);
+    getForwardingHistory = (...args: any[]) =>
+        this.call('getForwardingHistory', args);
     // lndhub
-    createAccount = (...args) => this.call('createAccount', args);
-    login = (...args) => this.call('login', args);
+    createAccount = (...args: any[]) => this.call('createAccount', args);
+    login = (...args: any[]) => this.call('login', args);
 
     supportsOnchainSends = () => this.call('supportsOnchainSends');
     supportsKeysend = () => this.call('supportsKeysend');
