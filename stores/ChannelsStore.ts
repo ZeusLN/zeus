@@ -173,7 +173,7 @@ export default class ChannelsStore {
                 host: request.host
             }
         })
-            .then((data: any) => {
+            .then(() => {
                 this.errorPeerConnect = false;
                 this.connectingToPeer = false;
                 this.errorMsgPeer = null;

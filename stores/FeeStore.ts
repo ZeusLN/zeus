@@ -92,13 +92,11 @@ export default class FeeStore {
         channelPoint?: string,
         channelId?: string
     ) => {
-        const { implementation } = this.settingsStore;
-
         this.loading = true;
         this.setFeesError = false;
         this.setFeesSuccess = false;
 
-        const data = {
+        const data: any = {
             base_fee_msat: newBaseFeeMsat,
             fee_rate: newFeeRateMiliMsat / 1000000,
             time_lock_delta: 4
@@ -120,7 +118,7 @@ export default class FeeStore {
         }
 
         RESTUtils.setFees(data)
-            .then((data: any) => {
+            .then(() => {
                 this.loading = false;
                 this.setFeesSuccess = true;
             })

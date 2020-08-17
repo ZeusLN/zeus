@@ -266,7 +266,7 @@ class CLightningREST extends LND {
     createInvoice = (data: any) =>
         this.postRequest('/v1/invoice/genInvoice/', {
             description: data.memo,
-            label: 'zeus.' + (Math.random() * 1000000).toString(),
+            label: 'zeus.' + Math.random() * 1000000,
             amount: Number(data.value) * 1000,
             expiry: data.expiry,
             private: true
@@ -484,15 +484,15 @@ class Spark {
                     memo: inv.description,
                     r_preimage: inv.payment_preimage,
                     r_hash: inv.payment_hash,
-                    value: parseInt(inv.msatoshi / 1000),
+                    value: inv.msatoshi / 1000,
                     value_msat: inv.msatoshi,
                     settled: inv.status === 'paid',
                     creation_date: inv.expires_at,
                     settle_date: inv.paid_at,
                     payment_request: inv.bolt11,
                     expiry: inv.expires_at,
-                    amt_paid: parseInt(inv.msatoshi_received / 1000),
-                    amt_paid_sat: parseInt(inv.msatoshi_received / 1000),
+                    amt_paid: inv.msatoshi_received / 1000,
+                    amt_paid_sat: inv.msatoshi_received / 1000,
                     amt_paid_msat: inv.msatoshi_received
                 }))
             })
@@ -500,7 +500,7 @@ class Spark {
     createInvoice = (data: any) =>
         this.rpc('invoice', {
             description: data.memo,
-            label: 'zeus.' + parseInt(Math.random() * 1000000),
+            label: 'zeus.' + Math.random() * 1000000,
             msatoshi: Number(data.value) * 1000,
             expiry: data.expiry,
             exposeprivatechannels: true
@@ -627,7 +627,7 @@ class Spark {
         return {
             routes: [
                 {
-                    total_fees: parseInt((route[0].msatoshi - msatoshi) / 1000)
+                    total_fees: (route[0].msatoshi - msatoshi) / 1000
                 }
             ]
         };

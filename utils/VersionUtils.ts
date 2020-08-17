@@ -18,14 +18,22 @@ class VersionUtils {
         const user = this.parseVersion(userVersion);
         const target = this.parseVersion(targetVersion);
 
-        if (user.coreVersion > target.coreVersion) {
+        if (
+            user.coreVersion &&
+            target.coreVersion &&
+            user.coreVersion > target.coreVersion
+        ) {
             return true;
         } else if (
+            user.mainVersion &&
+            target.mainVersion &&
             user.coreVersion === target.coreVersion &&
             user.mainVersion > target.mainVersion
         ) {
             return true;
         } else if (
+            user.minorVersion &&
+            target.minorVersion &&
             user.coreVersion === target.coreVersion &&
             user.mainVersion === target.mainVersion &&
             user.minorVersion >= target.minorVersion
