@@ -557,10 +557,9 @@ class Spark {
         ]);
 
         let lastDay, lastWeek, lastMonth;
-        const now = parseInt(new Date().getTime() / 1000);
+        const now = new Date().getTime() / 1000;
         const oneDayAgo = now - 60 * 60 * 24;
         const oneWeekAgo = now - 60 * 60 * 24 * 7;
-        const oneMonthAgo = now - 60 * 60 * 24 * 30;
         for (let i = listforwards.forwards.length - 1; i >= 0; i--) {
             const forward = listforwards.forwards[i];
             if (forward.status !== 'settled') continue;

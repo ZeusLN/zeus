@@ -15,14 +15,12 @@ import NodeUriUtils from './../utils/NodeUriUtils';
 
 import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
-import FeeStore from './../stores/FeeStore';
 
 interface OpenChannelProps {
     exitSetup: any;
     navigation: any;
     ChannelsStore: ChannelsStore;
     SettingsStore: SettingsStore;
-    FeeStore: FeeStore;
 }
 
 interface OpenChannelState {
@@ -35,7 +33,7 @@ interface OpenChannelState {
     suggestImport: string;
 }
 
-@inject('ChannelsStore', 'SettingsStore', 'FeeStore')
+@inject('ChannelsStore', 'SettingsStore')
 @observer
 export default class OpenChannel extends React.Component<
     OpenChannelProps,
@@ -113,7 +111,6 @@ export default class OpenChannel extends React.Component<
         const {
             ChannelsStore,
             SettingsStore,
-            FeeStore,
             navigation
         } = this.props;
         const {

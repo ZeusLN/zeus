@@ -160,13 +160,12 @@ export default class Send extends React.Component<SendProps, SendState> {
         const { implementation, settings } = SettingsStore;
         const { theme, fiat } = settings;
         const { units, changeUnits } = UnitsStore;
-        const { fiatRates } = FiatStore;
+        const { fiatRates }:any = FiatStore;
 
         const rate =
             (fiatRates && fiatRates[fiat] && fiatRates[fiat]['15m']) || 0;
-        const symbol = fiatRates && fiatRates[fiat] && fiatRates[fiat].symbol;
 
-        let satAmount;
+        let satAmount: string | number;
         switch (units) {
             case 'sats':
                 satAmount = amount;

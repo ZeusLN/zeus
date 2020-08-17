@@ -1,6 +1,5 @@
 import * as React from 'react';
 import {
-    Platform,
     StyleSheet,
     Text,
     View,
@@ -10,7 +9,7 @@ import {
     Image,
     TouchableHighlight
 } from 'react-native';
-import { Button, Icon } from 'react-native-elements';
+import { Button } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import UrlUtils from './../utils/UrlUtils';
 import { DEFAULT_LNDHUB } from './../utils/RESTUtils';

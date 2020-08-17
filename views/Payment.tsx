@@ -61,7 +61,6 @@ export default class PaymentView extends React.Component<PaymentProps> {
             navigation,
             UnitsStore,
             SettingsStore,
-            LnurlPayStore
         } = this.props;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { settings } = SettingsStore;

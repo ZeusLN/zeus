@@ -7,7 +7,6 @@ import {
     ScrollView
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { when } from 'mobx';
 import { Button } from 'react-native-elements';
 import LnurlPaySuccess from './LnurlPay/Success';
 

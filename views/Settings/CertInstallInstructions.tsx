@@ -18,7 +18,7 @@ export default class CertInstallInstructions extends React.Component<
 > {
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { loading, settings } = SettingsStore;
+        const { settings } = SettingsStore;
         const savedTheme = settings.theme;
 
         const BackButton = () => (

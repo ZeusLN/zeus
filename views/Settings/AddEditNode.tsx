@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import AddressUtils from './../../utils/AddressUtils';
 import LndConnectUtils from './../../utils/LndConnectUtils';
 import CollapsedQR from './../../components/CollapsedQR';
 import { DEFAULT_LNDHUB } from './../../utils/RESTUtils';
@@ -215,6 +216,7 @@ export default class AddEditNode extends React.Component<
                 host,
                 port,
                 macaroonHex,
+                url,
                 accessKey,
                 username,
                 password,

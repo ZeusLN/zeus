@@ -135,7 +135,7 @@ export default class FeeStore {
     };
 
     @action
-    public getForwardingHistory = params => {
+    public getForwardingHistory = (params?: any) => {
         this.loading = true;
         RESTUtils.getForwardingHistory(params)
             .then((data: any) => {
