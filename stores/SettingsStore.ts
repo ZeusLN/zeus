@@ -150,9 +150,12 @@ export default class SettingsStore {
     public getNewAddress = () => {
         return RESTUtils.getNewAddress().then((data: any) => {
             const newAddress = data.address || data[0].address;
-            this.settings.nodes[
-                this.settings.selectedNode || 0
-            ].onChainAddress = newAddress;
+            if (this.settings.nodes) {
+                this.settings.nodes[
+                    this.settings.selectedNode || 0
+                ].onChainAddress = newAddress;
+            }
+
             const newSettings = this.settings;
 
             this.setSettings(JSON.stringify(newSettings)).then(() => {

@@ -131,7 +131,7 @@ export default class ChannelsStore {
     ) => {
         this.loading = true;
 
-        let urlParams: Array<string> = [];
+        let urlParams: Array<any> = [];
         if (channelId) {
             // c-lightning
             urlParams = [channelId];

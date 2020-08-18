@@ -26,7 +26,7 @@ class AddressUtils {
             const btcAddressAndParams = input.split('bitcoin:')[1];
             const [btcAddress, params] = btcAddressAndParams.split('?');
 
-            let result = {};
+            let result: any = {};
             params.split('&').forEach(function(part) {
                 const item = part.split('=');
                 result[item[0]] = decodeURIComponent(item[1]);

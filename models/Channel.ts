@@ -14,7 +14,7 @@ export default class Channel extends BaseModel {
     commit_fee: string;
     csv_delay: number;
     channel_point: string;
-    chan_id?: string;
+    chan_id: string | number;
     fee_per_kw: string;
     total_satoshis_received: string;
     pending_htlcs: Array<HTLC>;

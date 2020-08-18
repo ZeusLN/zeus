@@ -59,7 +59,7 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get isPaid(): boolean {
-        return this.status === 'paid' || this.settled || this.ispaid;
+        return this.status === 'paid' || this.settled || this.ispaid || false;
     }
 
     @computed public get key(): string {
@@ -99,13 +99,13 @@ export default class Invoice extends BaseModel {
         return this.isPaid
             ? this.settleDate
             : DateTimeUtils.listFormattedDate(
-                  this.expires_at || this.creation_date || this.timestamp
+                  this.expires_at || this.creation_date || this.timestamp || 0
               );
     }
 
     @computed public get settleDate(): Date {
         return DateTimeUtils.listFormattedDate(
-            this.settle_date || this.paid_at || this.timestamp
+            this.settle_date || this.paid_at || this.timestamp || 0
         );
     }
 

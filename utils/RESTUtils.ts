@@ -71,14 +71,13 @@ class LND {
         } = stores.settingsStore;
 
         const auth = macaroonHex || accessToken;
-        const headers = this.getHeaders(auth, true);
+        const headers: any = this.getHeaders(auth, true);
         const methodRoute = `${route}?method=${method}`;
         const url = this.getURL(host || lndhubUrl, port, methodRoute, true);
 
         return new Promise(function(resolve, reject) {
             const ws: any = new WebSocket(url, null, {
                 headers
-                // rejectUnauthorized: certVerification
             });
 
             // keep pulling in responses until the socket closes
@@ -176,7 +175,7 @@ class LND {
     connectPeer = (data: any) => this.postRequest('/v1/peers', data);
     listNode = () => this.getRequest('/v1/network/listNode');
     decodePaymentRequest = (urlParams?: Array<string>) =>
-        this.getRequest(`/v1/payreq/${urlParams[0]}`, urlParams);
+        this.getRequest(`/v1/payreq/${urlParams && urlParams[0]}`);
     payLightningInvoice = (data: any) =>
         this.postRequest('/v1/channels/transactions', data);
     payLightningInvoiceV2 = (data: any) =>
@@ -184,19 +183,25 @@ class LND {
     closeChannel = (urlParams?: Array<string>) => {
         if (urlParams && urlParams.length === 4) {
             return this.deleteRequest(
-                `/v1/channels/${urlParams[0]}/${urlParams[1]}?force=${urlParams[2]}&sat_per_byte=${urlParams[3]}`
+                `/v1/channels/${urlParams && urlParams[0]}/${urlParams &&
+                    urlParams[1]}?force=${urlParams &&
+                    urlParams[2]}&sat_per_byte=${urlParams && urlParams[3]}`
             );
         }
         return this.deleteRequest(
-            `/v1/channels/${urlParams[0]}/${urlParams[1]}?force=${urlParams[2]}`
+            `/v1/channels/${urlParams && urlParams[0]}/${urlParams &&
+                urlParams[1]}?force=${urlParams && urlParams[2]}`
         );
     };
     getNodeInfo = (urlParams?: Array<string>) =>
-        this.getRequest(`/v1/graph/node/${urlParams[0]}`);
+        this.getRequest(`/v1/graph/node/${urlParams && urlParams[0]}`);
     getFees = () => this.getRequest('/v1/fees');
     setFees = (data: any) => this.postRequest('/v1/chanpolicy', data);
     getRoutes = (urlParams?: Array<string>) =>
-        this.getRequest(`/v1/graph/routes/${urlParams[0]}/${urlParams[1]}`);
+        this.getRequest(
+            `/v1/graph/routes/${urlParams && urlParams[0]}/${urlParams &&
+                urlParams[1]}`
+        );
     getForwardingHistory = (data: any) => this.postRequest('/v1/switch', data);
 
     // LndHub
@@ -281,14 +286,16 @@ class CLightningREST extends LND {
         });
     listNode = () => this.getRequest('/v1/network/listNode');
     decodePaymentRequest = (urlParams?: Array<string>) =>
-        this.getRequest(`/v1/pay/decodePay/${urlParams[0]}`);
+        this.getRequest(`/v1/pay/decodePay/${urlParams && urlParams[0]}`);
     payLightningInvoice = (data: any) =>
         this.postRequest('/v1/pay', {
             invoice: data.payment_request,
             amount: Number(data.amt && data.amt * 1000)
         });
     closeChannel = (urlParams?: Array<string>) =>
-        this.deleteRequest(`/v1/channel/closeChannel/${urlParams[0]}/`);
+        this.deleteRequest(
+            `/v1/channel/closeChannel/${urlParams && urlParams[0]}/`
+        );
     getNodeInfo = () => this.getRequest('N/A');
     getFees = () =>
         this.getRequest('/v1/getFees/').then(({ feeCollected }: any) => ({
@@ -519,35 +526,37 @@ class Spark {
         this.rpc('connect', [data.addr.pubkey, data.addr.host]);
     listNode = () => {};
     decodePaymentRequest = (urlParams?: Array<string>) =>
-        this.rpc('decodepay', [urlParams[0]]);
+        this.rpc('decodepay', [urlParams && urlParams[0]]);
     payLightningInvoice = (data: any) =>
         this.rpc('pay', {
             bolt11: data.payment_request,
             msatoshi: data.amt ? Number(data.amt * 1000) : undefined
         });
     closeChannel = (urlParams?: Array<string>) =>
-        this.rpc('close', [urlParams[0]]);
+        this.rpc('close', [urlParams && urlParams[0]]);
     getNodeInfo = (urlParams?: Array<string>) =>
-        this.rpc('listnodes', [urlParams[0]]).then(({ nodes }: any) => {
-            const node = nodes[0];
-            return {
-                node: node && {
-                    last_update: node.last_timestamp,
-                    pub_key: node.nodeid,
-                    alias: node.alias,
-                    color: node.color,
-                    addresses: node.addresses.map((addr: any) => ({
-                        network: 'tcp',
-                        addr:
-                            addr.type === 'ipv6'
-                                ? `[${addr.address}]:${addr.port}`
-                                : `${addr.address}:${addr.port}`
-                    }))
-                }
-            };
-        });
+        this.rpc('listnodes', [urlParams && urlParams[0]]).then(
+            ({ nodes }: any) => {
+                const node = nodes[0];
+                return {
+                    node: node && {
+                        last_update: node.last_timestamp,
+                        pub_key: node.nodeid,
+                        alias: node.alias,
+                        color: node.color,
+                        addresses: node.addresses.map((addr: any) => ({
+                            network: 'tcp',
+                            addr:
+                                addr.type === 'ipv6'
+                                    ? `[${addr.address}]:${addr.port}`
+                                    : `${addr.address}:${addr.port}`
+                        }))
+                    }
+                };
+            }
+        );
     getFees = async () => {
-        const info = await this.rpc('getinfo');
+        const info: any = await this.rpc('getinfo');
 
         const [listforwards, listpeers, listchannels] = await Promise.all([
             this.rpc('listforwards'),
@@ -593,7 +602,7 @@ class Spark {
                         channels: [
                             { short_channel_id, channel_id, funding_txid }
                         ]
-                    }) => ({
+                    }: any) => ({
                         chan_id: channel_id,
                         channel_point: funding_txid,
                         base_fee_msat:
@@ -601,23 +610,23 @@ class Spark {
                         fee_rate: channels[short_channel_id].fee_rate
                     })
                 ),
-            total_fee_sum: parseInt(info.msatoshi_fees_collected / 1000),
-            day_fee_sum: parseInt(lastDay / 1000),
-            week_fee_sum: parseInt(lastWeek / 1000),
-            month_fee_sum: parseInt(lastMonth / 1000)
+            total_fee_sum: info.msatoshi_fees_collected / 1000,
+            day_fee_sum: lastDay / 1000,
+            week_fee_sum: lastWeek / 1000,
+            month_fee_sum: lastMonth / 1000
         };
     };
     setFees = (data: any) =>
         this.rpc('setchannelfee', {
             id: data.global ? 'all' : data.channelId,
             base: data.base_fee_msat,
-            ppm: newFeeRateMiliMsat
+            ppm: data.newFeeRateMiliMsat
         });
     getRoutes = async (urlParams?: Array<string>) => {
-        const msatoshi = Number(urlParams[1]) * 1000;
+        const msatoshi = Number(urlParams && urlParams[1]) * 1000;
 
         const res = await this.rpc('getroute', {
-            id: urlParams[0],
+            id: urlParams && urlParams[0],
             msatoshi,
             riskfactor: 2
         });
@@ -637,6 +646,11 @@ class Spark {
 }
 
 class RESTUtils {
+    public spark: any;
+    public clightningREST: any;
+    public lndHub: any;
+    public lnd: any;
+
     constructor() {
         this.spark = new Spark();
         this.clightningREST = new CLightningREST();

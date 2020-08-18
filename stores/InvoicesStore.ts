@@ -221,7 +221,7 @@ export default class InvoicesStore {
     };
 
     @action
-    public getRoutes = (destination: string, amount: string) => {
+    public getRoutes = (destination: string, amount: string | number) => {
         this.loadingFeeEstimate = true;
         this.feeEstimate = null;
         this.successProbability = null;
