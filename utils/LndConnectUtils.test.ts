@@ -25,5 +25,29 @@ describe('LndConnectUtils', () => {
                 port: '2056'
             });
         });
+
+        it('validates all params correctly', () => {
+            expect(
+                LndConnectUtils.processLndConnectUrl(
+                    'lndconnect://[2604:2000::]:2058?macaroon=Z28gc2hvcnR5&cert=a&otherParam=B'
+                )
+            ).toEqual({
+                host: '[2604:2000::]',
+                macaroonHex: '676F2073686F727479',
+                port: '2058'
+            });
+        });
+
+        it('validates all params correctly - different order params', () => {
+            expect(
+                LndConnectUtils.processLndConnectUrl(
+                    'lndconnect://8.8.8.8:2059?otherParam=B&macaroon=Z28gc2hvcnR5&cert=asfdaa'
+                )
+            ).toEqual({
+                host: '8.8.8.8',
+                macaroonHex: '676F2073686F727479',
+                port: '2059'
+            });
+        });
     });
 });
