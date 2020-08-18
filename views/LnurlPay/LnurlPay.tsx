@@ -68,7 +68,7 @@ export default class LnurlPay extends React.Component<
         u.search = querystring.stringify(qs);
         u.query = querystring.stringify(qs);
 
-        RNFetchBlob.fetch('get', url.format(u), null)
+        RNFetchBlob.fetch('get', url.format(u))
             .then((response: any) => {
                 try {
                     const data = response.json();

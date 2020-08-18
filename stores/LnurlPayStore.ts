@@ -11,7 +11,7 @@ export interface LnurlPayTransaction {
     metadata_hash: string;
     successAction: LnurlPaySuccessAction;
     time: number;
-    metadata: string | Metadata; // only after an independent load from AsyncStorage.
+    metadata: Metadata; // only after an independent load from AsyncStorage.
 }
 
 interface Metadata {

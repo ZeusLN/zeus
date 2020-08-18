@@ -94,8 +94,8 @@ export default class TransactionsStore {
 
     sendPayment = (
         payment_request?: string | null,
-        amount?: string,
-        pubkey?: string,
+        amount?: string | null,
+        pubkey?: string | null,
         max_parts?: string,
         timeout_seconds?: string,
         fee_limit_sat?: string
