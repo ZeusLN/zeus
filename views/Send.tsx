@@ -15,6 +15,7 @@ import handleAnything from './../utils/handleAnything';
 import InvoicesStore from './../stores/InvoicesStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
 import TransactionsStore from './../stores/TransactionsStore';
+import FeeStore from './../stores/FeeStore';
 import SettingsStore from './../stores/SettingsStore';
 import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
 import FiatStore from './../stores/FiatStore';
@@ -31,6 +32,7 @@ interface SendProps {
     TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;
     FiatStore: FiatStore;
+    FeeStore: FeeStore;
     UnitsStore: UnitsStore;
 }
 
@@ -49,6 +51,7 @@ interface SendState {
     'TransactionsStore',
     'SettingsStore',
     'UnitsStore',
+    'FeeStore',
     'FiatStore'
 )
 @observer
@@ -149,7 +152,13 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     render() {
-        const { SettingsStore, UnitsStore, FiatStore, navigation } = this.props;
+        const {
+            SettingsStore,
+            UnitsStore,
+            FeeStore,
+            FiatStore,
+            navigation
+        } = this.props;
         const {
             isValid,
             transactionType,
@@ -458,7 +467,11 @@ export default class Send extends React.Component<SendProps, SendState> {
 
                     {transactionType === 'On-chain' && (
                         <View style={styles.feeTableButton}>
-                            <FeeTable setFee={this.setFee} />
+                            <FeeTable
+                                setFee={this.setFee}
+                                SettingsStore={SettingsStore}
+                                FeeStore={FeeStore}
+                            />
                         </View>
                     )}
 

@@ -14,12 +14,14 @@ import FeeTable from './../components/FeeTable';
 import NodeUriUtils from './../utils/NodeUriUtils';
 
 import ChannelsStore from './../stores/ChannelsStore';
+import FeeStore from './../stores/FeeStore';
 import SettingsStore from './../stores/SettingsStore';
 
 interface OpenChannelProps {
     exitSetup: any;
     navigation: any;
     ChannelsStore: ChannelsStore;
+    FeeStore: FeeStore;
     SettingsStore: SettingsStore;
 }
 
@@ -33,7 +35,7 @@ interface OpenChannelState {
     suggestImport: string;
 }
 
-@inject('ChannelsStore', 'SettingsStore')
+@inject('ChannelsStore', 'FeeStore', 'SettingsStore')
 @observer
 export default class OpenChannel extends React.Component<
     OpenChannelProps,
@@ -108,7 +110,12 @@ export default class OpenChannel extends React.Component<
     };
 
     render() {
-        const { ChannelsStore, SettingsStore, navigation } = this.props;
+        const {
+            ChannelsStore,
+            SettingsStore,
+            FeeStore,
+            navigation
+        } = this.props;
         const {
             node_pubkey_string,
             local_funding_amount,
@@ -374,7 +381,11 @@ export default class OpenChannel extends React.Component<
                         />
                     </View>
                     <View style={styles.button}>
-                        <FeeTable setFee={this.setFee} />
+                        <FeeTable
+                            setFee={this.setFee}
+                            SettingsStore={SettingsStore}
+                            FeeStore={FeeStore}
+                        />
                     </View>
                 </View>
             </ScrollView>
