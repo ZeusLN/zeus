@@ -58,7 +58,7 @@ export default class Eclair {
             this.api('onchaintransactions', { count: 100 }),
             this.api('getinfo')
         ]).then(([transactions, { blockHeight }]) => ({
-            transactions: transactions.map(tx => ({
+            transactions: transactions.reverse().map(tx => ({
                 amount: tx.amount,
                 block_height: blockHeight - tx.confirmations,
                 block_hash: tx.blockHash,
