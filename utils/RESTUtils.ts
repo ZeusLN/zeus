@@ -1,4 +1,9 @@
 import stores from '../stores/Stores';
+import CLightningREST from '../backends/CLightningREST';
+import Spark from '../backends/Spark';
+import LND from '../backends/LND';
+import LndHub from '../backends/LndHub';
+import Eclair from '../backends/Eclair';
 
 import LND from '../backends/LND';
 import CLightningREST from '../backends/CLightningREST';
