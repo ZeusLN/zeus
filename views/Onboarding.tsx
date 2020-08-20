@@ -14,6 +14,7 @@ import { Button, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import UrlUtils from './../utils/UrlUtils';
 import { DEFAULT_LNDHUB } from './../utils/RESTUtils';
+import DropdownSetting from './../components/DropdownSetting';
 
 const Background = require('./../images/onboarding/background.jpg');
 
@@ -79,8 +80,13 @@ export default class Onboarding extends React.Component<
     render() {
         const { navigation, SettingsStore } = this.props;
         let ScreenHeight = Dimensions.get('window').height;
-        const { settings } = SettingsStore;
-        const nodes = settings.nodes;
+        const {
+            settings,
+            changeLocale,
+            LOCALE_KEYS,
+            DEFAULT_LOCALE
+        } = SettingsStore;
+        const { nodes, locale } = settings;
         const { index } = this.state;
 
         const image = Background;
@@ -186,6 +192,13 @@ export default class Onboarding extends React.Component<
                 >
                     A lightning experience fit for the gods
                 </Text>
+                <DropdownSetting
+                    title="Locale"
+                    theme="light"
+                    selectedValue={locale || DEFAULT_LOCALE}
+                    onValueChange={(value: string) => changeLocale(value)}
+                    values={LOCALE_KEYS}
+                />
                 <ContinueButton title="Get started" />
                 <ScanQRButton />
                 <SkipTourButton />
