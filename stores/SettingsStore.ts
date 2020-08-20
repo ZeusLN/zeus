@@ -24,7 +24,17 @@ interface Settings {
     selectedNode?: number;
     passphrase?: string;
     fiat?: string;
+    locale?: string;
 }
+
+export const LOCALE_KEYS = [
+    { key: 'English', value: 'English' },
+    { key: 'Czech', value: 'Czech' }
+];
+
+export const DEFAULT_THEME = 'light';
+export const DEFAULT_FIAT = 'Disabled';
+export const DEFAULT_LOCALE = 'English';
 
 export default class SettingsStore {
     @observable settings: Settings = {};
@@ -43,6 +53,11 @@ export default class SettingsStore {
     @observable public createAccountSuccess: string;
     @observable public accessToken: string;
     @observable public refreshToken: string;
+
+    @action
+    public changeLocale = (locale: string) => {
+        this.settings.locale = locale;
+    };
 
     @action
     public fetchBTCPayConfig = (data: string) => {

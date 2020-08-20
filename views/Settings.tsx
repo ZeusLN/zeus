@@ -6,7 +6,12 @@ import Nodes from './Settings/Nodes';
 import PrivacyUtils from './../utils/PrivacyUtils';
 import DropdownSetting from './../components/DropdownSetting';
 
-import SettingsStore from './../stores/SettingsStore';
+import SettingsStore, {
+    LOCALE_KEYS,
+    DEFAULT_THEME,
+    DEFAULT_FIAT,
+    DEFAULT_LOCALE
+} from './../stores/SettingsStore';
 import UnitsStore from './../stores/UnitsStore';
 
 interface SettingsProps {
@@ -26,6 +31,7 @@ interface SettingsState {
     passphraseError: boolean;
     showPassphraseForm: boolean;
     fiat: string;
+    locale: string;
 }
 
 @inject('SettingsStore', 'UnitsStore')
@@ -38,7 +44,7 @@ export default class Settings extends React.Component<
 
     state = {
         nodes: [],
-        theme: 'light',
+        theme: DEFAULT_THEME,
         lurkerMode: false,
         saved: false,
         loading: false,
@@ -46,7 +52,8 @@ export default class Settings extends React.Component<
         passphraseConfirm: '',
         passphraseError: false,
         showPassphraseForm: false,
-        fiat: 'Disabled'
+        fiat: DEFAULT_FIAT,
+        locale: DEFAULT_LOCALE
     };
 
     componentDidMount() {
@@ -59,11 +66,12 @@ export default class Settings extends React.Component<
         if (settings) {
             this.setState({
                 nodes: settings.nodes || [],
-                theme: settings.theme || 'light',
+                theme: settings.theme || DEFAULT_THEME,
                 lurkerMode: settings.lurkerMode || false,
                 passphrase: settings.passphrase || '',
                 passphraseConfirm: settings.passphrase || '',
-                fiat: settings.fiat || 'Disabled'
+                fiat: settings.fiat || DEFAULT_FIAT,
+                locale: settings.locale || DEFAULT_LOCALE
             });
         }
     }
@@ -80,7 +88,8 @@ export default class Settings extends React.Component<
                 lurkerMode: settings.lurkerMode || false,
                 passphrase: settings.passphrase || '',
                 passphraseConfirm: settings.passphrase || '',
-                fiat: settings.fiat || 'Disabled'
+                fiat: settings.fiat || DEFAULT_FIAT,
+                locale: settings.locale || DEFAULT_LOCALE
             });
         }
     };
@@ -108,7 +117,8 @@ export default class Settings extends React.Component<
             lurkerMode,
             passphrase,
             passphraseConfirm,
-            fiat
+            fiat,
+            locale
         } = this.state;
         const { setSettings, settings } = SettingsStore;
 
@@ -129,6 +139,7 @@ export default class Settings extends React.Component<
                 lurkerMode,
                 passphrase,
                 fiat,
+                locale,
                 onChainAddress: settings.onChainAddress
             })
         );
@@ -159,7 +170,8 @@ export default class Settings extends React.Component<
             passphraseConfirm,
             passphraseError,
             showPassphraseForm,
-            fiat
+            fiat,
+            locale
         } = this.state;
         const { loading, settings } = SettingsStore;
         const savedTheme = settings.theme;
@@ -222,6 +234,16 @@ export default class Settings extends React.Component<
                         SettingsStore={SettingsStore}
                     />
                 </View>
+
+                <DropdownSetting
+                    title="Locale"
+                    theme={savedTheme}
+                    selectedValue={locale}
+                    onValueChange={(value: string) =>
+                        this.setState({ locale: value })
+                    }
+                    values={LOCALE_KEYS}
+                />
 
                 <DropdownSetting
                     title="Fiat Currency Rate"
