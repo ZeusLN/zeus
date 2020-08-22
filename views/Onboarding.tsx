@@ -10,11 +10,15 @@ import {
     Image,
     TouchableHighlight
 } from 'react-native';
-import { Button, Icon } from 'react-native-elements';
+import { Button } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import UrlUtils from './../utils/UrlUtils';
 import { DEFAULT_LNDHUB } from './../utils/RESTUtils';
 import DropdownSetting from './../components/DropdownSetting';
+import SettingsStore, {
+    DEFAULT_LOCALE,
+    LOCALE_KEYS
+} from './../stores/SettingsStore';
 
 const Background = require('./../images/onboarding/background.jpg');
 
@@ -22,8 +26,6 @@ const btcPay = require('./../images/onboarding/BTCPay.png');
 const nodl = require('./../images/onboarding/nodl.png');
 const raspiBlitz = require('./../images/onboarding/RaspiBlitz.png');
 const myNode = require('./../images/onboarding/myNode.png');
-
-import SettingsStore from './../../stores/SettingsStore';
 
 interface OnboardingProps {
     navigation: any;
@@ -80,12 +82,7 @@ export default class Onboarding extends React.Component<
     render() {
         const { navigation, SettingsStore } = this.props;
         let ScreenHeight = Dimensions.get('window').height;
-        const {
-            settings,
-            changeLocale,
-            LOCALE_KEYS,
-            DEFAULT_LOCALE
-        } = SettingsStore;
+        const { settings, changeLocale } = SettingsStore;
         const { nodes, locale } = settings;
         const { index } = this.state;
 
@@ -192,16 +189,18 @@ export default class Onboarding extends React.Component<
                 >
                     A lightning experience fit for the gods
                 </Text>
-                <DropdownSetting
-                    title="Locale"
-                    theme="light"
-                    selectedValue={locale || DEFAULT_LOCALE}
-                    onValueChange={(value: string) => changeLocale(value)}
-                    values={LOCALE_KEYS}
-                />
                 <ContinueButton title="Get started" />
                 <ScanQRButton />
                 <SkipTourButton />
+                <View style={{ alignItems: 'center', top: 25 }}>
+                    <DropdownSetting
+                        title="Locale"
+                        theme="light"
+                        selectedValue={locale || DEFAULT_LOCALE}
+                        onValueChange={(value: string) => changeLocale(value)}
+                        values={LOCALE_KEYS}
+                    />
+                </View>
             </View>
         );
 
