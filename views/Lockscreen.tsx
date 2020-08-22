@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button } from 'react-native-elements';
+import { localeString } from './../utils/LocaleUtils';
 
 import SettingsStore from './../stores/SettingsStore';
 
@@ -88,10 +89,12 @@ export default class Lockscreen extends React.Component<
                     <View style={styles.content}>
                         {error && (
                             <Text style={{ color: 'red' }}>
-                                Incorrect Passphrase
+                                {localeString('views.Lockscreen.incorrect')}
                             </Text>
                         )}
-                        <Text style={{ color: 'white' }}>Passphrase</Text>
+                        <Text style={{ color: 'white' }}>
+                            {localeString('views.Lockscreen.passphrase')}
+                        </Text>
                         <TextInput
                             placeholder={'****************'}
                             placeholderTextColor="darkgray"
@@ -110,11 +113,13 @@ export default class Lockscreen extends React.Component<
                         />
                         <TouchableOpacity onPress={this.onInputLabelPressed}>
                             <Text style={{ color: 'white' }}>
-                                {hidden ? 'Show' : 'Hide'}
+                                {hidden
+                                    ? localeString('general.show')
+                                    : localeString('general.hide')}
                             </Text>
                         </TouchableOpacity>
                         <Button
-                            title="Log In"
+                            title={localeString('views.Lockscreen.login')}
                             buttonStyle={{
                                 backgroundColor: 'orange',
                                 marginTop: 20

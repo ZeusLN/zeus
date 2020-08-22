@@ -4,6 +4,7 @@ import { Badge, Button, Header } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import LinearGradient from 'react-native-linear-gradient';
 import PrivacyUtils from './../../utils/PrivacyUtils';
+import { localeString } from './../../utils/LocaleUtils';
 
 import NodeInfoStore from './../../stores/NodeInfoStore';
 import UnitsStore from './../../stores/UnitsStore';
@@ -166,9 +167,9 @@ export default class MainPane extends React.Component<
 
         let infoValue = 'ⓘ';
         if (NodeInfoStore.testnet) {
-            infoValue = 'Testnet';
+            infoValue = localeString('views.Wallet.MainPane.testnet');
         } else if (NodeInfoStore.regtest) {
-            infoValue = 'Regtest';
+            infoValue = localeString('views.Wallet.MainPane.regtest');
         }
 
         const DefaultBalance = () => (
@@ -366,7 +367,7 @@ export default class MainPane extends React.Component<
                     >
                         {NodeInfoStore.errorMsg
                             ? NodeInfoStore.errorMsg
-                            : 'Error connecting to your node. Please check your settings and try again.'}
+                            : localeString('views.Wallet.MainPane.error')}
                     </Text>
                     <Button
                         icon={{
@@ -374,7 +375,9 @@ export default class MainPane extends React.Component<
                             size: 25,
                             color: '#fff'
                         }}
-                        title="Go to Settings"
+                        title={localeString(
+                            'views.Wallet.MainPane.goToSettings'
+                        )}
                         buttonStyle={{
                             backgroundColor: 'gray',
                             borderRadius: 30

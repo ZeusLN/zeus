@@ -13,6 +13,7 @@ import { inject, observer } from 'mobx-react';
 import { isNil } from 'lodash';
 import { version, playStore } from './../package.json';
 import PrivacyUtils from './../utils/PrivacyUtils';
+import { localeString } from './../utils/LocaleUtils';
 
 import NodeInfoStore from './../stores/NodeInfoStore';
 import FeeStore from './../stores/FeeStore';
