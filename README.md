@@ -88,7 +88,7 @@ Google Play releases aren't fully featured due to Google policies. To get the fu
 
 ## Contributing
 
-Please be sure to run `tsc` to check for type errors, `npm run test` to run all tests, and `npm run prettier` to run the prettier
+Please be sure to run `npm run tsc` to check for type errors, `npm run test` to run all tests, and `npm run prettier` to run the prettier
 
 If you are making cosmetic changes please test on both Android and iOS as things don't render exactly the same on both platforms.
 

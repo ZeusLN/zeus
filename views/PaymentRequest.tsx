@@ -14,7 +14,9 @@ import { Button, Header, Icon } from 'react-native-elements';
 import InvoicesStore from './../stores/InvoicesStore';
 import TransactionsStore from './../stores/TransactionsStore';
 import UnitsStore from './../stores/UnitsStore';
+import NodeInfoStore from './../stores/NodeInfoStore';
 import SettingsStore from './../stores/SettingsStore';
+import RESTUtils from './../utils/RESTUtils';
 
 interface InvoiceProps {
     exitSetup: any;
@@ -22,15 +24,26 @@ interface InvoiceProps {
     InvoicesStore: InvoicesStore;
     TransactionsStore: TransactionsStore;
     UnitsStore: UnitsStore;
+    NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
 }
 
 interface InvoiceState {
     setCustomAmount: boolean;
     customAmount: string;
+    enableMultiPathPayment: boolean;
+    maxParts: string;
+    timeoutSeconds: string;
+    feeLimitSat: string;
 }
 
-@inject('InvoicesStore', 'TransactionsStore', 'UnitsStore', 'SettingsStore')
+@inject(
+    'InvoicesStore',
+    'TransactionsStore',
+    'UnitsStore',
+    'NodeInfoStore',
+    'SettingsStore'
+)
 @observer
 export default class PaymentRequest extends React.Component<
     InvoiceProps,
@@ -38,7 +51,11 @@ export default class PaymentRequest extends React.Component<
 > {
     state = {
         setCustomAmount: false,
-        customAmount: ''
+        customAmount: '',
+        enableMultiPathPayment: false,
+        maxParts: '2',
+        timeoutSeconds: '20',
+        feeLimitSat: '10'
     };
 
     render() {
@@ -47,9 +64,18 @@ export default class PaymentRequest extends React.Component<
             InvoicesStore,
             UnitsStore,
             SettingsStore,
+            NodeInfoStore,
             navigation
         } = this.props;
-        const { setCustomAmount, customAmount } = this.state;
+        const { nodeInfo } = NodeInfoStore;
+        const {
+            setCustomAmount,
+            customAmount,
+            enableMultiPathPayment,
+            maxParts,
+            timeoutSeconds,
+            feeLimitSat
+        } = this.state;
         const {
             pay_req,
             paymentRequest,
@@ -74,9 +100,11 @@ export default class PaymentRequest extends React.Component<
         const { settings, implementation } = SettingsStore;
         const { theme } = settings;
 
+        const isLnd: boolean = implementation === 'lnd';
+
         // c-lightning can only pay custom amounts if the amount is not specified
-        const canPayCustomAmount =
-            implementation === 'lnd' || !requestAmount || requestAmount === 0;
+        const canPayCustomAmount: boolean =
+            isLnd || !requestAmount || requestAmount === 0;
 
         const BackButton = () => (
             <Icon
@@ -409,6 +437,127 @@ export default class PaymentRequest extends React.Component<
                         </View>
                     )}
 
+                    {!!pay_req && RESTUtils.supportsMPP() && (
+                        <View style={styles.button}>
+                            <Button
+                                title={
+                                    enableMultiPathPayment
+                                        ? 'Disable multi-path payment'
+                                        : 'Enable multi-path payment'
+                                }
+                                icon={{
+                                    name: 'call-split',
+                                    size: 25,
+                                    color: 'white'
+                                }}
+                                onPress={() => {
+                                    this.setState({
+                                        enableMultiPathPayment: !enableMultiPathPayment
+                                    });
+                                }}
+                                buttonStyle={{
+                                    backgroundColor: enableMultiPathPayment
+                                        ? 'red'
+                                        : 'green',
+                                    borderRadius: 30
+                                }}
+                            />
+                        </View>
+                    )}
+
+                    {enableMultiPathPayment && (
+                        <View style={styles.mppForm}>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Max parts:
+                            </Text>
+                            <TextInput
+                                keyboardType="numeric"
+                                placeholder="2 (or greater)"
+                                value={maxParts}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        maxParts: text
+                                    })
+                                }
+                                numberOfLines={1}
+                                style={
+                                    theme === 'dark'
+                                        ? styles.textInputDark
+                                        : styles.textInput
+                                }
+                                placeholderTextColor="gray"
+                            />
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                The maximum number of partial payments that may
+                                be used to complete the full amount.
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Timeout (seconds):
+                            </Text>
+                            <TextInput
+                                keyboardType="numeric"
+                                placeholder="20"
+                                value={timeoutSeconds}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        timeoutSeconds: text
+                                    })
+                                }
+                                numberOfLines={1}
+                                style={
+                                    theme === 'dark'
+                                        ? styles.textInputDark
+                                        : styles.textInput
+                                }
+                                placeholderTextColor="gray"
+                            />
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Fee limit (satoshis):
+                            </Text>
+                            <TextInput
+                                keyboardType="numeric"
+                                placeholder="100"
+                                value={feeLimitSat}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        feeLimitSat: text
+                                    })
+                                }
+                                numberOfLines={1}
+                                style={
+                                    theme === 'dark'
+                                        ? styles.textInputDark
+                                        : styles.textInput
+                                }
+                                placeholderTextColor="gray"
+                            />
+                        </View>
+                    )}
+
                     {!!pay_req && (
                         <View style={styles.button}>
                             <Button
@@ -419,7 +568,32 @@ export default class PaymentRequest extends React.Component<
                                     color: 'white'
                                 }}
                                 onPress={() => {
-                                    if (setCustomAmount && customAmount) {
+                                    if (
+                                        enableMultiPathPayment &&
+                                        setCustomAmount &&
+                                        customAmount
+                                    ) {
+                                        TransactionsStore.sendPayment(
+                                            paymentRequest,
+                                            customAmount,
+                                            null,
+                                            maxParts,
+                                            timeoutSeconds,
+                                            feeLimitSat
+                                        );
+                                    } else if (enableMultiPathPayment) {
+                                        TransactionsStore.sendPayment(
+                                            paymentRequest,
+                                            null,
+                                            null,
+                                            maxParts,
+                                            timeoutSeconds,
+                                            feeLimitSat
+                                        );
+                                    } else if (
+                                        setCustomAmount &&
+                                        customAmount
+                                    ) {
                                         TransactionsStore.sendPayment(
                                             paymentRequest,
                                             customAmount
@@ -499,5 +673,9 @@ const styles = StyleSheet.create({
     textInputDark: {
         fontSize: 20,
         color: 'white'
+    },
+    mppForm: {
+        paddingLeft: 20,
+        paddingBottom: 10
     }
 });
