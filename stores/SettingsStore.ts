@@ -29,7 +29,12 @@ interface Settings {
 
 export const LOCALE_KEYS = [
     { key: 'English', value: 'English' },
-    { key: 'Czech', value: 'Czech' }
+    { key: 'Spanish', value: 'Spanish' },
+    { key: 'Brazilian Portuguese', value: 'Brazilian Portuguese' },
+    { key: 'Czech', value: 'Czech' },
+    { key: 'Slovak', value: 'Slovak' },
+    { key: 'German', value: 'German' },
+    { key: 'Turkish', value: 'Turkish' }
 ];
 
 export const DEFAULT_THEME = 'light';
