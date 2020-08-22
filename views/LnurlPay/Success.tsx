@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Alert, View, Text, TouchableOpacity, Linking } from 'react-native';
 import { LNURLPaySuccessAction, decipherAES } from 'js-lnurl';
+import { localeString } from './../../utils/LocaleUtils';
 
 import SettingsStore from './../../stores/SettingsStore';
 
@@ -24,7 +25,11 @@ export default class LnurlPaySuccess extends React.Component<
             if (supported) {
                 Linking.openURL(urlString);
             } else {
-                Alert.alert(`Don't know how to open URI: ${urlString}`);
+                Alert.alert(
+                    `${localeString(
+                        'views.LnurlPay.Success.uriAlert'
+                    )}: ${urlString}`
+                );
             }
         });
     };

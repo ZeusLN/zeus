@@ -4,6 +4,7 @@ import { Avatar, Button, ListItem } from 'react-native-elements';
 import Payment from './../../models/Payment';
 import { inject, observer } from 'mobx-react';
 import PrivacyUtils from './../../utils/PrivacyUtils';
+import { localeString } from './../../utils/LocaleUtils';
 
 import PaymentsStore from './../../stores/PaymentsStore';
 import UnitsStore from './../../stores/UnitsStore';
@@ -118,7 +119,7 @@ export default class PaymentsView extends React.Component<PaymentsProps, {}> {
                     />
                 ) : (
                     <Button
-                        title="No Payments"
+                        title={localeString('views.Wallet.Payments.noPayments')}
                         icon={{
                             name: 'error-outline',
                             size: 25,
