@@ -5,6 +5,7 @@ import { inject, observer } from 'mobx-react';
 import Nodes from './Settings/Nodes';
 import PrivacyUtils from './../utils/PrivacyUtils';
 import DropdownSetting from './../components/DropdownSetting';
+import { localeString } from './../utils/LocaleUtils';
 
 import SettingsStore, {
     LOCALE_KEYS,
@@ -204,7 +205,7 @@ export default class Settings extends React.Component<
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: 'Settings',
+                        text: localeString('views.Settings.title'),
                         style: { color: '#fff' }
                     }}
                     backgroundColor={
@@ -236,7 +237,7 @@ export default class Settings extends React.Component<
                 </View>
 
                 <DropdownSetting
-                    title="Locale"
+                    title={localeString('views.Settings.locale')}
                     theme={savedTheme}
                     selectedValue={locale}
                     onValueChange={(value: string) =>
@@ -246,7 +247,7 @@ export default class Settings extends React.Component<
                 />
 
                 <DropdownSetting
-                    title="Fiat Currency Rate"
+                    title={localeString('views.Settings.fiatRate')}
                     theme={savedTheme}
                     selectedValue={fiat}
                     onValueChange={(value: string) =>
@@ -279,7 +280,7 @@ export default class Settings extends React.Component<
                 />
 
                 <DropdownSetting
-                    title="Theme"
+                    title={localeString('views.Settings.theme')}
                     theme={savedTheme}
                     selectedValue={theme}
                     displayValue={themes[theme]}
@@ -296,7 +297,11 @@ export default class Settings extends React.Component<
                     title={lurkerLabel}
                     theme={savedTheme}
                     selectedValue={lurkerMode}
-                    displayValue={lurkerMode ? 'Enabled' : 'Disabled'}
+                    displayValue={
+                        lurkerMode
+                            ? localeString('views.Settings.enabled')
+                            : localeString('views.Settings.disabled')
+                    }
                     onValueChange={(value: boolean) =>
                         this.setState({ lurkerMode: value })
                     }
@@ -314,7 +319,7 @@ export default class Settings extends React.Component<
                             paddingTop: 10
                         }}
                     >
-                        New Passphrase
+                        {localeString('views.Settings.newPassphrase')}
                     </Text>
                 )}
                 {showPassphraseForm && (
@@ -346,7 +351,7 @@ export default class Settings extends React.Component<
                             paddingLeft: 10
                         }}
                     >
-                        Confirm New Passphrase
+                        {localeString('views.Settings.confirmPassphrase')}
                     </Text>
                 )}
                 {showPassphraseForm && (
@@ -373,7 +378,11 @@ export default class Settings extends React.Component<
                 )}
                 <View style={styles.button}>
                     <Button
-                        title={saved ? 'Settings Saved!' : 'Save Settings'}
+                        title={
+                            saved
+                                ? localeString('views.Settings.settingsSaved')
+                                : localeString('views.Settings.saveSettings')
+                        }
                         icon={{
                             name: 'save',
                             size: 25,
@@ -400,8 +409,12 @@ export default class Settings extends React.Component<
                     <Button
                         title={
                             showPassphraseForm
-                                ? 'Hide New Passphrase Form'
-                                : 'Show New Passphrase Form'
+                                ? localeString(
+                                      'views.Settings.hidePassphraseForm'
+                                  )
+                                : localeString(
+                                      'views.Settings.showPassphraseForm'
+                                  )
                         }
                         icon={{
                             name: 'perm-identity',
@@ -427,7 +440,7 @@ export default class Settings extends React.Component<
                 </View>
                 <View style={styles.button}>
                     <Button
-                        title="About Zeus"
+                        title={localeString('views.Settings.about')}
                         buttonStyle={{
                             backgroundColor: 'black',
                             borderRadius: 30,
@@ -440,7 +453,7 @@ export default class Settings extends React.Component<
                 </View>
                 <View style={styles.button}>
                     <Button
-                        title="Intro Tour"
+                        title={localeString('views.Settings.intro')}
                         buttonStyle={{
                             backgroundColor: 'orange',
                             borderRadius: 30,
