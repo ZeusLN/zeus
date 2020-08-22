@@ -1,12 +1,13 @@
 import * as React from 'react';
 import {
+    ActivityIndicator,
     StyleSheet,
     ScrollView,
     Text,
     TouchableOpacity,
     View
 } from 'react-native';
-import { ButtonGroup, Header, Icon } from 'react-native-elements';
+import { Button, ButtonGroup, Header, Icon } from 'react-native-elements';
 import CollapsedQR from './../components/CollapsedQR';
 import SetFeesForm from './../components/SetFeesForm';
 import { inject, observer } from 'mobx-react';
@@ -18,6 +19,7 @@ import { localeString } from './../utils/LocaleUtils';
 import NodeInfoStore from './../stores/NodeInfoStore';
 import FeeStore from './../stores/FeeStore';
 import UnitsStore from './../stores/UnitsStore';
+import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
 
 interface NodeInfoProps {
@@ -25,6 +27,7 @@ interface NodeInfoProps {
     NodeInfoStore: NodeInfoStore;
     FeeStore: FeeStore;
     UnitsStore: UnitsStore;
+    ChannelsStore: ChannelsStore;
     SettingsStore: SettingsStore;
 }
 
@@ -32,7 +35,65 @@ interface NodeInfoState {
     selectedIndex: number;
 }
 
-@inject('NodeInfoStore', 'FeeStore', 'UnitsStore', 'SettingsStore')
+const ForwardingHistory = ({ events, lurkerMode, getAmount, aliasesById }) => {
+    let eventsDisplay: any = [];
+    for (let i = 0; i < events.length; i++) {
+        const event = events[i];
+        eventsDisplay.push(
+            `Timestamp: ${
+                lurkerMode
+                    ? PrivacyUtils.hideValue(event.getTime, 10)
+                    : event.getTime
+            }`
+        );
+        eventsDisplay.push(
+            `Source Channel ID: ${
+                lurkerMode
+                    ? PrivacyUtils.hideValue(event.chan_id_in, 10)
+                    : aliasesById[event.chan_id_in] || event.chan_id_in
+            }`
+        );
+        eventsDisplay.push(
+            `Destination Channel ID: ${
+                lurkerMode
+                    ? PrivacyUtils.hideValue(event.chan_id_out, 10)
+                    : aliasesById[event.chan_id_out] || event.chan_id_out
+            }`
+        );
+        eventsDisplay.push(
+            `Amount In: ${
+                lurkerMode
+                    ? PrivacyUtils.hideValue(getAmount(event.amt_in), 5, true)
+                    : getAmount(event.amt_in)
+            }`
+        );
+        eventsDisplay.push(
+            `Amount Out: ${
+                lurkerMode
+                    ? PrivacyUtils.hideValue(getAmount(event.amt_out), 5, true)
+                    : getAmount(event.amt_out)
+            }`
+        );
+        eventsDisplay.push(
+            `Fee: ${
+                lurkerMode
+                    ? PrivacyUtils.hideValue(event.fee, 3, true)
+                    : event.fee
+            }`
+        );
+        eventsDisplay.push('');
+    }
+
+    return eventsDisplay.join('\n');
+};
+
+@inject(
+    'NodeInfoStore',
+    'FeeStore',
+    'UnitsStore',
+    'ChannelsStore',
+    'SettingsStore'
+)
 @observer
 export default class NodeInfo extends React.Component<
     NodeInfoProps,
@@ -43,9 +104,13 @@ export default class NodeInfo extends React.Component<
     };
 
     UNSAFE_componentWillMount() {
-        const { NodeInfoStore, FeeStore } = this.props;
+        const { NodeInfoStore, FeeStore, SettingsStore } = this.props;
+        const { implementation } = SettingsStore;
         NodeInfoStore.getNodeInfo();
         FeeStore.getFees();
+        if (implementation === 'lnd') {
+            FeeStore.getForwardingHistory();
+        }
     }
 
     updateIndex = (selectedIndex: number) => {
@@ -60,13 +125,23 @@ export default class NodeInfo extends React.Component<
             FeeStore,
             NodeInfoStore,
             UnitsStore,
+            ChannelsStore,
             SettingsStore
         } = this.props;
         const { selectedIndex } = this.state;
         const { nodeInfo } = NodeInfoStore;
-        const { dayEarned, weekEarned, monthEarned, totalEarned } = FeeStore;
+        const { aliasesById } = ChannelsStore;
+        const {
+            dayEarned,
+            weekEarned,
+            monthEarned,
+            forwardingEvents,
+            getForwardingHistory,
+            forwardingHistoryError,
+            loading
+        } = FeeStore;
         const { changeUnits, getAmount, units } = UnitsStore;
-        const { settings } = SettingsStore;
+        const { settings, implementation } = SettingsStore;
         const { theme, lurkerMode } = settings;
 
         const generalInfoButton = () => (
@@ -81,10 +156,22 @@ export default class NodeInfo extends React.Component<
             </React.Fragment>
         );
 
-        const buttons = [
-            { element: generalInfoButton },
-            { element: feesButton }
-        ];
+        const forwardingHistoryButton = () => (
+            <React.Fragment>
+                <Text>Forwarding</Text>
+            </React.Fragment>
+        );
+
+        let buttons;
+        if (implementation === 'lnd') {
+            buttons = [
+                { element: generalInfoButton },
+                { element: feesButton },
+                { element: forwardingHistoryButton }
+            ];
+        } else {
+            buttons = [{ element: generalInfoButton }, { element: feesButton }];
+        }
 
         const BackButton = () => (
             <Icon
@@ -112,137 +199,6 @@ export default class NodeInfo extends React.Component<
 
             return items;
         };
-
-        const FeeReportView = () => (
-            <React.Fragment>
-                <TouchableOpacity onPress={() => changeUnits()}>
-                    {!isNil(dayEarned) && (
-                        <React.Fragment>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
-                                Earned today:
-                            </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
-                                {units &&
-                                    (lurkerMode
-                                        ? PrivacyUtils.hideValue(
-                                              getAmount(dayEarned),
-                                              5,
-                                              true
-                                          )
-                                        : getAmount(dayEarned))}
-                            </Text>
-                        </React.Fragment>
-                    )}
-
-                    {!isNil(weekEarned) && (
-                        <React.Fragment>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
-                                Earned this week:
-                            </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
-                                {units &&
-                                    (lurkerMode
-                                        ? PrivacyUtils.hideValue(
-                                              getAmount(weekEarned),
-                                              5,
-                                              true
-                                          )
-                                        : getAmount(weekEarned))}
-                            </Text>
-                        </React.Fragment>
-                    )}
-
-                    {!isNil(monthEarned) && (
-                        <React.Fragment>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
-                                Earned this month:
-                            </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
-                                {units &&
-                                    (lurkerMode
-                                        ? PrivacyUtils.hideValue(
-                                              getAmount(monthEarned),
-                                              5,
-                                              true
-                                          )
-                                        : getAmount(monthEarned))}
-                            </Text>
-                        </React.Fragment>
-                    )}
-
-                    {!isNil(totalEarned) && (
-                        <React.Fragment>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
-                                Total fees earned:
-                            </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
-                                {units &&
-                                    (lurkerMode
-                                        ? PrivacyUtils.hideValue(
-                                              getAmount(totalEarned),
-                                              5,
-                                              true
-                                          )
-                                        : getAmount(totalEarned))}
-                            </Text>
-                        </React.Fragment>
-                    )}
-                </TouchableOpacity>
-
-                <SetFeesForm
-                    FeeStore={FeeStore}
-                    SettingsStore={SettingsStore}
-                />
-            </React.Fragment>
-        );
 
         const NodeInfoView = () => (
             <React.Fragment>
@@ -358,6 +314,132 @@ export default class NodeInfo extends React.Component<
             </React.Fragment>
         );
 
+        const FeeReportView = () => (
+            <React.Fragment>
+                <TouchableOpacity onPress={() => changeUnits()}>
+                    {!isNil(dayEarned) && (
+                        <React.Fragment>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Earned today:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {units &&
+                                    (lurkerMode
+                                        ? PrivacyUtils.hideValue(
+                                              getAmount(dayEarned),
+                                              5,
+                                              true
+                                          )
+                                        : getAmount(dayEarned))}
+                            </Text>
+                        </React.Fragment>
+                    )}
+
+                    {!isNil(weekEarned) && (
+                        <React.Fragment>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Earned this week:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {units &&
+                                    (lurkerMode
+                                        ? PrivacyUtils.hideValue(
+                                              getAmount(weekEarned),
+                                              5,
+                                              true
+                                          )
+                                        : getAmount(weekEarned))}
+                            </Text>
+                        </React.Fragment>
+                    )}
+
+                    {!isNil(monthEarned) && (
+                        <React.Fragment>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                Earned this month:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {units &&
+                                    (lurkerMode
+                                        ? PrivacyUtils.hideValue(
+                                              getAmount(monthEarned),
+                                              5,
+                                              true
+                                          )
+                                        : getAmount(monthEarned))}
+                            </Text>
+                        </React.Fragment>
+                    )}
+                </TouchableOpacity>
+
+                <SetFeesForm
+                    FeeStore={FeeStore}
+                    SettingsStore={SettingsStore}
+                />
+            </React.Fragment>
+        );
+
+        const ForwardingHistoryView = () => (
+            <React.Fragment>
+                {loading && <ActivityIndicator size="large" color="#0000ff" />}
+
+                {forwardingHistoryError && (
+                    <Text style={{ color: 'red' }}>
+                        Error fetching forwarding history
+                    </Text>
+                )}
+
+                {forwardingEvents && !loading && (
+                    <TouchableOpacity onPress={() => changeUnits()}>
+                        <Text style={{ paddingTop: 10, paddingBottom: 10 }}>
+                            <ForwardingHistory
+                                events={forwardingEvents}
+                                lurkerMode={lurkerMode}
+                                getAmount={getAmount}
+                                aliasesById={aliasesById}
+                            />
+                        </Text>
+                    </TouchableOpacity>
+                )}
+            </React.Fragment>
+        );
+
         return (
             <ScrollView
                 style={
@@ -390,6 +472,7 @@ export default class NodeInfo extends React.Component<
                 <View style={styles.content}>
                     {selectedIndex === 0 && <NodeInfoView />}
                     {selectedIndex === 1 && <FeeReportView />}
+                    {selectedIndex === 2 && <ForwardingHistoryView />}
                 </View>
             </ScrollView>
         );

@@ -73,10 +73,11 @@ export default class About extends React.Component<AboutProps, {}> {
                             : styles.lightThemeText
                     }
                 >
-                    {localeString('views.Settings.About.thanks')} fiatjaf,
-                    Suheb, shesek, Zap, Blue Wallet, Ride the Lightning,
-                    Blockstream, {localeString('views.Settings.About.and')} last
-                    but not least, Lightning Labs.
+                    {localeString('views.Settings.About.thanks')} the Human
+                    Rights Foundation, Matt Odell, Jameson Lopp, fiatjaf, Suheb,
+                    shesek, k3tan, Zap, Blue Wallet, Ride the Lightning,
+                    Blockstream, {localeString('views.Settings.About.and')}
+                    Lightning Labs.
                 </Text>
                 <Text
                     style={

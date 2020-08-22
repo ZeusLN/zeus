@@ -12,6 +12,7 @@ export default class ChannelsStore {
     @observable public errorMsgChannel: string | null;
     @observable public errorMsgPeer: string | null;
     @observable public nodes: any = {};
+    @observable public aliasesById: any = {};
     @observable public channels: Array<Channel> = [];
     @observable public output_index: number | null;
     @observable public funding_txid_str: string | null;
@@ -61,6 +62,8 @@ export default class ChannelsStore {
                                     this.nodes[
                                         channel.remote_pubkey
                                     ] = nodeInfo;
+                                    this.aliasesById[channel.chan_id] =
+                                        nodeInfo.alias;
                                 }
                             );
                         }
