@@ -130,7 +130,9 @@ export default class Onboarding extends React.Component<
         const SkipTourButton = (props: ButtonProps) => (
             <View style={styles.button}>
                 <Button
-                    title={props.title || 'Skip Tour'}
+                    title={
+                        props.title || localeString('views.Onboarding.skipTour')
+                    }
                     buttonStyle={{
                         backgroundColor: 'green',
                         borderRadius: 30,
@@ -442,7 +444,9 @@ export default class Onboarding extends React.Component<
                         source={btcPay}
                     />
                 </TouchableHighlight>
-                <SkipTourButton title="Complete tour" />
+                <SkipTourButton
+                    title={localeString('views.Onboarding.completeTour')}
+                />
                 <BackButton />
             </View>
         );
