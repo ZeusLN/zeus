@@ -19,6 +19,7 @@ import SettingsStore, {
     DEFAULT_LOCALE,
     LOCALE_KEYS
 } from './../stores/SettingsStore';
+import { localeString } from './../utils/LocaleUtils';
 
 const Background = require('./../images/onboarding/background.jpg');
 
@@ -178,7 +179,7 @@ export default class Onboarding extends React.Component<
                         fontWeight: 'bold'
                     }}
                 >
-                    Welcome to Zeus
+                    {localeString('views.Onboarding.welcome')}
                 </Text>
                 <Text
                     style={{
@@ -187,7 +188,7 @@ export default class Onboarding extends React.Component<
                         alignSelf: 'center'
                     }}
                 >
-                    A lightning experience fit for the gods
+                    {localeString('views.Onboarding.tagline')}
                 </Text>
                 <ContinueButton title="Get started" />
                 <ScanQRButton />
