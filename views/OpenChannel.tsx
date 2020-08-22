@@ -12,6 +12,7 @@ import { inject, observer } from 'mobx-react';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import FeeTable from './../components/FeeTable';
 import NodeUriUtils from './../utils/NodeUriUtils';
+import { localeString } from './../utils/LocaleUtils';
 
 import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
@@ -158,7 +159,7 @@ export default class OpenChannel extends React.Component<
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: 'Open Channel',
+                        text: localeString('views.OpenChannel.openChannel'),
                         style: { color: '#fff' }
                     }}
                     backgroundColor="grey"
@@ -167,17 +168,17 @@ export default class OpenChannel extends React.Component<
                 {!!suggestImport && (
                     <View style={styles.clipboardImport}>
                         <Text style={{ color: 'white' }}>
-                            Detected the following Node URI in your clipboard:
+                            {localeString('views.OpenChannel.importText')}
                         </Text>
                         <Text style={{ color: 'white', padding: 15 }}>
                             {suggestImport}
                         </Text>
                         <Text style={{ color: 'white' }}>
-                            Would you like to import it?
+                            {localeString('views.OpenChannel.importPrompt')}
                         </Text>
                         <View style={styles.button}>
                             <Button
-                                title="Import"
+                                title={localeString('views.OpenChannel.import')}
                                 onPress={() => this.importClipboard()}
                                 titleStyle={{
                                     color: 'rgba(92, 99,216, 1)'
@@ -210,24 +211,26 @@ export default class OpenChannel extends React.Component<
                     )}
                     {peerSuccess && (
                         <Text style={{ color: 'green' }}>
-                            Succesfully connected to peer
+                            {localeString('views.OpenChannel.peerSuccess')}
                         </Text>
                     )}
                     {channelSuccess && (
                         <Text style={{ color: 'green' }}>
-                            Succesfully opened channel
+                            {localeString('views.OpenChannel.channelSuccess')}
                         </Text>
                     )}
                     {(errorMsgPeer || errorMsgChannel) && (
                         <Text style={{ color: 'red' }}>
-                            {errorMsgChannel || errorMsgPeer || 'Error'}
+                            {errorMsgChannel ||
+                                errorMsgPeer ||
+                                localeString('general.error')}
                         </Text>
                     )}
 
                     <Text
                         style={{ color: theme === 'dark' ? 'white' : 'black' }}
                     >
-                        Node pubkey
+                        {localeString('views.OpenChannel.nodePubkey')}
                     </Text>
                     <TextInput
                         placeholder={'0A...'}
@@ -248,10 +251,10 @@ export default class OpenChannel extends React.Component<
                     <Text
                         style={{ color: theme === 'dark' ? 'white' : 'black' }}
                     >
-                        Host
+                        {localeString('views.OpenChannel.host')}
                     </Text>
                     <TextInput
-                        placeholder={'Hostname:Port'}
+                        placeholder={localeString('views.OpenChannel.hostPort')}
                         value={host}
                         onChangeText={(text: string) =>
                             this.setState({ host: text })
@@ -269,11 +272,13 @@ export default class OpenChannel extends React.Component<
                     <Text
                         style={{ color: theme === 'dark' ? 'white' : 'black' }}
                     >
-                        Local amount (in satoshis)
+                        {localeString('views.OpenChannel.localAmt')}
                     </Text>
                     <TextInput
                         keyboardType="numeric"
-                        placeholder={'20000 (min)'}
+                        placeholder={localeString(
+                            'views.OpenChannel.amtExample'
+                        )}
                         value={local_funding_amount}
                         onChangeText={(text: string) =>
                             this.setState({ local_funding_amount: text })
@@ -291,7 +296,7 @@ export default class OpenChannel extends React.Component<
                     <Text
                         style={{ color: theme === 'dark' ? 'white' : 'black' }}
                     >
-                        Number of Confirmations
+                        {localeString('views.OpenChannel.numConf')}
                     </Text>
                     <TextInput
                         keyboardType="numeric"
@@ -315,7 +320,7 @@ export default class OpenChannel extends React.Component<
                     <Text
                         style={{ color: theme === 'dark' ? 'white' : 'black' }}
                     >
-                        Satoshis per byte
+                        {localeString('views.OpenChannel.satsPerByte')}
                     </Text>
                     <TextInput
                         keyboardType="numeric"
@@ -334,7 +339,7 @@ export default class OpenChannel extends React.Component<
 
                     <View style={{ padding: 10 }}>
                         <CheckBox
-                            title="Private"
+                            title={localeString('views.OpenChannel.private')}
                             checked={privateChannel}
                             onPress={() =>
                                 this.setState({ private: !privateChannel })
@@ -344,7 +349,9 @@ export default class OpenChannel extends React.Component<
 
                     <View style={styles.button}>
                         <Button
-                            title="Open Channel"
+                            title={localeString(
+                                'views.OpenChannel.openChannel'
+                            )}
                             icon={{
                                 name: 'swap-horiz',
                                 size: 25,
@@ -362,7 +369,7 @@ export default class OpenChannel extends React.Component<
                     </View>
                     <View style={styles.button}>
                         <Button
-                            title="Scan"
+                            title={localeString('general.scan')}
                             icon={{
                                 name: 'crop-free',
                                 size: 25,

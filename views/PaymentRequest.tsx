@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
+import { localeString } from './../utils/LocaleUtils';
 
 import InvoicesStore from './../stores/InvoicesStore';
 import TransactionsStore from './../stores/TransactionsStore';
@@ -126,7 +127,7 @@ export default class PaymentRequest extends React.Component<
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: 'Lightning Invoice',
+                        text: localeString('views.PaymentRequest.title'),
                         style: { color: '#fff' }
                     }}
                     backgroundColor={
@@ -148,7 +149,8 @@ export default class PaymentRequest extends React.Component<
                                         : styles.label
                                 }
                             >
-                                Error loading invoice: {getPayReqError}
+                                {localeString('views.PaymentRequest.error')}:{' '}
+                                {getPayReqError}
                             </Text>
                         </View>
                     )}
@@ -181,7 +183,9 @@ export default class PaymentRequest extends React.Component<
                                                     : 'black'
                                         }}
                                     >
-                                        Custom Amount (in satoshis)
+                                        {localeString(
+                                            'views.PaymentRequest.customAmt'
+                                        )}
                                     </Text>
                                 )}
                                 {setCustomAmount && (
@@ -212,8 +216,12 @@ export default class PaymentRequest extends React.Component<
                                         <Button
                                             title={
                                                 setCustomAmount
-                                                    ? 'Pay default amount'
-                                                    : 'Pay custom amount'
+                                                    ? localeString(
+                                                          'views.PaymentRequest.payDefault'
+                                                      )
+                                                    : localeString(
+                                                          'views.PaymentRequest.payCustom'
+                                                      )
                                             }
                                             icon={{
                                                 name: 'edit',
@@ -259,7 +267,10 @@ export default class PaymentRequest extends React.Component<
                                                     : styles.label
                                             }
                                         >
-                                            Fee Estimate:
+                                            {localeString(
+                                                'views.PaymentRequest.feeEstimate'
+                                            )}
+                                            :
                                         </Text>
                                         <Text
                                             style={
@@ -283,7 +294,10 @@ export default class PaymentRequest extends React.Component<
                                                 : styles.label
                                         }
                                     >
-                                        Success Probability:
+                                        {localeString(
+                                            'views.PaymentRequest.successProbability'
+                                        )}
+                                        :
                                     </Text>
                                     <Text
                                         style={
@@ -306,7 +320,10 @@ export default class PaymentRequest extends React.Component<
                                                 : styles.label
                                         }
                                     >
-                                        Description:
+                                        {localeString(
+                                            'views.PaymentRequest.description'
+                                        )}
+                                        :
                                     </Text>
                                     <Text
                                         style={
@@ -329,7 +346,10 @@ export default class PaymentRequest extends React.Component<
                                                 : styles.label
                                         }
                                     >
-                                        Timestamp:
+                                        {localeString(
+                                            'views.PaymentRequest.timestamp'
+                                        )}
+                                        :
                                     </Text>
                                     <Text
                                         style={
@@ -352,7 +372,10 @@ export default class PaymentRequest extends React.Component<
                                                 : styles.label
                                         }
                                     >
-                                        Expiry:
+                                        {localeString(
+                                            'views.PaymentRequest.expiry'
+                                        )}
+                                        :
                                     </Text>
                                     <Text
                                         style={
@@ -375,7 +398,10 @@ export default class PaymentRequest extends React.Component<
                                                 : styles.label
                                         }
                                     >
-                                        CLTV Expiry:
+                                        {localeString(
+                                            'views.PaymentRequest.cltvExpiry'
+                                        )}
+                                        :
                                     </Text>
                                     <Text
                                         style={
@@ -398,7 +424,10 @@ export default class PaymentRequest extends React.Component<
                                                 : styles.label
                                         }
                                     >
-                                        Destination:
+                                        {localeString(
+                                            'views.PaymentRequest.destination'
+                                        )}
+                                        :
                                     </Text>
                                     <Text
                                         style={
@@ -421,7 +450,10 @@ export default class PaymentRequest extends React.Component<
                                                 : styles.label
                                         }
                                     >
-                                        Payment Hash:
+                                        {localeString(
+                                            'views.PaymentRequest.paymentHash'
+                                        )}
+                                        :
                                     </Text>
                                     <Text
                                         style={
@@ -442,8 +474,12 @@ export default class PaymentRequest extends React.Component<
                             <Button
                                 title={
                                     enableMultiPathPayment
-                                        ? 'Disable multi-path payment'
-                                        : 'Enable multi-path payment'
+                                        ? localeString(
+                                              'views.PaymentRequest.disableMpp'
+                                          )
+                                        : localeString(
+                                              'views.PaymentRequest.enableMpp'
+                                          )
                                 }
                                 icon={{
                                     name: 'call-split',
@@ -474,7 +510,7 @@ export default class PaymentRequest extends React.Component<
                                         : styles.label
                                 }
                             >
-                                Max parts:
+                                {localeString('views.PaymentRequest.maxParts')}:
                             </Text>
                             <TextInput
                                 keyboardType="numeric"
@@ -500,8 +536,10 @@ export default class PaymentRequest extends React.Component<
                                         : styles.label
                                 }
                             >
-                                The maximum number of partial payments that may
-                                be used to complete the full amount.
+                                {localeString(
+                                    'views.PaymentRequest.maxPartsDescription'
+                                )}
+                                :
                             </Text>
                             <Text
                                 style={
@@ -510,7 +548,7 @@ export default class PaymentRequest extends React.Component<
                                         : styles.label
                                 }
                             >
-                                Timeout (seconds):
+                                {localeString('views.PaymentRequest.timeout')}:
                             </Text>
                             <TextInput
                                 keyboardType="numeric"
@@ -536,7 +574,7 @@ export default class PaymentRequest extends React.Component<
                                         : styles.label
                                 }
                             >
-                                Fee limit (satoshis):
+                                {localeString('views.PaymentRequest.feeLimit')}:
                             </Text>
                             <TextInput
                                 keyboardType="numeric"

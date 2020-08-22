@@ -148,7 +148,9 @@ export default class Onboarding extends React.Component<
         const ScanQRButton = () => (
             <View style={styles.button}>
                 <Button
-                    title="Scan lndconnect QR"
+                    title={localeString(
+                        'views.Settings.AddEditNode.scanLndconnect'
+                    )}
                     icon={{
                         name: 'crop-free',
                         size: 25,
@@ -195,7 +197,7 @@ export default class Onboarding extends React.Component<
                 <SkipTourButton />
                 <View style={{ alignItems: 'center', top: 25 }}>
                     <DropdownSetting
-                        title="Locale"
+                        title={localeString('views.Settings.locale')}
                         theme="light"
                         selectedValue={locale || DEFAULT_LOCALE}
                         onValueChange={(value: string) => changeLocale(value)}
