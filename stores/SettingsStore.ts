@@ -34,7 +34,12 @@ export const LOCALE_KEYS = [
     { key: 'Češka', value: 'Češka' },
     { key: 'Slovák', value: 'Slovák' },
     { key: 'Deutsche', value: 'Deutsche' },
-    { key: 'Türkçe', value: 'Türkçe' }
+    { key: 'Türkçe', value: 'Türkçe' },
+    // in progress
+    { key: 'Ελληνικά', value: 'Ελληνικά' },
+    { key: 'زبان فارسي', value: 'زبان فارسي' },
+    { key: 'Français', value: 'Français' },
+    { key: 'Nederlands', value: 'Nederlands' }
 ];
 
 export const DEFAULT_THEME = 'light';
