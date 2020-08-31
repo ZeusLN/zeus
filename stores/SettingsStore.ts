@@ -29,12 +29,12 @@ interface Settings {
 
 export const LOCALE_KEYS = [
     { key: 'English', value: 'English' },
-    { key: 'Spanish', value: 'Spanish' },
-    { key: 'Brazilian Portuguese', value: 'Brazilian Portuguese' },
-    { key: 'Czech', value: 'Czech' },
-    { key: 'Slovak', value: 'Slovak' },
-    { key: 'German', value: 'German' },
-    { key: 'Turkish', value: 'Turkish' }
+    { key: 'Español', value: 'Español' },
+    { key: 'Português', value: 'Português' },
+    { key: 'Češka', value: 'Češka' },
+    { key: 'Slovák', value: 'Slovák' },
+    { key: 'Deutsche', value: 'Deutsche' },
+    { key: 'Türkçe', value: 'Türkçe' }
 ];
 
 export const DEFAULT_THEME = 'light';

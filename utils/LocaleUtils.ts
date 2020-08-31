@@ -12,17 +12,17 @@ export function localeString(localeString: string) {
     const { locale } = settings;
 
     switch (locale) {
-        case 'Spanish':
+        case 'Español':
             return Spanish[localeString] || English[localeString];
-        case 'Brazilian Portuguese':
+        case 'Português':
             return BrazilianPortuguese[localeString] || English[localeString];
-        case 'Turkish':
+        case 'Türkçe':
             return Turkish[localeString] || English[localeString];
-        case 'Slovak':
+        case 'Slovák':
             return Slovak[localeString] || English[localeString];
-        case 'Czech':
+        case 'Češka':
             return Czech[localeString] || English[localeString];
-        case 'German':
+        case 'Deutsche':
             return German[localeString] || English[localeString];
         default:
             return English[localeString];
