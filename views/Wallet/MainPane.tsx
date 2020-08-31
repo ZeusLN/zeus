@@ -166,10 +166,10 @@ export default class MainPane extends React.Component<
         );
 
         let infoValue = 'ⓘ';
-        if (NodeInfoStore.testnet) {
+        if (NodeInfoStore.nodeInfo.isTestNet) {
             infoValue = localeString('views.Wallet.MainPane.testnet');
-        } else if (NodeInfoStore.regtest) {
-            infoValue = localeString('views.Wallet.MainPane.regtest');
+        } else if (NodeInfoStore.nodeInfo.isRegTest) {
+            infoValue = localeString('views.Wallet.MainPane.regnet');
         }
 
         const DefaultBalance = () => (

@@ -40,42 +40,42 @@ const ForwardingHistory = ({ events, lurkerMode, getAmount, aliasesById }) => {
     for (let i = 0; i < events.length; i++) {
         const event = events[i];
         eventsDisplay.push(
-            `${localeString('view.NodeInfo.ForwardingHistory.timestamp')}: ${
+            `${localeString('views.NodeInfo.ForwardingHistory.timestamp')}: ${
                 lurkerMode
                     ? PrivacyUtils.hideValue(event.getTime, 10)
                     : event.getTime
             }`
         );
         eventsDisplay.push(
-            `${localeString('view.NodeInfo.ForwardingHistory.srcChannelId')}: ${
+            `${localeString('views.NodeInfo.ForwardingHistory.srcChannelId')}: ${
                 lurkerMode
                     ? PrivacyUtils.hideValue(event.chan_id_in, 10)
                     : aliasesById[event.chan_id_in] || event.chan_id_in
             }`
         );
         eventsDisplay.push(
-            `${localeString('view.NodeInfo.ForwardingHistory.dstChannelId')}: ${
+            `${localeString('views.NodeInfo.ForwardingHistory.dstChannelId')}: ${
                 lurkerMode
                     ? PrivacyUtils.hideValue(event.chan_id_out, 10)
                     : aliasesById[event.chan_id_out] || event.chan_id_out
             }`
         );
         eventsDisplay.push(
-            `${localeString('view.NodeInfo.ForwardingHistory.amtIn')}: ${
+            `${localeString('views.NodeInfo.ForwardingHistory.amtIn')}: ${
                 lurkerMode
                     ? PrivacyUtils.hideValue(getAmount(event.amt_in), 5, true)
                     : getAmount(event.amt_in)
             }`
         );
         eventsDisplay.push(
-            `${localeString('view.NodeInfo.ForwardingHistory.amtOut')}: ${
+            `${localeString('views.NodeInfo.ForwardingHistory.amtOut')}: ${
                 lurkerMode
                     ? PrivacyUtils.hideValue(getAmount(event.amt_out), 5, true)
                     : getAmount(event.amt_out)
             }`
         );
         eventsDisplay.push(
-            `${localeString('view.NodeInfo.ForwardingHistory.fee')}: ${
+            `${localeString('views.NodeInfo.ForwardingHistory.fee')}: ${
                 lurkerMode
                     ? PrivacyUtils.hideValue(event.fee, 3, true)
                     : event.fee
@@ -146,19 +146,19 @@ export default class NodeInfo extends React.Component<
 
         const generalInfoButton = () => (
             <React.Fragment>
-                <Text>{localeString('view.NodeInfo.generalInfo')}</Text>
+                <Text>{localeString('views.NodeInfo.generalInfo')}</Text>
             </React.Fragment>
         );
 
         const feesButton = () => (
             <React.Fragment>
-                <Text>{localeString('view.NodeInfo.feeReport')}</Text>
+                <Text>{localeString('views.NodeInfo.feeReport')}</Text>
             </React.Fragment>
         );
 
         const forwardingHistoryButton = () => (
             <React.Fragment>
-                <Text>{localeString('view.NodeInfo.forwarding')}</Text>
+                <Text>{localeString('views.NodeInfo.forwarding')}</Text>
             </React.Fragment>
         );
 
@@ -191,7 +191,7 @@ export default class NodeInfo extends React.Component<
                         <CollapsedQR
                             value={uri}
                             theme={theme}
-                            copyText={localeString('view.NodeInfo.copyUri')}
+                            copyText={localeString('views.NodeInfo.copyUri')}
                         />
                     </React.Fragment>
                 );
@@ -205,7 +205,7 @@ export default class NodeInfo extends React.Component<
                 <Text
                     style={theme === 'dark' ? styles.labelDark : styles.label}
                 >
-                    {localeString('view.NodeInfo.alias')}:
+                    {localeString('views.NodeInfo.alias')}:
                 </Text>
                 <Text
                     style={theme === 'dark' ? styles.valueDark : styles.value}
@@ -218,7 +218,7 @@ export default class NodeInfo extends React.Component<
                 <Text
                     style={theme === 'dark' ? styles.labelDark : styles.label}
                 >
-                    {localeString('view.NodeInfo.implementationVersion')}:
+                    {localeString('views.NodeInfo.implementationVersion')}:
                 </Text>
                 <Text
                     style={theme === 'dark' ? styles.valueDark : styles.value}
@@ -231,7 +231,7 @@ export default class NodeInfo extends React.Component<
                 <Text
                     style={theme === 'dark' ? styles.labelDark : styles.label}
                 >
-                    {localeString('view.NodeInfo.zeusVersion')}:
+                    {localeString('views.NodeInfo.zeusVersion')}:
                 </Text>
                 <Text
                     style={theme === 'dark' ? styles.valueDark : styles.value}
@@ -248,7 +248,7 @@ export default class NodeInfo extends React.Component<
                                     : styles.label
                             }
                         >
-                            {localeString('view.NodeInfo.synced')}:
+                            {localeString('views.NodeInfo.synced')}:
                         </Text>
                         <Text
                             style={{
@@ -266,7 +266,7 @@ export default class NodeInfo extends React.Component<
                 <Text
                     style={theme === 'dark' ? styles.labelDark : styles.label}
                 >
-                    {localeString('view.NodeInfo.blockHeight')}:
+                    {localeString('views.NodeInfo.blockHeight')}:
                 </Text>
                 <Text
                     style={theme === 'dark' ? styles.valueDark : styles.value}
@@ -283,7 +283,7 @@ export default class NodeInfo extends React.Component<
                                     : styles.label
                             }
                         >
-                            {localeString('view.NodeInfo.blockHash')}:
+                            {localeString('views.NodeInfo.blockHash')}:
                         </Text>
                         <Text
                             style={
@@ -300,7 +300,7 @@ export default class NodeInfo extends React.Component<
                 <Text
                     style={theme === 'dark' ? styles.labelDark : styles.label}
                 >
-                    {localeString('view.NodeInfo.uris')}::
+                    {localeString('views.NodeInfo.uris')}::
                 </Text>
                 {nodeInfo.getURIs &&
                 nodeInfo.getURIs.length > 0 &&
@@ -308,7 +308,7 @@ export default class NodeInfo extends React.Component<
                     <URIs uris={nodeInfo.getURIs} />
                 ) : (
                     <Text style={{ ...styles.value, color: 'red' }}>
-                        {localeString('view.NodeInfo.noUris')}
+                        {localeString('views.NodeInfo.noUris')}
                     </Text>
                 )}
             </React.Fragment>
@@ -421,7 +421,7 @@ export default class NodeInfo extends React.Component<
 
                 {forwardingHistoryError && (
                     <Text style={{ color: 'red' }}>
-                        {localeString('view.NodeInfo.ForwardingHistory.error')}
+                        {localeString('views.NodeInfo.ForwardingHistory.error')}
                     </Text>
                 )}
 
