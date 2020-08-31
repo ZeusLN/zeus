@@ -14,6 +14,7 @@ import { inject, observer } from 'mobx-react';
 import { isNil } from 'lodash';
 import { version, playStore } from './../package.json';
 import PrivacyUtils from './../utils/PrivacyUtils';
+import { localeString } from './../utils/LocaleUtils';
 
 import NodeInfoStore from './../stores/NodeInfoStore';
 import FeeStore from './../stores/FeeStore';
@@ -39,42 +40,42 @@ const ForwardingHistory = ({ events, lurkerMode, getAmount, aliasesById }) => {
     for (let i = 0; i < events.length; i++) {
         const event = events[i];
         eventsDisplay.push(
-            `Timestamp: ${
+            `${localeString('view.NodeInfo.ForwardingHistory.timestamp')}: ${
                 lurkerMode
                     ? PrivacyUtils.hideValue(event.getTime, 10)
                     : event.getTime
             }`
         );
         eventsDisplay.push(
-            `Source Channel ID: ${
+            `${localeString('view.NodeInfo.ForwardingHistory.srcChannelId')}: ${
                 lurkerMode
                     ? PrivacyUtils.hideValue(event.chan_id_in, 10)
                     : aliasesById[event.chan_id_in] || event.chan_id_in
             }`
         );
         eventsDisplay.push(
-            `Destination Channel ID: ${
+            `${localeString('view.NodeInfo.ForwardingHistory.dstChannelId')}: ${
                 lurkerMode
                     ? PrivacyUtils.hideValue(event.chan_id_out, 10)
                     : aliasesById[event.chan_id_out] || event.chan_id_out
             }`
         );
         eventsDisplay.push(
-            `Amount In: ${
+            `${localeString('view.NodeInfo.ForwardingHistory.amtIn')}: ${
                 lurkerMode
                     ? PrivacyUtils.hideValue(getAmount(event.amt_in), 5, true)
                     : getAmount(event.amt_in)
             }`
         );
         eventsDisplay.push(
-            `Amount Out: ${
+            `${localeString('view.NodeInfo.ForwardingHistory.amtOut')}: ${
                 lurkerMode
                     ? PrivacyUtils.hideValue(getAmount(event.amt_out), 5, true)
                     : getAmount(event.amt_out)
             }`
         );
         eventsDisplay.push(
-            `Fee: ${
+            `${localeString('view.NodeInfo.ForwardingHistory.fee')}: ${
                 lurkerMode
                     ? PrivacyUtils.hideValue(event.fee, 3, true)
                     : event.fee
@@ -145,19 +146,19 @@ export default class NodeInfo extends React.Component<
 
         const generalInfoButton = () => (
             <React.Fragment>
-                <Text>General Info</Text>
+                <Text>{localeString('view.NodeInfo.generalInfo')}</Text>
             </React.Fragment>
         );
 
         const feesButton = () => (
             <React.Fragment>
-                <Text>Fee Report</Text>
+                <Text>{localeString('view.NodeInfo.feeReport')}</Text>
             </React.Fragment>
         );
 
         const forwardingHistoryButton = () => (
             <React.Fragment>
-                <Text>Forwarding</Text>
+                <Text>{localeString('view.NodeInfo.forwarding')}</Text>
             </React.Fragment>
         );
 
@@ -190,7 +191,7 @@ export default class NodeInfo extends React.Component<
                         <CollapsedQR
                             value={uri}
                             theme={theme}
-                            copyText="Copy URI"
+                            copyText={localeString('view.NodeInfo.copyUri')}
                         />
                     </React.Fragment>
                 );
@@ -204,7 +205,7 @@ export default class NodeInfo extends React.Component<
                 <Text
                     style={theme === 'dark' ? styles.labelDark : styles.label}
                 >
-                    Alias:
+                    {localeString('view.NodeInfo.alias')}:
                 </Text>
                 <Text
                     style={theme === 'dark' ? styles.valueDark : styles.value}
@@ -217,7 +218,7 @@ export default class NodeInfo extends React.Component<
                 <Text
                     style={theme === 'dark' ? styles.labelDark : styles.label}
                 >
-                    Implementation Version:
+                    {localeString('view.NodeInfo.implementationVersion')}:
                 </Text>
                 <Text
                     style={theme === 'dark' ? styles.valueDark : styles.value}
@@ -230,7 +231,7 @@ export default class NodeInfo extends React.Component<
                 <Text
                     style={theme === 'dark' ? styles.labelDark : styles.label}
                 >
-                    Zeus Version:
+                    {localeString('view.NodeInfo.zeusVersion')}:
                 </Text>
                 <Text
                     style={theme === 'dark' ? styles.valueDark : styles.value}
@@ -247,7 +248,7 @@ export default class NodeInfo extends React.Component<
                                     : styles.label
                             }
                         >
-                            Synced to Chain:
+                            {localeString('view.NodeInfo.synced')}:
                         </Text>
                         <Text
                             style={{
@@ -265,7 +266,7 @@ export default class NodeInfo extends React.Component<
                 <Text
                     style={theme === 'dark' ? styles.labelDark : styles.label}
                 >
-                    Block Height
+                    {localeString('view.NodeInfo.blockHeight')}:
                 </Text>
                 <Text
                     style={theme === 'dark' ? styles.valueDark : styles.value}
@@ -282,7 +283,7 @@ export default class NodeInfo extends React.Component<
                                     : styles.label
                             }
                         >
-                            Block Hash
+                            {localeString('view.NodeInfo.blockHash')}:
                         </Text>
                         <Text
                             style={
@@ -299,7 +300,7 @@ export default class NodeInfo extends React.Component<
                 <Text
                     style={theme === 'dark' ? styles.labelDark : styles.label}
                 >
-                    URIs:
+                    {localeString('view.NodeInfo.uris')}::
                 </Text>
                 {nodeInfo.getURIs &&
                 nodeInfo.getURIs.length > 0 &&
@@ -307,7 +308,7 @@ export default class NodeInfo extends React.Component<
                     <URIs uris={nodeInfo.getURIs} />
                 ) : (
                     <Text style={{ ...styles.value, color: 'red' }}>
-                        No URIs available
+                        {localeString('view.NodeInfo.noUris')}
                     </Text>
                 )}
             </React.Fragment>
@@ -325,7 +326,7 @@ export default class NodeInfo extends React.Component<
                                         : styles.label
                                 }
                             >
-                                Earned today:
+                                {localeString('views.NodeInfo.earnedToday')}:
                             </Text>
                             <Text
                                 style={
@@ -355,7 +356,7 @@ export default class NodeInfo extends React.Component<
                                         : styles.label
                                 }
                             >
-                                Earned this week:
+                                {localeString('views.NodeInfo.earnedWeek')}:
                             </Text>
                             <Text
                                 style={
@@ -385,7 +386,7 @@ export default class NodeInfo extends React.Component<
                                         : styles.label
                                 }
                             >
-                                Earned this month:
+                                {localeString('views.NodeInfo.earnedMonth')}:
                             </Text>
                             <Text
                                 style={
@@ -420,7 +421,7 @@ export default class NodeInfo extends React.Component<
 
                 {forwardingHistoryError && (
                     <Text style={{ color: 'red' }}>
-                        Error fetching forwarding history
+                        {localeString('view.NodeInfo.ForwardingHistory.error')}
                     </Text>
                 )}
 

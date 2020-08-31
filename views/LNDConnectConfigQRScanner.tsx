@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Alert } from 'react-native';
 import QRCodeScanner from './../components/QRCodeScanner';
 import LndConnectUtils from './../utils/LndConnectUtils';
+import { localeString } from './../utils/LocaleUtils';
 
 interface LNDConnectConfigQRProps {
     navigation: any;
@@ -29,8 +30,8 @@ export default class LNDConnectConfigQRScanner extends React.Component<
             });
         } else {
             Alert.alert(
-                'Error',
-                'Error fetching lndconnect config',
+                localeString('general.error'),
+                localeString('views.LNDConnectConfigQRScanner.error'),
                 [{ text: 'OK', onPress: () => void 0 }],
                 { cancelable: false }
             );
@@ -46,8 +47,8 @@ export default class LNDConnectConfigQRScanner extends React.Component<
 
         return (
             <QRCodeScanner
-                title="lndconnect Config QR Scanner"
-                text="Scan a lndconnect Config. Make sure you've told lndconnect to use your REST port."
+                title={localeString('views.LNDConnectConfigQRScanner.title')}
+                text={localeString('views.LNDConnectConfigQRScanner.text')}
                 handleQRScanned={this.handleLNDConnectConfigInvoiceScanned}
                 goBack={() => navigation.navigate('AddEditNode', { index })}
             />

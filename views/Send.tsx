@@ -22,6 +22,7 @@ import FiatStore from './../stores/FiatStore';
 import FeeTable from './../components/FeeTable';
 
 import RESTUtils from './../utils/RESTUtils';
+import { localeString } from './../utils/LocaleUtils';
 
 interface SendProps {
     exitSetup: any;
@@ -188,13 +189,13 @@ export default class Send extends React.Component<SendProps, SendState> {
             />
         );
 
-        const paymentOptions = ['Lightning payment request'];
+        const paymentOptions = [localeString('views.Send.lnPayment')];
 
         if (RESTUtils.supportsOnchainSends()) {
-            paymentOptions.push('Bitcoin address');
+            paymentOptions.push(localeString('views.Send.btcAddress'));
         }
         if (RESTUtils.supportsKeysend()) {
-            paymentOptions.push('keysend address (if enabled)');
+            paymentOptions.push(localeString('views.Send.keysendAddress'));
         }
 
         return (
@@ -207,7 +208,10 @@ export default class Send extends React.Component<SendProps, SendState> {
             >
                 <Header
                     leftComponent={<BackButton />}
-                    centerComponent={{ text: 'Send', style: { color: '#fff' } }}
+                    centerComponent={{
+                        text: localeString('views.Send.title'),
+                        style: { color: '#fff' }
+                    }}
                     backgroundColor="grey"
                 />
                 <View style={styles.content}>
@@ -235,7 +239,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 color: theme === 'dark' ? 'white' : 'black'
                             }}
                         >
-                            Must be a valid {paymentOptions.join(', ')}
+                            {localeString('views.Send.mustBeValid')}{' '}
+                            {paymentOptions.join(', ')}
                         </Text>
                     )}
                     {transactionType && (
@@ -253,7 +258,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     color: theme === 'dark' ? 'white' : 'black'
                                 }}
                             >
-                                On-chain sends are not supported on{' '}
+                                {localeString('views.Send.onChainNotSupported')}{' '}
                                 {implementation}
                             </Text>
                         )}
@@ -269,7 +274,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                     : 'black'
                                         }}
                                     >
-                                        Amount (in{' '}
+                                        {localeString('views.Send.amount')} (
                                         {units === 'fiat' ? fiat : units})
                                     </Text>
                                 </TouchableOpacity>
@@ -298,7 +303,10 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                         : 'black'
                                             }}
                                         >
-                                            {satAmount} satoshis
+                                            {satAmount}{' '}
+                                            {localeString(
+                                                'views.Send.satoshis'
+                                            )}
                                         </Text>
                                     </TouchableOpacity>
                                 )}
@@ -308,7 +316,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             theme === 'dark' ? 'white' : 'black'
                                     }}
                                 >
-                                    Fee (satoshis per byte)
+                                    {localeString('views.Send.feeSats')}:
                                 </Text>
                                 <TextInput
                                     keyboardType="numeric"
@@ -326,7 +334,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 />
                                 <View style={styles.button}>
                                     <Button
-                                        title="Send Coins"
+                                        title={localeString(
+                                            'views.Send.sendCoins'
+                                        )}
                                         icon={{
                                             name: 'send',
                                             size: 25,
@@ -353,8 +363,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             theme === 'dark' ? 'white' : 'black'
                                     }}
                                 >
-                                    Amount (in {units === 'fiat' ? fiat : units}
-                                    )
+                                    {localeString('views.Send.amount')} (
+                                    {units === 'fiat' ? fiat : units})
                                 </Text>
                             </TouchableOpacity>
                             <TextInput
@@ -380,13 +390,14 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                     : 'black'
                                         }}
                                     >
-                                        {satAmount} satoshis
+                                        {satAmount}{' '}
+                                        {localeString('views.Send.satoshis')}
                                     </Text>
                                 </TouchableOpacity>
                             )}
                             <View style={styles.button}>
                                 <Button
-                                    title="Send"
+                                    title={localeString('general.send')}
                                     icon={{
                                         name: 'send',
                                         size: 25,
@@ -411,15 +422,18 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             theme === 'dark' ? 'white' : 'black'
                                     }}
                                 >
-                                    Sorry, {implementation} does not support
-                                    sending keysend payments at the moment.
+                                    {localeString('views.Send.sorry')},{' '}
+                                    {implementation}{' '}
+                                    {localeString(
+                                        'views.Send.keysendNotSupported'
+                                    )}
                                 </Text>
                             </React.Fragment>
                         )}
                     {transactionType === 'Lightning' && (
                         <View style={styles.button}>
                             <Button
-                                title="Look Up Payment Request"
+                                title={localeString('views.Send.lookup')}
                                 icon={{
                                     name: 'send',
                                     size: 25,
@@ -438,7 +452,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     )}
                     <View style={styles.button}>
                         <Button
-                            title="Scan"
+                            title={localeString('general.scan')}
                             icon={{
                                 name: 'crop-free',
                                 size: 25,

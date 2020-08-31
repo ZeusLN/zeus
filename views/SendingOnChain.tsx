@@ -10,6 +10,7 @@ import { inject, observer } from 'mobx-react';
 import { Button } from 'react-native-elements';
 import UrlUtils from './../utils/UrlUtils';
 import CopyButton from './../components/CopyButton';
+import { localeString } from './../utils/LocaleUtils';
 
 import NodeInfoStore from './../stores/NodeInfoStore';
 import TransactionsStore from './../stores/TransactionsStore';
@@ -55,7 +56,11 @@ export default class SendingOnChain extends React.Component<
                     {loading && (
                         <ActivityIndicator size="large" color="#0000ff" />
                     )}
-                    {loading && <Text>Broadcasting Transaction</Text>}
+                    {loading && (
+                        <Text>
+                            {localeString('views.SendingOnChain.broadcasting')}
+                        </Text>
+                    )}
                     {error && error_msg && (
                         <Text
                             style={{
@@ -77,7 +82,7 @@ export default class SendingOnChain extends React.Component<
                                 alignSelf: 'center'
                             }}
                         >
-                            Transaction successfully sent
+                            {localeString('views.SendingOnChain.success')}
                         </Text>
                     )}
                     {txid && (
@@ -93,7 +98,9 @@ export default class SendingOnChain extends React.Component<
                                     fontSize: 15
                                 }}
                             >
-                                {`TXID: ${txid}`}
+                                {`${localeString(
+                                    'views.SendingOnChain.txid'
+                                )}: ${txid}`}
                             </Text>
                         </TouchableOpacity>
                     )}
@@ -133,7 +140,9 @@ export default class SendingOnChain extends React.Component<
                     {txid && (
                         <View style={styles.button}>
                             <CopyButton
-                                title="Copy TXID to Clipboard"
+                                title={localeString(
+                                    'views.SendingOnChain.copyTxid'
+                                )}
                                 copyValue={txid}
                             />
                         </View>
@@ -142,7 +151,9 @@ export default class SendingOnChain extends React.Component<
                     {txid && (
                         <View style={styles.button}>
                             <Button
-                                title="Go to Wallet"
+                                title={localeString(
+                                    'views.SendingOnChain.goToWallet'
+                                )}
                                 icon={{
                                     name: 'list',
                                     size: 25,
