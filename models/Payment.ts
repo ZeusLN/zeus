@@ -1,6 +1,7 @@
 import BaseModel from './BaseModel';
 import DateTimeUtils from './../utils/DateTimeUtils';
 import { computed } from 'mobx';
+import { localeString } from './../utils/LocaleUtils';
 
 export default class Payment extends BaseModel {
     payment_hash: string;
@@ -84,9 +85,11 @@ export default class Payment extends BaseModel {
                             const alias =
                                 this.nodes[pubKey] && this.nodes[pubKey].alias;
                             const nodeLabel = alias ? alias : pubKey;
-                            const enhancedHop = `${nodeLabel} [Forwarded: ${
-                                hop.amt_to_forward
-                            }, Fee: ${
+                            const enhancedHop = `${nodeLabel} [${localeString(
+                                'models.Payment.forwarded'
+                            )}: ${hop.amt_to_forward}, ${localeString(
+                                'models.Payment.fee'
+                            )}: ${
                                 hop.fee_msat ? Number(hop.fee_msat) / 1000 : 0
                             }]`;
                             route.push(enhancedHop);

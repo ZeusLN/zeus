@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import { observer } from 'mobx-react';
 import QRCodeScanner from './../components/QRCodeScanner';
 import handleAnything from './../utils/handleAnything';
+import { localeString } from './../utils/LocaleUtils';
 
 interface AddressQRProps {
     navigation: any;
@@ -44,8 +45,8 @@ export default class AddressQRScanner extends React.Component<
 
         return (
             <QRCodeScanner
-                title="Address/Payment Request QR Scanner"
-                text="Scan a valid Bitcoin address or Lightning payment request"
+                title={localeString('views.AddressQRScanner.title')}
+                text={localeString('views.AddressQRScanner.text')}
                 handleQRScanned={this.handleAddressInvoiceScanned}
                 goBack={() => navigation.navigate('Send')}
             />

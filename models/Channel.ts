@@ -1,5 +1,6 @@
 import { observable, computed } from 'mobx';
 import BaseModel from './BaseModel';
+import { localeString } from './../utils/LocaleUtils';
 
 interface HTLC {
     hash_lock: string;
@@ -59,6 +60,10 @@ export default class Channel extends BaseModel {
 
     @computed
     public get channelId(): string {
-        return this.chan_id || this.channel_id || 'Unknown Channel ID';
+        return (
+            this.chan_id ||
+            this.channel_id ||
+            localeString('models.Channel.unknownId')
+        );
     }
 }

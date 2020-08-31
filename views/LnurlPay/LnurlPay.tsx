@@ -9,6 +9,7 @@ import InvoicesStore from './../../stores/InvoicesStore';
 import LnurlPayStore from './../../stores/LnurlPayStore';
 import SettingsStore from './../../stores/SettingsStore';
 import LnurlPayMetadata from './Metadata';
+import { localeString } from './../../utils/LocaleUtils';
 
 interface LnurlPayProps {
     navigation: any;
@@ -40,7 +41,7 @@ export default class LnurlPay extends React.Component<
             };
 
             Alert.alert(
-                `Invalid lnurl params!`,
+                localeString('views.LnurlPay.LnurlPay.invalidParams'),
                 err.message,
                 [{ text: 'OK', onPress: () => void 0 }],
                 { cancelable: false }
@@ -105,7 +106,9 @@ export default class LnurlPay extends React.Component<
                 InvoicesStore.getPayReq(pr, lnurl.metadata).then(() => {
                     if (!!InvoicesStore.getPayReqError) {
                         Alert.alert(
-                            `Got an invalid invoice!`,
+                            localeString(
+                                'views.LnurlPay.LnurlPay.invalidInvoice'
+                            ),
                             InvoicesStore.getPayReqError,
                             [{ text: 'OK', onPress: () => void 0 }],
                             { cancelable: false }
@@ -182,7 +185,7 @@ export default class LnurlPay extends React.Component<
                             color: theme === 'dark' ? 'white' : 'black'
                         }}
                     >
-                        Amount to pay (in Satoshis)
+                        {localeString('views.LnurlPay.LnurlPay.amount')}
                         {lnurl && lnurl.minSendable !== lnurl.maxSendable
                             ? ` (${Math.ceil(
                                   lnurl.minSendable / 1000

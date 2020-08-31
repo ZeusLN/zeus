@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import { observer } from 'mobx-react';
 import QRCodeScanner from './../components/QRCodeScanner';
 import handleAnything from './../utils/handleAnything';
+import { localeString } from './../utils/LocaleUtils';
 
 interface LNDHubQRProps {
     navigation: any;
@@ -29,9 +30,14 @@ export default class LNDHubQRScanner extends React.Component<
             })
             .catch(err => {
                 Alert.alert(
-                    'Error',
+                    localeString('general.error'),
                     err.message,
-                    [{ text: 'OK', onPress: () => void 0 }],
+                    [
+                        {
+                            text: localeString('general.ok'),
+                            onPress: () => void 0
+                        }
+                    ],
                     { cancelable: false }
                 );
 
@@ -44,8 +50,8 @@ export default class LNDHubQRScanner extends React.Component<
 
         return (
             <QRCodeScanner
-                title="LNDHub QR Scanner"
-                text="Scan a LNDHub or Blue Wallet QR code"
+                title={localeString('views.LNDHubQRScanner.title')}
+                text={localeString('views.LNDHubQRScanner.text')}
                 handleQRScanned={this.handleCodeScanned}
                 goBack={() => navigation.goBack()}
             />

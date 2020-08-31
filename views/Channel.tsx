@@ -16,6 +16,7 @@ import Identicon from 'identicon.js';
 import { inject, observer } from 'mobx-react';
 const hash = require('object-hash');
 import PrivacyUtils from './../utils/PrivacyUtils';
+import { localeString } from './../utils/LocaleUtils';
 
 import ChannelsStore from './../stores/ChannelsStore';
 import FeeStore from './../stores/FeeStore';
@@ -184,7 +185,7 @@ export default class ChannelView extends React.Component<
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: 'Channel',
+                        text: localeString('views.Channel.title'),
                         style: { color: '#fff' }
                     }}
                     backgroundColor={theme === 'dark' ? '#261339' : 'black'}
@@ -234,16 +235,18 @@ export default class ChannelView extends React.Component<
                                         ? styles.balanceDark
                                         : styles.balance
                                 }
-                            >{`Local balance: ${units &&
-                                channelBalanceLocal}`}</Text>
+                            >{`${localeString(
+                                'views.Channel.localBalance'
+                            )}: ${units && channelBalanceLocal}`}</Text>
                             <Text
                                 style={
                                     theme === 'dark'
                                         ? styles.balanceDark
                                         : styles.balance
                                 }
-                            >{`Remote balance: ${units &&
-                                channelBalanceRemote}`}</Text>
+                            >{`${localeString(
+                                'views.Channel.remoteBalance'
+                            )}: ${units && channelBalanceRemote}`}</Text>
                             {unsettled_balance && (
                                 <Text
                                     style={
@@ -251,8 +254,9 @@ export default class ChannelView extends React.Component<
                                             ? styles.balanceDark
                                             : styles.balance
                                     }
-                                >{`Unsettled balance: ${units &&
-                                    unsettledBalance}`}</Text>
+                                >{`${localeString(
+                                    'views.Channel.unsettledBalance'
+                                )}: ${units && unsettledBalance}`}</Text>
                             )}
                         </TouchableOpacity>
                     </View>
@@ -262,7 +266,7 @@ export default class ChannelView extends React.Component<
                             theme === 'dark' ? styles.labelDark : styles.label
                         }
                     >
-                        Status:
+                        {localeString('views.Channel.status')}:
                     </Text>
                     <Text
                         style={{
@@ -270,7 +274,9 @@ export default class ChannelView extends React.Component<
                             color: isActive ? 'green' : 'red'
                         }}
                     >
-                        {isActive ? 'Active' : 'Inactive'}
+                        {isActive
+                            ? localeString('views.Channel.active')
+                            : localeString('views.Channel.inactive')}
                     </Text>
 
                     <Text
@@ -278,7 +284,7 @@ export default class ChannelView extends React.Component<
                             theme === 'dark' ? styles.labelDark : styles.label
                         }
                     >
-                        Private:
+                        {localeString('views.Channel.private')}:
                     </Text>
                     <Text
                         style={{
@@ -298,7 +304,7 @@ export default class ChannelView extends React.Component<
                                         : styles.label
                                 }
                             >
-                                Total Received:
+                                {localeString('views.Channel.totalReceived')}:
                             </Text>
                             <TouchableOpacity onPress={() => changeUnits()}>
                                 <Text
@@ -323,7 +329,7 @@ export default class ChannelView extends React.Component<
                                         : styles.label
                                 }
                             >
-                                Total Sent:
+                                {localeString('views.Channel.totalSent')}:
                             </Text>
                             <TouchableOpacity onPress={() => changeUnits()}>
                                 <Text
@@ -348,7 +354,7 @@ export default class ChannelView extends React.Component<
                                         : styles.label
                                 }
                             >
-                                Capacity:
+                                {localeString('views.Channel.capacity')}:
                             </Text>
                             <TouchableOpacity onPress={() => changeUnits()}>
                                 <Text
@@ -373,7 +379,7 @@ export default class ChannelView extends React.Component<
                                         : styles.label
                                 }
                             >
-                                Base Fee:
+                                {localeString('views.Channel.baseFee')}:
                             </Text>
                             <Text
                                 style={
@@ -402,7 +408,7 @@ export default class ChannelView extends React.Component<
                                         : styles.label
                                 }
                             >
-                                Fee Rate:
+                                {localeString('views.Channel.feeRate')}:
                             </Text>
                             <Text
                                 style={
@@ -431,7 +437,7 @@ export default class ChannelView extends React.Component<
                                         : styles.label
                                 }
                             >
-                                Commit Weight:
+                                {localeString('views.Channel.commitWeight')}:
                             </Text>
                             <Text
                                 style={
@@ -454,7 +460,7 @@ export default class ChannelView extends React.Component<
                                         : styles.label
                                 }
                             >
-                                Commit Fee:
+                                {localeString('views.Channel.commitFee')}:
                             </Text>
                             <Text
                                 style={
@@ -483,7 +489,7 @@ export default class ChannelView extends React.Component<
                                         : styles.label
                                 }
                             >
-                                CSV Delay:
+                                {localeString('views.Channel.csvDelay')}:
                             </Text>
                             <Text
                                 style={
@@ -506,7 +512,7 @@ export default class ChannelView extends React.Component<
                                         : styles.label
                                 }
                             >
-                                Fee per kilo-weight:
+                                {localeString('views.Channel.feePerKw')}:
                             </Text>
                             <Text
                                 style={
@@ -529,7 +535,7 @@ export default class ChannelView extends React.Component<
                     {implementation === 'lnd' && (
                         <View style={styles.button}>
                             <Button
-                                title="Keysend"
+                                title={localeString('views.Channel.keysend')}
                                 icon={{
                                     name: 'send',
                                     size: 25,
@@ -571,8 +577,8 @@ export default class ChannelView extends React.Component<
                         <Button
                             title={
                                 confirmCloseChannel
-                                    ? 'Cancel Channel Close'
-                                    : 'Close Channel'
+                                    ? localeString('views.Channel.cancelClose')
+                                    : localeString('views.Channel.close')
                             }
                             icon={{
                                 name: confirmCloseChannel ? 'cancel' : 'delete',
@@ -605,7 +611,9 @@ export default class ChannelView extends React.Component<
                                                     : 'black'
                                         }}
                                     >
-                                        (Optional) Sat per byte closing fee
+                                        {localeString(
+                                            'views.Channel.closingRate'
+                                        )}
                                     </Text>
                                     <TextInput
                                         keyboardType="numeric"
@@ -628,7 +636,9 @@ export default class ChannelView extends React.Component<
                                     />
                                     {implementation === 'lnd' && (
                                         <CheckBox
-                                            title="Force close"
+                                            title={localeString(
+                                                'views.Channel.forceClose'
+                                            )}
                                             checked={forceClose}
                                             onPress={() =>
                                                 this.setState({
@@ -641,7 +651,9 @@ export default class ChannelView extends React.Component<
                             )}
                             <View style={styles.button}>
                                 <Button
-                                    title="Confirm Channel Close"
+                                    title={localeString(
+                                        'views.Channel.confirmClose'
+                                    )}
                                     icon={{
                                         name: 'delete-forever',
                                         size: 25,

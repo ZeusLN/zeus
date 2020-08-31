@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Button } from 'react-native-elements';
 import QRCode from 'react-native-qrcode-svg';
 import CopyButton from './CopyButton';
+import { localeString } from './../utils/LocaleUtils';
 
 interface CollapsedQRProps {
     theme: any;
@@ -61,8 +62,10 @@ export default class CollapsedQR extends React.Component<
                 <Button
                     title={
                         collapsed
-                            ? showText || 'Show QR'
-                            : collapseText || 'Hide QR'
+                            ? showText ||
+                              localeString('components.CollapsedQr.show')
+                            : collapseText ||
+                              localeString('components.CollapsedQr.hide')
                     }
                     icon={{
                         name: 'qrcode',
@@ -80,7 +83,7 @@ export default class CollapsedQR extends React.Component<
                     }}
                     onPress={() => this.toggleCollapse()}
                 />
-                <CopyButton copyValue={value} title={copyText || 'Copy'} />
+                <CopyButton copyValue={value} title={copyText} />
             </React.Fragment>
         );
     }

@@ -18,6 +18,7 @@ import { inject, observer } from 'mobx-react';
 import LndConnectUtils from './../../utils/LndConnectUtils';
 import CollapsedQR from './../../components/CollapsedQR';
 import { DEFAULT_LNDHUB } from './../../utils/RESTUtils';
+import { localeString } from './../../utils/LocaleUtils';
 
 import SettingsStore from './../../stores/SettingsStore';
 
@@ -397,7 +398,9 @@ export default class AddEditNode extends React.Component<
         const CertInstallInstructions = () => (
             <View style={styles.button}>
                 <Button
-                    title="Certificate Install Instructions"
+                    title={localeString(
+                        'views.Settings.AddEditNode.certificateButton'
+                    )}
                     icon={{
                         name: 'lock',
                         size: 25,
@@ -429,7 +432,9 @@ export default class AddEditNode extends React.Component<
                                 color: savedTheme === 'dark' ? 'white' : 'black'
                             }}
                         >
-                            Node interface
+                            {localeString(
+                                'views.Settings.AddEditNode.nodeInterface'
+                            )}
                         </Text>
                         <Picker
                             selectedValue={implementation}
@@ -475,7 +480,9 @@ export default class AddEditNode extends React.Component<
                                 color: savedTheme === 'dark' ? 'white' : 'black'
                             }}
                         >
-                            Node interface
+                            {localeString(
+                                'views.Settings.AddEditNode.nodeInterface'
+                            )}
                         </Text>
                         <TouchableOpacity
                             onPress={() =>
@@ -548,7 +555,9 @@ export default class AddEditNode extends React.Component<
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: 'Node Configuration',
+                        text: localeString(
+                            'views.Settings.AddEditNode.nodeConfig'
+                        ),
                         style: { color: '#fff' }
                     }}
                     backgroundColor={
@@ -560,8 +569,9 @@ export default class AddEditNode extends React.Component<
                 {!!suggestImport && (
                     <View style={styles.clipboardImport}>
                         <Text style={{ color: 'white' }}>
-                            Detected the following connection string in your
-                            clipboard:
+                            {localeString(
+                                'views.Settings.AddEditNode.connectionStringClipboard'
+                            )}
                         </Text>
                         <Text style={{ color: 'white', padding: 15 }}>
                             {suggestImport.length > 100
@@ -569,11 +579,15 @@ export default class AddEditNode extends React.Component<
                                 : suggestImport}
                         </Text>
                         <Text style={{ color: 'white' }}>
-                            Would you like to import it?
+                            {localeString(
+                                'views.Settings.AddEditNode.importPrompt'
+                            )}
                         </Text>
                         <View style={styles.button}>
                             <Button
-                                title="Import"
+                                title={localeString(
+                                    'views.Settings.AddEditNode.import'
+                                )}
                                 onPress={() => this.importClipboard()}
                                 titleStyle={{
                                     color: 'rgba(92, 99,216, 1)'
@@ -586,7 +600,7 @@ export default class AddEditNode extends React.Component<
                         </View>
                         <View style={styles.button}>
                             <Button
-                                title="Cancel"
+                                title={localeString('general.cancel')}
                                 onPress={() => this.clearImportSuggestion()}
                                 titleStyle={{
                                     color: 'rgba(92, 99,216, 1)'
@@ -616,13 +630,12 @@ export default class AddEditNode extends React.Component<
                             {showLndHubModal && (
                                 <>
                                     <Text style={{ fontSize: 40 }}>
-                                        Warning
+                                        {localeString('general.warning')}
                                     </Text>
                                     <Text style={{ paddingTop: 20 }}>
-                                        With any instance of LNDHub the operator
-                                        can track your balances, transactions,
-                                        the IP addresses you connect with, and
-                                        even run off with your funds.
+                                        {localeString(
+                                            'views.Settings.AddEditNode.lndhubWarning'
+                                        )}
                                     </Text>
                                     <Text
                                         style={{
@@ -630,14 +643,15 @@ export default class AddEditNode extends React.Component<
                                             paddingBottom: 20
                                         }}
                                     >
-                                        If you have a friend who you trust and
-                                        who runs an lnd node you may want to
-                                        consider asking them to set up an LNDHub
-                                        instance for you to connect to.
+                                        {localeString(
+                                            'views.Settings.AddEditNode.lndhubFriend'
+                                        )}
                                     </Text>
                                     <View style={styles.button}>
                                         <Button
-                                            title="I understand, create my account"
+                                            title={localeString(
+                                                'views.Settings.AddEditNode.lndhubUnderstand'
+                                            )}
                                             onPress={() => {
                                                 createAccount(
                                                     lndhubUrl,
@@ -665,7 +679,9 @@ export default class AddEditNode extends React.Component<
                                     </View>
                                     <View style={styles.button}>
                                         <Button
-                                            title="Cancel"
+                                            title={localeString(
+                                                'general.cancel'
+                                            )}
                                             onPress={() =>
                                                 this.setState({
                                                     showLndHubModal: false
@@ -682,13 +698,12 @@ export default class AddEditNode extends React.Component<
                             {showSslModal && (
                                 <>
                                     <Text style={{ fontSize: 40 }}>
-                                        Warning
+                                        {localeString('general.warning')}
                                     </Text>
                                     <Text style={{ paddingTop: 20 }}>
-                                        Opting not to use Certificate
-                                        Verification may leave you vulnerable to
-                                        a man-in-the-middle attack. Do so at
-                                        your own discretion.
+                                        {localeString(
+                                            'views.Settings.AddEditNode.certificateWarning1'
+                                        )}
                                     </Text>
                                     <Text
                                         style={{
@@ -696,16 +711,16 @@ export default class AddEditNode extends React.Component<
                                             paddingBottom: 20
                                         }}
                                     >
-                                        If you're not verifying your connection
-                                        with a VPN or Tor v3 hidden service
-                                        configuration, we strongly advise you
-                                        install your node's certificate on this
-                                        device.
+                                        {localeString(
+                                            'views.Settings.AddEditNode.certificateWarning2'
+                                        )}
                                     </Text>
                                     <CertInstallInstructions />
                                     <View style={styles.button}>
                                         <Button
-                                            title="I understand, save my node config"
+                                            title={localeString(
+                                                'views.Settings.AddEditNode.certificateUnderstand'
+                                            )}
                                             onPress={() =>
                                                 this.saveNodeConfiguration()
                                             }
@@ -716,7 +731,9 @@ export default class AddEditNode extends React.Component<
                                     </View>
                                     <View style={styles.button}>
                                         <Button
-                                            title="Cancel"
+                                            title={localeString(
+                                                'general.cancel'
+                                            )}
                                             onPress={() =>
                                                 this.setState({
                                                     showSslModal: false
@@ -763,7 +780,9 @@ export default class AddEditNode extends React.Component<
                                             : 'black'
                                 }}
                             >
-                                Host
+                                {localeString(
+                                    'views.Settings.AddEditNode.host'
+                                )}
                             </Text>
                             <TextInput
                                 placeholder={'http://192.168.1.2:9737'}
@@ -792,7 +811,9 @@ export default class AddEditNode extends React.Component<
                                             : 'black'
                                 }}
                             >
-                                Access Key
+                                {localeString(
+                                    'views.Settings.AddEditNode.accessKey'
+                                )}
                             </Text>
                             <TextInput
                                 placeholder={'...'}
@@ -824,7 +845,9 @@ export default class AddEditNode extends React.Component<
                                             : 'black'
                                 }}
                             >
-                                Host
+                                {localeString(
+                                    'views.Settings.AddEditNode.host'
+                                )}
                             </Text>
                             <TextInput
                                 placeholder={DEFAULT_LNDHUB}
@@ -851,7 +874,9 @@ export default class AddEditNode extends React.Component<
                                 }}
                             >
                                 <CheckBox
-                                    title="Existing Account"
+                                    title={localeString(
+                                        'views.Settings.AddEditNode.existingAccount'
+                                    )}
                                     checked={existingAccount}
                                     onPress={() =>
                                         this.setState({
@@ -871,7 +896,9 @@ export default class AddEditNode extends React.Component<
                                                     : 'black'
                                         }}
                                     >
-                                        Username
+                                        {localeString(
+                                            'views.Settings.AddEditNode.username'
+                                        )}
                                     </Text>
                                     <TextInput
                                         placeholder={'...'}
@@ -900,7 +927,9 @@ export default class AddEditNode extends React.Component<
                                                     : 'black'
                                         }}
                                     >
-                                        Password
+                                        {localeString(
+                                            'views.Settings.AddEditNode.password'
+                                        )}
                                     </Text>
                                     <TextInput
                                         placeholder={'...'}
@@ -923,8 +952,12 @@ export default class AddEditNode extends React.Component<
                                     />
                                     {saved && lndhubUrl === DEFAULT_LNDHUB && (
                                         <CollapsedQR
-                                            showText="Show account QR"
-                                            collapseText="Hide account QR"
+                                            showText={localeString(
+                                                'views.Settings.AddEditNode.showAccountQR'
+                                            )}
+                                            collapseText={localeString(
+                                                'views.Settings.AddEditNode.hideAccountQR'
+                                            )}
                                             value={`lndhub://${username}:${password}`}
                                             hideText
                                         />
@@ -944,7 +977,9 @@ export default class AddEditNode extends React.Component<
                                             : 'black'
                                 }}
                             >
-                                Host
+                                {localeString(
+                                    'views.Settings.AddEditNode.host'
+                                )}
                             </Text>
                             <TextInput
                                 placeholder={'localhost'}
@@ -973,7 +1008,9 @@ export default class AddEditNode extends React.Component<
                                             : 'black'
                                 }}
                             >
-                                REST Port
+                                {localeString(
+                                    'views.Settings.AddEditNode.restPort'
+                                )}
                             </Text>
                             <TextInput
                                 keyboardType="numeric"
@@ -1003,7 +1040,9 @@ export default class AddEditNode extends React.Component<
                                             : 'black'
                                 }}
                             >
-                                Macaroon (Hex format)
+                                {localeString(
+                                    'views.Settings.AddEditNode.macaroon'
+                                )}
                             </Text>
                             <TextInput
                                 placeholder={'0A...'}
@@ -1032,7 +1071,9 @@ export default class AddEditNode extends React.Component<
                         }}
                     >
                         <CheckBox
-                            title="Certificate Verification"
+                            title={localeString(
+                                'views.Settings.AddEditNode.certificateVerification'
+                            )}
                             checked={certVerification}
                             onPress={() =>
                                 this.setState({
@@ -1047,7 +1088,9 @@ export default class AddEditNode extends React.Component<
                 {!existingAccount && implementation === 'lndhub' && (
                     <View style={styles.button}>
                         <Button
-                            title="Create LNDHub account"
+                            title={localeString(
+                                'views.Settings.AddEditNode.createLndhub'
+                            )}
                             onPress={() => {
                                 if (lndhubUrl === DEFAULT_LNDHUB) {
                                     this.setState({ showLndHubModal: true });
@@ -1076,7 +1119,15 @@ export default class AddEditNode extends React.Component<
 
                 <View style={styles.button}>
                     <Button
-                        title={saved ? 'Node Config Saved' : 'Save Node Config'}
+                        title={
+                            saved
+                                ? localeString(
+                                      'views.Settings.AddEditNode.nodeSaved'
+                                  )
+                                : localeString(
+                                      'views.Settings.AddEditNode.saveNode'
+                                  )
+                        }
                         icon={{
                             name: 'save',
                             size: 25,
@@ -1110,8 +1161,12 @@ export default class AddEditNode extends React.Component<
                         <Button
                             title={
                                 active
-                                    ? 'Node Active'
-                                    : 'Set Node Config as Active'
+                                    ? localeString(
+                                          'views.Settings.AddEditNode.nodeActive'
+                                      )
+                                    : localeString(
+                                          'views.Settings.AddEditNode.setNodeActive'
+                                      )
                             }
                             icon={{
                                 name: 'blur-circular',
@@ -1133,7 +1188,9 @@ export default class AddEditNode extends React.Component<
                 {implementation !== 'lndhub' && (
                     <View style={styles.button}>
                         <Button
-                            title="Scan lndconnect config"
+                            title={localeString(
+                                'views.Settings.AddEditNode.scanLndconnect'
+                            )}
                             icon={{
                                 name: 'crop-free',
                                 size: 25,
@@ -1162,7 +1219,9 @@ export default class AddEditNode extends React.Component<
                 {implementation !== 'lndhub' && (
                     <View style={styles.button}>
                         <Button
-                            title="Scan BTCPay config"
+                            title={localeString(
+                                'views.Settings.AddEditNode.scanBtcpay'
+                            )}
                             icon={{
                                 name: 'crop-free',
                                 size: 25,
@@ -1184,7 +1243,9 @@ export default class AddEditNode extends React.Component<
                 {implementation === 'lndhub' && (
                     <View style={styles.button}>
                         <Button
-                            title="Scan LNDHub QR"
+                            title={localeString(
+                                'views.Settings.AddEditNode.scanLndhub'
+                            )}
                             icon={{
                                 name: 'crop-free',
                                 size: 25,
@@ -1205,7 +1266,9 @@ export default class AddEditNode extends React.Component<
                 {saved && (
                     <View style={styles.button}>
                         <Button
-                            title="Delete Node config"
+                            title={localeString(
+                                'views.Settings.AddEditNode.deleteNode'
+                            )}
                             icon={{
                                 name: 'delete',
                                 size: 25,

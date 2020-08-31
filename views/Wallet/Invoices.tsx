@@ -4,6 +4,7 @@ import { Avatar, Button, ListItem } from 'react-native-elements';
 import Invoice from './../../models/Invoice';
 import { inject, observer } from 'mobx-react';
 import PrivacyUtils from './../../utils/PrivacyUtils';
+import { localeString } from './../../utils/LocaleUtils';
 
 import InvoicesStore from './../../stores/InvoicesStore';
 import UnitsStore from './../../stores/UnitsStore';
@@ -109,7 +110,13 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
                                 <ListItem
                                     title={memo}
                                     subtitle={`${
-                                        isPaid ? 'Paid' : 'Unpaid'
+                                        isPaid
+                                            ? localeString(
+                                                  'views.Wallet.Invoices.paid'
+                                              )
+                                            : localeString(
+                                                  'views.Wallet.Invoices.unpaid'
+                                              )
                                     }: ${units && invoiceAmount} | ${date}`}
                                     containerStyle={{
                                         borderBottomWidth: 0,
@@ -143,7 +150,7 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
                     />
                 ) : (
                     <Button
-                        title="No Invoices"
+                        title={localeString('views.Wallet.Invoices.noInvoices')}
                         icon={{
                             name: 'error-outline',
                             size: 25,

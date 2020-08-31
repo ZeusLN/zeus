@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Platform, StyleSheet, Text, View, ScrollView } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { localeString } from './../../utils/LocaleUtils';
 
 import SettingsStore from './../../stores/SettingsStore';
 
@@ -41,7 +42,9 @@ export default class CertInstallInstructions extends React.Component<
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: 'Certificate Installation Instructions',
+                        text: localeString(
+                            'views.Settings.CertInstallInstructions.title'
+                        ),
                         style: { color: '#fff' }
                     }}
                     backgroundColor={
@@ -59,11 +62,9 @@ export default class CertInstallInstructions extends React.Component<
                                     : styles.lightThemeText
                             }
                         >
-                            To install a certificate on Android, copy the
-                            certificate file to device. Then go to Settings >
-                            Security > Install from storage. It should detect
-                            the certificate and let you add install it to the
-                            device.
+                            {localeString(
+                                'views.Settings.CertInstallInstructions.graph1'
+                            )}
                         </Text>
                     )}
                     {Platform.OS === 'ios' && (
@@ -75,10 +76,9 @@ export default class CertInstallInstructions extends React.Component<
                                         : styles.lightThemeText
                                 }
                             >
-                                To install a certificate on iOS you must email
-                                the file to yourself, once you select the file
-                                in your email you will be prompted to install it
-                                as a profile.
+                                {localeString(
+                                    'views.Settings.CertInstallInstructions.graph2'
+                                )}
                             </Text>
                             <Text
                                 style={
@@ -87,8 +87,9 @@ export default class CertInstallInstructions extends React.Component<
                                         : styles.lightThemeText
                                 }
                             >
-                                Alternatively, you can provision a profile with
-                                the certificate for your phone in XCode.
+                                {localeString(
+                                    'views.Settings.CertInstallInstructions.graph3'
+                                )}
                             </Text>
                             <Text
                                 style={
@@ -97,9 +98,9 @@ export default class CertInstallInstructions extends React.Component<
                                         : styles.lightThemeText
                                 }
                             >
-                                You can access the certificate at any time in
-                                Settings > General > Profiles and remove it if
-                                required.
+                                {localeString(
+                                    'views.Settings.CertInstallInstructions.graph4'
+                                )}
                             </Text>
                         </View>
                     )}
@@ -110,12 +111,9 @@ export default class CertInstallInstructions extends React.Component<
                                 : styles.lightThemeText
                         }
                     >
-                        If you're connecting to your node via an external
-                        hostname or via Tor you must add the hostname to the
-                        certificate. lnd provides an option to do this with the
-                        TLSExtraDomain option in its config. You'll have to
-                        delete and regenerate the certificate after you make the
-                        change.
+                        {localeString(
+                            'views.Settings.CertInstallInstructions.graph5'
+                        )}
                     </Text>
                 </View>
             </ScrollView>
