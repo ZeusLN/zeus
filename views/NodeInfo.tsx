@@ -427,7 +427,13 @@ export default class NodeInfo extends React.Component<
 
                 {forwardingEvents && !loading && (
                     <TouchableOpacity onPress={() => changeUnits()}>
-                        <Text style={{ paddingTop: 10, paddingBottom: 10 }}>
+                        <Text
+                            style={{
+                                paddingTop: 10,
+                                paddingBottom: 10,
+                                color: theme === 'dark' ? 'white' : 'black'
+                            }}
+                        >
                             <ForwardingHistory
                                 events={forwardingEvents}
                                 lurkerMode={lurkerMode}
