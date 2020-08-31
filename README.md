@@ -92,6 +92,11 @@ Please be sure to run `npm run tsc` to check for type errors, `npm run test` to 
 
 If you are making cosmetic changes please test on both Android and iOS as things don't render exactly the same on both platforms.
 
+
+## Translations
+
+Do not directly modify the files in `/locales` unless you are adding new copy to the app in English. Instead, translators and reviewers should visit out [Transifex page](https://www.transifex.com/ZeusLN/zeus/) and request a role on the language you'd like to contribute to.
+
 ## Donations
 
 If you'd like to help us with the cost of running Zeus project (iOS developer account, Google Play developer account, hosting) you can send a payment to us via PayNym
