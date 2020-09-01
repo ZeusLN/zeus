@@ -13,8 +13,11 @@ import {
 } from 'react-native';
 import { Avatar, ListItem } from 'react-native-elements';
 import { remove } from 'lodash';
+import { inject, observer } from 'mobx-react';
 import { localeString } from './../utils/LocaleUtils';
+
 import stores from './../stores/Stores';
+import UTXOsStore from './../stores/UTXOsStore';
 
 const SelectedLight = require('./../images/selected-light.png');
 const SelectedDark = require('./../images/selected-dark.png');
@@ -26,6 +29,7 @@ interface UTXOPickerProps {
     selectedValue: string | boolean;
     displayValue?: string;
     onValueChange: (value: any) => void;
+    UTXOsStore: UTXOsStore;
 }
 
 interface UTXOPickerState {
@@ -44,6 +48,8 @@ const DEFAULT_TITLE = 'UTXOs to use';
 
 const Icon = (balanceImage: any) => <Avatar source={balanceImage} />;
 
+@inject('UTXOsStore')
+@observer
 export default class UTXOPicker extends React.Component<
     UTXOPickerProps,
     UTXOPickerState
@@ -76,7 +82,7 @@ export default class UTXOPicker extends React.Component<
             const length: number = utxo.length;
             const pre: string = utxo.slice(0, 4);
             const post: string = utxo.slice(length - 4, length);
-            display.push(`${pre}....${post}`);
+            display.push(`${pre}...${post}`);
         });
         return display.join(', ');
     }
@@ -101,12 +107,12 @@ export default class UTXOPicker extends React.Component<
             title,
             selectedValue,
             displayValue,
-            onValueChange
+            onValueChange,
+            UTXOsStore
         } = this.props;
         const { utxosSelected, utxosSet, showUtxoModal } = this.state;
-        const UTXOStore = stores.utxosStore;
         const SettingsStore = stores.settingsStore;
-        const { utxos, loading } = UTXOStore;
+        const { utxos, loading, getUTXOs } = UTXOsStore;
         const { settings } = SettingsStore;
         const { theme } = settings;
 
@@ -217,6 +223,7 @@ export default class UTXOPicker extends React.Component<
                                         keyExtractor={item => item.txid}
                                         onEndReachedThreshold={50}
                                         refreshing={loading}
+                                        onRefresh={() => getUTXOs()}
                                     />
 
                                     <View style={styles.button}>
