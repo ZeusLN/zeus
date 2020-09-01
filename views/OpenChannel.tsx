@@ -11,6 +11,7 @@ import {
 import { inject, observer } from 'mobx-react';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import FeeTable from './../components/FeeTable';
+import UTXOPicker from './../components/UTXOPicker';
 import NodeUriUtils from './../utils/NodeUriUtils';
 import { localeString } from './../utils/LocaleUtils';
 
@@ -228,7 +229,10 @@ export default class OpenChannel extends React.Component<
                     )}
 
                     <Text
-                        style={{ color: theme === 'dark' ? 'white' : 'black' }}
+                        style={{
+                            textDecorationLine: 'underline',
+                            color: theme === 'dark' ? 'white' : 'black'
+                        }}
                     >
                         {localeString('views.OpenChannel.nodePubkey')}
                     </Text>
@@ -249,7 +253,10 @@ export default class OpenChannel extends React.Component<
                     />
 
                     <Text
-                        style={{ color: theme === 'dark' ? 'white' : 'black' }}
+                        style={{
+                            textDecorationLine: 'underline',
+                            color: theme === 'dark' ? 'white' : 'black'
+                        }}
                     >
                         {localeString('views.OpenChannel.host')}
                     </Text>
@@ -270,7 +277,10 @@ export default class OpenChannel extends React.Component<
                     />
 
                     <Text
-                        style={{ color: theme === 'dark' ? 'white' : 'black' }}
+                        style={{
+                            textDecorationLine: 'underline',
+                            color: theme === 'dark' ? 'white' : 'black'
+                        }}
                     >
                         {localeString('views.OpenChannel.localAmt')}
                     </Text>
@@ -294,7 +304,10 @@ export default class OpenChannel extends React.Component<
                     />
 
                     <Text
-                        style={{ color: theme === 'dark' ? 'white' : 'black' }}
+                        style={{
+                            textDecorationLine: 'underline',
+                            color: theme === 'dark' ? 'white' : 'black'
+                        }}
                     >
                         {localeString('views.OpenChannel.numConf')}
                     </Text>
@@ -318,7 +331,10 @@ export default class OpenChannel extends React.Component<
                     />
 
                     <Text
-                        style={{ color: theme === 'dark' ? 'white' : 'black' }}
+                        style={{
+                            textDecorationLine: 'underline',
+                            color: theme === 'dark' ? 'white' : 'black'
+                        }}
                     >
                         {localeString('views.OpenChannel.satsPerByte')}
                     </Text>
@@ -336,6 +352,7 @@ export default class OpenChannel extends React.Component<
                         placeholderTextColor="gray"
                         editable={!openingChannel}
                     />
+                    <UTXOPicker />
 
                     <View style={{ padding: 10 }}>
                         <CheckBox

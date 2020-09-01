@@ -303,6 +303,7 @@ class CLightningREST extends LND {
             ppm: data.fee_rate
         });
     getRoutes = () => this.getRequest('N/A');
+    getUTXOs = () => this.getRequest('/v1/listFunds');
 
     supportsMPP = () => false;
 }
@@ -341,6 +342,7 @@ class LndHub extends LND {
             memo: data.memo
         });
     getNewAddress = () => this.getRequest('/getbtc');
+    getUTXOs = () => this.getRequest('N/A');
     payLightningInvoice = (data: any) =>
         this.postRequest('/payinvoice', {
             invoice: data.payment_request,
@@ -686,6 +688,7 @@ class RESTUtils {
     setFees = (...args) => this.call('setFees', args);
     getRoutes = (...args) => this.call('getRoutes', args);
     getForwardingHistory = (...args) => this.call('getForwardingHistory', args);
+    getUTXOs = (...args) => this.call('getUTXOs', args);
     // lndhub
     createAccount = (...args) => this.call('createAccount', args);
     login = (...args) => this.call('login', args);
