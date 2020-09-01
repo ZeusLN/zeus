@@ -30,6 +30,7 @@ interface UTXOPickerProps {
 interface UTXOPickerState {
     status: string;
     utxosSelected: Array<any>;
+    utxosSet: Array<any>;
     showUtxoModal: boolean;
 }
 
@@ -49,13 +50,22 @@ export default class UTXOPicker extends React.Component<
     state = {
         status: 'unselected',
         utxosSelected: [],
+        utxosSet: [],
         showUtxoModal: false
     };
 
     openPicker() {
         stores.utxosStore.getUTXOs();
         this.setState({
+            utxosSelected: [],
             showUtxoModal: true
+        });
+    }
+
+    clearSelection() {
+        this.setState({
+            utxosSelected: [],
+            utxosSet: []
         });
     }
 
@@ -86,7 +96,7 @@ export default class UTXOPicker extends React.Component<
 
     render() {
         const { title, selectedValue, displayValue } = this.props;
-        const { utxosSelected, showUtxoModal } = this.state;
+        const { utxosSelected, utxosSet, showUtxoModal } = this.state;
         const UTXOStore = stores.utxosStore;
         const SettingsStore = stores.settingsStore;
         const { utxos, loading } = UTXOStore;
@@ -221,7 +231,9 @@ export default class UTXOPicker extends React.Component<
                                             )}
                                             onPress={() =>
                                                 this.setState({
-                                                    showUtxoModal: false
+                                                    showUtxoModal: false,
+                                                    utxosSet: this.state
+                                                        .utxosSelected
                                                 })
                                             }
                                         />
@@ -259,7 +271,7 @@ export default class UTXOPicker extends React.Component<
                             selectedValue={selectedValue}
                             onValueChange={(itemValue: string) => {
                                 if (itemValue === 'Clear selection') {
-                                    this.setState({ utxosSelected: [] });
+                                    this.clearSelection();
                                 } else if (
                                     itemValue === 'Select UTXOs to use'
                                 ) {
@@ -296,9 +308,7 @@ export default class UTXOPicker extends React.Component<
                                     },
                                     buttonIndex => {
                                         if (buttonIndex == 2) {
-                                            this.setState({
-                                                utxosSelected: []
-                                            });
+                                            this.clearSelection();
                                         } else if (buttonIndex == 1) {
                                             this.openPicker();
                                         }
@@ -311,7 +321,7 @@ export default class UTXOPicker extends React.Component<
                                     color: theme === 'dark' ? 'white' : 'black'
                                 }}
                             >
-                                {utxosSelected.length > 0
+                                {utxosSet.length > 0
                                     ? this.displayValues()
                                     : 'No UTXOs selected'}
                             </Text>
