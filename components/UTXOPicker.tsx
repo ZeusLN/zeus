@@ -163,65 +163,53 @@ export default class UTXOPicker extends React.Component<
 
                                     <FlatList
                                         data={utxos}
-                                        renderItem={({ item }: any) => {
-                                            console.log('!');
-                                            console.log(item);
-                                            return (
-                                                <ListItem
-                                                    key={item.txid}
-                                                    title={`${item.txid}:${item.output}`}
-                                                    subtitle={`${item.value.toString()} ${localeString(
-                                                        'views.Send.satoshis'
-                                                    )}`}
-                                                    containerStyle={{
-                                                        borderBottomWidth: 0,
-                                                        backgroundColor:
-                                                            theme === 'dark'
-                                                                ? 'black'
-                                                                : 'white'
-                                                    }}
-                                                    leftElement={
-                                                        utxosSelected.includes(
-                                                            item.txid
-                                                        )
-                                                            ? theme === 'dark'
-                                                                ? Icon(
-                                                                      SelectedDark
-                                                                  )
-                                                                : Icon(
-                                                                      SelectedLight
-                                                                  )
-                                                            : theme === 'dark'
-                                                            ? Icon(
-                                                                  UnselectedDark
-                                                              )
+                                        renderItem={({ item }: any) => (
+                                            <ListItem
+                                                key={item.txid}
+                                                title={`${item.txid}:${item.output}`}
+                                                subtitle={`${item.value.toString()} ${localeString(
+                                                    'views.Send.satoshis'
+                                                )}`}
+                                                containerStyle={{
+                                                    borderBottomWidth: 0,
+                                                    backgroundColor:
+                                                        theme === 'dark'
+                                                            ? 'black'
+                                                            : 'white'
+                                                }}
+                                                leftElement={
+                                                    utxosSelected.includes(
+                                                        item.txid
+                                                    )
+                                                        ? theme === 'dark'
+                                                            ? Icon(SelectedDark)
                                                             : Icon(
-                                                                  UnselectedLight
+                                                                  SelectedLight
                                                               )
-                                                    }
-                                                    onPress={() =>
-                                                        this.toggleItem(item)
-                                                    }
-                                                    titleStyle={{
-                                                        color:
-                                                            theme === 'dark'
-                                                                ? 'white'
-                                                                : 'black'
-                                                    }}
-                                                    subtitleStyle={{
-                                                        color:
-                                                            theme === 'dark'
-                                                                ? 'gray'
-                                                                : '#8a8999'
-                                                    }}
-                                                />
-                                            );
-                                        }}
+                                                        : theme === 'dark'
+                                                        ? Icon(UnselectedDark)
+                                                        : Icon(UnselectedLight)
+                                                }
+                                                onPress={() =>
+                                                    this.toggleItem(item)
+                                                }
+                                                titleStyle={{
+                                                    color:
+                                                        theme === 'dark'
+                                                            ? 'white'
+                                                            : 'black'
+                                                }}
+                                                subtitleStyle={{
+                                                    color:
+                                                        theme === 'dark'
+                                                            ? 'gray'
+                                                            : '#8a8999'
+                                                }}
+                                            />
+                                        )}
                                         keyExtractor={item => item.txid}
-                                        // ItemSeparatorComponent={this.renderSeparator}
                                         onEndReachedThreshold={50}
                                         refreshing={loading}
-                                        // onRefresh={() => refresh()}
                                     />
 
                                     <View style={styles.button}>
