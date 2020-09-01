@@ -320,5 +320,5 @@
     "views.Transaction.destAddresses": "Destination Addresses",
     "components.UTXOPicker.modal.title": "Select UTXOs to use",
     "components.UTXOPicker.modal.description": "Select the UTXOs to be used in this operation. You may want to only use specific UTXOs to preserve your privacy.",
-    "components.UTXOPicker.modal.set": "Set UTXOs",
+    "components.UTXOPicker.modal.set": "Set UTXOs"
 }
