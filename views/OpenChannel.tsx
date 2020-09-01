@@ -12,7 +12,9 @@ import { inject, observer } from 'mobx-react';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import FeeTable from './../components/FeeTable';
 import UTXOPicker from './../components/UTXOPicker';
+
 import NodeUriUtils from './../utils/NodeUriUtils';
+import RESTUtils from './../utils/RESTUtils';
 import { localeString } from './../utils/LocaleUtils';
 
 import ChannelsStore from './../stores/ChannelsStore';
@@ -352,7 +354,8 @@ export default class OpenChannel extends React.Component<
                         placeholderTextColor="gray"
                         editable={!openingChannel}
                     />
-                    <UTXOPicker />
+
+                    {RESTUtils.supportsCoinControl() && <UTXOPicker />}
 
                     <View style={{ padding: 10 }}>
                         <CheckBox

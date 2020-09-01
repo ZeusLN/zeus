@@ -224,6 +224,7 @@ class LND {
     supportsChannelManagement = () => true;
     supportsCustomHostProtocol = () => false;
     supportsMPP = () => this.supports('v0.11.0');
+    supportsCoinControl = () => false;
 }
 
 class CLightningREST extends LND {
@@ -306,6 +307,7 @@ class CLightningREST extends LND {
     getUTXOs = () => this.getRequest('/v1/listFunds');
 
     supportsMPP = () => false;
+    supportsCoinControl = () => true;
 }
 
 class LndHub extends LND {
@@ -699,6 +701,7 @@ class RESTUtils {
     // let users specify http/https
     supportsCustomHostProtocol = () => this.call('supportsCustomHostProtocol');
     supportsMPP = () => this.call('supportsMPP');
+    supportsCoinControl = () => this.call('supportsCoinControl');
 }
 
 const restUtils = new RESTUtils();
