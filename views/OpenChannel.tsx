@@ -37,6 +37,7 @@ interface OpenChannelState {
     private: boolean;
     host: string;
     suggestImport: string;
+    utxos: Array<string>;
 }
 
 @inject('ChannelsStore', 'SettingsStore', 'FeeStore')
@@ -61,7 +62,8 @@ export default class OpenChannel extends React.Component<
             sat_per_byte: '2',
             private: false,
             host: host || '',
-            suggestImport: ''
+            suggestImport: '',
+            utxos: []
         };
     }
 
@@ -74,6 +76,8 @@ export default class OpenChannel extends React.Component<
             });
         }
     }
+
+    selectUTXOs = (utxos: Array<string>) => this.setState({ utxos });
 
     importClipboard = () => {
         const { pubkey, host } = NodeUriUtils.processNodeUri(
@@ -355,7 +359,9 @@ export default class OpenChannel extends React.Component<
                         editable={!openingChannel}
                     />
 
-                    {RESTUtils.supportsCoinControl() && <UTXOPicker />}
+                    {RESTUtils.supportsCoinControl() && (
+                        <UTXOPicker onValueChange={this.selectUTXOs} />
+                    )}
 
                     <View style={{ padding: 10 }}>
                         <CheckBox

@@ -25,6 +25,7 @@ interface UTXOPickerProps {
     title: string;
     selectedValue: string | boolean;
     displayValue?: string;
+    onValueChange: (value: any) => void;
 }
 
 interface UTXOPickerState {
@@ -83,11 +84,12 @@ export default class UTXOPicker extends React.Component<
     toggleItem(item: any) {
         const { utxosSelected } = this.state;
         let newArray = utxosSelected;
-        if (!utxosSelected.includes(item.txid)) {
-            newArray.push(item.txid);
+        const id = `${item.txid}:${item.output}`;
+        if (!utxosSelected.includes(id)) {
+            newArray.push(id);
         } else {
             newArray = remove(newArray, function(n) {
-                return n !== item.txid;
+                return n !== id;
             });
         }
 
@@ -95,7 +97,12 @@ export default class UTXOPicker extends React.Component<
     }
 
     render() {
-        const { title, selectedValue, displayValue } = this.props;
+        const {
+            title,
+            selectedValue,
+            displayValue,
+            onValueChange
+        } = this.props;
         const { utxosSelected, utxosSet, showUtxoModal } = this.state;
         const UTXOStore = stores.utxosStore;
         const SettingsStore = stores.settingsStore;
@@ -179,7 +186,7 @@ export default class UTXOPicker extends React.Component<
                                                 }}
                                                 leftElement={
                                                     utxosSelected.includes(
-                                                        item.txid
+                                                        `${item.txid}:${item.output}`
                                                     )
                                                         ? theme === 'dark'
                                                             ? Icon(SelectedDark)
@@ -217,13 +224,16 @@ export default class UTXOPicker extends React.Component<
                                             title={localeString(
                                                 'components.UTXOPicker.modal.set'
                                             )}
-                                            onPress={() =>
+                                            onPress={() => {
+                                                const selected = this.state
+                                                    .utxosSelected;
                                                 this.setState({
                                                     showUtxoModal: false,
-                                                    utxosSet: this.state
-                                                        .utxosSelected
-                                                })
-                                            }
+                                                    utxosSet: selected
+                                                });
+
+                                                onValueChange(selected);
+                                            }}
                                         />
                                     </View>
 
