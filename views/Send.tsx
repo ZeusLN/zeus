@@ -19,6 +19,7 @@ import SettingsStore from './../stores/SettingsStore';
 import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
 import FiatStore from './../stores/FiatStore';
 
+import UTXOPicker from './../components/UTXOPicker';
 import FeeTable from './../components/FeeTable';
 
 import RESTUtils from './../utils/RESTUtils';
@@ -332,6 +333,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     }
                                     placeholderTextColor="gray"
                                 />
+                                {RESTUtils.supportsCoinControl() && (
+                                    <UTXOPicker />
+                                )}
                                 <View style={styles.button}>
                                     <Button
                                         title={localeString(
