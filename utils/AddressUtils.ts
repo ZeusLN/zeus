@@ -22,21 +22,22 @@ class AddressUtils {
         // payment requests prefixed with 'lightning:'
 
         // handle BTCPay invoices with amounts embedded
-        if (input.includes('bitcoin:') && input.includes('amount=')) {
+        if (input.includes('bitcoin:')) {
             const btcAddressAndParams = input.split('bitcoin:')[1];
             const [btcAddress, params] = btcAddressAndParams.split('?');
 
             let result = {};
-            params.split('&').forEach(function(part) {
-                const item = part.split('=');
-                result[item[0]] = decodeURIComponent(item[1]);
-            });
+            params &&
+                params.split('&').forEach(function(part) {
+                    const item = part.split('=');
+                    result[item[0]] = decodeURIComponent(item[1]);
+                });
 
             value = btcAddress;
-            amount = Number(result.amount) * satoshisPerBTC;
-            amount = amount.toString();
-        } else if (input.includes('bitcoin:')) {
-            value = input.split('bitcoin:')[1];
+            if (result.amount) {
+                amount = Number(result.amount) * satoshisPerBTC;
+                amount = amount.toString();
+            }
         } else if (input.includes('lightning:')) {
             value = input.split('lightning:')[1];
         } else if (input.includes('LIGHTNING:')) {
