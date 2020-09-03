@@ -158,6 +158,15 @@ describe('AddressUtils', () => {
                     value: '34K6tvoWM7k2ujeXVuimv29WyAsqzhWofb',
                     amount: undefined
                 });
+
+                expect(
+                    AddressUtils.processSendAddress(
+                        'bitcoin:34K6tvoWM7k2ujeXVuimv29WyAsqzhWofd?label=BitMEX%20Deposit%20-%20randomUser'
+                    )
+                ).toEqual({
+                    value: '34K6tvoWM7k2ujeXVuimv29WyAsqzhWofd',
+                    amount: undefined
+                });
             });
         });
 

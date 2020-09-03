@@ -47,14 +47,18 @@ const ForwardingHistory = ({ events, lurkerMode, getAmount, aliasesById }) => {
             }`
         );
         eventsDisplay.push(
-            `${localeString('views.NodeInfo.ForwardingHistory.srcChannelId')}: ${
+            `${localeString(
+                'views.NodeInfo.ForwardingHistory.srcChannelId'
+            )}: ${
                 lurkerMode
                     ? PrivacyUtils.hideValue(event.chan_id_in, 10)
                     : aliasesById[event.chan_id_in] || event.chan_id_in
             }`
         );
         eventsDisplay.push(
-            `${localeString('views.NodeInfo.ForwardingHistory.dstChannelId')}: ${
+            `${localeString(
+                'views.NodeInfo.ForwardingHistory.dstChannelId'
+            )}: ${
                 lurkerMode
                     ? PrivacyUtils.hideValue(event.chan_id_out, 10)
                     : aliasesById[event.chan_id_out] || event.chan_id_out
