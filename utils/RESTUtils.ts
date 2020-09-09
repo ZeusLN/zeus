@@ -56,10 +56,17 @@ class LND {
         return calls[id];
     };
 
-    supports = (supportedVersion: string) => {
+    supports = (supportedVersion: string, apiVersion?: string) => {
         const { nodeInfo } = stores.nodeInfoStore;
-        const { version } = nodeInfo;
-        return VersionUtils.isSupportedVersion(version, supportedVersion);
+        const { version, api_version } = nodeInfo;
+        const { isSupportedVersion } = VersionUtils;
+        if (apiVersion) {
+            return (
+                isSupportedVersion(version, supportedVersion) &&
+                isSupportedVersion(api_version, apiVersion)
+            );
+        }
+        return isSupportedVersion(version, supportedVersion);
     };
 
     wsReq = (route: string, method: string, data?: any) => {
@@ -307,7 +314,7 @@ class CLightningREST extends LND {
     getUTXOs = () => this.getRequest('/v1/listFunds');
 
     supportsMPP = () => false;
-    supportsCoinControl = () => true;
+    supportsCoinControl = () => this.supports('v0.9.0', 'v0.4.0');
 }
 
 class LndHub extends LND {

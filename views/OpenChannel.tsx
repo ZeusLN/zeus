@@ -77,7 +77,8 @@ export default class OpenChannel extends React.Component<
         }
     }
 
-    selectUTXOs = (utxos: Array<string>) => this.setState({ utxos });
+    selectUTXOs = (utxos: Array<string>) =>
+        this.setState({ utxos, local_funding_amount: 'all' });
 
     importClipboard = () => {
         const { pubkey, host } = NodeUriUtils.processNodeUri(
