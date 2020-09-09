@@ -6,11 +6,12 @@ import { getParams as getlnurlParams, findlnurl } from 'js-lnurl';
 const { nodeInfoStore, invoicesStore, settingsStore } = stores;
 
 export default async function(data: string): Promise<any> {
-    const { testnet } = nodeInfoStore;
+    const { nodeInfo } = nodeInfoStore;
+    const { isTestNet, isRegTest } = nodeInfo;
     const { implementation } = settingsStore;
     const { value, amount } = AddressUtils.processSendAddress(data);
 
-    if (AddressUtils.isValidBitcoinAddress(value, testnet)) {
+    if (AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest)) {
         return [
             'Send',
             {
