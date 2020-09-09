@@ -15,6 +15,7 @@ import handleAnything from './../utils/handleAnything';
 import InvoicesStore from './../stores/InvoicesStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
 import TransactionsStore from './../stores/TransactionsStore';
+import BalanceStore from './../stores/BalanceStore';
 import SettingsStore from './../stores/SettingsStore';
 import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
 import FiatStore from './../stores/FiatStore';
@@ -43,12 +44,15 @@ interface SendState {
     amount: string;
     fee: string;
     error_msg: string;
+    utxos: Array<string>;
+    utxoBalance: number;
 }
 
 @inject(
     'InvoicesStore',
     'NodeInfoStore',
     'TransactionsStore',
+    'BalanceStore',
     'SettingsStore',
     'UnitsStore',
     'FiatStore'
@@ -68,7 +72,9 @@ export default class Send extends React.Component<SendProps, SendState> {
             transactionType: transactionType,
             destination: destination || '',
             amount: amount || '',
-            fee: '2'
+            fee: '2',
+            utxos: [],
+            utxoBalance: 0
         };
     }
 
@@ -84,6 +90,9 @@ export default class Send extends React.Component<SendProps, SendState> {
             this.validateAddress(this.state.destination);
         }
     }
+
+    selectUTXOs = (utxos: Array<string>, utxoBalance: number) =>
+        this.setState({ utxos, amount: 'all', utxoBalance });
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
         const { navigation, SettingsStore } = nextProps;
@@ -126,13 +135,24 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     sendCoins = (satAmount: string | number) => {
         const { TransactionsStore, navigation } = this.props;
-        const { destination, fee } = this.state;
+        const { destination, fee, utxos } = this.state;
 
-        TransactionsStore.sendCoins({
-            addr: destination,
-            sat_per_byte: fee,
-            amount: satAmount.toString()
-        });
+        let request;
+        if (utxos && utxos.length > 0) {
+            request = {
+                addr: destination,
+                sat_per_byte: fee,
+                amount: satAmount.toString(),
+                utxos
+            };
+        } else {
+            request = {
+                addr: destination,
+                sat_per_byte: fee,
+                amount: satAmount.toString()
+            };
+        }
+        TransactionsStore.sendCoins(request);
         navigation.navigate('SendingOnChain');
     };
 
@@ -150,15 +170,23 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     render() {
-        const { SettingsStore, UnitsStore, FiatStore, navigation } = this.props;
+        const {
+            SettingsStore,
+            UnitsStore,
+            FiatStore,
+            BalanceStore,
+            navigation
+        } = this.props;
         const {
             isValid,
             transactionType,
             destination,
             amount,
             fee,
-            error_msg
+            error_msg,
+            utxoBalance
         } = this.state;
+        const { confirmedBlockchainBalance } = BalanceStore;
         const { implementation, settings } = SettingsStore;
         const { theme, fiat } = settings;
         const { units, changeUnits } = UnitsStore;
@@ -217,7 +245,10 @@ export default class Send extends React.Component<SendProps, SendState> {
                 />
                 <View style={styles.content}>
                     <Text
-                        style={{ color: theme === 'dark' ? 'white' : 'black' }}
+                        style={{
+                            textDecorationLine: 'underline',
+                            color: theme === 'dark' ? 'white' : 'black'
+                        }}
                     >
                         {paymentOptions.join(', ')}
                     </Text>
@@ -256,6 +287,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         !RESTUtils.supportsOnchainSends() && (
                             <Text
                                 style={{
+                                    textDecorationLine: 'underline',
                                     color: theme === 'dark' ? 'white' : 'black'
                                 }}
                             >
@@ -269,6 +301,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 <TouchableOpacity onPress={() => changeUnits()}>
                                     <Text
                                         style={{
+                                            textDecorationLine: 'underline',
                                             color:
                                                 theme === 'dark'
                                                     ? 'white'
@@ -292,12 +325,13 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     }
                                     placeholderTextColor="gray"
                                 />
-                                {units !== 'sats' && (
+                                {units !== 'sats' && amount !== 'all' && (
                                     <TouchableOpacity
                                         onPress={() => changeUnits()}
                                     >
                                         <Text
                                             style={{
+                                                textDecorationLine: 'underline',
                                                 color:
                                                     theme === 'dark'
                                                         ? 'white'
@@ -311,8 +345,27 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         </Text>
                                     </TouchableOpacity>
                                 )}
+                                {amount === 'all' && (
+                                    <Text
+                                        style={{
+                                            color:
+                                                theme === 'dark'
+                                                    ? 'white'
+                                                    : 'black'
+                                        }}
+                                    >
+                                        {`${
+                                            utxoBalance > 0
+                                                ? utxoBalance
+                                                : confirmedBlockchainBalance
+                                        } ${localeString(
+                                            'views.Receive.satoshis'
+                                        )}`}
+                                    </Text>
+                                )}
                                 <Text
                                     style={{
+                                        textDecorationLine: 'underline',
                                         color:
                                             theme === 'dark' ? 'white' : 'black'
                                     }}
@@ -334,7 +387,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     placeholderTextColor="gray"
                                 />
                                 {RESTUtils.supportsCoinControl() && (
-                                    <UTXOPicker />
+                                    <UTXOPicker
+                                        onValueChange={this.selectUTXOs}
+                                    />
                                 )}
                                 <View style={styles.button}>
                                     <Button
@@ -363,6 +418,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <TouchableOpacity onPress={() => changeUnits()}>
                                 <Text
                                     style={{
+                                        textDecorationLine: 'underline',
                                         color:
                                             theme === 'dark' ? 'white' : 'black'
                                     }}
@@ -388,6 +444,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 <TouchableOpacity onPress={() => changeUnits()}>
                                     <Text
                                         style={{
+                                            textDecorationLine: 'underline',
                                             color:
                                                 theme === 'dark'
                                                     ? 'white'
@@ -422,6 +479,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <React.Fragment>
                                 <Text
                                     style={{
+                                        textDecorationLine: 'underline',
                                         color:
                                             theme === 'dark' ? 'white' : 'black'
                                     }}
