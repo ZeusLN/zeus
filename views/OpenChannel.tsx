@@ -11,17 +11,22 @@ import {
 import { inject, observer } from 'mobx-react';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import FeeTable from './../components/FeeTable';
+import UTXOPicker from './../components/UTXOPicker';
+
 import NodeUriUtils from './../utils/NodeUriUtils';
+import RESTUtils from './../utils/RESTUtils';
 import { localeString } from './../utils/LocaleUtils';
 
 import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
 import FeeStore from './../stores/FeeStore';
+import BalanceStore from './../stores/BalanceStore';
 
 interface OpenChannelProps {
     exitSetup: any;
     navigation: any;
     ChannelsStore: ChannelsStore;
+    BalanceStore: BalanceStore;
     SettingsStore: SettingsStore;
     FeeStore: FeeStore;
 }
@@ -34,9 +39,11 @@ interface OpenChannelState {
     private: boolean;
     host: string;
     suggestImport: string;
+    utxos: Array<string>;
+    utxoBalance: number;
 }
 
-@inject('ChannelsStore', 'SettingsStore', 'FeeStore')
+@inject('ChannelsStore', 'SettingsStore', 'FeeStore', 'BalanceStore')
 @observer
 export default class OpenChannel extends React.Component<
     OpenChannelProps,
@@ -58,7 +65,9 @@ export default class OpenChannel extends React.Component<
             sat_per_byte: '2',
             private: false,
             host: host || '',
-            suggestImport: ''
+            suggestImport: '',
+            utxos: [],
+            utxoBalance: 0
         };
     }
 
@@ -71,6 +80,13 @@ export default class OpenChannel extends React.Component<
             });
         }
     }
+
+    selectUTXOs = (utxos: Array<string>, utxoBalance: number) =>
+        this.setState({
+            utxos,
+            local_funding_amount: 'all',
+            utxoBalance: utxoBalance
+        });
 
     importClipboard = () => {
         const { pubkey, host } = NodeUriUtils.processNodeUri(
@@ -114,6 +130,7 @@ export default class OpenChannel extends React.Component<
         const {
             ChannelsStore,
             SettingsStore,
+            BalanceStore,
             FeeStore,
             navigation
         } = this.props;
@@ -123,7 +140,8 @@ export default class OpenChannel extends React.Component<
             min_confs,
             host,
             sat_per_byte,
-            suggestImport
+            suggestImport,
+            utxoBalance
         } = this.state;
         const privateChannel = this.state.private;
 
@@ -136,6 +154,7 @@ export default class OpenChannel extends React.Component<
             peerSuccess,
             channelSuccess
         } = ChannelsStore;
+        const { confirmedBlockchainBalance } = BalanceStore;
         const { settings } = SettingsStore;
         const { theme } = settings;
 
@@ -228,7 +247,10 @@ export default class OpenChannel extends React.Component<
                     )}
 
                     <Text
-                        style={{ color: theme === 'dark' ? 'white' : 'black' }}
+                        style={{
+                            textDecorationLine: 'underline',
+                            color: theme === 'dark' ? 'white' : 'black'
+                        }}
                     >
                         {localeString('views.OpenChannel.nodePubkey')}
                     </Text>
@@ -249,7 +271,10 @@ export default class OpenChannel extends React.Component<
                     />
 
                     <Text
-                        style={{ color: theme === 'dark' ? 'white' : 'black' }}
+                        style={{
+                            textDecorationLine: 'underline',
+                            color: theme === 'dark' ? 'white' : 'black'
+                        }}
                     >
                         {localeString('views.OpenChannel.host')}
                     </Text>
@@ -270,7 +295,10 @@ export default class OpenChannel extends React.Component<
                     />
 
                     <Text
-                        style={{ color: theme === 'dark' ? 'white' : 'black' }}
+                        style={{
+                            textDecorationLine: 'underline',
+                            color: theme === 'dark' ? 'white' : 'black'
+                        }}
                     >
                         {localeString('views.OpenChannel.localAmt')}
                     </Text>
@@ -292,9 +320,25 @@ export default class OpenChannel extends React.Component<
                         placeholderTextColor="gray"
                         editable={!openingChannel}
                     />
+                    {local_funding_amount === 'all' && (
+                        <Text
+                            style={{
+                                color: theme === 'dark' ? 'white' : 'black'
+                            }}
+                        >
+                            {`${
+                                utxoBalance > 0
+                                    ? utxoBalance
+                                    : confirmedBlockchainBalance
+                            } ${localeString('views.Receive.satoshis')}`}
+                        </Text>
+                    )}
 
                     <Text
-                        style={{ color: theme === 'dark' ? 'white' : 'black' }}
+                        style={{
+                            textDecorationLine: 'underline',
+                            color: theme === 'dark' ? 'white' : 'black'
+                        }}
                     >
                         {localeString('views.OpenChannel.numConf')}
                     </Text>
@@ -318,7 +362,10 @@ export default class OpenChannel extends React.Component<
                     />
 
                     <Text
-                        style={{ color: theme === 'dark' ? 'white' : 'black' }}
+                        style={{
+                            textDecorationLine: 'underline',
+                            color: theme === 'dark' ? 'white' : 'black'
+                        }}
                     >
                         {localeString('views.OpenChannel.satsPerByte')}
                     </Text>
@@ -336,6 +383,10 @@ export default class OpenChannel extends React.Component<
                         placeholderTextColor="gray"
                         editable={!openingChannel}
                     />
+
+                    {RESTUtils.supportsCoinControl() && (
+                        <UTXOPicker onValueChange={this.selectUTXOs} />
+                    )}
 
                     <View style={{ padding: 10 }}>
                         <CheckBox

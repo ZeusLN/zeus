@@ -317,5 +317,8 @@
     "views.Transaction.status": "Status",
     "views.Transaction.timestamp": "Timestamp",
     "views.Transaction.destAddress": "Destination Address",
-    "views.Transaction.destAddresses": "Destination Addresses"
+    "views.Transaction.destAddresses": "Destination Addresses",
+    "components.UTXOPicker.modal.title": "Select UTXOs to use",
+    "components.UTXOPicker.modal.description": "Select the UTXOs to be used in this operation. You may want to only use specific UTXOs to preserve your privacy.",
+    "components.UTXOPicker.modal.set": "Set UTXOs"
 }

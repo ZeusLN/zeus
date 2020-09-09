@@ -21,6 +21,7 @@ export default class NodeInfo extends BaseModel {
     @observable network?: string;
     @observable blockheight?: number;
     address?: Array<any>;
+    api_version?: string;
 
     @computed public get isTestNet(): boolean {
         return this.testnet || this.network === 'testnet';

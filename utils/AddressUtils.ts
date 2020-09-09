@@ -9,7 +9,7 @@ const lnPubKey = /^[a-f0-9]{66}$/;
 
 /* testnet */
 const btcNonBechTestnet = /^[2][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
-const btcBechTestnet = /^(bc1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
+const btcBechTestnet = /^(bc1|bcrt1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
 const btcBechPubkeyScriptHashTestnet = /^(tb1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
 
 /* lndhub */

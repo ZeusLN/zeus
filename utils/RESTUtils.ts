@@ -60,6 +60,7 @@ class RESTUtils {
     setFees = (...args) => this.call('setFees', args);
     getRoutes = (...args) => this.call('getRoutes', args);
     getForwardingHistory = (...args) => this.call('getForwardingHistory', args);
+    getUTXOs = (...args) => this.call('getUTXOs', args);
     // lndhub
     createAccount = (...args) => this.call('createAccount', args);
     login = (...args) => this.call('login', args);
@@ -70,6 +71,7 @@ class RESTUtils {
     // let users specify http/https
     supportsCustomHostProtocol = () => this.call('supportsCustomHostProtocol');
     supportsMPP = () => this.call('supportsMPP');
+    supportsCoinControl = () => this.call('supportsCoinControl');
 }
 
 const restUtils = new RESTUtils();
