@@ -77,8 +77,8 @@ export default class ChannelView extends React.Component<
                 );
             }
         } else if (channelId) {
-            // c-lightning
-            ChannelsStore.closeChannel(null, channelId);
+            // c-lightning, eclair
+            ChannelsStore.closeChannel(null, channelId, satPerByte, forceClose);
         }
 
         navigation.navigate('Wallet');

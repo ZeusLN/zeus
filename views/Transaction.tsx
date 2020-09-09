@@ -119,7 +119,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                 </View>
 
                 <View style={styles.content}>
-                    {total_fees && (
+                    {total_fees ? (
                         <View>
                             <Text
                                 style={
@@ -142,7 +142,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                 </Text>
                             </TouchableOpacity>
                         </View>
-                    )}
+                    ) : null}
 
                     <Text
                         style={

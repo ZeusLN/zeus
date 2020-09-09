@@ -108,7 +108,11 @@ export default class SendingLightning extends React.Component<
                             style={{
                                 color: 'white',
                                 padding: 20,
-                                fontSize: 40
+                                fontSize:
+                                    (payment_error || error_msg || '').length >
+                                    100
+                                        ? 20
+                                        : 40
                             }}
                         >
                             {localeString('general.error')}:{' '}

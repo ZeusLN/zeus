@@ -133,8 +133,8 @@ export default class ChannelsStore {
 
         let urlParams: Array<string> = [];
         if (channelId) {
-            // c-lightning
-            urlParams = [channelId];
+            // c-lightning, eclair
+            urlParams = [channelId, forceClose];
         } else if (request) {
             // lnd
             const { funding_txid_str, output_index } = request;

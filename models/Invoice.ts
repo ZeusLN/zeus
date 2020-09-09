@@ -36,7 +36,7 @@ export default class Invoice extends BaseModel {
     public description_hash: string;
     public r_preimage: string;
     public cltv_expiry: string;
-    // c-lightning
+    // c-lightning, eclair
     public bolt11: string;
     public label: string;
     public description: string;

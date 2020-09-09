@@ -105,7 +105,7 @@ export default class FeeStore {
         };
 
         if (channelId) {
-            // c-lightning
+            // c-lightning, eclair
             data.channelId = channelId;
         } else if (channelPoint) {
             // lnd
