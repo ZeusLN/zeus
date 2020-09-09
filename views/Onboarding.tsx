@@ -1,6 +1,5 @@
 import * as React from 'react';
 import {
-    Platform,
     StyleSheet,
     Text,
     View,
@@ -38,7 +37,7 @@ interface OnboardingState {
 }
 
 interface ButtonProps {
-    title: string;
+    title?: string;
 }
 
 @inject('SettingsStore')
@@ -47,6 +46,8 @@ export default class Onboarding extends React.Component<
     OnboardingProps,
     OnboardingState
 > {
+    refs: any;
+
     state = {
         index: 0
     };

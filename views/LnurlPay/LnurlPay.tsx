@@ -60,21 +60,16 @@ export default class LnurlPay extends React.Component<
     }
 
     sendValues() {
-        const {
-            navigation,
-            InvoicesStore,
-            LnurlPayStore,
-            SettingsStore
-        } = this.props;
+        const { navigation, InvoicesStore, LnurlPayStore } = this.props;
         const { domain, amount } = this.state;
         const lnurl = navigation.getParam('lnurlParams');
         const u = url.parse(lnurl.callback);
         const qs = querystring.parse(u.query);
-        qs.amount = parseInt(parseFloat(amount) * 1000);
+        qs.amount = parseInt((parseFloat(amount) * 1000).toString());
         u.search = querystring.stringify(qs);
         u.query = querystring.stringify(qs);
 
-        RNFetchBlob.fetch('get', url.format(u), null)
+        RNFetchBlob.fetch('get', url.format(u))
             .then((response: any) => {
                 try {
                     const data = response.json();

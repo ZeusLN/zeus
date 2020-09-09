@@ -1,5 +1,4 @@
 import { action, reaction, observable } from 'mobx';
-import Transaction from './../models/Transaction';
 import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
 
