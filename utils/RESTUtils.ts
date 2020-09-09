@@ -347,7 +347,7 @@ class CLightningREST extends LND {
     getUTXOs = () => this.getRequest('/v1/listFunds');
 
     supportsMPP = () => false;
-    supportsCoinControl = () => this.supports('v0.9.0', 'v0.4.0');
+    supportsCoinControl = () => this.supports('v0.8.2', 'v0.4.0');
 }
 
 class LndHub extends LND {
