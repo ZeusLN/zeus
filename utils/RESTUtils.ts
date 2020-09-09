@@ -284,7 +284,14 @@ class CLightningREST extends LND {
     getPayments = () => this.getRequest('/v1/pay/listPayments');
     getNewAddress = () => this.getRequest('/v1/newaddr');
     openChannel = (data: OpenChannelRequest) =>
-        this.postRequest('/v1/channel/openChannel/', data);
+        this.postRequest('/v1/channel/openChannel/', {
+            id: data.id,
+            satoshis: data.satoshis,
+            feeRate: data.sat_per_byte,
+            annnounce: data.announce,
+            minfConf: data.min_confs,
+            utxos: data.utxos
+        });
     connectPeer = (data: any) =>
         this.postRequest('/v1/peer/connect', {
             id: `${data.addr.pubkey}@${data.addr.host}`
