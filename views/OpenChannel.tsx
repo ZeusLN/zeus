@@ -20,11 +20,13 @@ import { localeString } from './../utils/LocaleUtils';
 import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
 import FeeStore from './../stores/FeeStore';
+import BalanceStore from './../stores/BalanceStore';
 
 interface OpenChannelProps {
     exitSetup: any;
     navigation: any;
     ChannelsStore: ChannelsStore;
+    BalanceStore: BalanceStore;
     SettingsStore: SettingsStore;
     FeeStore: FeeStore;
 }
@@ -38,9 +40,10 @@ interface OpenChannelState {
     host: string;
     suggestImport: string;
     utxos: Array<string>;
+    utxoBalance: number;
 }
 
-@inject('ChannelsStore', 'SettingsStore', 'FeeStore')
+@inject('ChannelsStore', 'SettingsStore', 'FeeStore', 'BalanceStore')
 @observer
 export default class OpenChannel extends React.Component<
     OpenChannelProps,
@@ -63,7 +66,8 @@ export default class OpenChannel extends React.Component<
             private: false,
             host: host || '',
             suggestImport: '',
-            utxos: []
+            utxos: [],
+            utxoBalance: 0
         };
     }
 
@@ -77,8 +81,12 @@ export default class OpenChannel extends React.Component<
         }
     }
 
-    selectUTXOs = (utxos: Array<string>) =>
-        this.setState({ utxos, local_funding_amount: 'all' });
+    selectUTXOs = (utxos: Array<string>, utxoBalance: number) =>
+        this.setState({
+            utxos,
+            local_funding_amount: 'all',
+            utxoBalance: utxoBalance
+        });
 
     importClipboard = () => {
         const { pubkey, host } = NodeUriUtils.processNodeUri(
@@ -122,6 +130,7 @@ export default class OpenChannel extends React.Component<
         const {
             ChannelsStore,
             SettingsStore,
+            BalanceStore,
             FeeStore,
             navigation
         } = this.props;
@@ -131,7 +140,8 @@ export default class OpenChannel extends React.Component<
             min_confs,
             host,
             sat_per_byte,
-            suggestImport
+            suggestImport,
+            utxoBalance
         } = this.state;
         const privateChannel = this.state.private;
 
@@ -144,6 +154,7 @@ export default class OpenChannel extends React.Component<
             peerSuccess,
             channelSuccess
         } = ChannelsStore;
+        const { confirmedBlockchainBalance } = BalanceStore;
         const { settings } = SettingsStore;
         const { theme } = settings;
 
@@ -309,6 +320,19 @@ export default class OpenChannel extends React.Component<
                         placeholderTextColor="gray"
                         editable={!openingChannel}
                     />
+                    {local_funding_amount === 'all' && (
+                        <Text
+                            style={{
+                                color: theme === 'dark' ? 'white' : 'black'
+                            }}
+                        >
+                            {`${
+                                utxoBalance > 0
+                                    ? utxoBalance
+                                    : confirmedBlockchainBalance
+                            } ${localeString('views.Receive.satoshis')}`}
+                        </Text>
+                    )}
 
                     <Text
                         style={{
