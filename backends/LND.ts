@@ -51,10 +51,17 @@ export default class LND {
         return calls[id];
     };
 
-    supports = (supportedVersion: string) => {
+    supports = (supportedVersion: string, apiVersion?: string) => {
         const { nodeInfo } = stores.nodeInfoStore;
-        const { version } = nodeInfo;
-        return VersionUtils.isSupportedVersion(version, supportedVersion);
+        const { version, api_version } = nodeInfo;
+        const { isSupportedVersion } = VersionUtils;
+        if (apiVersion) {
+            return (
+                isSupportedVersion(version, supportedVersion) &&
+                isSupportedVersion(api_version, apiVersion)
+            );
+        }
+        return isSupportedVersion(version, supportedVersion);
     };
 
     wsReq = (route: string, method: string, data?: any) => {
@@ -217,4 +224,5 @@ export default class LND {
     supportsChannelManagement = () => true;
     supportsCustomHostProtocol = () => false;
     supportsMPP = () => this.supports('v0.11.0');
+    supportsCoinControl = () => false;
 }

@@ -304,7 +304,7 @@ export default class NodeInfo extends React.Component<
                 <Text
                     style={theme === 'dark' ? styles.labelDark : styles.label}
                 >
-                    {localeString('views.NodeInfo.uris')}::
+                    {localeString('views.NodeInfo.uris')}:
                 </Text>
                 {nodeInfo.getURIs &&
                 nodeInfo.getURIs.length > 0 &&

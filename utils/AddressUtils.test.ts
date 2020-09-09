@@ -6,6 +6,12 @@ describe('AddressUtils', () => {
             expect(AddressUtils.isValidBitcoinAddress('a', false)).toBeFalsy();
             expect(
                 AddressUtils.isValidBitcoinAddress(
+                    'bcrt1qqgdrlt97x4847rf85utak8gre5q7k83uwh3ajj',
+                    true
+                )
+            ).toBeTruthy();
+            expect(
+                AddressUtils.isValidBitcoinAddress(
                     '1AY6gTALH7bGrbN73qqTRnkW271JvBJc9o',
                     false
                 )

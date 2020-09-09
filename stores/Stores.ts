@@ -9,6 +9,7 @@ import PaymentsStore from './PaymentsStore';
 import FeeStore from './FeeStore';
 import LnurlPayStore from './LnurlPayStore';
 import FiatStore from './FiatStore';
+import UTXOsStore from './UTXOsStore';
 
 class Stores {
     public channelsStore: ChannelsStore;
@@ -22,6 +23,7 @@ class Stores {
     public paymentsStore: PaymentsStore;
     public feeStore: FeeStore;
     public lnurlPayStore: LnurlPayStore;
+    public utxosStore: UTXOsStore;
 
     constructor() {
         this.settingsStore = new SettingsStore();
@@ -41,6 +43,8 @@ class Stores {
             this.settingsStore,
             this.nodeInfoStore
         );
+        this.nodeInfoStore = new NodeInfoStore(this.settingsStore);
+        this.utxosStore = new UTXOsStore(this.settingsStore);
     }
 }
 
