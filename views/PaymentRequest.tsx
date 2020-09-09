@@ -15,7 +15,6 @@ import { localeString } from './../utils/LocaleUtils';
 import InvoicesStore from './../stores/InvoicesStore';
 import TransactionsStore from './../stores/TransactionsStore';
 import UnitsStore from './../stores/UnitsStore';
-import NodeInfoStore from './../stores/NodeInfoStore';
 import SettingsStore from './../stores/SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
 
@@ -25,7 +24,6 @@ interface InvoiceProps {
     InvoicesStore: InvoicesStore;
     TransactionsStore: TransactionsStore;
     UnitsStore: UnitsStore;
-    NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
 }
 
@@ -42,7 +40,6 @@ interface InvoiceState {
     'InvoicesStore',
     'TransactionsStore',
     'UnitsStore',
-    'NodeInfoStore',
     'SettingsStore'
 )
 @observer
@@ -65,10 +62,8 @@ export default class PaymentRequest extends React.Component<
             InvoicesStore,
             UnitsStore,
             SettingsStore,
-            NodeInfoStore,
             navigation
         } = this.props;
-        const { nodeInfo } = NodeInfoStore;
         const {
             setCustomAmount,
             customAmount,

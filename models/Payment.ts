@@ -26,6 +26,7 @@ export default class Payment extends BaseModel {
     msatoshi?: string;
     // amount_sent_msat?: string;
     created_at?: string;
+    timestamp?: string;
     // status: string;
     // payment_preimage: string;
     bolt11?: string;

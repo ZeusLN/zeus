@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import AddressUtils from './../../utils/AddressUtils';
 import LndConnectUtils from './../../utils/LndConnectUtils';
 import { DEFAULT_LNDHUB } from './../../utils/RESTUtils';
 import { localeString } from './../../utils/LocaleUtils';
@@ -67,9 +68,13 @@ export default class AddEditNode extends React.Component<
         certVerification: false,
         existingAccount: false,
         suggestImport: '',
+        url: '',
         lndhubUrl: DEFAULT_LNDHUB,
         showLndHubModal: false,
-        showSslModal: false
+        showSslModal: false,
+        username: '',
+        password: '',
+        accessKey: ''
     };
 
     async UNSAFE_componentWillMount() {
@@ -207,6 +212,7 @@ export default class AddEditNode extends React.Component<
             lndhubUrl,
             existingAccount,
             macaroonHex,
+            url,
             accessKey,
             username,
             password,
@@ -951,6 +957,7 @@ export default class AddEditNode extends React.Component<
                                                     ? ''
                                                     : `@${lndhubUrl}`)
                                             }
+                                            theme={savedTheme}
                                             hideText
                                         />
                                     )}

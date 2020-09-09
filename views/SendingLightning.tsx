@@ -7,7 +7,6 @@ import {
     ScrollView
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { when } from 'mobx';
 import { Button } from 'react-native-elements';
 import LnurlPaySuccess from './LnurlPay/Success';
 import { localeString } from './../utils/LocaleUtils';
@@ -29,14 +28,6 @@ export default class SendingLightning extends React.Component<
     SendingLightningProps,
     {}
 > {
-    componentDidMount = () => {
-        const {
-            payment_route,
-            payment_hash,
-            payment_error
-        } = TransactionsStore;
-    };
-
     getBackgroundColor() {
         const { TransactionsStore } = this.props;
         const {

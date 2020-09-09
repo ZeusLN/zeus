@@ -15,7 +15,7 @@ export default class InvoicesStore {
     @observable error_msg: string | null;
     @observable getPayReqError: string | null = null;
     @observable invoices: Array<Invoice> = [];
-    @observable invoice: Invoice;
+    @observable invoice: Invoice | null;
     @observable pay_req: Invoice | null;
     @observable payment_request: string | null;
     @observable creatingInvoice: boolean = false;
@@ -221,7 +221,7 @@ export default class InvoicesStore {
     };
 
     @action
-    public getRoutes = (destination: string, amount: string) => {
+    public getRoutes = (destination: string, amount: string | number) => {
         this.loadingFeeEstimate = true;
         this.feeEstimate = null;
         this.successProbability = null;

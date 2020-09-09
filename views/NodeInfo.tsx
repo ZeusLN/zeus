@@ -7,7 +7,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { Button, ButtonGroup, Header, Icon } from 'react-native-elements';
+import { ButtonGroup, Header, Icon } from 'react-native-elements';
 import CollapsedQR from './../components/CollapsedQR';
 import SetFeesForm from './../components/SetFeesForm';
 import { inject, observer } from 'mobx-react';
@@ -140,7 +140,6 @@ export default class NodeInfo extends React.Component<
             weekEarned,
             monthEarned,
             forwardingEvents,
-            getForwardingHistory,
             forwardingHistoryError,
             loading
         } = FeeStore;

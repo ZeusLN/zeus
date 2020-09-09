@@ -28,7 +28,7 @@ interface UTXOPickerProps {
     title: string;
     selectedValue: string | boolean;
     displayValue?: string;
-    onValueChange: (value: any, balance: ) => void;
+    onValueChange: (value: any, balance: number) => void;
     UTXOsStore: UTXOsStore;
 }
 
