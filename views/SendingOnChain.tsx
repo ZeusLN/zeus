@@ -3,6 +3,7 @@ import {
     ActivityIndicator,
     StyleSheet,
     Text,
+    ScrollView,
     View,
     TouchableOpacity
 } from 'react-native';
@@ -52,7 +53,12 @@ export default class SendingOnChain extends React.Component<
                     backgroundColor: this.getBackgroundColor()
                 }}
             >
-                <View style={styles.content}>
+                <ScrollView
+                    contentContainerStyle={{
+                        ...styles.content,
+                        height: '100%'
+                    }}
+                >
                     {loading && (
                         <ActivityIndicator size="large" color="#0000ff" />
                     )}
@@ -148,7 +154,7 @@ export default class SendingOnChain extends React.Component<
                         </View>
                     )}
 
-                    {txid && (
+                    {(txid || error) && (
                         <View style={styles.button}>
                             <Button
                                 title={localeString(
@@ -157,7 +163,7 @@ export default class SendingOnChain extends React.Component<
                                 icon={{
                                     name: 'list',
                                     size: 25,
-                                    color: 'green'
+                                    color: txid ? 'green' : 'red'
                                 }}
                                 buttonStyle={{
                                     backgroundColor: '#fff',
@@ -170,7 +176,7 @@ export default class SendingOnChain extends React.Component<
                             />
                         </View>
                     )}
-                </View>
+                </ScrollView>
             </View>
         );
     }
