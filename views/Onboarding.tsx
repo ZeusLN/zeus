@@ -304,6 +304,30 @@ export default class Onboarding extends React.Component<
                         }}
                     />
                 </View>
+                <View style={styles.button}>
+                    <Button
+                        title="Connect to an Eclair node"
+                        onPress={() =>
+                            navigation.navigate('AddEditNode', {
+                                newEntry: true,
+                                node: {
+                                    implementation: 'eclair'
+                                },
+                                index:
+                                    (nodes &&
+                                        nodes.length &&
+                                        Number(nodes.length)) ||
+                                    0
+                            })
+                        }
+                        buttonStyle={{
+                            borderRadius: 30
+                        }}
+                        titleStyle={{
+                            color: 'white'
+                        }}
+                    />
+                </View>
                 <ScanQRButton />
 
                 <View style={{ padding: 20 }} />

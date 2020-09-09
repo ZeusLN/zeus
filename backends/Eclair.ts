@@ -1,0 +1,442 @@
+import RNFetchBlob from 'rn-fetch-blob';
+import querystring from 'querystring-es3';
+import stores from '../stores/Stores';
+import TransactionRequest from './../models/TransactionRequest';
+import OpenChannelRequest from './../models/OpenChannelRequest';
+import Base64Utils from './../utils/Base64Utils';
+
+// keep track of all active calls so we can cancel when appropriate
+const calls: any = {};
+
+export default class Eclair {
+    api = (method, params = {}) => {
+        let { url, password, certVerification } = stores.settingsStore;
+
+        const id = method + JSON.stringify(params);
+        if (calls[id]) {
+            return calls[id];
+        }
+
+        url = url.slice(-1) === '/' ? url : url + '/';
+
+        calls[id] = RNFetchBlob.config({
+            trusty: !certVerification
+        })
+            .fetch(
+                'POST',
+                url + method,
+                {
+                    Authorization: 'Basic ' + Base64Utils.btoa(':' + password),
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                querystring.stringify(params)
+            )
+            .then(response => {
+                delete calls[id];
+
+                const status = response.info().status;
+                if (status < 300) {
+                    return response.json();
+                } else {
+                    var errorInfo;
+                    try {
+                        errorInfo = response.json();
+                    } catch (err) {
+                        throw new Error(
+                            'response was (' + status + ')' + response.text()
+                        );
+                    }
+                    throw new Error(errorInfo.error);
+                }
+            });
+
+        return calls[id];
+    };
+
+    getTransactions = () =>
+        Promise.all([
+            this.api('onchaintransactions', { count: 100 }),
+            this.api('getinfo')
+        ]).then(([transactions, { blockHeight }]) => ({
+            transactions: transactions.reverse().map(tx => ({
+                amount: tx.amount,
+                block_height: blockHeight - tx.confirmations,
+                block_hash: tx.blockHash,
+                total_fees: tx.fees,
+                dest_addresses: [tx.address],
+                address: tx.address,
+                num_confirmations: tx.confirmations,
+                time_stamp: tx.timestamp,
+                txid: tx.txid
+            }))
+        }));
+    getChannels = () =>
+        this.api('channels').then(channels => ({
+            channels: channels.map(chan => {
+                return {
+                    active: chan.state === 'NORMAL',
+                    remote_pubkey: chan.data.commitments.remoteParams.nodeId,
+                    channel_point: null,
+                    chan_id: chan.channelId,
+                    capacity: Number(
+                        chan.data.commitments.localCommit.spec.toLocal +
+                            chan.data.commitments.localCommit.spec.toRemote
+                    ).toString(),
+                    local_balance: Number(
+                        chan.data.commitments.localCommit.spec.toLocal
+                    ).toString(),
+                    remote_balance: Number(
+                        chan.data.commitments.localCommit.spec.toRemote
+                    ).toString(),
+                    total_satoshis_sent: null,
+                    total_satoshis_received: null,
+                    num_updates: null,
+                    csv_delay: chan.data.commitments.localParams.toSelfDelay,
+                    private: false,
+                    local_chan_reserve_sat: chan.data.commitments.localParams.channelReserve.toString(),
+                    remote_chan_reserve_sat: chan.data.commitments.remoteParams.channelReserve.toString(),
+                    close_address: null
+                };
+            })
+        }));
+    getBlockchainBalance = () =>
+        this.api('onchainbalance').then(({ confirmed, unconfirmed }) => {
+            return {
+                total_balance: confirmed + unconfirmed,
+                confirmed_balance: confirmed,
+                unconfirmed_balance: unconfirmed
+            };
+        });
+    getLightningBalance = () =>
+        this.api('channels').then(channels => ({
+            balance: channels
+                .filter(
+                    chan => chan.state === 'NORMAL' || chan.state == 'OFFLINE'
+                )
+                .reduce(
+                    (acc, o) =>
+                        acc + o.data.commitments.localCommit.spec.toLocal,
+                    0
+                ),
+            pending_open_balance: channels
+                .filter(chan => chan.state === 'WAIT_FOR_FUNDING_CONFIRMED')
+                .reduce(
+                    (acc, o) =>
+                        acc + o.data.commitments.localCommit.spec.toLocal,
+                    0
+                )
+        }));
+    sendCoins = (data: TransactionRequest) =>
+        this.api('sendonchain', {
+            address: data.addr,
+            confirmationTarget: data.conf_target,
+            amountSatoshis: data.amount
+        }).then(txid => ({ txid }));
+    getMyNodeInfo = () =>
+        this.api('getinfo').then(
+            ({
+                version,
+                nodeId,
+                alias,
+                color,
+                network,
+                blockHeight,
+                publicAddresses
+            }) => ({
+                uris: publicAddresses.map(addr => nodeId + '@' + addr),
+                alias,
+                version,
+                identity_pubkey: nodeId,
+                testnet: network === 'testnet',
+                regtest: network === 'regtest'
+            })
+        );
+    getInvoices = () => {
+        const since = parseInt(new Date().getTime() / 1000) - 60 * 60 * 24 * 90; // 90 days ago
+        return Promise.all([
+            this.api('listinvoices', { from: since }),
+            this.api('listpendinginvoices', { from: since })
+        ]).then(([all, pending]) => {
+            const isPending = {};
+            for (let i = 0; i < pending.length; i++) {
+                const inv = pending[i];
+                isPending[inv.paymentHash] = true;
+            }
+
+            return {
+                invoices: all.map(mapInvoice(isPending))
+            };
+        });
+    };
+    createInvoice = (data: any) =>
+        this.api('createinvoice', {
+            description: data.memo,
+            amountMsat: Number(data.value) * 1000,
+            expireIn: data.expiry
+        }).then(mapInvoice(null));
+    getPayments = () =>
+        this.api('audit').then(({ sent }) => ({
+            payments: sent.map(
+                ({
+                    paymentHash,
+                    paymentPreimage,
+                    parts,
+                    recipientAmount,
+                    recipientNodeId,
+                    id
+                }) => ({
+                    id,
+                    payment_hash: paymentHash,
+                    payment_preimage: paymentPreimage,
+                    creation_date: parts[0].timestamp,
+                    value: parseInt(recipientAmount / 1000),
+                    value_sat: parseInt(recipientAmount / 1000),
+                    value_msat: recipientAmount,
+                    msatoshi: recipientAmount,
+                    msatoshi_sent: recipientAmount,
+                    destination: recipientNodeId,
+                    fee_sat: parseInt(
+                        parts.reduce((acc, p) => acc + p.feesPaid, 0) / 1000
+                    ),
+                    fee_msat: parts.reduce((acc, p) => acc + p.feesPaid, 0)
+                })
+            )
+        }));
+    getNewAddress = () =>
+        this.api('getnewaddress').then(address => ({ address }));
+    openChannel = (data: OpenChannelRequest) =>
+        this.api('open', {
+            nodeId: data.node_pubkey_string,
+            fundingSatoshis: data.satoshis,
+            fundingFeerateSatByte: data.sat_per_byte,
+            channelFlags: data.private ? 0 : 1
+        }).then(() => ({}));
+    connectPeer = (data: any) =>
+        this.api('connect', { uri: data.addr.pubkey + '@' + data.addr.host });
+    listNode = () => {};
+    decodePaymentRequest = (urlParams?: Array<string>) =>
+        this.api('parseinvoice', { invoice: [urlParams[0]] }).then(
+            ({
+                serialized,
+                description,
+                expiry,
+                amount,
+                paymentHash,
+                nodeId,
+                timestamp
+            }) => ({
+                bolt11: serialized,
+                description,
+                description_hash: description,
+                expiry,
+                msatoshi: amount,
+                payment_hash: paymentHash,
+                destination: nodeId,
+                timestamp
+            })
+        );
+    payLightningInvoice = (data: any) => {
+        const params = { invoice: data.payment_request };
+        if (data.amt) params.amountMsat = Number(data.amt * 1000);
+        return this.api('payinvoice', params)
+            .then(payId => this.api('getsentinfo', { id: payId }))
+            .then(attempts => {
+                if (attempts.length === 0) {
+                    return {
+                        status: 'failed',
+                        payment_error: 'no routes found'
+                    };
+                }
+
+                const last = attempts.slice(-1)[0];
+                if (last.status.type === 'failed') {
+                    return {
+                        payment_hash: last.paymentHash,
+                        payment_preimage: last.status.paymentPreimage,
+                        status: 'failed',
+                        payment_error: last.status.failures[0].failureMessage
+                    };
+                }
+
+                return {
+                    payment_hash: last.paymentHash,
+                    payment_route: last.status.route,
+                    status: 'SUCCEEDED',
+                    payment_error: ''
+                };
+            });
+    };
+    closeChannel = (urlParams?: Array<string>) => {
+        let method = 'close';
+        if (urlParams[1]) method = 'forceclose';
+        return this.api('close', {
+            channelId: [urlParams[0]]
+        }).then(() => ({ chan_close: { success: true } }));
+    };
+    getNodeInfo = (urlParams?: Array<string>) =>
+        this.api('nodes', { nodeIds: urlParams[0] }).then(nodes => {
+            const node = nodes[0];
+            return {
+                node: node && {
+                    last_update: node.timestamp,
+                    pub_key: node.nodeId,
+                    alias: node.alias,
+                    color: node.rgbColor,
+                    addresses: node.addresses.map(addr => ({
+                        network: 'tcp',
+                        addr
+                    }))
+                }
+            };
+        });
+    getFees = async () => {
+        const [channels, { relayed }] = await Promise.all([
+            this.api('channels'),
+            this.api('audit')
+        ]);
+
+        let lastDay, lastWeek, lastMonth, allTimes;
+        const now = parseInt(new Date().getTime() / 1000);
+        const oneDayAgo = now - 60 * 60 * 24;
+        const oneWeekAgo = now - 60 * 60 * 24 * 7;
+        const oneMonthAgo = now - 60 * 60 * 24 * 30;
+        for (let i = relayed.length - 1; i >= 0; i--) {
+            const relay = relayed[i];
+            allTimes += relay.amountIn - relay.amountOut;
+            if (relay.timestamp > oneDayAgo) {
+                lastDay += relay.amountIn - relay.amountOut;
+                lastWeek += relay.amountIn - relay.amountOut;
+                lastMonth += relay.amountIn - relay.amountOut;
+            } else if (relay.timestamp > oneWeekAgo) {
+                lastWeek += relay.amountIn - relay.amountOut;
+                lastMonth += relay.amountIn - relay.amountOut;
+            } else if (relay.timestamp > oneWeekAgo) {
+                lastMonth += relay.amountIn - relay.amountOut;
+            } else break;
+        }
+
+        return {
+            channel_fees: channels.map(channel => ({
+                chan_id: channel.channelId,
+                channel_point: null,
+                base_fee_msat: channel.data.channelUpdate
+                    ? channel.data.channelUpdate.feeBaseMsat
+                    : null,
+                fee_rate: channel.data.channelUpdate
+                    ? channel.data.channelUpdate.feeProportionalMillionths /
+                      1000000
+                    : null
+            })),
+            total_fee_sum: parseInt(allTimes / 1000),
+            day_fee_sum: parseInt(lastDay / 1000),
+            week_fee_sum: parseInt(lastWeek / 1000),
+            month_fee_sum: parseInt(lastMonth / 1000)
+        };
+    };
+    setFees = async (data: any) => {
+        const params = {};
+        if (data.global) {
+            params.channelIds = (
+                await this.api('channels').then(channels =>
+                    channels.map(channel => channel.channelId)
+                )
+            ).join(',');
+        } else {
+            params.channelId = data.channelId;
+        }
+
+        params.feeBaseMsat = data.base_fee_msat;
+        params.feeProportionalMillionths = data.fee_rate * 1000000;
+
+        return this.api('updaterelayfee', params);
+    };
+    getRoutes = (urlParams?: Array<string>) => {
+        this.api('findroutetonode', {
+            nodeId: urlParams[0],
+            amountMsat: urlParams[1]
+        })
+            .then(nodeIds =>
+                Promise.all(
+                    nodeIds
+                        .slice(1) // discard ourselves since our channel will be free
+                        .map(nodeId => this.api('allupdates', { nodeId }))
+                )
+            )
+            .then(nodesUpdates => {
+                // we will match each hop in the route from end to beginning
+                // with their previous hop using the channel updates scid
+                const route = [];
+                let nextHopChannels = nodesUpdates.pop();
+                while (nodesUpdates.length > 0) {
+                    let hopChannels = nodesUpdates.pop();
+                    let found = false;
+                    for (let i = 0; i < hopChannels.length; i++) {
+                        let chan = hopChannels[i];
+                        for (let j = 0; j < nextHopChannels.length; j++) {
+                            let nextChan = nextHopChannels[j];
+                            if (
+                                chan.shortChannelId === nextChan.shortChannelId
+                            ) {
+                                route.unshift(chan);
+                                hopChannels.splice(i, 1);
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (found) break;
+                    }
+                    if (!found) {
+                        // an error
+                        return {};
+                    }
+                    nextHopChannels = hopChannels;
+                }
+
+                // we finally have all the chan updates for the route, calculate the fee
+                return {
+                    routes: [
+                        {
+                            total_fees: route.reduce(
+                                (acc, r) =>
+                                    acc +
+                                    r.feeBaseMsat +
+                                    (acc * r.feeProportionalMillionths) /
+                                        1000000,
+                                0
+                            )
+                        }
+                    ]
+                };
+            });
+    };
+
+    supportsOnchainSends = () => true;
+    supportsKeysend = () => false;
+    supportsChannelManagement = () => true;
+    supportsCustomHostProtocol = () => false;
+    supportsMPP = () => false;
+}
+
+const mapInvoice = isPending => ({
+    description,
+    serialized,
+    paymentHash,
+    expiry,
+    amount
+}) => {
+    if (!isPending) isPending = { [paymentHash]: true };
+    return {
+        memo: description,
+        r_hash: paymentHash,
+        value: parseInt(amount / 1000),
+        value_msat: amount,
+        settled: !isPending[paymentHash],
+        creation_date: null,
+        settle_date: null,
+        payment_request: serialized,
+        expiry,
+        amt_paid: isPending[paymentHash] ? 0 : parseInt(amount / 1000),
+        amt_paid_sat: isPending[paymentHash] ? 0 : parseInt(amount / 1000),
+        amt_paid_msat: isPending[paymentHash] ? 0 : amount
+    };
+};
