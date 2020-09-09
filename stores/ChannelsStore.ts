@@ -190,7 +190,7 @@ export default class ChannelsStore {
 
                 if (
                     this.errorMsgPeer &&
-                    this.errorMsgPeer.includes('already connected to peer')
+                    this.errorMsgPeer.includes('already')
                 ) {
                     this.channelRequest = request;
                 }
