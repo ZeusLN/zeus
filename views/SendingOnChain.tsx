@@ -163,14 +163,14 @@ export default class SendingOnChain extends React.Component<
                                 icon={{
                                     name: 'list',
                                     size: 25,
-                                    color: txid ? 'green' : 'red'
+                                    color: txid ? 'green' : 'darkred'
                                 }}
                                 buttonStyle={{
                                     backgroundColor: '#fff',
                                     borderRadius: 30
                                 }}
                                 titleStyle={{
-                                    color: 'green'
+                                    color: txid ? 'green' : 'darkred'
                                 }}
                                 onPress={() => navigation.navigate('Wallet')}
                             />

@@ -166,7 +166,11 @@ export default class LND {
     getChannels = () => this.getRequest('/v1/channels');
     getBlockchainBalance = () => this.getRequest('/v1/balance/blockchain');
     getLightningBalance = () => this.getRequest('/v1/balance/channels');
-    sendCoins = (data: any) => this.postRequest('/v1/transactions', data);
+    sendCoins = (data: any) => this.postRequest('/v1/transactions', {
+        addr: data.addr,
+        sat_per_byte: data.sat_per_byte,
+        amount: data.amount
+    });
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
     getInvoices = () =>
         this.getRequest('/v1/invoices?reversed=true&num_max_invoices=100');
@@ -205,6 +209,7 @@ export default class LND {
             `/v1/graph/routes/${urlParams && urlParams[0]}/${urlParams &&
                 urlParams[1]}`
         );
+    getForwardingHistory = (data: any) => this.postRequest('/v1/switch', data);
 
     // LndHub
     createAccount = (host: string, certVerification: boolean) => {
