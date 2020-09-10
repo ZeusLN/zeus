@@ -207,7 +207,10 @@ export default class Send extends React.Component<SendProps, SendState> {
         const { units, changeUnits } = UnitsStore;
         const { fiatRates }: any = FiatStore;
 
-        const rate = fiat && fiatRates ? fiatRates[fiat]['15m'] : 0;
+        const rate =
+            fiat && fiat !== 'Disabled' && fiatRates
+                ? fiatRates[fiat]['15m']
+                : 0;
 
         let satAmount: string | number;
         switch (units) {
