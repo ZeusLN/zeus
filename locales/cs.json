@@ -192,7 +192,7 @@
     "views.Onboarding.fullNodeGraph1": "Ve skutečnosti nepoužíváte bitcoin bez použití plného uzlu.",
     "views.Onboarding.fullNodeGraph2": "provozování plného uzlu má mnoho skvělých výhod. Když odstraníte prostředníka a ověříte si své vlastní transakce, získáte velkou výhodu, pokud jde o bezpečnost a soukromí. V souvislosti s lightning sítí máte plnou kontrolu nad svými lightning kanály a likviditou.",
     "views.Onboarding.fullNodeGraph3": "Zeus vám poskytuje rozhraní pro správu vašich kanálů, odesílání a přijímání bitcoinů na lightning i na on-chain a použití některých nejnovějších lightning funkcí.",
-    "views.Onboarding.fullNodeGraph4": "Zeus má podporu pro připojení k lnd uzlům a c-lightning uzlům provozujícím rozhraní c-lightning-REST nebo Spark.",
+    "views.Onboarding.fullNodeGraph4": "Zeus has support for connecting to lnd nodes, to Eclair nodes or to c-lightning nodes running the c-lightning-REST or Spark interfaces.",
     "views.Onboarding.connect1": "Připojit se k lnd uzlu",
     "views.Onboarding.connect2": "Připojit se k c-lightning-REST uzlu",
     "views.Onboarding.connect3": "Připojit se k c-lightning Spark uzlu",
@@ -317,5 +317,8 @@
     "views.Transaction.status": "Status",
     "views.Transaction.timestamp": "Časové razítko",
     "views.Transaction.destAddress": "Cílová adresa",
-    "views.Transaction.destAddresses": "Cílové adresy"
+    "views.Transaction.destAddresses": "Cílové adresy",
+    "components.UTXOPicker.modal.title": "Vyberte UTXO, které chcete použít",
+    "components.UTXOPicker.modal.description": "Vyberte UTXO, které se mají použít v této operaci. Možná budete chtít používat pouze konkrétní UTXO k ochraně vašeho soukromí.",
+    "components.UTXOPicker.modal.set": "Nastavit UTXO"
 }
