@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Platform, StyleSheet, Text, View, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { version, playStore } from './../../package.json';
@@ -19,7 +19,7 @@ interface AboutProps {
 export default class About extends React.Component<AboutProps, {}> {
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { loading, settings } = SettingsStore;
+        const { settings } = SettingsStore;
         const savedTheme = settings.theme;
 
         const BackButton = () => (

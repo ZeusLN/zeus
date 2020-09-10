@@ -15,7 +15,7 @@ export default class TransactionsStore {
     @observable error: boolean = false;
     @observable error_msg: string | null;
     @observable transactions: Array<Transaction> = [];
-    @observable transaction: Transaction;
+    @observable transaction: Transaction | null;
     @observable payment_route: any; // Route
     @observable payment_preimage: string | null;
     @observable payment_hash: any;
@@ -94,8 +94,8 @@ export default class TransactionsStore {
 
     sendPayment = (
         payment_request?: string | null,
-        amount?: string,
-        pubkey?: string,
+        amount?: string | null,
+        pubkey?: string | null,
         max_parts?: string,
         timeout_seconds?: string,
         fee_limit_sat?: string
@@ -109,7 +109,7 @@ export default class TransactionsStore {
         this.payment_error = null;
         this.status = null;
 
-        let data;
+        let data: any;
         if (pubkey) {
             const preimage = randomBytes(preimageByteLength);
             const secret = preimage.toString('base64');

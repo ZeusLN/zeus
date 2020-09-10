@@ -1,4 +1,5 @@
 import LND from './LND';
+import LoginRequest from './../models/LoginRequest';
 
 export const DEFAULT_LNDHUB = 'https://lndhub.herokuapp.com';
 
@@ -25,7 +26,7 @@ export default class LndHub extends LND {
 
     getPayments = () => this.getRequest('/gettxs');
     getLightningBalance = () =>
-        this.getRequest('/balance').then(({ BTC }) => ({
+        this.getRequest('/balance').then(({ BTC }: any) => ({
             balance: BTC.AvailableBalance
         }));
     getInvoices = () => this.getRequest('/getuserinvoices?limit=200');

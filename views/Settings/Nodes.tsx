@@ -40,7 +40,7 @@ export default class Nodes extends React.Component<NodesProps, {}> {
             selectedNode,
             SettingsStore
         } = this.props;
-        const { setSettings, settings } = SettingsStore;
+        const { setSettings, settings }: any = SettingsStore;
         const { lurkerMode } = settings;
 
         const Node = (balanceImage: string) => (

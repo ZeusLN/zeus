@@ -1,6 +1,5 @@
 import * as React from 'react';
 import {
-    Platform,
     StyleSheet,
     Text,
     View,
@@ -13,7 +12,7 @@ import {
 import { Button } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import UrlUtils from './../utils/UrlUtils';
-import { DEFAULT_LNDHUB } from './../utils/RESTUtils';
+import { DEFAULT_LNDHUB } from './../backends/LndHub';
 import DropdownSetting from './../components/DropdownSetting';
 import SettingsStore, {
     DEFAULT_LOCALE,
@@ -38,7 +37,7 @@ interface OnboardingState {
 }
 
 interface ButtonProps {
-    title: string;
+    title?: string;
 }
 
 @inject('SettingsStore')
@@ -47,6 +46,8 @@ export default class Onboarding extends React.Component<
     OnboardingProps,
     OnboardingState
 > {
+    refs: any;
+
     state = {
         index: 0
     };

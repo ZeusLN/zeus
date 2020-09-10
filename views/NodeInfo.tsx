@@ -7,7 +7,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { Button, ButtonGroup, Header, Icon } from 'react-native-elements';
+import { ButtonGroup, Header, Icon } from 'react-native-elements';
 import CollapsedQR from './../components/CollapsedQR';
 import SetFeesForm from './../components/SetFeesForm';
 import { inject, observer } from 'mobx-react';
@@ -35,7 +35,12 @@ interface NodeInfoState {
     selectedIndex: number;
 }
 
-const ForwardingHistory = ({ events, lurkerMode, getAmount, aliasesById }) => {
+const ForwardingHistory = ({
+    events,
+    lurkerMode,
+    getAmount,
+    aliasesById
+}: any) => {
     let eventsDisplay: any = [];
     for (let i = 0; i < events.length; i++) {
         const event = events[i];
@@ -140,7 +145,6 @@ export default class NodeInfo extends React.Component<
             weekEarned,
             monthEarned,
             forwardingEvents,
-            getForwardingHistory,
             forwardingHistoryError,
             loading
         } = FeeStore;

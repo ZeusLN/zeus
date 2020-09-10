@@ -94,7 +94,7 @@ export default class Receive extends React.Component<
         } = this.props;
         const { selectedIndex, memo, value, expiry } = this.state;
         const { units, changeUnits } = UnitsStore;
-        const { fiatRates } = FiatStore;
+        const { fiatRates }: any = FiatStore;
 
         const {
             createInvoice,
@@ -112,11 +112,9 @@ export default class Receive extends React.Component<
         const { theme, fiat } = settings;
         const address = chainAddress;
 
-        const rate =
-            (fiatRates && fiatRates[fiat] && fiatRates[fiat]['15m']) || 0;
-        const symbol = fiatRates && fiatRates[fiat] && fiatRates[fiat].symbol;
+        const rate = fiat && fiatRates ? fiatRates[fiat]['15m'] : 0;
 
-        let satAmount;
+        let satAmount: string | number;
         switch (units) {
             case 'sats':
                 satAmount = value;

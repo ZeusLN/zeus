@@ -6,6 +6,12 @@ import Spark from '../backends/Spark';
 import Eclair from '../backends/Eclair';
 
 class RESTUtils {
+    spark: Spark;
+    clightningREST: CLightningREST;
+    lndHub: LndHub;
+    lnd: LND;
+    eclair: Eclair;
+
     constructor() {
         this.spark = new Spark();
         this.clightningREST = new CLightningREST();
@@ -32,38 +38,43 @@ class RESTUtils {
         }
     };
 
-    call = (funcName, args) => {
+    call = (funcName: string, args?: any) => {
         const cls = this.getClass();
         return cls[funcName].apply(cls, args);
     };
 
-    getTransactions = (...args) => this.call('getTransactions', args);
-    getChannels = (...args) => this.call('getChannels', args);
-    getBlockchainBalance = (...args) => this.call('getBlockchainBalance', args);
-    getLightningBalance = (...args) => this.call('getLightningBalance', args);
-    sendCoins = (...args) => this.call('sendCoins', args);
-    getMyNodeInfo = (...args) => this.call('getMyNodeInfo', args);
-    getInvoices = (...args) => this.call('getInvoices', args);
-    createInvoice = (...args) => this.call('createInvoice', args);
-    getPayments = (...args) => this.call('getPayments', args);
-    getNewAddress = (...args) => this.call('getNewAddress', args);
-    openChannel = (...args) => this.call('openChannel', args);
-    connectPeer = (...args) => this.call('connectPeer', args);
-    listNode = (...args) => this.call('listNode', args);
-    decodePaymentRequest = (...args) => this.call('decodePaymentRequest', args);
-    payLightningInvoice = (...args) => this.call('payLightningInvoice', args);
-    payLightningInvoiceV2 = (...args) =>
+    getTransactions = (...args: any[]) => this.call('getTransactions', args);
+    getChannels = (...args: any[]) => this.call('getChannels', args);
+    getBlockchainBalance = (...args: any[]) =>
+        this.call('getBlockchainBalance', args);
+    getLightningBalance = (...args: any[]) =>
+        this.call('getLightningBalance', args);
+    sendCoins = (...args: any[]) => this.call('sendCoins', args);
+    getMyNodeInfo = (...args: any[]) => this.call('getMyNodeInfo', args);
+    getInvoices = (...args: any[]) => this.call('getInvoices', args);
+    createInvoice = (...args: any[]) => this.call('createInvoice', args);
+    getPayments = (...args: any[]) => this.call('getPayments', args);
+    getNewAddress = (...args: any[]) => this.call('getNewAddress', args);
+    openChannel = (...args: any[]) => this.call('openChannel', args);
+    connectPeer = (...args: any[]) => this.call('connectPeer', args);
+    listNode = (...args: any[]) => this.call('listNode', args);
+    decodePaymentRequest = (...args: any[]) =>
+        this.call('decodePaymentRequest', args);
+    payLightningInvoice = (...args: any[]) =>
+        this.call('payLightningInvoice', args);
+    payLightningInvoiceV2 = (...args: any[]) =>
         this.call('payLightningInvoiceV2', args);
-    closeChannel = (...args) => this.call('closeChannel', args);
-    getNodeInfo = (...args) => this.call('getNodeInfo', args);
-    getFees = (...args) => this.call('getFees', args);
-    setFees = (...args) => this.call('setFees', args);
-    getRoutes = (...args) => this.call('getRoutes', args);
-    getForwardingHistory = (...args) => this.call('getForwardingHistory', args);
-    getUTXOs = (...args) => this.call('getUTXOs', args);
+    closeChannel = (...args: any[]) => this.call('closeChannel', args);
+    getNodeInfo = (...args: any[]) => this.call('getNodeInfo', args);
+    getFees = (...args: any[]) => this.call('getFees', args);
+    setFees = (...args: any[]) => this.call('setFees', args);
+    getRoutes = (...args: any[]) => this.call('getRoutes', args);
+    getForwardingHistory = (...args: any[]) =>
+        this.call('getForwardingHistory', args);
+    getUTXOs = (...args: any[]) => this.call('getUTXOs', args);
     // lndhub
-    createAccount = (...args) => this.call('createAccount', args);
-    login = (...args) => this.call('login', args);
+    createAccount = (...args: any[]) => this.call('createAccount', args);
+    login = (...args: any[]) => this.call('login', args);
 
     supportsOnchainSends = () => this.call('supportsOnchainSends');
     supportsKeysend = () => this.call('supportsKeysend');

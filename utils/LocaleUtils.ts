@@ -1,18 +1,30 @@
 import stores from '../stores/Stores';
-import * as English from './../locales/en.json';
-import * as Czech from './../locales/cs.json';
-import * as German from './../locales/de.json';
-import * as Spanish from './../locales/es.json';
-import * as BrazilianPortuguese from './../locales/pt_BR.json';
-import * as Slovak from './../locales/sk.json';
-import * as Turkish from './../locales/tr.json';
+import * as EN from './../locales/en.json';
+import * as CS from './../locales/cs.json';
+import * as DE from './../locales/de.json';
+import * as ES from './../locales/es.json';
+import * as PTBR from './../locales/pt_BR.json';
+import * as SK from './../locales/sk.json';
+import * as TR from './../locales/tr.json';
 // in progress
-import * as Persian from './../locales/fa.json';
-import * as Greek from './../locales/el.json';
-import * as French from './../locales/fr.json';
-import * as Dutch from './../locales/nl.json';
+import * as FA from './../locales/fa.json';
+import * as EL from './../locales/el.json';
+import * as FR from './../locales/fr.json';
+import * as NL from './../locales/nl.json';
 
-export function localeString(localeString: string) {
+const English: any = EN;
+const Czech: any = CS;
+const German: any = DE;
+const Spanish: any = ES;
+const BrazilianPortuguese: any = PTBR;
+const Slovak: any = SK;
+const Turkish: any = TR;
+const Persian: any = FA;
+const Greek: any = EL;
+const French: any = FR;
+const Dutch: any = NL;
+
+export function localeString(localeString: string): any {
     const { settings } = stores.settingsStore;
     const { locale } = settings;
 
