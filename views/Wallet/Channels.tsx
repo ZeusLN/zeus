@@ -6,6 +6,8 @@ import BalanceSlider from './../../components/BalanceSlider';
 import Identicon from 'identicon.js';
 import { inject, observer } from 'mobx-react';
 const hash = require('object-hash');
+import PrivacyUtils from './../../utils/PrivacyUtils';
+import { localeString } from './../../utils/LocaleUtils';
 
 import ChannelsStore from './../../stores/ChannelsStore';
 import NodeInfoStore from './../../stores/NodeInfoStore';
@@ -54,7 +56,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
         const { getAmount, units } = UnitsStore;
         const { nodes, loading } = ChannelsStore;
         const { settings } = SettingsStore;
-        const { theme } = settings;
+        const { theme, lurkerMode } = settings;
 
         const ChannelIcon = (balanceImage: string) => (
             <Avatar
@@ -75,7 +77,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                 {!NodeInfoStore.error && (
                     <View style={styles.button}>
                         <Button
-                            title="Open Channel"
+                            title={localeString('views.Wallet.Channels.open')}
                             icon={{
                                 name: 'swap-horiz',
                                 size: 25,
@@ -103,34 +105,62 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                     <FlatList
                         data={channels}
                         renderItem={({ item }) => {
+                            const displayName =
+                                item.alias ||
+                                (nodes[item.remote_pubkey] &&
+                                    nodes[item.remote_pubkey].alias) ||
+                                item.remote_pubkey ||
+                                item.channelId;
+
+                            const channelTitle = lurkerMode
+                                ? PrivacyUtils.hideValue(displayName, 8)
+                                : displayName;
+
                             const data = new Identicon(
-                                hash.sha1(item.alias || item.remote_pubkey),
-                                420
+                                hash.sha1(channelTitle),
+                                255
                             ).toString();
+
+                            const localBalanceDisplay = lurkerMode
+                                ? PrivacyUtils.hideValue(
+                                      getAmount(item.localBalance || 0),
+                                      7,
+                                      true
+                                  )
+                                : getAmount(item.localBalance || 0);
+                            const remoteBalanceDisplay = lurkerMode
+                                ? PrivacyUtils.hideValue(
+                                      getAmount(item.remoteBalance || 0),
+                                      7,
+                                      true
+                                  )
+                                : getAmount(item.remoteBalance || 0);
+
                             return (
                                 <React.Fragment>
                                     <ListItem
-                                        title={
-                                            item.alias ||
-                                            (nodes[item.remote_pubkey] &&
-                                                nodes[item.remote_pubkey]
-                                                    .alias) ||
-                                            item.remote_pubkey
-                                        }
+                                        title={channelTitle}
                                         leftElement={ChannelIcon(
                                             `data:image/png;base64,${data}`
                                         )}
                                         subtitle={`${
-                                            !item.isActive ? 'INACTIVE | ' : ''
+                                            !item.isActive
+                                                ? `${localeString(
+                                                      'views.Wallet.Channels.inactive'
+                                                  )} | `
+                                                : ''
                                         }${
-                                            item.private ? 'Private | ' : ''
-                                        }Local: ${units &&
-                                            getAmount(
-                                                item.localBalance || 0
-                                            )} | Remote: ${units &&
-                                            getAmount(
-                                                item.remoteBalance || 0
-                                            )}`}
+                                            item.private
+                                                ? `${localeString(
+                                                      'views.Wallet.Channels.private'
+                                                  )} | `
+                                                : ''
+                                        }${localeString(
+                                            'views.Wallet.Channels.local'
+                                        )}: ${units &&
+                                            localBalanceDisplay} | ${localeString(
+                                            'views.Wallet.Channels.remote'
+                                        )}: ${units && remoteBalanceDisplay}`}
                                         containerStyle={{
                                             borderBottomWidth: 0,
                                             backgroundColor:
@@ -157,8 +187,12 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                         }}
                                     />
                                     <BalanceSlider
-                                        localBalance={item.localBalance}
-                                        remoteBalance={item.remoteBalance}
+                                        localBalance={
+                                            lurkerMode ? 50 : item.localBalance
+                                        }
+                                        remoteBalance={
+                                            lurkerMode ? 50 : item.remoteBalance
+                                        }
                                         theme={theme}
                                         list
                                     />
@@ -175,7 +209,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                     />
                 ) : (
                     <Button
-                        title="No Channels"
+                        title={localeString('views.Wallet.Channels.noChannels')}
                         icon={{
                             name: 'error-outline',
                             size: 25,
@@ -198,7 +232,8 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
 
 const styles = StyleSheet.create({
     lightThemeStyle: {
-        flex: 1
+        flex: 1,
+        backgroundColor: 'white'
     },
     darkThemeStyle: {
         flex: 1,

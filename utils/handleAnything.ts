@@ -1,14 +1,17 @@
 import stores from '../stores/Stores';
 import AddressUtils from './../utils/AddressUtils';
+import LndConnectUtils from './../utils/LndConnectUtils';
 import { getParams as getlnurlParams, findlnurl } from 'js-lnurl';
 
-const { nodeInfoStore, invoicesStore } = stores;
+const { nodeInfoStore, invoicesStore, settingsStore } = stores;
 
-export default async function(data: string): Promise<[string, any]> {
-    const { testnet } = nodeInfoStore;
+export default async function(data: string): Promise<any> {
+    const { nodeInfo } = nodeInfoStore;
+    const { isTestNet, isRegTest } = nodeInfo;
+    const { implementation } = settingsStore;
     const { value, amount } = AddressUtils.processSendAddress(data);
 
-    if (AddressUtils.isValidBitcoinAddress(value, testnet)) {
+    if (AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest)) {
         return [
             'Send',
             {
@@ -17,12 +20,63 @@ export default async function(data: string): Promise<[string, any]> {
                 transactionType: 'On-chain'
             }
         ];
+    } else if (AddressUtils.isValidLightningPubKey(value)) {
+        return [
+            'Send',
+            {
+                destination: value,
+                transactionType: 'Keysend'
+            }
+        ];
     } else if (AddressUtils.isValidLightningPaymentRequest(value)) {
-        invoicesStore.getPayReq(value);
+        if (implementation === 'lndhub') {
+            invoicesStore.getPayReqLocal(value);
+        } else {
+            invoicesStore.getPayReq(value);
+        }
         return ['PaymentRequest', {}];
+    } else if (value.includes('lndconnect')) {
+        const node = LndConnectUtils.processLndConnectUrl(value);
+        return [
+            'AddEditNode',
+            {
+                node,
+                newEntry: true
+            }
+        ];
+    } else if (AddressUtils.isValidLNDHubAddress(value)) {
+        const { username, password, host } = AddressUtils.processLNDHubAddress(
+            value
+        );
+        let node;
+        if (host) {
+            node = {
+                implementation: 'lndhub',
+                username,
+                password,
+                lndhubUrl: host,
+                certVerification: true,
+                existingAccount: true
+            };
+        } else {
+            node = {
+                implementation: 'lndhub',
+                username,
+                password,
+                certVerification: true,
+                existingAccount: true
+            };
+        }
+        return [
+            'AddEditNode',
+            {
+                node,
+                newEntry: true
+            }
+        ];
     } else if (findlnurl(value) !== null) {
-        const raw = findlnurl(value);
-        return getlnurlParams(raw).then(params => {
+        const raw: string = findlnurl(value) || '';
+        return getlnurlParams(raw).then((params: any) => {
             switch (params.tag) {
                 case 'withdrawRequest':
                     return [
@@ -43,7 +97,9 @@ export default async function(data: string): Promise<[string, any]> {
                     break;
                 default:
                     throw new Error(
-                        params.reason || `Unsupported lnurl type: ${params.tag}`
+                        params.status === 'ERROR'
+                            ? `${params.domain} says: ${params.reason}`
+                            : `Unsupported lnurl type: ${params.tag}`
                     );
             }
         });

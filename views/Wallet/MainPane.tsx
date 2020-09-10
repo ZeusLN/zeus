@@ -3,6 +3,8 @@ import { Image, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Badge, Button, Header } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import LinearGradient from 'react-native-linear-gradient';
+import PrivacyUtils from './../../utils/PrivacyUtils';
+import { localeString } from './../../utils/LocaleUtils';
 
 import NodeInfoStore from './../../stores/NodeInfoStore';
 import UnitsStore from './../../stores/UnitsStore';
@@ -10,6 +12,8 @@ import BalanceStore from './../../stores/BalanceStore';
 import SettingsStore from './../../stores/SettingsStore';
 
 const TorIcon = require('./../../images/tor.png');
+
+import { version, playStore } from './../../package.json';
 
 interface MainPaneProps {
     navigation: any;
@@ -49,26 +53,68 @@ export default class MainPane extends React.Component<
             lightningBalance,
             pendingOpenBalance
         } = BalanceStore;
-        const { host, settings } = SettingsStore;
-        const { theme } = settings;
+        const { host, settings, implementation } = SettingsStore;
+        const { theme, lurkerMode } = settings;
         const loading = NodeInfoStore.loading || BalanceStore.loading;
 
-        const BalanceView = () => (
-            <React.Fragment>
+        const pendingUnconfirmedBalance =
+            Number(pendingOpenBalance) + Number(unconfirmedBlockchainBalance);
+        const combinedBalanceValue =
+            Number(totalBlockchainBalance) + Number(lightningBalance);
+
+        const LightningBalance = () => (
+            <>
                 <Text style={styles.lightningBalance}>
-                    {units && getAmount(lightningBalance)} ⚡
+                    {units &&
+                        (lurkerMode
+                            ? PrivacyUtils.hideValue(
+                                  getAmount(lightningBalance),
+                                  8,
+                                  true
+                              )
+                            : getAmount(lightningBalance))}{' '}
+                    ⚡
                 </Text>
                 {pendingOpenBalance > 0 ? (
                     <Text style={styles.pendingBalance}>
-                        {units && getAmount(pendingOpenBalance)} pending open
+                        {units &&
+                            (lurkerMode
+                                ? PrivacyUtils.hideValue(
+                                      getAmount(pendingOpenBalance),
+                                      8,
+                                      true
+                                  )
+                                : getAmount(pendingOpenBalance))}{' '}
+                        pending open
                     </Text>
                 ) : null}
+            </>
+        );
+
+        const BalanceView = () => (
+            <React.Fragment>
+                <LightningBalance />
                 <Text style={styles.blockchainBalance}>
-                    {units && getAmount(totalBlockchainBalance)} ⛓️
+                    {units &&
+                        (lurkerMode
+                            ? PrivacyUtils.hideValue(
+                                  getAmount(totalBlockchainBalance),
+                                  8,
+                                  true
+                              )
+                            : getAmount(totalBlockchainBalance))}{' '}
+                    ⛓️
                 </Text>
                 {unconfirmedBlockchainBalance ? (
                     <Text style={styles.pendingBalance}>
-                        {units && getAmount(unconfirmedBlockchainBalance)}{' '}
+                        {units &&
+                            (lurkerMode
+                                ? PrivacyUtils.hideValue(
+                                      getAmount(unconfirmedBlockchainBalance),
+                                      8,
+                                      true
+                                  )
+                                : getAmount(unconfirmedBlockchainBalance))}{' '}
                         pending
                     </Text>
                 ) : null}
@@ -79,18 +125,24 @@ export default class MainPane extends React.Component<
             <React.Fragment>
                 <Text style={styles.lightningBalance}>
                     {units &&
-                        getAmount(
-                            Number(totalBlockchainBalance) +
-                                Number(lightningBalance)
-                        )}
+                        (lurkerMode
+                            ? PrivacyUtils.hideValue(
+                                  getAmount(combinedBalanceValue),
+                                  null,
+                                  true
+                              )
+                            : getAmount(combinedBalanceValue))}
                 </Text>
                 {unconfirmedBlockchainBalance || pendingOpenBalance ? (
                     <Text style={styles.pendingBalance}>
                         {units &&
-                            getAmount(
-                                Number(pendingOpenBalance) +
-                                    Number(unconfirmedBlockchainBalance)
-                            )}{' '}
+                            (lurkerMode
+                                ? PrivacyUtils.hideValue(
+                                      getAmount(pendingUnconfirmedBalance),
+                                      null,
+                                      true
+                                  )
+                                : getAmount(pendingUnconfirmedBalance))}{' '}
                         pending
                     </Text>
                 ) : null}
@@ -114,15 +166,42 @@ export default class MainPane extends React.Component<
         );
 
         let infoValue = 'ⓘ';
-        if (NodeInfoStore.testnet) {
-            infoValue = 'Testnet';
-        } else if (NodeInfoStore.regtest) {
-            infoValue = 'Regtest';
+        if (NodeInfoStore.nodeInfo.isTestNet) {
+            infoValue = localeString('views.Wallet.MainPane.testnet');
+        } else if (NodeInfoStore.nodeInfo.isRegTest) {
+            infoValue = localeString('views.Wallet.MainPane.regnet');
         }
+
+        const DefaultBalance = () => (
+            <>
+                <TouchableOpacity
+                    onPress={() => changeUnits()}
+                    onLongPress={() =>
+                        this.setState({
+                            combinedBalance: !combinedBalance
+                        })
+                    }
+                >
+                    {combinedBalance ? (
+                        <BalanceViewCombined />
+                    ) : (
+                        <BalanceView />
+                    )}
+                </TouchableOpacity>
+            </>
+        );
+
+        const LndHubBalance = () => (
+            <>
+                <TouchableOpacity onPress={() => changeUnits()}>
+                    <LightningBalance />
+                </TouchableOpacity>
+            </>
+        );
 
         const NodeInfoBadge = () => (
             <View style={styles.nodeInfo}>
-                {host && host.includes('.onion') && (
+                {host && host.includes('.onion') ? (
                     <TouchableOpacity
                         onPress={() => navigation.navigate('NodeInfo')}
                     >
@@ -131,8 +210,8 @@ export default class MainPane extends React.Component<
                             source={TorIcon}
                         />
                     </TouchableOpacity>
-                )}
-                {host && !host.includes('.onion') && (
+                ) : null}
+                {host && !host.includes('.onion') ? (
                     <Badge
                         onPress={() => navigation.navigate('NodeInfo')}
                         value={infoValue}
@@ -142,7 +221,7 @@ export default class MainPane extends React.Component<
                             marginLeft: 5
                         }}
                     />
-                )}
+                ) : null}
             </View>
         );
 
@@ -193,20 +272,11 @@ export default class MainPane extends React.Component<
                                 borderBottomWidth: 0
                             }}
                         />
-                        <TouchableOpacity
-                            onPress={() => changeUnits()}
-                            onLongPress={() =>
-                                this.setState({
-                                    combinedBalance: !combinedBalance
-                                })
-                            }
-                        >
-                            {combinedBalance ? (
-                                <BalanceViewCombined />
-                            ) : (
-                                <BalanceView />
-                            )}
-                        </TouchableOpacity>
+                        {implementation === 'lndhub' ? (
+                            <LndHubBalance />
+                        ) : (
+                            <DefaultBalance />
+                        )}
                         <View style={styles.buttons}>
                             <Button
                                 title="Send"
@@ -297,7 +367,7 @@ export default class MainPane extends React.Component<
                     >
                         {NodeInfoStore.errorMsg
                             ? NodeInfoStore.errorMsg
-                            : 'Error connecting to your node. Please check your settings and try again.'}
+                            : localeString('views.Wallet.MainPane.error')}
                     </Text>
                     <Button
                         icon={{
@@ -305,7 +375,9 @@ export default class MainPane extends React.Component<
                             size: 25,
                             color: '#fff'
                         }}
-                        title="Go to Settings"
+                        title={localeString(
+                            'views.Wallet.MainPane.goToSettings'
+                        )}
                         buttonStyle={{
                             backgroundColor: 'gray',
                             borderRadius: 30
@@ -315,6 +387,16 @@ export default class MainPane extends React.Component<
                         }}
                         onPress={() => navigation.navigate('Settings')}
                     />
+                    <Text
+                        style={{
+                            color: '#fff',
+                            fontSize: 12,
+                            marginTop: 20,
+                            marginBottom: -40
+                        }}
+                    >
+                        {playStore ? `v${version}-play` : `v${version}`}
+                    </Text>
                 </View>
             );
         }

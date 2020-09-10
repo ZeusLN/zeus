@@ -1,8 +1,8 @@
 import { observable, computed } from 'mobx';
-import BaseModel from './BaseModel.ts';
+import BaseModel from './BaseModel';
 
 export default class NodeInfo extends BaseModel {
-    chains?: Array<string>;
+    chains?: Array<any>;
     uris?: Array<string>;
     alias?: string;
     num_active_channels?: number;
@@ -12,6 +12,7 @@ export default class NodeInfo extends BaseModel {
     num_peers?: number;
     synced_to_chain?: boolean;
     @observable testnet?: boolean;
+    @observable regtest?: boolean;
     block_hash?: string;
     @observable block_height?: number;
     best_header_timestamp?: string;
@@ -20,17 +21,30 @@ export default class NodeInfo extends BaseModel {
     @observable network?: string;
     @observable blockheight?: number;
     address?: Array<any>;
+    api_version?: string;
 
     @computed public get isTestNet(): boolean {
-        return this.testnet || this.network === 'testnet';
+        return (
+            this.testnet ||
+            this.network === 'testnet' ||
+            (this.chains &&
+                this.chains[0] &&
+                this.chains[0].network === 'testnet')
+        );
     }
 
     @computed public get isRegTest(): boolean {
-        return this.regtest || this.network === 'regtest';
+        return (
+            this.regtest ||
+            this.network === 'regtest' ||
+            (this.chains &&
+                this.chains[0] &&
+                this.chains[0].network === 'regtest')
+        );
     }
 
     @computed public get currentBlockHeight(): Number {
-        return this.block_height || this.blockheight;
+        return this.block_height || this.blockheight || 0;
     }
 
     @computed public get getURIs(): Array<string> {
@@ -40,10 +54,11 @@ export default class NodeInfo extends BaseModel {
         }
 
         // c-lightning
-        const uris = [];
-        this.address.forEach(uri => {
-            uris.push(`${this.id}@${uri.address}:${uri.port}`);
-        });
+        const uris: any[] = [];
+        this.address &&
+            this.address.forEach(uri => {
+                uris.push(`${this.id}@${uri.address}:${uri.port}`);
+            });
         return uris;
     }
 }

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text, View } from 'react-native';
+import { Linking, Text, View } from 'react-native';
 import { ButtonGroup } from 'react-native-elements';
 import Transactions from './Transactions';
 import Payments from './Payments';
@@ -7,15 +7,21 @@ import Invoices from './Invoices';
 import Channels from './Channels';
 import MainPane from './MainPane';
 import { inject, observer } from 'mobx-react';
+import PrivacyUtils from './../../utils/PrivacyUtils';
+import { localeString } from './../../utils/LocaleUtils';
 
 import BalanceStore from './../../stores/BalanceStore';
 import ChannelsStore from './../../stores/ChannelsStore';
+import FeeStore from './../../stores/FeeStore';
 import InvoicesStore from './../../stores/InvoicesStore';
 import NodeInfoStore from './../../stores/NodeInfoStore';
 import PaymentsStore from './../../stores/PaymentsStore';
 import SettingsStore from './../../stores/SettingsStore';
+import FiatStore from './../../stores/FiatStore';
 import TransactionsStore from './../../stores/TransactionsStore';
 import UnitsStore from './../../stores/UnitsStore';
+
+import handleAnything from './../../utils/handleAnything';
 
 interface WalletProps {
     enterSetup: any;
@@ -23,12 +29,14 @@ interface WalletProps {
     navigation: any;
     BalanceStore: BalanceStore;
     ChannelsStore: ChannelsStore;
+    FeeStore: FeeStore;
     InvoicesStore: InvoicesStore;
     NodeInfoStore: NodeInfoStore;
     PaymentsStore: PaymentsStore;
     SettingsStore: SettingsStore;
     TransactionsStore: TransactionsStore;
     UnitsStore: UnitsStore;
+    FiatStore: FiatStore;
 }
 
 interface WalletState {
@@ -45,7 +53,8 @@ interface WalletState {
     'PaymentsStore',
     'SettingsStore',
     'TransactionsStore',
-    'UnitsStore'
+    'UnitsStore',
+    'FiatStore'
 )
 @observer
 export default class Wallet extends React.Component<WalletProps, WalletState> {
@@ -54,11 +63,25 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         selectedIndex: 0
     };
 
-    componentWillMount = () => {
+    componentDidMount() {
+        Linking.getInitialURL()
+            .then(url => {
+                if (url) {
+                    handleAnything(url).then(([route, props]) => {
+                        this.props.navigation.navigate(route, props);
+                    });
+                }
+            })
+            .catch(err =>
+                console.error(localeString('views.Wallet.Wallet.error'), err)
+            );
+    }
+
+    UNSAFE_componentWillMount = () => {
         this.getSettingsAndRefresh();
     };
 
-    componentWillReceiveProps = (nextProps: any) => {
+    UNSAFE_componentWillReceiveProps = (nextProps: any) => {
         const { navigation } = nextProps;
         const refresh = navigation.getParam('refresh', null);
 
@@ -68,7 +91,23 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     };
 
     async getSettingsAndRefresh() {
-        const { SettingsStore } = this.props;
+        const {
+            SettingsStore,
+            NodeInfoStore,
+            BalanceStore,
+            PaymentsStore,
+            InvoicesStore,
+            TransactionsStore,
+            ChannelsStore
+        } = this.props;
+
+        NodeInfoStore.reset();
+        BalanceStore.reset();
+        PaymentsStore.reset();
+        InvoicesStore.reset();
+        TransactionsStore.reset();
+        ChannelsStore.reset();
+
         await SettingsStore.getSettings().then(() => {
             this.refresh();
         });
@@ -82,16 +121,43 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             ChannelsStore,
             InvoicesStore,
             PaymentsStore,
-            FeeStore
+            FeeStore,
+            SettingsStore,
+            FiatStore
         } = this.props;
-        NodeInfoStore.getNodeInfo();
-        BalanceStore.getBlockchainBalance();
-        BalanceStore.getLightningBalance();
-        TransactionsStore.getTransactions();
-        PaymentsStore.getPayments();
-        InvoicesStore.getInvoices();
-        ChannelsStore.getChannels();
-        FeeStore.getFees();
+        const {
+            settings,
+            implementation,
+            username,
+            password,
+            login
+        } = SettingsStore;
+        const { fiat } = settings;
+
+        if (implementation === 'lndhub') {
+            login({ login: username, password }).then(() => {
+                BalanceStore.getLightningBalance();
+                PaymentsStore.getPayments();
+                InvoicesStore.getInvoices();
+            });
+        } else {
+            NodeInfoStore.getNodeInfo();
+            BalanceStore.getBlockchainBalance();
+            BalanceStore.getLightningBalance();
+            PaymentsStore.getPayments();
+            InvoicesStore.getInvoices();
+            TransactionsStore.getTransactions();
+            ChannelsStore.getChannels();
+            FeeStore.getFees();
+        }
+
+        if (implementation === 'lnd') {
+            FeeStore.getForwardingHistory();
+        }
+
+        if (!!fiat && fiat !== 'Disabled') {
+            FiatStore.getFiatRates();
+        }
     };
 
     updateIndex = (selectedIndex: number) => {
@@ -123,16 +189,36 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { payments } = PaymentsStore;
         const { invoices, invoicesCount } = InvoicesStore;
         const { channels } = ChannelsStore;
-        const { settings } = SettingsStore;
-        const { theme } = settings;
+        const { settings, implementation } = SettingsStore;
+        const { theme, lurkerMode } = settings;
+
+        const paymentsCount = (payments && payments.length) || 0;
+        const paymentsButtonCount = lurkerMode
+            ? PrivacyUtils.hideValue(paymentsCount, 2, true)
+            : paymentsCount;
+
+        const invoicesCountValue = invoicesCount || 0;
+        const invoicesButtonCount = lurkerMode
+            ? PrivacyUtils.hideValue(invoicesCountValue, 2, true)
+            : invoicesCountValue;
+
+        const transactionsCount = (transactions && transactions.length) || 0;
+        const transactionsButtonCount = lurkerMode
+            ? PrivacyUtils.hideValue(transactionsCount, 2, true)
+            : transactionsCount;
+
+        const channelsCount = (channels && channels.length) || 0;
+        const channelsButtonCount = lurkerMode
+            ? PrivacyUtils.hideValue(channelsCount, 2, true)
+            : channelsCount;
 
         const paymentsButton = () => (
             <React.Fragment>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
-                    {(payments && payments.length) || 0}
+                    {paymentsButtonCount}
                 </Text>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
-                    Payments
+                    {localeString('views.Wallet.Wallet.payments')}
                 </Text>
             </React.Fragment>
         );
@@ -140,10 +226,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const invoicesButton = () => (
             <React.Fragment>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
-                    {invoicesCount || 0}
+                    {invoicesButtonCount}
                 </Text>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
-                    Invoices
+                    {localeString('views.Wallet.Wallet.invoices')}
                 </Text>
             </React.Fragment>
         );
@@ -151,10 +237,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const transactionsButton = () => (
             <React.Fragment>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
-                    {(transactions && transactions.length) || 0}
+                    {transactionsButtonCount}
                 </Text>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
-                    On-chain
+                    {localeString('views.Wallet.Wallet.onchain')}
                 </Text>
             </React.Fragment>
         );
@@ -162,10 +248,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const channelsButton = () => (
             <React.Fragment>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
-                    {(channels && channels.length) || 0}
+                    {channelsButtonCount}
                 </Text>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
-                    Channels
+                    {localeString('views.Wallet.Wallet.channels')}
                 </Text>
             </React.Fragment>
         );
@@ -176,6 +262,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             { element: transactionsButton },
             { element: channelsButton }
         ];
+
+        const lndHubButtons = [
+            { element: paymentsButton },
+            { element: invoicesButton }
+        ];
+
+        const selectedButtons =
+            implementation === 'lndhub' ? lndHubButtons : buttons;
 
         return (
             <View style={{ flex: 1 }}>
@@ -191,7 +285,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     <ButtonGroup
                         onPress={this.updateIndex}
                         selectedIndex={selectedIndex}
-                        buttons={buttons}
+                        buttons={selectedButtons}
                         containerStyle={{
                             height: 50,
                             marginTop: 0,
@@ -210,7 +304,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     <ButtonGroup
                         onPress={this.updateIndex}
                         selectedIndex={selectedIndex}
-                        buttons={buttons}
+                        buttons={selectedButtons}
                         containerStyle={{
                             height: 50,
                             marginTop: 0,

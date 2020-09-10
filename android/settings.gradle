@@ -1,17 +1,16 @@
 rootProject.name = 'zeus'
-include ':realm'
-project(':realm').projectDir = new File(rootProject.projectDir, '../node_modules/realm/android')
+include ':rn-fetch-blob'
+project(':rn-fetch-blob').projectDir = new File(rootProject.projectDir, '../node_modules/rn-fetch-blob/android')
+include ':react-native-randombytes'
+project(':react-native-randombytes').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-randombytes/android')
+include ':react-native-secure-key-store'
+project(':react-native-secure-key-store').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-secure-key-store/android')
 include ':react-native-linear-gradient'
 project(':react-native-linear-gradient').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-linear-gradient/android')
-include ':react-native-keychain'
-project(':react-native-keychain').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-keychain/android')
+apply from: file("../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesSettingsGradle(settings)
 include ':rncamerakit'
 project(':rncamerakit').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-camera-kit/android/')
-include ':react-native-gesture-handler'
-project(':react-native-gesture-handler').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-gesture-handler/android')
-include ':react-native-vector-icons'
-project(':react-native-vector-icons').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-vector-icons/android')
-include ':react-native-activity-result-fork'
-project(':react-native-activity-result-fork').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-activity-result-fork/android')
+include ':react-native-secure-key-store'
+project(':react-native-secure-key-store').projectDir = new File(rootProject.projectDir, 	'../node_modules/react-native-secure-key-store/android')
 
 include ':app'

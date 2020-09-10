@@ -1,21 +1,15 @@
 import * as React from 'react';
-import axios from 'axios';
-import {
-    Alert,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
-    ScrollView
-} from 'react-native';
+import RNFetchBlob from 'rn-fetch-blob';
+import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
-import { getDomain, LNURLPayResult, LNURLPaySuccessAction } from 'js-lnurl';
-import AddressUtils from './../../utils/AddressUtils';
+import querystring from 'querystring-es3';
+import url from 'url';
 import InvoicesStore from './../../stores/InvoicesStore';
 import LnurlPayStore from './../../stores/LnurlPayStore';
 import SettingsStore from './../../stores/SettingsStore';
 import LnurlPayMetadata from './Metadata';
+import { localeString } from './../../utils/LocaleUtils';
 
 interface LnurlPayProps {
     navigation: any;
@@ -35,30 +29,33 @@ export default class LnurlPay extends React.Component<
     LnurlPayProps,
     LnurlPayState
 > {
-    constructor(props: any) {
+    constructor(props: LnurlPayProps) {
         super(props);
 
         try {
             this.state = this.stateFromProps(props);
         } catch (err) {
-            this.state = {};
+            this.state = {
+                amount: '',
+                domain: ''
+            };
 
-            Alert.alert(`Invalid lnurl params!`, err.message, [], {
-                onDismiss: () => {
-                    props.navigation.navigate('Wallet');
-                }
-            });
+            Alert.alert(
+                localeString('views.LnurlPay.LnurlPay.invalidParams'),
+                err.message,
+                [{ text: 'OK', onPress: () => void 0 }],
+                { cancelable: false }
+            );
         }
     }
 
-    stateFromProps(props) {
+    stateFromProps(props: LnurlPayProps) {
         const { navigation } = props;
         const lnurl = navigation.getParam('lnurlParams');
-        const domain = getDomain(lnurl.callback);
 
         return {
             amount: Math.floor(lnurl.minSendable / 1000).toString(),
-            domain
+            domain: lnurl.domain
         };
     }
 
@@ -66,50 +63,69 @@ export default class LnurlPay extends React.Component<
         const { navigation, InvoicesStore, LnurlPayStore } = this.props;
         const { domain, amount } = this.state;
         const lnurl = navigation.getParam('lnurlParams');
+        const u = url.parse(lnurl.callback);
+        const qs = querystring.parse(u.query);
+        qs.amount = parseInt((parseFloat(amount) * 1000).toString());
+        u.search = querystring.stringify(qs);
+        u.query = querystring.stringify(qs);
 
-        axios
-            .get(lnurl.callback, {
-                params: { amount: parseFloat(amount) * 1000 }
+        RNFetchBlob.fetch('get', url.format(u))
+            .then((response: any) => {
+                try {
+                    const data = response.json();
+                    return data;
+                } catch (err) {
+                    return { status: 'ERROR', reason: response.text() };
+                }
             })
             .catch((err: any) => ({
                 status: 'ERROR',
-                reason: err.response_data
+                reason: err.message
             }))
-            .then(async (response: any) => {
-                if (response.data.status === 'ERROR') {
-                    Alert.alert(response.data.reason);
+            .then((data: any) => {
+                if (data.status === 'ERROR') {
+                    Alert.alert(
+                        `[error] ${domain} says:`,
+                        data.reason,
+                        [{ text: 'OK', onPress: () => void 0 }],
+                        { cancelable: false }
+                    );
                     return;
                 }
 
-                const pr = response.data.pr;
-                const successAction = response.data.successAction || {
+                const pr = data.pr;
+                const successAction = data.successAction || {
                     tag: 'noop'
                 };
 
                 InvoicesStore.getPayReq(pr, lnurl.metadata).then(() => {
                     if (!!InvoicesStore.getPayReqError) {
                         Alert.alert(
-                            `Got an invalid invoice!`,
+                            localeString(
+                                'views.LnurlPay.LnurlPay.invalidInvoice'
+                            ),
                             InvoicesStore.getPayReqError,
-                            [],
-                            {
-                                onDismiss: () => {
-                                    navigation.navigate('Wallet');
-                                }
-                            }
+                            [{ text: 'OK', onPress: () => void 0 }],
+                            { cancelable: false }
                         );
                         return;
                     }
 
+                    const payment_hash: string =
+                        (InvoicesStore.pay_req &&
+                            InvoicesStore.pay_req.payment_hash) ||
+                        '';
+                    const description_hash: string =
+                        (InvoicesStore.pay_req &&
+                            InvoicesStore.pay_req.description_hash) ||
+                        '';
+
                     LnurlPayStore.keep(
-                        InvoicesStore.pay_req.payment_hash,
+                        payment_hash,
                         domain,
                         lnurl.lnurlText,
-                        {
-                            metadata: lnurl.metadata,
-                            descriptionHash:
-                                InvoicesStore.pay_req.description_hash
-                        },
+                        lnurl.metadata,
+                        description_hash,
                         successAction
                     );
                     navigation.navigate('PaymentRequest');
@@ -151,7 +167,8 @@ export default class LnurlPay extends React.Component<
                         style={{
                             padding: 20,
                             fontWeight: 'bold',
-                            fontSize: 22
+                            fontSize: 22,
+                            color: theme === 'dark' ? 'white' : 'black'
                         }}
                     >
                         {domain}
@@ -163,7 +180,7 @@ export default class LnurlPay extends React.Component<
                             color: theme === 'dark' ? 'white' : 'black'
                         }}
                     >
-                        Amount to pay (in Satoshis)
+                        {localeString('views.LnurlPay.LnurlPay.amount')}
                         {lnurl && lnurl.minSendable !== lnurl.maxSendable
                             ? ` (${Math.ceil(
                                   lnurl.minSendable / 1000
@@ -208,7 +225,10 @@ export default class LnurlPay extends React.Component<
                     </View>
                 </View>
                 <View style={styles.content}>
-                    <LnurlPayMetadata metadata={lnurl.metadata} />
+                    <LnurlPayMetadata
+                        metadata={lnurl.metadata}
+                        SettingsStore={SettingsStore}
+                    />
                 </View>
             </View>
         );
@@ -217,7 +237,8 @@ export default class LnurlPay extends React.Component<
 
 const styles = StyleSheet.create({
     lightThemeStyle: {
-        flex: 1
+        flex: 1,
+        backgroundColor: 'white'
     },
     darkThemeStyle: {
         flex: 1,

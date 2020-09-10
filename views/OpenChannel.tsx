@@ -11,19 +11,26 @@ import {
 import { inject, observer } from 'mobx-react';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import FeeTable from './../components/FeeTable';
-import FeeUtils from './../utils/FeeUtils';
+import UTXOPicker from './../components/UTXOPicker';
+
 import NodeUriUtils from './../utils/NodeUriUtils';
+import RESTUtils from './../utils/RESTUtils';
+import { localeString } from './../utils/LocaleUtils';
 
 import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
 import FeeStore from './../stores/FeeStore';
+import BalanceStore from './../stores/BalanceStore';
+import UTXOsStore from './../stores/UTXOsStore';
 
 interface OpenChannelProps {
     exitSetup: any;
     navigation: any;
     ChannelsStore: ChannelsStore;
+    BalanceStore: BalanceStore;
     SettingsStore: SettingsStore;
     FeeStore: FeeStore;
+    UTXOsStore: UTXOsStore;
 }
 
 interface OpenChannelState {
@@ -34,25 +41,45 @@ interface OpenChannelState {
     private: boolean;
     host: string;
     suggestImport: string;
+    utxos: Array<string>;
+    utxoBalance: number;
 }
 
-@inject('ChannelsStore', 'SettingsStore', 'FeeStore')
+@inject(
+    'ChannelsStore',
+    'SettingsStore',
+    'FeeStore',
+    'BalanceStore',
+    'UTXOsStore'
+)
 @observer
 export default class OpenChannel extends React.Component<
     OpenChannelProps,
     OpenChannelState
 > {
-    state = {
-        node_pubkey_string: '',
-        local_funding_amount: '',
-        min_confs: 1,
-        sat_per_byte: '2',
-        private: false,
-        host: '',
-        suggestImport: ''
-    };
+    constructor(props: any) {
+        super(props);
+        const { navigation } = props;
+        const node_pubkey_string = navigation.getParam(
+            'node_pubkey_string',
+            null
+        );
+        const host = navigation.getParam('host', null);
 
-    async componentWillMount() {
+        this.state = {
+            node_pubkey_string: node_pubkey_string || '',
+            local_funding_amount: '',
+            min_confs: 1,
+            sat_per_byte: '2',
+            private: false,
+            host: host || '',
+            suggestImport: '',
+            utxos: [],
+            utxoBalance: 0
+        };
+    }
+
+    async UNSAFE_componentWillMount() {
         const clipboard = await Clipboard.getString();
 
         if (NodeUriUtils.isValidNodeUri(clipboard)) {
@@ -61,6 +88,13 @@ export default class OpenChannel extends React.Component<
             });
         }
     }
+
+    selectUTXOs = (utxos: Array<string>, utxoBalance: number) =>
+        this.setState({
+            utxos,
+            local_funding_amount: 'all',
+            utxoBalance: utxoBalance
+        });
 
     importClipboard = () => {
         const { pubkey, host } = NodeUriUtils.processNodeUri(
@@ -82,7 +116,7 @@ export default class OpenChannel extends React.Component<
         });
     };
 
-    componentWillReceiveProps(nextProps: any) {
+    UNSAFE_componentWillReceiveProps(nextProps: any) {
         const { navigation } = nextProps;
         const node_pubkey_string = navigation.getParam(
             'node_pubkey_string',
@@ -97,14 +131,16 @@ export default class OpenChannel extends React.Component<
     }
 
     setFee = (text: string) => {
-        this.setState({ sat_per_byte: FeeUtils.roundFee(text) });
+        this.setState({ sat_per_byte: text });
     };
 
     render() {
         const {
             ChannelsStore,
             SettingsStore,
+            BalanceStore,
             FeeStore,
+            UTXOsStore,
             navigation
         } = this.props;
         const {
@@ -113,7 +149,8 @@ export default class OpenChannel extends React.Component<
             min_confs,
             host,
             sat_per_byte,
-            suggestImport
+            suggestImport,
+            utxoBalance
         } = this.state;
         const privateChannel = this.state.private;
 
@@ -126,6 +163,7 @@ export default class OpenChannel extends React.Component<
             peerSuccess,
             channelSuccess
         } = ChannelsStore;
+        const { confirmedBlockchainBalance } = BalanceStore;
         const { settings } = SettingsStore;
         const { theme } = settings;
 
@@ -149,7 +187,7 @@ export default class OpenChannel extends React.Component<
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: 'Open Channel',
+                        text: localeString('views.OpenChannel.openChannel'),
                         style: { color: '#fff' }
                     }}
                     backgroundColor="grey"
@@ -158,17 +196,17 @@ export default class OpenChannel extends React.Component<
                 {!!suggestImport && (
                     <View style={styles.clipboardImport}>
                         <Text style={{ color: 'white' }}>
-                            Detected the following Node URI in your clipboard:
+                            {localeString('views.OpenChannel.importText')}
                         </Text>
                         <Text style={{ color: 'white', padding: 15 }}>
                             {suggestImport}
                         </Text>
                         <Text style={{ color: 'white' }}>
-                            Would you like to import it?
+                            {localeString('views.OpenChannel.importPrompt')}
                         </Text>
                         <View style={styles.button}>
                             <Button
-                                title="Import"
+                                title={localeString('views.OpenChannel.import')}
                                 onPress={() => this.importClipboard()}
                                 titleStyle={{
                                     color: 'rgba(92, 99,216, 1)'
@@ -201,24 +239,29 @@ export default class OpenChannel extends React.Component<
                     )}
                     {peerSuccess && (
                         <Text style={{ color: 'green' }}>
-                            Succesfully connected to peer
+                            {localeString('views.OpenChannel.peerSuccess')}
                         </Text>
                     )}
                     {channelSuccess && (
                         <Text style={{ color: 'green' }}>
-                            Succesfully opened channel
+                            {localeString('views.OpenChannel.channelSuccess')}
                         </Text>
                     )}
                     {(errorMsgPeer || errorMsgChannel) && (
                         <Text style={{ color: 'red' }}>
-                            {errorMsgChannel || errorMsgPeer || 'Error'}
+                            {errorMsgChannel ||
+                                errorMsgPeer ||
+                                localeString('general.error')}
                         </Text>
                     )}
 
                     <Text
-                        style={{ color: theme === 'dark' ? 'white' : 'black' }}
+                        style={{
+                            textDecorationLine: 'underline',
+                            color: theme === 'dark' ? 'white' : 'black'
+                        }}
                     >
-                        Node pubkey
+                        {localeString('views.OpenChannel.nodePubkey')}
                     </Text>
                     <TextInput
                         placeholder={'0A...'}
@@ -237,12 +280,15 @@ export default class OpenChannel extends React.Component<
                     />
 
                     <Text
-                        style={{ color: theme === 'dark' ? 'white' : 'black' }}
+                        style={{
+                            textDecorationLine: 'underline',
+                            color: theme === 'dark' ? 'white' : 'black'
+                        }}
                     >
-                        Host
+                        {localeString('views.OpenChannel.host')}
                     </Text>
                     <TextInput
-                        placeholder={'Hostname:Port'}
+                        placeholder={localeString('views.OpenChannel.hostPort')}
                         value={host}
                         onChangeText={(text: string) =>
                             this.setState({ host: text })
@@ -258,12 +304,18 @@ export default class OpenChannel extends React.Component<
                     />
 
                     <Text
-                        style={{ color: theme === 'dark' ? 'white' : 'black' }}
+                        style={{
+                            textDecorationLine: 'underline',
+                            color: theme === 'dark' ? 'white' : 'black'
+                        }}
                     >
-                        Local amount (in satoshis)
+                        {localeString('views.OpenChannel.localAmt')}
                     </Text>
                     <TextInput
-                        placeholder={'20000 (min)'}
+                        keyboardType="numeric"
+                        placeholder={localeString(
+                            'views.OpenChannel.amtExample'
+                        )}
                         value={local_funding_amount}
                         onChangeText={(text: string) =>
                             this.setState({ local_funding_amount: text })
@@ -277,13 +329,30 @@ export default class OpenChannel extends React.Component<
                         placeholderTextColor="gray"
                         editable={!openingChannel}
                     />
+                    {local_funding_amount === 'all' && (
+                        <Text
+                            style={{
+                                color: theme === 'dark' ? 'white' : 'black'
+                            }}
+                        >
+                            {`${
+                                utxoBalance > 0
+                                    ? utxoBalance
+                                    : confirmedBlockchainBalance
+                            } ${localeString('views.Receive.satoshis')}`}
+                        </Text>
+                    )}
 
                     <Text
-                        style={{ color: theme === 'dark' ? 'white' : 'black' }}
+                        style={{
+                            textDecorationLine: 'underline',
+                            color: theme === 'dark' ? 'white' : 'black'
+                        }}
                     >
-                        Number of Confirmations
+                        {localeString('views.OpenChannel.numConf')}
                     </Text>
                     <TextInput
+                        keyboardType="numeric"
                         placeholder={'1'}
                         value={min_confs.toString()}
                         onChangeText={(text: string) =>
@@ -302,11 +371,15 @@ export default class OpenChannel extends React.Component<
                     />
 
                     <Text
-                        style={{ color: theme === 'dark' ? 'white' : 'black' }}
+                        style={{
+                            textDecorationLine: 'underline',
+                            color: theme === 'dark' ? 'white' : 'black'
+                        }}
                     >
-                        Satoshis per byte
+                        {localeString('views.OpenChannel.satsPerByte')}
                     </Text>
                     <TextInput
+                        keyboardType="numeric"
                         placeholder="2"
                         value={sat_per_byte}
                         onChangeText={(text: string) => this.setFee(text)}
@@ -320,24 +393,34 @@ export default class OpenChannel extends React.Component<
                         editable={!openingChannel}
                     />
 
-                    <CheckBox
-                        title="Private"
-                        checked={privateChannel}
-                        onPress={() =>
-                            this.setState({ private: !privateChannel })
-                        }
-                    />
+                    {RESTUtils.supportsCoinControl() && (
+                        <UTXOPicker
+                            onValueChange={this.selectUTXOs}
+                            UTXOsStore={UTXOsStore}
+                        />
+                    )}
+
+                    <View style={{ padding: 10 }}>
+                        <CheckBox
+                            title={localeString('views.OpenChannel.private')}
+                            checked={privateChannel}
+                            onPress={() =>
+                                this.setState({ private: !privateChannel })
+                            }
+                        />
+                    </View>
 
                     <View style={styles.button}>
                         <Button
-                            title="Open Channel"
+                            title={localeString(
+                                'views.OpenChannel.openChannel'
+                            )}
                             icon={{
                                 name: 'swap-horiz',
                                 size: 25,
                                 color: 'white'
                             }}
                             onPress={() => connectPeer(this.state)}
-                            style={{ padding: 10 }}
                             buttonStyle={{
                                 backgroundColor:
                                     theme === 'dark'
@@ -349,7 +432,7 @@ export default class OpenChannel extends React.Component<
                     </View>
                     <View style={styles.button}>
                         <Button
-                            title="Scan"
+                            title={localeString('general.scan')}
                             icon={{
                                 name: 'crop-free',
                                 size: 25,
@@ -370,8 +453,8 @@ export default class OpenChannel extends React.Component<
                     <View style={styles.button}>
                         <FeeTable
                             setFee={this.setFee}
-                            SettingsStore={SettingsStore}
                             FeeStore={FeeStore}
+                            SettingsStore={SettingsStore}
                         />
                     </View>
                 </View>
@@ -382,7 +465,8 @@ export default class OpenChannel extends React.Component<
 
 const styles = StyleSheet.create({
     lightThemeStyle: {
-        flex: 1
+        flex: 1,
+        backgroundColor: 'white'
     },
     darkThemeStyle: {
         flex: 1,
@@ -398,13 +482,16 @@ const styles = StyleSheet.create({
         color: 'white'
     },
     content: {
-        alignItems: 'center',
         paddingTop: 20,
-        paddingBottom: 20
+        paddingBottom: 20,
+        paddingLeft: 5,
+        paddingRight: 5
     },
     button: {
         paddingTop: 10,
-        paddingBottom: 10
+        paddingBottom: 10,
+        width: 250,
+        alignSelf: 'center'
     },
     clipboardImport: {
         padding: 10,

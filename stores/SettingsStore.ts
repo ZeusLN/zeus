@@ -1,66 +1,124 @@
-import * as Keychain from 'react-native-keychain';
+import RNSecureKeyStore, { ACCESSIBLE } from 'react-native-secure-key-store';
 import { action, observable } from 'mobx';
-import axios from 'axios';
+import RNFetchBlob from 'rn-fetch-blob';
 import RESTUtils from '../utils/RESTUtils';
+
+// lndhub
+import LoginRequest from './../models/LoginRequest';
 
 interface Node {
     host?: string;
     port?: string;
+    url?: string;
     macaroonHex?: string;
+    accessKey?: string;
     implementation?: string;
+    certVerification?: boolean;
+    onChainAddress?: string;
 }
 
 interface Settings {
     nodes?: Array<Node>;
-    onChainAddress?: string;
     theme?: string;
+    lurkerMode?: boolean;
     selectedNode?: number;
     passphrase?: string;
+    fiat?: string;
+    locale?: string;
+    onChainAddress?: string;
 }
+
+export const LOCALE_KEYS = [
+    { key: 'English', value: 'English' },
+    { key: 'Español', value: 'Español' },
+    { key: 'Português', value: 'Português' },
+    { key: 'Češka', value: 'Češka' },
+    { key: 'Slovák', value: 'Slovák' },
+    { key: 'Deutsche', value: 'Deutsche' },
+    { key: 'Türkçe', value: 'Türkçe' },
+    // in progress
+    { key: 'Ελληνικά', value: 'Ελληνικά' },
+    { key: 'زبان فارسي', value: 'زبان فارسي' },
+    { key: 'Français', value: 'Français' },
+    { key: 'Nederlands', value: 'Nederlands' }
+];
+
+export const DEFAULT_THEME = 'light';
+export const DEFAULT_FIAT = 'Disabled';
+export const DEFAULT_LOCALE = 'English';
 
 export default class SettingsStore {
     @observable settings: Settings = {};
-    @observable loading: boolean = false;
+    @observable public loading: boolean = false;
     @observable btcPayError: string | null;
-    @observable host: string | null;
-    @observable port: string | null;
-    @observable macaroonHex: string | null;
-    @observable implementation: string | null;
-    @observable chainAddress: string;
+    @observable host: string;
+    @observable port: string;
+    @observable url: string;
+    @observable macaroonHex: string;
+    @observable accessKey: string;
+    @observable implementation: string;
+    @observable certVerification: boolean | undefined;
+    @observable chainAddress: string | undefined;
+    // LNDHub
+    @observable username: string;
+    @observable password: string;
+    @observable lndhubUrl: string;
+    @observable public createAccountError: string;
+    @observable public createAccountSuccess: string;
+    @observable public accessToken: string;
+    @observable public refreshToken: string;
+
+    @action
+    public changeLocale = (locale: string) => {
+        this.settings.locale = locale;
+    };
 
     @action
     public fetchBTCPayConfig = (data: string) => {
         const configRoute = data.split('config=')[1];
         this.btcPayError = null;
 
-        return axios
-            .request({
-                method: 'get',
-                url: configRoute
-            })
+        return RNFetchBlob.fetch('get', configRoute)
             .then((response: any) => {
-                // handle success
-                const data = response.data;
-                const configuration = data.configurations[0];
-                const { adminMacaroon, type, uri } = configuration;
+                const status = response.info().status;
+                if (status == 200) {
+                    const data = response.json();
+                    const configuration = data.configurations[0];
+                    const {
+                        adminMacaroon,
+                        macaroon,
+                        type,
+                        uri
+                    } = configuration;
 
-                if (type !== 'lnd-rest') {
-                    this.btcPayError =
-                        'Sorry, we only currently support BTCPay instances using lnd';
+                    if (type !== 'lnd-rest' && type !== 'clightning-rest') {
+                        this.btcPayError =
+                            'Sorry, we currently only support BTCPay instances using lnd or c-lightning';
+                    } else {
+                        const config = {
+                            host: uri.split('https://')[1],
+                            macaroonHex: adminMacaroon || macaroon,
+                            implementation:
+                                type === 'clightning-rest'
+                                    ? 'c-lightning-REST'
+                                    : 'lnd'
+                        };
+
+                        return config;
+                    }
                 } else {
-                    const config = {
-                        host: uri.split('https://')[1],
-                        macaroonHex: adminMacaroon
-                    };
-
-                    return config;
+                    this.btcPayError = 'Error getting BTCPay configuration';
                 }
             })
-            .catch(() => {
+            .catch((err: any) => {
                 // handle error
-                this.btcPayError = 'Error getting BTCPay configuration';
+                this.btcPayError = `Error getting BTCPay configuration: ${err.toString()}`;
             });
     };
+
+    hasCredentials() {
+        return this.macaroonHex || this.accessKey ? true : false;
+    }
 
     @action
     public async getSettings() {
@@ -68,20 +126,28 @@ export default class SettingsStore {
 
         try {
             // Retrieve the credentials
-            const credentials: any = await Keychain.getGenericPassword();
+            const credentials: any = await RNSecureKeyStore.get(
+                'zeus-settings'
+            );
             this.loading = false;
             if (credentials) {
-                this.settings = JSON.parse(credentials.password);
+                this.settings = JSON.parse(credentials);
                 const node: any =
                     this.settings.nodes &&
                     this.settings.nodes[this.settings.selectedNode || 0];
                 if (node) {
                     this.host = node.host;
                     this.port = node.port;
+                    this.url = node.url;
+                    this.username = node.username;
+                    this.password = node.password;
+                    this.lndhubUrl = node.lndhubUrl;
                     this.macaroonHex = node.macaroonHex;
-                    this.implementation = node.implementation;
+                    this.accessKey = node.accessKey;
+                    this.implementation = node.implementation || 'lnd';
+                    this.certVerification = node.certVerification || false;
+                    this.chainAddress = node.onChainAddress;
                 }
-                this.chainAddress = this.settings.onChainAddress;
                 return this.settings;
             } else {
                 console.log('No credentials stored');
@@ -97,31 +163,71 @@ export default class SettingsStore {
         this.loading = true;
 
         // Store the credentials
-        await Keychain.setGenericPassword('settings', settings).then(() => {
+        await RNSecureKeyStore.set('zeus-settings', settings, {
+            accessible: ACCESSIBLE.WHEN_UNLOCKED
+        }).then(() => {
             this.loading = false;
+            return settings;
         });
     }
 
     @action
     public getNewAddress = () => {
-        const { host, port, macaroonHex, implementation } = this;
+        return RESTUtils.getNewAddress().then((data: any) => {
+            const newAddress = data.address || data[0].address;
+            if (this.settings.nodes) {
+                this.settings.nodes[
+                    this.settings.selectedNode || 0
+                ].onChainAddress = newAddress;
+            }
 
-        return RESTUtils.getNewAddress({
-            host,
-            port,
-            macaroonHex,
-            implementation
-        }).then((response: any) => {
-            // handle success
-            const data = response.data;
-            const newAddress = data.address;
-            this.chainAddress = newAddress;
-            const newSettings = {
-                ...this.settings,
-                onChainAddress: newAddress
-            };
+            const newSettings = this.settings;
 
-            this.setSettings(JSON.stringify(newSettings));
+            this.setSettings(JSON.stringify(newSettings)).then(() => {
+                this.getSettings();
+            });
         });
+    };
+
+    // LNDHub
+    @action
+    public createAccount = (host: string, certVerification: boolean) => {
+        this.createAccountSuccess = '';
+        this.createAccountError = '';
+        this.loading = true;
+        return RESTUtils.createAccount(host, certVerification)
+            .then((data: any) => {
+                this.loading = false;
+                this.createAccountSuccess =
+                    'Successfully created LNDHub account. Record the username and password somewhere so you can restore your funds if something happens to your device. Then hit Save Node Config to continue.';
+                return data;
+            })
+            .catch(() => {
+                // handle error
+                this.loading = false;
+                this.createAccountError =
+                    'Error creating LNDHub account. Please check the host and try again.';
+            });
+    };
+
+    // LNDHub
+    @action
+    public login = (request: LoginRequest) => {
+        this.createAccountSuccess = '';
+        this.createAccountError = '';
+        this.loading = true;
+        return RESTUtils.login({
+            login: request.login,
+            password: request.password
+        })
+            .then((data: any) => {
+                this.loading = false;
+                this.accessToken = data.access_token;
+                this.refreshToken = data.refresh_token;
+            })
+            .catch(() => {
+                // handle error
+                this.loading = false;
+            });
     };
 }

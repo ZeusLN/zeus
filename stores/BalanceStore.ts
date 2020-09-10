@@ -1,19 +1,15 @@
 import { action, reaction, observable } from 'mobx';
-import axios from 'axios';
-import Transaction from './../models/Transaction';
 import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
-import Balance from './../models/Balance';
 
 export default class BalanceStore {
-    @observable public totalBlockchainBalance: number = 0;
-    @observable public confirmedBlockchainBalance: number = 0;
-    @observable public unconfirmedBlockchainBalance: number = 0;
+    @observable public totalBlockchainBalance: number | string = 0;
+    @observable public confirmedBlockchainBalance: number | string = 0;
+    @observable public unconfirmedBlockchainBalance: number | string = 0;
     @observable public loading: boolean = false;
     @observable public error: boolean = false;
-    @observable public transactions: Array<Transaction> = [];
-    @observable public pendingOpenBalance: number = 0;
-    @observable public lightningBalance: number = 0;
+    @observable public pendingOpenBalance: number | string = 0;
+    @observable public lightningBalance: number | string = 0;
     settingsStore: SettingsStore;
 
     constructor(settingsStore: SettingsStore) {
@@ -22,7 +18,7 @@ export default class BalanceStore {
         reaction(
             () => this.settingsStore.settings,
             () => {
-                if (this.settingsStore.macaroonHex) {
+                if (this.settingsStore.hasCredentials()) {
                     this.getBlockchainBalance();
                     this.getLightningBalance();
                 }
@@ -30,43 +26,55 @@ export default class BalanceStore {
         );
     }
 
+    reset = () => {
+        this.resetLightningBalance();
+        this.resetBlockchainBalance();
+        this.error = false;
+    };
+
+    resetBlockchainBalance = () => {
+        this.unconfirmedBlockchainBalance = 0;
+        this.confirmedBlockchainBalance = 0;
+        this.totalBlockchainBalance = 0;
+        this.loading = false;
+    };
+
+    resetLightningBalance = () => {
+        this.pendingOpenBalance = 0;
+        this.lightningBalance = 0;
+        this.loading = false;
+    };
+
     @action
     public getBlockchainBalance = () => {
         this.loading = true;
-        RESTUtils.getBlockchainBalance(this.settingsStore)
-            .then((response: any) => {
-                // handle success
-                const balance = new Balance(response.data);
-                this.unconfirmedBlockchainBalance = balance.unconfirmedBalance;
-                this.confirmedBlockchainBalance = balance.confirmedBalance;
-                this.totalBlockchainBalance = balance.getTotalBalance;
+        RESTUtils.getBlockchainBalance()
+            .then((data: any) => {
+                this.unconfirmedBlockchainBalance = Number(
+                    data.unconfirmed_balance
+                );
+                this.confirmedBlockchainBalance = Number(
+                    data.confirmed_balance
+                );
+                this.totalBlockchainBalance = Number(data.total_balance);
                 this.loading = false;
             })
             .catch(() => {
-                // handle error
-                this.unconfirmedBlockchainBalance = 0;
-                this.confirmedBlockchainBalance = 0;
-                this.totalBlockchainBalance = 0;
-                this.loading = false;
+                this.resetBlockchainBalance();
             });
     };
 
     @action
     public getLightningBalance = () => {
         this.loading = true;
-        RESTUtils.getLightningBalance(this.settingsStore)
-            .then((response: any) => {
-                // handle success
-                const balance = new Balance(response.data);
-                this.pendingOpenBalance = balance.pending_open_balance || 0;
-                this.lightningBalance = balance.getTotalLightningBalance;
+        RESTUtils.getLightningBalance()
+            .then((data: any) => {
+                this.pendingOpenBalance = Number(data.pending_open_balance);
+                this.lightningBalance = Number(data.balance);
                 this.loading = false;
             })
             .catch(() => {
-                // handle error
-                this.pendingOpenBalance = 0;
-                this.lightningBalance = 0;
-                this.loading = false;
+                this.resetLightningBalance();
             });
     };
 }

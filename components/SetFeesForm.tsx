@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from 'react-native-elements';
-import { inject, observer } from 'mobx-react';
+import { localeString } from './../utils/LocaleUtils';
 
 import FeeStore from './../stores/FeeStore';
 import SettingsStore from './../stores/SettingsStore';
@@ -22,8 +22,6 @@ interface SetFeesFormState {
     newFeeRateMiliMsat: string;
 }
 
-@inject('SettingsStore', 'FeeStore')
-@observer
 export default class SetFeesForm extends React.Component<
     SetFeesFormProps,
     SetFeesFormState
@@ -52,13 +50,7 @@ export default class SetFeesForm extends React.Component<
         } = this.props;
         const { settings } = SettingsStore;
         const { theme } = settings;
-        const {
-            channelFees,
-            setFees,
-            loading,
-            setFeesError,
-            setFeesSuccess
-        } = FeeStore;
+        const { setFees, loading, setFeesError, setFeesSuccess } = FeeStore;
 
         return (
             <React.Fragment>
@@ -66,8 +58,8 @@ export default class SetFeesForm extends React.Component<
                     <Button
                         title={
                             showNewFeesForm
-                                ? 'Hide Set New Fees Form'
-                                : 'Set New Fees'
+                                ? localeString('components.SetFeesForm.hide')
+                                : localeString('components.SetFeesForm.setNew')
                         }
                         onPress={() =>
                             this.setState({ showNewFeesForm: !showNewFeesForm })
@@ -89,7 +81,7 @@ export default class SetFeesForm extends React.Component<
                                     color: theme === 'dark' ? 'white' : 'black'
                                 }}
                             >
-                                Setting fees, please wait...
+                                {localeString('components.SetFeesForm.setting')}
                             </Text>
                         )}
                         {feesSubmitted && setFeesSuccess && (
@@ -98,7 +90,7 @@ export default class SetFeesForm extends React.Component<
                                     color: 'green'
                                 }}
                             >
-                                Succesfully set fees!
+                                {localeString('components.SetFeesForm.success')}
                             </Text>
                         )}
                         {feesSubmitted && setFeesError && (
@@ -107,7 +99,7 @@ export default class SetFeesForm extends React.Component<
                                     color: 'red'
                                 }}
                             >
-                                Error setting fees
+                                {localeString('components.SetFeesForm.error')}
                             </Text>
                         )}
 
@@ -116,9 +108,10 @@ export default class SetFeesForm extends React.Component<
                                 color: theme === 'dark' ? 'white' : 'black'
                             }}
                         >
-                            Base Fee msat
+                            {localeString('components.SetFeesForm.baseFee')}
                         </Text>
                         <TextInput
+                            keyboardType="numeric"
                             placeholder={baseFeeMsat || '1'}
                             placeholderTextColor="darkgray"
                             value={newBaseFeeMsat}
@@ -141,9 +134,10 @@ export default class SetFeesForm extends React.Component<
                                 color: theme === 'dark' ? 'white' : 'black'
                             }}
                         >
-                            Fee Rate mili msat
+                            {localeString('components.SetFeesForm.feeRateMili')}
                         </Text>
                         <TextInput
+                            keyboardType="numeric"
                             placeholder={feeRate || '1000000'}
                             placeholderTextColor="darkgray"
                             value={newFeeRateMiliMsat}
@@ -164,7 +158,9 @@ export default class SetFeesForm extends React.Component<
 
                         <View style={styles.button}>
                             <Button
-                                title={'Submit New Fees'}
+                                title={localeString(
+                                    'components.SetFeesForm.submit'
+                                )}
                                 onPress={() => {
                                     setFees(
                                         newBaseFeeMsat,

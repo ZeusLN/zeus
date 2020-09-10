@@ -1,230 +1,88 @@
-import axios from 'axios';
-import SettingsStore from './../stores/SettingsStore';
-
-const lndRoutes = {
-    getTransactions: '/v1/transactions',
-    getBlockchainBalance: '/v1/balance/blockchain',
-    getLightningBalance: '/v1/balance/channels',
-    getChannels: '/v1/channels',
-    sendCoins: '/v1/transactions',
-    getMyNodeInfo: '/v1/getinfo',
-    getInvoices: '/v1/invoices?reversed=true&num_max_invoices=100',
-    createInvoice: '/v1/invoices',
-    getPayments: '/v1/payments',
-    getNewAddress: '/v1/newaddress',
-    openChannel: '/v1/channels',
-    connectPeer: '/v1/peers',
-    listNode: '/v1/network/listNode',
-    closeChannel: function(urlParams: Array<string>) {
-        return `/v1/channels/${urlParams[0]}/${urlParams[1]}/`;
-    },
-    decodePaymentRequest: function(urlParams: Array<string>) {
-        return `/v1/payreq/${urlParams[0]}`;
-    },
-    payLightningInvoice: '/v1/channels/transactions',
-    getNodeInfo: function(urlParams: Array<string>) {
-        return `/v1/graph/node/${urlParams[0]}`;
-    },
-    getFees: '/v1/fees',
-    setFees: '/v1/chanpolicy'
-};
-
-const clightningRoutes = {
-    getTransactions: '/v1/listFunds',
-    getBlockchainBalance: '/v1/getBalance',
-    getLightningBalance: '/v1/channel/localremotebal',
-    getChannels: '/v1/channel/listChannels',
-    sendCoins: '/v1/withdraw',
-    getMyNodeInfo: '/v1/getinfo',
-    getInvoices: '/v1/invoice/listInvoices/',
-    createInvoice: '/v1/invoice/genInvoice/',
-    getPayments: '/v1/pay/listPayments',
-    getNewAddress: '/v1/newaddr',
-    openChannel: '/v1/channel/openChannel/',
-    connectPeer: '/v1/peer/connect',
-    listNode: '/v1/network/listNode',
-    closeChannel: function(urlParams: Array<string>) {
-        return `/v1/channel/closeChannel/${urlParams[0]}/`;
-    },
-    decodePaymentRequest: function(urlParams: Array<string>) {
-        return `/v1/pay/decodePay/${urlParams[0]}`;
-    },
-    payLightningInvoice: '/v1/pay',
-    getNodeInfo: 'N/A',
-    getFees: '/v1/getFees/',
-    setFees: '/v1/channel/setChannelFee/'
-};
-
-interface Headers {
-    macaroon?: string;
-    encodingtype?: string;
-    'Grpc-Metadata-macaroon'?: string;
-}
-
-const getTransactionsToken = axios.CancelToken.source().token;
-const getChannelsToken = axios.CancelToken.source().token;
-const getBlockchainBalanceToken = axios.CancelToken.source().token;
-const getLightningBalanceToken = axios.CancelToken.source().token;
-const getMyNodeInfoToken = axios.CancelToken.source().token;
-const getInvoicesToken = axios.CancelToken.source().token;
-const getPaymentsToken = axios.CancelToken.source().token;
-const getNodeInfoToken = axios.CancelToken.source().token;
+import stores from '../stores/Stores';
+import LND from '../backends/LND';
+import CLightningREST from '../backends/CLightningREST';
+import LndHub from '../backends/LndHub';
+import Spark from '../backends/Spark';
+import Eclair from '../backends/Eclair';
 
 class RESTUtils {
-    axiosReq = (
-        headers: Headers,
-        url: string,
-        method: string,
-        cancelToken?: any,
-        data?: any
-    ) => {
-        return axios.request({
-            method,
-            url,
-            headers,
-            cancelToken,
-            data
-        });
-    };
+    spark: Spark;
+    clightningREST: CLightningREST;
+    lndHub: LndHub;
+    lnd: LND;
+    eclair: Eclair;
 
-    getHeaders = (implementation: string, macaroonHex: string) => {
-        if (implementation === 'c-lightning-REST') {
-            return {
-                macaroon: macaroonHex,
-                encodingtype: 'hex'
-            };
+    constructor() {
+        this.spark = new Spark();
+        this.clightningREST = new CLightningREST();
+        this.lndHub = new LndHub();
+        this.lnd = new LND();
+        this.eclair = new Eclair();
+    }
+
+    getClass = () => {
+        const { implementation } = stores.settingsStore;
+        switch (implementation) {
+            case 'lnd':
+                return this.lnd;
+            case 'spark':
+                return this.spark;
+            case 'lndhub':
+                return this.lndHub;
+            case 'eclair':
+                return this.eclair;
+            case 'c-lightning-REST':
+                return this.clightningREST;
+            default:
+                return this.lnd;
         }
-        return {
-            'Grpc-Metadata-macaroon': macaroonHex
-        };
     };
 
-    getURL = (host: string, port: string | number, route: string) => {
-        const baseUrl = `https://${host}${port ? ':' + port : ''}`;
-        return `${baseUrl}${route}`;
+    call = (funcName: string, args?: any) => {
+        const cls: any = this.getClass();
+        return cls[funcName].apply(cls, args);
     };
 
-    request = (
-        settingsStore: SettingsStore,
-        request: string,
-        method: string,
-        cancelToken?: any,
-        data?: any,
-        urlParams?: Array<string>
-    ) => {
-        const { host, port, macaroonHex, implementation } = settingsStore;
+    getTransactions = (...args: any[]) => this.call('getTransactions', args);
+    getChannels = (...args: any[]) => this.call('getChannels', args);
+    getBlockchainBalance = (...args: any[]) =>
+        this.call('getBlockchainBalance', args);
+    getLightningBalance = (...args: any[]) =>
+        this.call('getLightningBalance', args);
+    sendCoins = (...args: any[]) => this.call('sendCoins', args);
+    getMyNodeInfo = (...args: any[]) => this.call('getMyNodeInfo', args);
+    getInvoices = (...args: any[]) => this.call('getInvoices', args);
+    createInvoice = (...args: any[]) => this.call('createInvoice', args);
+    getPayments = (...args: any[]) => this.call('getPayments', args);
+    getNewAddress = (...args: any[]) => this.call('getNewAddress', args);
+    openChannel = (...args: any[]) => this.call('openChannel', args);
+    connectPeer = (...args: any[]) => this.call('connectPeer', args);
+    listNode = (...args: any[]) => this.call('listNode', args);
+    decodePaymentRequest = (...args: any[]) =>
+        this.call('decodePaymentRequest', args);
+    payLightningInvoice = (...args: any[]) =>
+        this.call('payLightningInvoice', args);
+    payLightningInvoiceV2 = (...args: any[]) =>
+        this.call('payLightningInvoiceV2', args);
+    closeChannel = (...args: any[]) => this.call('closeChannel', args);
+    getNodeInfo = (...args: any[]) => this.call('getNodeInfo', args);
+    getFees = (...args: any[]) => this.call('getFees', args);
+    setFees = (...args: any[]) => this.call('setFees', args);
+    getRoutes = (...args: any[]) => this.call('getRoutes', args);
+    getForwardingHistory = (...args: any[]) =>
+        this.call('getForwardingHistory', args);
+    getUTXOs = (...args: any[]) => this.call('getUTXOs', args);
+    // lndhub
+    createAccount = (...args: any[]) => this.call('createAccount', args);
+    login = (...args: any[]) => this.call('login', args);
 
-        let route: string;
-        if (urlParams) {
-            route =
-                implementation === 'c-lightning-REST'
-                    ? clightningRoutes[request](urlParams)
-                    : lndRoutes[request](urlParams);
-        } else {
-            route =
-                implementation === 'c-lightning-REST'
-                    ? clightningRoutes[request]
-                    : lndRoutes[request];
-        }
-
-        const headers = this.getHeaders(implementation, macaroonHex);
-        const url = this.getURL(host, port, route);
-        return this.axiosReq(headers, url, method, cancelToken, data);
-    };
-
-    getRequest = (
-        settingsStore: SettingsStore,
-        request: string,
-        cancelToken?: any,
-        urlParams?: Array<string>
-    ) => {
-        return this.request(
-            settingsStore,
-            request,
-            'get',
-            cancelToken,
-            null,
-            urlParams
-        );
-    };
-
-    postRequest = (
-        settingsStore: SettingsStore,
-        request: string,
-        data?: any
-    ) => {
-        return this.request(settingsStore, request, 'post', null, data);
-    };
-
-    deleteRequest = (
-        settingsStore: SettingsStore,
-        request: string,
-        urlParams?: Array<string>
-    ) => {
-        return this.request(
-            settingsStore,
-            request,
-            'delete',
-            null,
-            null,
-            urlParams
-        );
-    };
-
-    getTransactions = (settingsStore: SettingsStore) =>
-        this.getRequest(settingsStore, 'getTransactions', getTransactionsToken);
-    getChannels = (settingsStore: SettingsStore) =>
-        this.getRequest(settingsStore, 'getChannels', getChannelsToken);
-    getBlockchainBalance = (settingsStore: SettingsStore) =>
-        this.getRequest(
-            settingsStore,
-            'getBlockchainBalance',
-            getBlockchainBalanceToken
-        );
-    getLightningBalance = (settingsStore: SettingsStore) =>
-        this.getRequest(
-            settingsStore,
-            'getLightningBalance',
-            getLightningBalanceToken
-        );
-    sendCoins = (settingsStore: SettingsStore, data: any) =>
-        this.postRequest(settingsStore, 'sendCoins', data);
-    getMyNodeInfo = (settingsStore: SettingsStore) =>
-        this.getRequest(settingsStore, 'getMyNodeInfo', getMyNodeInfoToken);
-    getInvoices = (settingsStore: SettingsStore) =>
-        this.getRequest(settingsStore, 'getInvoices', getInvoicesToken);
-    createInvoice = (settingsStore: SettingsStore, data: any) =>
-        this.postRequest(settingsStore, 'createInvoice', data);
-    getPayments = (settingsStore: SettingsStore) =>
-        this.getRequest(settingsStore, 'getPayments', getPaymentsToken);
-    getNewAddress = (settingsStore: SettingsStore) =>
-        this.getRequest(settingsStore, 'getNewAddress');
-    openChannel = (settingsStore: SettingsStore, data: any) =>
-        this.postRequest(settingsStore, 'openChannel', data);
-    connectPeer = (settingsStore: SettingsStore, data: any) =>
-        this.postRequest(settingsStore, 'connectPeer', data);
-    listNode = (settingsStore: SettingsStore) =>
-        this.getRequest(settingsStore, 'listNode');
-    decodePaymentRequest = (
-        settingsStore: SettingsStore,
-        urlParams?: Array<string>
-    ) =>
-        this.getRequest(settingsStore, 'decodePaymentRequest', null, urlParams);
-    payLightningInvoice = (settingsStore: SettingsStore, data: any) =>
-        this.postRequest(settingsStore, 'payLightningInvoice', data);
-    closeChannel = (settingsStore: SettingsStore, urlParams?: Array<string>) =>
-        this.deleteRequest(settingsStore, 'closeChannel', urlParams);
-    getNodeInfo = (settingsStore: SettingsStore, urlParams?: Array<string>) =>
-        this.getRequest(
-            settingsStore,
-            'getNodeInfo',
-            getNodeInfoToken,
-            urlParams
-        );
-    getFees = (settingsStore: SettingsStore) =>
-        this.getRequest(settingsStore, 'getFees');
-    setFees = (settingsStore: SettingsStore, data: any) =>
-        this.postRequest(settingsStore, 'setFees', data);
+    supportsOnchainSends = () => this.call('supportsOnchainSends');
+    supportsKeysend = () => this.call('supportsKeysend');
+    supportsChannelManagement = () => this.call('supportsChannelManagement');
+    // let users specify http/https
+    supportsCustomHostProtocol = () => this.call('supportsCustomHostProtocol');
+    supportsMPP = () => this.call('supportsMPP');
+    supportsCoinControl = () => this.call('supportsCoinControl');
 }
 
 const restUtils = new RESTUtils();

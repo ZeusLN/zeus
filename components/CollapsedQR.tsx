@@ -1,13 +1,17 @@
 import * as React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Button } from 'react-native-elements';
-import QRCode from 'react-native-qrcode';
+import QRCode from 'react-native-qrcode-svg';
 import CopyButton from './CopyButton';
+import { localeString } from './../utils/LocaleUtils';
 
 interface CollapsedQRProps {
     theme: any;
     value: string;
+    showText?: string;
+    collapseText?: string;
     copyText?: string;
+    hideText?: boolean;
 }
 
 interface CollapsedQRState {
@@ -30,22 +34,39 @@ export default class CollapsedQR extends React.Component<
 
     render() {
         const { collapsed } = this.state;
-        const { theme, value, copyText } = this.props;
+        const {
+            theme,
+            value,
+            showText,
+            copyText,
+            collapseText,
+            hideText
+        } = this.props;
 
         return (
             <React.Fragment>
-                <Text
-                    style={theme === 'dark' ? styles.valueDark : styles.value}
-                >
-                    {value}
-                </Text>
+                {!hideText && (
+                    <Text
+                        style={
+                            theme === 'dark' ? styles.valueDark : styles.value
+                        }
+                    >
+                        {value}
+                    </Text>
+                )}
                 {!collapsed && (
                     <View style={styles.qrPadding}>
-                        <QRCode value={value} size={200} fgColor="white" />
+                        <QRCode value={value} size={200} />
                     </View>
                 )}
                 <Button
-                    title={collapsed ? 'Show QR' : 'Hide QR'}
+                    title={
+                        collapsed
+                            ? showText ||
+                              localeString('components.CollapsedQr.show')
+                            : collapseText ||
+                              localeString('components.CollapsedQr.hide')
+                    }
                     icon={{
                         name: 'qrcode',
                         type: 'font-awesome',
@@ -62,7 +83,7 @@ export default class CollapsedQR extends React.Component<
                     }}
                     onPress={() => this.toggleCollapse()}
                 />
-                <CopyButton copyValue={value} title={copyText || 'Copy'} />
+                <CopyButton copyValue={value} title={copyText} />
             </React.Fragment>
         );
     }

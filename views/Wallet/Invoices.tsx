@@ -3,6 +3,8 @@ import { StyleSheet, View, FlatList } from 'react-native';
 import { Avatar, Button, ListItem } from 'react-native-elements';
 import Invoice from './../../models/Invoice';
 import { inject, observer } from 'mobx-react';
+import PrivacyUtils from './../../utils/PrivacyUtils';
+import { localeString } from './../../utils/LocaleUtils';
 
 import InvoicesStore from './../../stores/InvoicesStore';
 import UnitsStore from './../../stores/UnitsStore';
@@ -54,13 +56,9 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
         const { getAmount, units } = UnitsStore;
         const { loading } = InvoicesStore;
         const { settings } = SettingsStore;
-        const { theme } = settings;
+        const { theme, lurkerMode } = settings;
 
         const InvoiceImage = (settled: boolean) => {
-            const { SettingsStore } = this.props;
-            const { settings } = SettingsStore;
-            const { theme } = settings;
-
             let avatar;
             if (settled) {
                 avatar = theme === 'dark' ? AddBalanceDark : AddBalance;
@@ -91,15 +89,35 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
                         data={invoices}
                         renderItem={({ item }) => {
                             const { isPaid } = item;
+
+                            const memo = lurkerMode
+                                ? PrivacyUtils.hideValue(item.getMemo, 10)
+                                : item.getMemo;
+
+                            const invoiceAmount = lurkerMode
+                                ? PrivacyUtils.hideValue(
+                                      getAmount(item.getAmount),
+                                      null,
+                                      true
+                                  )
+                                : getAmount(item.getAmount);
+
+                            const date = lurkerMode
+                                ? PrivacyUtils.hideValue(item.listDate, 14)
+                                : item.listDate;
+
                             return (
                                 <ListItem
-                                    title={item.getMemo}
+                                    title={memo}
                                     subtitle={`${
-                                        isPaid ? 'Paid' : 'Unpaid'
-                                    }: ${units &&
-                                        getAmount(item.getAmount)} | ${
-                                        item.listDate
-                                    }`}
+                                        isPaid
+                                            ? localeString(
+                                                  'views.Wallet.Invoices.paid'
+                                              )
+                                            : localeString(
+                                                  'views.Wallet.Invoices.unpaid'
+                                              )
+                                    }: ${units && invoiceAmount} | ${date}`}
                                     containerStyle={{
                                         borderBottomWidth: 0,
                                         backgroundColor:
@@ -124,7 +142,7 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
                                 />
                             );
                         }}
-                        keyExtractor={item => item.key}
+                        keyExtractor={(item, index) => `${item.key}-${index}`}
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}
                         refreshing={loading}
@@ -132,7 +150,7 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
                     />
                 ) : (
                     <Button
-                        title="No Invoices"
+                        title={localeString('views.Wallet.Invoices.noInvoices')}
                         icon={{
                             name: 'error-outline',
                             size: 25,
@@ -155,7 +173,8 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
 
 const styles = StyleSheet.create({
     lightThemeStyle: {
-        flex: 1
+        flex: 1,
+        backgroundColor: 'white'
     },
     darkThemeStyle: {
         flex: 1,

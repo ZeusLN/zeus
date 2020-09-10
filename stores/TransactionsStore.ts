@@ -1,20 +1,25 @@
 import { action, reaction, observable } from 'mobx';
 import Transaction from './../models/Transaction';
 import TransactionRequest from './../models/TransactionRequest';
-import ErrorUtils from './../utils/ErrorUtils';
 import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
+import { randomBytes } from 'react-native-randombytes';
+import { sha256 } from 'js-sha256';
+import { Buffer } from 'buffer';
+
+const keySendPreimageType = '5482373484';
+const preimageByteLength = 32;
 
 export default class TransactionsStore {
     @observable loading: boolean = false;
     @observable error: boolean = false;
     @observable error_msg: string | null;
-    @observable transactions: Array<Transaction> = <Transaction>[];
-    @observable transaction: Transaction;
+    @observable transactions: Array<Transaction> = [];
+    @observable transaction: Transaction | null;
     @observable payment_route: any; // Route
     @observable payment_preimage: string | null;
-    @observable payment_hash: string | null;
-    @observable payment_error: string | null;
+    @observable payment_hash: any;
+    @observable payment_error: any;
     @observable onchain_address: string;
     @observable txid: string | null;
     // c-lightning
@@ -28,24 +33,37 @@ export default class TransactionsStore {
         reaction(
             () => this.settingsStore.settings,
             () => {
-                if (this.settingsStore.macaroonHex) {
+                if (this.settingsStore.hasCredentials()) {
                     this.getTransactions();
                 }
             }
         );
     }
 
+    reset = () => {
+        this.loading = false;
+        this.error = false;
+        this.error_msg = null;
+        this.transactions = [];
+        this.transaction = null;
+        this.payment_route = null;
+        this.payment_preimage = null;
+        this.payment_hash = null;
+        this.payment_error = null;
+        this.onchain_address = '';
+        this.txid = null;
+        this.status = null;
+    };
+
     @action
     public getTransactions = () => {
         this.loading = true;
-        RESTUtils.getTransactions(this.settingsStore)
-            .then((response: any) => {
-                // handle success
-                const data = response.data;
-                const transactions = data.transactions || data.outputs;
-                this.transactions = transactions
+        RESTUtils.getTransactions()
+            .then((data: any) => {
+                this.transactions = data.transactions
+                    .slice()
                     .reverse()
-                    .map(tx => new Transaction(tx));
+                    .map((tx: any) => new Transaction(tx));
                 this.loading = false;
             })
             .catch(() => {
@@ -61,25 +79,27 @@ export default class TransactionsStore {
         this.error_msg = null;
         this.txid = null;
         this.loading = true;
-        RESTUtils.sendCoins(this.settingsStore, transactionRequest)
-            .then((response: any) => {
-                // handle success
-                const data = response.data || response;
+        RESTUtils.sendCoins(transactionRequest)
+            .then((data: any) => {
                 this.txid = data.txid;
                 this.loading = false;
             })
             .catch((error: any) => {
                 // handle error
-                const errorInfo = error.response.data;
-                this.error_msg = errorInfo.error.message || errorInfo.error;
+                this.error_msg = error.message;
                 this.error = true;
                 this.loading = false;
             });
     };
 
-    sendPayment = (payment_request: string, amount?: string) => {
-        const { implementation } = this.settingsStore;
-
+    sendPayment = (
+        payment_request?: string | null,
+        amount?: string | null,
+        pubkey?: string | null,
+        max_parts?: string,
+        timeout_seconds?: string,
+        fee_limit_sat?: string
+    ) => {
         this.loading = true;
         this.error_msg = null;
         this.error = false;
@@ -89,11 +109,19 @@ export default class TransactionsStore {
         this.payment_error = null;
         this.status = null;
 
-        let data;
-        if (implementation === 'c-lightning-REST') {
+        let data: any;
+        if (pubkey) {
+            const preimage = randomBytes(preimageByteLength);
+            const secret = preimage.toString('base64');
+            const payment_hash = Buffer.from(sha256(preimage), 'hex').toString(
+                'base64'
+            );
+
             data = {
-                invoice: payment_request,
-                amount
+                amt: amount,
+                dest_string: pubkey,
+                dest_custom_records: { [keySendPreimageType]: secret },
+                payment_hash
             };
         } else {
             if (amount) {
@@ -108,29 +136,44 @@ export default class TransactionsStore {
             }
         }
 
-        RESTUtils.payLightningInvoice(this.settingsStore, data)
-            .then((response: any) => {
-                // handle success
-                const data = response.data;
+        // multi-path payments
+        if (max_parts) {
+            data.max_parts = max_parts;
+            data.timeout_seconds = timeout_seconds;
+            data.fee_limit_sat = Number(fee_limit_sat);
+        }
+
+        const payFunc = max_parts
+            ? RESTUtils.payLightningInvoiceV2
+            : RESTUtils.payLightningInvoice;
+
+        payFunc(data)
+            .then((data: any) => {
+                const result = data.result || data;
                 this.loading = false;
-                this.payment_route = data.payment_route;
-                this.payment_preimage = data.payment_preimage;
-                this.payment_hash = data.payment_hash;
-                this.payment_error = data.payment_error;
-                this.status = data.status;
+                this.payment_route = result.payment_route;
+                this.payment_preimage = result.payment_preimage;
+                this.payment_hash = result.payment_hash;
+                if (
+                    data.payment_error !== '' &&
+                    result.status !== 'SUCCEEDED'
+                ) {
+                    this.error = true;
+                    this.payment_error =
+                        result.payment_error || result.failure_reason;
+                }
+                // lndhub
+                if (result.error) {
+                    this.error = true;
+                    this.error_msg = result.message;
+                } else {
+                    this.status = result.status || 'complete';
+                }
             })
-            .catch((err: error) => {
-                // handle error
-                const errorInfo = err.response.data;
-                const code = errorInfo.code;
+            .catch((err: Error) => {
                 this.error = true;
                 this.loading = false;
-                this.error_msg =
-                    errorInfo.error.message ||
-                    ErrorUtils.errorToUserFriendly(code) ||
-                    errorInfo.message ||
-                    errorInfo.error ||
-                    'Error sending payment';
+                this.error_msg = err.message || 'Error sending payment';
             });
     };
 }

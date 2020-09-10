@@ -1,5 +1,5 @@
 # Zeus
-A mobile Bitcoin app for lnd and c-lightning node operators ⚡️
+A mobile Bitcoin/Lightning app for lnd, c-lightning, and eclair node operators ⚡️
 
 *Notice*: If you are looking for Zeus Server, the Lightning-based Point-of-Sale solution (unrelated to this project), please visit [puzzle/zeus](https://github.com/puzzle/zeus).
 
@@ -12,9 +12,9 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 *Disclaimer*: Zeus and Lightning in general are software projects in their early development stages. Please be wary when using Lightning and do not fund your node with more money than you are willing to lose.
 
 ### App Store links
-* [F-Droid](https://f-droid.org/packages/com.zeusln.zeus/)
-* [Google Play](https://play.google.com/store/apps/details?id=com.zeusln.zeus)
+* [Google Play](https://play.google.com/store/apps/details?id=app.zeusln.zeus)
 * [Apple TestFlight](https://testflight.apple.com/join/gpVFzEHN)
+* [F-Droid](https://f-droid.org/packages/com.zeusln.zeus/)
 
 ### Get in touch with us
 * Come chat with us on
@@ -27,19 +27,20 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 ## Connecting to your node
 
 Currently, to use Zeus, you must have a Bitcoin Lightning node running
-[Lightning Network Daemon (lnd)](https://github.com/LightningNetwork/lnd) or [c-lightning](https://github.com/ElementsProject/lightning) using the [c-lightning-REST](https://github.com/Ride-The-Lightning/c-lightning-REST/) REST API.
+[Lightning Network Daemon (lnd)](https://github.com/LightningNetwork/lnd), [eclair](https://github.com/ACINQ/eclair), or [c-lightning](https://github.com/ElementsProject/lightning) using the [c-lightning-REST](https://github.com/Ride-The-Lightning/c-lightning-REST/) or [Spark](https://github.com/shesek/spark-wallet#server-installation) API .
 
 You must provide Zeus with your node's hostname, port number, and the macaroon you choose to use in **hex format**. If you need help converting your macaroon to hex format we wrote up a Node.js script that can use
 [here](https://github.com/ZeusLN/lnd-hex-macaroon-generator/). Alternatively, if you're running a Unix-based operating system (eg. macOS, Linux) you can run `xxd -ps -u -c 1000 /path/to/admin.macaroon` to generate your macaroon in hex format.
 
-If you would like to learn more about running your own guide we suggest checking out the following guides:
+If you would like to learn more about running your own node we suggest checking out the following guides:
 * If you're looking to run a full node on existing hardware running Windows or macOS, check out Pierre Rochard's
 [Lightning Power Node Launcher](https://github.com/PierreRochard/node-launcher).
 We recommend reading
 [this guide](https://medium.com/lightning-power-users/windows-macos-lightning-network-284bd5034340).
 * If you're looking to run a full node on a dedicated piece of hardware like a Raspberry Pi, check out Stadicus'
 [Raspibolt Tutorial](https://github.com/Stadicus/guides/tree/master/raspibolt) or
-[RaspiBlitz](https://github.com/rootzoll/raspiblitz/).
+[RaspiBlitz](https://github.com/rootzoll/raspiblitz/) or
+[myNode](https://mynodebtc.com/).
 
 ### Tor Connection Guides
 
@@ -75,19 +76,31 @@ Zeus is proud to be integrated on the following platforms:
 1. install and setup react-native and its related dependencies under **"Building Projects with Native Code"** on
 [react-native's Getting Started page](https://facebook.github.io/react-native/docs/getting-started.html)
 2. install node dependencies with `npm i`
-3. apply patches with `npm run patch`
+3. `cd ios && pod install`
 4. open `ios/zeus.xcodeproj` in Xcode and hit Run
+
+## Google Play Releases
+
+Google Play releases aren't fully featured due to Google policies. To get the fully featured version of Zeus on Android you must download the APK from the [Zeus website](https://zeusln.app), GitHub, or F-Droid. Google Play releases are managed on the `play-releases` branch. Commits used for Google Play builds will be marked in the release notes.
+
+#### Current features not included on Google Play releases
+* Keysend donation button
 
 ## Contributing
 
-Please be sure to run `tsc` to check for type errors, `npm run test` to run all tests, and `npm run prettier` to run the prettier
+Please be sure to run `npm run tsc` to check for type errors, `npm run test` to run all tests, and `npm run prettier` to run the prettier
 
 If you are making cosmetic changes please test on both Android and iOS as things don't render exactly the same on both platforms.
 
+
+## Translations
+
+Do not directly modify the files in `/locales` unless you are adding new copy to the app in English. Instead, translators and reviewers should visit out [Transifex page](https://www.transifex.com/ZeusLN/zeus/) and request a role on the language you'd like to contribute to.
+
 ## Donations
 
-If you'd like to help us with the cost of running Zeus project (iOS developer account, Google Play developer account, hosting) you can send a payment to
-[3Lbz4vdt15Fsa4wVD3Yk8uGf6ugKKY4zSc](https://blockstream.info/address/3Lbz4vdt15Fsa4wVD3Yk8uGf6ugKKY4zSc).
+If you'd like to help us with the cost of running Zeus project (iOS developer account, Google Play developer account, hosting) you can send a payment to us via PayNym
+[+holymorning7d1](http://my.paynym.is/+holymorning7d1), via [tippin.me](https://tippin.me/@ZeusLN), or via keysend. Our node can be found at ```03e1210c8d4b236a53191bb172701d76ec06dfa869a1afffcfd8f4e07d9129d898@zg6ziy65wqhiczqfqupx26j5yjot5iuxftqtiyvika3xoydc5hx2mtyd.onion:9735```.
 
 Thank you.
 

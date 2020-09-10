@@ -1,6 +1,7 @@
-import BaseModel from './BaseModel.ts';
+import BaseModel from './BaseModel';
 import { observable, computed } from 'mobx';
 import DateTimeUtils from './../utils/DateTimeUtils';
+import { localeString } from './../utils/LocaleUtils';
 
 interface HopHint {
     fee_proportional_millionths: number;
@@ -35,22 +36,35 @@ export default class Invoice extends BaseModel {
     public description_hash: string;
     public r_preimage: string;
     public cltv_expiry: string;
-    // c-lightning
+    // c-lightning, eclair
     public bolt11: string;
     public label: string;
     public description: string;
-    public msatoshi: Number;
+    public msatoshi: number;
     @observable public payment_hash: string;
-    public paid_at: Number;
-    public expires_at: Number;
+    public paid_at: number;
+    public expires_at: number;
     public status: string;
+    // pay req
+    public timestamp?: string | number;
+    public destination?: string;
+    public num_satoshis?: string | number;
+    // lndhub
+    public amt?: number;
+    public ispaid?: boolean;
+    public expire_time?: number;
+    public millisatoshis?: string;
 
-    @computed public get getMemo(): number | string {
-        return this.memo || this.description || 'No memo';
+    @computed public get getMemo(): string {
+        return (
+            this.memo ||
+            this.description ||
+            localeString('models.Invoice.noMemo')
+        );
     }
 
-    @computed public get isPaid(): number | string {
-        return this.status === 'paid' || this.settled;
+    @computed public get isPaid(): boolean {
+        return this.status === 'paid' || this.settled || this.ispaid || false;
     }
 
     @computed public get key(): string {
@@ -67,7 +81,9 @@ export default class Invoice extends BaseModel {
             const msatoshi = this.msatoshi.toString();
             return Number(msatoshi.replace('msat', '')) / 1000;
         }
-        return this.settled ? Number(this.amt_paid_sat) : Number(this.value);
+        return this.settled
+            ? Number(this.amt_paid_sat)
+            : Number(this.value) || Number(this.amt);
     }
 
     // return amount in satoshis
@@ -76,7 +92,11 @@ export default class Invoice extends BaseModel {
             const msatoshi = this.msatoshi.toString();
             return Number(msatoshi.replace('msat', '')) / 1000;
         }
-        return Number(this.num_satoshis);
+        if (this.millisatoshis) {
+            const msatoshi = this.millisatoshis;
+            return Number(msatoshi) / 1000;
+        }
+        return Number(this.num_satoshis || 0);
     }
 
     // return amount in satoshis
@@ -84,13 +104,13 @@ export default class Invoice extends BaseModel {
         return this.isPaid
             ? this.settleDate
             : DateTimeUtils.listFormattedDate(
-                  this.expires_at || this.creation_date
+                  this.expires_at || this.creation_date || this.timestamp || 0
               );
     }
 
     @computed public get settleDate(): Date {
         return DateTimeUtils.listFormattedDate(
-            this.settle_date || this.paid_at
+            this.settle_date || this.paid_at || this.timestamp || 0
         );
     }
 
@@ -99,6 +119,14 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get expirationDate(): Date | string {
-        return this.expiry || DateTimeUtils.listFormattedDate(this.expires_at);
+        if (this.expiry || this.expire_time) {
+            return `${this.expiry || this.expire_time} ${localeString(
+                'models.Invoice.seconds'
+            )}`;
+        }
+
+        return this.expires_at
+            ? DateTimeUtils.listFormattedDate(this.expires_at)
+            : localeString('models.Invoice.never');
     }
 }

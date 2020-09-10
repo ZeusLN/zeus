@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Alert } from 'react-native';
 import QRCodeScanner from './../components/QRCodeScanner';
 import { inject, observer } from 'mobx-react';
+import { localeString } from './../utils/LocaleUtils';
 
 import SettingsStore from './../stores/SettingsStore';
 
@@ -24,12 +25,20 @@ export default class BTCPayConfigQRScanner extends React.Component<
 
         fetchBTCPayConfig(data)
             .then((config: any) => {
+                if (!!SettingsStore.btcPayError) {
+                    Alert.alert(
+                        localeString('general.error'),
+                        SettingsStore.btcPayError,
+                        [{ text: 'OK', onPress: () => void 0 }],
+                        { cancelable: false }
+                    );
+                }
                 navigation.navigate('AddEditNode', { node: config, index });
             })
             .catch(() => {
                 Alert.alert(
-                    'Error',
-                    'Error fetching BTCPay config',
+                    localeString('general.error'),
+                    localeString('views.BTCPayConfigQRScanner.error'),
                     [{ text: 'OK', onPress: () => void 0 }],
                     { cancelable: false }
                 );
@@ -45,8 +54,8 @@ export default class BTCPayConfigQRScanner extends React.Component<
 
         return (
             <QRCodeScanner
-                title="BTCPay Config QR Scanner"
-                text="Scan a BTCPay Config under Settings > Services > LND Rest"
+                title={localeString('views.BTCPayConfigQRScanner.title')}
+                text={localeString('views.BTCPayConfigQRScanner.text')}
                 handleQRScanned={this.handleBTCPayConfigInvoiceScanned}
                 goBack={() => navigation.navigate('AddEditNode', { index })}
             />

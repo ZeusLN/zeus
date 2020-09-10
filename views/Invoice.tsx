@@ -9,6 +9,9 @@ import {
 import { Header, Icon } from 'react-native-elements';
 import Invoice from './../models/Invoice';
 import { inject, observer } from 'mobx-react';
+import PrivacyUtils from './../utils/PrivacyUtils';
+import CollapsedQR from './../components/CollapsedQR';
+import { localeString } from './../utils/LocaleUtils';
 
 import UnitsStore from './../stores/UnitsStore';
 import SettingsStore from './../stores/SettingsStore';
@@ -26,22 +29,21 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
         const { navigation, UnitsStore, SettingsStore } = this.props;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { settings } = SettingsStore;
-        const { theme } = settings;
+        const { theme, lurkerMode } = settings;
 
         const invoice: Invoice = navigation.getParam('invoice', null);
         const {
-            amt_paid_sat,
             fallback_addr,
             r_hash,
             isPaid,
             getMemo,
             receipt,
-            value,
             creation_date,
             description_hash,
             r_preimage,
             cltv_expiry,
-            expirationDate
+            expirationDate,
+            payment_request
         } = invoice;
         const privateInvoice = invoice.private;
 
@@ -54,6 +56,10 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
             />
         );
 
+        const amount = lurkerMode
+            ? PrivacyUtils.hideValue(getAmount(invoice.getAmount), 8, true)
+            : getAmount(invoice.getAmount);
+
         return (
             <ScrollView
                 style={
@@ -65,7 +71,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: 'Invoice',
+                        text: localeString('views.Invoice.title'),
                         style: { color: '#fff' }
                     }}
                     backgroundColor={theme === 'dark' ? '#261339' : 'orange'}
@@ -78,8 +84,11 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                     ? styles.amountDark
                                     : styles.amount
                             }
-                        >{`${isPaid ? 'Paid' : 'Unpaid'}: ${units &&
-                            getAmount(invoice.getAmount)}`}</Text>
+                        >{`${
+                            isPaid
+                                ? localeString('views.Invoice.paid')
+                                : localeString('views.Invoice.unpaid')
+                        }: ${units && amount}`}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -93,7 +102,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.label
                                 }
                             >
-                                Memo:
+                                {localeString('views.Invoice.memo')}:
                             </Text>
                             <Text
                                 style={
@@ -102,12 +111,14 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.value
                                 }
                             >
-                                {getMemo}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(getMemo)
+                                    : getMemo}
                             </Text>
                         </React.Fragment>
                     )}
 
-                    {receipt && (
+                    {!!receipt && (
                         <React.Fragment>
                             <Text
                                 style={
@@ -116,7 +127,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.label
                                 }
                             >
-                                Receipt:
+                                {localeString('views.Invoice.receipt')}:
                             </Text>
                             <Text
                                 style={
@@ -125,7 +136,9 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.value
                                 }
                             >
-                                {receipt}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(receipt)
+                                    : receipt}
                             </Text>
                         </React.Fragment>
                     )}
@@ -139,7 +152,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.label
                                 }
                             >
-                                Settle Date:
+                                {localeString('views.Invoice.settleDate')}:
                             </Text>
                             <Text
                                 style={
@@ -148,12 +161,17 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.value
                                 }
                             >
-                                {invoice.settleDate}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(
+                                          invoice.settleDate,
+                                          14
+                                      )
+                                    : invoice.settleDate}
                             </Text>
                         </React.Fragment>
                     )}
 
-                    {creation_date && (
+                    {!!creation_date && (
                         <React.Fragment>
                             <Text
                                 style={
@@ -162,7 +180,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.label
                                 }
                             >
-                                Creation Date:
+                                {localeString('views.Invoice.creationDate')}:
                             </Text>
                             <Text
                                 style={
@@ -171,12 +189,17 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.value
                                 }
                             >
-                                {invoice.creationDate}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(
+                                          invoice.creationDate,
+                                          14
+                                      )
+                                    : invoice.creationDate}
                             </Text>
                         </React.Fragment>
                     )}
 
-                    {expirationDate && (
+                    {!!expirationDate && (
                         <React.Fragment>
                             <Text
                                 style={
@@ -185,7 +208,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.label
                                 }
                             >
-                                Expiration:
+                                {localeString('views.Invoice.expiration')}:
                             </Text>
                             <Text
                                 style={
@@ -194,12 +217,14 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.value
                                 }
                             >
-                                {expirationDate}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(expirationDate, 14)
+                                    : expirationDate}
                             </Text>
                         </React.Fragment>
                     )}
 
-                    {privateInvoice && (
+                    {!!privateInvoice && (
                         <React.Fragment>
                             <Text
                                 style={
@@ -208,7 +233,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.label
                                 }
                             >
-                                Private:
+                                {localeString('views.Invoice.private')}:
                             </Text>
                             <Text
                                 style={
@@ -222,7 +247,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                         </React.Fragment>
                     )}
 
-                    {fallback_addr && (
+                    {!!fallback_addr && (
                         <React.Fragment>
                             <Text
                                 style={
@@ -231,7 +256,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.label
                                 }
                             >
-                                Fallback Address:
+                                {localeString('views.Invoice.fallbackAddress')}:
                             </Text>
                             <Text
                                 style={
@@ -240,12 +265,14 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.value
                                 }
                             >
-                                {fallback_addr}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(fallback_addr)
+                                    : fallback_addr}
                             </Text>
                         </React.Fragment>
                     )}
 
-                    {cltv_expiry && (
+                    {!!cltv_expiry && (
                         <React.Fragment>
                             <Text
                                 style={
@@ -254,7 +281,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.label
                                 }
                             >
-                                CLTV Expiry:
+                                {localeString('views.Invoice.cltvExpiry')}:
                             </Text>
                             <Text
                                 style={
@@ -268,7 +295,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                         </React.Fragment>
                     )}
 
-                    {r_hash && (
+                    {!!r_hash && typeof r_hash === 'string' && (
                         <React.Fragment>
                             <Text
                                 style={
@@ -277,7 +304,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.label
                                 }
                             >
-                                R Hash:
+                                {localeString('views.Invoice.rHash')}:
                             </Text>
                             <Text
                                 style={
@@ -286,12 +313,14 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.value
                                 }
                             >
-                                {r_hash}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(r_hash)
+                                    : r_hash}
                             </Text>
                         </React.Fragment>
                     )}
 
-                    {r_preimage && (
+                    {!!r_preimage && (
                         <React.Fragment>
                             <Text
                                 style={
@@ -300,7 +329,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.label
                                 }
                             >
-                                R Pre-Image:
+                                {localeString('views.Invoice.rPreimage')}:
                             </Text>
                             <Text
                                 style={
@@ -309,12 +338,14 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.value
                                 }
                             >
-                                {r_preimage}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(r_preimage)
+                                    : r_preimage}
                             </Text>
                         </React.Fragment>
                     )}
 
-                    {description_hash && (
+                    {!!description_hash && (
                         <React.Fragment>
                             <Text
                                 style={
@@ -323,7 +354,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.label
                                 }
                             >
-                                Description Hash:
+                                {localeString('views.Invoice.descriptionHash')}:
                             </Text>
                             <Text
                                 style={
@@ -332,9 +363,47 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.value
                                 }
                             >
-                                {description_hash}
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(description_hash)
+                                    : description_hash}
                             </Text>
                         </React.Fragment>
+                    )}
+
+                    {!!payment_request && (
+                        <React.Fragment>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.labelDark
+                                        : styles.label
+                                }
+                            >
+                                {localeString('views.Invoice.paymentRequest')}:
+                            </Text>
+                            <Text
+                                style={
+                                    theme === 'dark'
+                                        ? styles.valueDark
+                                        : styles.value
+                                }
+                            >
+                                {lurkerMode
+                                    ? PrivacyUtils.hideValue(payment_request)
+                                    : payment_request}
+                            </Text>
+                        </React.Fragment>
+                    )}
+
+                    {!!payment_request && (
+                        <CollapsedQR
+                            value={payment_request}
+                            theme={theme}
+                            copyText={localeString(
+                                'views.Invoice.copyPaymentRequest'
+                            )}
+                            hideText
+                        />
                     )}
                 </View>
             </ScrollView>
@@ -344,7 +413,8 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
 
 const styles = StyleSheet.create({
     lightThemeStyle: {
-        flex: 1
+        flex: 1,
+        backgroundColor: 'white'
     },
     darkThemeStyle: {
         flex: 1,

@@ -12,6 +12,7 @@ export default class ChannelsStore {
     @observable public errorMsgChannel: string | null;
     @observable public errorMsgPeer: string | null;
     @observable public nodes: any = {};
+    @observable public aliasesById: any = {};
     @observable public channels: Array<Channel> = [];
     @observable public output_index: number | null;
     @observable public funding_txid_str: string | null;
@@ -31,7 +32,7 @@ export default class ChannelsStore {
         reaction(
             () => this.settingsStore.settings,
             () => {
-                if (this.settingsStore.macaroonHex) {
+                if (this.settingsStore.hasCredentials()) {
                     this.getChannels();
                 }
             }
@@ -57,10 +58,12 @@ export default class ChannelsStore {
                     this.channels.forEach((channel: Channel) => {
                         if (!this.nodes[channel.remote_pubkey]) {
                             this.getNodeInfo(channel.remote_pubkey).then(
-                                nodeInfo => {
+                                (nodeInfo: any) => {
                                     this.nodes[
                                         channel.remote_pubkey
                                     ] = nodeInfo;
+                                    this.aliasesById[channel.chan_id] =
+                                        nodeInfo.alias;
                                 }
                             );
                         }
@@ -70,91 +73,107 @@ export default class ChannelsStore {
         );
     }
 
+    reset = () => {
+        this.loading = false;
+        this.error = false;
+        this.errorPeerConnect = false;
+        this.errorMsgChannel = null;
+        this.errorMsgPeer = null;
+        this.nodes = {};
+        this.channels = [];
+        this.output_index = null;
+        this.funding_txid_str = null;
+        this.openingChannel = false;
+        this.connectingToPeer = false;
+        this.errorOpenChannel = false;
+        this.peerSuccess = false;
+        this.channelSuccess = false;
+        this.channelRequest = null;
+    };
+
     @action
     getNodeInfo = (pubkey: string) => {
         this.loading = true;
-        return RESTUtils.getNodeInfo(this.settingsStore, [pubkey]).then(
-            (response: any) => {
-                // handle success
-                const data = response.data;
-                return data.node;
-            }
-        );
+        return RESTUtils.getNodeInfo([pubkey]).then((data: any) => {
+            return data.node;
+        });
+    };
+
+    getChannelsError = () => {
+        this.channels = [];
+        this.error = true;
+        this.loading = false;
     };
 
     @action
     public getChannels = () => {
         this.channels = [];
         this.loading = true;
-        RESTUtils.getChannels(this.settingsStore)
-            .then((response: any) => {
-                const data = response.data;
-                const channels = data.channels || data;
-                this.channels = channels.map(channel => new Channel(channel));
+        RESTUtils.getChannels()
+            .then((data: any) => {
+                this.channels = data.channels.map(
+                    (channel: any) => new Channel(channel)
+                );
                 this.error = false;
                 this.loading = false;
             })
             .catch(() => {
-                // handle error
-                this.channels = [];
-                this.error = true;
-                this.loading = false;
+                this.getChannelsError();
             });
     };
 
     @action
     public closeChannel = (
-        request?: CloseChannelRequest,
-        channelId?: string
+        request?: CloseChannelRequest | null,
+        channelId?: string | null,
+        satPerByte?: string | null,
+        forceClose?: boolean | string | null
     ) => {
-        const { implementation } = this.settingsStore;
         this.loading = true;
 
-        let urlParams: Array<string>;
-        if (implementation === 'c-lightning-REST') {
-            urlParams = [channelId];
-        } else {
+        let urlParams: Array<any> = [];
+        if (channelId) {
+            // c-lightning, eclair
+            urlParams = [channelId, forceClose];
+        } else if (request) {
+            // lnd
             const { funding_txid_str, output_index } = request;
-            urlParams = [funding_txid_str, output_index];
+
+            urlParams = [funding_txid_str, output_index, forceClose];
+
+            if (satPerByte) {
+                urlParams = [
+                    funding_txid_str,
+                    output_index,
+                    forceClose,
+                    satPerByte
+                ];
+            }
         }
 
-        RESTUtils.closeChannel(this.settingsStore, urlParams)
-            .then((response: any) => {
-                const data = response.data;
+        RESTUtils.closeChannel(urlParams)
+            .then((data: any) => {
                 const { chan_close } = data;
                 this.closeChannelSuccess = chan_close.success;
                 this.error = false;
                 this.loading = false;
             })
             .catch(() => {
-                this.channels = [];
-                this.error = true;
-                this.loading = false;
+                this.getChannelsError();
             });
     };
 
     @action
     public connectPeer = (request: OpenChannelRequest) => {
-        const { implementation } = this.settingsStore;
         this.connectingToPeer = true;
 
-        let data;
-        if (implementation === 'c-lightning-REST') {
-            data = {
-                id: `${request.node_pubkey_string}@${request.host}`
-            };
-        } else {
-            data = JSON.stringify({
-                addr: {
-                    pubkey: request.node_pubkey_string,
-                    host: request.host
-                }
-            });
-        }
-
-        RESTUtils.connectPeer(this.settingsStore, data)
-            .then(response => {
-                // handle success
+        RESTUtils.connectPeer({
+            addr: {
+                pubkey: request.node_pubkey_string,
+                host: request.host
+            }
+        })
+            .then(() => {
                 this.errorPeerConnect = false;
                 this.connectingToPeer = false;
                 this.errorMsgPeer = null;
@@ -163,9 +182,7 @@ export default class ChannelsStore {
             })
             .catch((error: any) => {
                 // handle error
-                const errorInfo = error.response && error.response.data;
-                this.errorMsgPeer =
-                    (errorInfo && errorInfo.error.message) || error.message;
+                this.errorMsgPeer = error.toString();
                 this.errorPeerConnect = true;
                 this.connectingToPeer = false;
                 this.peerSuccess = false;
@@ -173,7 +190,7 @@ export default class ChannelsStore {
 
                 if (
                     this.errorMsgPeer &&
-                    this.errorMsgPeer.includes('already connected to peer')
+                    this.errorMsgPeer.includes('already')
                 ) {
                     this.channelRequest = request;
                 }
@@ -181,23 +198,14 @@ export default class ChannelsStore {
     };
 
     openChannel = (request: OpenChannelRequest) => {
-        const { implementation } = this.settingsStore;
         delete request.host;
 
         this.peerSuccess = false;
         this.channelSuccess = false;
         this.openingChannel = true;
 
-        let openChannelReq;
-        if (implementation === 'c-lightning-REST') {
-            openChannelReq = request;
-        } else {
-            openChannelReq = JSON.stringify(request);
-        }
-
-        RESTUtils.openChannel(this.settingsStore, openChannelReq)
-            .then((response: any) => {
-                const data = response.data;
+        RESTUtils.openChannel(request)
+            .then((data: any) => {
                 this.output_index = data.output_index;
                 this.funding_txid_str = data.funding_txid_str;
                 this.errorOpenChannel = false;
@@ -206,10 +214,8 @@ export default class ChannelsStore {
                 this.channelRequest = null;
                 this.channelSuccess = true;
             })
-            .catch((error: err) => {
-                const errorInfo = error.response.data;
-                this.errorMsgChannel =
-                    errorInfo.error.message || errorInfo.error;
+            .catch((error: any) => {
+                this.errorMsgChannel = error.toString();
                 this.output_index = null;
                 this.funding_txid_str = null;
                 this.errorOpenChannel = true;
