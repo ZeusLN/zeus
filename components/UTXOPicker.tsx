@@ -34,8 +34,8 @@ interface UTXOPickerProps {
 
 interface UTXOPickerState {
     status: string;
-    utxosSelected: Array<any>;
-    utxosSet: Array<any>;
+    utxosSelected: string[];
+    utxosSet: string[];
     showUtxoModal: boolean;
     selectedBalance: number;
     setBalance: number;
@@ -96,12 +96,12 @@ export default class UTXOPicker extends React.Component<
 
     toggleItem(item: any) {
         const { utxosSelected, selectedBalance } = this.state;
-        let newArray: any[] = [];
-        utxosSelected.forEach((utxo: any) => newArray.push(utxo));
+        let newArray: string[] = [];
+        utxosSelected.forEach((utxo: string) => newArray.push(utxo));
         const { txid, output } = item;
-        const itemId = `${txid}:${output}`;
+        const itemId: string = `${txid}:${output}`;
         let balance;
-        if (!utxosSelected.includes(itemId)) {
+        if (!newArray.includes(itemId)) {
             newArray.push(itemId);
             balance = selectedBalance + item.value;
         } else {
@@ -126,6 +126,9 @@ export default class UTXOPicker extends React.Component<
         const { utxos, loading, getUTXOs } = UTXOsStore;
         const { settings } = SettingsStore;
         const { theme } = settings;
+
+        let utxosPicked: string[] = [];
+        utxosSelected.forEach((utxo: string) => utxosPicked.push(utxo));
 
         const pickerValuesAndroid: Array<any> = [];
         const pickerValuesIOS: Array<string> = ['Cancel'];
@@ -218,7 +221,7 @@ export default class UTXOPicker extends React.Component<
                                                             : 'white'
                                                 }}
                                                 leftElement={
-                                                    utxosSelected.includes(
+                                                    utxosPicked.includes(
                                                         `${item.txid}:${item.output}`
                                                     )
                                                         ? theme === 'dark'
@@ -379,6 +382,10 @@ const styles = StyleSheet.create({
     pickerDark: {
         height: 50,
         color: 'white'
+    },
+    button: {
+        paddingTop: 10,
+        paddingBottom: 10
     },
     modal: {
         margin: 20,
