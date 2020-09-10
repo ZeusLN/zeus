@@ -35,7 +35,12 @@ interface NodeInfoState {
     selectedIndex: number;
 }
 
-const ForwardingHistory = ({ events, lurkerMode, getAmount, aliasesById }) => {
+const ForwardingHistory = ({
+    events,
+    lurkerMode,
+    getAmount,
+    aliasesById
+}: any) => {
     let eventsDisplay: any = [];
     for (let i = 0; i < events.length; i++) {
         const event = events[i];

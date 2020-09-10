@@ -1,13 +1,13 @@
 import RNFetchBlob from 'rn-fetch-blob';
 import stores from '../stores/Stores';
 import OpenChannelRequest from './../models/OpenChannelRequest';
-import LoginRequest from './../models/LoginRequest';
 import ErrorUtils from './../utils/ErrorUtils';
 import VersionUtils from './../utils/VersionUtils';
 
 interface Headers {
     macaroon?: string;
     encodingtype?: string;
+    'Grpc-Metadata-Macaroon'?: string;
     'Grpc-Metadata-macaroon'?: string;
 }
 
@@ -16,7 +16,7 @@ const calls: any = {};
 
 export default class LND {
     restReq = (
-        headers: Headers,
+        headers: Headers | any,
         url: string,
         method: any,
         data?: any,
@@ -33,7 +33,7 @@ export default class LND {
             trusty: !certVerification
         })
             .fetch(method, url, headers, data ? JSON.stringify(data) : data)
-            .then(response => {
+            .then((response: any) => {
                 delete calls[id];
                 if (response.info().status < 300) {
                     return response.json();
@@ -70,30 +70,28 @@ export default class LND {
             lndhubUrl,
             port,
             macaroonHex,
-            accessToken,
-            certVerification
+            accessToken
         } = stores.settingsStore;
 
         const auth = macaroonHex || accessToken;
-        const headers = this.getHeaders(auth, true);
+        const headers: any = this.getHeaders(auth, true);
         const methodRoute = `${route}?method=${method}`;
         const url = this.getURL(host || lndhubUrl, port, methodRoute, true);
 
         return new Promise(function(resolve, reject) {
-            const ws = new WebSocket(url, null, {
+            const ws: any = new WebSocket(url, null, {
                 headers
-                // rejectUnauthorized: certVerification
             });
 
             // keep pulling in responses until the socket closes
-            let resp;
+            let resp: any;
 
             ws.addEventListener('open', () => {
                 // connection opened
                 ws.send(JSON.stringify(data)); // send a message
             });
 
-            ws.addEventListener('message', e => {
+            ws.addEventListener('message', (e: any) => {
                 // a message was received
                 const data = JSON.parse(e.data);
                 if (data.error) {
@@ -103,19 +101,19 @@ export default class LND {
                 }
             });
 
-            ws.addEventListener('error', e => {
+            ws.addEventListener('error', (e: any) => {
                 // an error occurred
                 reject(e.message);
             });
 
-            ws.addEventListener('close', e => {
+            ws.addEventListener('close', () => {
                 // connection closed
                 resolve(JSON.parse(resp));
             });
         });
     };
 
-    getHeaders = (macaroonHex: string, ws?: boolean) => {
+    getHeaders = (macaroonHex: string, ws?: boolean): any => {
         if (ws) {
             return {
                 'Grpc-Metadata-Macaroon': macaroonHex
@@ -142,7 +140,7 @@ export default class LND {
         return `${baseUrl}${route}`;
     };
 
-    request = (route: string, method: string, data?: any, ws?: boolean) => {
+    request = (route: string, method: string, data?: any) => {
         const {
             host,
             lndhubUrl,
@@ -153,7 +151,7 @@ export default class LND {
         } = stores.settingsStore;
 
         const auth = macaroonHex || accessToken;
-        const headers = this.getHeaders(auth);
+        const headers: any = this.getHeaders(auth);
         headers['Content-Type'] = 'application/json';
         const url = this.getURL(host || lndhubUrl, port, route);
         return this.restReq(headers, url, method, data, certVerification);
@@ -180,26 +178,33 @@ export default class LND {
     connectPeer = (data: any) => this.postRequest('/v1/peers', data);
     listNode = () => this.getRequest('/v1/network/listNode');
     decodePaymentRequest = (urlParams?: Array<string>) =>
-        this.getRequest(`/v1/payreq/${urlParams[0]}`, urlParams);
+        this.getRequest(`/v1/payreq/${urlParams && urlParams[0]}`);
     payLightningInvoice = (data: any) =>
         this.postRequest('/v1/channels/transactions', data);
     payLightningInvoiceV2 = (data: any) =>
         this.wsReq('/v2/router/send', 'POST', data);
     closeChannel = (urlParams?: Array<string>) => {
-        if (urlParams.length === 4) {
-            return `/v1/channels/${urlParams[0]}/${urlParams[1]}?force=${urlParams[2]}&sat_per_byte=${urlParams[3]}`;
+        if (urlParams && urlParams.length === 4) {
+            return this.deleteRequest(
+                `/v1/channels/${urlParams && urlParams[0]}/${urlParams &&
+                    urlParams[1]}?force=${urlParams &&
+                    urlParams[2]}&sat_per_byte=${urlParams && urlParams[3]}`
+            );
         }
         return this.deleteRequest(
-            '`/v1/channels/${urlParams[0]}/${urlParams[1]}?force=${urlParams[2]}`;',
-            urlParams
+            `/v1/channels/${urlParams && urlParams[0]}/${urlParams &&
+                urlParams[1]}?force=${urlParams && urlParams[2]}`
         );
     };
     getNodeInfo = (urlParams?: Array<string>) =>
-        this.getRequest(`/v1/graph/node/${urlParams[0]}`);
+        this.getRequest(`/v1/graph/node/${urlParams && urlParams[0]}`);
     getFees = () => this.getRequest('/v1/fees');
     setFees = (data: any) => this.postRequest('/v1/chanpolicy', data);
     getRoutes = (urlParams?: Array<string>) =>
-        this.getRequest(`/v1/graph/routes/${urlParams[0]}/${urlParams[1]}`);
+        this.getRequest(
+            `/v1/graph/routes/${urlParams && urlParams[0]}/${urlParams &&
+                urlParams[1]}`
+        );
 
     // LndHub
     createAccount = (host: string, certVerification: boolean) => {

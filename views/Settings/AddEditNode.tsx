@@ -17,7 +17,7 @@ import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import AddressUtils from './../../utils/AddressUtils';
 import LndConnectUtils from './../../utils/LndConnectUtils';
-import { DEFAULT_LNDHUB } from './../../utils/RESTUtils';
+import { DEFAULT_LNDHUB } from './../../backends/LndHub';
 import { localeString } from './../../utils/LocaleUtils';
 import CollapsedQR from './../../components/CollapsedQR';
 import SettingsStore from './../../stores/SettingsStore';
@@ -153,7 +153,7 @@ export default class AddEditNode extends React.Component<
         this.initFromProps(nextProps);
     }
 
-    initFromProps(props) {
+    initFromProps(props: any) {
         const { navigation } = props;
 
         const node = navigation.getParam('node', null);
@@ -212,7 +212,6 @@ export default class AddEditNode extends React.Component<
             lndhubUrl,
             existingAccount,
             macaroonHex,
-            url,
             accessKey,
             username,
             password,
@@ -808,14 +807,17 @@ export default class AddEditNode extends React.Component<
                                 placeholder={'...'}
                                 value={accessKey}
                                 onChangeText={(text: string) => {
-                                    let param =
-                                        implementation === 'spark'
-                                            ? 'accessKey'
-                                            : 'password';
-                                    this.setState({
-                                        [param]: text.trim(),
-                                        saved: false
-                                    });
+                                    if (implementation === 'spark') {
+                                        this.setState({
+                                            accessKey: text.trim(),
+                                            saved: false
+                                        });
+                                    } else {
+                                        this.setState({
+                                            password: text.trim(),
+                                            saved: false
+                                        });
+                                    }
                                 }}
                                 numberOfLines={1}
                                 style={

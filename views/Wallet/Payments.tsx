@@ -111,7 +111,7 @@ export default class PaymentsView extends React.Component<PaymentsProps, {}> {
                                 }}
                             />
                         )}
-                        keyExtractor={item => item.payment_hash}
+                        keyExtractor={(item: any) => item.payment_hash}
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}
                         refreshing={loading}

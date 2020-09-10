@@ -17,6 +17,7 @@ import NodeInfoStore from './../stores/NodeInfoStore';
 import TransactionsStore from './../stores/TransactionsStore';
 import FeeStore from './../stores/FeeStore';
 import BalanceStore from './../stores/BalanceStore';
+import UTXOsStore from './../stores/UTXOsStore';
 import SettingsStore from './../stores/SettingsStore';
 import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
 import FiatStore from './../stores/FiatStore';
@@ -30,6 +31,7 @@ import { localeString } from './../utils/LocaleUtils';
 interface SendProps {
     exitSetup: any;
     navigation: any;
+    BalanceStore: BalanceStore;
     InvoicesStore: InvoicesStore;
     NodeInfoStore: NodeInfoStore;
     TransactionsStore: TransactionsStore;
@@ -37,6 +39,7 @@ interface SendProps {
     FiatStore: FiatStore;
     FeeStore: FeeStore;
     UnitsStore: UnitsStore;
+    UTXOsStore: UTXOsStore;
 }
 
 interface SendState {
@@ -48,6 +51,7 @@ interface SendState {
     error_msg: string;
     utxos: Array<string>;
     utxoBalance: number;
+    confirmationTarget: string;
 }
 
 @inject(
@@ -58,7 +62,8 @@ interface SendState {
     'SettingsStore',
     'UnitsStore',
     'FeeStore',
-    'FiatStore'
+    'FiatStore',
+    'UTXOsStore'
 )
 @observer
 export default class Send extends React.Component<SendProps, SendState> {
@@ -140,7 +145,7 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     sendCoins = (satAmount: string | number) => {
         const { TransactionsStore, navigation } = this.props;
-        const { destination, fee, utxos,  confirmationTarget } = this.state;
+        const { destination, fee, utxos, confirmationTarget } = this.state;
 
         let request;
         if (utxos && utxos.length > 0) {
@@ -183,6 +188,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             FeeStore,
             FiatStore,
             BalanceStore,
+            UTXOsStore,
             navigation
         } = this.props;
         const {
@@ -202,7 +208,6 @@ export default class Send extends React.Component<SendProps, SendState> {
         const { fiatRates }: any = FiatStore;
 
         const rate = fiat && fiatRates ? fiatRates[fiat]['15m'] : 0;
-        const symbol = fiatRates && fiatRates[fiat] && fiatRates[fiat].symbol;
 
         let satAmount: string | number;
         switch (units) {
@@ -397,6 +402,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 {RESTUtils.supportsCoinControl() && (
                                     <UTXOPicker
                                         onValueChange={this.selectUTXOs}
+                                        UTXOsStore={UTXOsStore}
                                     />
                                 )}
                                 <View style={styles.button}>

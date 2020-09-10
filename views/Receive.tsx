@@ -113,7 +113,6 @@ export default class Receive extends React.Component<
         const address = chainAddress;
 
         const rate = fiat && fiatRates ? fiatRates[fiat]['15m'] : 0;
-        const symbol = fiatRates && fiatRates[fiat] && fiatRates[fiat].symbol;
 
         let satAmount: string | number;
         switch (units) {

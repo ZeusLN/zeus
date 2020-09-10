@@ -21,6 +21,7 @@ import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
 import FeeStore from './../stores/FeeStore';
 import BalanceStore from './../stores/BalanceStore';
+import UTXOsStore from './../stores/UTXOsStore';
 
 interface OpenChannelProps {
     exitSetup: any;
@@ -29,6 +30,7 @@ interface OpenChannelProps {
     BalanceStore: BalanceStore;
     SettingsStore: SettingsStore;
     FeeStore: FeeStore;
+    UTXOsStore: UTXOsStore;
 }
 
 interface OpenChannelState {
@@ -43,7 +45,13 @@ interface OpenChannelState {
     utxoBalance: number;
 }
 
-@inject('ChannelsStore', 'SettingsStore', 'FeeStore', 'BalanceStore')
+@inject(
+    'ChannelsStore',
+    'SettingsStore',
+    'FeeStore',
+    'BalanceStore',
+    'UTXOsStore'
+)
 @observer
 export default class OpenChannel extends React.Component<
     OpenChannelProps,
@@ -132,6 +140,7 @@ export default class OpenChannel extends React.Component<
             SettingsStore,
             BalanceStore,
             FeeStore,
+            UTXOsStore,
             navigation
         } = this.props;
         const {
@@ -385,7 +394,10 @@ export default class OpenChannel extends React.Component<
                     />
 
                     {RESTUtils.supportsCoinControl() && (
-                        <UTXOPicker onValueChange={this.selectUTXOs} />
+                        <UTXOPicker
+                            onValueChange={this.selectUTXOs}
+                            UTXOsStore={UTXOsStore}
+                        />
                     )}
 
                     <View style={{ padding: 10 }}>
@@ -439,7 +451,11 @@ export default class OpenChannel extends React.Component<
                         />
                     </View>
                     <View style={styles.button}>
-                        <FeeTable setFee={this.setFee} />
+                        <FeeTable
+                            setFee={this.setFee}
+                            FeeStore={FeeStore}
+                            SettingsStore={SettingsStore}
+                        />
                     </View>
                 </View>
             </ScrollView>
