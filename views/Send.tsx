@@ -15,7 +15,9 @@ import handleAnything from './../utils/handleAnything';
 import InvoicesStore from './../stores/InvoicesStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
 import TransactionsStore from './../stores/TransactionsStore';
+import FeeStore from './../stores/FeeStore';
 import BalanceStore from './../stores/BalanceStore';
+import UTXOsStore from './../stores/UTXOsStore';
 import SettingsStore from './../stores/SettingsStore';
 import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
 import FiatStore from './../stores/FiatStore';
@@ -29,12 +31,15 @@ import { localeString } from './../utils/LocaleUtils';
 interface SendProps {
     exitSetup: any;
     navigation: any;
+    BalanceStore: BalanceStore;
     InvoicesStore: InvoicesStore;
     NodeInfoStore: NodeInfoStore;
     TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;
     FiatStore: FiatStore;
+    FeeStore: FeeStore;
     UnitsStore: UnitsStore;
+    UTXOsStore: UTXOsStore;
 }
 
 interface SendState {
@@ -46,6 +51,7 @@ interface SendState {
     error_msg: string;
     utxos: Array<string>;
     utxoBalance: number;
+    confirmationTarget: string;
 }
 
 @inject(
@@ -55,7 +61,9 @@ interface SendState {
     'BalanceStore',
     'SettingsStore',
     'UnitsStore',
-    'FiatStore'
+    'FeeStore',
+    'FiatStore',
+    'UTXOsStore'
 )
 @observer
 export default class Send extends React.Component<SendProps, SendState> {
@@ -75,7 +83,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             fee: '2',
             utxos: [],
             utxoBalance: 0,
-            confirmationTarget: '60'
+            confirmationTarget: '60',
+            error_msg: ''
         };
     }
 
@@ -136,7 +145,7 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     sendCoins = (satAmount: string | number) => {
         const { TransactionsStore, navigation } = this.props;
-        const { destination, fee, utxos,  confirmationTarget } = this.state;
+        const { destination, fee, utxos, confirmationTarget } = this.state;
 
         let request;
         if (utxos && utxos.length > 0) {
@@ -176,8 +185,10 @@ export default class Send extends React.Component<SendProps, SendState> {
         const {
             SettingsStore,
             UnitsStore,
+            FeeStore,
             FiatStore,
             BalanceStore,
+            UTXOsStore,
             navigation
         } = this.props;
         const {
@@ -194,13 +205,11 @@ export default class Send extends React.Component<SendProps, SendState> {
         const { implementation, settings } = SettingsStore;
         const { theme, fiat } = settings;
         const { units, changeUnits } = UnitsStore;
-        const { fiatRates } = FiatStore;
+        const { fiatRates }: any = FiatStore;
 
-        const rate =
-            (fiatRates && fiatRates[fiat] && fiatRates[fiat]['15m']) || 0;
-        const symbol = fiatRates && fiatRates[fiat] && fiatRates[fiat].symbol;
+        const rate = fiat && fiatRates ? fiatRates[fiat]['15m'] : 0;
 
-        let satAmount;
+        let satAmount: string | number;
         switch (units) {
             case 'sats':
                 satAmount = amount;
@@ -393,6 +402,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 {RESTUtils.supportsCoinControl() && (
                                     <UTXOPicker
                                         onValueChange={this.selectUTXOs}
+                                        UTXOsStore={UTXOsStore}
                                     />
                                 )}
                                 <View style={styles.button}>
@@ -558,7 +568,11 @@ export default class Send extends React.Component<SendProps, SendState> {
                             </View>
                         ) : (
                             <View style={styles.feeTableButton}>
-                                <FeeTable setFee={this.setFee} />
+                                <FeeTable
+                                    setFee={this.setFee}
+                                    SettingsStore={SettingsStore}
+                                    FeeStore={FeeStore}
+                                />
                             </View>
                         ))}
 

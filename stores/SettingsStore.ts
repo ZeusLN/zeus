@@ -25,6 +25,7 @@ interface Settings {
     passphrase?: string;
     fiat?: string;
     locale?: string;
+    onChainAddress?: string;
 }
 
 export const LOCALE_KEYS = [
@@ -59,6 +60,9 @@ export default class SettingsStore {
     @observable certVerification: boolean | undefined;
     @observable chainAddress: string | undefined;
     // LNDHub
+    @observable username: string;
+    @observable password: string;
+    @observable lndhubUrl: string;
     @observable public createAccountError: string;
     @observable public createAccountSuccess: string;
     @observable public accessToken: string;
@@ -171,9 +175,12 @@ export default class SettingsStore {
     public getNewAddress = () => {
         return RESTUtils.getNewAddress().then((data: any) => {
             const newAddress = data.address || data[0].address;
-            this.settings.nodes[
-                this.settings.selectedNode || 0
-            ].onChainAddress = newAddress;
+            if (this.settings.nodes) {
+                this.settings.nodes[
+                    this.settings.selectedNode || 0
+                ].onChainAddress = newAddress;
+            }
+
             const newSettings = this.settings;
 
             this.setSettings(JSON.stringify(newSettings)).then(() => {

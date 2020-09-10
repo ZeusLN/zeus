@@ -1,7 +1,9 @@
 import LND from './LND';
+import TransactionRequest from './../models/TransactionRequest';
+import OpenChannelRequest from './../models/OpenChannelRequest';
 
 export default class CLightningREST extends LND {
-    getHeaders = (macaroonHex: string) => {
+    getHeaders = (macaroonHex: string): any => {
         return {
             macaroon: macaroonHex,
             encodingtype: 'hex'
@@ -9,16 +11,16 @@ export default class CLightningREST extends LND {
     };
 
     getTransactions = () =>
-        this.getRequest('/v1/listFunds').then(data => ({
+        this.getRequest('/v1/listFunds').then((data: any) => ({
             transactions: data.outputs
         }));
     getChannels = () =>
-        this.getRequest('/v1/channel/listChannels').then(data => ({
+        this.getRequest('/v1/channel/listChannels').then((data: any) => ({
             channels: data
         }));
     getBlockchainBalance = () =>
         this.getRequest('/v1/getBalance').then(
-            ({ totalBalance, confBalance, unconfBalance }) => ({
+            ({ totalBalance, confBalance, unconfBalance }: any) => ({
                 total_balance: totalBalance,
                 confirmed_balance: confBalance,
                 unconfirmed_balance: unconfBalance
@@ -26,13 +28,13 @@ export default class CLightningREST extends LND {
         );
     getLightningBalance = () =>
         this.getRequest('/v1/channel/localremotebal').then(
-            ({ localBalance, pendingBalance }) => ({
+            ({ localBalance, pendingBalance }: any) => ({
                 balance: localBalance,
                 pending_open_balance: pendingBalance
             })
         );
     sendCoins = (data: TransactionRequest) => {
-        let request;
+        let request: any;
         if (data.utxos) {
             request = {
                 address: data.addr,
@@ -54,7 +56,7 @@ export default class CLightningREST extends LND {
     createInvoice = (data: any) =>
         this.postRequest('/v1/invoice/genInvoice/', {
             description: data.memo,
-            label: 'zeus.' + parseInt(Math.random() * 1000000),
+            label: 'zeus.' + Math.random() * 1000000,
             amount: Number(data.value) * 1000,
             expiry: data.expiry,
             private: true
@@ -62,7 +64,7 @@ export default class CLightningREST extends LND {
     getPayments = () => this.getRequest('/v1/pay/listPayments');
     getNewAddress = () => this.getRequest('/v1/newaddr');
     openChannel = (data: OpenChannelRequest) => {
-        let request;
+        let request: any;
         if (data.utxos && data.utxos.length > 0) {
             request = {
                 id: data.id,
@@ -90,18 +92,20 @@ export default class CLightningREST extends LND {
         });
     listNode = () => this.getRequest('/v1/network/listNode');
     decodePaymentRequest = (urlParams?: Array<string>) =>
-        this.getRequest(`/v1/pay/decodePay/${urlParams[0]}`);
+        this.getRequest(`/v1/pay/decodePay/${urlParams && urlParams[0]}`);
     payLightningInvoice = (data: any) =>
         this.postRequest('/v1/pay', {
             invoice: data.payment_request,
             amount: Number(data.amt && data.amt * 1000)
         });
     closeChannel = (urlParams?: Array<string>) =>
-        this.deleteRequest(`/v1/channel/closeChannel/${urlParams[0]}/`);
+        this.deleteRequest(
+            `/v1/channel/closeChannel/${urlParams && urlParams[0]}/`
+        );
     getNodeInfo = () => this.getRequest('N/A');
     getFees = () =>
-        this.getRequest('/v1/getFees/').then(({ feeCollected }) => ({
-            total_fee_sum: parseInt(feeCollected / 1000)
+        this.getRequest('/v1/getFees/').then(({ feeCollected }: any) => ({
+            total_fee_sum: feeCollected / 1000
         }));
     setFees = (data: any) =>
         this.postRequest('/v1/channel/setChannelFee/', {

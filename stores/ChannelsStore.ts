@@ -131,7 +131,7 @@ export default class ChannelsStore {
     ) => {
         this.loading = true;
 
-        let urlParams: Array<string> = [];
+        let urlParams: Array<any> = [];
         if (channelId) {
             // c-lightning, eclair
             urlParams = [channelId, forceClose];
@@ -173,7 +173,7 @@ export default class ChannelsStore {
                 host: request.host
             }
         })
-            .then((data: any) => {
+            .then(() => {
                 this.errorPeerConnect = false;
                 this.connectingToPeer = false;
                 this.errorMsgPeer = null;
