@@ -86,7 +86,7 @@
     "views.Settings.CertInstallInstructions.graph5": "Se você está se conectando ao node via um hostname externo ou via Tor você precisa adicionar o hostname no certificado. lnd possui uma opção para isso com a opção TLSExtraDomain nas suas configurações. Você terá que deletar e recriar o certificado depois de fazer a alteração.",
     "views.Settings.Nodes.noNodes": "Sem Nodes",
     "views.Settings.Nodes.add": "Adicionar um novo node",
-    "views.Wallet.Channels.open": "Open Channel",
+    "views.Wallet.Channels.open": "Abrir Canal",
     "views.Wallet.Channels.inactive": "INATIVO",
     "views.Wallet.Channels.private": "Privado",
     "views.Wallet.Channels.local": "Local",
@@ -192,7 +192,7 @@
     "views.Onboarding.fullNodeGraph1": "Você não está realmente usando bitcoin sem usar um full node.",
     "views.Onboarding.fullNodeGraph2": "Rodar um servidor Bitcoin tem várias vantagens. Você tem ganhos em segurança e privacidade quando corta o atravessador e verifica suas próprias transações. No contexto da Rede Relâmpago você tem controle total dos seus canais e liquidez.",
     "views.Onboarding.fullNodeGraph3": "Com a carteira Zeus é possível administrar seus canais, enviar e receber bitcoins tanto através da rede Relâmpago quanto por transações na blockchain, e usufruir de novos desenvolvimentos relampísticos.",
-    "views.Onboarding.fullNodeGraph4": "A Zeus tem suporte para se conectar a nodes lnd e c-lightning rodando interfaces c-lightning-REST ou Spark.",
+    "views.Onboarding.fullNodeGraph4": "Zeus has support for connecting to lnd nodes, to Eclair nodes or to c-lightning nodes running the c-lightning-REST or Spark interfaces.",
     "views.Onboarding.connect1": "Conectar a um node lnd",
     "views.Onboarding.connect2": "Conectar a um node c-lightning-REST",
     "views.Onboarding.connect3": "Conectar a um node c-lightning Spark",
@@ -317,5 +317,8 @@
     "views.Transaction.status": "Estado",
     "views.Transaction.timestamp": "Timestamp",
     "views.Transaction.destAddress": "Endereço de Destino",
-    "views.Transaction.destAddresses": "Endereços de Destino"
+    "views.Transaction.destAddresses": "Endereços de Destino",
+    "components.UTXOPicker.modal.title": "Select UTXOs to use",
+    "components.UTXOPicker.modal.description": "Select the UTXOs to be used in this operation. You may want to only use specific UTXOs to preserve your privacy.",
+    "components.UTXOPicker.modal.set": "Set UTXOs"
 }
