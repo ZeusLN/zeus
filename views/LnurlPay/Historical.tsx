@@ -31,7 +31,9 @@ export default class LnurlPayHistorical extends React.Component<
         const { settings } = SettingsStore;
         const { theme } = settings;
         const { lnurl, domain, successAction } = lnurlpaytx;
-        const metadata = lnurlpaytx.metadata && lnurlpaytx.metadata.metadata || 'No metadata available';
+        const metadata =
+            (lnurlpaytx.metadata && lnurlpaytx.metadata.metadata) ||
+            'No metadata available';
         return (
             <View>
                 <TouchableOpacity
