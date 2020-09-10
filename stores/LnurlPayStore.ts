@@ -9,23 +9,23 @@ export interface LnurlPayTransaction {
     domain: string;
     lnurl: string;
     metadata_hash: string;
-    successAction: LnurlPaySuccessAction;
+    successAction: LNURLPaySuccessAction;
     time: number;
-    metadata: Metadata; // only after an independent load from AsyncStorage.
+    metadata?: Metadata; // only after an independent load from AsyncStorage.
 }
 
 interface Metadata {
     metadata: string;
 }
 
-interface LnurlPaySuccessAction {
-    tag: string;
-    description?: string;
-    url: string;
-    message: string;
-    iv: string;
-    ciphertext: string;
-}
+// interface LnurlPaySuccessAction {
+//     tag: string;
+//     description?: string;
+//     url: string;
+//     message: string;
+//     iv: string;
+//     ciphertext: string;
+// }
 
 interface LnurlPayMetadataEntry {
     metadata: string;
