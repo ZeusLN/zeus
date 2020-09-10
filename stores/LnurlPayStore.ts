@@ -20,7 +20,7 @@ interface Metadata {
 
 interface LnurlPaySuccessAction {
     tag: string;
-    description: string;
+    description?: string;
     url: string;
     message: string;
     iv: string;

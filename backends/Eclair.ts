@@ -9,10 +9,10 @@ import Base64Utils from './../utils/Base64Utils';
 const calls: any = {};
 
 export default class Eclair {
-    api = (method, params = {}) => {
+    api = (method: string, params: any = {}) => {
         let { url, password, certVerification } = stores.settingsStore;
 
-        const id = method + JSON.stringify(params);
+        const id: string = method + JSON.stringify(params);
         if (calls[id]) {
             return calls[id];
         }
@@ -58,7 +58,7 @@ export default class Eclair {
             this.api('onchaintransactions', { count: 100 }),
             this.api('getinfo')
         ]).then(([transactions, { blockHeight }]) => ({
-            transactions: transactions.reverse().map(tx => ({
+            transactions: transactions.reverse().map((tx: any) => ({
                 amount: tx.amount,
                 block_height: blockHeight - tx.confirmations,
                 block_hash: tx.blockHash,
@@ -71,8 +71,8 @@ export default class Eclair {
             }))
         }));
     getChannels = () =>
-        this.api('channels').then(channels => ({
-            channels: channels.map(chan => {
+        this.api('channels').then((channels: any) => ({
+            channels: channels.map((chan: any) => {
                 return {
                     active: chan.state === 'NORMAL',
                     remote_pubkey: chan.data.commitments.remoteParams.nodeId,
@@ -100,7 +100,7 @@ export default class Eclair {
             })
         }));
     getBlockchainBalance = () =>
-        this.api('onchainbalance').then(({ confirmed, unconfirmed }) => {
+        this.api('onchainbalance').then(({ confirmed, unconfirmed }: any) => {
             return {
                 total_balance: confirmed + unconfirmed,
                 confirmed_balance: confirmed,
@@ -108,20 +108,23 @@ export default class Eclair {
             };
         });
     getLightningBalance = () =>
-        this.api('channels').then(channels => ({
+        this.api('channels').then((channels: any) => ({
             balance: channels
                 .filter(
-                    chan => chan.state === 'NORMAL' || chan.state == 'OFFLINE'
+                    (chan: any) =>
+                        chan.state === 'NORMAL' || chan.state == 'OFFLINE'
                 )
                 .reduce(
-                    (acc, o) =>
+                    (acc: any, o: any) =>
                         acc + o.data.commitments.localCommit.spec.toLocal,
                     0
                 ),
             pending_open_balance: channels
-                .filter(chan => chan.state === 'WAIT_FOR_FUNDING_CONFIRMED')
+                .filter(
+                    (chan: any) => chan.state === 'WAIT_FOR_FUNDING_CONFIRMED'
+                )
                 .reduce(
-                    (acc, o) =>
+                    (acc: any, o: any) =>
                         acc + o.data.commitments.localCommit.spec.toLocal,
                     0
                 )
@@ -131,19 +134,11 @@ export default class Eclair {
             address: data.addr,
             confirmationTarget: data.conf_target,
             amountSatoshis: data.amount
-        }).then(txid => ({ txid }));
+        }).then((txid: any) => ({ txid }));
     getMyNodeInfo = () =>
         this.api('getinfo').then(
-            ({
-                version,
-                nodeId,
-                alias,
-                color,
-                network,
-                blockHeight,
-                publicAddresses
-            }) => ({
-                uris: publicAddresses.map(addr => nodeId + '@' + addr),
+            ({ version, nodeId, alias, network, publicAddresses }: any) => ({
+                uris: publicAddresses.map((addr: any) => nodeId + '@' + addr),
                 alias,
                 version,
                 identity_pubkey: nodeId,
@@ -152,12 +147,12 @@ export default class Eclair {
             })
         );
     getInvoices = () => {
-        const since = parseInt(new Date().getTime() / 1000) - 60 * 60 * 24 * 90; // 90 days ago
+        const since = new Date().getTime() / 1000 - 60 * 60 * 24 * 90; // 90 days ago
         return Promise.all([
             this.api('listinvoices', { from: since }),
             this.api('listpendinginvoices', { from: since })
         ]).then(([all, pending]) => {
-            const isPending = {};
+            const isPending: any = {};
             for (let i = 0; i < pending.length; i++) {
                 const inv = pending[i];
                 isPending[inv.paymentHash] = true;
@@ -175,7 +170,7 @@ export default class Eclair {
             expireIn: data.expiry
         }).then(mapInvoice(null));
     getPayments = () =>
-        this.api('audit').then(({ sent }) => ({
+        this.api('audit').then(({ sent }: any) => ({
             payments: sent.map(
                 ({
                     paymentHash,
@@ -184,26 +179,31 @@ export default class Eclair {
                     recipientAmount,
                     recipientNodeId,
                     id
-                }) => ({
+                }: any) => ({
                     id,
                     payment_hash: paymentHash,
                     payment_preimage: paymentPreimage,
                     creation_date: parts[0].timestamp,
-                    value: parseInt(recipientAmount / 1000),
-                    value_sat: parseInt(recipientAmount / 1000),
+                    value: recipientAmount / 1000,
+                    value_sat: recipientAmount / 1000,
                     value_msat: recipientAmount,
                     msatoshi: recipientAmount,
                     msatoshi_sent: recipientAmount,
                     destination: recipientNodeId,
-                    fee_sat: parseInt(
-                        parts.reduce((acc, p) => acc + p.feesPaid, 0) / 1000
-                    ),
-                    fee_msat: parts.reduce((acc, p) => acc + p.feesPaid, 0)
+                    fee_sat:
+                        parts.reduce(
+                            (acc: any, p: any) => acc + p.feesPaid,
+                            0
+                        ) / 1000,
+                    fee_msat: parts.reduce(
+                        (acc: any, p: any) => acc + p.feesPaid,
+                        0
+                    )
                 })
             )
         }));
     getNewAddress = () =>
-        this.api('getnewaddress').then(address => ({ address }));
+        this.api('getnewaddress').then((address: any) => ({ address }));
     openChannel = (data: OpenChannelRequest) =>
         this.api('open', {
             nodeId: data.node_pubkey_string,
@@ -215,7 +215,7 @@ export default class Eclair {
         this.api('connect', { uri: data.addr.pubkey + '@' + data.addr.host });
     listNode = () => {};
     decodePaymentRequest = (urlParams?: Array<string>) =>
-        this.api('parseinvoice', { invoice: [urlParams[0]] }).then(
+        this.api('parseinvoice', { invoice: [urlParams && urlParams[0]] }).then(
             ({
                 serialized,
                 description,
@@ -224,7 +224,7 @@ export default class Eclair {
                 paymentHash,
                 nodeId,
                 timestamp
-            }) => ({
+            }: any) => ({
                 bolt11: serialized,
                 description,
                 description_hash: description,
@@ -236,11 +236,11 @@ export default class Eclair {
             })
         );
     payLightningInvoice = (data: any) => {
-        const params = { invoice: data.payment_request };
+        const params: any = { invoice: data.payment_request };
         if (data.amt) params.amountMsat = Number(data.amt * 1000);
         return this.api('payinvoice', params)
-            .then(payId => this.api('getsentinfo', { id: payId }))
-            .then(attempts => {
+            .then((payId: any) => this.api('getsentinfo', { id: payId }))
+            .then((attempts: any) => {
                 if (attempts.length === 0) {
                     return {
                         status: 'failed',
@@ -268,38 +268,42 @@ export default class Eclair {
     };
     closeChannel = (urlParams?: Array<string>) => {
         let method = 'close';
-        if (urlParams[1]) method = 'forceclose';
-        return this.api('close', {
-            channelId: [urlParams[0]]
+        if (urlParams && urlParams[1]) method = 'forceclose';
+        return this.api(method, {
+            channelId: [urlParams && urlParams[0]]
         }).then(() => ({ chan_close: { success: true } }));
     };
     getNodeInfo = (urlParams?: Array<string>) =>
-        this.api('nodes', { nodeIds: urlParams[0] }).then(nodes => {
-            const node = nodes[0];
-            return {
-                node: node && {
-                    last_update: node.timestamp,
-                    pub_key: node.nodeId,
-                    alias: node.alias,
-                    color: node.rgbColor,
-                    addresses: node.addresses.map(addr => ({
-                        network: 'tcp',
-                        addr
-                    }))
-                }
-            };
-        });
+        this.api('nodes', { nodeIds: urlParams && urlParams[0] }).then(
+            (nodes: any) => {
+                const node = nodes[0];
+                return {
+                    node: node && {
+                        last_update: node.timestamp,
+                        pub_key: node.nodeId,
+                        alias: node.alias,
+                        color: node.rgbColor,
+                        addresses: node.addresses.map((addr: any) => ({
+                            network: 'tcp',
+                            addr
+                        }))
+                    }
+                };
+            }
+        );
     getFees = async () => {
         const [channels, { relayed }] = await Promise.all([
             this.api('channels'),
             this.api('audit')
         ]);
 
-        let lastDay, lastWeek, lastMonth, allTimes;
-        const now = parseInt(new Date().getTime() / 1000);
+        let lastDay = 0,
+            lastWeek = 0,
+            lastMonth = 0,
+            allTimes = 0;
+        const now = new Date().getTime() / 1000;
         const oneDayAgo = now - 60 * 60 * 24;
         const oneWeekAgo = now - 60 * 60 * 24 * 7;
-        const oneMonthAgo = now - 60 * 60 * 24 * 30;
         for (let i = relayed.length - 1; i >= 0; i--) {
             const relay = relayed[i];
             allTimes += relay.amountIn - relay.amountOut;
@@ -316,7 +320,7 @@ export default class Eclair {
         }
 
         return {
-            channel_fees: channels.map(channel => ({
+            channel_fees: channels.map((channel: any) => ({
                 chan_id: channel.channelId,
                 channel_point: null,
                 base_fee_msat: channel.data.channelUpdate
@@ -327,20 +331,19 @@ export default class Eclair {
                       1000000
                     : null
             })),
-            total_fee_sum: parseInt(allTimes / 1000),
-            day_fee_sum: parseInt(lastDay / 1000),
-            week_fee_sum: parseInt(lastWeek / 1000),
-            month_fee_sum: parseInt(lastMonth / 1000)
+            total_fee_sum: allTimes / 1000,
+            day_fee_sum: lastDay / 1000,
+            week_fee_sum: lastWeek / 1000,
+            month_fee_sum: lastMonth / 1000
         };
     };
     setFees = async (data: any) => {
-        const params = {};
+        const params: any = {};
         if (data.global) {
-            params.channelIds = (
-                await this.api('channels').then(channels =>
-                    channels.map(channel => channel.channelId)
-                )
-            ).join(',');
+            params.channelIds = (await this.api('channels').then(
+                (channels: any) =>
+                    channels.map((channel: any) => channel.channelId)
+            )).join(',');
         } else {
             params.channelId = data.channelId;
         }
@@ -352,17 +355,19 @@ export default class Eclair {
     };
     getRoutes = (urlParams?: Array<string>) => {
         this.api('findroutetonode', {
-            nodeId: urlParams[0],
-            amountMsat: urlParams[1]
+            nodeId: urlParams && urlParams[0],
+            amountMsat: urlParams && urlParams[1]
         })
-            .then(nodeIds =>
+            .then((nodeIds: any) =>
                 Promise.all(
                     nodeIds
                         .slice(1) // discard ourselves since our channel will be free
-                        .map(nodeId => this.api('allupdates', { nodeId }))
+                        .map((nodeId: any) =>
+                            this.api('allupdates', { nodeId })
+                        )
                 )
             )
-            .then(nodesUpdates => {
+            .then((nodesUpdates: any) => {
                 // we will match each hop in the route from end to beginning
                 // with their previous hop using the channel updates scid
                 const route = [];
@@ -417,26 +422,26 @@ export default class Eclair {
     supportsMPP = () => false;
 }
 
-const mapInvoice = isPending => ({
+const mapInvoice = (isPending: any) => ({
     description,
     serialized,
     paymentHash,
     expiry,
     amount
-}) => {
+}: any) => {
     if (!isPending) isPending = { [paymentHash]: true };
     return {
         memo: description,
         r_hash: paymentHash,
-        value: parseInt(amount / 1000),
+        value: amount / 1000,
         value_msat: amount,
         settled: !isPending[paymentHash],
         creation_date: null,
         settle_date: null,
         payment_request: serialized,
         expiry,
-        amt_paid: isPending[paymentHash] ? 0 : parseInt(amount / 1000),
-        amt_paid_sat: isPending[paymentHash] ? 0 : parseInt(amount / 1000),
+        amt_paid: isPending[paymentHash] ? 0 : amount / 1000,
+        amt_paid_sat: isPending[paymentHash] ? 0 : amount / 1000,
         amt_paid_msat: isPending[paymentHash] ? 0 : amount
     };
 };

@@ -36,12 +36,7 @@ interface InvoiceState {
     feeLimitSat: string;
 }
 
-@inject(
-    'InvoicesStore',
-    'TransactionsStore',
-    'UnitsStore',
-    'SettingsStore'
-)
+@inject('InvoicesStore', 'TransactionsStore', 'UnitsStore', 'SettingsStore')
 @observer
 export default class PaymentRequest extends React.Component<
     InvoiceProps,

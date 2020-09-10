@@ -7,17 +7,17 @@ import OpenChannelRequest from './../models/OpenChannelRequest';
 const calls: any = {};
 
 export default class Spark {
-    rpc = (rpcmethod, params = {}, range = null) => {
+    rpc = (rpcmethod: string, param = {}, range: any = null) => {
         let { url, accessKey, certVerification } = stores.settingsStore;
 
-        const id = rpcmethod + JSON.stringify(params) + JSON.stringify(range);
+        const id = rpcmethod + JSON.stringify(param) + JSON.stringify(range);
         if (calls[id]) {
             return calls[id];
         }
 
         url = url.slice(-4) === '/rpc' ? url : url + '/rpc';
 
-        const headers = { 'X-Access': accessKey };
+        const headers: any = { 'X-Access': accessKey };
         if (range) {
             headers['Range'] = `${range.unit}=${range.slice}`;
         }
@@ -29,9 +29,9 @@ export default class Spark {
                 'POST',
                 url,
                 headers,
-                JSON.stringify({ method: rpcmethod, params: params })
+                JSON.stringify({ method: rpcmethod, params: param })
             )
-            .then(response => {
+            .then((response: any) => {
                 delete calls[id];
                 const status = response.info().status;
                 if (status < 300) {
@@ -53,17 +53,18 @@ export default class Spark {
     };
 
     getTransactions = () =>
-        this.rpc('listfunds').then(({ outputs }) => ({
+        this.rpc('listfunds').then(({ outputs }: any) => ({
             transactions: outputs
         }));
     getChannels = () =>
-        this.rpc('listpeers').then(({ peers }) => ({
+        this.rpc('listpeers').then(({ peers }: any) => ({
             channels: peers
-                .filter(peer => peer.channels.length)
-                .map(peer => {
+                .filter((peer: any) => peer.channels.length)
+                .map((peer: any) => {
                     let channel =
                         peer.channels.find(
-                            c => c.state !== 'ONCHAIN' && c.state !== 'CLOSED'
+                            (c: any) =>
+                                c.state !== 'ONCHAIN' && c.state !== 'CLOSED'
                         ) || peer.channels[0];
 
                     return {
@@ -100,13 +101,13 @@ export default class Spark {
                 })
         }));
     getBlockchainBalance = () =>
-        this.rpc('listfunds').then(({ outputs }) => {
+        this.rpc('listfunds').then(({ outputs }: any) => {
             const unconf = outputs
-                .filter(o => o.status !== 'confirmed')
-                .reduce((acc, o) => acc + o.value, 0);
+                .filter((o: any) => o.status !== 'confirmed')
+                .reduce((acc: any, o: any) => acc + o.value, 0);
             const conf = outputs
-                .filter(o => o.status === 'confirmed')
-                .reduce((acc, o) => acc + o.value, 0);
+                .filter((o: any) => o.status === 'confirmed')
+                .reduce((acc: any, o: any) => acc + o.value, 0);
 
             return {
                 total_balance: conf + unconf,
@@ -115,13 +116,13 @@ export default class Spark {
             };
         });
     getLightningBalance = () =>
-        this.rpc('listfunds').then(({ channels }) => ({
+        this.rpc('listfunds').then(({ channels }: any) => ({
             balance: channels
-                .filter(o => o.state === 'CHANNELD_NORMAL')
-                .reduce((acc, o) => acc + o.channel_sat, 0),
+                .filter((o: any) => o.state === 'CHANNELD_NORMAL')
+                .reduce((acc: any, o: any) => acc + o.channel_sat, 0),
             pending_open_balance: channels
-                .filter(o => o.state === 'CHANNELD_AWAITING_LOCKIN')
-                .reduce((acc, o) => acc + o.channel_sat, 0)
+                .filter((o: any) => o.state === 'CHANNELD_AWAITING_LOCKIN')
+                .reduce((acc: any, o: any) => acc + o.channel_sat, 0)
         }));
     sendCoins = (data: TransactionRequest) =>
         this.rpc('withdraw', {
@@ -132,20 +133,20 @@ export default class Spark {
     getMyNodeInfo = () => this.rpc('getinfo');
     getInvoices = () =>
         this.rpc('listinvoices', {}, { unit: 'invoices', slice: '-100' }).then(
-            ({ invoices }) => ({
-                invoices: invoices.map(inv => ({
+            ({ invoices }: any) => ({
+                invoices: invoices.map((inv: any) => ({
                     memo: inv.description,
                     r_preimage: inv.payment_preimage,
                     r_hash: inv.payment_hash,
-                    value: parseInt(inv.msatoshi / 1000),
+                    value: inv.msatoshi / 1000,
                     value_msat: inv.msatoshi,
                     settled: inv.status === 'paid',
                     creation_date: inv.expires_at,
                     settle_date: inv.paid_at,
                     payment_request: inv.bolt11,
                     expiry: inv.expires_at,
-                    amt_paid: parseInt(inv.msatoshi_received / 1000),
-                    amt_paid_sat: parseInt(inv.msatoshi_received / 1000),
+                    amt_paid: inv.msatoshi_received / 1000,
+                    amt_paid_sat: inv.msatoshi_received / 1000,
                     amt_paid_msat: inv.msatoshi_received
                 }))
             })
@@ -153,7 +154,7 @@ export default class Spark {
     createInvoice = (data: any) =>
         this.rpc('invoice', {
             description: data.memo,
-            label: 'zeus.' + parseInt(Math.random() * 1000000),
+            label: 'zeus.' + Math.random() * 1000000,
             msatoshi: Number(data.value) * 1000,
             expiry: data.expiry,
             exposeprivatechannels: true
@@ -167,12 +168,12 @@ export default class Spark {
             amount: data.satoshis,
             feerate: `${Number(data.sat_per_byte) * 1000}perkb`,
             announce: !data.private
-        }).then(({ txid }) => ({ funding_txid_str: txid }));
+        }).then(({ txid }: any) => ({ funding_txid_str: txid }));
     connectPeer = (data: any) =>
         this.rpc('connect', [data.addr.pubkey, data.addr.host]);
     listNode = () => {};
     decodePaymentRequest = (urlParams?: Array<string>) =>
-        this.rpc('decodepay', [urlParams[0]]);
+        this.rpc('decodepay', [urlParams && urlParams[0]]);
     payLightningInvoice = (data: any) =>
         this.rpc('pay', {
             bolt11: data.payment_request,
@@ -180,28 +181,30 @@ export default class Spark {
         });
     closeChannel = (urlParams?: Array<string>) =>
         this.rpc('close', {
-            id: urlParams[0],
-            unilateraltimeout: urlParams[1] ? 60 : 0
+            id: urlParams && urlParams[0],
+            unilateraltimeout: urlParams && urlParams[1] ? 60 : 0
         }).then(() => ({ chan_close: { success: true } }));
     getNodeInfo = (urlParams?: Array<string>) =>
-        this.rpc('listnodes', [urlParams[0]]).then(({ nodes }) => {
-            const node = nodes[0];
-            return {
-                node: node && {
-                    last_update: node.last_timestamp,
-                    pub_key: node.nodeid,
-                    alias: node.alias,
-                    color: node.color,
-                    addresses: node.addresses.map(addr => ({
-                        network: 'tcp',
-                        addr:
-                            addr.type === 'ipv6'
-                                ? `[${addr.address}]:${addr.port}`
-                                : `${addr.address}:${addr.port}`
-                    }))
-                }
-            };
-        });
+        this.rpc('listnodes', [urlParams && urlParams[0]]).then(
+            ({ nodes }: any) => {
+                const node = nodes[0];
+                return {
+                    node: node && {
+                        last_update: node.last_timestamp,
+                        pub_key: node.nodeid,
+                        alias: node.alias,
+                        color: node.color,
+                        addresses: node.addresses.map((addr: any) => ({
+                            network: 'tcp',
+                            addr:
+                                addr.type === 'ipv6'
+                                    ? `[${addr.address}]:${addr.port}`
+                                    : `${addr.address}:${addr.port}`
+                        }))
+                    }
+                };
+            }
+        );
     getFees = async () => {
         const info = await this.rpc('getinfo');
 
@@ -211,11 +214,12 @@ export default class Spark {
             this.rpc('listchannels', { source: info.id })
         ]);
 
-        let lastDay, lastWeek, lastMonth;
-        const now = parseInt(new Date().getTime() / 1000);
+        let lastDay = 0,
+            lastWeek = 0,
+            lastMonth = 0;
+        const now = new Date().getTime() / 1000;
         const oneDayAgo = now - 60 * 60 * 24;
         const oneWeekAgo = now - 60 * 60 * 24 * 7;
-        const oneMonthAgo = now - 60 * 60 * 24 * 30;
         for (let i = listforwards.forwards.length - 1; i >= 0; i--) {
             const forward = listforwards.forwards[i];
             if (forward.status !== 'settled') continue;
@@ -231,7 +235,7 @@ export default class Spark {
             } else break;
         }
 
-        const channels = {};
+        const channels: any = {};
         for (let i = 0; i < listchannels.channels.length; i++) {
             const channel = listchannels.channels[i];
             channels[channel.short_channel_id] = {
@@ -242,13 +246,13 @@ export default class Spark {
 
         return {
             channel_fees: listpeers
-                .filter(({ channels }) => channels && channels.length)
+                .filter(({ channels }: any) => channels && channels.length)
                 .map(
                     ({
                         channels: [
                             { short_channel_id, channel_id, funding_txid }
                         ]
-                    }) => ({
+                    }: any) => ({
                         chan_id: channel_id,
                         channel_point: funding_txid,
                         base_fee_msat:
@@ -256,10 +260,10 @@ export default class Spark {
                         fee_rate: channels[short_channel_id].fee_rate
                     })
                 ),
-            total_fee_sum: parseInt(info.msatoshi_fees_collected / 1000),
-            day_fee_sum: parseInt(lastDay / 1000),
-            week_fee_sum: parseInt(lastWeek / 1000),
-            month_fee_sum: parseInt(lastMonth / 1000)
+            total_fee_sum: info.msatoshi_fees_collected / 1000,
+            day_fee_sum: lastDay / 1000,
+            week_fee_sum: lastWeek / 1000,
+            month_fee_sum: lastMonth / 1000
         };
     };
     setFees = (data: any) =>
@@ -269,10 +273,10 @@ export default class Spark {
             ppm: data.fee_rate * 1000000
         });
     getRoutes = async (urlParams?: Array<string>) => {
-        const msatoshi = Number(urlParams[1]) * 1000;
+        const msatoshi = Number(urlParams && urlParams[1]) * 1000;
 
         const res = await this.rpc('getroute', {
-            id: urlParams[0],
+            id: urlParams && urlParams[0],
             msatoshi,
             riskfactor: 2
         });
@@ -282,7 +286,7 @@ export default class Spark {
         return {
             routes: [
                 {
-                    total_fees: parseInt((route[0].msatoshi - msatoshi) / 1000)
+                    total_fees: (route[0].msatoshi - msatoshi) / 1000
                 }
             ]
         };

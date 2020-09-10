@@ -25,8 +25,8 @@ const UnselectedLight = require('./../images/unselected-light.png');
 const UnselectedDark = require('./../images/unselected-dark.png');
 
 interface UTXOPickerProps {
-    title: string;
-    selectedValue: string | boolean;
+    title?: string;
+    selectedValue?: string | boolean;
     displayValue?: string;
     onValueChange: (value: any, balance: number) => void;
     UTXOsStore: UTXOsStore;
@@ -84,7 +84,7 @@ export default class UTXOPicker extends React.Component<
     }
 
     displayValues(): string {
-        const display = [];
+        const display: string[] = [];
         this.state.utxosSelected.forEach((utxo: any) => {
             const length: number = utxo.length;
             const pre: string = utxo.slice(0, 4);
@@ -96,15 +96,17 @@ export default class UTXOPicker extends React.Component<
 
     toggleItem(item: any) {
         const { utxosSelected, selectedBalance } = this.state;
-        let newArray = utxosSelected;
-        const id = `${item.txid}:${item.output}`;
+        let newArray: any[] = [];
+        utxosSelected.forEach((utxo: any) => newArray.push(utxo));
+        const { txid, output } = item;
+        const itemId = `${txid}:${output}`;
         let balance;
-        if (!utxosSelected.includes(id)) {
-            newArray.push(id);
+        if (!utxosSelected.includes(itemId)) {
+            newArray.push(itemId);
             balance = selectedBalance + item.value;
         } else {
             newArray = remove(newArray, function(n) {
-                return n !== id;
+                return n !== itemId;
             });
             balance = selectedBalance - item.value;
         }
@@ -113,13 +115,7 @@ export default class UTXOPicker extends React.Component<
     }
 
     render() {
-        const {
-            title,
-            selectedValue,
-            displayValue,
-            onValueChange,
-            UTXOsStore
-        } = this.props;
+        const { title, selectedValue, onValueChange, UTXOsStore } = this.props;
         const {
             utxosSelected,
             utxosSet,
@@ -251,7 +247,7 @@ export default class UTXOPicker extends React.Component<
                                                 }}
                                             />
                                         )}
-                                        keyExtractor={item => item.txid}
+                                        keyExtractor={(item: any) => item.txid}
                                         onEndReachedThreshold={50}
                                         refreshing={loading}
                                         onRefresh={() => getUTXOs()}
@@ -265,7 +261,7 @@ export default class UTXOPicker extends React.Component<
                                             onPress={() => {
                                                 const {
                                                     utxosSelected,
-                                                    balanceSelected
+                                                    selectedBalance
                                                 } = this.state;
                                                 this.setState({
                                                     showUtxoModal: false,
