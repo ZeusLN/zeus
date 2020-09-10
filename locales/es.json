@@ -86,7 +86,7 @@
     "views.Settings.CertInstallInstructions.graph5": "Si se conecta a su Nodo a través de un nombre de host externo o Tor, debe agregar el nombre de host al certificado. Lnd proporciona una opción para hacer esto con la opción TLSExtraDomain en su configuración. Deberá eliminar y volver a generar el certificado después de realizar el cambio.",
     "views.Settings.Nodes.noNodes": "Sin Nodos",
     "views.Settings.Nodes.add": "Añadir nuevo Nodo",
-    "views.Wallet.Channels.open": "Open Channel",
+    "views.Wallet.Channels.open": "Abrir Canal",
     "views.Wallet.Channels.inactive": "INACTIVO",
     "views.Wallet.Channels.private": "Privado",
     "views.Wallet.Channels.local": "Local",
@@ -192,7 +192,7 @@
     "views.Onboarding.fullNodeGraph1": "Realmente no estás usando bitcoin sin usar un Nodo completo.",
     "views.Onboarding.fullNodeGraph2": "Ejecutar un Nodo completo tiene muchas ventajas excelentes. Obtiene grandes ganancias en términos de seguridad y privacidad cuando elimina al intermediario y verifica sus propias transacciones. En el contexto de la red de Lightning, usted tiene el control total de sus canales de Lightning y su liquidez.",
     "views.Onboarding.fullNodeGraph3": "Zeus le brinda una interfaz para administrar sus canales, enviar y recibir bitcoins tanto en Lightning como en cadena, y usar algunas de las últimas funciones de Lightning.",
-    "views.Onboarding.fullNodeGraph4": "Zeus tiene soporte para conectarse a Nodos lnd y a Nodos c-lightning que ejecutan las interfaces c-lightning-REST o Spark.",
+    "views.Onboarding.fullNodeGraph4": "Zeus has support for connecting to lnd nodes, to Eclair nodes or to c-lightning nodes running the c-lightning-REST or Spark interfaces.",
     "views.Onboarding.connect1": "Conectar a un Nodo lnd",
     "views.Onboarding.connect2": "Conectar a un Nodo c-lightning-REST",
     "views.Onboarding.connect3": "Conectar a un Nodo c-lightning Spark ",
@@ -317,5 +317,8 @@
     "views.Transaction.status": "Estado",
     "views.Transaction.timestamp": "Timestamp",
     "views.Transaction.destAddress": "Dirección de Destino",
-    "views.Transaction.destAddresses": "Direcciones de Destino"
+    "views.Transaction.destAddresses": "Direcciones de Destino",
+    "components.UTXOPicker.modal.title": "Select UTXOs to use",
+    "components.UTXOPicker.modal.description": "Select the UTXOs to be used in this operation. You may want to only use specific UTXOs to preserve your privacy.",
+    "components.UTXOPicker.modal.set": "Set UTXOs"
 }
