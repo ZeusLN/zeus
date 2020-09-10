@@ -36,7 +36,7 @@ export default class FeeTable extends React.Component<
         collapsed: true
     };
 
-    styler(x: number | string) {
+    styler(x: number | string): any {
         if (x == null || typeof x === 'string') {
             return {
                 backgroundColor: 'white',
