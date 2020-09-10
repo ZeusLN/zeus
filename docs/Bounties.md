@@ -10,11 +10,11 @@ Currently, Zeus on Android requires Orbot to connect to your node over the Tor n
 Additional bounty patrons: [Capitalist Dog](https://github.com/capitalistdog)
 
 ## Tor on iOS
-Payout: 21,850,000 sats (0.2185 BTC)
+Payout: 22,050,000 sats (0.2205 BTC)
 
 Currently, Zeus on iOS cannot connect over Tor. Users looking to connect remotely need a VPN configuration. We'd like for users to be able to connect their node over Tor without the use of another app. The user should be able to start and stop the Tor process and get a new identity if possible.
 
-Additional bounty patrons: [Ben Prentice](https://twitter.com/mrcoolbp), [Capitalist Dog](https://github.com/capitalistdog)
+Additional bounty patrons: [Ben Prentice](https://twitter.com/mrcoolbp), [Capitalist Dog](https://github.com/capitalistdog), anonymous
 
 # Claimed Bounties
 
