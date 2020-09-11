@@ -79,7 +79,7 @@
     "views.Settings.AddEditNode.deleteNode": "Delete Node config",
     "views.Settings.AddEditNode.nodeInterface": "Node interface",
     "views.Settings.CertInstallInstructions.title": "Certificate Installation Instructions",
-    "views.Settings.CertInstallInstructions.graph1": "To install a certificate on Android, copy the certificate file to device. Then go to Settings > Security > Install from storage. It should detect the certificate and let you add install it to the device. The certificate must have the extension .cert",
+    "views.Settings.CertInstallInstructions.graph1": "To install a certificate on Android, copy the certificate file to device. Then go to Settings > Security > Install from storage. It should detect the certificate and let you add install it to the device. The certificate must have the extension .cert or .crt",
     "views.Settings.CertInstallInstructions.graph2": "Om een certificaat op iOS te installeren moet u het bestand naar uzelf e-mailen, zodra u het bestand in uw e-mail selecteert wordt u gevraagd om het als profiel te installeren.",
     "views.Settings.CertInstallInstructions.graph3": "Alternatively, you can provision a profile with the certificate for your phone in XCode.",
     "views.Settings.CertInstallInstructions.graph4": "You can access the certificate at any time in Settings > General > Profiles and remove it if required.",
