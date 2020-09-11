@@ -79,7 +79,7 @@
     "views.Settings.AddEditNode.deleteNode": "Odstranit konfiguraci uzlu",
     "views.Settings.AddEditNode.nodeInterface": "Rozhraní uzlu",
     "views.Settings.CertInstallInstructions.title": "Pokyny k instalaci certifikátu",
-    "views.Settings.CertInstallInstructions.graph1": "Chcete-li nainstalovat certifikát na Android, zkopírujte soubor certifikátu do zařízení. Poté přejděte na Nastavení > Zabezpečení > Instalovat z úložiště. Mělo by to detekovat certifikát a umožnit vám přidat jej do zařízení. Certifikát musí mít příponu .cert",
+    "views.Settings.CertInstallInstructions.graph1": "Chcete-li nainstalovat certifikát na Android, zkopírujte soubor certifikátu do zařízení. Poté přejděte na Nastavení > Zabezpečení > Instalovat z úložiště. Mělo by to detekovat certifikát a umožnit vám přidat jej do zařízení. Certifikát musí mít příponu .cert nebo .crt",
     "views.Settings.CertInstallInstructions.graph2": "Chcete-li nainstalovat certifikát na iOS, musíte soubor odeslat e-mailem sami, jakmile vyberete soubor v e-mailu, budete vyzváni k jeho instalaci jako profil.",
     "views.Settings.CertInstallInstructions.graph3": "Alternativně můžete v XCode poskytnout certifikát certifikátu pro váš telefon.",
     "views.Settings.CertInstallInstructions.graph4": "K certifikátu máte kdykoli přístup v Nastavení > Obecné > Profily a v případě potřeby jej odeberte.",
