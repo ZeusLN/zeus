@@ -79,7 +79,7 @@
     "views.Settings.AddEditNode.deleteNode": "حذف تنظیمات نود",
     "views.Settings.AddEditNode.nodeInterface": "Node interface",
     "views.Settings.CertInstallInstructions.title": "Certificate Installation Instructions",
-    "views.Settings.CertInstallInstructions.graph1": "To install a certificate on Android, copy the certificate file to device. Then go to Settings > Security > Install from storage. It should detect the certificate and let you add install it to the device. The certificate must have the extension .cert",
+    "views.Settings.CertInstallInstructions.graph1": "To install a certificate on Android, copy the certificate file to device. Then go to Settings > Security > Install from storage. It should detect the certificate and let you add install it to the device. The certificate must have the extension .cert or .crt",
     "views.Settings.CertInstallInstructions.graph2": "برای نصب گواهینامه در iOS ، باید فایل را به خودتان ایمیل کنید ، پس از انتخاب پرونده در ایمیل خود ، از شما خواسته می شود تا آن را به عنوان پروفایل نصب کنید.",
     "views.Settings.CertInstallInstructions.graph3": "از طرف دیگر ، می توانید مشخصات خود را با گواهی تلفن خود در XCode تهیه کنید.",
     "views.Settings.CertInstallInstructions.graph4": "You can access the certificate at any time in Settings > General > Profiles and remove it if required.",
