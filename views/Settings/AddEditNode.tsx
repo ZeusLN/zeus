@@ -45,7 +45,7 @@ interface AddEditNodeState {
     newEntry: boolean;
     suggestImport: string;
     showLndHubModal: boolean;
-    showSslModal: boolean;
+    showCertModal: boolean;
 }
 
 @inject('SettingsStore')
@@ -71,7 +71,7 @@ export default class AddEditNode extends React.Component<
         url: '',
         lndhubUrl: DEFAULT_LNDHUB,
         showLndHubModal: false,
-        showSslModal: false,
+        showCertModal: false,
         username: '',
         password: '',
         accessKey: ''
@@ -348,7 +348,7 @@ export default class AddEditNode extends React.Component<
             existingAccount,
             suggestImport,
             showLndHubModal,
-            showSslModal
+            showCertModal
         } = this.state;
         const {
             loading,
@@ -383,7 +383,7 @@ export default class AddEditNode extends React.Component<
                     }}
                     onPress={() => {
                         this.setState({
-                            showSslModal: false
+                            showCertModal: false
                         });
                         navigation.navigate('CertInstallInstructions');
                     }}
@@ -606,7 +606,7 @@ export default class AddEditNode extends React.Component<
                 <Modal
                     animationType="slide"
                     transparent={true}
-                    visible={showLndHubModal || showSslModal}
+                    visible={showLndHubModal || showCertModal}
                 >
                     <View style={styles.centeredView}>
                         <View style={styles.modal}>
@@ -678,7 +678,7 @@ export default class AddEditNode extends React.Component<
                                     </View>
                                 </>
                             )}
-                            {showSslModal && (
+                            {showCertModal && (
                                 <>
                                     <Text style={{ fontSize: 40 }}>
                                         {localeString('general.warning')}
@@ -704,9 +704,10 @@ export default class AddEditNode extends React.Component<
                                             title={localeString(
                                                 'views.Settings.AddEditNode.certificateUnderstand'
                                             )}
-                                            onPress={() =>
-                                                this.saveNodeConfiguration()
-                                            }
+                                            onPress={() => {
+                                                this.saveNodeConfiguration();
+                                                this.setState({ showCertModal: false });
+                                            }}
                                             buttonStyle={{
                                                 borderRadius: 30
                                             }}
@@ -719,7 +720,7 @@ export default class AddEditNode extends React.Component<
                                             )}
                                             onPress={() =>
                                                 this.setState({
-                                                    showSslModal: false
+                                                    showCertModal: false
                                                 })
                                             }
                                             buttonStyle={{
@@ -1136,7 +1137,7 @@ export default class AddEditNode extends React.Component<
                         }}
                         onPress={() => {
                             if (!saved && !certVerification) {
-                                this.setState({ showSslModal: true });
+                                this.setState({ showCertModal: true });
                             } else {
                                 this.saveNodeConfiguration();
                             }
