@@ -1,4 +1,4 @@
-package app.zeusln.zeus;
+package app.zeusln.zeusBeta;
 
 import android.app.Application;
 import android.util.Log;

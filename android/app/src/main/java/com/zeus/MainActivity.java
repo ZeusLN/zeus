@@ -1,4 +1,4 @@
-package app.zeusln.zeus;
+package app.zeusln.zeusBeta;
 
 import com.facebook.react.ReactActivity;
 import com.facebook.react.ReactActivityDelegate;
