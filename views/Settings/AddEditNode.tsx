@@ -706,7 +706,9 @@ export default class AddEditNode extends React.Component<
                                             )}
                                             onPress={() => {
                                                 this.saveNodeConfiguration();
-                                                this.setState({ showCertModal: false });
+                                                this.setState({
+                                                    showCertModal: false
+                                                });
                                             }}
                                             buttonStyle={{
                                                 borderRadius: 30
@@ -788,47 +790,74 @@ export default class AddEditNode extends React.Component<
                                 placeholderTextColor="gray"
                             />
 
-                            <Text
-                                style={{
-                                    color:
-                                        savedTheme === 'dark'
-                                            ? 'white'
-                                            : 'black'
-                                }}
-                            >
-                                {implementation === 'spark'
-                                    ? localeString(
-                                          'views.Settings.AddEditNode.accessKey'
-                                      )
-                                    : localeString(
-                                          'views.Settings.AddEditNode.password'
-                                      )}
-                            </Text>
-                            <TextInput
-                                placeholder={'...'}
-                                value={accessKey}
-                                onChangeText={(text: string) => {
-                                    if (implementation === 'spark') {
-                                        this.setState({
-                                            accessKey: text.trim(),
-                                            saved: false
-                                        });
-                                    } else {
-                                        this.setState({
-                                            password: text.trim(),
-                                            saved: false
-                                        });
-                                    }
-                                }}
-                                numberOfLines={1}
-                                style={
-                                    savedTheme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
-                                editable={!loading}
-                                placeholderTextColor="gray"
-                            />
+                            {implementation === 'spark' && (
+                                <>
+                                    <Text
+                                        style={{
+                                            color:
+                                                savedTheme === 'dark'
+                                                    ? 'white'
+                                                    : 'black'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.AddEditNode.accessKey'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        placeholder={'...'}
+                                        value={accessKey}
+                                        onChangeText={(text: string) => {
+                                            this.setState({
+                                                accessKey: text.trim(),
+                                                saved: false
+                                            });
+                                        }}
+                                        numberOfLines={1}
+                                        style={
+                                            savedTheme === 'dark'
+                                                ? styles.textInputDark
+                                                : styles.textInput
+                                        }
+                                        editable={!loading}
+                                        placeholderTextColor="gray"
+                                    />
+                                </>
+                            )}
+                            {implementation === 'eclair' && (
+                                <>
+                                    <Text
+                                        style={{
+                                            color:
+                                                savedTheme === 'dark'
+                                                    ? 'white'
+                                                    : 'black'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.AddEditNode.password'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        placeholder={'...'}
+                                        value={password}
+                                        onChangeText={(text: string) => {
+                                            this.setState({
+                                                password: text.trim(),
+                                                saved: false
+                                            });
+                                        }}
+                                        numberOfLines={1}
+                                        style={
+                                            savedTheme === 'dark'
+                                                ? styles.textInputDark
+                                                : styles.textInput
+                                        }
+                                        editable={!loading}
+                                        placeholderTextColor="gray"
+                                    />
+                                </>
+                            )}
                         </>
                     )}
                     {implementation === 'lndhub' && (
