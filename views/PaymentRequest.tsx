@@ -18,6 +18,8 @@ import UnitsStore from './../stores/UnitsStore';
 import SettingsStore from './../stores/SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
 
+import HopPicker from './../components/HopPicker';
+
 interface InvoiceProps {
     exitSetup: any;
     navigation: any;
@@ -456,6 +458,11 @@ export default class PaymentRequest extends React.Component<
                                     </Text>
                                 </React.Fragment>
                             )}
+
+                            <>
+                                {!!pay_req && <HopPicker onValueChange={(item: any) => console.log(item)} title="Outgoing Channel ID (First Hop)" />}
+                                {!!pay_req && <HopPicker onValueChange={() => console.log('test')} title="Last Hop Pubkey" />}
+                            </>
                         </View>
                     )}
 
