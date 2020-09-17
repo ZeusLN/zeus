@@ -31,6 +31,7 @@
     "models.Payment.forwarded": "Weitergeleitet",
     "models.Payment.fee": "Gebühr",
     "views.LnurlPay.LnurlPay.amount": "Zu zahlender Betrag (in Satoshis)",
+    "views.LnurlPay.LnurlPay.comment": "Kommentar",
     "views.LnurlPay.LnurlPay.invalidParams": "Ungültige lnurl Parameter!",
     "views.LnurlPay.LnurlPay.invalidInvoice": "Sie haben eine ungültige Rechnung erhalten!",
     "views.LnurlPay.Success.uriAlert": "Ich weiß nicht, wie man die URL öffnet",
