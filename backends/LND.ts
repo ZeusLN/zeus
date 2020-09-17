@@ -137,6 +137,11 @@ export default class LND {
         if (ws) {
             baseUrl = baseUrl.replace('https', 'wss');
         }
+
+        if (baseUrl[baseUrl.length - 1] === '/') {
+            baseUrl = baseUrl.slice(0, -1);
+        }
+
         return `${baseUrl}${route}`;
     };
 
