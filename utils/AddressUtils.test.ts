@@ -190,14 +190,14 @@ describe('AddressUtils', () => {
                 ).toBeTruthy();
                 expect(
                     AddressUtils.isValidLNDHubAddress(
-                        'lndhub://123:9b9537fe3de0dc2a9c6b5b6475dd4047d5a4cf16e531fd4a3e37efb68c99b5d6@https://lntxbot.bigsun.xyz'
+                        'lndhub://admin:99b46a0892f7404e8a6e3a5e41d095cf@https://lnbits.local.domain.url:16507/lndhub/ext/'
                     )
                 ).toBeTruthy();
                 expect(
                     AddressUtils.isValidLNDHubAddress(
-                        'lndhub://9ae:9a1e4e972f732352c75e'
+                        'lndhub://123:9b9537fe3de0dc2a9c6b5b6475dd4047d5a4cf16e531fd4a3e37efb68c99b5d6@https://lntxbot.bigsun.xyz'
                     )
-                ).toBeFalsy();
+                ).toBeTruthy();
             });
         });
 
