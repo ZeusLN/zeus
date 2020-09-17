@@ -31,6 +31,7 @@
     "models.Payment.forwarded": "Preposlané",
     "models.Payment.fee": "Poplatok",
     "views.LnurlPay.LnurlPay.amount": "Suma na zaplatenie (V satoshi) ",
+    "views.LnurlPay.LnurlPay.comment": "Komentovať",
     "views.LnurlPay.LnurlPay.invalidParams": "Nesprávne parametre LNURL!",
     "views.LnurlPay.LnurlPay.invalidInvoice": "Faktúra je neplatná!",
     "views.LnurlPay.Success.uriAlert": "Neviem ako otvoriť URI",

@@ -31,6 +31,7 @@
     "models.Payment.forwarded": "Doorgestuurd",
     "models.Payment.fee": "Kosten",
     "views.LnurlPay.LnurlPay.amount": "Bedrag te betalen (in Satoshis)",
+    "views.LnurlPay.LnurlPay.comment": "Commentaar",
     "views.LnurlPay.LnurlPay.invalidParams": "Invalid lnurl params!",
     "views.LnurlPay.LnurlPay.invalidInvoice": "Got an invalid invoice!",
     "views.LnurlPay.Success.uriAlert": "Don't know how to open URI",

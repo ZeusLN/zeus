@@ -31,6 +31,7 @@
     "models.Payment.forwarded": "Encaminhado",
     "models.Payment.fee": "Taxa",
     "views.LnurlPay.LnurlPay.amount": "Quantia a pagar (em Satoshis)",
+    "views.LnurlPay.LnurlPay.comment": "Comentário",
     "views.LnurlPay.LnurlPay.invalidParams": "Parâmetros do lnurl inválidos",
     "views.LnurlPay.LnurlPay.invalidInvoice": "Cobrança inválida recebida!",
     "views.LnurlPay.Success.uriAlert": "Não foi possível abrir esta URI",

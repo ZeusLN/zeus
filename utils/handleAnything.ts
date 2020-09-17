@@ -29,11 +29,7 @@ export default async function(data: string): Promise<any> {
             }
         ];
     } else if (AddressUtils.isValidLightningPaymentRequest(value)) {
-        if (implementation === 'lndhub') {
-            invoicesStore.getPayReqLocal(value);
-        } else {
-            invoicesStore.getPayReq(value);
-        }
+        invoicesStore.getPayReq(value);
         return ['PaymentRequest', {}];
     } else if (value.includes('lndconnect')) {
         const node = LndConnectUtils.processLndConnectUrl(value);

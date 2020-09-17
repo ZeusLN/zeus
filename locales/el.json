@@ -31,6 +31,7 @@
     "models.Payment.forwarded": "Forwarded",
     "models.Payment.fee": "Τέλος",
     "views.LnurlPay.LnurlPay.amount": "Σύνολο για πληρωμή (σε Satoshis)",
+    "views.LnurlPay.LnurlPay.comment": "Σχόλιο",
     "views.LnurlPay.LnurlPay.invalidParams": "Invalid lnurl params!",
     "views.LnurlPay.LnurlPay.invalidInvoice": "Got an invalid invoice!",
     "views.LnurlPay.Success.uriAlert": "Don't know how to open URI",
