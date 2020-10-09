@@ -31,7 +31,6 @@
     "models.Payment.forwarded": "Reenviado",
     "models.Payment.fee": "Comisión",
     "views.LnurlPay.LnurlPay.amount": "Cantidad a pagar (en Satoshis)",
-    "views.LnurlPay.LnurlPay.comment": "Comentario",
     "views.LnurlPay.LnurlPay.invalidParams": "Parámetros lnurl incorrectos!",
     "views.LnurlPay.LnurlPay.invalidInvoice": "Es una factura incorrecta!",
     "views.LnurlPay.Success.uriAlert": "No sé cómo abrir URI",

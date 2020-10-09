@@ -31,7 +31,6 @@
     "models.Payment.forwarded": "بازارسال‌شده",
     "models.Payment.fee": "کارمزد",
     "views.LnurlPay.LnurlPay.amount": "مقدار قابل پرداخت (به ساتوشی)",
-    "views.LnurlPay.LnurlPay.comment": "اظهار نظر",
     "views.LnurlPay.LnurlPay.invalidParams": "مقادیر ورودی صحیح نیستند",
     "views.LnurlPay.LnurlPay.invalidInvoice": "صورت‌حساب نامعتبر دریافت شد!",
     "views.LnurlPay.Success.uriAlert": "نمی دانید چگونه URI را باز کنید",

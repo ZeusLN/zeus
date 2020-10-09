@@ -31,7 +31,6 @@
     "models.Payment.forwarded": "İletildi",
     "models.Payment.fee": "Ücret",
     "views.LnurlPay.LnurlPay.amount": "Ödenecek miktar (Satoshi)",
-    "views.LnurlPay.LnurlPay.comment": "Yorum Yap",
     "views.LnurlPay.LnurlPay.invalidParams": "Geçersiz lnurl parametreleri!",
     "views.LnurlPay.LnurlPay.invalidInvoice": "Geçersiz bir fatura aldınız!",
     "views.LnurlPay.Success.uriAlert": "URI'yı nasıl açacağımı bilmiyorum",
