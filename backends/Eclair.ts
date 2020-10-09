@@ -147,7 +147,9 @@ export default class Eclair {
             })
         );
     getInvoices = () => {
-        const since = new Date().getTime() / 1000 - 60 * 60 * 24 * 90; // 90 days ago
+        // 90 days ago
+        const since = Math.round(new Date().getTime() / 1000 - 60 * 60 * 24 * 90);
+
         return Promise.all([
             this.api('listinvoices', { from: since }),
             this.api('listpendinginvoices', { from: since })
