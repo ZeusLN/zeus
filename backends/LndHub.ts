@@ -41,7 +41,9 @@ export default class LndHub extends LND {
     getNewAddress = () => this.getRequest('/getbtc');
     decodePaymentRequest = (urlParams?: Array<string>) =>
         Promise.resolve().then(() => {
-            const decoded = bolt11.decode(urlParams && urlParams[0]);
+            const decoded: any = bolt11.decode(
+                (urlParams && urlParams[0]) || ''
+            );
             for (let i = 0; i < decoded.tags.length; i++) {
                 let tag = decoded.tags[i];
                 switch (tag.tagName) {

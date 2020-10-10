@@ -105,8 +105,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         this.setState({ utxos, amount: 'all', utxoBalance });
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
-        const { navigation, SettingsStore } = nextProps;
-        const { implementation } = SettingsStore;
+        const { navigation } = nextProps;
         const destination = navigation.getParam('destination', null);
         const amount = navigation.getParam('amount', null);
         const transactionType = navigation.getParam('transactionType', null);

@@ -3,12 +3,11 @@ import AddressUtils from './../utils/AddressUtils';
 import LndConnectUtils from './../utils/LndConnectUtils';
 import { getParams as getlnurlParams, findlnurl } from 'js-lnurl';
 
-const { nodeInfoStore, invoicesStore, settingsStore } = stores;
+const { nodeInfoStore, invoicesStore } = stores;
 
 export default async function(data: string): Promise<any> {
     const { nodeInfo } = nodeInfoStore;
     const { isTestNet, isRegTest } = nodeInfo;
-    const { implementation } = settingsStore;
     const { value, amount } = AddressUtils.processSendAddress(data);
 
     if (AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest)) {
