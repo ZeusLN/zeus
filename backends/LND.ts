@@ -167,7 +167,10 @@ export default class LND {
         this.request(route, 'post', data);
     deleteRequest = (route: string) => this.request(route, 'delete', null);
 
-    getTransactions = () => this.getRequest('/v1/transactions');
+    getTransactions = () =>
+        this.getRequest('/v1/transactions').then((data: any) => ({
+            transactions: data.transactions.reverse()
+        }));
     getChannels = () => this.getRequest('/v1/channels');
     getBlockchainBalance = () => this.getRequest('/v1/balance/blockchain');
     getLightningBalance = () => this.getRequest('/v1/balance/channels');
