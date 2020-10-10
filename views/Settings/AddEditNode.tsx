@@ -220,7 +220,7 @@ export default class AddEditNode extends React.Component<
             index
         } = this.state;
         const { setSettings, settings } = SettingsStore;
-        const { lurkerMode, passphrase, fiat } = settings;
+        const { lurkerMode, passphrase, fiat, locale } = settings;
 
         if (
             implementation === 'lndhub' &&
@@ -258,6 +258,7 @@ export default class AddEditNode extends React.Component<
                 selectedNode: settings.selectedNode,
                 onChainAddress: settings.onChainAddress,
                 fiat,
+                locale,
                 lurkerMode,
                 passphrase
             })
@@ -278,7 +279,7 @@ export default class AddEditNode extends React.Component<
         const { SettingsStore, navigation } = this.props;
         const { setSettings, settings } = SettingsStore;
         const { index } = this.state;
-        const { nodes, lurkerMode, passphrase, fiat } = settings;
+        const { nodes, lurkerMode, passphrase, fiat, locale } = settings;
 
         let newNodes: any = [];
         for (let i = 0; nodes && i < nodes.length; i++) {
@@ -295,6 +296,7 @@ export default class AddEditNode extends React.Component<
                     index === settings.selectedNode ? 0 : settings.selectedNode,
                 onChainAddress: settings.onChainAddress,
                 fiat,
+                locale,
                 lurkerMode,
                 passphrase
             })
@@ -307,7 +309,7 @@ export default class AddEditNode extends React.Component<
         const { SettingsStore, navigation } = this.props;
         const { setSettings, settings } = SettingsStore;
         const { index } = this.state;
-        const { nodes, lurkerMode, passphrase, fiat } = settings;
+        const { nodes, lurkerMode, passphrase, fiat, locale } = settings;
 
         setSettings(
             JSON.stringify({
@@ -316,6 +318,7 @@ export default class AddEditNode extends React.Component<
                 selectedNode: index,
                 onChainAddress: settings.onChainAddress,
                 fiat,
+                locale,
                 lurkerMode,
                 passphrase
             })
