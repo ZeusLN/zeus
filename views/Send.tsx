@@ -112,11 +112,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         const transactionType = navigation.getParam('transactionType', null);
 
         if (transactionType === 'Lightning') {
-            if (implementation === 'lndhub') {
-                this.props.InvoicesStore.getPayReqLocal(destination);
-            } else {
-                this.props.InvoicesStore.getPayReq(destination);
-            }
+            this.props.InvoicesStore.getPayReq(destination);
         }
 
         this.setState({
