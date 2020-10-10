@@ -38,7 +38,8 @@ export default class LnurlPay extends React.Component<
         } catch (err) {
             this.state = {
                 amount: '',
-                domain: ''
+                domain: '',
+                comment: ''
             };
 
             Alert.alert(

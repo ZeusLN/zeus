@@ -31,7 +31,7 @@ export default class Eclair {
                 },
                 querystring.stringify(params)
             )
-            .then((response) => {
+            .then((response: any) => {
                 delete calls[id];
 
                 const status = response.info().status;
@@ -154,7 +154,9 @@ export default class Eclair {
         );
     getInvoices = () => {
         // 90 days ago
-        const since = Math.round(new Date().getTime() / 1000 - 60 * 60 * 24 * 90);
+        const since = Math.round(
+            new Date().getTime() / 1000 - 60 * 60 * 24 * 90
+        );
 
         return Promise.all([
             this.api('listinvoices', { from: since }),
@@ -348,11 +350,10 @@ export default class Eclair {
     setFees = async (data: any) => {
         const params: any = {};
         if (data.global) {
-            params.channelIds = (
-                await this.api('channels').then((channels: any) =>
+            params.channelIds = (await this.api('channels').then(
+                (channels: any) =>
                     channels.map((channel: any) => channel.channelId)
-                )
-            ).join(',');
+            )).join(',');
         } else {
             params.channelId = data.channelId;
         }
