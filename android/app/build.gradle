@@ -131,7 +131,7 @@ android {
         applicationId "app.zeusln.zeusBeta"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 21
+        versionCode 22
         versionName "0.4.0"
         multiDexEnabled true
     }
