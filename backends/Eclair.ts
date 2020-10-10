@@ -31,7 +31,7 @@ export default class Eclair {
                 },
                 querystring.stringify(params)
             )
-            .then(response => {
+            .then((response: any) => {
                 delete calls[id];
 
                 const status = response.info().status;
@@ -78,15 +78,16 @@ export default class Eclair {
                     remote_pubkey: chan.data.commitments.remoteParams.nodeId,
                     channel_point: null,
                     chan_id: chan.channelId,
-                    capacity: Number(
-                        chan.data.commitments.localCommit.spec.toLocal +
-                            chan.data.commitments.localCommit.spec.toRemote
+                    capacity: Math.round(
+                        (chan.data.commitments.localCommit.spec.toLocal +
+                            chan.data.commitments.localCommit.spec.toRemote) /
+                            1000
                     ).toString(),
-                    local_balance: Number(
-                        chan.data.commitments.localCommit.spec.toLocal
+                    local_balance: Math.round(
+                        chan.data.commitments.localCommit.spec.toLocal / 1000
                     ).toString(),
-                    remote_balance: Number(
-                        chan.data.commitments.localCommit.spec.toRemote
+                    remote_balance: Math.round(
+                        chan.data.commitments.localCommit.spec.toRemote / 1000
                     ).toString(),
                     total_satoshis_sent: null,
                     total_satoshis_received: null,
@@ -109,25 +110,30 @@ export default class Eclair {
         });
     getLightningBalance = () =>
         this.api('channels').then((channels: any) => ({
-            balance: channels
-                .filter(
-                    (chan: any) =>
-                        chan.state === 'NORMAL' || chan.state == 'OFFLINE'
-                )
-                .reduce(
-                    (acc: any, o: any) =>
-                        acc + o.data.commitments.localCommit.spec.toLocal,
-                    0
-                ),
-            pending_open_balance: channels
-                .filter(
-                    (chan: any) => chan.state === 'WAIT_FOR_FUNDING_CONFIRMED'
-                )
-                .reduce(
-                    (acc: any, o: any) =>
-                        acc + o.data.commitments.localCommit.spec.toLocal,
-                    0
-                )
+            balance: Math.round(
+                channels
+                    .filter(
+                        (chan: any) =>
+                            chan.state === 'NORMAL' || chan.state == 'OFFLINE'
+                    )
+                    .reduce(
+                        (acc: any, o: any) =>
+                            acc + o.data.commitments.localCommit.spec.toLocal,
+                        0
+                    ) / 1000
+            ),
+            pending_open_balance: Math.round(
+                channels
+                    .filter(
+                        (chan: any) =>
+                            chan.state === 'WAIT_FOR_FUNDING_CONFIRMED'
+                    )
+                    .reduce(
+                        (acc: any, o: any) =>
+                            acc + o.data.commitments.localCommit.spec.toLocal,
+                        0
+                    ) / 1000
+            )
         }));
     sendCoins = (data: TransactionRequest) =>
         this.api('sendonchain', {
@@ -147,7 +153,11 @@ export default class Eclair {
             })
         );
     getInvoices = () => {
-        const since = new Date().getTime() / 1000 - 60 * 60 * 24 * 90; // 90 days ago
+        // 90 days ago
+        const since = Math.round(
+            new Date().getTime() / 1000 - 60 * 60 * 24 * 90
+        );
+
         return Promise.all([
             this.api('listinvoices', { from: since }),
             this.api('listpendinginvoices', { from: since })

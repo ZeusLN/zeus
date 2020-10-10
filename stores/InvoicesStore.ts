@@ -6,7 +6,6 @@ import hashjs from 'hash.js';
 import Invoice from './../models/Invoice';
 import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
-import bolt11 from 'bolt11';
 
 export default class InvoicesStore {
     @observable paymentRequest: string;
@@ -174,15 +173,17 @@ export default class InvoicesStore {
                 this.pay_req = new Invoice(data);
 
                 // check description_hash if asked for
+                const needed = hashjs
+                    .sha256()
+                    .update(descriptionPreimage)
+                    .digest('hex');
                 if (
                     descriptionPreimage &&
-                    this.pay_req.description_hash !==
-                        hashjs
-                            .sha256()
-                            .update(descriptionPreimage)
-                            .digest('hex')
+                    this.pay_req.description_hash !== needed
                 ) {
-                    throw new Error('wrong description_hash!');
+                    throw new Error(
+                        `wrong description_hash! got ${this.pay_req.description_hash}, needed ${needed}.`
+                    );
                 }
 
                 this.loading = false;
@@ -194,24 +195,6 @@ export default class InvoicesStore {
                 this.pay_req = null;
                 this.getPayReqError = error.toString();
             });
-    };
-
-    @action
-    public getPayReqLocal = (paymentRequest: string) => {
-        this.pay_req = null;
-        this.paymentRequest = paymentRequest;
-        this.loading = true;
-        this.getPayReqError = '';
-
-        try {
-            const invoice = bolt11.decode(paymentRequest);
-            this.pay_req = new Invoice(invoice);
-            this.loading = false;
-            return this.pay_req;
-        } catch (err) {
-            this.loading = false;
-            this.getPayReqError = err.toString();
-        }
     };
 
     getRoutesError = () => {
