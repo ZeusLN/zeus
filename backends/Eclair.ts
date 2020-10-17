@@ -437,6 +437,7 @@ const mapInvoice = (isPending: any) => ({
     serialized,
     paymentHash,
     expiry,
+    timestamp,
     amount
 }: any) => {
     if (!isPending) isPending = { [paymentHash]: true };
@@ -449,6 +450,7 @@ const mapInvoice = (isPending: any) => ({
         creation_date: null,
         settle_date: null,
         payment_request: serialized,
+        timestamp,
         expiry,
         amt_paid: isPending[paymentHash] ? 0 : amount / 1000,
         amt_paid_sat: isPending[paymentHash] ? 0 : amount / 1000,
