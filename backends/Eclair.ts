@@ -50,6 +50,14 @@ export default class Eclair {
                 }
             });
 
+        setTimeout(
+            (id) => {
+                delete calls[id];
+            },
+            5000,
+            id
+        );
+
         return calls[id];
     };
 
@@ -357,10 +365,11 @@ export default class Eclair {
     setFees = async (data: any) => {
         const params: any = {};
         if (data.global) {
-            params.channelIds = (await this.api('channels').then(
-                (channels: any) =>
+            params.channelIds = (
+                await this.api('channels').then((channels: any) =>
                     channels.map((channel: any) => channel.channelId)
-            )).join(',');
+                )
+            ).join(',');
         } else {
             params.channelId = data.channelId;
         }

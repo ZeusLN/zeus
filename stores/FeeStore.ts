@@ -80,7 +80,8 @@ export default class FeeStore {
 
                 this.loading = false;
             })
-            .catch(() => {
+            .catch((err) => {
+                console.log('error getting fee report', err);
                 this.resetFees();
             });
     };
