@@ -437,6 +437,7 @@ export default class Eclair {
     supportsChannelManagement = () => true;
     supportsCustomHostProtocol = () => false;
     supportsMPP = () => false;
+    supportsCoinControl = () => false;
 }
 
 const mapInvoice = (isPending: any) => ({
