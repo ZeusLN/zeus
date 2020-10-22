@@ -260,7 +260,6 @@ export default class Spark {
                         fee_rate: channels[short_channel_id].fee_rate
                     })
                 ),
-            total_fee_sum: info.msatoshi_fees_collected / 1000,
             day_fee_sum: lastDay / 1000,
             week_fee_sum: lastWeek / 1000,
             month_fee_sum: lastMonth / 1000

@@ -349,7 +349,6 @@ export default class Eclair {
                       1000000
                     : null
             })),
-            total_fee_sum: allTimes / 1000,
             day_fee_sum: lastDay / 1000,
             week_fee_sum: lastWeek / 1000,
             month_fee_sum: lastMonth / 1000
