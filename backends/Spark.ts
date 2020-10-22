@@ -296,4 +296,5 @@ export default class Spark {
     supportsChannelManagement = () => true;
     supportsCustomHostProtocol = () => false;
     supportsMPP = () => false;
+    supportsCoinControl = () => false;
 }
