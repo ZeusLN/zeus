@@ -53,7 +53,8 @@ export default class MainPane extends React.Component<
             lightningBalance,
             pendingOpenBalance
         } = BalanceStore;
-        const { host, url, settings, implementation } = SettingsStore;
+        const { settings, implementation } = SettingsStore;
+        const nodeAddress = SettingsStore.host || SettingsStore.url;
         const { theme, lurkerMode } = settings;
         const loading = NodeInfoStore.loading || BalanceStore.loading;
 
@@ -201,8 +202,7 @@ export default class MainPane extends React.Component<
 
         const NodeInfoBadge = () => (
             <View style={styles.nodeInfo}>
-                {(host && host.includes('.onion')) ||
-                (url && url.includes('.onion')) ? (
+                {nodeAddress && nodeAddress.includes('.onion') ? (
                     <TouchableOpacity
                         onPress={() => navigation.navigate('NodeInfo')}
                     >
@@ -212,8 +212,7 @@ export default class MainPane extends React.Component<
                         />
                     </TouchableOpacity>
                 ) : null}
-                {(host && !host.includes('.onion')) ||
-                (url && !url.includes('.onion')) ? (
+                {nodeAddress && !nodeAddress.includes('.onion') ? (
                     <Badge
                         onPress={() => navigation.navigate('NodeInfo')}
                         value={infoValue}
