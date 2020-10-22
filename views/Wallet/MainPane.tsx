@@ -279,7 +279,7 @@ export default class MainPane extends React.Component<
                         )}
                         <View style={styles.buttons}>
                             <Button
-                                title="Send"
+                                title={localeString('general.send')}
                                 icon={{
                                     name: 'arrow-upward',
                                     size: 25,
@@ -300,7 +300,7 @@ export default class MainPane extends React.Component<
                                 raised={theme !== 'dark'}
                             />
                             <Button
-                                title="Receive"
+                                title={localeString('general.receive')}
                                 icon={{
                                     name: 'arrow-downward',
                                     size: 25,
@@ -322,7 +322,7 @@ export default class MainPane extends React.Component<
                                 raised={theme !== 'dark'}
                             />
                             <Button
-                                title="Scan"
+                                title={localeString('general.scan')}
                                 icon={{
                                     name: 'crop-free',
                                     size: 25,
