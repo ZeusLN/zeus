@@ -223,18 +223,33 @@ export default class NodeInfo extends React.Component<
                         : nodeInfo.alias}
                 </Text>
 
-                <Text
-                    style={theme === 'dark' ? styles.labelDark : styles.label}
-                >
-                    {localeString('views.NodeInfo.implementationVersion')}:
-                </Text>
-                <Text
-                    style={theme === 'dark' ? styles.valueDark : styles.value}
-                >
-                    {lurkerMode
-                        ? PrivacyUtils.hideValue(nodeInfo.version, 12)
-                        : nodeInfo.version}
-                </Text>
+                {nodeInfo.version && (
+                    <>
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.labelDark
+                                    : styles.label
+                            }
+                        >
+                            {localeString(
+                                'views.NodeInfo.implementationVersion'
+                            )}
+                            :
+                        </Text>
+                        <Text
+                            style={
+                                theme === 'dark'
+                                    ? styles.valueDark
+                                    : styles.value
+                            }
+                        >
+                            {lurkerMode
+                                ? PrivacyUtils.hideValue(nodeInfo.version, 12)
+                                : nodeInfo.version}
+                        </Text>
+                    </>
+                )}
 
                 <Text
                     style={theme === 'dark' ? styles.labelDark : styles.label}
