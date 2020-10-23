@@ -143,10 +143,18 @@ export default class Eclair {
         }).then((txid: any) => ({ txid }));
     getMyNodeInfo = () =>
         this.api('getinfo').then(
-            ({ version, nodeId, alias, network, publicAddresses }: any) => ({
+            ({
+                version,
+                nodeId,
+                alias,
+                network,
+                publicAddresses,
+                blockHeight
+            }: any) => ({
                 uris: publicAddresses.map((addr: any) => nodeId + '@' + addr),
                 alias,
                 version,
+                block_height: blockHeight,
                 identity_pubkey: nodeId,
                 testnet: network === 'testnet',
                 regtest: network === 'regtest'
