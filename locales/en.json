@@ -22,7 +22,7 @@
     "components.SetFeesForm.success": "Succesfully set fees!",
     "components.SetFeesForm.error": "Error setting fees",
     "components.SetFeesForm.baseFee": "Base Fee msat",
-    "components.SetFeesForm.feeRateMili": "Fee Rate mili msat",
+    "components.SetFeesForm.ppm": "PPM (Points Per Million)",
     "components.SetFeesForm.submit": "Submit New Fees",
     "models.Channel.unknownId": "Unknown Channel ID",
     "models.Invoice.noMemo": "No memo",
