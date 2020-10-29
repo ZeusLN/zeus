@@ -220,6 +220,7 @@ export default class Spark {
         const now = new Date().getTime() / 1000;
         const oneDayAgo = now - 60 * 60 * 24;
         const oneWeekAgo = now - 60 * 60 * 24 * 7;
+        const oneMonthAgo = now - 60 * 60 * 24 * 30;
         for (let i = listforwards.forwards.length - 1; i >= 0; i--) {
             const forward = listforwards.forwards[i];
             if (forward.status !== 'settled') continue;
@@ -230,23 +231,27 @@ export default class Spark {
             } else if (forward.resolved_time > oneWeekAgo) {
                 lastWeek += forward.fee;
                 lastMonth += forward.fee;
-            } else if (forward.resolved_time > oneWeekAgo) {
+            } else if (forward.resolved_time > oneMonthAgo) {
                 lastMonth += forward.fee;
             } else break;
         }
 
-        const channels: any = {};
+        const channelsMap: any = {};
         for (let i = 0; i < listchannels.channels.length; i++) {
             const channel = listchannels.channels[i];
-            channels[channel.short_channel_id] = {
+            channelsMap[channel.short_channel_id] = {
                 base_fee_msat: channel.base_fee_millisatoshi,
                 fee_rate: channel.fee_per_millionth / 1000000
             };
         }
 
         return {
-            channel_fees: listpeers
+            channel_fees: listpeers.peers
                 .filter(({ channels }: any) => channels && channels.length)
+                .filter(
+                    ({ channels: [{ short_channel_id }] }) =>
+                        channelsMap[short_channel_id]
+                )
                 .map(
                     ({
                         channels: [
@@ -256,11 +261,10 @@ export default class Spark {
                         chan_id: channel_id,
                         channel_point: funding_txid,
                         base_fee_msat:
-                            channels[short_channel_id].base_fee_milli,
-                        fee_rate: channels[short_channel_id].fee_rate
+                            channelsMap[short_channel_id].base_fee_msat,
+                        fee_rate: channelsMap[short_channel_id].fee_rate
                     })
                 ),
-            total_fee_sum: info.msatoshi_fees_collected / 1000,
             day_fee_sum: lastDay / 1000,
             week_fee_sum: lastWeek / 1000,
             month_fee_sum: lastMonth / 1000
@@ -297,4 +301,5 @@ export default class Spark {
     supportsChannelManagement = () => true;
     supportsCustomHostProtocol = () => false;
     supportsMPP = () => false;
+    supportsCoinControl = () => false;
 }

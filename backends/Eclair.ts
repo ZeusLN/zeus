@@ -50,6 +50,14 @@ export default class Eclair {
                 }
             });
 
+        setTimeout(
+            id => {
+                delete calls[id];
+            },
+            5000,
+            id
+        );
+
         return calls[id];
     };
 
@@ -349,7 +357,6 @@ export default class Eclair {
                       1000000
                     : null
             })),
-            total_fee_sum: allTimes / 1000,
             day_fee_sum: lastDay / 1000,
             week_fee_sum: lastWeek / 1000,
             month_fee_sum: lastMonth / 1000
@@ -438,6 +445,7 @@ export default class Eclair {
     supportsChannelManagement = () => true;
     supportsCustomHostProtocol = () => false;
     supportsMPP = () => false;
+    supportsCoinControl = () => false;
 }
 
 const mapInvoice = (isPending: any) => ({
