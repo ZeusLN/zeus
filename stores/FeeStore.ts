@@ -89,7 +89,7 @@ export default class FeeStore {
     @action
     public setFees = (
         newBaseFeeMsat: string,
-        newFeeRateMiliMsat: any,
+        newFeeRatePPM: any,
         channelPoint?: string,
         channelId?: string
     ) => {
@@ -99,7 +99,7 @@ export default class FeeStore {
 
         const data: any = {
             base_fee_msat: newBaseFeeMsat,
-            fee_rate: newFeeRateMiliMsat / 1000000,
+            fee_rate: newFeeRatePPM,
             time_lock_delta: 4
         };
 

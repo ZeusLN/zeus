@@ -19,7 +19,7 @@ interface SetFeesFormState {
     showNewFeesForm: boolean;
     feesSubmitted: boolean;
     newBaseFeeMsat: string;
-    newFeeRateMiliMsat: string;
+    newFeeRatePPM: string;
 }
 
 export default class SetFeesForm extends React.Component<
@@ -30,7 +30,7 @@ export default class SetFeesForm extends React.Component<
         showNewFeesForm: false,
         feesSubmitted: false,
         newBaseFeeMsat: '1',
-        newFeeRateMiliMsat: '1000000'
+        newFeeRatePPM: '1'
     };
 
     render() {
@@ -38,7 +38,7 @@ export default class SetFeesForm extends React.Component<
             showNewFeesForm,
             feesSubmitted,
             newBaseFeeMsat,
-            newFeeRateMiliMsat
+            newFeeRatePPM
         } = this.state;
         const {
             SettingsStore,
@@ -134,16 +134,16 @@ export default class SetFeesForm extends React.Component<
                                 color: theme === 'dark' ? 'white' : 'black'
                             }}
                         >
-                            {localeString('components.SetFeesForm.feeRateMili')}
+                            {localeString('components.SetFeesForm.ppm')}
                         </Text>
                         <TextInput
                             keyboardType="numeric"
-                            placeholder={feeRate || '1000000'}
+                            placeholder={feeRate || '1'}
                             placeholderTextColor="darkgray"
-                            value={newFeeRateMiliMsat}
+                            value={newFeeRatePPM}
                             onChangeText={(text: string) =>
                                 this.setState({
-                                    newFeeRateMiliMsat: text
+                                    newFeeRatePPM: text
                                 })
                             }
                             numberOfLines={1}
@@ -164,7 +164,7 @@ export default class SetFeesForm extends React.Component<
                                 onPress={() => {
                                     setFees(
                                         newBaseFeeMsat,
-                                        newFeeRateMiliMsat,
+                                        newFeeRatePPM,
                                         channelPoint,
                                         channelId
                                     );
