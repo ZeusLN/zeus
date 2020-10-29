@@ -59,6 +59,8 @@ export default class ChannelsStore {
                         if (!this.nodes[channel.remote_pubkey]) {
                             this.getNodeInfo(channel.remote_pubkey).then(
                                 (nodeInfo: any) => {
+                                    if (!nodeInfo) return;
+
                                     this.nodes[
                                         channel.remote_pubkey
                                     ] = nodeInfo;
