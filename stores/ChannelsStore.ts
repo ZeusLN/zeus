@@ -59,6 +59,8 @@ export default class ChannelsStore {
                         if (!this.nodes[channel.remote_pubkey]) {
                             this.getNodeInfo(channel.remote_pubkey).then(
                                 (nodeInfo: any) => {
+                                    if (!nodeInfo) return;
+
                                     this.nodes[
                                         channel.remote_pubkey
                                     ] = nodeInfo;
@@ -131,10 +133,10 @@ export default class ChannelsStore {
     ) => {
         this.loading = true;
 
-        let urlParams: Array<string> = [];
+        let urlParams: Array<any> = [];
         if (channelId) {
-            // c-lightning
-            urlParams = [channelId];
+            // c-lightning, eclair
+            urlParams = [channelId, forceClose];
         } else if (request) {
             // lnd
             const { funding_txid_str, output_index } = request;
@@ -173,7 +175,7 @@ export default class ChannelsStore {
                 host: request.host
             }
         })
-            .then((data: any) => {
+            .then(() => {
                 this.errorPeerConnect = false;
                 this.connectingToPeer = false;
                 this.errorMsgPeer = null;
@@ -190,7 +192,7 @@ export default class ChannelsStore {
 
                 if (
                     this.errorMsgPeer &&
-                    this.errorMsgPeer.includes('already connected to peer')
+                    this.errorMsgPeer.includes('already')
                 ) {
                     this.channelRequest = request;
                 }

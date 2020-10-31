@@ -1,6 +1,5 @@
 import * as React from 'react';
 import {
-    Platform,
     StyleSheet,
     Text,
     View,
@@ -10,10 +9,16 @@ import {
     Image,
     TouchableHighlight
 } from 'react-native';
-import { Button, Icon } from 'react-native-elements';
+import { Button } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import UrlUtils from './../utils/UrlUtils';
-import { DEFAULT_LNDHUB } from './../utils/RESTUtils';
+import { DEFAULT_LNDHUB } from './../backends/LndHub';
+import DropdownSetting from './../components/DropdownSetting';
+import SettingsStore, {
+    DEFAULT_LOCALE,
+    LOCALE_KEYS
+} from './../stores/SettingsStore';
+import { localeString } from './../utils/LocaleUtils';
 
 const Background = require('./../images/onboarding/background.jpg');
 
@@ -21,8 +26,6 @@ const btcPay = require('./../images/onboarding/BTCPay.png');
 const nodl = require('./../images/onboarding/nodl.png');
 const raspiBlitz = require('./../images/onboarding/RaspiBlitz.png');
 const myNode = require('./../images/onboarding/myNode.png');
-
-import SettingsStore from './../../stores/SettingsStore';
 
 interface OnboardingProps {
     navigation: any;
@@ -34,7 +37,7 @@ interface OnboardingState {
 }
 
 interface ButtonProps {
-    title: string;
+    title?: string;
 }
 
 @inject('SettingsStore')
@@ -43,6 +46,8 @@ export default class Onboarding extends React.Component<
     OnboardingProps,
     OnboardingState
 > {
+    refs: any;
+
     state = {
         index: 0
     };
@@ -79,8 +84,8 @@ export default class Onboarding extends React.Component<
     render() {
         const { navigation, SettingsStore } = this.props;
         let ScreenHeight = Dimensions.get('window').height;
-        const { settings } = SettingsStore;
-        const nodes = settings.nodes;
+        const { settings, changeLocale } = SettingsStore;
+        const { nodes, locale } = settings;
         const { index } = this.state;
 
         const image = Background;
@@ -126,7 +131,9 @@ export default class Onboarding extends React.Component<
         const SkipTourButton = (props: ButtonProps) => (
             <View style={styles.button}>
                 <Button
-                    title={props.title || 'Skip Tour'}
+                    title={
+                        props.title || localeString('views.Onboarding.skipTour')
+                    }
                     buttonStyle={{
                         backgroundColor: 'green',
                         borderRadius: 30,
@@ -144,7 +151,9 @@ export default class Onboarding extends React.Component<
         const ScanQRButton = () => (
             <View style={styles.button}>
                 <Button
-                    title="Scan lndconnect QR"
+                    title={localeString(
+                        'views.Settings.AddEditNode.scanLndconnect'
+                    )}
                     icon={{
                         name: 'crop-free',
                         size: 25,
@@ -175,7 +184,7 @@ export default class Onboarding extends React.Component<
                         fontWeight: 'bold'
                     }}
                 >
-                    Welcome to Zeus
+                    {localeString('views.Onboarding.welcome')}
                 </Text>
                 <Text
                     style={{
@@ -184,11 +193,20 @@ export default class Onboarding extends React.Component<
                         alignSelf: 'center'
                     }}
                 >
-                    A lightning experience fit for the gods
+                    {localeString('views.Onboarding.tagline')}
                 </Text>
                 <ContinueButton title="Get started" />
                 <ScanQRButton />
                 <SkipTourButton />
+                <View style={{ alignItems: 'center', top: 25 }}>
+                    <DropdownSetting
+                        title={localeString('views.Settings.locale')}
+                        theme="light"
+                        selectedValue={locale || DEFAULT_LOCALE}
+                        onValueChange={(value: string) => changeLocale(value)}
+                        values={LOCALE_KEYS}
+                    />
+                </View>
             </View>
         );
 
@@ -200,31 +218,23 @@ export default class Onboarding extends React.Component<
                         alignSelf: 'center'
                     }}
                 >
-                    Full node control
+                    {localeString('views.Onboarding.fullNodeTitle')}
                 </Text>
                 <Text style={styles.leadingGraph}>
-                    You're not really using bitcoin without using a full node.
+                    {localeString('views.Onboarding.fullNodeGraph1')}
                 </Text>
                 <Text style={styles.defaultGraph}>
-                    Running a full node has a lot of great advantages. You get
-                    great gains in terms of security and privacy when you cut
-                    out the middle man and verify your own transactions. In the
-                    context of the lightning network you have full control of
-                    your lightning channels and liquidity.
+                    {localeString('views.Onboarding.fullNodeGraph2')}
                 </Text>
                 <Text style={styles.defaultGraph}>
-                    Zeus gives you an interface to manage your channels, send
-                    and receive bitcoin both on lightning and on-chain, and use
-                    some of lightning's latest features.
+                    {localeString('views.Onboarding.fullNodeGraph3')}
                 </Text>
                 <Text style={styles.defaultGraph}>
-                    Zeus has support for connecting to lnd nodes and to
-                    c-lightning nodes running the c-lightning-REST or Spark
-                    interfaces.
+                    {localeString('views.Onboarding.fullNodeGraph4')}
                 </Text>
                 <View style={styles.button}>
                     <Button
-                        title="Connect to an lnd node"
+                        title={localeString('views.Onboarding.connect1')}
                         onPress={() =>
                             navigation.navigate('AddEditNode', {
                                 newEntry: true,
@@ -249,7 +259,7 @@ export default class Onboarding extends React.Component<
                 </View>
                 <View style={styles.button}>
                     <Button
-                        title="Connect to a c-lightning-REST node"
+                        title={localeString('views.Onboarding.connect2')}
                         onPress={() =>
                             navigation.navigate('AddEditNode', {
                                 newEntry: true,
@@ -273,7 +283,7 @@ export default class Onboarding extends React.Component<
                 </View>
                 <View style={styles.button}>
                     <Button
-                        title="Connect to a c-lightning Spark node"
+                        title={localeString('views.Onboarding.connect3')}
                         onPress={() =>
                             navigation.navigate('AddEditNode', {
                                 newEntry: true,
@@ -295,11 +305,37 @@ export default class Onboarding extends React.Component<
                         }}
                     />
                 </View>
+                <View style={styles.button}>
+                    <Button
+                        title="Connect to an Eclair node"
+                        onPress={() =>
+                            navigation.navigate('AddEditNode', {
+                                newEntry: true,
+                                node: {
+                                    implementation: 'eclair'
+                                },
+                                index:
+                                    (nodes &&
+                                        nodes.length &&
+                                        Number(nodes.length)) ||
+                                    0
+                            })
+                        }
+                        buttonStyle={{
+                            borderRadius: 30
+                        }}
+                        titleStyle={{
+                            color: 'white'
+                        }}
+                    />
+                </View>
                 <ScanQRButton />
 
                 <View style={{ padding: 20 }} />
 
-                <ContinueButton title="I don't have a node" />
+                <ContinueButton
+                    title={localeString('views.Onboarding.noNode')}
+                />
                 <BackButton />
                 <SkipTourButton />
             </View>
@@ -313,28 +349,20 @@ export default class Onboarding extends React.Component<
                         alignSelf: 'center'
                     }}
                 >
-                    No node?
+                    {localeString('views.Onboarding.noNodeTitle')}
                 </Text>
                 <Text style={styles.leadingGraph}>
-                    LNDHub is a custodial solution for lightning. You use the
-                    admin's channels so you don't have to worry about managing
-                    them yourself. You'll be able to pay and create lightning
-                    interfaces without having a node of your own.
+                    {localeString('views.Onboarding.noNodeGraph1')}
                 </Text>
                 <Text style={styles.defaultGraph}>
-                    There are trade-offs though: you won't be able to send
-                    payments on-chain, and the administrator of the LNDHub
-                    instance will have full control of your funds and records of
-                    your transactions. Not your keys, not your coins.
+                    {localeString('views.Onboarding.noNodeGraph2')}
                 </Text>
                 <Text style={styles.defaultGraph}>
-                    You can connect to the public instance or find a friend you
-                    trust with a LNDHub enabled node. Consider being the Uncle
-                    Jim in your family and setting up LNDHub on your lnd node.
+                    {localeString('views.Onboarding.noNodeGraph3')}
                 </Text>
                 <View style={styles.button}>
                     <Button
-                        title="Connect with LNDHub"
+                        title={localeString('views.Onboarding.connect4')}
                         onPress={() =>
                             navigation.navigate('AddEditNode', {
                                 newEntry: true,
@@ -359,7 +387,9 @@ export default class Onboarding extends React.Component<
                         }}
                     />
                 </View>
-                <ContinueButton title="See integrations" />
+                <ContinueButton
+                    title={localeString('views.Onboarding.seeIntegrations')}
+                />
                 <BackButton />
                 <SkipTourButton />
             </View>
@@ -374,7 +404,7 @@ export default class Onboarding extends React.Component<
                         fontWeight: 'bold'
                     }}
                 >
-                    Need a node?
+                    {localeString('views.Onboarding.needANode')}
                 </Text>
                 <Text
                     style={{
@@ -383,7 +413,7 @@ export default class Onboarding extends React.Component<
                         alignSelf: 'center'
                     }}
                 >
-                    Zeus is proudly integrated on the following node platforms:
+                    {localeString('views.Onboarding.integratedOn')}
                 </Text>
                 <TouchableHighlight
                     onPress={() => UrlUtils.goToUrl('https://raspiblitz.com/')}
@@ -439,7 +469,9 @@ export default class Onboarding extends React.Component<
                         source={btcPay}
                     />
                 </TouchableHighlight>
-                <SkipTourButton title="Complete tour" />
+                <SkipTourButton
+                    title={localeString('views.Onboarding.completeTour')}
+                />
                 <BackButton />
             </View>
         );

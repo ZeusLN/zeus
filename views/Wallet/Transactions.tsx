@@ -5,6 +5,7 @@ import Transaction from './../../models/Transaction';
 import DateTimeUtils from './../../utils/DateTimeUtils';
 import { inject, observer } from 'mobx-react';
 import PrivacyUtils from './../../utils/PrivacyUtils';
+import { localeString } from './../../utils/LocaleUtils';
 
 import TransactionsStore from './../../stores/TransactionsStore';
 import UnitsStore from './../../stores/UnitsStore';
@@ -114,7 +115,9 @@ export default class Transactions extends React.Component<TransactionsProps> {
                                       )
                                     : item.getBlockHeight;
                             } else {
-                                subtitle = 'Awaiting Confirmation';
+                                subtitle = localeString(
+                                    'views.Wallet.Transactions.awaitingConf'
+                                );
                             }
 
                             const txAmount = lurkerMode
@@ -171,7 +174,9 @@ export default class Transactions extends React.Component<TransactionsProps> {
                     />
                 ) : (
                     <Button
-                        title="No Transactions"
+                        title={localeString(
+                            'views.Wallet.Transactions.noTransactions'
+                        )}
                         icon={{
                             name: 'error-outline',
                             size: 25,

@@ -7,6 +7,7 @@ import Identicon from 'identicon.js';
 import { inject, observer } from 'mobx-react';
 const hash = require('object-hash');
 import PrivacyUtils from './../../utils/PrivacyUtils';
+import { localeString } from './../../utils/LocaleUtils';
 
 import ChannelsStore from './../../stores/ChannelsStore';
 import NodeInfoStore from './../../stores/NodeInfoStore';
@@ -76,7 +77,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                 {!NodeInfoStore.error && (
                     <View style={styles.button}>
                         <Button
-                            title="Open Channel"
+                            title={localeString('views.Wallet.Channels.open')}
                             icon={{
                                 name: 'swap-horiz',
                                 size: 25,
@@ -143,12 +144,23 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                             `data:image/png;base64,${data}`
                                         )}
                                         subtitle={`${
-                                            !item.isActive ? 'INACTIVE | ' : ''
+                                            !item.isActive
+                                                ? `${localeString(
+                                                      'views.Wallet.Channels.inactive'
+                                                  )} | `
+                                                : ''
                                         }${
-                                            item.private ? 'Private | ' : ''
-                                        }Local: ${units &&
-                                            localBalanceDisplay} | Remote: ${units &&
-                                            remoteBalanceDisplay}`}
+                                            item.private
+                                                ? `${localeString(
+                                                      'views.Wallet.Channels.private'
+                                                  )} | `
+                                                : ''
+                                        }${localeString(
+                                            'views.Wallet.Channels.local'
+                                        )}: ${units &&
+                                            localBalanceDisplay} | ${localeString(
+                                            'views.Wallet.Channels.remote'
+                                        )}: ${units && remoteBalanceDisplay}`}
                                         containerStyle={{
                                             borderBottomWidth: 0,
                                             backgroundColor:
@@ -197,7 +209,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                     />
                 ) : (
                     <Button
-                        title="No Channels"
+                        title={localeString('views.Wallet.Channels.noChannels')}
                         icon={{
                             name: 'error-outline',
                             size: 25,

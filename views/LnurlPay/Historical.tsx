@@ -30,7 +30,10 @@ export default class LnurlPayHistorical extends React.Component<
         const { showLnurlSuccess } = this.state;
         const { settings } = SettingsStore;
         const { theme } = settings;
-
+        const { lnurl, domain, successAction } = lnurlpaytx;
+        const metadata =
+            (lnurlpaytx.metadata && lnurlpaytx.metadata.metadata) ||
+            'No metadata available';
         return (
             <View>
                 <TouchableOpacity
@@ -46,7 +49,7 @@ export default class LnurlPayHistorical extends React.Component<
                             fontWeight: 'bold'
                         }}
                     >
-                        {lnurlpaytx.lnurl}
+                        {lnurl}
                     </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -58,14 +61,14 @@ export default class LnurlPayHistorical extends React.Component<
                 >
                     {showLnurlSuccess ? (
                         <LnurlPaySuccess
-                            domain={lnurlpaytx.domain}
-                            successAction={lnurlpaytx.successAction}
+                            domain={domain}
+                            successAction={successAction}
                             preimage={preimage}
                             SettingsStore={SettingsStore}
                         />
                     ) : (
                         <LnurlPayMetadata
-                            metadata={lnurlpaytx.metadata.metadata}
+                            metadata={metadata}
                             SettingsStore={SettingsStore}
                         />
                     )}

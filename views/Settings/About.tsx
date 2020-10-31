@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { Platform, StyleSheet, Text, View, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { version, playStore } from './../../package.json';
+import { localeString } from './../../utils/LocaleUtils';
 
 import SettingsStore from './../../stores/SettingsStore';
 import UrlUtils from './../../utils/UrlUtils';
@@ -18,7 +19,7 @@ interface AboutProps {
 export default class About extends React.Component<AboutProps, {}> {
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { loading, settings } = SettingsStore;
+        const { settings } = SettingsStore;
         const savedTheme = settings.theme;
 
         const BackButton = () => (
@@ -41,7 +42,7 @@ export default class About extends React.Component<AboutProps, {}> {
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: 'About Zeus',
+                        text: localeString('views.Settings.About.about'),
                         style: { color: '#fff' }
                     }}
                     backgroundColor="black"
@@ -53,7 +54,8 @@ export default class About extends React.Component<AboutProps, {}> {
                             : styles.lightThemeTextLarge
                     }
                 >
-                    Version: {playStore ? `v${version}-play` : `v${version}`}
+                    {localeString('views.Settings.About.version')}:{' '}
+                    {playStore ? `v${version}-play` : `v${version}`}
                 </Text>
                 <Text
                     style={
@@ -62,9 +64,7 @@ export default class About extends React.Component<AboutProps, {}> {
                             : styles.lightThemeText
                     }
                 >
-                    Zeus is distributed under the GNU Affero General Public
-                    License (AGPL v3). The full license is available on our
-                    GitHub repo.
+                    {localeString('views.Settings.About.gpl')}
                 </Text>
                 <Text
                     style={
@@ -73,12 +73,12 @@ export default class About extends React.Component<AboutProps, {}> {
                             : styles.lightThemeText
                     }
                 >
-                    Special thanks to all of Zeus' contributors and all of the
-                    people that contributed to or helped enable the software
-                    that Zeus is built upon including the Human Rights
-                    Foundation, Matt Odell, Jameson Lopp, fiatjaf, Suheb,
-                    shesek, Zap, Blue Wallet, Ride the Lightning, Blockstream,
-                    and Lightning Labs.
+                    {localeString('views.Settings.About.thanks')}: the Human
+                    Rights Foundation, Matt Odell, Jameson Lopp, fiatjaf, Suheb,
+                    shesek, k3tan, __B__T__C__, Zap, Blue Wallet, Ride the
+                    Lightning, Blockstream,{' '}
+                    {`${localeString('views.Settings.About.and')} `}
+                    Lightning Labs.
                 </Text>
                 <Text
                     style={
@@ -87,11 +87,11 @@ export default class About extends React.Component<AboutProps, {}> {
                             : styles.lightThemeText
                     }
                 >
-                    Zeus was created and is maintained by Evan Kaloudis.
+                    {localeString('views.Settings.About.created')}
                 </Text>
                 <View style={styles.button}>
                     <Button
-                        title="Official Zeus Website"
+                        title={localeString('views.Settings.About.website')}
                         onPress={() => UrlUtils.goToUrl('https://zeusln.app')}
                         buttonStyle={{
                             backgroundColor: 'black',
@@ -101,7 +101,7 @@ export default class About extends React.Component<AboutProps, {}> {
                 </View>
                 <View style={styles.button}>
                     <Button
-                        title="GitHub Repo"
+                        title={localeString('views.Settings.About.github')}
                         onPress={() =>
                             UrlUtils.goToUrl('https://github.com/ZeusLN/zeus')
                         }
@@ -114,7 +114,7 @@ export default class About extends React.Component<AboutProps, {}> {
                 {RESTUtils.supportsChannelManagement() && (
                     <View style={styles.button}>
                         <Button
-                            title="Connect to our node"
+                            title={localeString('views.Settings.About.node')}
                             icon={{
                                 name: 'computer',
                                 size: 25,
@@ -138,7 +138,7 @@ export default class About extends React.Component<AboutProps, {}> {
                 {!playStore && RESTUtils.supportsKeysend() && (
                     <View style={styles.button}>
                         <Button
-                            title="Send keysend donation"
+                            title={localeString('views.Settings.About.keysend')}
                             icon={{
                                 name: 'send',
                                 size: 25,
@@ -161,7 +161,7 @@ export default class About extends React.Component<AboutProps, {}> {
                 )}
                 <View style={styles.button}>
                     <Button
-                        title="Follow @ZeusLN on Twitter"
+                        title={localeString('views.Settings.About.twitter1')}
                         onPress={() =>
                             UrlUtils.goToUrl('https://twitter.com/ZeusLN')
                         }
@@ -173,7 +173,7 @@ export default class About extends React.Component<AboutProps, {}> {
                 </View>
                 <View style={styles.button}>
                     <Button
-                        title="Follow @evankaloudis on Twitter"
+                        title={localeString('views.Settings.About.twitter2')}
                         onPress={() =>
                             UrlUtils.goToUrl('https://twitter.com/evankaloudis')
                         }
@@ -185,7 +185,7 @@ export default class About extends React.Component<AboutProps, {}> {
                 </View>
                 <View style={styles.button}>
                     <Button
-                        title="Join the Zeus Telegram group"
+                        title={localeString('views.Settings.About.telegram')}
                         onPress={() => UrlUtils.goToUrl('https://t.me/ZeusLN')}
                         buttonStyle={{
                             borderRadius: 30

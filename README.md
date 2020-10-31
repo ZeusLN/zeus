@@ -1,5 +1,5 @@
 # Zeus
-A mobile Bitcoin/Lightning app for lnd and c-lightning node operators ⚡️
+A mobile Bitcoin/Lightning app for lnd, c-lightning, and Eclair node operators ⚡️
 
 *Notice*: If you are looking for Zeus Server, the Lightning-based Point-of-Sale solution (unrelated to this project), please visit [puzzle/zeus](https://github.com/puzzle/zeus).
 
@@ -27,7 +27,7 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 ## Connecting to your node
 
 Currently, to use Zeus, you must have a Bitcoin Lightning node running
-[Lightning Network Daemon (lnd)](https://github.com/LightningNetwork/lnd) or [c-lightning](https://github.com/ElementsProject/lightning) using the [c-lightning-REST](https://github.com/Ride-The-Lightning/c-lightning-REST/) API.
+[Lightning Network Daemon (lnd)](https://github.com/LightningNetwork/lnd), [eclair](https://github.com/ACINQ/eclair), or [c-lightning](https://github.com/ElementsProject/lightning) using the [c-lightning-REST](https://github.com/Ride-The-Lightning/c-lightning-REST/) or [Spark](https://github.com/shesek/spark-wallet#server-installation) API .
 
 You must provide Zeus with your node's hostname, port number, and the macaroon you choose to use in **hex format**. If you need help converting your macaroon to hex format we wrote up a Node.js script that can use
 [here](https://github.com/ZeusLN/lnd-hex-macaroon-generator/). Alternatively, if you're running a Unix-based operating system (eg. macOS, Linux) you can run `xxd -ps -u -c 1000 /path/to/admin.macaroon` to generate your macaroon in hex format.
@@ -38,7 +38,7 @@ If you would like to learn more about running your own node we suggest checking 
 We recommend reading
 [this guide](https://medium.com/lightning-power-users/windows-macos-lightning-network-284bd5034340).
 * If you're looking to run a full node on a dedicated piece of hardware like a Raspberry Pi, check out Stadicus'
-[Raspibolt Tutorial](https://github.com/Stadicus/guides/tree/master/raspibolt) or
+[Raspibolt Tutorial](https://stadicus.github.io/RaspiBolt/) or
 [RaspiBlitz](https://github.com/rootzoll/raspiblitz/) or
 [myNode](https://mynodebtc.com/).
 
@@ -46,7 +46,7 @@ We recommend reading
 
 On Android Zeus has support for connecting to you node entirely over the Tor network. You can refer to these guides to set up a Tor hidden service on your lnd node. The instructions are generally interchangable and typically only require you to change your Tor path.
 
-* [Zeus over Tor guide for RaspiBolt](http://raspibolt.com/raspibolt_72_zeus-over-tor.html)
+* [Zeus over Tor guide for RaspiBolt](https://stadicus.github.io/RaspiBolt/raspibolt_72_zeus-over-tor.html)
 * [Zeus over Tor guide for FreeNAS by Seth586](https://github.com/seth586/guides/blob/master/FreeNAS/wallets/zeusln.md)
 * [Zeus over Tor guide for RaspiBlitz by openoms](https://github.com/openoms/bitcoin-tutorials/blob/master/Zeus_to_RaspiBlitz_through_Tor.md)
 
@@ -88,9 +88,14 @@ Google Play releases aren't fully featured due to Google policies. To get the fu
 
 ## Contributing
 
-Please be sure to run `tsc` to check for type errors, `npm run test` to run all tests, and `npm run prettier` to run the prettier
+Please be sure to run `npm run tsc` to check for type errors, `npm run test` to run all tests, and `npm run prettier` to run the prettier
 
 If you are making cosmetic changes please test on both Android and iOS as things don't render exactly the same on both platforms.
+
+
+## Translations
+
+Do not directly modify the files in `/locales` unless you are adding new copy to the app in English. Instead, translators and reviewers should visit out [Transifex page](https://www.transifex.com/ZeusLN/zeus/) and request a role on the language you'd like to contribute to.
 
 ## Donations
 

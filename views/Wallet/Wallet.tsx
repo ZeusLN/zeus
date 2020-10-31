@@ -8,6 +8,7 @@ import Channels from './Channels';
 import MainPane from './MainPane';
 import { inject, observer } from 'mobx-react';
 import PrivacyUtils from './../../utils/PrivacyUtils';
+import { localeString } from './../../utils/LocaleUtils';
 
 import BalanceStore from './../../stores/BalanceStore';
 import ChannelsStore from './../../stores/ChannelsStore';
@@ -71,7 +72,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     });
                 }
             })
-            .catch(err => console.error('An error occurred', err));
+            .catch(err =>
+                console.error(localeString('views.Wallet.Wallet.error'), err)
+            );
     }
 
     UNSAFE_componentWillMount = () => {
@@ -215,7 +218,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     {paymentsButtonCount}
                 </Text>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
-                    Payments
+                    {localeString('views.Wallet.Wallet.payments')}
                 </Text>
             </React.Fragment>
         );
@@ -226,7 +229,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     {invoicesButtonCount}
                 </Text>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
-                    Invoices
+                    {localeString('views.Wallet.Wallet.invoices')}
                 </Text>
             </React.Fragment>
         );
@@ -237,7 +240,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     {transactionsButtonCount}
                 </Text>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
-                    On-chain
+                    {localeString('views.Wallet.Wallet.onchain')}
                 </Text>
             </React.Fragment>
         );
@@ -248,7 +251,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     {channelsButtonCount}
                 </Text>
                 <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
-                    Channels
+                    {localeString('views.Wallet.Wallet.channels')}
                 </Text>
             </React.Fragment>
         );
