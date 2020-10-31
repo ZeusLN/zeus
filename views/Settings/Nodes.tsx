@@ -5,6 +5,7 @@ import SettingsStore from './../../stores/SettingsStore';
 import Identicon from 'identicon.js';
 const hash = require('object-hash');
 import PrivacyUtils from './../../utils/PrivacyUtils';
+import { localeString } from './../../utils/LocaleUtils';
 
 interface NodesProps {
     nodes: any[];
@@ -39,7 +40,7 @@ export default class Nodes extends React.Component<NodesProps, {}> {
             selectedNode,
             SettingsStore
         } = this.props;
-        const { setSettings, settings } = SettingsStore;
+        const { setSettings, settings }: any = SettingsStore;
         const { lurkerMode } = settings;
 
         const Node = (balanceImage: string) => (
@@ -180,7 +181,7 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                 )}
                 {nodes && nodes.length === 0 && !loading && (
                     <Button
-                        title="No Nodes"
+                        title={localeString('views.Settings.Nodes.noNodes')}
                         icon={{
                             name: 'error-outline',
                             size: 25,
@@ -197,7 +198,7 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                 )}
                 {!loading && (
                     <Button
-                        title="Add a new node"
+                        title={localeString('views.Settings.Nodes.add')}
                         icon={{
                             name: 'add',
                             size: 25,

@@ -1,6 +1,7 @@
 import BaseModel from './BaseModel';
 import { observable, computed } from 'mobx';
 import DateTimeUtils from './../utils/DateTimeUtils';
+import { localeString } from './../utils/LocaleUtils';
 
 interface HopHint {
     fee_proportional_millionths: number;
@@ -35,7 +36,7 @@ export default class Invoice extends BaseModel {
     public description_hash: string;
     public r_preimage: string;
     public cltv_expiry: string;
-    // c-lightning
+    // c-lightning, eclair
     public bolt11: string;
     public label: string;
     public description: string;
@@ -55,11 +56,15 @@ export default class Invoice extends BaseModel {
     public millisatoshis?: string;
 
     @computed public get getMemo(): string {
-        return this.memo || this.description || 'No memo';
+        return (
+            this.memo ||
+            this.description ||
+            localeString('models.Invoice.noMemo')
+        );
     }
 
     @computed public get isPaid(): boolean {
-        return this.status === 'paid' || this.settled || this.ispaid;
+        return this.status === 'paid' || this.settled || this.ispaid || false;
     }
 
     @computed public get key(): string {
@@ -94,18 +99,17 @@ export default class Invoice extends BaseModel {
         return Number(this.num_satoshis || 0);
     }
 
-    // return amount in satoshis
     @computed public get listDate(): string {
         return this.isPaid
             ? this.settleDate
             : DateTimeUtils.listFormattedDate(
-                  this.expires_at || this.creation_date || this.timestamp
+                  this.expires_at || this.creation_date || this.timestamp || 0
               );
     }
 
     @computed public get settleDate(): Date {
         return DateTimeUtils.listFormattedDate(
-            this.settle_date || this.paid_at || this.timestamp
+            this.settle_date || this.paid_at || this.timestamp || 0
         );
     }
 
@@ -115,11 +119,13 @@ export default class Invoice extends BaseModel {
 
     @computed public get expirationDate(): Date | string {
         if (this.expiry || this.expire_time) {
-            return `${this.expiry || this.expire_time} seconds`;
+            return `${this.expiry || this.expire_time} ${localeString(
+                'models.Invoice.seconds'
+            )}`;
         }
 
         return this.expires_at
             ? DateTimeUtils.listFormattedDate(this.expires_at)
-            : 'Never';
+            : localeString('models.Invoice.never');
     }
 }

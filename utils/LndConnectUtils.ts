@@ -4,7 +4,13 @@ class LndConnectUtils {
     processLndConnectUrl = (input: string) => {
         let host, port, macaroonHex;
         const lndconnect = input.split('lndconnect://')[1];
-        const macaroon = input.split('&macaroon=')[1];
+        const params = input.split('?')[1];
+
+        let result: any = {};
+        params.split('&').forEach(function(part) {
+            const item = part.split('=');
+            result[item[0]] = decodeURIComponent(item[1]);
+        });
 
         // is IPv6
         if (input.includes('[')) {
@@ -20,7 +26,8 @@ class LndConnectUtils {
                 lndconnect.split(':')[1] &&
                 lndconnect.split(':')[1].split('?')[0];
         }
-        macaroonHex = macaroon && MacaroonUtils.base64UrlToHex(macaroon);
+        macaroonHex =
+            result.macaroon && MacaroonUtils.base64UrlToHex(result.macaroon);
 
         return { host, port, macaroonHex };
     };

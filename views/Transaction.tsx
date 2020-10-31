@@ -16,6 +16,7 @@ import PrivacyUtils from './../utils/PrivacyUtils';
 import NodeInfoStore from './../stores/NodeInfoStore';
 import UnitsStore from './../stores/UnitsStore';
 import SettingsStore from './../stores/SettingsStore';
+import { localeString } from './../utils/LocaleUtils';
 
 interface TransactionProps {
     navigation: any;
@@ -99,7 +100,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: 'Transaction',
+                        text: localeString('views.Transaction.title'),
                         style: { color: '#fff' }
                     }}
                     backgroundColor={theme === 'dark' ? '#261339' : 'orange'}
@@ -118,7 +119,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                 </View>
 
                 <View style={styles.content}>
-                    {total_fees && (
+                    {total_fees ? (
                         <View>
                             <Text
                                 style={
@@ -127,7 +128,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                         : styles.label
                                 }
                             >
-                                Total Fees:
+                                {localeString('views.Transaction.totalFees')}:
                             </Text>
                             <TouchableOpacity onPress={() => changeUnits()}>
                                 <Text
@@ -141,14 +142,14 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                 </Text>
                             </TouchableOpacity>
                         </View>
-                    )}
+                    ) : null}
 
                     <Text
                         style={
                             theme === 'dark' ? styles.labelDark : styles.label
                         }
                     >
-                        Transaction Hash:
+                        {localeString('views.Transaction.transactionHash')}:
                     </Text>
                     <TouchableOpacity
                         onPress={() =>
@@ -169,7 +170,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                         : styles.label
                                 }
                             >
-                                Block Hash:
+                                {localeString('views.Transaction.blockHash')}:
                             </Text>
                             <TouchableOpacity
                                 onPress={() =>
@@ -196,7 +197,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                     : styles.label
                             }
                         >
-                            Block Height:
+                            {localeString('views.Transaction.blockHeight')}:
                         </Text>
                     )}
                     {!!block_height && (
@@ -229,7 +230,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                         : styles.label
                                 }
                             >
-                                Number of Confirmations:
+                                {localeString('views.Transaction.numConf')}:
                             </Text>
                             <Text
                                 style={{
@@ -258,7 +259,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                         : styles.label
                                 }
                             >
-                                Status:
+                                {localeString('views.Transaction.status')}:
                             </Text>
                             <Text
                                 style={
@@ -281,7 +282,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                         : styles.label
                                 }
                             >
-                                Timestamp:
+                                {localeString('views.Transaction.timestamp')}:
                             </Text>
                             <Text
                                 style={
@@ -310,8 +311,12 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                 }
                             >
                                 {destAddresses.length > 1
-                                    ? 'Destination Addresses:'
-                                    : 'Destination Address:'}
+                                    ? `${localeString(
+                                          'views.Transaction.destAddresses'
+                                      )}:`
+                                    : `${localeString(
+                                          'views.Transaction.destAddress'
+                                      )}:`}
                             </Text>
                             <React.Fragment>{addresses}</React.Fragment>
                         </View>

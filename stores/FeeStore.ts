@@ -80,7 +80,8 @@ export default class FeeStore {
 
                 this.loading = false;
             })
-            .catch(() => {
+            .catch((err: any) => {
+                console.log('error getting fee report', err);
                 this.resetFees();
             });
     };
@@ -88,24 +89,22 @@ export default class FeeStore {
     @action
     public setFees = (
         newBaseFeeMsat: string,
-        newFeeRateMiliMsat: any,
+        newFeeRatePPM: any,
         channelPoint?: string,
         channelId?: string
     ) => {
-        const { implementation } = this.settingsStore;
-
         this.loading = true;
         this.setFeesError = false;
         this.setFeesSuccess = false;
 
-        const data = {
+        const data: any = {
             base_fee_msat: newBaseFeeMsat,
-            fee_rate: newFeeRateMiliMsat / 1000000,
+            fee_rate: newFeeRatePPM,
             time_lock_delta: 4
         };
 
         if (channelId) {
-            // c-lightning
+            // c-lightning, eclair
             data.channelId = channelId;
         } else if (channelPoint) {
             // lnd
@@ -120,7 +119,7 @@ export default class FeeStore {
         }
 
         RESTUtils.setFees(data)
-            .then((data: any) => {
+            .then(() => {
                 this.loading = false;
                 this.setFeesSuccess = true;
             })
@@ -135,7 +134,7 @@ export default class FeeStore {
     };
 
     @action
-    public getForwardingHistory = params => {
+    public getForwardingHistory = (params?: any) => {
         this.loading = true;
         RESTUtils.getForwardingHistory(params)
             .then((data: any) => {

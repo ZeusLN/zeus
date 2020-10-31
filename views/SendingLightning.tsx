@@ -7,9 +7,9 @@ import {
     ScrollView
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { when } from 'mobx';
 import { Button } from 'react-native-elements';
 import LnurlPaySuccess from './LnurlPay/Success';
+import { localeString } from './../utils/LocaleUtils';
 
 import TransactionsStore from './../stores/TransactionsStore';
 import LnurlPayStore from './../stores/LnurlPayStore';
@@ -28,14 +28,6 @@ export default class SendingLightning extends React.Component<
     SendingLightningProps,
     {}
 > {
-    componentDidMount = () => {
-        const {
-            payment_route,
-            payment_hash,
-            payment_error
-        } = TransactionsStore;
-    };
-
     getBackgroundColor() {
         const { TransactionsStore } = this.props;
         const {
@@ -97,8 +89,28 @@ export default class SendingLightning extends React.Component<
                     {loading && (
                         <ActivityIndicator size="large" color="#0000ff" />
                     )}
-                    {loading && <Text>Sending Transaction</Text>}
-                    {(error || payment_error) && (
+                    {loading && (
+                        <Text>
+                            {localeString('views.SendingLightning.sending')}
+                        </Text>
+                    )}
+                    {(!!error || !!payment_error) && (
+                        <Text
+                            style={{
+                                color: 'white',
+                                padding: 20,
+                                fontSize:
+                                    (payment_error || error_msg || '').length >
+                                    100
+                                        ? 20
+                                        : 40
+                            }}
+                        >
+                            {localeString('general.error')}:{' '}
+                            {payment_error || error_msg}
+                        </Text>
+                    )}
+                    {!!success && !error && (
                         <Text
                             style={{
                                 color: 'white',
@@ -106,21 +118,10 @@ export default class SendingLightning extends React.Component<
                                 fontSize: 40
                             }}
                         >
-                            Error: {payment_error || error_msg}
+                            {localeString('views.SendingLightning.success')}
                         </Text>
                     )}
-                    {success && !error && (
-                        <Text
-                            style={{
-                                color: 'white',
-                                padding: 20,
-                                fontSize: 40
-                            }}
-                        >
-                            Transaction successfully sent
-                        </Text>
-                    )}
-                    {payment_preimage &&
+                    {!!payment_preimage &&
                         payment_hash === LnurlPayStore.paymentHash &&
                         LnurlPayStore.successAction && (
                             <LnurlPaySuccess
@@ -131,16 +132,18 @@ export default class SendingLightning extends React.Component<
                                 SettingsStore={SettingsStore}
                             />
                         )}
-                    {payment_hash && (
+                    {!!payment_hash && (
                         <Text
                             style={{
                                 color: 'white',
                                 padding: 20,
                                 fontSize: 15
                             }}
-                        >{`Payment Hash: ${payment_hash}`}</Text>
+                        >{`${localeString(
+                            'views.SendingLightning.paymentHash'
+                        )}: ${payment_hash}`}</Text>
                     )}
-                    {success && !error && (
+                    {!!success && !error && (
                         <Button
                             title=""
                             icon={{
@@ -155,7 +158,7 @@ export default class SendingLightning extends React.Component<
                             }}
                         />
                     )}
-                    {error && (
+                    {!!error && (
                         <Button
                             title=""
                             icon={{
@@ -171,9 +174,11 @@ export default class SendingLightning extends React.Component<
                         />
                     )}
 
-                    {(error || payment_error || success) && (
+                    {(!!error || !!payment_error || !!success) && (
                         <Button
-                            title="Go to Wallet"
+                            title={localeString(
+                                'views.SendingLightning.goToWallet'
+                            )}
                             icon={{
                                 name: 'list',
                                 size: 25,

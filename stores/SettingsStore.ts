@@ -24,7 +24,28 @@ interface Settings {
     selectedNode?: number;
     passphrase?: string;
     fiat?: string;
+    locale?: string;
+    onChainAddress?: string;
 }
+
+export const LOCALE_KEYS = [
+    { key: 'English', value: 'English' },
+    { key: 'Español', value: 'Español' },
+    { key: 'Português', value: 'Português' },
+    { key: 'Češka', value: 'Češka' },
+    { key: 'Slovák', value: 'Slovák' },
+    { key: 'Deutsche', value: 'Deutsche' },
+    { key: 'Türkçe', value: 'Türkçe' },
+    // in progress
+    { key: 'Ελληνικά', value: 'Ελληνικά' },
+    { key: 'زبان فارسي', value: 'زبان فارسي' },
+    { key: 'Français', value: 'Français' },
+    { key: 'Nederlands', value: 'Nederlands' }
+];
+
+export const DEFAULT_THEME = 'light';
+export const DEFAULT_FIAT = 'Disabled';
+export const DEFAULT_LOCALE = 'English';
 
 export default class SettingsStore {
     @observable settings: Settings = {};
@@ -39,10 +60,18 @@ export default class SettingsStore {
     @observable certVerification: boolean | undefined;
     @observable chainAddress: string | undefined;
     // LNDHub
+    @observable username: string;
+    @observable password: string;
+    @observable lndhubUrl: string;
     @observable public createAccountError: string;
     @observable public createAccountSuccess: string;
     @observable public accessToken: string;
     @observable public refreshToken: string;
+
+    @action
+    public changeLocale = (locale: string) => {
+        this.settings.locale = locale;
+    };
 
     @action
     public fetchBTCPayConfig = (data: string) => {
@@ -146,9 +175,12 @@ export default class SettingsStore {
     public getNewAddress = () => {
         return RESTUtils.getNewAddress().then((data: any) => {
             const newAddress = data.address || data[0].address;
-            this.settings.nodes[
-                this.settings.selectedNode || 0
-            ].onChainAddress = newAddress;
+            if (this.settings.nodes) {
+                this.settings.nodes[
+                    this.settings.selectedNode || 0
+                ].onChainAddress = newAddress;
+            }
+
             const newSettings = this.settings;
 
             this.setSettings(JSON.stringify(newSettings)).then(() => {

@@ -41,9 +41,10 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
             return;
         }
 
+        let response;
         try {
             const uniqueId = 0;
-            const response = await ActivityResult.startActivityForResult(
+            response = await ActivityResult.startActivityForResult(
                 uniqueId,
                 QRINTENT,
                 { SCAN_MODE: 'QR_CODE_MODE' }
@@ -60,13 +61,13 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                 this.setState({ useInternalScanner: true });
                 return;
             }
-
-            this.props.handleQRScanned(response.data.SCAN_RESULT);
         } catch (e) {
             // it seems this will never happen
             this.setState({ useInternalScanner: true });
             return;
         }
+
+        this.props.handleQRScanned(response.data.SCAN_RESULT);
     }
 
     async componentDidMount() {
