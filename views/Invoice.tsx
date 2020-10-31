@@ -11,6 +11,7 @@ import Invoice from './../models/Invoice';
 import { inject, observer } from 'mobx-react';
 import PrivacyUtils from './../utils/PrivacyUtils';
 import CollapsedQR from './../components/CollapsedQR';
+import { localeString } from './../utils/LocaleUtils';
 
 import UnitsStore from './../stores/UnitsStore';
 import SettingsStore from './../stores/SettingsStore';
@@ -70,7 +71,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: 'Invoice',
+                        text: localeString('views.Invoice.title'),
                         style: { color: '#fff' }
                     }}
                     backgroundColor={theme === 'dark' ? '#261339' : 'orange'}
@@ -83,8 +84,11 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                     ? styles.amountDark
                                     : styles.amount
                             }
-                        >{`${isPaid ? 'Paid' : 'Unpaid'}: ${units &&
-                            amount}`}</Text>
+                        >{`${
+                            isPaid
+                                ? localeString('views.Invoice.paid')
+                                : localeString('views.Invoice.unpaid')
+                        }: ${units && amount}`}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -98,7 +102,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.label
                                 }
                             >
-                                Memo:
+                                {localeString('views.Invoice.memo')}:
                             </Text>
                             <Text
                                 style={
@@ -123,7 +127,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.label
                                 }
                             >
-                                Receipt:
+                                {localeString('views.Invoice.receipt')}:
                             </Text>
                             <Text
                                 style={
@@ -148,7 +152,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.label
                                 }
                             >
-                                Settle Date:
+                                {localeString('views.Invoice.settleDate')}:
                             </Text>
                             <Text
                                 style={
@@ -176,7 +180,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.label
                                 }
                             >
-                                Creation Date:
+                                {localeString('views.Invoice.creationDate')}:
                             </Text>
                             <Text
                                 style={
@@ -204,7 +208,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.label
                                 }
                             >
-                                Expiration:
+                                {localeString('views.Invoice.expiration')}:
                             </Text>
                             <Text
                                 style={
@@ -229,7 +233,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.label
                                 }
                             >
-                                Private:
+                                {localeString('views.Invoice.private')}:
                             </Text>
                             <Text
                                 style={
@@ -252,7 +256,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.label
                                 }
                             >
-                                Fallback Address:
+                                {localeString('views.Invoice.fallbackAddress')}:
                             </Text>
                             <Text
                                 style={
@@ -277,7 +281,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.label
                                 }
                             >
-                                CLTV Expiry:
+                                {localeString('views.Invoice.cltvExpiry')}:
                             </Text>
                             <Text
                                 style={
@@ -300,7 +304,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.label
                                 }
                             >
-                                R Hash:
+                                {localeString('views.Invoice.rHash')}:
                             </Text>
                             <Text
                                 style={
@@ -325,7 +329,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.label
                                 }
                             >
-                                R Pre-Image:
+                                {localeString('views.Invoice.rPreimage')}:
                             </Text>
                             <Text
                                 style={
@@ -350,7 +354,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.label
                                 }
                             >
-                                Description Hash:
+                                {localeString('views.Invoice.descriptionHash')}:
                             </Text>
                             <Text
                                 style={
@@ -375,7 +379,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                         : styles.label
                                 }
                             >
-                                Payment request:
+                                {localeString('views.Invoice.paymentRequest')}:
                             </Text>
                             <Text
                                 style={
@@ -395,7 +399,9 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                         <CollapsedQR
                             value={payment_request}
                             theme={theme}
-                            copyText="Copy Payment Request"
+                            copyText={localeString(
+                                'views.Invoice.copyPaymentRequest'
+                            )}
                             hideText
                         />
                     )}

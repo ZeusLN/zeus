@@ -1,5 +1,6 @@
 import { observable, computed } from 'mobx';
 import BaseModel from './BaseModel';
+import { localeString } from './../utils/LocaleUtils';
 
 interface HTLC {
     hash_lock: string;
@@ -14,7 +15,7 @@ export default class Channel extends BaseModel {
     commit_fee: string;
     csv_delay: number;
     channel_point: string;
-    chan_id?: string;
+    chan_id: string;
     fee_per_kw: string;
     total_satoshis_received: string;
     pending_htlcs: Array<HTLC>;
@@ -59,6 +60,10 @@ export default class Channel extends BaseModel {
 
     @computed
     public get channelId(): string {
-        return this.chan_id || this.channel_id || 'Unknown Channel ID';
+        return (
+            this.chan_id ||
+            this.channel_id ||
+            localeString('models.Channel.unknownId')
+        );
     }
 }

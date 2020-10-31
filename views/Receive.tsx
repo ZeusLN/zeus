@@ -12,6 +12,7 @@ import { LNURLWithdrawParams } from 'js-lnurl';
 import { Button, ButtonGroup, Header, Icon } from 'react-native-elements';
 import CollapsedQR from './../components/CollapsedQR';
 import { inject, observer } from 'mobx-react';
+import { localeString } from './../utils/LocaleUtils';
 
 import InvoicesStore from './../stores/InvoicesStore';
 import SettingsStore from './../stores/SettingsStore';
@@ -93,7 +94,7 @@ export default class Receive extends React.Component<
         } = this.props;
         const { selectedIndex, memo, value, expiry } = this.state;
         const { units, changeUnits } = UnitsStore;
-        const { fiatRates } = FiatStore;
+        const { fiatRates }: any = FiatStore;
 
         const {
             createInvoice,
@@ -112,10 +113,11 @@ export default class Receive extends React.Component<
         const address = chainAddress;
 
         const rate =
-            (fiatRates && fiatRates[fiat] && fiatRates[fiat]['15m']) || 0;
-        const symbol = fiatRates && fiatRates[fiat] && fiatRates[fiat].symbol;
+            fiat && fiat !== 'Disabled' && fiatRates
+                ? fiatRates[fiat]['15m']
+                : 0;
 
-        let satAmount;
+        let satAmount: string | number;
         switch (units) {
             case 'sats':
                 satAmount = value;
@@ -134,13 +136,13 @@ export default class Receive extends React.Component<
 
         const lightningButton = () => (
             <React.Fragment>
-                <Text>Lightning</Text>
+                <Text>{localeString('general.lightning')}</Text>
             </React.Fragment>
         );
 
         const onChainButton = () => (
             <React.Fragment>
-                <Text>On-chain</Text>
+                <Text>{localeString('general.onchain')}</Text>
             </React.Fragment>
         );
 
@@ -169,7 +171,7 @@ export default class Receive extends React.Component<
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: 'Receive',
+                        text: localeString('views.Receive.title'),
                         style: { color: '#fff' }
                     }}
                     backgroundColor="grey"
@@ -192,13 +194,18 @@ export default class Receive extends React.Component<
                         <View>
                             {!!payment_request && (
                                 <Text style={{ color: 'green', padding: 20 }}>
-                                    Successfully created invoice
-                                    {!!lnurl && ` and sent to ${lnurl.domain}`}
+                                    {localeString(
+                                        'views.Receive.successCreate'
+                                    )}
+                                    {!!lnurl &&
+                                        ` ${localeString(
+                                            'views.Receive.andSentTo'
+                                        )} ${lnurl.domain}`}
                                 </Text>
                             )}
                             {creatingInvoiceError && (
                                 <Text style={{ color: 'red', padding: 20 }}>
-                                    Error creating invoice
+                                    {localeString('views.Receive.errorCreate')}
                                 </Text>
                             )}
                             {error_msg && (
@@ -223,7 +230,9 @@ export default class Receive extends React.Component<
                             {!!payment_request && (
                                 <CollapsedQR
                                     value={payment_request.toUpperCase()}
-                                    copyText="Copy Invoice"
+                                    copyText={localeString(
+                                        'views.Receive.copyInvoice'
+                                    )}
                                     theme={theme}
                                 />
                             )}
@@ -232,10 +241,12 @@ export default class Receive extends React.Component<
                                     color: theme === 'dark' ? 'white' : 'black'
                                 }}
                             >
-                                Memo
+                                {localeString('views.Receive.memo')}:
                             </Text>
                             <TextInput
-                                placeholder="Sent a few satoshis"
+                                placeholder={localeString(
+                                    'views.Receive.memoPlaceholder'
+                                )}
                                 value={memo}
                                 onChangeText={(text: string) =>
                                     this.setState({ memo: text })
@@ -257,8 +268,8 @@ export default class Receive extends React.Component<
                                             theme === 'dark' ? 'white' : 'black'
                                     }}
                                 >
-                                    Amount (in {units === 'fiat' ? fiat : units}
-                                    )
+                                    {localeString('views.Receive.amount')} (
+                                    {units === 'fiat' ? fiat : units})
                                     {lnurl &&
                                     lnurl.minWithdrawable !==
                                         lnurl.maxWithdrawable
@@ -302,7 +313,8 @@ export default class Receive extends React.Component<
                                                     : 'black'
                                         }}
                                     >
-                                        {satAmount} satoshis
+                                        {satAmount}{' '}
+                                        {localeString('views.Receive.satoshis')}
                                     </Text>
                                 </TouchableOpacity>
                             )}
@@ -317,7 +329,10 @@ export default class Receive extends React.Component<
                                                     : 'black'
                                         }}
                                     >
-                                        Expiration (in seconds)
+                                        {localeString(
+                                            'views.Receive.expiration'
+                                        )}
+                                        :
                                     </Text>
                                     <TextInput
                                         keyboardType="numeric"
@@ -341,9 +356,13 @@ export default class Receive extends React.Component<
                             <View style={styles.button}>
                                 <Button
                                     title={
-                                        'Create invoice' +
+                                        localeString(
+                                            'views.Receive.createInvoice'
+                                        ) +
                                         (!!lnurl
-                                            ? ` and submit to ${lnurl.domain}`
+                                            ? ` ${localeString(
+                                                  'views.Receive.andSubmitTo'
+                                              )} ${lnurl.domain}`
                                             : '')
                                     }
                                     icon={{
@@ -376,8 +395,7 @@ export default class Receive extends React.Component<
                                             theme === 'dark' ? 'white' : 'black'
                                     }}
                                 >
-                                    No on-chain address available. Generate one
-                                    by pressing the button below.
+                                    {localeString('views.Receive.noOnChain')}
                                 </Text>
                             )}
                             {loading && (
@@ -389,7 +407,9 @@ export default class Receive extends React.Component<
                             {address && (
                                 <CollapsedQR
                                     value={address}
-                                    copyText="Copy Address"
+                                    copyText={localeString(
+                                        'views.Receive.copyAddress'
+                                    )}
                                     theme={theme}
                                 />
                             )}
@@ -398,8 +418,12 @@ export default class Receive extends React.Component<
                                     <Button
                                         title={
                                             implementation === 'lndhub'
-                                                ? 'Get Address'
-                                                : 'Get New Address'
+                                                ? localeString(
+                                                      'views.Receive.getAddress'
+                                                  )
+                                                : localeString(
+                                                      'views.Receive.getNewAddress'
+                                                  )
                                         }
                                         icon={{
                                             name: 'fiber-new',

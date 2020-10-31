@@ -4,6 +4,7 @@ import { Badge, Button, Header } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import LinearGradient from 'react-native-linear-gradient';
 import PrivacyUtils from './../../utils/PrivacyUtils';
+import { localeString } from './../../utils/LocaleUtils';
 
 import NodeInfoStore from './../../stores/NodeInfoStore';
 import UnitsStore from './../../stores/UnitsStore';
@@ -52,7 +53,8 @@ export default class MainPane extends React.Component<
             lightningBalance,
             pendingOpenBalance
         } = BalanceStore;
-        const { host, settings, implementation } = SettingsStore;
+        const { settings, implementation } = SettingsStore;
+        const nodeAddress = SettingsStore.host || SettingsStore.url;
         const { theme, lurkerMode } = settings;
         const loading = NodeInfoStore.loading || BalanceStore.loading;
 
@@ -165,10 +167,10 @@ export default class MainPane extends React.Component<
         );
 
         let infoValue = 'ⓘ';
-        if (NodeInfoStore.testnet) {
-            infoValue = 'Testnet';
-        } else if (NodeInfoStore.regtest) {
-            infoValue = 'Regtest';
+        if (NodeInfoStore.nodeInfo.isTestNet) {
+            infoValue = localeString('views.Wallet.MainPane.testnet');
+        } else if (NodeInfoStore.nodeInfo.isRegTest) {
+            infoValue = localeString('views.Wallet.MainPane.regnet');
         }
 
         const DefaultBalance = () => (
@@ -200,7 +202,7 @@ export default class MainPane extends React.Component<
 
         const NodeInfoBadge = () => (
             <View style={styles.nodeInfo}>
-                {host && host.includes('.onion') ? (
+                {nodeAddress && nodeAddress.includes('.onion') ? (
                     <TouchableOpacity
                         onPress={() => navigation.navigate('NodeInfo')}
                     >
@@ -210,7 +212,7 @@ export default class MainPane extends React.Component<
                         />
                     </TouchableOpacity>
                 ) : null}
-                {host && !host.includes('.onion') ? (
+                {nodeAddress && !nodeAddress.includes('.onion') ? (
                     <Badge
                         onPress={() => navigation.navigate('NodeInfo')}
                         value={infoValue}
@@ -278,7 +280,7 @@ export default class MainPane extends React.Component<
                         )}
                         <View style={styles.buttons}>
                             <Button
-                                title="Send"
+                                title={localeString('general.send')}
                                 icon={{
                                     name: 'arrow-upward',
                                     size: 25,
@@ -299,7 +301,7 @@ export default class MainPane extends React.Component<
                                 raised={theme !== 'dark'}
                             />
                             <Button
-                                title="Receive"
+                                title={localeString('general.receive')}
                                 icon={{
                                     name: 'arrow-downward',
                                     size: 25,
@@ -321,7 +323,7 @@ export default class MainPane extends React.Component<
                                 raised={theme !== 'dark'}
                             />
                             <Button
-                                title="Scan"
+                                title={localeString('general.scan')}
                                 icon={{
                                     name: 'crop-free',
                                     size: 25,
@@ -366,7 +368,7 @@ export default class MainPane extends React.Component<
                     >
                         {NodeInfoStore.errorMsg
                             ? NodeInfoStore.errorMsg
-                            : 'Error connecting to your node. Please check your settings and try again.'}
+                            : localeString('views.Wallet.MainPane.error')}
                     </Text>
                     <Button
                         icon={{
@@ -374,7 +376,9 @@ export default class MainPane extends React.Component<
                             size: 25,
                             color: '#fff'
                         }}
-                        title="Go to Settings"
+                        title={localeString(
+                            'views.Wallet.MainPane.goToSettings'
+                        )}
                         buttonStyle={{
                             backgroundColor: 'gray',
                             borderRadius: 30

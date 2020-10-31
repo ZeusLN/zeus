@@ -78,6 +78,7 @@ export default class DropdownSetting extends React.Component<
                         <Text
                             style={{
                                 color: theme === 'dark' ? 'white' : 'black',
+                                textDecorationLine: 'underline',
                                 paddingLeft: 10,
                                 paddingTop: 10
                             }}
@@ -91,10 +92,13 @@ export default class DropdownSetting extends React.Component<
                                         options: pickerValuesIOS,
                                         cancelButtonIndex: 0
                                     },
-                                    buttonIndex =>
-                                        onValueChange(
-                                            values[buttonIndex - 1].value
-                                        )
+                                    buttonIndex => {
+                                        if (buttonIndex) {
+                                            onValueChange(
+                                                values[buttonIndex - 1].value
+                                            );
+                                        }
+                                    }
                                 )
                             }
                         >

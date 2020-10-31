@@ -2,7 +2,7 @@ import { observable, computed } from 'mobx';
 import BaseModel from './BaseModel';
 
 export default class NodeInfo extends BaseModel {
-    chains?: Array<string>;
+    chains?: Array<any>;
     uris?: Array<string>;
     alias?: string;
     num_active_channels?: number;
@@ -21,13 +21,26 @@ export default class NodeInfo extends BaseModel {
     @observable network?: string;
     @observable blockheight?: number;
     address?: Array<any>;
+    api_version?: string;
 
     @computed public get isTestNet(): boolean {
-        return this.testnet || this.network === 'testnet';
+        return (
+            this.testnet ||
+            this.network === 'testnet' ||
+            (this.chains &&
+                this.chains[0] &&
+                this.chains[0].network === 'testnet')
+        );
     }
 
     @computed public get isRegTest(): boolean {
-        return this.regtest || this.network === 'regtest';
+        return (
+            this.regtest ||
+            this.network === 'regtest' ||
+            (this.chains &&
+                this.chains[0] &&
+                this.chains[0].network === 'regtest')
+        );
     }
 
     @computed public get currentBlockHeight(): Number {

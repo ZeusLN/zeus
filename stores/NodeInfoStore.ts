@@ -48,8 +48,6 @@ export default class NodeInfoStore {
             .then((data: any) => {
                 const nodeInfo = new NodeInfo(data);
                 this.nodeInfo = nodeInfo;
-                this.testnet = nodeInfo.isTestNet;
-                this.regtest = nodeInfo.isRegTest;
                 this.loading = false;
                 this.error = false;
             })

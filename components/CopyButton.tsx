@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Clipboard } from 'react-native';
 import { Button } from 'react-native-elements';
+import { localeString } from './../utils/LocaleUtils';
 
 interface CopyButtonProps {
     title?: string;
@@ -50,7 +51,9 @@ export default class CopyButton extends React.Component<
         const { copied } = this.state;
         const { title } = this.props;
 
-        const buttonTitle = copied ? 'Copied!' : title || 'Copy to Clipboard';
+        const buttonTitle = copied
+            ? localeString('components.CopyButton.copied')
+            : title || localeString('components.CopyButton.copy');
 
         return (
             <Button

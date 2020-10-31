@@ -1,10 +1,12 @@
 type FeeLimit = { percent: string } | { fixed: string };
 
 export default interface TransactionRequest {
-    target_conf?: Number | null; // optional
+    target_conf?: number | null; // optional
     addr?: string;
     sat_per_byte?: string | null; // optional
     amount?: string;
+    utxos?: string[];
+    conf_target?: number;
 }
 
 export type SendPaymentRequest =

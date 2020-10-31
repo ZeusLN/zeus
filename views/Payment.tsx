@@ -10,6 +10,7 @@ import { Header, Icon } from 'react-native-elements';
 import Payment from './../models/Payment';
 import { inject, observer } from 'mobx-react';
 import PrivacyUtils from './../utils/PrivacyUtils';
+import { localeString } from './../utils/LocaleUtils';
 
 import UnitsStore from './../stores/UnitsStore';
 import SettingsStore from './../stores/SettingsStore';
@@ -23,7 +24,7 @@ interface PaymentProps {
     LnurlPayStore: LnurlPayStore;
 }
 
-const PaymentPath = ({ path }) => {
+const PaymentPath = ({ path }: any) => {
     if (path.length === 1) {
         return path[0];
     }
@@ -57,12 +58,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
     }
 
     render() {
-        const {
-            navigation,
-            UnitsStore,
-            SettingsStore,
-            LnurlPayStore
-        } = this.props;
+        const { navigation, UnitsStore, SettingsStore } = this.props;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { settings } = SettingsStore;
         const { theme, lurkerMode } = settings;
@@ -106,7 +102,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: 'Payment',
+                        text: localeString('views.Payment.title'),
                         style: { color: '#fff' }
                     }}
                     backgroundColor={theme === 'dark' ? '#261339' : 'black'}
@@ -146,7 +142,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                         : styles.label
                                 }
                             >
-                                Fee:
+                                {localeString('views.Payment.fee')}:
                             </Text>
                             <TouchableOpacity onPress={() => changeUnits()}>
                                 <Text
@@ -171,7 +167,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                         : styles.label
                                 }
                             >
-                                Payment Hash
+                                {localeString('views.Payment.paymentHash')}:
                             </Text>
                             <Text
                                 style={
@@ -192,7 +188,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             theme === 'dark' ? styles.labelDark : styles.label
                         }
                     >
-                        Payment Pre-Image
+                        {localeString('views.Payment.paymentPreimage')}:
                     </Text>
                     <Text
                         style={
@@ -209,7 +205,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             theme === 'dark' ? styles.labelDark : styles.label
                         }
                     >
-                        Creation Date:
+                        {localeString('views.Payment.creationDate')}:
                     </Text>
                     <Text
                         style={
@@ -227,7 +223,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                     : styles.label
                             }
                         >
-                            Path:
+                            {localeString('views.Payment.path')}:
                         </Text>
                     )}
                     {enhancedPath.length > 0 && (

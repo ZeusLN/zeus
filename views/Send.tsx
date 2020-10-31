@@ -15,23 +15,31 @@ import handleAnything from './../utils/handleAnything';
 import InvoicesStore from './../stores/InvoicesStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
 import TransactionsStore from './../stores/TransactionsStore';
+import FeeStore from './../stores/FeeStore';
+import BalanceStore from './../stores/BalanceStore';
+import UTXOsStore from './../stores/UTXOsStore';
 import SettingsStore from './../stores/SettingsStore';
 import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
 import FiatStore from './../stores/FiatStore';
 
+import UTXOPicker from './../components/UTXOPicker';
 import FeeTable from './../components/FeeTable';
 
 import RESTUtils from './../utils/RESTUtils';
+import { localeString } from './../utils/LocaleUtils';
 
 interface SendProps {
     exitSetup: any;
     navigation: any;
+    BalanceStore: BalanceStore;
     InvoicesStore: InvoicesStore;
     NodeInfoStore: NodeInfoStore;
     TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;
     FiatStore: FiatStore;
+    FeeStore: FeeStore;
     UnitsStore: UnitsStore;
+    UTXOsStore: UTXOsStore;
 }
 
 interface SendState {
@@ -41,15 +49,21 @@ interface SendState {
     amount: string;
     fee: string;
     error_msg: string;
+    utxos: Array<string>;
+    utxoBalance: number;
+    confirmationTarget: string;
 }
 
 @inject(
     'InvoicesStore',
     'NodeInfoStore',
     'TransactionsStore',
+    'BalanceStore',
     'SettingsStore',
     'UnitsStore',
-    'FiatStore'
+    'FeeStore',
+    'FiatStore',
+    'UTXOsStore'
 )
 @observer
 export default class Send extends React.Component<SendProps, SendState> {
@@ -66,7 +80,11 @@ export default class Send extends React.Component<SendProps, SendState> {
             transactionType: transactionType,
             destination: destination || '',
             amount: amount || '',
-            fee: '2'
+            fee: '2',
+            utxos: [],
+            utxoBalance: 0,
+            confirmationTarget: '60',
+            error_msg: ''
         };
     }
 
@@ -83,19 +101,17 @@ export default class Send extends React.Component<SendProps, SendState> {
         }
     }
 
+    selectUTXOs = (utxos: Array<string>, utxoBalance: number) =>
+        this.setState({ utxos, amount: 'all', utxoBalance });
+
     UNSAFE_componentWillReceiveProps(nextProps: any) {
-        const { navigation, SettingsStore } = nextProps;
-        const { implementation } = SettingsStore;
+        const { navigation } = nextProps;
         const destination = navigation.getParam('destination', null);
         const amount = navigation.getParam('amount', null);
         const transactionType = navigation.getParam('transactionType', null);
 
         if (transactionType === 'Lightning') {
-            if (implementation === 'lndhub') {
-                this.props.InvoicesStore.getPayReqLocal(destination);
-            } else {
-                this.props.InvoicesStore.getPayReq(destination);
-            }
+            this.props.InvoicesStore.getPayReq(destination);
         }
 
         this.setState({
@@ -124,13 +140,26 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     sendCoins = (satAmount: string | number) => {
         const { TransactionsStore, navigation } = this.props;
-        const { destination, fee } = this.state;
+        const { destination, fee, utxos, confirmationTarget } = this.state;
 
-        TransactionsStore.sendCoins({
-            addr: destination,
-            sat_per_byte: fee,
-            amount: satAmount.toString()
-        });
+        let request;
+        if (utxos && utxos.length > 0) {
+            request = {
+                addr: destination,
+                sat_per_byte: fee,
+                amount: satAmount.toString(),
+                target_conf: Number(confirmationTarget),
+                utxos
+            };
+        } else {
+            request = {
+                addr: destination,
+                sat_per_byte: fee,
+                amount: satAmount.toString(),
+                target_conf: Number(confirmationTarget)
+            };
+        }
+        TransactionsStore.sendCoins(request);
         navigation.navigate('SendingOnChain');
     };
 
@@ -148,25 +177,37 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     render() {
-        const { SettingsStore, UnitsStore, FiatStore, navigation } = this.props;
+        const {
+            SettingsStore,
+            UnitsStore,
+            FeeStore,
+            FiatStore,
+            BalanceStore,
+            UTXOsStore,
+            navigation
+        } = this.props;
         const {
             isValid,
             transactionType,
             destination,
             amount,
             fee,
+            confirmationTarget,
+            utxoBalance,
             error_msg
         } = this.state;
+        const { confirmedBlockchainBalance } = BalanceStore;
         const { implementation, settings } = SettingsStore;
         const { theme, fiat } = settings;
         const { units, changeUnits } = UnitsStore;
-        const { fiatRates } = FiatStore;
+        const { fiatRates }: any = FiatStore;
 
         const rate =
-            (fiatRates && fiatRates[fiat] && fiatRates[fiat]['15m']) || 0;
-        const symbol = fiatRates && fiatRates[fiat] && fiatRates[fiat].symbol;
+            fiat && fiat !== 'Disabled' && fiatRates
+                ? fiatRates[fiat]['15m']
+                : 0;
 
-        let satAmount;
+        let satAmount: string | number;
         switch (units) {
             case 'sats':
                 satAmount = amount;
@@ -188,13 +229,13 @@ export default class Send extends React.Component<SendProps, SendState> {
             />
         );
 
-        const paymentOptions = ['Lightning payment request'];
+        const paymentOptions = [localeString('views.Send.lnPayment')];
 
         if (RESTUtils.supportsOnchainSends()) {
-            paymentOptions.push('Bitcoin address');
+            paymentOptions.push(localeString('views.Send.btcAddress'));
         }
         if (RESTUtils.supportsKeysend()) {
-            paymentOptions.push('keysend address (if enabled)');
+            paymentOptions.push(localeString('views.Send.keysendAddress'));
         }
 
         return (
@@ -207,12 +248,18 @@ export default class Send extends React.Component<SendProps, SendState> {
             >
                 <Header
                     leftComponent={<BackButton />}
-                    centerComponent={{ text: 'Send', style: { color: '#fff' } }}
+                    centerComponent={{
+                        text: localeString('views.Send.title'),
+                        style: { color: '#fff' }
+                    }}
                     backgroundColor="grey"
                 />
                 <View style={styles.content}>
                     <Text
-                        style={{ color: theme === 'dark' ? 'white' : 'black' }}
+                        style={{
+                            textDecorationLine: 'underline',
+                            color: theme === 'dark' ? 'white' : 'black'
+                        }}
                     >
                         {paymentOptions.join(', ')}
                     </Text>
@@ -235,7 +282,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 color: theme === 'dark' ? 'white' : 'black'
                             }}
                         >
-                            Must be a valid {paymentOptions.join(', ')}
+                            {localeString('views.Send.mustBeValid')}{' '}
+                            {paymentOptions.join(', ')}
                         </Text>
                     )}
                     {transactionType && (
@@ -250,10 +298,11 @@ export default class Send extends React.Component<SendProps, SendState> {
                         !RESTUtils.supportsOnchainSends() && (
                             <Text
                                 style={{
+                                    textDecorationLine: 'underline',
                                     color: theme === 'dark' ? 'white' : 'black'
                                 }}
                             >
-                                On-chain sends are not supported on{' '}
+                                {localeString('views.Send.onChainNotSupported')}{' '}
                                 {implementation}
                             </Text>
                         )}
@@ -263,13 +312,14 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 <TouchableOpacity onPress={() => changeUnits()}>
                                     <Text
                                         style={{
+                                            textDecorationLine: 'underline',
                                             color:
                                                 theme === 'dark'
                                                     ? 'white'
                                                     : 'black'
                                         }}
                                     >
-                                        Amount (in{' '}
+                                        {localeString('views.Send.amount')} (
                                         {units === 'fiat' ? fiat : units})
                                     </Text>
                                 </TouchableOpacity>
@@ -286,29 +336,52 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     }
                                     placeholderTextColor="gray"
                                 />
-                                {units !== 'sats' && (
+                                {units !== 'sats' && amount !== 'all' && (
                                     <TouchableOpacity
                                         onPress={() => changeUnits()}
                                     >
                                         <Text
                                             style={{
+                                                textDecorationLine: 'underline',
                                                 color:
                                                     theme === 'dark'
                                                         ? 'white'
                                                         : 'black'
                                             }}
                                         >
-                                            {satAmount} satoshis
+                                            {satAmount}{' '}
+                                            {localeString(
+                                                'views.Send.satoshis'
+                                            )}
                                         </Text>
                                     </TouchableOpacity>
                                 )}
+                                {amount === 'all' && (
+                                    <Text
+                                        style={{
+                                            color:
+                                                theme === 'dark'
+                                                    ? 'white'
+                                                    : 'black'
+                                        }}
+                                    >
+                                        {`${
+                                            utxoBalance > 0
+                                                ? utxoBalance
+                                                : confirmedBlockchainBalance
+                                        } ${localeString(
+                                            'views.Receive.satoshis'
+                                        )}`}
+                                    </Text>
+                                )}
                                 <Text
                                     style={{
+                                        textDecorationLine: 'underline',
                                         color:
                                             theme === 'dark' ? 'white' : 'black'
                                     }}
                                 >
-                                    Fee (satoshis per byte)
+                                    {localeString('views.Send.feeSats')}:
                                 </Text>
                                 <TextInput
                                     keyboardType="numeric"
@@ -324,9 +397,17 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     }
                                     placeholderTextColor="gray"
                                 />
+                                {RESTUtils.supportsCoinControl() && (
+                                    <UTXOPicker
+                                        onValueChange={this.selectUTXOs}
+                                        UTXOsStore={UTXOsStore}
+                                    />
+                                )}
                                 <View style={styles.button}>
                                     <Button
-                                        title="Send Coins"
+                                        title={localeString(
+                                            'views.Send.sendCoins'
+                                        )}
                                         icon={{
                                             name: 'send',
                                             size: 25,
@@ -349,12 +430,13 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <TouchableOpacity onPress={() => changeUnits()}>
                                 <Text
                                     style={{
+                                        textDecorationLine: 'underline',
                                         color:
                                             theme === 'dark' ? 'white' : 'black'
                                     }}
                                 >
-                                    Amount (in {units === 'fiat' ? fiat : units}
-                                    )
+                                    {localeString('views.Send.amount')} (
+                                    {units === 'fiat' ? fiat : units})
                                 </Text>
                             </TouchableOpacity>
                             <TextInput
@@ -374,19 +456,21 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 <TouchableOpacity onPress={() => changeUnits()}>
                                     <Text
                                         style={{
+                                            textDecorationLine: 'underline',
                                             color:
                                                 theme === 'dark'
                                                     ? 'white'
                                                     : 'black'
                                         }}
                                     >
-                                        {satAmount} satoshis
+                                        {satAmount}{' '}
+                                        {localeString('views.Send.satoshis')}
                                     </Text>
                                 </TouchableOpacity>
                             )}
                             <View style={styles.button}>
                                 <Button
-                                    title="Send"
+                                    title={localeString('general.send')}
                                     icon={{
                                         name: 'send',
                                         size: 25,
@@ -407,19 +491,23 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <React.Fragment>
                                 <Text
                                     style={{
+                                        textDecorationLine: 'underline',
                                         color:
                                             theme === 'dark' ? 'white' : 'black'
                                     }}
                                 >
-                                    Sorry, {implementation} does not support
-                                    sending keysend payments at the moment.
+                                    {localeString('views.Send.sorry')},{' '}
+                                    {implementation}{' '}
+                                    {localeString(
+                                        'views.Send.keysendNotSupported'
+                                    )}
                                 </Text>
                             </React.Fragment>
                         )}
                     {transactionType === 'Lightning' && (
                         <View style={styles.button}>
                             <Button
-                                title="Look Up Payment Request"
+                                title={localeString('views.Send.lookup')}
                                 icon={{
                                     name: 'send',
                                     size: 25,
@@ -438,7 +526,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     )}
                     <View style={styles.button}>
                         <Button
-                            title="Scan"
+                            title={localeString('general.scan')}
                             icon={{
                                 name: 'crop-free',
                                 size: 25,
@@ -457,11 +545,34 @@ export default class Send extends React.Component<SendProps, SendState> {
                         />
                     </View>
 
-                    {transactionType === 'On-chain' && (
-                        <View style={styles.feeTableButton}>
-                            <FeeTable setFee={this.setFee} />
-                        </View>
-                    )}
+                    {transactionType === 'On-chain' &&
+                        (implementation === 'eclair' ? (
+                            <View style={styles.feeTableButton}>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    value={confirmationTarget}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            confirmationTarget: text
+                                        })
+                                    }
+                                    style={
+                                        theme === 'dark'
+                                            ? styles.textInputDark
+                                            : styles.textInput
+                                    }
+                                    placeholderTextColor="gray"
+                                />
+                            </View>
+                        ) : (
+                            <View style={styles.feeTableButton}>
+                                <FeeTable
+                                    setFee={this.setFee}
+                                    SettingsStore={SettingsStore}
+                                    FeeStore={FeeStore}
+                                />
+                            </View>
+                        ))}
 
                     {!!error_msg && (
                         <React.Fragment>

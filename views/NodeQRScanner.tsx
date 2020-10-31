@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Alert } from 'react-native';
 import QRCodeScanner from './../components/QRCodeScanner';
 import NodeUriUtils from './../utils/NodeUriUtils';
+import { localeString } from './../utils/LocaleUtils';
 
 interface NodeQRProps {
     navigation: any;
@@ -19,8 +20,8 @@ export default class NodeQRScanner extends React.Component<NodeQRProps, {}> {
             });
         } else {
             Alert.alert(
-                'Error',
-                'Scanned QR code was not a valid Lightning Node',
+                localeString('general.error'),
+                localeString('views.NodeQRScanner.error'),
                 [{ text: 'OK', onPress: () => void 0 }],
                 { cancelable: false }
             );
@@ -33,8 +34,8 @@ export default class NodeQRScanner extends React.Component<NodeQRProps, {}> {
 
         return (
             <QRCodeScanner
-                title="Lightning Node QR Scanner"
-                text="Scan a valid Lightning Node"
+                title={localeString('views.NodeQRScanner.title')}
+                text={localeString('views.NodeQRScanner.text')}
                 handleQRScanned={this.handleNodeScanned}
                 goBack={() => navigation.navigate('OpenChannel')}
             />
