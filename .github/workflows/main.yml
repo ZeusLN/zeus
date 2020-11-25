@@ -25,7 +25,32 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
-      - name: React Native Android Build APK
-        # You may pin to the exact commit or the version.
-        # uses: realabbas/Github-Actions-React-Native@047b6256928e9f54ec66393c95817b702c4a0ee2
-        uses: realabbas/Github-Actions-React-Native@v1.1.2
+      name: react-native-android-build-apk
+        on:
+          push:
+            branches:
+              - master
+        jobs:
+          install-and-test:
+            runs-on: ubuntu-latest
+            steps:
+              - uses: actions/checkout@v2
+              - name: Install npm dependencies
+                run: |
+                  npm install
+          build-android:
+            needs: install-and-test
+            runs-on: ubuntu-latest
+            steps: 
+              - uses: actions/checkout@v2
+              - name: Install npm dependencies
+                run: |
+                  npm install
+              - name: Build Android Release
+                run: |
+                  cd android && ./gradlew assembleRelease
+              - name: Upload Artifact
+                uses: actions/upload-artifact@v1
+                with:
+                  name: app-release.apk
+                  path: android/app/build/outputs/apk/release/
