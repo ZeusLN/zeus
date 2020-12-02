@@ -3,7 +3,7 @@ import stores from '../stores/Stores';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import ErrorUtils from './../utils/ErrorUtils';
 import VersionUtils from './../utils/VersionUtils';
-import { doTorRequest } from '../utils/TorUtils';
+import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 
 interface Headers {
     macaroon?: string;
@@ -33,7 +33,12 @@ export default class LND {
         // API is a bit of a mess but
         // If tor enabled in setting, start up the daemon here
         if (useTor === true) {
-            calls[id] = doTorRequest(url, method, data, headers);
+            calls[id] = doTorRequest(
+                url,
+                method as RequestMethod,
+                JSON.stringify(data),
+                headers
+            );
         } else {
             calls[id] = RNFetchBlob.config({
                 trusty: !certVerification
@@ -162,7 +167,7 @@ export default class LND {
             macaroonHex,
             accessToken,
             certVerification,
-            enableTor,
+            enableTor
         } = stores.settingsStore;
         const auth = macaroonHex || accessToken;
         const headers: any = this.getHeaders(auth);

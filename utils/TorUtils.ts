@@ -1,26 +1,30 @@
-import Tor from 'react-native-tor';
+import Tor, { RequestMethod } from 'react-native-tor';
 const tor = Tor();
-const doTorRequest = async (
+const doTorRequest = async <T extends RequestMethod>(
     url: string,
-    method: string,
-    data?: any,
+    method: T,
+    data?: string,
     headers?: any,
     trustSSL: boolean = true
 ) => {
     await tor.startIfNotStarted();
-    console.log('will call', url, method, data, headers);
     switch (method.toLowerCase()) {
-        case 'get':
+        case RequestMethod.GET:
             const getResult = await tor.get(url, headers, trustSSL);
             if (getResult.json) {
                 return getResult.json;
             }
-        case 'post':
-            const postResult = await tor.post(url, data, headers, trustSSL);
+        case RequestMethod.POST:
+            const postResult = await tor.post(
+                url,
+                data || '',
+                headers,
+                trustSSL
+            );
             if (postResult.json) {
                 return postResult.json;
             }
-        case 'delete':
+        case RequestMethod.DELETE:
             const deleteResult = await tor.delete(url, data, headers, trustSSL);
             if (deleteResult.json) {
                 return deleteResult.json;
@@ -28,4 +32,4 @@ const doTorRequest = async (
             break;
     }
 };
-export { doTorRequest };
+export { doTorRequest, RequestMethod };
