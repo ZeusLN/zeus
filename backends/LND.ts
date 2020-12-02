@@ -3,6 +3,7 @@ import stores from '../stores/Stores';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import ErrorUtils from './../utils/ErrorUtils';
 import VersionUtils from './../utils/VersionUtils';
+import { doTorRequest } from '../utils/TorUtils';
 
 interface Headers {
     macaroon?: string;
@@ -13,14 +14,15 @@ interface Headers {
 
 // keep track of all active calls so we can cancel when appropriate
 const calls: any = {};
-
 export default class LND {
-    restReq = (
+    torSocksPort?: number = undefined;
+    restReq = async (
         headers: Headers | any,
         url: string,
         method: any,
         data?: any,
-        certVerification?: boolean
+        certVerification?: boolean,
+        useTor?: boolean
     ) => {
         // use body data as an identifier too, we don't want to cancel when we
         // are making multiples calls to get all the node names, for example
@@ -28,27 +30,34 @@ export default class LND {
         if (calls[id]) {
             return calls[id];
         }
+        // API is a bit of a mess but
+        // If tor enabled in setting, start up the daemon here
+        if (useTor === true) {
+            calls[id] = doTorRequest(url, method, data, headers);
+        } else {
+            calls[id] = RNFetchBlob.config({
+                trusty: !certVerification
+            })
+                .fetch(method, url, headers, data ? JSON.stringify(data) : data)
+                .then((response: any) => {
+                    delete calls[id];
+                    if (response.info().status < 300) {
+                        return response.json();
+                    } else {
+                        const errorInfo = response.json();
+                        throw new Error(
+                            (errorInfo.error && errorInfo.error.message) ||
+                                ErrorUtils.errorToUserFriendly(
+                                    errorInfo.code
+                                ) ||
+                                errorInfo.message ||
+                                errorInfo.error
+                        );
+                    }
+                });
+        }
 
-        calls[id] = RNFetchBlob.config({
-            trusty: !certVerification
-        })
-            .fetch(method, url, headers, data ? JSON.stringify(data) : data)
-            .then((response: any) => {
-                delete calls[id];
-                if (response.info().status < 300) {
-                    return response.json();
-                } else {
-                    const errorInfo = response.json();
-                    throw new Error(
-                        (errorInfo.error && errorInfo.error.message) ||
-                            ErrorUtils.errorToUserFriendly(errorInfo.code) ||
-                            errorInfo.message ||
-                            errorInfo.error
-                    );
-                }
-            });
-
-        return calls[id];
+        return await calls[id];
     };
 
     supports = (supportedVersion: string, apiVersion?: string) => {
@@ -152,14 +161,21 @@ export default class LND {
             port,
             macaroonHex,
             accessToken,
-            certVerification
+            certVerification,
+            enableTor,
         } = stores.settingsStore;
-
         const auth = macaroonHex || accessToken;
         const headers: any = this.getHeaders(auth);
         headers['Content-Type'] = 'application/json';
         const url = this.getURL(host || lndhubUrl, port, route);
-        return this.restReq(headers, url, method, data, certVerification);
+        return this.restReq(
+            headers,
+            url,
+            method,
+            data,
+            certVerification,
+            enableTor
+        );
     };
 
     getRequest = (route: string) => this.request(route, 'get', null);
@@ -241,7 +257,8 @@ export default class LND {
     supportsOnchainSends = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
-    supportsCustomHostProtocol = () => false;
+    supportsCustomHostProtocol = () =>
+        stores.settingsStore.enableTor ? true : false;
     supportsMPP = () => this.supports('v0.11.0');
     supportsCoinControl = () => false;
 }

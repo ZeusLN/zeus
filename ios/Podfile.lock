@@ -200,6 +200,8 @@ PODS:
     - React
   - react-native-safe-area-context (0.6.2):
     - React
+  - react-native-tor (0.1.0):
+    - React
   - react-native-udp (2.7.0):
     - React
   - React-RCTActionSheet (0.61.5):
@@ -303,6 +305,7 @@ DEPENDENCIES:
   - react-native-camera-kit (from `../node_modules/react-native-camera-kit`)
   - react-native-randombytes (from `../node_modules/react-native-randombytes`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
+  - react-native-tor (from `../node_modules/react-native-tor`)
   - react-native-udp (from `../node_modules/react-native-udp`)
   - React-RCTActionSheet (from `../node_modules/react-native/Libraries/ActionSheetIOS`)
   - React-RCTAnimation (from `../node_modules/react-native/Libraries/NativeAnimation`)
@@ -394,6 +397,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-randombytes"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
+  react-native-tor:
+    :path: "../node_modules/react-native-tor"
   react-native-udp:
     :path: "../node_modules/react-native-udp"
   React-RCTActionSheet:
@@ -503,6 +508,7 @@ SPEC CHECKSUMS:
   react-native-camera-kit: ded127598a48890a360fbf5e26cf7c44fcc5b873
   react-native-randombytes: 991545e6eaaf700b4ee384c291ef3d572e0b2ca8
   react-native-safe-area-context: a1d322930b8c5d04ebeb77cc47cc97575ad27203
+  react-native-tor: 46df1b9f9bb513e51cf86c9dfddf58f84f3fc779
   react-native-udp: ccbd878f0f3b968217fc7e3d5eb5839fcaab8b6c
   React-RCTActionSheet: 600b4d10e3aea0913b5a92256d2719c0cdd26d76
   React-RCTAnimation: 791a87558389c80908ed06cc5dfc5e7920dfa360
@@ -542,4 +548,4 @@ SPEC CHECKSUMS:
 
 PODFILE CHECKSUM: 2c1381e3853970d57036bb603be8e1f5a3f7f50c
 
-COCOAPODS: 1.8.4
+COCOAPODS: 1.10.0.rc.1
