@@ -4,7 +4,7 @@ import stores from '../stores/Stores';
 import TransactionRequest from './../models/TransactionRequest';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
-import { doTorRequest } from '../utils/TorUtils';
+import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 
 // keep track of all active calls so we can cancel when appropriate
 const calls: any = {};
@@ -15,7 +15,7 @@ export default class Eclair {
             url,
             password,
             certVerification,
-            enableTor,
+            enableTor
         } = stores.settingsStore;
 
         const id: string = method + JSON.stringify(params);
@@ -31,8 +31,12 @@ export default class Eclair {
         const body = querystring.stringify(params);
 
         if (enableTor === true) {
-            // FIXME body is not json here. Does this blowup on native side ?
-            calls[id] = doTorRequest(url + method, 'POST', body, headers);
+            calls[id] = doTorRequest(
+                url + method,
+                RequestMethod.POST,
+                body,
+                headers
+            );
         } else {
             calls[id] = RNFetchBlob.config({
                 trusty: !certVerification
