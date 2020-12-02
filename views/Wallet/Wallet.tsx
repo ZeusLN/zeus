@@ -108,6 +108,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         TransactionsStore.reset();
         ChannelsStore.reset();
 
+        // This awaits on settings, so should await on Tor being bootstrapped before making requests
         await SettingsStore.getSettings().then(() => {
             this.refresh();
         });

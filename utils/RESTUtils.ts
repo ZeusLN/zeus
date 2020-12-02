@@ -11,7 +11,7 @@ class RESTUtils {
     lndHub: LndHub;
     lnd: LND;
     eclair: Eclair;
-
+    torSocksPort: null | Promise<number> = null;
     constructor() {
         this.spark = new Spark();
         this.clightningREST = new CLightningREST();

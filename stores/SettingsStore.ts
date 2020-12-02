@@ -15,6 +15,7 @@ interface Node {
     implementation?: string;
     certVerification?: boolean;
     onChainAddress?: string;
+    enableTor?: boolean;
 }
 
 interface Settings {
@@ -46,7 +47,6 @@ export const LOCALE_KEYS = [
 export const DEFAULT_THEME = 'light';
 export const DEFAULT_FIAT = 'Disabled';
 export const DEFAULT_LOCALE = 'English';
-
 export default class SettingsStore {
     @observable settings: Settings = {};
     @observable public loading: boolean = false;
@@ -67,6 +67,8 @@ export default class SettingsStore {
     @observable public createAccountSuccess: string;
     @observable public accessToken: string;
     @observable public refreshToken: string;
+    // Tor
+    @observable public enableTor: boolean;
 
     @action
     public changeLocale = (locale: string) => {
@@ -123,13 +125,11 @@ export default class SettingsStore {
     @action
     public async getSettings() {
         this.loading = true;
-
         try {
             // Retrieve the credentials
             const credentials: any = await RNSecureKeyStore.get(
                 'zeus-settings'
             );
-            this.loading = false;
             if (credentials) {
                 this.settings = JSON.parse(credentials);
                 const node: any =
@@ -147,14 +147,16 @@ export default class SettingsStore {
                     this.implementation = node.implementation || 'lnd';
                     this.certVerification = node.certVerification || false;
                     this.chainAddress = node.onChainAddress;
+                    this.enableTor = node.enableTor;
                 }
                 return this.settings;
             } else {
                 console.log('No credentials stored');
             }
         } catch (error) {
-            this.loading = false;
             console.log("Keychain couldn't be accessed!", error);
+        } finally {
+            this.loading = false;
         }
     }
 
