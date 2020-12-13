@@ -62,7 +62,7 @@
     "react-native-secure-key-store": "^2.0.5",
     "react-native-svg": "^9.13.6",
     "react-native-tcp": "^3.3.2",
-    "react-native-tor": "github:Sifir-io/react-native-tor",
+    "react-native-tor": "0.1.0",
     "react-native-udp": "^2.7.0",
     "react-native-unimodules": "^0.7.0",
     "react-native-vector-icons": "6.6.0",
