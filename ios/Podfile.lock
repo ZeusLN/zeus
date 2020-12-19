@@ -200,7 +200,7 @@ PODS:
     - React
   - react-native-safe-area-context (0.6.2):
     - React
-  - react-native-tor (0.1.0):
+  - react-native-tor (0.1.1):
     - React
   - react-native-udp (2.7.0):
     - React
@@ -508,7 +508,7 @@ SPEC CHECKSUMS:
   react-native-camera-kit: ded127598a48890a360fbf5e26cf7c44fcc5b873
   react-native-randombytes: 991545e6eaaf700b4ee384c291ef3d572e0b2ca8
   react-native-safe-area-context: a1d322930b8c5d04ebeb77cc47cc97575ad27203
-  react-native-tor: 46df1b9f9bb513e51cf86c9dfddf58f84f3fc779
+  react-native-tor: bf9deea3540f52abad529a3d93eba25a56581411
   react-native-udp: ccbd878f0f3b968217fc7e3d5eb5839fcaab8b6c
   React-RCTActionSheet: 600b4d10e3aea0913b5a92256d2719c0cdd26d76
   React-RCTAnimation: 791a87558389c80908ed06cc5dfc5e7920dfa360
