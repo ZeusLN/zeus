@@ -184,7 +184,8 @@ export default class AddEditNode extends React.Component<
                 username,
                 password,
                 implementation,
-                certVerification
+                certVerification,
+                enableTor,
             } = node;
 
             this.setState({
@@ -202,7 +203,8 @@ export default class AddEditNode extends React.Component<
                 index,
                 active,
                 saved,
-                newEntry
+                newEntry,
+                enableTor
             });
         } else {
             this.setState({
