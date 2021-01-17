@@ -209,7 +209,7 @@ export default class Eclair {
                     id,
                     payment_hash: paymentHash,
                     payment_preimage: paymentPreimage,
-                    creation_date: parts[0].timestamp,
+                    creation_date: parts[0].timestamp / 1000,
                     value: recipientAmount / 1000,
                     value_sat: recipientAmount / 1000,
                     value_msat: recipientAmount,
