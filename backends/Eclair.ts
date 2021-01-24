@@ -4,13 +4,19 @@ import stores from '../stores/Stores';
 import TransactionRequest from './../models/TransactionRequest';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
+import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 
 // keep track of all active calls so we can cancel when appropriate
 const calls: any = {};
 
 export default class Eclair {
     api = (method: string, params: any = {}) => {
-        let { url, password, certVerification } = stores.settingsStore;
+        let {
+            url,
+            password,
+            certVerification,
+            enableTor
+        } = stores.settingsStore;
 
         const id: string = method + JSON.stringify(params);
         if (calls[id]) {
@@ -18,43 +24,51 @@ export default class Eclair {
         }
 
         url = url.slice(-1) === '/' ? url : url + '/';
+        const headers = {
+            Authorization: 'Basic ' + Base64Utils.btoa(':' + password),
+            'Content-Type': 'application/x-www-form-urlencoded'
+        };
+        const body = querystring.stringify(params);
 
-        calls[id] = RNFetchBlob.config({
-            trusty: !certVerification
-        })
-            .fetch(
-                'POST',
+        if (enableTor === true) {
+            calls[id] = doTorRequest(
                 url + method,
-                {
-                    Authorization: 'Basic ' + Base64Utils.btoa(':' + password),
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                querystring.stringify(params)
-            )
-            .then((response: any) => {
-                delete calls[id];
+                RequestMethod.POST,
+                body,
+                headers
+            );
+        } else {
+            calls[id] = RNFetchBlob.config({
+                trusty: !certVerification
+            })
+                .fetch('POST', url + method, headers, body)
+                .then((response: any) => {
+                    delete calls[id];
 
-                const status = response.info().status;
-                if (status < 300) {
-                    return response.json();
-                } else {
-                    var errorInfo;
-                    try {
-                        errorInfo = response.json();
-                    } catch (err) {
-                        throw new Error(
-                            'response was (' + status + ')' + response.text()
-                        );
+                    const status = response.info().status;
+                    if (status < 300) {
+                        return response.json();
+                    } else {
+                        let errorInfo;
+                        try {
+                            errorInfo = response.json();
+                        } catch (err) {
+                            throw new Error(
+                                'response was (' +
+                                    status +
+                                    ')' +
+                                    response.text()
+                            );
+                        }
+                        throw new Error(errorInfo.error);
                     }
-                    throw new Error(errorInfo.error);
-                }
-            });
-
+                });
+        }
         setTimeout(
             id => {
                 delete calls[id];
             },
-            5000,
+            9000,
             id
         );
 
@@ -263,7 +277,9 @@ export default class Eclair {
         );
     payLightningInvoice = (data: any) => {
         const params: any = { invoice: data.payment_request };
-        if (data.amt) params.amountMsat = Number(data.amt * 1000);
+        if (data.amt) {
+            params.amountMsat = Number(data.amt * 1000);
+        }
         return this.api('payinvoice', params)
             .then((payId: any) => this.api('getsentinfo', { id: payId }))
             .then((attempts: any) => {
@@ -294,7 +310,9 @@ export default class Eclair {
     };
     closeChannel = (urlParams?: Array<string>) => {
         let method = 'close';
-        if (urlParams && urlParams[1]) method = 'forceclose';
+        if (urlParams && urlParams[1]) {
+            method = 'forceclose';
+        }
         return this.api(method, {
             channelId: [urlParams && urlParams[0]]
         }).then(() => ({ chan_close: { success: true } }));
@@ -342,7 +360,9 @@ export default class Eclair {
                 lastMonth += relay.amountIn - relay.amountOut;
             } else if (relay.timestamp > oneWeekAgo) {
                 lastMonth += relay.amountIn - relay.amountOut;
-            } else break;
+            } else {
+                break;
+            }
         }
 
         return {
@@ -413,7 +433,9 @@ export default class Eclair {
                                 break;
                             }
                         }
-                        if (found) break;
+                        if (found) {
+                            break;
+                        }
                     }
                     if (!found) {
                         // an error
@@ -443,7 +465,8 @@ export default class Eclair {
     supportsOnchainSends = () => true;
     supportsKeysend = () => false;
     supportsChannelManagement = () => true;
-    supportsCustomHostProtocol = () => false;
+    supportsCustomHostProtocol = () =>
+        stores.settingsStore.enableTor ? true : false;
     supportsMPP = () => false;
     supportsCoinControl = () => false;
 }
@@ -456,7 +479,9 @@ const mapInvoice = (isPending: any) => ({
     timestamp,
     amount
 }: any) => {
-    if (!isPending) isPending = { [paymentHash]: true };
+    if (!isPending) {
+        isPending = { [paymentHash]: true };
+    }
     return {
         memo: description,
         r_hash: paymentHash,
