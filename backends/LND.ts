@@ -137,6 +137,11 @@ export default class LND {
         if (ws) {
             baseUrl = baseUrl.replace('https', 'wss');
         }
+
+        if (baseUrl[baseUrl.length - 1] === '/') {
+            baseUrl = baseUrl.slice(0, -1);
+        }
+
         return `${baseUrl}${route}`;
     };
 
@@ -162,15 +167,19 @@ export default class LND {
         this.request(route, 'post', data);
     deleteRequest = (route: string) => this.request(route, 'delete', null);
 
-    getTransactions = () => this.getRequest('/v1/transactions');
+    getTransactions = () =>
+        this.getRequest('/v1/transactions').then((data: any) => ({
+            transactions: data.transactions.reverse()
+        }));
     getChannels = () => this.getRequest('/v1/channels');
     getBlockchainBalance = () => this.getRequest('/v1/balance/blockchain');
     getLightningBalance = () => this.getRequest('/v1/balance/channels');
-    sendCoins = (data: any) => this.postRequest('/v1/transactions', {
-        addr: data.addr,
-        sat_per_byte: data.sat_per_byte,
-        amount: data.amount
-    });
+    sendCoins = (data: any) =>
+        this.postRequest('/v1/transactions', {
+            addr: data.addr,
+            sat_per_byte: data.sat_per_byte,
+            amount: data.amount
+        });
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
     getInvoices = () =>
         this.getRequest('/v1/invoices?reversed=true&num_max_invoices=100');

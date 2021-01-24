@@ -13,7 +13,7 @@ const btcBechTestnet = /^(bc1|bcrt1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
 const btcBechPubkeyScriptHashTestnet = /^(tb1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
 
 /* lndhub */
-const lndHubAddress = /^(lndhub:\/\/)[a-hA-H-0-9]{1,24}(:)[a-hA-H-0-9]{18,64}(@https?:\/\/[\w\.]+)?$/;
+const lndHubAddress = /^(lndhub:\/\/)\w+(:)\w+(@https?:\/\/[\w\.]+(:\d{1,5})?([\/\w]+)?)?$/;
 
 class AddressUtils {
     processSendAddress = (input: string) => {

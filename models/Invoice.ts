@@ -99,7 +99,6 @@ export default class Invoice extends BaseModel {
         return Number(this.num_satoshis || 0);
     }
 
-    // return amount in satoshis
     @computed public get listDate(): string {
         return this.isPaid
             ? this.settleDate

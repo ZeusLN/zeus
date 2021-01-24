@@ -53,7 +53,8 @@ export default class MainPane extends React.Component<
             lightningBalance,
             pendingOpenBalance
         } = BalanceStore;
-        const { host, settings, implementation } = SettingsStore;
+        const { settings, implementation } = SettingsStore;
+        const nodeAddress = SettingsStore.host || SettingsStore.url;
         const { theme, lurkerMode } = settings;
         const loading = NodeInfoStore.loading || BalanceStore.loading;
 
@@ -201,7 +202,7 @@ export default class MainPane extends React.Component<
 
         const NodeInfoBadge = () => (
             <View style={styles.nodeInfo}>
-                {host && host.includes('.onion') ? (
+                {nodeAddress && nodeAddress.includes('.onion') ? (
                     <TouchableOpacity
                         onPress={() => navigation.navigate('NodeInfo')}
                     >
@@ -211,7 +212,7 @@ export default class MainPane extends React.Component<
                         />
                     </TouchableOpacity>
                 ) : null}
-                {host && !host.includes('.onion') ? (
+                {nodeAddress && !nodeAddress.includes('.onion') ? (
                     <Badge
                         onPress={() => navigation.navigate('NodeInfo')}
                         value={infoValue}
@@ -279,7 +280,7 @@ export default class MainPane extends React.Component<
                         )}
                         <View style={styles.buttons}>
                             <Button
-                                title="Send"
+                                title={localeString('general.send')}
                                 icon={{
                                     name: 'arrow-upward',
                                     size: 25,
@@ -300,7 +301,7 @@ export default class MainPane extends React.Component<
                                 raised={theme !== 'dark'}
                             />
                             <Button
-                                title="Receive"
+                                title={localeString('general.receive')}
                                 icon={{
                                     name: 'arrow-downward',
                                     size: 25,
@@ -322,7 +323,7 @@ export default class MainPane extends React.Component<
                                 raised={theme !== 'dark'}
                             />
                             <Button
-                                title="Scan"
+                                title={localeString('general.scan')}
                                 icon={{
                                     name: 'crop-free',
                                     size: 25,
