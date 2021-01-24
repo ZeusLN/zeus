@@ -75,8 +75,8 @@ export default class About extends React.Component<AboutProps, {}> {
                 >
                     {localeString('views.Settings.About.thanks')}: the Human
                     Rights Foundation, Matt Odell, Jameson Lopp, fiatjaf, Suheb,
-                    shesek, k3tan, __B__T__C__, Zap, Blue Wallet, Ride the
-                    Lightning, Blockstream,{' '}
+                    shesek, k3tan, __B__T__C__, gabidi, Sifir Apps, Zap, Blue
+                    Wallet, Ride the Lightning, Blockstream,{' '}
                     {`${localeString('views.Settings.About.and')} `}
                     Lightning Labs.
                 </Text>
