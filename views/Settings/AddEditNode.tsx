@@ -46,6 +46,7 @@ interface AddEditNodeState {
     suggestImport: string;
     showLndHubModal: boolean;
     showCertModal: boolean;
+    enableTor: boolean;
 }
 
 @inject('SettingsStore')
@@ -66,6 +67,7 @@ export default class AddEditNode extends React.Component<
         newEntry: false,
         implementation: 'lnd',
         certVerification: false,
+        enableTor: false,
         existingAccount: false,
         suggestImport: '',
         url: '',
@@ -149,6 +151,14 @@ export default class AddEditNode extends React.Component<
         this.isComponentMounted = false;
     }
 
+    componentDidUpdate() {
+        // auto set tor enabled if onion
+        if (this.state.host?.length && this.state.host.endsWith('.onion')) {
+            if (this.state.enableTor === false) {
+                this.setState(state => ({ ...state, enableTor: true }));
+            }
+        }
+    }
     UNSAFE_componentWillReceiveProps(nextProps: any) {
         this.initFromProps(nextProps);
     }
@@ -174,7 +184,8 @@ export default class AddEditNode extends React.Component<
                 username,
                 password,
                 implementation,
-                certVerification
+                certVerification,
+                enableTor,
             } = node;
 
             this.setState({
@@ -192,7 +203,8 @@ export default class AddEditNode extends React.Component<
                 index,
                 active,
                 saved,
-                newEntry
+                newEntry,
+                enableTor
             });
         } else {
             this.setState({
@@ -209,6 +221,7 @@ export default class AddEditNode extends React.Component<
             host,
             port,
             url,
+            enableTor,
             lndhubUrl,
             existingAccount,
             macaroonHex,
@@ -240,7 +253,8 @@ export default class AddEditNode extends React.Component<
             username,
             password,
             implementation,
-            certVerification
+            certVerification,
+            enableTor,
         };
 
         let nodes: any;
@@ -348,6 +362,7 @@ export default class AddEditNode extends React.Component<
             newEntry,
             implementation,
             certVerification,
+            enableTor,
             existingAccount,
             suggestImport,
             showLndHubModal,
@@ -1099,6 +1114,22 @@ export default class AddEditNode extends React.Component<
                         </>
                     )}
 
+                    <View
+                        style={{
+                            marginTop: 5
+                        }}
+                    >
+                        <CheckBox
+                            title={'Use Tor'}
+                            checked={enableTor}
+                            onPress={() =>
+                                this.setState({
+                                    enableTor: !enableTor,
+                                    saved: false
+                                })
+                            }
+                        />
+                    </View>
                     <View
                         style={{
                             marginTop: 5

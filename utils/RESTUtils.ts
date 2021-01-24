@@ -11,7 +11,6 @@ class RESTUtils {
     lndHub: LndHub;
     lnd: LND;
     eclair: Eclair;
-
     constructor() {
         this.spark = new Spark();
         this.clightningREST = new CLightningREST();
