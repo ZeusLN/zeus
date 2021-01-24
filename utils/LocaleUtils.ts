@@ -39,7 +39,7 @@ export function localeString(localeString: string): any {
             return Slovak[localeString] || English[localeString];
         case 'Češka':
             return Czech[localeString] || English[localeString];
-        case 'Deutsche':
+        case 'Deutsch':
             return German[localeString] || English[localeString];
         case 'Ελληνικά':
             return Greek[localeString] || English[localeString];

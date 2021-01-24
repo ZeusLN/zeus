@@ -7,10 +7,12 @@ class LndConnectUtils {
         const params = input.split('?')[1];
 
         let result: any = {};
-        params.split('&').forEach(function(part) {
-            const item = part.split('=');
-            result[item[0]] = decodeURIComponent(item[1]);
-        });
+        if (params) {
+            params.split('&').forEach(function(part) {
+                const item = part.split('=');
+                result[item[0]] = decodeURIComponent(item[1]);
+            });
+        }
 
         // is IPv6
         if (input.includes('[')) {

@@ -97,6 +97,10 @@ If you are making cosmetic changes please test on both Android and iOS as things
 
 Do not directly modify the files in `/locales` unless you are adding new copy to the app in English. Instead, translators and reviewers should visit out [Transifex page](https://www.transifex.com/ZeusLN/zeus/) and request a role on the language you'd like to contribute to.
 
+## Release + Commit Verification
+
+All releases and all maintainer commits as of January 24, 2020 are signed by key `A28823E23E1A70BF` (zeusln@tutanota.com). The key can be found [in this repo] (https://github.com/ZeusLN/zeus/blob/master/PGP.txt) and [on the ZeusLN.app website](https://zeusln.app/PGP.txt). 
+
 ## Donations
 
 If you'd like to help us with the cost of running Zeus project (iOS developer account, Google Play developer account, hosting) you can send a payment to us via PayNym
