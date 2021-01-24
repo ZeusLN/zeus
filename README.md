@@ -1,5 +1,5 @@
 # Zeus
-A mobile Bitcoin/Lightning app for lnd, c-lightning, and eclair node operators ⚡️
+A mobile Bitcoin/Lightning app for lnd, c-lightning, and Eclair node operators ⚡️
 
 *Notice*: If you are looking for Zeus Server, the Lightning-based Point-of-Sale solution (unrelated to this project), please visit [puzzle/zeus](https://github.com/puzzle/zeus).
 
@@ -38,7 +38,7 @@ If you would like to learn more about running your own node we suggest checking 
 We recommend reading
 [this guide](https://medium.com/lightning-power-users/windows-macos-lightning-network-284bd5034340).
 * If you're looking to run a full node on a dedicated piece of hardware like a Raspberry Pi, check out Stadicus'
-[Raspibolt Tutorial](https://github.com/Stadicus/guides/tree/master/raspibolt) or
+[Raspibolt Tutorial](https://stadicus.github.io/RaspiBolt/) or
 [RaspiBlitz](https://github.com/rootzoll/raspiblitz/) or
 [myNode](https://mynodebtc.com/).
 
@@ -46,7 +46,7 @@ We recommend reading
 
 On Android Zeus has support for connecting to you node entirely over the Tor network. You can refer to these guides to set up a Tor hidden service on your lnd node. The instructions are generally interchangable and typically only require you to change your Tor path.
 
-* [Zeus over Tor guide for RaspiBolt](http://raspibolt.com/raspibolt_72_zeus-over-tor.html)
+* [Zeus over Tor guide for RaspiBolt](https://stadicus.github.io/RaspiBolt/raspibolt_72_zeus-over-tor.html)
 * [Zeus over Tor guide for FreeNAS by Seth586](https://github.com/seth586/guides/blob/master/FreeNAS/wallets/zeusln.md)
 * [Zeus over Tor guide for RaspiBlitz by openoms](https://github.com/openoms/bitcoin-tutorials/blob/master/Zeus_to_RaspiBlitz_through_Tor.md)
 

@@ -31,7 +31,7 @@ export default class Eclair {
                 },
                 querystring.stringify(params)
             )
-            .then(response => {
+            .then((response: any) => {
                 delete calls[id];
 
                 const status = response.info().status;
@@ -49,6 +49,14 @@ export default class Eclair {
                     throw new Error(errorInfo.error);
                 }
             });
+
+        setTimeout(
+            id => {
+                delete calls[id];
+            },
+            5000,
+            id
+        );
 
         return calls[id];
     };
@@ -78,15 +86,16 @@ export default class Eclair {
                     remote_pubkey: chan.data.commitments.remoteParams.nodeId,
                     channel_point: null,
                     chan_id: chan.channelId,
-                    capacity: Number(
-                        chan.data.commitments.localCommit.spec.toLocal +
-                            chan.data.commitments.localCommit.spec.toRemote
+                    capacity: Math.round(
+                        (chan.data.commitments.localCommit.spec.toLocal +
+                            chan.data.commitments.localCommit.spec.toRemote) /
+                            1000
                     ).toString(),
-                    local_balance: Number(
-                        chan.data.commitments.localCommit.spec.toLocal
+                    local_balance: Math.round(
+                        chan.data.commitments.localCommit.spec.toLocal / 1000
                     ).toString(),
-                    remote_balance: Number(
-                        chan.data.commitments.localCommit.spec.toRemote
+                    remote_balance: Math.round(
+                        chan.data.commitments.localCommit.spec.toRemote / 1000
                     ).toString(),
                     total_satoshis_sent: null,
                     total_satoshis_received: null,
@@ -109,25 +118,30 @@ export default class Eclair {
         });
     getLightningBalance = () =>
         this.api('channels').then((channels: any) => ({
-            balance: channels
-                .filter(
-                    (chan: any) =>
-                        chan.state === 'NORMAL' || chan.state == 'OFFLINE'
-                )
-                .reduce(
-                    (acc: any, o: any) =>
-                        acc + o.data.commitments.localCommit.spec.toLocal,
-                    0
-                ),
-            pending_open_balance: channels
-                .filter(
-                    (chan: any) => chan.state === 'WAIT_FOR_FUNDING_CONFIRMED'
-                )
-                .reduce(
-                    (acc: any, o: any) =>
-                        acc + o.data.commitments.localCommit.spec.toLocal,
-                    0
-                )
+            balance: Math.round(
+                channels
+                    .filter(
+                        (chan: any) =>
+                            chan.state === 'NORMAL' || chan.state == 'OFFLINE'
+                    )
+                    .reduce(
+                        (acc: any, o: any) =>
+                            acc + o.data.commitments.localCommit.spec.toLocal,
+                        0
+                    ) / 1000
+            ),
+            pending_open_balance: Math.round(
+                channels
+                    .filter(
+                        (chan: any) =>
+                            chan.state === 'WAIT_FOR_FUNDING_CONFIRMED'
+                    )
+                    .reduce(
+                        (acc: any, o: any) =>
+                            acc + o.data.commitments.localCommit.spec.toLocal,
+                        0
+                    ) / 1000
+            )
         }));
     sendCoins = (data: TransactionRequest) =>
         this.api('sendonchain', {
@@ -137,17 +151,29 @@ export default class Eclair {
         }).then((txid: any) => ({ txid }));
     getMyNodeInfo = () =>
         this.api('getinfo').then(
-            ({ version, nodeId, alias, network, publicAddresses }: any) => ({
+            ({
+                version,
+                nodeId,
+                alias,
+                network,
+                publicAddresses,
+                blockHeight
+            }: any) => ({
                 uris: publicAddresses.map((addr: any) => nodeId + '@' + addr),
                 alias,
                 version,
+                block_height: blockHeight,
                 identity_pubkey: nodeId,
                 testnet: network === 'testnet',
                 regtest: network === 'regtest'
             })
         );
     getInvoices = () => {
-        const since = new Date().getTime() / 1000 - 60 * 60 * 24 * 90; // 90 days ago
+        // 90 days ago
+        const since = Math.round(
+            new Date().getTime() / 1000 - 60 * 60 * 24 * 90
+        );
+
         return Promise.all([
             this.api('listinvoices', { from: since }),
             this.api('listpendinginvoices', { from: since })
@@ -331,7 +357,6 @@ export default class Eclair {
                       1000000
                     : null
             })),
-            total_fee_sum: allTimes / 1000,
             day_fee_sum: lastDay / 1000,
             week_fee_sum: lastWeek / 1000,
             month_fee_sum: lastMonth / 1000
@@ -420,6 +445,7 @@ export default class Eclair {
     supportsChannelManagement = () => true;
     supportsCustomHostProtocol = () => false;
     supportsMPP = () => false;
+    supportsCoinControl = () => false;
 }
 
 const mapInvoice = (isPending: any) => ({
@@ -427,6 +453,7 @@ const mapInvoice = (isPending: any) => ({
     serialized,
     paymentHash,
     expiry,
+    timestamp,
     amount
 }: any) => {
     if (!isPending) isPending = { [paymentHash]: true };
@@ -439,6 +466,7 @@ const mapInvoice = (isPending: any) => ({
         creation_date: null,
         settle_date: null,
         payment_request: serialized,
+        timestamp,
         expiry,
         amt_paid: isPending[paymentHash] ? 0 : amount / 1000,
         amt_paid_sat: isPending[paymentHash] ? 0 : amount / 1000,

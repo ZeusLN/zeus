@@ -21,6 +21,7 @@ interface LnurlPayProps {
 interface LnurlPayState {
     amount: string;
     domain: string;
+    comment: string;
 }
 
 @inject('InvoicesStore', 'SettingsStore', 'LnurlPayStore')
@@ -37,7 +38,8 @@ export default class LnurlPay extends React.Component<
         } catch (err) {
             this.state = {
                 amount: '',
-                domain: ''
+                domain: '',
+                comment: ''
             };
 
             Alert.alert(
@@ -55,17 +57,19 @@ export default class LnurlPay extends React.Component<
 
         return {
             amount: Math.floor(lnurl.minSendable / 1000).toString(),
-            domain: lnurl.domain
+            domain: lnurl.domain,
+            comment: ''
         };
     }
 
     sendValues() {
         const { navigation, InvoicesStore, LnurlPayStore } = this.props;
-        const { domain, amount } = this.state;
+        const { domain, amount, comment } = this.state;
         const lnurl = navigation.getParam('lnurlParams');
         const u = url.parse(lnurl.callback);
         const qs = querystring.parse(u.query);
         qs.amount = parseInt((parseFloat(amount) * 1000).toString());
+        qs.comment = comment;
         u.search = querystring.stringify(qs);
         u.query = querystring.stringify(qs);
 
@@ -135,7 +139,7 @@ export default class LnurlPay extends React.Component<
 
     render() {
         const { SettingsStore, navigation } = this.props;
-        const { amount, domain } = this.state;
+        const { amount, domain, comment } = this.state;
         const { settings } = SettingsStore;
         const { theme } = settings;
         const lnurl = navigation.getParam('lnurlParams');
@@ -186,6 +190,7 @@ export default class LnurlPay extends React.Component<
                                   lnurl.minSendable / 1000
                               )}--${Math.floor(lnurl.maxSendable / 1000)})`
                             : ''}
+                        {':'}
                     </Text>
                     <TextInput
                         value={amount}
@@ -203,8 +208,33 @@ export default class LnurlPay extends React.Component<
                                 ? styles.textInputDark
                                 : styles.textInput
                         }
-                        placeholderTextColor="gray"
                     />
+                    {lnurl.commentAllowed > 0 ? (
+                        <>
+                            <Text
+                                style={{
+                                    color: theme === 'dark' ? 'white' : 'black'
+                                }}
+                            >
+                                {localeString(
+                                    'views.LnurlPay.LnurlPay.comment'
+                                ) + ` (${lnurl.commentAllowed} char)`}
+                                :
+                            </Text>
+                            <TextInput
+                                value={comment}
+                                onChangeText={(text: string) => {
+                                    this.setState({ comment: text });
+                                }}
+                                numberOfLines={1}
+                                style={
+                                    theme === 'dark'
+                                        ? styles.textInputDark
+                                        : styles.textInput
+                                }
+                            />
+                        </>
+                    ) : null}
                     <View style={styles.button}>
                         <Button
                             title="Confirm"

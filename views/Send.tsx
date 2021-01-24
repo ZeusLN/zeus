@@ -105,18 +105,13 @@ export default class Send extends React.Component<SendProps, SendState> {
         this.setState({ utxos, amount: 'all', utxoBalance });
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
-        const { navigation, SettingsStore } = nextProps;
-        const { implementation } = SettingsStore;
+        const { navigation } = nextProps;
         const destination = navigation.getParam('destination', null);
         const amount = navigation.getParam('amount', null);
         const transactionType = navigation.getParam('transactionType', null);
 
         if (transactionType === 'Lightning') {
-            if (implementation === 'lndhub') {
-                this.props.InvoicesStore.getPayReqLocal(destination);
-            } else {
-                this.props.InvoicesStore.getPayReq(destination);
-            }
+            this.props.InvoicesStore.getPayReq(destination);
         }
 
         this.setState({
