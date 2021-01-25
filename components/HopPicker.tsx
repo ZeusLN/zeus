@@ -103,7 +103,13 @@ export default class ChannelPicker extends React.Component<
     }
 
     render() {
-        const { title, selectedValue, onValueChange, ChannelsStore, UnitsStore } = this.props;
+        const {
+            title,
+            selectedValue,
+            onValueChange,
+            ChannelsStore,
+            UnitsStore
+        } = this.props;
         const {
             channelSelected,
             channelSet,
@@ -181,12 +187,16 @@ export default class ChannelPicker extends React.Component<
                                             const displayName =
                                                 item.alias ||
                                                 (nodes[item.remote_pubkey] &&
-                                                    nodes[item.remote_pubkey].alias) ||
+                                                    nodes[item.remote_pubkey]
+                                                        .alias) ||
                                                 item.remote_pubkey ||
                                                 item.channelId;
 
                                             const channelTitle = lurkerMode
-                                                ? PrivacyUtils.hideValue(displayName, 8)
+                                                ? PrivacyUtils.hideValue(
+                                                      displayName,
+                                                      8
+                                                  )
                                                 : displayName;
 
                                             const data = new Identicon(
@@ -196,88 +206,111 @@ export default class ChannelPicker extends React.Component<
 
                                             const localBalanceDisplay = lurkerMode
                                                 ? PrivacyUtils.hideValue(
-                                                      getAmount(item.localBalance || 0),
+                                                      getAmount(
+                                                          item.localBalance || 0
+                                                      ),
                                                       7,
                                                       true
                                                   )
-                                                : getAmount(item.localBalance || 0);
+                                                : getAmount(
+                                                      item.localBalance || 0
+                                                  );
                                             const remoteBalanceDisplay = lurkerMode
                                                 ? PrivacyUtils.hideValue(
-                                                      getAmount(item.remoteBalance || 0),
+                                                      getAmount(
+                                                          item.remoteBalance ||
+                                                              0
+                                                      ),
                                                       7,
                                                       true
                                                   )
-                                                : getAmount(item.remoteBalance || 0);
+                                                : getAmount(
+                                                      item.remoteBalance || 0
+                                                  );
 
-                                          return (
-                                            <>
-                                                <ListItem
-                                                    title={channelTitle}
-                                                    subtitle={`${
-                                                        !item.isActive
-                                                            ? `${localeString(
-                                                                  'views.Wallet.Channels.inactive'
-                                                              )} | `
-                                                            : ''
-                                                    }${
-                                                        item.private
-                                                            ? `${localeString(
-                                                                  'views.Wallet.Channels.private'
-                                                              )} | `
-                                                            : ''
-                                                    }${localeString(
-                                                        'views.Wallet.Channels.local'
-                                                    )}: ${units &&
-                                                        localBalanceDisplay} | ${localeString(
-                                                        'views.Wallet.Channels.remote'
-                                                    )}: ${units && remoteBalanceDisplay}`}
-                                                    containerStyle={{
-                                                        borderBottomWidth: 0,
-                                                        backgroundColor:
-                                                            theme === 'dark'
-                                                                ? 'black'
-                                                                : 'white'
-                                                    }}
-                                                    leftElement={
-                                                        channelPicked === item.channelId
-                                                            ? theme === 'dark'
-                                                                ? Icon(SelectedDark)
-                                                                : Icon(
-                                                                      SelectedLight
+                                            return (
+                                                <>
+                                                    <ListItem
+                                                        title={channelTitle}
+                                                        subtitle={`${
+                                                            !item.isActive
+                                                                ? `${localeString(
+                                                                      'views.Wallet.Channels.inactive'
+                                                                  )} | `
+                                                                : ''
+                                                        }${
+                                                            item.private
+                                                                ? `${localeString(
+                                                                      'views.Wallet.Channels.private'
+                                                                  )} | `
+                                                                : ''
+                                                        }${localeString(
+                                                            'views.Wallet.Channels.local'
+                                                        )}: ${units &&
+                                                            localBalanceDisplay} | ${localeString(
+                                                            'views.Wallet.Channels.remote'
+                                                        )}: ${units &&
+                                                            remoteBalanceDisplay}`}
+                                                        containerStyle={{
+                                                            borderBottomWidth: 0,
+                                                            backgroundColor:
+                                                                theme === 'dark'
+                                                                    ? 'black'
+                                                                    : 'white'
+                                                        }}
+                                                        leftElement={
+                                                            channelPicked ===
+                                                            item.channelId
+                                                                ? theme ===
+                                                                  'dark'
+                                                                    ? Icon(
+                                                                          SelectedDark
+                                                                      )
+                                                                    : Icon(
+                                                                          SelectedLight
+                                                                      )
+                                                                : ChannelIcon(
+                                                                      `data:image/png;base64,${data}`
                                                                   )
-                                                            : ChannelIcon(
-                                                                `data:image/png;base64,${data}`
+                                                        }
+                                                        onPress={() =>
+                                                            this.toggleItem(
+                                                                item
                                                             )
-                                                    }
-                                                    onPress={() =>
-                                                        this.toggleItem(item)
-                                                    }
-                                                    titleStyle={{
-                                                        color:
-                                                            theme === 'dark'
-                                                                ? 'white'
-                                                                : 'black'
-                                                    }}
-                                                    subtitleStyle={{
-                                                        color:
-                                                            theme === 'dark'
-                                                                ? 'gray'
-                                                                : '#8a8999'
-                                                    }}
-                                                />
-                                                <BalanceSlider
-                                                    localBalance={
-                                                        lurkerMode ? 50 : item.localBalance
-                                                    }
-                                                    remoteBalance={
-                                                        lurkerMode ? 50 : item.remoteBalance
-                                                    }
-                                                    theme={theme}
-                                                    list
-                                                />
-                                            </>
-                                        )}}
-                                        keyExtractor={(item: any) => item.txid}
+                                                        }
+                                                        titleStyle={{
+                                                            color:
+                                                                theme === 'dark'
+                                                                    ? 'white'
+                                                                    : 'black'
+                                                        }}
+                                                        subtitleStyle={{
+                                                            color:
+                                                                theme === 'dark'
+                                                                    ? 'gray'
+                                                                    : '#8a8999'
+                                                        }}
+                                                    />
+                                                    <BalanceSlider
+                                                        localBalance={
+                                                            lurkerMode
+                                                                ? 50
+                                                                : item.localBalance
+                                                        }
+                                                        remoteBalance={
+                                                            lurkerMode
+                                                                ? 50
+                                                                : item.remoteBalance
+                                                        }
+                                                        theme={theme}
+                                                        list
+                                                    />
+                                                </>
+                                            );
+                                        }}
+                                        keyExtractor={(item: any) =>
+                                            item.channelId
+                                        }
                                         onEndReachedThreshold={50}
                                         refreshing={loading}
                                         onRefresh={() => getChannels()}
@@ -292,14 +325,26 @@ export default class ChannelPicker extends React.Component<
                                                 const {
                                                     channelSelected
                                                 } = this.state;
+
+                                                const displayName =
+                                                    channelSelected.alias ||
+                                                    (nodes[
+                                                        channelSelected
+                                                            .remote_pubkey
+                                                    ] &&
+                                                        nodes[
+                                                            channelSelected
+                                                                .remote_pubkey
+                                                        ].alias) ||
+                                                    channelSelected.remote_pubkey ||
+                                                    channelSelected.channelId;
+
                                                 this.setState({
                                                     showChannelModal: false,
-                                                    valueSet: channelSelected.channelId
+                                                    valueSet: displayName
                                                 });
 
-                                                onValueChange(
-                                                    channelSelected
-                                                );
+                                                onValueChange(channelSelected);
                                             }}
                                         />
                                     </View>
@@ -386,9 +431,7 @@ export default class ChannelPicker extends React.Component<
                                     color: theme === 'dark' ? 'white' : 'black'
                                 }}
                             >
-                                {valueSet
-                                    ? valueSet
-                                    : 'No selection'}
+                                {valueSet ? valueSet : 'No selection'}
                             </Text>
                         </TouchableOpacity>
                     </View>
