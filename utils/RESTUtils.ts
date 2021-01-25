@@ -82,6 +82,7 @@ class RESTUtils {
     supportsCustomHostProtocol = () => this.call('supportsCustomHostProtocol');
     supportsMPP = () => this.call('supportsMPP');
     supportsCoinControl = () => this.call('supportsCoinControl');
+    supportsHopPicking = () => this.call('supportsHopPicking');
 }
 
 const restUtils = new RESTUtils();
