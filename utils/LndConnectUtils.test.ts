@@ -8,7 +8,7 @@ describe('LndConnectUtils', () => {
                     'lndconnect://8.8.0.0:2056?&macaroon=Z28gc2hvcnR5'
                 )
             ).toEqual({
-                host: '8.8.0.0',
+                host: 'https://8.8.0.0',
                 macaroonHex: '676F2073686F727479',
                 port: '2056'
             });
@@ -20,7 +20,7 @@ describe('LndConnectUtils', () => {
                     'lndconnect://[2604:2000::]:2056?&macaroon=Z28gc2hvcnR5'
                 )
             ).toEqual({
-                host: '[2604:2000::]',
+                host: 'https://[2604:2000::]',
                 macaroonHex: '676F2073686F727479',
                 port: '2056'
             });
@@ -32,7 +32,7 @@ describe('LndConnectUtils', () => {
                     'lndconnect://[2604:2000::]:2058?macaroon=Z28gc2hvcnR5&cert=a&otherParam=B'
                 )
             ).toEqual({
-                host: '[2604:2000::]',
+                host: 'https://[2604:2000::]',
                 macaroonHex: '676F2073686F727479',
                 port: '2058'
             });
@@ -44,7 +44,7 @@ describe('LndConnectUtils', () => {
                     'lndconnect://8.8.8.8:2059?otherParam=B&macaroon=Z28gc2hvcnR5&cert=asfdaa'
                 )
             ).toEqual({
-                host: '8.8.8.8',
+                host: 'https://8.8.8.8',
                 macaroonHex: '676F2073686F727479',
                 port: '2059'
             });
