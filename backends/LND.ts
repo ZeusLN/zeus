@@ -144,9 +144,7 @@ export default class LND {
         route: string,
         ws?: boolean
     ) => {
-        let baseUrl = this.supportsCustomHostProtocol()
-            ? `${host}${port ? ':' + port : ''}`
-            : `https://${host}${port ? ':' + port : ''}`;
+        let baseUrl = `${host}${port ? ':' + port : ''}`;
 
         if (ws) {
             baseUrl = baseUrl.replace('https', 'wss');
@@ -262,8 +260,6 @@ export default class LND {
     supportsOnchainSends = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
-    supportsCustomHostProtocol = () =>
-        stores.settingsStore.enableTor ? true : false;
     supportsMPP = () => this.supports('v0.11.0');
     supportsCoinControl = () => false;
 }
