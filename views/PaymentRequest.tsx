@@ -472,7 +472,7 @@ export default class PaymentRequest extends React.Component<
                                 </React.Fragment>
                             )}
 
-                            {!!pay_req && (
+                            {!!pay_req && RESTUtils.supportsHopPicking() && (
                                 <>
                                     {
                                         <HopPicker
