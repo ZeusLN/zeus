@@ -98,7 +98,9 @@ export default class TransactionsStore {
         pubkey?: string | null,
         max_parts?: string,
         timeout_seconds?: string,
-        fee_limit_sat?: string
+        fee_limit_sat?: string,
+        outgoing_chan_ids?: Array<string>,
+        last_hop_pubkey?: string
     ) => {
         this.loading = true;
         this.error_msg = null;
@@ -110,6 +112,12 @@ export default class TransactionsStore {
         this.status = null;
 
         let data: any;
+        if (payment_request) {
+            data.payment_request = payment_request;
+        }
+        if (amount) {
+            data.amt = amount;
+        }
         if (pubkey) {
             const preimage = randomBytes(preimageByteLength);
             const secret = preimage.toString('base64');
@@ -117,23 +125,9 @@ export default class TransactionsStore {
                 'base64'
             );
 
-            data = {
-                amt: amount,
-                dest_string: pubkey,
-                dest_custom_records: { [keySendPreimageType]: secret },
-                payment_hash
-            };
-        } else {
-            if (amount) {
-                data = {
-                    amt: amount,
-                    payment_request
-                };
-            } else {
-                data = {
-                    payment_request
-                };
-            }
+            data.dest_string = pubkey;
+            data.dest_custom_records = { [keySendPreimageType]: secret };
+            data.payment_hash = payment_hash;
         }
 
         // multi-path payments
@@ -141,6 +135,15 @@ export default class TransactionsStore {
             data.max_parts = max_parts;
             data.timeout_seconds = timeout_seconds;
             data.fee_limit_sat = Number(fee_limit_sat);
+        }
+
+        // first hop
+        if (outgoing_chan_ids) {
+            data.outgoing_chan_ids = outgoing_chan_ids;
+        }
+        // last hop
+        if (last_hop_pubkey) {
+            data.last_hop_pubkey = last_hop_pubkey;
         }
 
         const payFunc = max_parts
