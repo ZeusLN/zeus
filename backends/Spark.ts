@@ -13,7 +13,7 @@ export default class Spark {
             url,
             accessKey,
             certVerification,
-            enableTor,
+            enableTor
         } = stores.settingsStore;
 
         const id = rpcmethod + JSON.stringify(param) + JSON.stringify(range);
@@ -316,4 +316,5 @@ export default class Spark {
         stores.settingsStore.enableTor ? true : false;
     supportsMPP = () => false;
     supportsCoinControl = () => false;
+    supportsHopPicking = () => false;
 }

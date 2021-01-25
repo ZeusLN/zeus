@@ -469,6 +469,7 @@ export default class Eclair {
         stores.settingsStore.enableTor ? true : false;
     supportsMPP = () => false;
     supportsCoinControl = () => false;
+    supportsHopPicking = () => false;
 }
 
 const mapInvoice = (isPending: any) => ({
