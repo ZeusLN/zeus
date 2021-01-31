@@ -53,6 +53,15 @@ describe('AddressUtils', () => {
                 )
             ).toBeFalsy();
         });
+        it('validates BECH32 variations properly', () => {
+            // handle all caps BECH32 addresses
+            expect(
+                AddressUtils.isValidBitcoinAddress(
+                    'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU',
+                    false
+                )
+            ).toBeTruthy();
+        });
     });
 
     describe('isValidLightningPaymentRequest', () => {
@@ -198,6 +207,75 @@ describe('AddressUtils', () => {
                         'lndhub://123:9b9537fe3de0dc2a9c6b5b6475dd4047d5a4cf16e531fd4a3e37efb68c99b5d6@https://lntxbot.bigsun.xyz'
                     )
                 ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLNDHubAddress(
+                        'lndhub://9a1e4e972f732352c75e:4a1e4e172f732352c75e@https://test-domain.org:4324'
+                    )
+                ).toBeTruthy();
+            });
+            it('processes all BECH32 send address variations', () => {
+                // with fee
+                expect(
+                    AddressUtils.processSendAddress(
+                        'BITCOIN:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU?amount=0.00170003'
+                    )
+                ).toEqual({
+                    value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU',
+                    amount: '170003' // amount in sats
+                });
+                expect(
+                    AddressUtils.processSendAddress(
+                        'BITCOIN:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                    )
+                ).toEqual({
+                    value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                    amount: '170003' // amount in sats
+                });
+                expect(
+                    AddressUtils.processSendAddress(
+                        'bitcoin:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU?amount=0.00170003'
+                    )
+                ).toEqual({
+                    value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU',
+                    amount: '170003' // amount in sats
+                });
+                expect(
+                    AddressUtils.processSendAddress(
+                        'bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                    )
+                ).toEqual({
+                    value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                    amount: '170003' // amount in sats
+                });
+                // without fee
+                expect(
+                    AddressUtils.processSendAddress(
+                        'BITCOIN:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU'
+                    )
+                ).toEqual({
+                    value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU'
+                });
+                expect(
+                    AddressUtils.processSendAddress(
+                        'BITCOIN:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
+                    )
+                ).toEqual({
+                    value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
+                });
+                expect(
+                    AddressUtils.processSendAddress(
+                        'bitcoin:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU'
+                    )
+                ).toEqual({
+                    value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU'
+                });
+                expect(
+                    AddressUtils.processSendAddress(
+                        'bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
+                    )
+                ).toEqual({
+                    value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
+                });
             });
         });
 
@@ -208,6 +286,7 @@ describe('AddressUtils', () => {
                         'lndhub://9a1e4e972f732352c75e:4a1e4e172f732352c75e'
                     )
                 ).toEqual({
+                    host: 'https://lndhub.herokuapp.com',
                     username: '9a1e4e972f732352c75e',
                     password: '4a1e4e172f732352c75e'
                 });
