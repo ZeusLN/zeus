@@ -21,6 +21,12 @@ describe('VersionUtils', () => {
                 minorVersion: null,
                 releaseVersion: null
             });
+            expect(VersionUtils.parseVersion('v0.0.2')).toEqual({
+                coreVersion: 0,
+                mainVersion: 0,
+                minorVersion: 2,
+                releaseVersion: null
+            });
         });
     });
 
