@@ -78,8 +78,6 @@ class RESTUtils {
     supportsOnchainSends = () => this.call('supportsOnchainSends');
     supportsKeysend = () => this.call('supportsKeysend');
     supportsChannelManagement = () => this.call('supportsChannelManagement');
-    // let users specify http/https
-    supportsCustomHostProtocol = () => this.call('supportsCustomHostProtocol');
     supportsMPP = () => this.call('supportsMPP');
     supportsCoinControl = () => this.call('supportsCoinControl');
 }

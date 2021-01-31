@@ -465,8 +465,6 @@ export default class Eclair {
     supportsOnchainSends = () => true;
     supportsKeysend = () => false;
     supportsChannelManagement = () => true;
-    supportsCustomHostProtocol = () =>
-        stores.settingsStore.enableTor ? true : false;
     supportsMPP = () => false;
     supportsCoinControl = () => false;
 }
