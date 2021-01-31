@@ -31,6 +31,9 @@ class LndConnectUtils {
         macaroonHex =
             result.macaroon && MacaroonUtils.base64UrlToHex(result.macaroon);
 
+        // prepend https by default
+        host = 'https://' + host;
+
         return { host, port, macaroonHex };
     };
 }
