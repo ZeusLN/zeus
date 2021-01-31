@@ -13,7 +13,7 @@ export default class Spark {
             url,
             accessKey,
             certVerification,
-            enableTor,
+            enableTor
         } = stores.settingsStore;
 
         const id = rpcmethod + JSON.stringify(param) + JSON.stringify(range);
