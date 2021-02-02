@@ -80,6 +80,7 @@ class RESTUtils {
     supportsChannelManagement = () => this.call('supportsChannelManagement');
     supportsMPP = () => this.call('supportsMPP');
     supportsCoinControl = () => this.call('supportsCoinControl');
+    supportsHopPicking = () => this.call('supportsHopPicking');
 }
 
 const restUtils = new RESTUtils();

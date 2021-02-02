@@ -72,4 +72,6 @@ export default class LndHub extends LND {
     supportsKeysend = () => false;
     supportsChannelManagement = () => false;
     supportsMPP = () => false;
+    supportsCoinControl = () => false;
+    supportsHopPicking = () => false;
 }
