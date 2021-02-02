@@ -3,6 +3,12 @@
   "version": "0.4.0",
   "private": true,
   "playStore": false,
+  "jest": {
+    "preset": "react-native",
+    "watchPathIgnorePatterns": [
+      "<rootDir>/node_modules"
+    ]
+  },
   "scripts": {
     "start": "react-native start",
     "postinstall": "rn-nodeify --install --hack; npx jetify",
