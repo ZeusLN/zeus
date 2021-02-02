@@ -19,21 +19,18 @@ class VersionUtils {
         const target = this.parseVersion(targetVersion);
 
         if (
-            user.coreVersion &&
-            target.coreVersion &&
+            (user.coreVersion || target.coreVersion) &&
             user.coreVersion > target.coreVersion
         ) {
             return true;
         } else if (
-            user.mainVersion &&
-            target.mainVersion &&
+            (user.mainVersion || target.mainVersion) &&
             user.coreVersion === target.coreVersion &&
             user.mainVersion > target.mainVersion
         ) {
             return true;
         } else if (
-            user.minorVersion &&
-            target.minorVersion &&
+            (user.minorVersion || target.minorVersion) &&
             user.coreVersion === target.coreVersion &&
             user.mainVersion === target.mainVersion &&
             user.minorVersion >= target.minorVersion
