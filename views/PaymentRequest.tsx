@@ -18,6 +18,8 @@ import UnitsStore from './../stores/UnitsStore';
 import SettingsStore from './../stores/SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
 
+import HopPicker from './../components/HopPicker';
+
 interface InvoiceProps {
     exitSetup: any;
     navigation: any;
@@ -34,6 +36,8 @@ interface InvoiceState {
     maxParts: string;
     timeoutSeconds: string;
     feeLimitSat: string;
+    outgoingChanIds: Array<string> | null;
+    lastHopPubkey: string | null;
 }
 
 @inject('InvoicesStore', 'TransactionsStore', 'UnitsStore', 'SettingsStore')
@@ -48,7 +52,9 @@ export default class PaymentRequest extends React.Component<
         enableMultiPathPayment: false,
         maxParts: '2',
         timeoutSeconds: '20',
-        feeLimitSat: '10'
+        feeLimitSat: '10',
+        outgoingChanIds: null,
+        lastHopPubkey: null
     };
 
     render() {
@@ -65,7 +71,9 @@ export default class PaymentRequest extends React.Component<
             enableMultiPathPayment,
             maxParts,
             timeoutSeconds,
-            feeLimitSat
+            feeLimitSat,
+            outgoingChanIds,
+            lastHopPubkey
         } = this.state;
         const {
             pay_req,
@@ -222,9 +230,16 @@ export default class PaymentRequest extends React.Component<
                                                         : 'white'
                                             }}
                                             onPress={() => {
-                                                this.setState({
-                                                    setCustomAmount: !setCustomAmount
-                                                });
+                                                if (setCustomAmount) {
+                                                    this.setState({
+                                                        setCustomAmount: false,
+                                                        customAmount: ''
+                                                    });
+                                                } else {
+                                                    this.setState({
+                                                        setCustomAmount: true
+                                                    });
+                                                }
                                             }}
                                             style={styles.button}
                                             titleStyle={{
@@ -456,6 +471,35 @@ export default class PaymentRequest extends React.Component<
                                     </Text>
                                 </React.Fragment>
                             )}
+
+                            {!!pay_req && RESTUtils.supportsHopPicking() && (
+                                <>
+                                    {
+                                        <HopPicker
+                                            onValueChange={(item: any) =>
+                                                this.setState({
+                                                    outgoingChanIds: item
+                                                        ? [item.channelId]
+                                                        : null
+                                                })
+                                            }
+                                            title="First Hop"
+                                        />
+                                    }
+                                    {
+                                        <HopPicker
+                                            onValueChange={(item: any) =>
+                                                this.setState({
+                                                    lastHopPubkey: item
+                                                        ? item.remote_pubkey
+                                                        : null
+                                                })
+                                            }
+                                            title="Last Hop"
+                                        />
+                                    }
+                                </>
+                            )}
                         </View>
                     )}
 
@@ -600,41 +644,16 @@ export default class PaymentRequest extends React.Component<
                                     color: 'white'
                                 }}
                                 onPress={() => {
-                                    if (
-                                        enableMultiPathPayment &&
-                                        setCustomAmount &&
-                                        customAmount
-                                    ) {
-                                        TransactionsStore.sendPayment(
-                                            paymentRequest,
-                                            customAmount,
-                                            null,
-                                            maxParts,
-                                            timeoutSeconds,
-                                            feeLimitSat
-                                        );
-                                    } else if (enableMultiPathPayment) {
-                                        TransactionsStore.sendPayment(
-                                            paymentRequest,
-                                            null,
-                                            null,
-                                            maxParts,
-                                            timeoutSeconds,
-                                            feeLimitSat
-                                        );
-                                    } else if (
-                                        setCustomAmount &&
-                                        customAmount
-                                    ) {
-                                        TransactionsStore.sendPayment(
-                                            paymentRequest,
-                                            customAmount
-                                        );
-                                    } else {
-                                        TransactionsStore.sendPayment(
-                                            paymentRequest
-                                        );
-                                    }
+                                    TransactionsStore.sendPayment(
+                                        paymentRequest,
+                                        customAmount,
+                                        null,
+                                        maxParts,
+                                        timeoutSeconds,
+                                        feeLimitSat,
+                                        outgoingChanIds,
+                                        lastHopPubkey
+                                    );
 
                                     navigation.navigate('SendingLightning');
                                 }}

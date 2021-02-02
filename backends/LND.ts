@@ -262,4 +262,5 @@ export default class LND {
     supportsChannelManagement = () => true;
     supportsMPP = () => this.supports('v0.11.0');
     supportsCoinControl = () => false;
+    supportsHopPicking = () => this.supports('v0.11.0');
 }
