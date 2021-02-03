@@ -150,6 +150,11 @@ export default class TransactionsStore {
             ? RESTUtils.payLightningInvoiceV2
             : RESTUtils.payLightningInvoice;
 
+        // backwards compatibility with v1
+        if (!max_parts && outgoing_chan_ids) {
+            data.outgoing_chan_id = outgoing_chan_ids[0];
+        }
+
         payFunc(data)
             .then((response: any) => {
                 const result = response.result || response;
