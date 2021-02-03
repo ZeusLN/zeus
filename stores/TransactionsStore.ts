@@ -111,7 +111,7 @@ export default class TransactionsStore {
         this.payment_error = null;
         this.status = null;
 
-        let data: any;
+        let data: any = {};
         if (payment_request) {
             data.payment_request = payment_request;
         }
@@ -151,14 +151,14 @@ export default class TransactionsStore {
             : RESTUtils.payLightningInvoice;
 
         payFunc(data)
-            .then((data: any) => {
-                const result = data.result || data;
+            .then((response: any) => {
+                const result = response.result || response;
                 this.loading = false;
                 this.payment_route = result.payment_route;
                 this.payment_preimage = result.payment_preimage;
                 this.payment_hash = result.payment_hash;
                 if (
-                    data.payment_error !== '' &&
+                    response.payment_error !== '' &&
                     result.status !== 'SUCCEEDED'
                 ) {
                     this.error = true;
