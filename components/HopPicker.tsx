@@ -28,8 +28,6 @@ import PrivacyUtils from './../utils/PrivacyUtils';
 
 const SelectedLight = require('./../images/selected-light.png');
 const SelectedDark = require('./../images/selected-dark.png');
-const UnselectedLight = require('./../images/unselected-light.png');
-const UnselectedDark = require('./../images/unselected-dark.png');
 
 interface ChannelPickerProps {
     title?: string;
@@ -57,8 +55,8 @@ const ChannelIcon = (balanceImage: string) => (
 );
 
 const VALUES = [
-    { key: 'Select Channel to use', value: 'Select Channel to use' },
-    { key: 'Clear selection', value: 'Clear selection' }
+    { key: 'No selection', value: 'No selection' },
+    { key: 'Select Channel to use', value: 'Select Channel to use' }
 ];
 
 const DEFAULT_TITLE = 'Channels to use';
@@ -259,8 +257,8 @@ export default class ChannelPicker extends React.Component<
                                                                     : 'white'
                                                         }}
                                                         leftElement={
-                                                            channelPicked ===
-                                                            item.channelId
+                                                            channelSelected ===
+                                                            item
                                                                 ? theme ===
                                                                   'dark'
                                                                     ? Icon(
@@ -377,25 +375,35 @@ export default class ChannelPicker extends React.Component<
                         >
                             {title || DEFAULT_TITLE}
                         </Text>
-                        <Picker
-                            selectedValue={selectedValue}
-                            onValueChange={(itemValue: string) => {
-                                if (itemValue === 'Clear selection') {
-                                    this.clearSelection();
-                                } else if (
-                                    itemValue === 'Select Channels to use'
-                                ) {
-                                    this.openPicker();
+                        {valueSet ? (
+                            <TouchableOpacity
+                                onPress={() => this.clearSelection()}
+                            >
+                                <Text style={{ padding: 10, fontSize: 16 }}>
+                                    {valueSet}
+                                </Text>
+                            </TouchableOpacity>
+                        ) : (
+                            <Picker
+                                selectedValue={selectedValue}
+                                onValueChange={(itemValue: string) => {
+                                    if (itemValue === 'No selection') {
+                                        this.clearSelection();
+                                    } else if (
+                                        itemValue === 'Select Channel to use'
+                                    ) {
+                                        this.openPicker();
+                                    }
+                                }}
+                                style={
+                                    theme === 'dark'
+                                        ? styles.pickerDark
+                                        : styles.picker
                                 }
-                            }}
-                            style={
-                                theme === 'dark'
-                                    ? styles.pickerDark
-                                    : styles.picker
-                            }
-                        >
-                            {pickerValuesAndroid}
-                        </Picker>
+                            >
+                                {pickerValuesAndroid}
+                            </Picker>
+                        )}
                     </View>
                 )}
 
@@ -443,7 +451,8 @@ export default class ChannelPicker extends React.Component<
 
 const styles = StyleSheet.create({
     field: {
-        paddingTop: 10
+        paddingTop: 10,
+        marginLeft: Platform.OS === 'ios' ? 0 : -8
     },
     picker: {
         height: 50,
