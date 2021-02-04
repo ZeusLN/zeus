@@ -45,13 +45,19 @@ class AddressUtils {
 
         // handle BTCPay invoices with amounts embedded
         if (input.includes('bitcoin:')) {
-            const [parsedValue, parsedAmount] = bitcoinQrParser(input, 'bitcoin:');
+            const [parsedValue, parsedAmount] = bitcoinQrParser(
+                input,
+                'bitcoin:'
+            );
             value = parsedValue;
             if (parsedAmount) {
                 amount = parsedAmount;
             }
         } else if (input.includes('BITCOIN:')) {
-            const [parsedValue, parsedAmount] = bitcoinQrParser(input, 'BITCOIN:');
+            const [parsedValue, parsedAmount] = bitcoinQrParser(
+                input,
+                'BITCOIN:'
+            );
             value = parsedValue;
             if (parsedAmount) {
                 amount = parsedAmount;
