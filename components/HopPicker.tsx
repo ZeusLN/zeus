@@ -379,7 +379,14 @@ export default class ChannelPicker extends React.Component<
                             <TouchableOpacity
                                 onPress={() => this.clearSelection()}
                             >
-                                <Text style={{ padding: 10, fontSize: 16 }}>
+                                <Text
+                                    style={{
+                                        padding: 10,
+                                        fontSize: 16,
+                                        color:
+                                            theme === 'dark' ? 'white' : 'black'
+                                    }}
+                                >
                                     {valueSet}
                                 </Text>
                             </TouchableOpacity>
@@ -425,9 +432,9 @@ export default class ChannelPicker extends React.Component<
                                         cancelButtonIndex: 0
                                     },
                                     buttonIndex => {
-                                        if (buttonIndex == 2) {
+                                        if (buttonIndex == 1) {
                                             this.clearSelection();
-                                        } else if (buttonIndex == 1) {
+                                        } else if (buttonIndex == 2) {
                                             this.openPicker();
                                         }
                                     }
