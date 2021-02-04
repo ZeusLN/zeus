@@ -648,9 +648,15 @@ export default class PaymentRequest extends React.Component<
                                         paymentRequest,
                                         customAmount,
                                         null,
-                                        enableMultiPathPayment ? maxParts : null,
-                                        enableMultiPathPayment ? timeoutSeconds : null,
-                                        enableMultiPathPayment ? feeLimitSat : null,
+                                        enableMultiPathPayment
+                                            ? maxParts
+                                            : null,
+                                        enableMultiPathPayment
+                                            ? timeoutSeconds
+                                            : null,
+                                        enableMultiPathPayment
+                                            ? feeLimitSat
+                                            : null,
                                         outgoingChanIds,
                                         lastHopPubkey
                                     );

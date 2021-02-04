@@ -116,7 +116,8 @@ export default class LND {
             });
 
             ws.addEventListener('error', (e: any) => {
-                const certWarning = "You may have to install this node's certificate to the device to make these kind of calls";
+                const certWarning =
+                    "You may have to install this node's certificate to the device to make these kind of calls";
                 // an error occurred
                 reject(
                     e.message ? `${certWarning} (${e.message})` : certWarning
