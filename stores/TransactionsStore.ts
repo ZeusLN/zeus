@@ -143,7 +143,7 @@ export default class TransactionsStore {
         }
         // last hop
         if (last_hop_pubkey) {
-            data.last_hop_pubkey = last_hop_pubkey;
+            data.last_hop_pubkey = last_hop_pubkey.toString('base64');
         }
 
         const payFunc = max_parts
