@@ -6,6 +6,7 @@ import RESTUtils from './../utils/RESTUtils';
 import { randomBytes } from 'react-native-randombytes';
 import { sha256 } from 'js-sha256';
 import { Buffer } from 'buffer';
+import Base64Utils from './../utils/Base64Utils';
 
 const keySendPreimageType = '5482373484';
 const preimageByteLength = 32;
@@ -143,12 +144,18 @@ export default class TransactionsStore {
         }
         // last hop
         if (last_hop_pubkey) {
-            data.last_hop_pubkey = last_hop_pubkey;
+            // must be base64 encoded (bytes)
+            data.last_hop_pubkey = Base64Utils.hexToBase64(last_hop_pubkey);
         }
 
         const payFunc = max_parts
             ? RESTUtils.payLightningInvoiceV2
             : RESTUtils.payLightningInvoice;
+
+        // backwards compatibility with v1
+        if (!max_parts && outgoing_chan_ids) {
+            data.outgoing_chan_id = outgoing_chan_ids[0];
+        }
 
         payFunc(data)
             .then((response: any) => {
