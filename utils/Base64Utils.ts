@@ -1,7 +1,7 @@
 const chars =
     'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-const Base64Utils = {
-    btoa: (input: string = '') => {
+class Base64Utils {
+    btoa = (input: string = '') => {
         let str = input;
         let output = '';
 
@@ -22,9 +22,9 @@ const Base64Utils = {
         }
 
         return output;
-    },
+    };
 
-    atob: (input: string = '') => {
+    atob = (input: string = '') => {
         let str = input.replace(/=+$/, '');
         let output = '';
 
@@ -44,7 +44,34 @@ const Base64Utils = {
         }
 
         return output;
-    }
-};
+    };
 
-export default Base64Utils;
+    hexStringToByte = (str: string = '') => {
+        if (!str) {
+            return new Uint8Array();
+        }
+
+        const a = [];
+        for (let i = 0, len = str.length; i < len; i += 2) {
+            a.push(parseInt(str.substr(i, 2), 16));
+        }
+
+        return new Uint8Array(a);
+    };
+
+    byteToBase64 = (buffer: Uint8Array) => {
+        let binary = '';
+        const bytes = new Uint8Array(buffer);
+        const len = bytes.byteLength;
+        for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return this.btoa(binary);
+    };
+
+    hexToBase64 = (str: string = '') =>
+        this.byteToBase64(this.hexStringToByte(str));
+}
+
+const base64Utils = new Base64Utils();
+export default base64Utils;

@@ -309,7 +309,13 @@ export default class UTXOPicker extends React.Component<
                             {title || DEFAULT_TITLE}
                         </Text>
                         {utxosSet.length > 0 ? (
-                            <Text style={{ padding: 10, fontSize: 16 }}>
+                            <Text
+                                style={{
+                                    padding: 10,
+                                    fontSize: 16,
+                                    color: theme === 'dark' ? 'white' : 'black'
+                                }}
+                            >
                                 {this.displayValues()}
                             </Text>
                         ) : (
@@ -354,9 +360,9 @@ export default class UTXOPicker extends React.Component<
                                         cancelButtonIndex: 0
                                     },
                                     buttonIndex => {
-                                        if (buttonIndex == 2) {
+                                        if (buttonIndex == 1) {
                                             this.clearSelection();
-                                        } else if (buttonIndex == 1) {
+                                        } else if (buttonIndex == 2) {
                                             this.openPicker();
                                         }
                                     }
