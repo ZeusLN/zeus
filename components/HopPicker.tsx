@@ -278,13 +278,21 @@ export default class ChannelPicker extends React.Component<
                                                         }
                                                         titleStyle={{
                                                             color:
-                                                                theme === 'dark'
+                                                                channelSelected ===
+                                                                item
+                                                                    ? 'orange'
+                                                                    : theme ===
+                                                                      'dark'
                                                                     ? 'white'
                                                                     : 'black'
                                                         }}
                                                         subtitleStyle={{
                                                             color:
-                                                                theme === 'dark'
+                                                                channelSelected ===
+                                                                item
+                                                                    ? 'orange'
+                                                                    : theme ===
+                                                                      'dark'
                                                                     ? 'gray'
                                                                     : '#8a8999'
                                                         }}
