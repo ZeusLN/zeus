@@ -153,7 +153,7 @@ export default class AddEditNode extends React.Component<
 
     componentDidUpdate() {
         // auto set tor enabled if onion
-        if (this.state.host?.length && this.state.host.endsWith('.onion')) {
+        if (this.state.host && this.state.host.endsWith('.onion')) {
             if (this.state.enableTor === false) {
                 this.setState(state => ({ ...state, enableTor: true }));
             }
@@ -185,7 +185,7 @@ export default class AddEditNode extends React.Component<
                 password,
                 implementation,
                 certVerification,
-                enableTor,
+                enableTor
             } = node;
 
             this.setState({
@@ -254,7 +254,7 @@ export default class AddEditNode extends React.Component<
             password,
             implementation,
             certVerification,
-            enableTor,
+            enableTor
         };
 
         let nodes: any;

@@ -238,21 +238,17 @@ export default class UTXOPicker extends React.Component<
                                                 }
                                                 titleStyle={{
                                                     color:
-                                                        channelSelected ===
-                                                        item
+                                                        channelSelected === item
                                                             ? 'orange'
-                                                            : theme ===
-                                                              'dark'
+                                                            : theme === 'dark'
                                                             ? 'white'
                                                             : 'black'
                                                 }}
                                                 subtitleStyle={{
                                                     color:
-                                                        channelSelected ===
-                                                        item
+                                                        channelSelected === item
                                                             ? 'orange'
-                                                            : theme ===
-                                                              'dark'
+                                                            : theme === 'dark'
                                                             ? 'gray'
                                                             : '#8a8999'
                                                 }}
