@@ -15,6 +15,7 @@ import { localeString } from './../utils/LocaleUtils';
 import InvoicesStore from './../stores/InvoicesStore';
 import TransactionsStore from './../stores/TransactionsStore';
 import UnitsStore from './../stores/UnitsStore';
+import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
 
@@ -26,6 +27,7 @@ interface InvoiceProps {
     InvoicesStore: InvoicesStore;
     TransactionsStore: TransactionsStore;
     UnitsStore: UnitsStore;
+    ChannelsStore: ChannelsStore;
     SettingsStore: SettingsStore;
 }
 
@@ -40,7 +42,13 @@ interface InvoiceState {
     lastHopPubkey: string | null;
 }
 
-@inject('InvoicesStore', 'TransactionsStore', 'UnitsStore', 'SettingsStore')
+@inject(
+    'InvoicesStore',
+    'TransactionsStore',
+    'UnitsStore',
+    'ChannelsStore',
+    'SettingsStore'
+)
 @observer
 export default class PaymentRequest extends React.Component<
     InvoiceProps,
@@ -62,6 +70,7 @@ export default class PaymentRequest extends React.Component<
             TransactionsStore,
             InvoicesStore,
             UnitsStore,
+            ChannelsStore,
             SettingsStore,
             navigation
         } = this.props;
@@ -484,6 +493,8 @@ export default class PaymentRequest extends React.Component<
                                                 })
                                             }
                                             title="First Hop"
+                                            ChannelsStore={ChannelsStore}
+                                            UnitsStore={UnitsStore}
                                         />
                                     }
                                     {
@@ -496,6 +507,8 @@ export default class PaymentRequest extends React.Component<
                                                 })
                                             }
                                             title="Last Hop"
+                                            ChannelsStore={ChannelsStore}
+                                            UnitsStore={UnitsStore}
                                         />
                                     }
                                 </>

@@ -12,13 +12,13 @@ describe('VersionUtils', () => {
             expect(VersionUtils.parseVersion('v11.3-beta-2')).toEqual({
                 coreVersion: 11,
                 mainVersion: 3,
-                minorVersion: null,
+                minorVersion: 0,
                 releaseVersion: 'beta-2'
             });
             expect(VersionUtils.parseVersion('V11.4')).toEqual({
                 coreVersion: 11,
                 mainVersion: 4,
-                minorVersion: null,
+                minorVersion: 0,
                 releaseVersion: null
             });
             expect(VersionUtils.parseVersion('v0.0.2')).toEqual({

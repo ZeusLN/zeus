@@ -262,7 +262,7 @@ export default class Spark {
             channel_fees: listpeers.peers
                 .filter(({ channels }: any) => channels && channels.length)
                 .filter(
-                    ({ channels: [{ short_channel_id }] }) =>
+                    ({ channels: [{ short_channel_id }] }: any) =>
                         channelsMap[short_channel_id]
                 )
                 .map(
