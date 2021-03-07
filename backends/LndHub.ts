@@ -2,7 +2,6 @@ import bolt11 from 'bolt11';
 
 import LND from './LND';
 import LoginRequest from './../models/LoginRequest';
-import { DEFAULT_LNDHUB } from './../utils/AddressUtils';
 
 export default class LndHub extends LND {
     getHeaders = (accessToken: string) => {

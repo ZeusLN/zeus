@@ -12,7 +12,6 @@ import {
     TouchableOpacity
 } from 'react-native';
 import { Avatar, ListItem } from 'react-native-elements';
-import { remove } from 'lodash';
 import { inject, observer } from 'mobx-react';
 import { localeString } from './../utils/LocaleUtils';
 import Identicon from 'identicon.js';
@@ -20,7 +19,7 @@ const hash = require('object-hash');
 
 import stores from './../stores/Stores';
 import ChannelsStore from './../stores/ChannelsStore';
-import Channel from './../model/Channel';
+import Channel from './../models/Channel';
 import UnitsStore from './../stores/UnitsStore';
 
 import BalanceSlider from './../components/BalanceSlider';
@@ -40,10 +39,9 @@ interface ChannelPickerProps {
 
 interface ChannelPickerState {
     status: string;
-    channelSelected: Channel;
+    channelSelected: Channel | null;
     valueSet: string;
     showChannelModal: boolean;
-    setBalance: number;
 }
 
 const ChannelIcon = (balanceImage: string) => (
@@ -71,7 +69,7 @@ export default class ChannelPicker extends React.Component<
 > {
     state = {
         status: 'unselected',
-        channelSelected: {},
+        channelSelected: null,
         valueSet: '',
         showChannelModal: false
     };
@@ -79,21 +77,16 @@ export default class ChannelPicker extends React.Component<
     openPicker() {
         stores.channelsStore.getChannels();
         this.setState({
-            channelSelected: {},
+            channelSelected: null,
             showChannelModal: true
         });
     }
 
     clearSelection() {
         this.setState({
-            channelSelected: {},
+            channelSelected: null,
             valueSet: ''
         });
-    }
-
-    displayValues(): string {
-        const { channelSelected } = this.state;
-        return channelSelected.channelId;
     }
 
     toggleItem(item: any) {
@@ -108,19 +101,13 @@ export default class ChannelPicker extends React.Component<
             ChannelsStore,
             UnitsStore
         } = this.props;
-        const {
-            channelSelected,
-            channelSet,
-            showChannelModal,
-            valueSet
-        } = this.state;
+        const { channelSelected, showChannelModal, valueSet } = this.state;
         const SettingsStore = stores.settingsStore;
         const { channels, nodes, loading, getChannels } = ChannelsStore;
         const { getAmount, units } = UnitsStore;
         const { settings } = SettingsStore;
         const { theme, lurkerMode } = settings;
 
-        let channelPicked = channelSelected;
         const pickerValuesAndroid: Array<any> = [];
         const pickerValuesIOS: Array<string> = ['Cancel'];
         VALUES.forEach((value: { key: string; value: string }) => {
@@ -330,7 +317,7 @@ export default class ChannelPicker extends React.Component<
                                             onPress={() => {
                                                 const {
                                                     channelSelected
-                                                } = this.state;
+                                                }: any = this.state;
 
                                                 const displayName =
                                                     channelSelected.alias ||
@@ -342,8 +329,10 @@ export default class ChannelPicker extends React.Component<
                                                             channelSelected
                                                                 .remote_pubkey
                                                         ].alias) ||
-                                                    channelSelected.remote_pubkey ||
-                                                    channelSelected.channelId;
+                                                    (channelSelected &&
+                                                        channelSelected.remote_pubkey) ||
+                                                    (channelSelected &&
+                                                        channelSelected.channelId);
 
                                                 this.setState({
                                                     showChannelModal: false,

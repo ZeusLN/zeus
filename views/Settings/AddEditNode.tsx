@@ -15,9 +15,8 @@ import {
 } from 'react-native';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import AddressUtils from './../../utils/AddressUtils';
+import AddressUtils, { DEFAULT_LNDHUB } from './../../utils/AddressUtils';
 import LndConnectUtils from './../../utils/LndConnectUtils';
-import { DEFAULT_LNDHUB } from './../../backends/LndHub';
 import { localeString } from './../../utils/LocaleUtils';
 import CollapsedQR from './../../components/CollapsedQR';
 import SettingsStore from './../../stores/SettingsStore';

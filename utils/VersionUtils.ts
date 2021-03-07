@@ -7,9 +7,9 @@ class VersionUtils {
         const [coreVersion, mainVersion, minorVersion] = noPrefix.split('.');
 
         return {
-            coreVersion: coreVersion ? Number(coreVersion) : null,
-            mainVersion: mainVersion ? Number(mainVersion) : null,
-            minorVersion: minorVersion ? Number(minorVersion) : null,
+            coreVersion: coreVersion ? Number(coreVersion) : 0,
+            mainVersion: mainVersion ? Number(mainVersion) : 0,
+            minorVersion: minorVersion ? Number(minorVersion) : 0,
             releaseVersion
         };
     };

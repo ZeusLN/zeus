@@ -237,20 +237,22 @@ export default class UTXOPicker extends React.Component<
                                                     this.toggleItem(item)
                                                 }
                                                 titleStyle={{
-                                                    color:
-                                                        channelSelected === item
-                                                            ? 'orange'
-                                                            : theme === 'dark'
-                                                            ? 'white'
-                                                            : 'black'
+                                                    color: utxosPicked.includes(
+                                                        `${item.txid}:${item.output}`
+                                                    )
+                                                        ? 'orange'
+                                                        : theme === 'dark'
+                                                        ? 'white'
+                                                        : 'black'
                                                 }}
                                                 subtitleStyle={{
-                                                    color:
-                                                        channelSelected === item
-                                                            ? 'orange'
-                                                            : theme === 'dark'
-                                                            ? 'gray'
-                                                            : '#8a8999'
+                                                    color: utxosPicked.includes(
+                                                        `${item.txid}:${item.output}`
+                                                    )
+                                                        ? 'orange'
+                                                        : theme === 'dark'
+                                                        ? 'gray'
+                                                        : '#8a8999'
                                                 }}
                                             />
                                         )}
