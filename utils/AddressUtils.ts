@@ -1,19 +1,40 @@
 import { satoshisPerBTC } from './../stores/UnitsStore';
-import { DEFAULT_LNDHUB } from '../backends/LndHub';
-
 const btcNonBech = /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
-const btcBech = /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/;
+const btcBech = /^(bc1|BC1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/;
 
 const lnInvoice = /^(lnbcrt|lntb|lnbc|LNBCRT|LNTB|LNBC)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
 const lnPubKey = /^[a-f0-9]{66}$/;
 
 /* testnet */
 const btcNonBechTestnet = /^[2][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
-const btcBechTestnet = /^(bc1|bcrt1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
-const btcBechPubkeyScriptHashTestnet = /^(tb1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
+const btcBechTestnet = /^(bc1|bcrt1|BC1|BCRT1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
+const btcBechPubkeyScriptHashTestnet = /^(tb1|TB1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
 
 /* lndhub */
-const lndHubAddress = /^(lndhub:\/\/)\w+(:)\w+(@https?:\/\/[\w\.]+(:\d{1,5})?([\/\w]+)?)?$/;
+const lndHubAddress = /^(lndhub:\/\/)\w+(:)\w+(@https?:\/\/[\w\-_.]+(:\d{1,5})?([\/\w]+)?)?$/;
+
+export const DEFAULT_LNDHUB = 'https://lndhub.herokuapp.com';
+
+const bitcoinQrParser = (input: string, prefix: string) => {
+    let amount, value;
+    const btcAddressAndParams = input.split(prefix)[1];
+    const [btcAddress, params] = btcAddressAndParams.split('?');
+
+    let result: any = {};
+    params &&
+        params.split('&').forEach(function(part) {
+            const item = part.split('=');
+            result[item[0]] = decodeURIComponent(item[1]);
+        });
+
+    value = btcAddress;
+    if (result.amount) {
+        amount = Number(result.amount) * satoshisPerBTC;
+        amount = amount.toString();
+    }
+
+    return [value, amount];
+};
 
 class AddressUtils {
     processSendAddress = (input: string) => {
@@ -24,20 +45,22 @@ class AddressUtils {
 
         // handle BTCPay invoices with amounts embedded
         if (input.includes('bitcoin:')) {
-            const btcAddressAndParams = input.split('bitcoin:')[1];
-            const [btcAddress, params] = btcAddressAndParams.split('?');
-
-            let result: any = {};
-            params &&
-                params.split('&').forEach(function(part) {
-                    const item = part.split('=');
-                    result[item[0]] = decodeURIComponent(item[1]);
-                });
-
-            value = btcAddress;
-            if (result.amount) {
-                amount = Number(result.amount) * satoshisPerBTC;
-                amount = amount.toString();
+            const [parsedValue, parsedAmount] = bitcoinQrParser(
+                input,
+                'bitcoin:'
+            );
+            value = parsedValue;
+            if (parsedAmount) {
+                amount = parsedAmount;
+            }
+        } else if (input.includes('BITCOIN:')) {
+            const [parsedValue, parsedAmount] = bitcoinQrParser(
+                input,
+                'BITCOIN:'
+            );
+            value = parsedValue;
+            if (parsedAmount) {
+                amount = parsedAmount;
             }
         } else if (input.includes('lightning:')) {
             value = input.split('lightning:')[1];
