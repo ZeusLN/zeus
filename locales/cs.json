@@ -22,7 +22,7 @@
     "components.SetFeesForm.success": "Poplatky úspěšně nastaveny!",
     "components.SetFeesForm.error": "Chyba při nastavování poplatků",
     "components.SetFeesForm.baseFee": "Základní poplatek msat",
-    "components.SetFeesForm.feeRateMili": "Sazba poplatků mili msat",
+    "components.SetFeesForm.ppm": "PPM (částí na milion)",
     "components.SetFeesForm.submit": "Odeslat nové poplatky",
     "models.Channel.unknownId": "Neznámé ID kanálu",
     "models.Invoice.noMemo": "Žádné poznámky",
@@ -80,7 +80,7 @@
     "views.Settings.AddEditNode.deleteNode": "Odstranit konfiguraci uzlu",
     "views.Settings.AddEditNode.nodeInterface": "Rozhraní uzlu",
     "views.Settings.CertInstallInstructions.title": "Pokyny k instalaci certifikátu",
-    "views.Settings.CertInstallInstructions.graph1": "To install a certificate on Android, copy the certificate file to device. Then go to Settings > Security > Install from storage. It should detect the certificate and let you add install it to the device. The certificate must have the extension .cert or .crt",
+    "views.Settings.CertInstallInstructions.graph1": "Chcete-li nainstalovat certifikát na Android, zkopírujte soubor certifikátu do zařízení. Poté přejděte do Nastavení > Zabezpečení > Instalovat z úložiště. Mělo by to detekovat certifikát a umožnit vám přidat jej nainstalovat do zařízení. Certifikát musí mít příponu .cert nebo .crt",
     "views.Settings.CertInstallInstructions.graph2": "Chcete-li nainstalovat certifikát na iOS, musíte soubor odeslat e-mailem sami, jakmile vyberete soubor v e-mailu, budete vyzváni k jeho instalaci jako profil.",
     "views.Settings.CertInstallInstructions.graph3": "Alternativně můžete v XCode poskytnout certifikát certifikátu pro váš telefon.",
     "views.Settings.CertInstallInstructions.graph4": "K certifikátu máte kdykoli přístup v Nastavení > Obecné > Profily a v případě potřeby jej odeberte.",
@@ -321,5 +321,8 @@
     "views.Transaction.destAddresses": "Cílové adresy",
     "components.UTXOPicker.modal.title": "Vyberte UTXO, které chcete použít",
     "components.UTXOPicker.modal.description": "Vyberte UTXO, které se mají použít v této operaci. Možná budete chtít používat pouze konkrétní UTXO k ochraně vašeho soukromí.",
-    "components.UTXOPicker.modal.set": "Nastavit UTXO"
+    "components.UTXOPicker.modal.set": "Nastavit UTXO",
+    "components.ChannelPicker.modal.title": "Vyberte kanál, který chcete použít",
+    "components.ChannelPicker.modal.description": "Vyberte kanál, který se má při této operaci použít. V zájmu ochrany vašeho soukromí možná budete chtít používat pouze konkrétní kanály.",
+    "components.ChannelPicker.modal.set": "Nastavit kanál"
 }
