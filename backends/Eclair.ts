@@ -343,14 +343,12 @@ export default class Eclair {
 
         let lastDay = 0,
             lastWeek = 0,
-            lastMonth = 0,
-            allTimes = 0;
+            lastMonth = 0;
         const now = new Date().getTime() / 1000;
         const oneDayAgo = now - 60 * 60 * 24;
         const oneWeekAgo = now - 60 * 60 * 24 * 7;
         for (let i = relayed.length - 1; i >= 0; i--) {
             const relay = relayed[i];
-            allTimes += relay.amountIn - relay.amountOut;
             if (relay.timestamp > oneDayAgo) {
                 lastDay += relay.amountIn - relay.amountOut;
                 lastWeek += relay.amountIn - relay.amountOut;

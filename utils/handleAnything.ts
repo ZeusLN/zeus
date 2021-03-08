@@ -8,7 +8,7 @@ const { nodeInfoStore, invoicesStore } = stores;
 export default async function(data: string): Promise<any> {
     const { nodeInfo } = nodeInfoStore;
     const { isTestNet, isRegTest } = nodeInfo;
-    const { value, amount } = AddressUtils.processSendAddress(data);
+    const { value, amount }: any = AddressUtils.processSendAddress(data);
 
     if (AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest)) {
         return [

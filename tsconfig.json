@@ -15,6 +15,7 @@
     "strict": true,
     "target": "esnext",
     "strictPropertyInitialization": false,
+    "skipLibCheck": true,
     "baseUrl": "./",
     "paths": {
         "*" : ["typings/*"]

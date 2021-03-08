@@ -97,11 +97,11 @@ export default class TransactionsStore {
         payment_request?: string | null,
         amount?: string | null,
         pubkey?: string | null,
-        max_parts?: string,
-        timeout_seconds?: string,
-        fee_limit_sat?: string,
-        outgoing_chan_ids?: Array<string>,
-        last_hop_pubkey?: string
+        max_parts?: string | null,
+        timeout_seconds?: string | null,
+        fee_limit_sat?: string | null,
+        outgoing_chan_ids?: Array<string> | null,
+        last_hop_pubkey?: string | null
     ) => {
         this.loading = true;
         this.error_msg = null;
