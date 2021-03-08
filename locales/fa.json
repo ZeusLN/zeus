@@ -22,7 +22,7 @@
     "components.SetFeesForm.success": "تعرفه‌های جدید با موفقیت تنظیم شد",
     "components.SetFeesForm.error": "خطا در تنظیم تعرفه",
     "components.SetFeesForm.baseFee": "کارمز پایه msat",
-    "components.SetFeesForm.feeRateMili": "Fee Rate mili msat",
+    "components.SetFeesForm.ppm": "PPM (Parts Per Million)",
     "components.SetFeesForm.submit": "ارسال تعرفه جدید",
     "models.Channel.unknownId": "شناسه کانال ناشناخته",
     "models.Invoice.noMemo": "بدون یادداشت",
@@ -321,5 +321,8 @@
     "views.Transaction.destAddresses": "آدرس‌های مقصد",
     "components.UTXOPicker.modal.title": "Select UTXOs to use",
     "components.UTXOPicker.modal.description": "Select the UTXOs to be used in this operation. You may want to only use specific UTXOs to preserve your privacy.",
-    "components.UTXOPicker.modal.set": "Set UTXOs"
+    "components.UTXOPicker.modal.set": "Set UTXOs",
+    "components.ChannelPicker.modal.title": "Select Channel to use",
+    "components.ChannelPicker.modal.description": "Select the Channel to be used in this operation. You may want to only use specific channels to preserve your privacy.",
+    "components.ChannelPicker.modal.set": "Set Channel"
 }
