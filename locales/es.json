@@ -22,7 +22,7 @@
     "components.SetFeesForm.success": "Comisiones Establecidas Satisfactóriamente!",
     "components.SetFeesForm.error": "Error estableciendo comisiones",
     "components.SetFeesForm.baseFee": "Comisión Base msat",
-    "components.SetFeesForm.feeRateMili": "Comisión Rate msat",
+    "components.SetFeesForm.ppm": "PPM (Parts Per Million)",
     "components.SetFeesForm.submit": "Enviar Nuevas Comisiones",
     "models.Channel.unknownId": "ID de Canal Irreconocible",
     "models.Invoice.noMemo": "Sin memo",
@@ -321,5 +321,8 @@
     "views.Transaction.destAddresses": "Direcciones de Destino",
     "components.UTXOPicker.modal.title": "Seleccionar UTXOs para usar",
     "components.UTXOPicker.modal.description": "Seleccione las UTXOs que se utilizarán en esta operación. Es posible que desee utilizar solo un UTXO específico para preservar su privacidad.",
-    "components.UTXOPicker.modal.set": "Conjunto de UTXOs"
+    "components.UTXOPicker.modal.set": "Conjunto de UTXOs",
+    "components.ChannelPicker.modal.title": "Select Channel to use",
+    "components.ChannelPicker.modal.description": "Select the Channel to be used in this operation. You may want to only use specific channels to preserve your privacy.",
+    "components.ChannelPicker.modal.set": "Set Channel"
 }

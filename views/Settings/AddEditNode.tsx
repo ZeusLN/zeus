@@ -15,9 +15,8 @@ import {
 } from 'react-native';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import AddressUtils from './../../utils/AddressUtils';
+import AddressUtils, { DEFAULT_LNDHUB } from './../../utils/AddressUtils';
 import LndConnectUtils from './../../utils/LndConnectUtils';
-import { DEFAULT_LNDHUB } from './../../backends/LndHub';
 import { localeString } from './../../utils/LocaleUtils';
 import CollapsedQR from './../../components/CollapsedQR';
 import SettingsStore from './../../stores/SettingsStore';
@@ -153,7 +152,7 @@ export default class AddEditNode extends React.Component<
 
     componentDidUpdate() {
         // auto set tor enabled if onion
-        if (this.state.host?.length && this.state.host.endsWith('.onion')) {
+        if (this.state.host && this.state.host.endsWith('.onion')) {
             if (this.state.enableTor === false) {
                 this.setState(state => ({ ...state, enableTor: true }));
             }
@@ -185,7 +184,7 @@ export default class AddEditNode extends React.Component<
                 password,
                 implementation,
                 certVerification,
-                enableTor,
+                enableTor
             } = node;
 
             this.setState({
@@ -254,7 +253,7 @@ export default class AddEditNode extends React.Component<
             password,
             implementation,
             certVerification,
-            enableTor,
+            enableTor
         };
 
         let nodes: any;
