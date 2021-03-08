@@ -2,7 +2,7 @@
   "name": "zeus",
   "version": "0.5.0",
   "private": true,
-  "playStore": false,
+  "playStore": true,
   "jest": {
     "preset": "react-native",
     "watchPathIgnorePatterns": [
