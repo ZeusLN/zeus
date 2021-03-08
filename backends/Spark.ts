@@ -2,13 +2,19 @@ import RNFetchBlob from 'rn-fetch-blob';
 import stores from '../stores/Stores';
 import TransactionRequest from './../models/TransactionRequest';
 import OpenChannelRequest from './../models/OpenChannelRequest';
+import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 
 // keep track of all active calls so we can cancel when appropriate
 const calls: any = {};
 
 export default class Spark {
     rpc = (rpcmethod: string, param = {}, range: any = null) => {
-        let { url, accessKey, certVerification } = stores.settingsStore;
+        let {
+            url,
+            accessKey,
+            certVerification,
+            enableTor
+        } = stores.settingsStore;
 
         const id = rpcmethod + JSON.stringify(param) + JSON.stringify(range);
         if (calls[id]) {
@@ -19,35 +25,38 @@ export default class Spark {
 
         const headers: any = { 'X-Access': accessKey };
         if (range) {
-            headers['Range'] = `${range.unit}=${range.slice}`;
+            headers.Range = `${range.unit}=${range.slice}`;
         }
+        const body = JSON.stringify({ method: rpcmethod, params: param });
 
-        calls[id] = RNFetchBlob.config({
-            trusty: !certVerification
-        })
-            .fetch(
-                'POST',
-                url,
-                headers,
-                JSON.stringify({ method: rpcmethod, params: param })
-            )
-            .then((response: any) => {
-                delete calls[id];
-                const status = response.info().status;
-                if (status < 300) {
-                    return response.json();
-                } else {
-                    var errorInfo;
-                    try {
-                        errorInfo = response.json();
-                    } catch (err) {
-                        throw new Error(
-                            'response was (' + status + ')' + response.text()
-                        );
+        if (enableTor === true) {
+            calls[id] = doTorRequest(url, RequestMethod.POST, body, headers);
+        } else {
+            calls[id] = RNFetchBlob.config({
+                trusty: !certVerification
+            })
+                .fetch('POST', url, headers, body)
+                .then((response: any) => {
+                    delete calls[id];
+                    const status = response.info().status;
+                    if (status < 300) {
+                        return response.json();
+                    } else {
+                        var errorInfo;
+                        try {
+                            errorInfo = response.json();
+                        } catch (err) {
+                            throw new Error(
+                                'response was (' +
+                                    status +
+                                    ')' +
+                                    response.text()
+                            );
+                        }
+                        throw new Error(errorInfo.message);
                     }
-                    throw new Error(errorInfo.message);
-                }
-            });
+                });
+        }
 
         return calls[id];
     };
@@ -223,7 +232,9 @@ export default class Spark {
         const oneMonthAgo = now - 60 * 60 * 24 * 30;
         for (let i = listforwards.forwards.length - 1; i >= 0; i--) {
             const forward = listforwards.forwards[i];
-            if (forward.status !== 'settled') continue;
+            if (forward.status !== 'settled') {
+                continue;
+            }
             if (forward.resolved_time > oneDayAgo) {
                 lastDay += forward.fee;
                 lastWeek += forward.fee;
@@ -233,7 +244,9 @@ export default class Spark {
                 lastMonth += forward.fee;
             } else if (forward.resolved_time > oneMonthAgo) {
                 lastMonth += forward.fee;
-            } else break;
+            } else {
+                break;
+            }
         }
 
         const channelsMap: any = {};
@@ -249,7 +262,7 @@ export default class Spark {
             channel_fees: listpeers.peers
                 .filter(({ channels }: any) => channels && channels.length)
                 .filter(
-                    ({ channels: [{ short_channel_id }] }) =>
+                    ({ channels: [{ short_channel_id }] }: any) =>
                         channelsMap[short_channel_id]
                 )
                 .map(
@@ -299,7 +312,7 @@ export default class Spark {
     supportsOnchainSends = () => true;
     supportsKeysend = () => false;
     supportsChannelManagement = () => true;
-    supportsCustomHostProtocol = () => false;
     supportsMPP = () => false;
     supportsCoinControl = () => false;
+    supportsHopPicking = () => false;
 }

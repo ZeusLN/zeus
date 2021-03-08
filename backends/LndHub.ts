@@ -3,8 +3,6 @@ import bolt11 from 'bolt11';
 import LND from './LND';
 import LoginRequest from './../models/LoginRequest';
 
-export const DEFAULT_LNDHUB = 'https://lndhub.herokuapp.com';
-
 export default class LndHub extends LND {
     getHeaders = (accessToken: string) => {
         if (accessToken) {
@@ -72,6 +70,7 @@ export default class LndHub extends LND {
     supportsOnchainSends = () => false;
     supportsKeysend = () => false;
     supportsChannelManagement = () => false;
-    supportsCustomHostProtocol = () => true;
     supportsMPP = () => false;
+    supportsCoinControl = () => false;
+    supportsHopPicking = () => false;
 }

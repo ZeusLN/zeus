@@ -11,7 +11,6 @@ class RESTUtils {
     lndHub: LndHub;
     lnd: LND;
     eclair: Eclair;
-
     constructor() {
         this.spark = new Spark();
         this.clightningREST = new CLightningREST();
@@ -79,10 +78,9 @@ class RESTUtils {
     supportsOnchainSends = () => this.call('supportsOnchainSends');
     supportsKeysend = () => this.call('supportsKeysend');
     supportsChannelManagement = () => this.call('supportsChannelManagement');
-    // let users specify http/https
-    supportsCustomHostProtocol = () => this.call('supportsCustomHostProtocol');
     supportsMPP = () => this.call('supportsMPP');
     supportsCoinControl = () => this.call('supportsCoinControl');
+    supportsHopPicking = () => this.call('supportsHopPicking');
 }
 
 const restUtils = new RESTUtils();

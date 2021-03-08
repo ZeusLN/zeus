@@ -42,8 +42,8 @@ interface UTXOPickerState {
 }
 
 const VALUES = [
-    { key: 'Select UTXOs to use', value: 'Select UTXOs to use' },
-    { key: 'Clear selection', value: 'Clear selection' }
+    { key: 'No selection', value: 'No selection' },
+    { key: 'Select UTXOs to use', value: 'Select UTXOs to use' }
 ];
 
 const DEFAULT_TITLE = 'UTXOs to use';
@@ -237,16 +237,22 @@ export default class UTXOPicker extends React.Component<
                                                     this.toggleItem(item)
                                                 }
                                                 titleStyle={{
-                                                    color:
-                                                        theme === 'dark'
-                                                            ? 'white'
-                                                            : 'black'
+                                                    color: utxosPicked.includes(
+                                                        `${item.txid}:${item.output}`
+                                                    )
+                                                        ? 'orange'
+                                                        : theme === 'dark'
+                                                        ? 'white'
+                                                        : 'black'
                                                 }}
                                                 subtitleStyle={{
-                                                    color:
-                                                        theme === 'dark'
-                                                            ? 'gray'
-                                                            : '#8a8999'
+                                                    color: utxosPicked.includes(
+                                                        `${item.txid}:${item.output}`
+                                                    )
+                                                        ? 'orange'
+                                                        : theme === 'dark'
+                                                        ? 'gray'
+                                                        : '#8a8999'
                                                 }}
                                             />
                                         )}
@@ -308,25 +314,37 @@ export default class UTXOPicker extends React.Component<
                         >
                             {title || DEFAULT_TITLE}
                         </Text>
-                        <Picker
-                            selectedValue={selectedValue}
-                            onValueChange={(itemValue: string) => {
-                                if (itemValue === 'Clear selection') {
-                                    this.clearSelection();
-                                } else if (
-                                    itemValue === 'Select UTXOs to use'
-                                ) {
-                                    this.openPicker();
+                        {utxosSet.length > 0 ? (
+                            <Text
+                                style={{
+                                    padding: 10,
+                                    fontSize: 16,
+                                    color: theme === 'dark' ? 'white' : 'black'
+                                }}
+                            >
+                                {this.displayValues()}
+                            </Text>
+                        ) : (
+                            <Picker
+                                selectedValue={selectedValue}
+                                onValueChange={(itemValue: string) => {
+                                    if (itemValue === 'No selection') {
+                                        this.clearSelection();
+                                    } else if (
+                                        itemValue === 'Select UTXOs to use'
+                                    ) {
+                                        this.openPicker();
+                                    }
+                                }}
+                                style={
+                                    theme === 'dark'
+                                        ? styles.pickerDark
+                                        : styles.picker
                                 }
-                            }}
-                            style={
-                                theme === 'dark'
-                                    ? styles.pickerDark
-                                    : styles.picker
-                            }
-                        >
-                            {pickerValuesAndroid}
-                        </Picker>
+                            >
+                                {pickerValuesAndroid}
+                            </Picker>
+                        )}
                     </View>
                 )}
 
@@ -348,9 +366,9 @@ export default class UTXOPicker extends React.Component<
                                         cancelButtonIndex: 0
                                     },
                                     buttonIndex => {
-                                        if (buttonIndex == 2) {
+                                        if (buttonIndex == 1) {
                                             this.clearSelection();
-                                        } else if (buttonIndex == 1) {
+                                        } else if (buttonIndex == 2) {
                                             this.openPicker();
                                         }
                                     }
