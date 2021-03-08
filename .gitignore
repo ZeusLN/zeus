@@ -66,4 +66,6 @@ buck-out/
 .jest/
 
 # CocoaPods
-/ios/Pods/
+ios/Pods
+**.swp
+yarn.lock

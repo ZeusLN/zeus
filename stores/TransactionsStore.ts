@@ -6,6 +6,7 @@ import RESTUtils from './../utils/RESTUtils';
 import { randomBytes } from 'react-native-randombytes';
 import { sha256 } from 'js-sha256';
 import { Buffer } from 'buffer';
+import Base64Utils from './../utils/Base64Utils';
 
 const keySendPreimageType = '5482373484';
 const preimageByteLength = 32;
@@ -96,9 +97,11 @@ export default class TransactionsStore {
         payment_request?: string | null,
         amount?: string | null,
         pubkey?: string | null,
-        max_parts?: string,
-        timeout_seconds?: string,
-        fee_limit_sat?: string
+        max_parts?: string | null,
+        timeout_seconds?: string | null,
+        fee_limit_sat?: string | null,
+        outgoing_chan_ids?: Array<string> | null,
+        last_hop_pubkey?: string | null
     ) => {
         this.loading = true;
         this.error_msg = null;
@@ -109,7 +112,13 @@ export default class TransactionsStore {
         this.payment_error = null;
         this.status = null;
 
-        let data: any;
+        let data: any = {};
+        if (payment_request) {
+            data.payment_request = payment_request;
+        }
+        if (amount) {
+            data.amt = amount;
+        }
         if (pubkey) {
             const preimage = randomBytes(preimageByteLength);
             const secret = preimage.toString('base64');
@@ -117,23 +126,9 @@ export default class TransactionsStore {
                 'base64'
             );
 
-            data = {
-                amt: amount,
-                dest_string: pubkey,
-                dest_custom_records: { [keySendPreimageType]: secret },
-                payment_hash
-            };
-        } else {
-            if (amount) {
-                data = {
-                    amt: amount,
-                    payment_request
-                };
-            } else {
-                data = {
-                    payment_request
-                };
-            }
+            data.dest_string = pubkey;
+            data.dest_custom_records = { [keySendPreimageType]: secret };
+            data.payment_hash = payment_hash;
         }
 
         // multi-path payments
@@ -143,19 +138,34 @@ export default class TransactionsStore {
             data.fee_limit_sat = Number(fee_limit_sat);
         }
 
+        // first hop
+        if (outgoing_chan_ids) {
+            data.outgoing_chan_ids = outgoing_chan_ids;
+        }
+        // last hop
+        if (last_hop_pubkey) {
+            // must be base64 encoded (bytes)
+            data.last_hop_pubkey = Base64Utils.hexToBase64(last_hop_pubkey);
+        }
+
         const payFunc = max_parts
             ? RESTUtils.payLightningInvoiceV2
             : RESTUtils.payLightningInvoice;
 
+        // backwards compatibility with v1
+        if (!max_parts && outgoing_chan_ids) {
+            data.outgoing_chan_id = outgoing_chan_ids[0];
+        }
+
         payFunc(data)
-            .then((data: any) => {
-                const result = data.result || data;
+            .then((response: any) => {
+                const result = response.result || response;
                 this.loading = false;
                 this.payment_route = result.payment_route;
                 this.payment_preimage = result.payment_preimage;
                 this.payment_hash = result.payment_hash;
                 if (
-                    data.payment_error !== '' &&
+                    response.payment_error !== '' &&
                     result.status !== 'SUCCEEDED'
                 ) {
                     this.error = true;
