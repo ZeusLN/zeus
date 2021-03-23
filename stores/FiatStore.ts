@@ -19,9 +19,12 @@ export default class FiatStore {
     public getRate = () => {
         const { settings } = this.settingsStore;
         const { fiat } = settings;
-        const rate = this.fiatRates[fiat]['15m'];
-        const symbol = this.fiatRates[fiat].symbol;
-        return `${symbol}${rate} BTC/${fiat}`;
+        if (fiat) {
+            const rate = this.fiatRates[fiat]['15m'];
+            const symbol = this.fiatRates[fiat].symbol;
+            return `${symbol}${rate} BTC/${fiat}`;
+        }
+        return 'N/A';
     };
 
     @action
