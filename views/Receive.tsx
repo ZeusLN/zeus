@@ -126,7 +126,9 @@ export default class Receive extends React.Component<
                 satAmount = Number(value) * satoshisPerBTC;
                 break;
             case 'fiat':
-                satAmount = Number(Number(value) / Number(rate) * Number(satoshisPerBTC)).toFixed(0);
+                satAmount = Number(
+                    (Number(value) / Number(rate)) * Number(satoshisPerBTC)
+                ).toFixed(0);
                 break;
         }
 
@@ -313,7 +315,10 @@ export default class Receive extends React.Component<
                                                     : 'black'
                                         }}
                                     >
-                                        {UnitsStore.getAmount(satAmount, 'sats')}{' '}
+                                        {UnitsStore.getAmount(
+                                            satAmount,
+                                            'sats'
+                                        )}{' '}
                                     </Text>
                                 </TouchableOpacity>
                             )}
