@@ -126,7 +126,9 @@ export default class Receive extends React.Component<
                 satAmount = Number(value) * satoshisPerBTC;
                 break;
             case 'fiat':
-                satAmount = Number(Number(value) * rate).toFixed(0);
+                satAmount = Number(
+                    (Number(value) / Number(rate)) * Number(satoshisPerBTC)
+                ).toFixed(0);
                 break;
         }
 
@@ -313,8 +315,39 @@ export default class Receive extends React.Component<
                                                     : 'black'
                                         }}
                                     >
-                                        {satAmount}{' '}
-                                        {localeString('views.Receive.satoshis')}
+                                        {UnitsStore.getAmount(
+                                            satAmount,
+                                            'sats'
+                                        )}{' '}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
+                            {units !== 'btc' && (
+                                <TouchableOpacity onPress={() => changeUnits()}>
+                                    <Text
+                                        style={{
+                                            color:
+                                                theme === 'dark'
+                                                    ? 'white'
+                                                    : 'black'
+                                        }}
+                                    >
+                                        {UnitsStore.getAmount(satAmount, 'btc')}{' '}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
+
+                            {units === 'fiat' && (
+                                <TouchableOpacity onPress={() => changeUnits()}>
+                                    <Text
+                                        style={{
+                                            color:
+                                                theme === 'dark'
+                                                    ? 'white'
+                                                    : 'black'
+                                        }}
+                                    >
+                                        {FiatStore.getRate()}{' '}
                                     </Text>
                                 </TouchableOpacity>
                             )}
