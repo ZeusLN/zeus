@@ -16,6 +16,15 @@ export default class FiatStore {
     }
 
     @action
+    public getRate = () => {
+        const { settings } = this.settingsStore;
+        const { fiat } = settings;
+        const rate = this.fiatRates[fiat]['15m'];
+        const symbol = this.fiatRates[fiat].symbol;
+        return `${symbol}${rate} BTC/${fiat}`;
+    };
+
+    @action
     public getFiatRates = () => {
         this.loading = true;
         RNFetchBlob.fetch('get', 'https://blockchain.info/ticker')
