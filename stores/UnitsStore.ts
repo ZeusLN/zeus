@@ -48,37 +48,38 @@ export default class UnitsStore {
         x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
     @action
-    public getAmount = (value: string | number = 0) => {
+    public getAmount = (value: string | number = 0, fixedUnits?: string) => {
         const { settings } = this.settingsStore;
         const { fiat } = settings;
+        const units = fixedUnits || this.units;
 
         const wholeSats = value.toString().split('.')[0];
-        if (this.units === 'btc') {
+        if (units === 'btc') {
             // handle negative values
             const valueToProcess = (wholeSats && wholeSats.toString()) || '0';
             if (valueToProcess.includes('-')) {
                 let processedValue = valueToProcess.split('-')[1];
-                return `- ₿ ${FeeUtils.toFixed(
+                return `-₿${FeeUtils.toFixed(
                     Number(processedValue) / satoshisPerBTC
                 )}`;
             }
 
-            return `₿ ${FeeUtils.toFixed(
+            return `₿${FeeUtils.toFixed(
                 Number(wholeSats || 0) / satoshisPerBTC
             )}`;
-        } else if (this.units === 'sats') {
+        } else if (units === 'sats') {
             const sats = `${value || 0} ${
                 Number(value) === 1 || Number(value) === -1 ? 'sat' : 'sats'
             }`;
             return this.numberWithCommas(sats);
-        } else if (this.units === 'fiat' && fiat) {
+        } else if (units === 'fiat' && fiat) {
             const rate = this.fiatStore.fiatRates[fiat]['15m'];
             const symbol = this.fiatStore.fiatRates[fiat].symbol;
 
             const valueToProcess = (wholeSats && wholeSats.toString()) || '0';
             if (valueToProcess.includes('-')) {
                 let processedValue = valueToProcess.split('-')[1];
-                return `- ${symbol} ${(
+                return `-${symbol}${(
                     FeeUtils.toFixed(Number(processedValue) / satoshisPerBTC) *
                     rate
                 ).toFixed(2)}`;
