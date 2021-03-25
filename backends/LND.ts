@@ -38,7 +38,10 @@ export default class LND {
                 method as RequestMethod,
                 JSON.stringify(data),
                 headers
-            );
+            ).then((response: any) => {
+                delete calls[id];
+                return response;
+            });
         } else {
             calls[id] = RNFetchBlob.config({
                 trusty: !certVerification
