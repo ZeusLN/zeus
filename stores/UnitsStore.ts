@@ -85,7 +85,7 @@ export default class UnitsStore {
                 ).toFixed(2)}`;
             }
 
-            return `${symbol} ${(
+            return `${symbol}${(
                 FeeUtils.toFixed(Number(wholeSats || 0) / satoshisPerBTC) * rate
             ).toFixed(2)}`;
         }
