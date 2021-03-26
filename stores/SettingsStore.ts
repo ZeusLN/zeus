@@ -98,7 +98,7 @@ export default class SettingsStore {
                             'Sorry, we currently only support BTCPay instances using lnd or c-lightning';
                     } else {
                         const config = {
-                            host: uri.split('https://')[1],
+                            host: uri,
                             macaroonHex: adminMacaroon || macaroon,
                             implementation:
                                 type === 'clightning-rest'

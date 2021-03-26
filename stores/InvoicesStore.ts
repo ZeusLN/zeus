@@ -2,6 +2,8 @@ import { action, observable, reaction } from 'mobx';
 import RNFetchBlob from 'rn-fetch-blob';
 import { Alert } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
+import querystring from 'querystring-es3';
+import url from 'url';
 import hashjs from 'hash.js';
 import Invoice from './../models/Invoice';
 import SettingsStore from './SettingsStore';
@@ -119,10 +121,14 @@ export default class InvoicesStore {
                 this.creatingInvoice = false;
 
                 if (lnurl) {
-                    RNFetchBlob.fetch(
-                        'get',
-                        `${lnurl.callback}?k1=${lnurl.k1}&pr=${this.payment_request}`
-                    )
+                    const u = url.parse(lnurl.callback);
+                    const qs = querystring.parse(u.query);
+                    qs.k1 = lnurl.k1;
+                    qs.pr = this.payment_request;
+                    u.search = querystring.stringify(qs);
+                    u.query = querystring.stringify(qs);
+
+                    RNFetchBlob.fetch('get', url.format(u))
                         .then((response: any) => {
                             try {
                                 const data = response.json();

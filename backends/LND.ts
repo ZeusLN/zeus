@@ -38,7 +38,10 @@ export default class LND {
                 method as RequestMethod,
                 JSON.stringify(data),
                 headers
-            );
+            ).then((response: any) => {
+                delete calls[id];
+                return response;
+            });
         } else {
             calls[id] = RNFetchBlob.config({
                 trusty: !certVerification
@@ -148,10 +151,11 @@ export default class LND {
         route: string,
         ws?: boolean
     ) => {
-        let baseUrl = `${host}${port ? ':' + port : ''}`;
+        const hostPath = host.includes('://') ? host : `https://${host}`;
+        let baseUrl = `${hostPath}${port ? ':' + port : ''}`;
 
         if (ws) {
-            baseUrl = baseUrl.replace('https', 'wss');
+            baseUrl = baseUrl.replace('https', 'wss').replace('http', 'ws');
         }
 
         if (baseUrl[baseUrl.length - 1] === '/') {
