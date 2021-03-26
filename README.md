@@ -14,7 +14,7 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 ### App Store links
 * [Google Play](https://play.google.com/store/apps/details?id=app.zeusln.zeus)
 * [Apple TestFlight](https://testflight.apple.com/join/gpVFzEHN)
-* [F-Droid](https://f-droid.org/packages/com.zeusln.zeus/)
+* [F-Droid](https://f-droid.org/packages/app.zeusln.zeus/)
 
 ### Get in touch with us
 * Come chat with us on
@@ -99,7 +99,7 @@ Do not directly modify the files in `/locales` unless you are adding new copy to
 
 ## Release + Commit Verification
 
-All releases and all maintainer commits as of January 24, 2020 are signed by key `A28823E23E1A70BF` (zeusln@tutanota.com). The key can be found [in this repo] (https://github.com/ZeusLN/zeus/blob/master/PGP.txt) and [on the ZeusLN.app website](https://zeusln.app/PGP.txt). 
+All releases and all maintainer commits as of January 24, 2020 are signed by key `A28823E23E1A70BF` (zeusln@tutanota.com). The key can be found [in this repo](https://github.com/ZeusLN/zeus/blob/master/PGP.txt) and [on the ZeusLN.app website](https://zeusln.app/PGP.txt). 
 
 ## Donations
 
