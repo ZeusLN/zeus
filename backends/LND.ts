@@ -155,7 +155,7 @@ export default class LND {
         let baseUrl = `${hostPath}${port ? ':' + port : ''}`;
 
         if (ws) {
-            baseUrl = baseUrl.replace('https', 'wss').replace('http', 'wss');
+            baseUrl = baseUrl.replace('https', 'wss').replace('http', 'ws');
         }
 
         if (baseUrl[baseUrl.length - 1] === '/') {
