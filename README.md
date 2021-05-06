@@ -54,10 +54,19 @@ On Android Zeus has support for connecting to you node entirely over the Tor net
 
 Zeus is proud to be integrated on the following platforms:
 
-* [BTCPay Server](https://btcpayserver.org/)
+### Full node solutions
 * [nodl](https://www.nodl.it/)
 * [myNode](https://mynodebtc.com/) ([Standard guide](https://mynodebtc.com/guide/zeus), [Tor guide](https://mynodebtc.com/guide/zeus_tor))
 * [RaspiBlitz](https://github.com/rootzoll/raspiblitz)
+* [Umbrel](https://getumbrel.com/)
+* [Start9 Embassy](https://start9.com/)
+
+### Payment platforms
+* [BTCPay Server](https://btcpayserver.org/)
+* [LNBits](https://lnbits.com/)
+
+### Android nodes
+* [Nayuta Core](https://nayuta.co/core/)
 
 ## Building Zeus from source
 
