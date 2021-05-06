@@ -49,6 +49,7 @@ On Android Zeus has support for connecting to you node entirely over the Tor net
 * [Zeus over Tor guide for RaspiBolt](https://stadicus.github.io/RaspiBolt/raspibolt_72_zeus-over-tor.html)
 * [Zeus over Tor guide for FreeNAS by Seth586](https://github.com/seth586/guides/blob/master/FreeNAS/wallets/zeusln.md)
 * [Zeus over Tor guide for RaspiBlitz by openoms](https://github.com/openoms/bitcoin-tutorials/blob/master/Zeus_to_RaspiBlitz_through_Tor.md)
+* [Tor-Only Bitcoin & Lightning Guide by Lopp](https://blog.lopp.net/tor-only-bitcoin-lightning-guide/)
 
 ## Integrations
 
