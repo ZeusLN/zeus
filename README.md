@@ -22,7 +22,7 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 * Keep up with us on
 [Twitter](https://twitter.com/ZeusLN)
 * Open a channel with
-[our node](https://1ml.com/node/03e1210c8d4b236a53191bb172701d76ec06dfa869a1afffcfd8f4e07d9129d898)
+[our main node](https://1ml.com/node/03e1210c8d4b236a53191bb172701d76ec06dfa869a1afffcfd8f4e07d9129d898) or [our Olympus node](https://1ml.com/node/02c2d8e5f8220c99d92f4fe808e7c5332d33d146db3e63a50f03663addfaa5a8df)
 
 ## Connecting to your node
 
