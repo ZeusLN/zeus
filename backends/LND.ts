@@ -248,7 +248,11 @@ export default class LND {
     getForwardingHistory = (data: any) => this.postRequest('/v1/switch', data);
 
     // LndHub
-    createAccount = (host: string, certVerification: boolean) => {
+    createAccount = (
+        host: string,
+        certVerification: boolean,
+        useTor?: boolean
+    ) => {
         const url: string = `${host}/create`;
         return this.restReq(
             {
@@ -261,7 +265,8 @@ export default class LND {
                 partnerid: 'bluewallet',
                 accounttype: 'common'
             },
-            certVerification
+            certVerification,
+            useTor
         );
     };
 
