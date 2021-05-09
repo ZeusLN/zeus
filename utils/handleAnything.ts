@@ -54,6 +54,7 @@ export default async function(data: string): Promise<any> {
                 password,
                 lndhubUrl: host,
                 certVerification: true,
+                enableTor: host.includes('.onion'),
                 existingAccount
             };
         } else {
