@@ -34,7 +34,9 @@ class LndConnectUtils {
         // prepend https by default
         host = 'https://' + host;
 
-        return { host, port, macaroonHex };
+        const enableTor: boolean = host.includes('.onion');
+
+        return { host, port, macaroonHex, enableTor };
     };
 }
 
