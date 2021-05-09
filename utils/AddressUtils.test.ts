@@ -212,6 +212,11 @@ describe('AddressUtils', () => {
                         'lndhub://9a1e4e972f732352c75e:4a1e4e172f732352c75e@https://test-domain.org:4324'
                     )
                 ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLNDHubAddress(
+                        'bluewallet:setlndhuburl?url=http%3A%2F%2Fnaf3121nfadoxnwer1s5x2rkirdqbmvuws2ojvgood.onion'
+                    )
+                ).toBeTruthy();
             });
             it('processes all BECH32 send address variations', () => {
                 // with fee
@@ -298,6 +303,16 @@ describe('AddressUtils', () => {
                     username: '9a1e4e972f732352c75e',
                     password: '4a1e4e172f732352c75e',
                     host: 'https://test-domain.org:4324'
+                });
+            });
+            it('processes hosts from Umbrel', () => {
+                expect(
+                    AddressUtils.processLNDHubAddress(
+                        'bluewallet:setlndhuburl?url=http%3A%2F%2Fnaf3121nfadoxnwer1s5x2rkirdqbmvuws2ojvgood.onion'
+                    )
+                ).toEqual({
+                    host:
+                        'http://naf3121nfadoxnwer1s5x2rkirdqbmvuws2ojvgood.onion'
                 });
             });
         });
