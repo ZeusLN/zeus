@@ -246,6 +246,12 @@ export default class LND {
                 urlParams[1]}`
         );
     getForwardingHistory = (data: any) => this.postRequest('/v1/switch', data);
+    // Coin Control
+    fundPsbt = (data: any) => this.postRequest('/v2/wallet/psbt/fund', data);
+    finalizePsbt = (data: any) => this.postRequest('/v2/wallet/psbt/finalize', data);
+    publishTransaction = (data: any) => this.postRequest('/v2/wallet/tx', data);
+    getUTXOs = () => this.postRequest('/v2/wallet/utxos');
+    bumpFee = (data: any) => this.postRequest('/v2/wallet/bumpfee', data);
 
     // LndHub
     createAccount = (host: string, certVerification: boolean) => {
