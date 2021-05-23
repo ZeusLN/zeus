@@ -66,7 +66,7 @@ export default class UTXOPicker extends React.Component<
     };
 
     openPicker() {
-        stores.utxosStore.getUTXOs();
+        stores.utxosStore.getUTXOs({ min_confs: 1 });
         this.setState({
             utxosSelected: [],
             showUtxoModal: true,
@@ -188,7 +188,7 @@ export default class UTXOPicker extends React.Component<
                                         )}
                                     </Text>
 
-                                    <Text
+                                    {!loading && utxos.length !== 0 && <Text
                                         style={{
                                             fontSize: 20,
                                             paddingTop: 20,
@@ -202,7 +202,9 @@ export default class UTXOPicker extends React.Component<
                                         {`${selectedBalance} ${localeString(
                                             'views.Receive.satoshis'
                                         )}`}
-                                    </Text>
+                                    </Text>}
+
+                                    {!loading && utxos.length === 0 && <Text style={{ color:theme === 'dark' ? 'white' : 'black'}}>No UTXOs available</Text>}
 
                                     <FlatList
                                         data={utxos}
@@ -259,7 +261,7 @@ export default class UTXOPicker extends React.Component<
                                         keyExtractor={(item: any) => item.txid}
                                         onEndReachedThreshold={50}
                                         refreshing={loading}
-                                        onRefresh={() => getUTXOs()}
+                                        onRefresh={() => getUTXOs({ min_confs: 1, max_confs: 500000 })}
                                     />
 
                                     <View style={styles.button}>

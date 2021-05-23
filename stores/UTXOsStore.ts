@@ -20,13 +20,13 @@ export default class UTXOsStore {
     };
 
     @action
-    public getUTXOs = () => {
+    public getUTXOs = (req: any) => {
         this.errorMsg = '';
         this.loading = true;
-        RESTUtils.getUTXOs()
+        RESTUtils.getUTXOs(req)
             .then((data: any) => {
                 this.loading = false;
-                this.utxos = data.outputs || data;
+                this.utxos = data.outputs || data.utxos || data;
                 this.error = false;
             })
             .catch((error: any) => {

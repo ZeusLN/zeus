@@ -250,7 +250,7 @@ export default class LND {
     fundPsbt = (data: any) => this.postRequest('/v2/wallet/psbt/fund', data);
     finalizePsbt = (data: any) => this.postRequest('/v2/wallet/psbt/finalize', data);
     publishTransaction = (data: any) => this.postRequest('/v2/wallet/tx', data);
-    getUTXOs = () => this.postRequest('/v2/wallet/utxos');
+    getUTXOs = (data: any) => this.postRequest('/v2/wallet/utxos', data);
     bumpFee = (data: any) => this.postRequest('/v2/wallet/bumpfee', data);
 
     // LndHub
@@ -275,6 +275,6 @@ export default class LND {
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
     supportsMPP = () => this.supports('v0.11.0');
-    supportsCoinControl = () => false;
+    supportsCoinControl = () => true;
     supportsHopPicking = () => this.supports('v0.11.0');
 }

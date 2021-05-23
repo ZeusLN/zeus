@@ -227,4 +227,9 @@ export default class ChannelsStore {
                 this.channelSuccess = false;
             });
     };
+
+    @action
+    public openChannelLndCoinControl = (request: OpenChannelRequest) => {
+      // wip
+    };
 }
