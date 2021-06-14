@@ -5,9 +5,9 @@ import {
     StyleSheet,
     View,
     Text,
-    Picker,
     TouchableOpacity
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 
 interface DropdownSettingProps {
     title: string;

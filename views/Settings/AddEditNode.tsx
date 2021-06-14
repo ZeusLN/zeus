@@ -4,7 +4,6 @@ import {
     ActionSheetIOS,
     Clipboard,
     Modal,
-    Picker,
     Platform,
     StyleSheet,
     Text,
@@ -13,6 +12,7 @@ import {
     TextInput,
     TouchableOpacity
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import AddressUtils, { DEFAULT_LNDHUB } from './../../utils/AddressUtils';
