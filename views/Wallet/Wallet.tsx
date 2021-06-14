@@ -330,48 +330,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         }}
                     />
                 )}
-
-                {selectedIndex == 0 && (
-                    <Payments
-                        payments={payments}
-                        navigation={navigation}
-                        refresh={this.refresh}
-                        PaymentsStore={PaymentsStore}
-                        UnitsStore={UnitsStore}
-                        SettingsStore={SettingsStore}
-                    />
-                )}
-                {selectedIndex == 1 && (
-                    <Invoices
-                        invoices={invoices}
-                        navigation={navigation}
-                        refresh={this.refresh}
-                        InvoicesStore={InvoicesStore}
-                        UnitsStore={UnitsStore}
-                        SettingsStore={SettingsStore}
-                    />
-                )}
-                {selectedIndex == 2 && (
-                    <Transactions
-                        transactions={transactions}
-                        navigation={navigation}
-                        refresh={this.refresh}
-                        TransactionsStore={TransactionsStore}
-                        UnitsStore={UnitsStore}
-                        SettingsStore={SettingsStore}
-                    />
-                )}
-                {selectedIndex == 3 && (
-                    <Channels
-                        channels={channels}
-                        navigation={navigation}
-                        refresh={this.refresh}
-                        ChannelsStore={ChannelsStore}
-                        NodeInfoStore={NodeInfoStore}
-                        UnitsStore={UnitsStore}
-                        SettingsStore={SettingsStore}
-                    />
-                )}
             </View>
         );
     }
