@@ -53,7 +53,7 @@ export default class PaymentsView extends React.Component<PaymentsProps, {}> {
         const { getAmount, units } = UnitsStore;
         const { loading } = PaymentsStore;
         const { settings } = SettingsStore;
-        const { theme, lurkerMode } = settings;
+        const { theme } = settings;
 
         const Balance = (balanceImage: any) => <Avatar source={balanceImage} />;
 
@@ -73,21 +73,15 @@ export default class PaymentsView extends React.Component<PaymentsProps, {}> {
                                 key={item.payment_hash}
                                 title={
                                     units &&
-                                    (lurkerMode
-                                        ? PrivacyUtils.hideValue(
-                                              getAmount(item.getAmount),
-                                              null,
-                                              true
-                                          )
-                                        : getAmount(item.getAmount))
+                                    PrivacyUtils.sensitiveValue(
+                                        getAmount(item.getAmount),
+                                        null,
+                                        true
+                                    )
                                 }
-                                subtitle={
-                                    lurkerMode
-                                        ? PrivacyUtils.hideValue(
-                                              item.getCreationTime
-                                          )
-                                        : item.getCreationTime
-                                }
+                                subtitle={PrivacyUtils.sensitiveValue(
+                                    item.getCreationTime
+                                )}
                                 containerStyle={{
                                     borderBottomWidth: 0,
                                     backgroundColor:
