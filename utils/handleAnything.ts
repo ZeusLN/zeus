@@ -43,6 +43,9 @@ export default async function(data: string): Promise<any> {
         const { username, password, host } = AddressUtils.processLNDHubAddress(
             value
         );
+
+        const existingAccount: boolean = !!username;
+
         let node;
         if (host) {
             node = {
@@ -51,7 +54,8 @@ export default async function(data: string): Promise<any> {
                 password,
                 lndhubUrl: host,
                 certVerification: true,
-                existingAccount: true
+                enableTor: host.includes('.onion'),
+                existingAccount
             };
         } else {
             node = {
@@ -59,7 +63,7 @@ export default async function(data: string): Promise<any> {
                 username,
                 password,
                 certVerification: true,
-                existingAccount: true
+                existingAccount
             };
         }
         return [
