@@ -124,9 +124,7 @@ export default class ChannelView extends React.Component<
             alias ||
             channelId;
 
-        const channelDisplay = lurkerMode
-            ? PrivacyUtils.hideValue(channelName, 8)
-            : channelName;
+        const channelDisplay = PrivacyUtils.sensitiveValue(channelName, 8);
 
         const data = new Identicon(
             hash.sha1(alias || remote_pubkey || channelId),
@@ -135,35 +133,39 @@ export default class ChannelView extends React.Component<
 
         const channelFee = channelFees[channel_point];
 
-        const channelBalanceLocal = lurkerMode
-            ? PrivacyUtils.hideValue(getAmount(localBalance || 0), 8, true)
-            : getAmount(localBalance || 0);
-        const channelBalanceRemote = lurkerMode
-            ? PrivacyUtils.hideValue(getAmount(remoteBalance || 0), 8, true)
-            : getAmount(remoteBalance || 0);
+        const channelBalanceLocal = PrivacyUtils.sensitiveValue(
+            getAmount(localBalance || 0),
+            8,
+            true
+        );
+        const channelBalanceRemote = PrivacyUtils.sensitiveValue(
+            getAmount(remoteBalance || 0),
+            8,
+            true
+        );
 
-        const unsettledBalance = lurkerMode
-            ? PrivacyUtils.hideValue(getAmount(unsettled_balance), 8, true)
-            : getAmount(unsettled_balance);
+        const unsettledBalance = PrivacyUtils.sensitiveValue(
+            getAmount(unsettled_balance),
+            8,
+            true
+        );
 
-        const totalSatoshisReceived = lurkerMode
-            ? PrivacyUtils.hideValue(
-                  getAmount(total_satoshis_received || 0),
-                  8,
-                  true
-              )
-            : getAmount(total_satoshis_received || 0);
-        const totalSatoshisSent = lurkerMode
-            ? PrivacyUtils.hideValue(
-                  getAmount(total_satoshis_sent || 0),
-                  8,
-                  true
-              )
-            : getAmount(total_satoshis_sent || 0);
+        const totalSatoshisReceived = PrivacyUtils.sensitiveValue(
+            getAmount(total_satoshis_received || 0),
+            8,
+            true
+        );
+        const totalSatoshisSent = PrivacyUtils.sensitiveValue(
+            getAmount(total_satoshis_sent || 0),
+            8,
+            true
+        );
 
-        const capacityDisplay = lurkerMode
-            ? PrivacyUtils.hideValue(getAmount(capacity), 5, true)
-            : getAmount(capacity);
+        const capacityDisplay = PrivacyUtils.sensitiveValue(
+            getAmount(capacity),
+            5,
+            true
+        );
 
         const BackButton = () => (
             <Icon
@@ -209,9 +211,7 @@ export default class ChannelView extends React.Component<
                                         : styles.pubkey
                                 }
                             >
-                                {lurkerMode
-                                    ? PrivacyUtils.hideValue(remote_pubkey)
-                                    : remote_pubkey}
+                                {PrivacyUtils.sensitiveValue(remote_pubkey)}
                             </Text>
                         )}
 
@@ -388,13 +388,11 @@ export default class ChannelView extends React.Component<
                                         : styles.value
                                 }
                             >
-                                {lurkerMode
-                                    ? PrivacyUtils.hideValue(
-                                          channelFee.base_fee_msat,
-                                          5,
-                                          true
-                                      )
-                                    : channelFee.base_fee_msat}
+                                {PrivacyUtils.sensitiveValue(
+                                    channelFee.base_fee_msat,
+                                    5,
+                                    true
+                                )}
                             </Text>
                         </View>
                     )}
@@ -417,13 +415,11 @@ export default class ChannelView extends React.Component<
                                         : styles.value
                                 }
                             >
-                                {lurkerMode
-                                    ? PrivacyUtils.hideValue(
-                                          channelFee.fee_rate * 1000000,
-                                          2,
-                                          true
-                                      )
-                                    : channelFee.fee_rate * 1000000}
+                                {PrivacyUtils.sensitiveValue(
+                                    channelFee.fee_rate * 1000000,
+                                    2,
+                                    true
+                                )}
                             </Text>
                         </View>
                     )}
@@ -469,13 +465,11 @@ export default class ChannelView extends React.Component<
                                         : styles.value
                                 }
                             >
-                                {lurkerMode
-                                    ? PrivacyUtils.hideValue(
-                                          commit_fee,
-                                          4,
-                                          true
-                                      )
-                                    : commit_fee}
+                                {PrivacyUtils.sensitiveValue(
+                                    commit_fee,
+                                    4,
+                                    true
+                                )}
                             </Text>
                         </View>
                     )}
@@ -521,13 +515,11 @@ export default class ChannelView extends React.Component<
                                         : styles.value
                                 }
                             >
-                                {lurkerMode
-                                    ? PrivacyUtils.hideValue(
-                                          fee_per_kw,
-                                          6,
-                                          true
-                                      )
-                                    : fee_per_kw}
+                                {PrivacyUtils.sensitiveValue(
+                                    fee_per_kw,
+                                    6,
+                                    true
+                                )}
                             </Text>
                         </View>
                     )}

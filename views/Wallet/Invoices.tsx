@@ -56,7 +56,7 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
         const { getAmount, units } = UnitsStore;
         const { loading } = InvoicesStore;
         const { settings } = SettingsStore;
-        const { theme, lurkerMode } = settings;
+        const { theme } = settings;
 
         const InvoiceImage = (settled: boolean) => {
             let avatar;
@@ -90,21 +90,21 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
                         renderItem={({ item }) => {
                             const { isPaid } = item;
 
-                            const memo = lurkerMode
-                                ? PrivacyUtils.hideValue(item.getMemo, 10)
-                                : item.getMemo;
+                            const memo = PrivacyUtils.sensitiveValue(
+                                item.getMemo,
+                                10
+                            );
 
-                            const invoiceAmount = lurkerMode
-                                ? PrivacyUtils.hideValue(
-                                      getAmount(item.getAmount),
-                                      null,
-                                      true
-                                  )
-                                : getAmount(item.getAmount);
+                            const invoiceAmount = PrivacyUtils.sensitiveValue(
+                                getAmount(item.getAmount),
+                                null,
+                                true
+                            );
 
-                            const date = lurkerMode
-                                ? PrivacyUtils.hideValue(item.listDate, 14)
-                                : item.listDate;
+                            const date = PrivacyUtils.sensitiveValue(
+                                item.listDate,
+                                14
+                            );
 
                             return (
                                 <ListItem

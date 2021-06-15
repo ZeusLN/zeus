@@ -82,12 +82,12 @@ export default class PaymentView extends React.Component<PaymentProps> {
             />
         );
 
-        const amount = lurkerMode
-            ? PrivacyUtils.hideValue(getAmount(payment.getAmount), 8, true)
-            : getAmount(payment.getAmount);
-        const fee = lurkerMode
-            ? PrivacyUtils.hideValue(getAmount(getFee), 3, true)
-            : getAmount(getFee);
+        const amount = PrivacyUtils.sensitiveValue(
+            getAmount(payment.getAmount),
+            8,
+            true
+        );
+        const fee = PrivacyUtils.sensitiveValue(getAmount(getFee), 3, true);
 
         const lnurlpaytx = this.state.lnurlpaytx;
 
@@ -176,9 +176,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                         : styles.value
                                 }
                             >
-                                {lurkerMode
-                                    ? PrivacyUtils.hideValue(payment_hash)
-                                    : payment_hash}
+                                {PrivacyUtils.sensitiveValue(payment_hash)}
                             </Text>
                         </>
                     )}
@@ -195,9 +193,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             theme === 'dark' ? styles.valueDark : styles.value
                         }
                     >
-                        {lurkerMode
-                            ? PrivacyUtils.hideValue(payment_preimage)
-                            : payment_preimage}
+                        {PrivacyUtils.sensitiveValue(payment_preimage)}
                     </Text>
 
                     <Text
@@ -212,7 +208,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             theme === 'dark' ? styles.valueDark : styles.value
                         }
                     >
-                        {lurkerMode ? PrivacyUtils.hideValue(date, 14) : date}
+                        {PrivacyUtils.sensitiveValue(date, 14)}
                     </Text>
 
                     {enhancedPath.length > 0 && (
@@ -236,7 +232,9 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             selectable
                         >
                             {lurkerMode ? (
-                                PrivacyUtils.hideValue(enhancedPath.join(', '))
+                                PrivacyUtils.sensitiveValue(
+                                    enhancedPath.join(', ')
+                                )
                             ) : (
                                 <PaymentPath path={enhancedPath} />
                             )}
