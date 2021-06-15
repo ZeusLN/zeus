@@ -1,13 +1,13 @@
 import * as React from 'react';
 import {
     ActivityIndicator,
-    Clipboard,
     ScrollView,
     StyleSheet,
     Text,
     View,
     TextInput
 } from 'react-native';
+import Clipboard from '@react-native-community/clipboard';
 import { inject, observer } from 'mobx-react';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import FeeTable from './../components/FeeTable';
