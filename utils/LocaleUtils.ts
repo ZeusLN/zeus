@@ -11,6 +11,7 @@ import * as FA from './../locales/fa.json';
 import * as EL from './../locales/el.json';
 import * as FR from './../locales/fr.json';
 import * as NL from './../locales/nl.json';
+import * as HU from './../locales/hu.json';
 
 const English: any = EN;
 const Czech: any = CS;
@@ -23,6 +24,7 @@ const Persian: any = FA;
 const Greek: any = EL;
 const French: any = FR;
 const Dutch: any = NL;
+const Hungarian: any = HU;
 
 export function localeString(localeString: string): any {
     const { settings } = stores.settingsStore;
@@ -49,6 +51,8 @@ export function localeString(localeString: string): any {
             return French[localeString] || English[localeString];
         case 'Nederlands':
             return Dutch[localeString] || English[localeString];
+        case 'Hungarian':
+            return Hungarian[localeString] || English[localeString];
         default:
             return English[localeString];
     }
