@@ -35,60 +35,53 @@ interface NodeInfoState {
     selectedIndex: number;
 }
 
-const ForwardingHistory = ({
-    events,
-    lurkerMode,
-    getAmount,
-    aliasesById
-}: any) => {
+const ForwardingHistory = ({ events, getAmount, aliasesById }: any) => {
     let eventsDisplay: any = [];
     for (let i = 0; i < events.length; i++) {
         const event = events[i];
         eventsDisplay.push(
-            `${localeString('views.NodeInfo.ForwardingHistory.timestamp')}: ${
-                lurkerMode
-                    ? PrivacyUtils.hideValue(event.getTime, 10)
-                    : event.getTime
-            }`
+            `${localeString(
+                'views.NodeInfo.ForwardingHistory.timestamp'
+            )}: ${PrivacyUtils.sensitiveValue(event.getTime, 10)}`
         );
         eventsDisplay.push(
             `${localeString(
                 'views.NodeInfo.ForwardingHistory.srcChannelId'
-            )}: ${
-                lurkerMode
-                    ? PrivacyUtils.hideValue(event.chan_id_in, 10)
-                    : aliasesById[event.chan_id_in] || event.chan_id_in
-            }`
+            )}: ${PrivacyUtils.sensitiveValue(
+                aliasesById[event.chan_id_in] || event.chan_id_in,
+                10
+            )}`
         );
         eventsDisplay.push(
             `${localeString(
                 'views.NodeInfo.ForwardingHistory.dstChannelId'
-            )}: ${
-                lurkerMode
-                    ? PrivacyUtils.hideValue(event.chan_id_out, 10)
-                    : aliasesById[event.chan_id_out] || event.chan_id_out
-            }`
+            )}: ${PrivacyUtils.sensitiveValue(
+                aliasesById[event.chan_id_out] || event.chan_id_out,
+                10
+            )}`
         );
         eventsDisplay.push(
-            `${localeString('views.NodeInfo.ForwardingHistory.amtIn')}: ${
-                lurkerMode
-                    ? PrivacyUtils.hideValue(getAmount(event.amt_in), 5, true)
-                    : getAmount(event.amt_in)
-            }`
+            `${localeString(
+                'views.NodeInfo.ForwardingHistory.amtIn'
+            )}: ${PrivacyUtils.sensitiveValue(
+                getAmount(event.amt_in),
+                5,
+                true
+            )}`
         );
         eventsDisplay.push(
-            `${localeString('views.NodeInfo.ForwardingHistory.amtOut')}: ${
-                lurkerMode
-                    ? PrivacyUtils.hideValue(getAmount(event.amt_out), 5, true)
-                    : getAmount(event.amt_out)
-            }`
+            `${localeString(
+                'views.NodeInfo.ForwardingHistory.amtOut'
+            )}: ${PrivacyUtils.sensitiveValue(
+                getAmount(event.amt_out),
+                5,
+                true
+            )}`
         );
         eventsDisplay.push(
-            `${localeString('views.NodeInfo.ForwardingHistory.fee')}: ${
-                lurkerMode
-                    ? PrivacyUtils.hideValue(event.fee, 3, true)
-                    : event.fee
-            }`
+            `${localeString(
+                'views.NodeInfo.ForwardingHistory.fee'
+            )}: ${PrivacyUtils.sensitiveValue(event.fee, 3, true)}`
         );
         eventsDisplay.push('');
     }
@@ -218,9 +211,7 @@ export default class NodeInfo extends React.Component<
                 <Text
                     style={theme === 'dark' ? styles.valueDark : styles.value}
                 >
-                    {lurkerMode
-                        ? PrivacyUtils.hideValue(nodeInfo.alias, 10)
-                        : nodeInfo.alias}
+                    {PrivacyUtils.sensitiveValue(nodeInfo.alias, 10)}
                 </Text>
 
                 {nodeInfo.version && (
@@ -244,9 +235,7 @@ export default class NodeInfo extends React.Component<
                                     : styles.value
                             }
                         >
-                            {lurkerMode
-                                ? PrivacyUtils.hideValue(nodeInfo.version, 12)
-                                : nodeInfo.version}
+                            {PrivacyUtils.sensitiveValue(nodeInfo.version, 12)}
                         </Text>
                     </>
                 )}
@@ -359,13 +348,11 @@ export default class NodeInfo extends React.Component<
                                 }
                             >
                                 {units &&
-                                    (lurkerMode
-                                        ? PrivacyUtils.hideValue(
-                                              getAmount(dayEarned),
-                                              5,
-                                              true
-                                          )
-                                        : getAmount(dayEarned))}
+                                    PrivacyUtils.sensitiveValue(
+                                        getAmount(dayEarned),
+                                        5,
+                                        true
+                                    )}
                             </Text>
                         </React.Fragment>
                     )}
@@ -389,13 +376,11 @@ export default class NodeInfo extends React.Component<
                                 }
                             >
                                 {units &&
-                                    (lurkerMode
-                                        ? PrivacyUtils.hideValue(
-                                              getAmount(weekEarned),
-                                              5,
-                                              true
-                                          )
-                                        : getAmount(weekEarned))}
+                                    PrivacyUtils.sensitiveValue(
+                                        getAmount(weekEarned),
+                                        5,
+                                        true
+                                    )}
                             </Text>
                         </React.Fragment>
                     )}
@@ -419,13 +404,11 @@ export default class NodeInfo extends React.Component<
                                 }
                             >
                                 {units &&
-                                    (lurkerMode
-                                        ? PrivacyUtils.hideValue(
-                                              getAmount(monthEarned),
-                                              5,
-                                              true
-                                          )
-                                        : getAmount(monthEarned))}
+                                    PrivacyUtils.sensitiveValue(
+                                        getAmount(monthEarned),
+                                        5,
+                                        true
+                                    )}
                             </Text>
                         </React.Fragment>
                     )}
@@ -459,7 +442,6 @@ export default class NodeInfo extends React.Component<
                         >
                             <ForwardingHistory
                                 events={forwardingEvents}
-                                lurkerMode={lurkerMode}
                                 getAmount={getAmount}
                                 aliasesById={aliasesById}
                             />

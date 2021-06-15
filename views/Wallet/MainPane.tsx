@@ -55,7 +55,7 @@ export default class MainPane extends React.Component<
         } = BalanceStore;
         const { settings, implementation } = SettingsStore;
         const nodeAddress = SettingsStore.host || SettingsStore.url;
-        const { theme, lurkerMode } = settings;
+        const { theme } = settings;
         const loading = NodeInfoStore.loading || BalanceStore.loading;
 
         const pendingUnconfirmedBalance =
@@ -67,25 +67,21 @@ export default class MainPane extends React.Component<
             <>
                 <Text style={styles.lightningBalance}>
                     {units &&
-                        (lurkerMode
-                            ? PrivacyUtils.hideValue(
-                                  getAmount(lightningBalance),
-                                  8,
-                                  true
-                              )
-                            : getAmount(lightningBalance))}{' '}
+                        PrivacyUtils.sensitiveValue(
+                            getAmount(lightningBalance),
+                            8,
+                            true
+                        )}{' '}
                     ⚡
                 </Text>
                 {pendingOpenBalance > 0 ? (
                     <Text style={styles.pendingBalance}>
                         {units &&
-                            (lurkerMode
-                                ? PrivacyUtils.hideValue(
-                                      getAmount(pendingOpenBalance),
-                                      8,
-                                      true
-                                  )
-                                : getAmount(pendingOpenBalance))}{' '}
+                            PrivacyUtils.sensitiveValue(
+                                getAmount(pendingOpenBalance),
+                                8,
+                                true
+                            )}{' '}
                         pending open
                     </Text>
                 ) : null}
@@ -97,25 +93,21 @@ export default class MainPane extends React.Component<
                 <LightningBalance />
                 <Text style={styles.blockchainBalance}>
                     {units &&
-                        (lurkerMode
-                            ? PrivacyUtils.hideValue(
-                                  getAmount(totalBlockchainBalance),
-                                  8,
-                                  true
-                              )
-                            : getAmount(totalBlockchainBalance))}{' '}
+                        PrivacyUtils.sensitiveValue(
+                            getAmount(totalBlockchainBalance),
+                            8,
+                            true
+                        )}{' '}
                     ⛓️
                 </Text>
                 {unconfirmedBlockchainBalance ? (
                     <Text style={styles.pendingBalance}>
                         {units &&
-                            (lurkerMode
-                                ? PrivacyUtils.hideValue(
-                                      getAmount(unconfirmedBlockchainBalance),
-                                      8,
-                                      true
-                                  )
-                                : getAmount(unconfirmedBlockchainBalance))}{' '}
+                            PrivacyUtils.sensitiveValue(
+                                getAmount(unconfirmedBlockchainBalance),
+                                8,
+                                true
+                            )}{' '}
                         pending
                     </Text>
                 ) : null}
@@ -126,24 +118,20 @@ export default class MainPane extends React.Component<
             <React.Fragment>
                 <Text style={styles.lightningBalance}>
                     {units &&
-                        (lurkerMode
-                            ? PrivacyUtils.hideValue(
-                                  getAmount(combinedBalanceValue),
-                                  null,
-                                  true
-                              )
-                            : getAmount(combinedBalanceValue))}
+                        PrivacyUtils.sensitiveValue(
+                            getAmount(combinedBalanceValue),
+                            null,
+                            true
+                        )}
                 </Text>
                 {unconfirmedBlockchainBalance || pendingOpenBalance ? (
                     <Text style={styles.pendingBalance}>
                         {units &&
-                            (lurkerMode
-                                ? PrivacyUtils.hideValue(
-                                      getAmount(pendingUnconfirmedBalance),
-                                      null,
-                                      true
-                                  )
-                                : getAmount(pendingUnconfirmedBalance))}{' '}
+                            PrivacyUtils.sensitiveValue(
+                                getAmount(pendingUnconfirmedBalance),
+                                null,
+                                true
+                            )}{' '}
                         pending
                     </Text>
                 ) : null}
