@@ -33,8 +33,8 @@ interface AddEditNodeState {
     url: string; // spark, eclair
     accessKey: string; // spark
     lndhubUrl: string; // lndhub
-    username: string; // lndhub
-    password: string; // lndhub, eclair
+    username: string | undefined; // lndhub
+    password: string | undefined; // lndhub, eclair
     existingAccount: boolean; // lndhub
     implementation: string;
     certVerification: boolean;
@@ -83,7 +83,8 @@ export default class AddEditNode extends React.Component<
 
         if (
             clipboard.includes('lndconnect://') ||
-            clipboard.includes('lndhub://')
+            clipboard.includes('lndhub://') ||
+            clipboard.includes('bluewallet:')
         ) {
             this.setState({
                 suggestImport: clipboard
@@ -105,14 +106,20 @@ export default class AddEditNode extends React.Component<
                 host,
                 port,
                 macaroonHex,
-                suggestImport: ''
+                suggestImport: '',
+                enableTor: host.includes('.onion')
             });
-        } else if (suggestImport.includes('lndhub://')) {
+        } else if (
+            suggestImport.includes('lndhub://') ||
+            suggestImport.includes('bluewallet:')
+        ) {
             const {
                 username,
                 password,
                 host
             } = AddressUtils.processLNDHubAddress(suggestImport);
+
+            const existingAccount: boolean = !!username;
 
             if (host) {
                 this.setState({
@@ -120,14 +127,17 @@ export default class AddEditNode extends React.Component<
                     password,
                     lndhubUrl: host,
                     implementation: 'lndhub',
-                    suggestImport: ''
+                    suggestImport: '',
+                    enableTor: host.includes('.onion'),
+                    existingAccount
                 });
             } else {
                 this.setState({
                     username,
                     password,
                     implementation: 'lndhub',
-                    suggestImport: ''
+                    suggestImport: '',
+                    existingAccount
                 });
             }
         }
@@ -150,14 +160,6 @@ export default class AddEditNode extends React.Component<
         this.isComponentMounted = false;
     }
 
-    componentDidUpdate() {
-        // auto set tor enabled if onion
-        if (this.state.host && this.state.host.endsWith('.onion')) {
-            if (this.state.enableTor === false) {
-                this.setState(state => ({ ...state, enableTor: true }));
-            }
-        }
-    }
     UNSAFE_componentWillReceiveProps(nextProps: any) {
         this.initFromProps(nextProps);
     }
@@ -1161,7 +1163,8 @@ export default class AddEditNode extends React.Component<
                                 } else {
                                     createAccount(
                                         lndhubUrl,
-                                        certVerification
+                                        certVerification,
+                                        enableTor
                                     ).then((data: any) => {
                                         if (data) {
                                             this.setState({
