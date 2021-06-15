@@ -37,6 +37,7 @@ export const LOCALE_KEYS = [
     { key: 'Slovák', value: 'Slovák' },
     { key: 'Deutsch', value: 'Deutsch' },
     { key: 'Türkçe', value: 'Türkçe' },
+    { key: 'Hungarian', value: 'Hungarian' },
     // in progress
     { key: 'Ελληνικά', value: 'Ελληνικά' },
     { key: 'زبان فارسي', value: 'زبان فارسي' },
