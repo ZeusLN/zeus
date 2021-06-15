@@ -1,5 +1,5 @@
 import Tor, { RequestMethod } from 'react-native-tor';
-const tor = Tor();
+const tor = Tor({ bootstrapTimeoutMs: 35000 });
 const doTorRequest = async <T extends RequestMethod>(
     url: string,
     method: T,
