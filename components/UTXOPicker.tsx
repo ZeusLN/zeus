@@ -8,9 +8,9 @@ import {
     StyleSheet,
     View,
     Text,
-    Picker,
     TouchableOpacity
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { Avatar, ListItem } from 'react-native-elements';
 import { remove } from 'lodash';
 import { inject, observer } from 'mobx-react';
