@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { forEach, isNull } from 'lodash';
+import forEach from 'lodash/forEach';
+import isNull from 'lodash/isNull';
 import {
     StyleSheet,
     ScrollView,
