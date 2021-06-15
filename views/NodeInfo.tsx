@@ -11,7 +11,7 @@ import { ButtonGroup, Header, Icon } from 'react-native-elements';
 import CollapsedQR from './../components/CollapsedQR';
 import SetFeesForm from './../components/SetFeesForm';
 import { inject, observer } from 'mobx-react';
-import { isNil } from 'lodash';
+import isNil from 'lodash/isNil';
 import { version, playStore } from './../package.json';
 import PrivacyUtils from './../utils/PrivacyUtils';
 import { localeString } from './../utils/LocaleUtils';
