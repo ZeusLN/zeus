@@ -2,7 +2,6 @@ import * as React from 'react';
 import {
     ActivityIndicator,
     ActionSheetIOS,
-    Clipboard,
     Modal,
     Platform,
     StyleSheet,
@@ -12,6 +11,7 @@ import {
     TextInput,
     TouchableOpacity
 } from 'react-native';
+import Clipboard from '@react-native-community/clipboard';
 import { Picker } from '@react-native-picker/picker';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';

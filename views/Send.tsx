@@ -5,9 +5,9 @@ import {
     TextInput,
     View,
     ScrollView,
-    Clipboard,
     TouchableOpacity
 } from 'react-native';
+import Clipboard from '@react-native-community/clipboard';
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
 import handleAnything from './../utils/handleAnything';
