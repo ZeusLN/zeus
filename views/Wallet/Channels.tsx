@@ -112,29 +112,26 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                 item.remote_pubkey ||
                                 item.channelId;
 
-                            const channelTitle = lurkerMode
-                                ? PrivacyUtils.hideValue(displayName, 8)
-                                : displayName;
+                            const channelTitle = PrivacyUtils.sensitiveValue(
+                                displayName,
+                                8
+                            );
 
                             const data = new Identicon(
                                 hash.sha1(channelTitle),
                                 255
                             ).toString();
 
-                            const localBalanceDisplay = lurkerMode
-                                ? PrivacyUtils.hideValue(
-                                      getAmount(item.localBalance || 0),
-                                      7,
-                                      true
-                                  )
-                                : getAmount(item.localBalance || 0);
-                            const remoteBalanceDisplay = lurkerMode
-                                ? PrivacyUtils.hideValue(
-                                      getAmount(item.remoteBalance || 0),
-                                      7,
-                                      true
-                                  )
-                                : getAmount(item.remoteBalance || 0);
+                            const localBalanceDisplay = PrivacyUtils.sensitiveValue(
+                                getAmount(item.localBalance || 0),
+                                7,
+                                true
+                            );
+                            const remoteBalanceDisplay = PrivacyUtils.sensitiveValue(
+                                getAmount(item.remoteBalance || 0),
+                                7,
+                                true
+                            );
 
                             return (
                                 <React.Fragment>
