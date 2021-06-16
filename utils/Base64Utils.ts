@@ -24,53 +24,8 @@ class Base64Utils {
         return output;
     };
 
-    atob = (input: string = '') => {
-        let str = input.replace(/=+$/, '');
-        let output = '';
-
-        if (str.length % 4 == 1) {
-            throw new Error(
-                "'atob' failed: The string to be decoded is not correctly encoded."
-            );
-        }
-        for (
-            let bc = 0, bs = 0, buffer, i = 0;
-            (buffer = str.charAt(i++));
-            ~buffer && ((bs = bc % 4 ? bs * 64 + buffer : buffer), bc++ % 4)
-                ? (output += String.fromCharCode(255 & (bs >> ((-2 * bc) & 6))))
-                : 0
-        ) {
-            buffer = chars.indexOf(buffer);
-        }
-
-        return output;
-    };
-
-    hexStringToByte = (str: string = '') => {
-        if (!str) {
-            return new Uint8Array();
-        }
-
-        const a = [];
-        for (let i = 0, len = str.length; i < len; i += 2) {
-            a.push(parseInt(str.substr(i, 2), 16));
-        }
-
-        return new Uint8Array(a);
-    };
-
-    byteToBase64 = (buffer: Uint8Array) => {
-        let binary = '';
-        const bytes = new Uint8Array(buffer);
-        const len = bytes.byteLength;
-        for (let i = 0; i < len; i++) {
-            binary += String.fromCharCode(bytes[i]);
-        }
-        return this.btoa(binary);
-    };
-
     hexToBase64 = (str: string = '') =>
-        this.byteToBase64(this.hexStringToByte(str));
+        Buffer.from(str, 'hex').toString('base64');
 }
 
 const base64Utils = new Base64Utils();
