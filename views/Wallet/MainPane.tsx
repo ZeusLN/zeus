@@ -23,20 +23,12 @@ interface MainPaneProps {
     SettingsStore: SettingsStore;
 }
 
-interface MainPaneState {
-    combinedBalance: boolean;
-}
-
 @inject('UnitsStore', 'SettingsStore')
 @observer
-export default class MainPane extends React.Component<
+export default class MainPane extends React.PureComponent<
     MainPaneProps,
-    MainPaneState
+    {}
 > {
-    state = {
-        combinedBalance: false
-    };
-
     render() {
         const {
             NodeInfoStore,
@@ -45,7 +37,6 @@ export default class MainPane extends React.Component<
             SettingsStore,
             navigation
         } = this.props;
-        const { combinedBalance } = this.state;
         const { changeUnits, getAmount, units } = UnitsStore;
         const {
             totalBlockchainBalance,
@@ -163,19 +154,8 @@ export default class MainPane extends React.Component<
 
         const DefaultBalance = () => (
             <>
-                <TouchableOpacity
-                    onPress={() => changeUnits()}
-                    onLongPress={() =>
-                        this.setState({
-                            combinedBalance: !combinedBalance
-                        })
-                    }
-                >
-                    {combinedBalance ? (
-                        <BalanceViewCombined />
-                    ) : (
-                        <BalanceView />
-                    )}
+                <TouchableOpacity onPress={() => changeUnits()}>
+                    <BalanceViewCombined />
                 </TouchableOpacity>
             </>
         );
@@ -394,13 +374,13 @@ export default class MainPane extends React.Component<
     }
 }
 
-const lightThemeGradient = ['#FAB57F', 'orange', '#ee7600'];
+const lightThemeGradient = ['white', 'grey', 'black'];
 const darkThemeGradient = ['#33194d', '#261339', 'black'];
 
 const styles = StyleSheet.create({
     container: {
         paddingBottom: 50,
-        paddingLeft: 10
+        alignItems: 'center'
     },
     loadingContainer: {
         backgroundColor: 'rgba(253, 164, 40, 0.5)',
