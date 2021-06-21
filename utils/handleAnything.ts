@@ -94,6 +94,14 @@ export default async function(data: string): Promise<any> {
                         }
                     ];
                     break;
+                case 'channelRequest':
+                    return [
+                        'LnurlChannel',
+                        {
+                            lnurlParams: params
+                        }
+                    ];
+                    break;
                 default:
                     throw new Error(
                         params.status === 'ERROR'

@@ -1,8 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:tools="http://schemas.android.com/tools"
     package="app.zeusln.zeus">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-sdk tools:overrideLibrary="com.sifir.tor"/>
 
     <application
       android:name=".MainApplication"
