@@ -1,8 +1,8 @@
-<svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path fill-rule="evenodd" clip-rule="evenodd" d="M12.675 7.42105C12.8961 7.97884 13.3122 8.43812 13.8392 8.71483L8.71468 13.8394C8.43796 13.3124 7.97869 12.8963 7.4209 12.6751L12.675 7.42105ZM16.1612 21.2856L18.7236 18.7232L21.2854 16.1614C21.5623 16.6882 22.0217 17.1042 22.5796 17.3252L19.9526 19.9522L17.325 22.5798C17.1041 22.0219 16.6881 21.5624 16.1612 21.2856Z" fill="white"/>
-<circle cx="15" cy="6.5" r="2.5" fill="white" stroke="white" stroke-width="2"/>
-<circle cx="15" cy="23.5" r="2.5" fill="white" stroke="white" stroke-width="2"/>
-<circle cx="6.5" cy="15" r="2.5" fill="white" stroke="white" stroke-width="2"/>
-<circle cx="23.5" cy="15" r="2.5" fill="white" stroke="white" stroke-width="2"/>
-<path fill-rule="evenodd" clip-rule="evenodd" d="M20.2338 14.0838L14.9376 14.0846L9.64153 14.0855C9.74849 14.6618 9.7189 15.2584 9.55276 15.8236L14.9373 15.8227L20.3221 15.8219C20.1561 15.2569 20.1267 14.6602 20.2338 14.0838Z" fill="white"/>
+<svg width="30" height="30" viewBox="0 0 30 30" fill="#000" xmlns="http://www.w3.org/2000/svg">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M12.675 7.42105C12.8961 7.97884 13.3122 8.43812 13.8392 8.71483L8.71468 13.8394C8.43796 13.3124 7.97869 12.8963 7.4209 12.6751L12.675 7.42105ZM16.1612 21.2856L18.7236 18.7232L21.2854 16.1614C21.5623 16.6882 22.0217 17.1042 22.5796 17.3252L19.9526 19.9522L17.325 22.5798C17.1041 22.0219 16.6881 21.5624 16.1612 21.2856Z" fill="#000"/>
+<circle cx="15" cy="6.5" r="2.5" fill="#000" stroke="#000" stroke-width="2"/>
+<circle cx="15" cy="23.5" r="2.5" fill="#000" stroke="#000" stroke-width="2"/>
+<circle cx="6.5" cy="15" r="2.5" fill="#000" stroke="#000" stroke-width="2"/>
+<circle cx="23.5" cy="15" r="2.5" fill="#000" stroke="#000" stroke-width="2"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M20.2338 14.0838L14.9376 14.0846L9.64153 14.0855C9.74849 14.6618 9.7189 15.2584 9.55276 15.8236L14.9373 15.8227L20.3221 15.8219C20.1561 15.2569 20.1267 14.6602 20.2338 14.0838Z" fill="#000"/>
 </svg>
