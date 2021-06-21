@@ -1,18 +1,14 @@
 import * as React from 'react';
 import RNFetchBlob from 'rn-fetch-blob';
-import { Alert, StyleSheet, Text, TextInput, View, ActivityIndicator } from 'react-native';
+import { Alert, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon, CheckBox } from 'react-native-elements';
-import DropdownSetting from './../components/DropdownSetting';
 import querystring from 'querystring-es3';
 import url from 'url';
-// import InvoicesStore from './../stores/InvoicesStore';
-// import LnurlPayStore from './../stores/LnurlPayStore';
 import SettingsStore from './../stores/SettingsStore';
 import ChannelsStore from './../stores/ChannelsStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
 
-// import LnurlPayMetadata from './Metadata';
 import { localeString } from './../utils/LocaleUtils';
 import NodeUriUtils from './../utils/NodeUriUtils';
 import RESTUtils from './../utils/RESTUtils';
@@ -26,7 +22,7 @@ interface LnurlChannelProps {
 
 interface LnurlChannelState {
     domain: string;
-    private: boolean;
+    privateChannel: boolean;
     node_pubkey_string: string;
     host: string;
     k1: string;
@@ -50,7 +46,7 @@ export default class LnurlChannel extends React.Component<
         } catch (err) {
             this.state = {
                 domain: '',
-                private: false,
+                privateChannel: false,
                 node_pubkey_string: '',
                 host: '',
                 k1: '',
@@ -72,11 +68,9 @@ export default class LnurlChannel extends React.Component<
     stateFromProps(props: LnurlChannelProps) {
         const { navigation } = props;
         const lnurl = navigation.getParam('lnurlParams');
-        console.log("lnurl: ", lnurl);
+        console.log('lnurl: ', lnurl);
 
-        const { pubkey, host } = NodeUriUtils.processNodeUri(
-            lnurl.uri
-        );
+        const { pubkey, host } = NodeUriUtils.processNodeUri(lnurl.uri);
         return {
             uri: lnurl.uri,
             domain: lnurl.domain,
@@ -85,6 +79,7 @@ export default class LnurlChannel extends React.Component<
             k1: lnurl.k1,
             localnodeids: [],
             localnodeid: '',
+            privateChannel: false,
             connectingToPeer: false,
             peerSuccess: false,
             lnurlChannelSuccess: false,
@@ -96,7 +91,7 @@ export default class LnurlChannel extends React.Component<
         const { node_pubkey_string, host } = this.state;
         // console.log("triggerConnect to peer: ", node_pubkey_string, host);
 
-        this.setState({ connectingToPeer: true })
+        this.setState({ connectingToPeer: true });
 
         RESTUtils.connectPeer({
             addr: {
@@ -104,25 +99,28 @@ export default class LnurlChannel extends React.Component<
                 host: host
             }
         })
-        .then(() => {
-            console.log("connectpeer OK");
-            this.setState({ connectingToPeer: false })
-            this.setState({ peerSuccess: true })
-        })
-        .catch((error: any) => {
-            console.log("connectpeer Error ", error.toString());
-            // handle error
-            if (
-                this.state.errorMsgPeer &&
-                this.state.errorMsgPeer.includes('already')
-            ) {
-                this.setState({ peerSuccess: true })
-            }
+            .then(() => {
+                console.log('connectpeer OK');
+                this.setState({ connectingToPeer: false });
+                this.setState({ peerSuccess: true });
+            })
+            .catch((error: any) => {
+                console.log('connectpeer Error ', error.toString());
+                // handle error
+                this.setState({ connectingToPeer: false });
+                console.log(
+                    'set this.state.errorMsgPeer to ',
+                    error.toString()
+                );
+                this.setState({ errorMsgPeer: error.toString() });
 
-            this.setState({ connectingToPeer: false })
-            console.log("set this.state.errorMsgPeer to ", error.toString());
-            this.setState({ errorMsgPeer: error.toString() })
-        });        
+                if (
+                    this.state.errorMsgPeer &&
+                    this.state.errorMsgPeer.includes('already')
+                ) {
+                    this.setState({ peerSuccess: true });
+                }
+            });
     }
     componentDidMount() {
         this.triggerConnect();
@@ -135,30 +133,28 @@ export default class LnurlChannel extends React.Component<
         const u = url.parse(lnurl.callback);
         const qs = querystring.parse(u.query);
         qs.k1 = k1;
-        qs.private = this.state.private ? 1 : 0;
+        qs.private = this.state.privateChannel ? 1 : 0;
 
         const { nodeInfo } = NodeInfoStore;
         const nodeids = nodeInfo.getURIs;
         const localnodeid = nodeids[0];
-        const { pubkey, host } = NodeUriUtils.processNodeUri(
-            localnodeid
-        );
+        const { pubkey } = NodeUriUtils.processNodeUri(localnodeid);
 
         qs.remoteid = pubkey;
         u.search = querystring.stringify(qs);
         u.query = querystring.stringify(qs);
         // <callback>?k1=<k1>&remoteid=<Local LN node ID>&private=<1/0>
-        console.log("u: ", u)
+        console.log('u: ', u);
 
         RNFetchBlob.fetch('get', url.format(u))
             .then((response: any) => {
                 try {
                     const data = response.json();
-                    console.log("response data: ", data);
+                    console.log('response data: ', data);
                     return data;
                 } catch (err) {
-                    this.setState({ peerSuccess: false })
-                    this.setState({ errorMsgPeer: response.text() })
+                    this.setState({ peerSuccess: false });
+                    this.setState({ errorMsgPeer: response.text() });
                     return { status: 'ERROR', reason: response.text() };
                 }
             })
@@ -168,8 +164,8 @@ export default class LnurlChannel extends React.Component<
             }))
             .then((data: any) => {
                 if (data.status === 'ERROR') {
-                    this.setState({ peerSuccess: false })
-                    this.setState({ errorMsgPeer: data.reason })
+                    this.setState({ peerSuccess: false });
+                    this.setState({ errorMsgPeer: data.reason });
                     Alert.alert(
                         `[error] ${domain} says:`,
                         data.reason,
@@ -178,14 +174,14 @@ export default class LnurlChannel extends React.Component<
                     );
                     return;
                 } else {
-                    this.setState({ peerSuccess: false })
-                    this.setState({ lnurlChannelSuccess: true })
+                    this.setState({ peerSuccess: false });
+                    this.setState({ lnurlChannelSuccess: true });
                 }
             });
     }
 
     render() {
-        const { SettingsStore, navigation, NodeInfoStore } = this.props;
+        const { SettingsStore, navigation } = this.props;
         const { domain, privateChannel } = this.state;
         const { settings } = SettingsStore;
         const { theme } = settings;
@@ -211,7 +207,10 @@ export default class LnurlChannel extends React.Component<
             >
                 <Header
                     leftComponent={<BackButton />}
-                    centerComponent={{ text: 'Incoming Channel', style: { color: '#fff' } }}
+                    centerComponent={{
+                        text: 'Incoming Channel',
+                        style: { color: '#fff' }
+                    }}
                     backgroundColor="grey"
                 />
                 <View style={styles.content}>
@@ -248,7 +247,9 @@ export default class LnurlChannel extends React.Component<
                             title={localeString('views.OpenChannel.private')}
                             checked={privateChannel}
                             onPress={() =>
-                                this.setState({ private: !privateChannel })
+                                this.setState({
+                                    privateChannel: !privateChannel
+                                })
                             }
                         />
                     </View>
@@ -273,28 +274,28 @@ export default class LnurlChannel extends React.Component<
                     </View>
 
                     <View style={styles.content}>
-                        {(this.state.connectingToPeer) && (
+                        {this.state.connectingToPeer && (
                             <ActivityIndicator size="large" color="#0000ff" />
                         )}
-                        {(this.state.peerSuccess) && (
+                        {this.state.peerSuccess && (
                             <Text style={{ color: 'green' }}>
                                 {localeString('views.OpenChannel.peerSuccess')}
                             </Text>
                         )}
-                        {(this.state.lnurlChannelSuccess) && (
+                        {this.state.lnurlChannelSuccess && (
                             <Text style={{ color: 'green' }}>
                                 {localeString('views.LnurlChannel.success')}
                             </Text>
                         )}
-                        {(this.state.errorMsgPeer && !this.state.peerSuccess && !this.state.lnurlChannelSuccess) && (
-                            <Text style={{ color: 'red' }}>
-                                {this.state.errorMsgChannel ||
-                                    this.state.errorMsgPeer ||
-                                    localeString('general.error')}
-                            </Text>
-                        )}
+                        {this.state.errorMsgPeer &&
+                            !this.state.peerSuccess &&
+                            !this.state.lnurlChannelSuccess && (
+                                <Text style={{ color: 'red' }}>
+                                    {this.state.errorMsgPeer ||
+                                        localeString('general.error')}
+                                </Text>
+                            )}
                     </View>
-
                 </View>
             </View>
         );
