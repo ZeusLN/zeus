@@ -69,6 +69,7 @@
     "react-native-screens": "2.0.0-alpha.29",
     "react-native-secure-key-store": "2.0.5",
     "react-native-svg": "9.13.6",
+    "react-native-svg-transformer": "0.14.3",
     "react-native-tcp": "3.3.2",
     "react-native-tor": "0.1.6",
     "react-native-udp": "2.7.0",
