@@ -25,10 +25,7 @@ interface MainPaneProps {
 
 @inject('UnitsStore', 'SettingsStore')
 @observer
-export default class MainPane extends React.PureComponent<
-    MainPaneProps,
-    {}
-> {
+export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
     render() {
         const {
             NodeInfoStore,
