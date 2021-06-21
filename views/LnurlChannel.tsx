@@ -68,7 +68,6 @@ export default class LnurlChannel extends React.Component<
     stateFromProps(props: LnurlChannelProps) {
         const { navigation } = props;
         const lnurl = navigation.getParam('lnurlParams');
-        console.log('lnurl: ', lnurl);
 
         const { pubkey, host } = NodeUriUtils.processNodeUri(lnurl.uri);
         return {
@@ -89,8 +88,6 @@ export default class LnurlChannel extends React.Component<
 
     triggerConnect() {
         const { node_pubkey_string, host } = this.state;
-        // console.log("triggerConnect to peer: ", node_pubkey_string, host);
-
         this.setState({ connectingToPeer: true });
 
         RESTUtils.connectPeer({
@@ -100,18 +97,12 @@ export default class LnurlChannel extends React.Component<
             }
         })
             .then(() => {
-                console.log('connectpeer OK');
                 this.setState({ connectingToPeer: false });
                 this.setState({ peerSuccess: true });
             })
             .catch((error: any) => {
-                console.log('connectpeer Error ', error.toString());
                 // handle error
                 this.setState({ connectingToPeer: false });
-                console.log(
-                    'set this.state.errorMsgPeer to ',
-                    error.toString()
-                );
                 this.setState({ errorMsgPeer: error.toString() });
 
                 if (
@@ -143,14 +134,11 @@ export default class LnurlChannel extends React.Component<
         qs.remoteid = pubkey;
         u.search = querystring.stringify(qs);
         u.query = querystring.stringify(qs);
-        // <callback>?k1=<k1>&remoteid=<Local LN node ID>&private=<1/0>
-        console.log('u: ', u);
 
         RNFetchBlob.fetch('get', url.format(u))
             .then((response: any) => {
                 try {
                     const data = response.json();
-                    console.log('response data: ', data);
                     return data;
                 } catch (err) {
                     this.setState({ peerSuccess: false });
@@ -186,7 +174,6 @@ export default class LnurlChannel extends React.Component<
         const { settings } = SettingsStore;
         const { theme } = settings;
         const lnurl = navigation.getParam('lnurlParams');
-        // console.log("connectingToPeer: ", this.state.connectingToPeer, this.state.errorMsgPeer);
 
         const BackButton = () => (
             <Icon
