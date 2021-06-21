@@ -20,6 +20,7 @@ import SettingsStore from './../../stores/SettingsStore';
 import FiatStore from './../../stores/FiatStore';
 import TransactionsStore from './../../stores/TransactionsStore';
 import UnitsStore from './../../stores/UnitsStore';
+import LayerBalances from './../../components/LayerBalances';
 
 import handleAnything from './../../utils/handleAnything';
 
@@ -290,96 +291,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     SettingsStore={SettingsStore}
                 />
 
-                {theme !== 'dark' && (
-                    <ButtonGroup
-                        onPress={this.updateIndex}
-                        selectedIndex={selectedIndex}
-                        buttons={selectedButtons}
-                        containerStyle={{
-                            height: 50,
-                            marginTop: 0,
-                            marginLeft: 0,
-                            marginRight: 0,
-                            marginBottom: 0,
-                            backgroundColor: '#f2f2f2'
-                        }}
-                        selectedButtonStyle={{
-                            backgroundColor: 'white'
-                        }}
-                    />
-                )}
-
-                {theme === 'dark' && (
-                    <ButtonGroup
-                        onPress={this.updateIndex}
-                        selectedIndex={selectedIndex}
-                        buttons={selectedButtons}
-                        containerStyle={{
-                            height: 50,
-                            marginTop: 0,
-                            marginLeft: 0,
-                            marginRight: 0,
-                            marginBottom: 0,
-                            backgroundColor: 'black',
-                            borderTopWidth: 0,
-                            borderLeftWidth: 0,
-                            borderRightWidth: 0,
-                            borderBottomWidth: 1,
-                            borderRadius: 0
-                        }}
-                        selectedButtonStyle={{
-                            backgroundColor: '#261339'
-                        }}
-                        selectedTextStyle={{
-                            color: 'white'
-                        }}
-                        innerBorderStyle={{
-                            color: 'black'
-                        }}
-                    />
-                )}
-
-                {selectedIndex == 0 && (
-                    <Payments
-                        payments={payments}
-                        navigation={navigation}
-                        refresh={this.refresh}
-                        PaymentsStore={PaymentsStore}
-                        UnitsStore={UnitsStore}
-                        SettingsStore={SettingsStore}
-                    />
-                )}
-                {selectedIndex == 1 && (
-                    <Invoices
-                        invoices={invoices}
-                        navigation={navigation}
-                        refresh={this.refresh}
-                        InvoicesStore={InvoicesStore}
-                        UnitsStore={UnitsStore}
-                        SettingsStore={SettingsStore}
-                    />
-                )}
-                {selectedIndex == 2 && (
-                    <Transactions
-                        transactions={transactions}
-                        navigation={navigation}
-                        refresh={this.refresh}
-                        TransactionsStore={TransactionsStore}
-                        UnitsStore={UnitsStore}
-                        SettingsStore={SettingsStore}
-                    />
-                )}
-                {selectedIndex == 3 && (
-                    <Channels
-                        channels={channels}
-                        navigation={navigation}
-                        refresh={this.refresh}
-                        ChannelsStore={ChannelsStore}
-                        NodeInfoStore={NodeInfoStore}
-                        UnitsStore={UnitsStore}
-                        SettingsStore={SettingsStore}
-                    />
-                )}
+                <LayerBalances
+                    BalanceStore={BalanceStore}
+                    UnitsStore={UnitsStore}
+                />
             </View>
         );
     }
