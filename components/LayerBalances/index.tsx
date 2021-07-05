@@ -34,7 +34,7 @@ const Row = ({ item }: { item: DataRow }) => (
         ) : (
             <Lightning style={{ top: 5 }} />
         )}
-        <Text style={styles.layerText}>{item.layer}</Text>
+        <Text style={styles.layerTextDark}>{item.layer}</Text>
         <Text style={styles.balanceText}>{item.balance}</Text>
     </RectButton>
 );
@@ -102,6 +102,17 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         justifyContent: 'space-between',
         flexDirection: 'column',
+        backgroundColor: '#2b3037',
+        marginLeft: 15,
+        marginRight: 15,
+        borderRadius: 15
+    },
+    rectButtonDark: {
+        height: 80,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        justifyContent: 'space-between',
+        flexDirection: 'column',
         backgroundColor: 'white',
         marginLeft: 15,
         marginRight: 15,
@@ -119,12 +130,29 @@ const styles = StyleSheet.create({
         top: 30,
         left: 75
     },
+    layerTextDark: {
+        backgroundColor: 'transparent',
+        position: 'absolute',
+        fontWeight: 'bold',
+        fontSize: 15,
+        top: 30,
+        left: 75,
+        color: 'white'
+    },
     balanceText: {
         backgroundColor: 'transparent',
         position: 'absolute',
         right: 20,
         top: 30,
         color: '#999',
+        fontWeight: 'bold'
+    },
+    balanceTextDark: {
+        backgroundColor: 'transparent',
+        position: 'absolute',
+        right: 20,
+        top: 30,
+        color: 'white',
         fontWeight: 'bold'
     }
 });

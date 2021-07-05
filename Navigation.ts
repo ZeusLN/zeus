@@ -28,6 +28,9 @@ import AddEditNode from './views/Settings/AddEditNode';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import About from './views/Settings/About';
 
+// new views
+import Channels from './views/Channels';
+
 import Onboarding from './views/Onboarding';
 
 const AppScenes = {
@@ -102,6 +105,9 @@ const AppScenes = {
     },
     NodeInfo: {
         screen: NodeInfo
+    },
+    Channels: {
+        screen: Channels
     }
 };
 

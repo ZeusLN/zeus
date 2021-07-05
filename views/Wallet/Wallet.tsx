@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { Linking, Text, View } from 'react-native';
-import { ButtonGroup } from 'react-native-elements';
+import { Image, Linking, Text, View, TouchableOpacity } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import { Button, ButtonGroup } from 'react-native-elements';
 import Transactions from './Transactions';
 import Payments from './Payments';
 import Invoices from './Invoices';
@@ -21,6 +22,13 @@ import FiatStore from './../../stores/FiatStore';
 import TransactionsStore from './../../stores/TransactionsStore';
 import UnitsStore from './../../stores/UnitsStore';
 import LayerBalances from './../../components/LayerBalances';
+
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+
+import WalletIcon from './../../images/SVG/Wallet.svg';
+import ChannelsIcon from './../../images/SVG/Channels.svg';
+import QRIcon from './../../images/SVG/QR.svg';
 
 import handleAnything from './../../utils/handleAnything';
 
@@ -174,6 +182,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     };
 
     render() {
+        const Tab = createBottomTabNavigator();
         const {
             ChannelsStore,
             InvoicesStore,
@@ -266,6 +275,43 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             </React.Fragment>
         );
 
+        const lightThemeGradient = ['white', 'grey', 'black'];
+        const darkThemeGradient = ['black', '#1f2328', '#1f2328', '#1f2328'];
+
+        const WalletScreen = () => {
+            return (
+                <View
+                    style={{
+                        backgroundColor:
+                            theme === 'dark' ? '#1f2328' : 'transparent',
+                        flex: 1
+                    }}
+                >
+                    <LinearGradient
+                        colors={
+                            theme === 'dark'
+                                ? darkThemeGradient
+                                : lightThemeGradient
+                        }
+                        style={{ flex: 1 }}
+                    >
+                        <MainPane
+                            navigation={navigation}
+                            NodeInfoStore={NodeInfoStore}
+                            UnitsStore={UnitsStore}
+                            BalanceStore={BalanceStore}
+                            SettingsStore={SettingsStore}
+                        />
+
+                        <LayerBalances
+                            BalanceStore={BalanceStore}
+                            UnitsStore={UnitsStore}
+                        />
+                    </LinearGradient>
+                </View>
+            );
+        };
+
         const buttons = [
             { element: paymentsButton },
             { element: invoicesButton },
@@ -281,20 +327,90 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const selectedButtons =
             implementation === 'lndhub' ? lndHubButtons : buttons;
 
+        const Theme = {
+            ...DefaultTheme,
+            colors: {
+                ...DefaultTheme.colors,
+                card: '#2b3037',
+                border: '#2b3037'
+            }
+        };
+
+        const scanAndSend = `${localeString('general.scan')} / ${localeString(
+            'general.send'
+        )}`;
+
         return (
             <View style={{ flex: 1 }}>
-                <MainPane
-                    navigation={navigation}
-                    NodeInfoStore={NodeInfoStore}
-                    UnitsStore={UnitsStore}
-                    BalanceStore={BalanceStore}
-                    SettingsStore={SettingsStore}
-                />
+                <NavigationContainer theme={Theme}>
+                    <Tab.Navigator
+                        screenOptions={({ route }) => ({
+                            tabBarIcon: ({ focused, color, size }) => {
+                                let iconName;
 
-                <LayerBalances
-                    BalanceStore={BalanceStore}
-                    UnitsStore={UnitsStore}
-                />
+                                if (route.name === 'Wallet') {
+                                    return <WalletIcon />;
+                                }
+                                if (route.name === scanAndSend) {
+                                    return (
+                                        <TouchableOpacity
+                                            style={{
+                                                position: 'absolute',
+                                                height: 90,
+                                                width: 90,
+                                                borderRadius: 90,
+                                                bottom: 5,
+                                                backgroundColor: '#2b3037',
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
+                                                shadowColor: 'black',
+                                                shadowRadius: 5,
+                                                shadowOpacity: 0.8
+                                            }}
+                                            onPress={() =>
+                                                this.props.navigation.navigate(
+                                                    'AddressQRCodeScanner'
+                                                )
+                                            }
+                                        >
+                                            <QRIcon
+                                                style={{
+                                                    padding: 25
+                                                }}
+                                            />
+                                        </TouchableOpacity>
+                                    );
+                                }
+                                return (
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            this.props.navigation.navigate(
+                                                'Channels'
+                                            )
+                                        }
+                                    >
+                                        <ChannelsIcon />
+                                    </TouchableOpacity>
+                                );
+                            }
+                        })}
+                        tabBarOptions={{
+                            activeTintColor: '#ffd24b',
+                            inactiveTintColor: 'gray',
+                            backgroundColor: '#ffd24b'
+                        }}
+                    >
+                        <Tab.Screen name="Wallet" component={WalletScreen} />
+                        <Tab.Screen
+                            name={scanAndSend}
+                            component={WalletScreen}
+                        />
+                        <Tab.Screen
+                            name={localeString('views.Wallet.Wallet.channels')}
+                            component={WalletScreen}
+                        />
+                    </Tab.Navigator>
+                </NavigationContainer>
             </View>
         );
     }
