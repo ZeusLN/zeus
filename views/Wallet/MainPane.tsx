@@ -2,7 +2,6 @@ import * as React from 'react';
 import { Image, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Badge, Button, Header } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import LinearGradient from 'react-native-linear-gradient';
 import PrivacyUtils from './../../utils/PrivacyUtils';
 import { localeString } from './../../utils/LocaleUtils';
 
@@ -10,6 +9,8 @@ import NodeInfoStore from './../../stores/NodeInfoStore';
 import UnitsStore from './../../stores/UnitsStore';
 import BalanceStore from './../../stores/BalanceStore';
 import SettingsStore from './../../stores/SettingsStore';
+
+import NodeOn from './../../images/SVG/Node On.svg';
 
 const TorIcon = require('./../../images/tor.png');
 
@@ -130,7 +131,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
             <Button
                 title=""
                 icon={{
-                    name: 'settings',
+                    name: 'more-horiz',
                     size: 25,
                     color: '#fff'
                 }}
@@ -166,6 +167,14 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
         );
 
         const NodeInfoBadge = () => (
+            <TouchableOpacity
+                onPress={() => this.props.navigation.navigate('NodeInfo')}
+            >
+                <NodeOn />
+            </TouchableOpacity>
+        );
+
+        const NetworkBadge = () => (
             <View style={styles.nodeInfo}>
                 {nodeAddress && nodeAddress.includes('.onion') ? (
                     <TouchableOpacity
@@ -221,97 +230,21 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
             );
         } else if (!NodeInfoStore.error) {
             mainPane = (
-                <View>
-                    <LinearGradient
-                        colors={
-                            theme === 'dark'
-                                ? darkThemeGradient
-                                : lightThemeGradient
-                        }
-                        style={styles.container}
-                    >
-                        <Header
-                            leftComponent={<NodeInfoBadge />}
-                            rightComponent={<SettingsButton />}
-                            backgroundColor="transparent"
-                            containerStyle={{
-                                borderBottomWidth: 0
-                            }}
-                        />
-                        {implementation === 'lndhub' ? (
-                            <LndHubBalance />
-                        ) : (
-                            <DefaultBalance />
-                        )}
-                        <View style={styles.buttons}>
-                            <Button
-                                title={localeString('general.send')}
-                                icon={{
-                                    name: 'arrow-upward',
-                                    size: 25,
-                                    color: 'red'
-                                }}
-                                buttonStyle={{
-                                    backgroundColor:
-                                        theme === 'dark' ? 'black' : 'white',
-                                    borderRadius: 30
-                                }}
-                                containerStyle={{
-                                    marginRight: 10
-                                }}
-                                titleStyle={{
-                                    color: theme === 'dark' ? 'white' : 'black'
-                                }}
-                                onPress={() => navigation.navigate('Send')}
-                                raised={theme !== 'dark'}
-                            />
-                            <Button
-                                title={localeString('general.receive')}
-                                icon={{
-                                    name: 'arrow-downward',
-                                    size: 25,
-                                    color: 'green'
-                                }}
-                                buttonStyle={{
-                                    backgroundColor:
-                                        theme === 'dark' ? 'black' : 'white',
-                                    borderRadius: 30
-                                }}
-                                containerStyle={{
-                                    marginLeft: 10,
-                                    marginRight: 10
-                                }}
-                                titleStyle={{
-                                    color: theme === 'dark' ? 'white' : 'black'
-                                }}
-                                onPress={() => navigation.navigate('Receive')}
-                                raised={theme !== 'dark'}
-                            />
-                            <Button
-                                title={localeString('general.scan')}
-                                icon={{
-                                    name: 'crop-free',
-                                    size: 25,
-                                    color: '#f1a58c'
-                                }}
-                                buttonStyle={{
-                                    backgroundColor:
-                                        theme === 'dark' ? 'black' : 'white',
-                                    borderRadius: 20
-                                }}
-                                containerStyle={{
-                                    marginLeft: 10
-                                }}
-                                titleStyle={{
-                                    color: theme === 'dark' ? 'white' : 'black'
-                                }}
-                                onPress={() =>
-                                    navigation.navigate('AddressQRCodeScanner')
-                                }
-                                raised={theme !== 'dark'}
-                            />
-                        </View>
-                    </LinearGradient>
+                <View style={styles.container}>
+                    <Header
+                        leftComponent={<NodeInfoBadge />}
+                        rightComponent={<SettingsButton />}
+                        backgroundColor="transparent"
+                        containerStyle={{
+                            borderBottomWidth: 0
+                        }}
+                    />
+                    {implementation === 'lndhub' ? (
+                        <LndHubBalance />
+                    ) : (
+                        <DefaultBalance />
+                    )}
+                    {infoValue !== 'ⓘ' && <NetworkBadge />}
                 </View>
             );
         } else {
@@ -371,13 +304,11 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
     }
 }
 
-const lightThemeGradient = ['white', 'grey', 'black'];
-const darkThemeGradient = ['#33194d', '#261339', 'black'];
-
 const styles = StyleSheet.create({
     container: {
         paddingBottom: 50,
-        alignItems: 'center'
+        alignItems: 'center',
+        backgroundColor: '#1f2328'
     },
     loadingContainer: {
         backgroundColor: 'rgba(253, 164, 40, 0.5)',
@@ -419,12 +350,5 @@ const styles = StyleSheet.create({
     nodeInfo: {
         alignItems: 'flex-start',
         marginLeft: -15
-    },
-    buttons: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: 20,
-        marginBottom: -30
     }
 });

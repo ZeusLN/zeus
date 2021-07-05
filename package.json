@@ -22,6 +22,8 @@
     "@react-native-community/clipboard": "1.5.1",
     "@react-native-community/masked-view": "0.1.6",
     "@react-native-picker/picker": "1.16.1",
+    "@react-navigation/bottom-tabs": "5.11.11",
+    "@react-navigation/native": "5.9.4",
     "@tradle/react-native-http": "2.0.1",
     "assert": "1.5.0",
     "base-64": "0.1.0",
