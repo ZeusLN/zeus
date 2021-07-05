@@ -1,18 +1,18 @@
 import * as React from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
-import { Avatar, Button, ListItem } from 'react-native-elements';
-import Channel from './../../models/Channel';
-import BalanceSlider from './../../components/BalanceSlider';
+import { FlatList, ScrollView, StyleSheet, View } from 'react-native';
+import { Avatar, Button, Header, Icon, ListItem } from 'react-native-elements';
+import Channel from './../models/Channel';
+import BalanceSlider from './../components/BalanceSlider';
 import Identicon from 'identicon.js';
 import { inject, observer } from 'mobx-react';
 const hash = require('object-hash');
-import PrivacyUtils from './../../utils/PrivacyUtils';
-import { localeString } from './../../utils/LocaleUtils';
+import PrivacyUtils from './../utils/PrivacyUtils';
+import { localeString } from './../utils/LocaleUtils';
 
-import ChannelsStore from './../../stores/ChannelsStore';
-import NodeInfoStore from './../../stores/NodeInfoStore';
-import UnitsStore from './../../stores/UnitsStore';
-import SettingsStore from './../../stores/SettingsStore';
+import ChannelsStore from './../stores/ChannelsStore';
+import NodeInfoStore from './../stores/NodeInfoStore';
+import UnitsStore from './../stores/UnitsStore';
+import SettingsStore from './../stores/SettingsStore';
 
 interface ChannelsProps {
     channels: Array<Channel>;
@@ -24,7 +24,7 @@ interface ChannelsProps {
     SettingsStore: SettingsStore;
 }
 
-@inject('NodeInfoStore', 'UnitsStore', 'SettingsStore')
+@inject('ChannelsStore', 'NodeInfoStore', 'UnitsStore', 'SettingsStore')
 @observer
 export default class Channels extends React.Component<ChannelsProps, {}> {
     renderSeparator = () => {
@@ -43,11 +43,12 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
         );
     };
 
+    refresh = () => this.props.ChannelsStore.getChannels();
+
     render() {
         const {
             channels,
             navigation,
-            refresh,
             ChannelsStore,
             NodeInfoStore,
             UnitsStore,
@@ -66,14 +67,31 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
             />
         );
 
+        const BackButton = () => (
+            <Icon
+                name="arrow-back"
+                onPress={() => navigation.navigate('Wallet')}
+                color="#fff"
+                underlayColor="transparent"
+            />
+        );
+
         return (
-            <View
+            <ScrollView
                 style={
                     theme === 'dark'
                         ? styles.darkThemeStyle
                         : styles.lightThemeStyle
                 }
             >
+                <Header
+                    leftComponent={<BackButton />}
+                    centerComponent={{
+                        text: localeString('views.Wallet.Wallet.channels'),
+                        style: { color: '#fff' }
+                    }}
+                    backgroundColor={theme === 'dark' ? '#261339' : '#1f2328'}
+                />
                 {!NodeInfoStore.error && (
                     <View style={styles.button}>
                         <Button
@@ -162,7 +180,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                             borderBottomWidth: 0,
                                             backgroundColor:
                                                 theme === 'dark'
-                                                    ? 'black'
+                                                    ? '#1f2328'
                                                     : 'white'
                                         }}
                                         onPress={() =>
@@ -174,7 +192,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                             color:
                                                 theme === 'dark'
                                                     ? 'white'
-                                                    : 'black'
+                                                    : '#1f2328'
                                         }}
                                         subtitleStyle={{
                                             color:
@@ -202,7 +220,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}
                         refreshing={loading}
-                        onRefresh={() => refresh()}
+                        onRefresh={() => this.refresh()}
                     />
                 ) : (
                     <Button
@@ -210,19 +228,19 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                         icon={{
                             name: 'error-outline',
                             size: 25,
-                            color: theme === 'dark' ? 'white' : 'black'
+                            color: theme === 'dark' ? 'white' : '#1f2328'
                         }}
-                        onPress={() => refresh()}
+                        onPress={() => this.refresh()}
                         buttonStyle={{
                             backgroundColor: 'transparent',
                             borderRadius: 30
                         }}
                         titleStyle={{
-                            color: theme === 'dark' ? 'white' : 'black'
+                            color: theme === 'dark' ? 'white' : '#1f2328'
                         }}
                     />
                 )}
-            </View>
+            </ScrollView>
         );
     }
 }
@@ -234,7 +252,7 @@ const styles = StyleSheet.create({
     },
     darkThemeStyle: {
         flex: 1,
-        backgroundColor: 'black',
+        backgroundColor: '#1f2328',
         color: 'white'
     },
     lightSeparator: {

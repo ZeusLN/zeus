@@ -1,8 +1,8 @@
 <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect x="3" y="6.99999" width="24" height="2" rx="1" fill="white"/>
-<rect x="3" y="14" width="24" height="2" rx="1" fill="white"/>
-<ellipse cx="21" cy="15" rx="3" ry="3" fill="white"/>
-<ellipse cx="9" cy="8" rx="3" ry="3" fill="white"/>
-<rect x="3" y="21" width="24" height="2" rx="1" fill="white"/>
-<ellipse cx="9" cy="22" rx="3" ry="3" fill="white"/>
+<rect x="3" y="6.99999" width="24" height="2" rx="1" fill="gray"/>
+<rect x="3" y="14" width="24" height="2" rx="1" fill="gray"/>
+<ellipse cx="21" cy="15" rx="3" ry="3" fill="gray"/>
+<ellipse cx="9" cy="8" rx="3" ry="3" fill="gray"/>
+<rect x="3" y="21" width="24" height="2" rx="1" fill="gray"/>
+<ellipse cx="9" cy="22" rx="3" ry="3" fill="gray"/>
 </svg>
