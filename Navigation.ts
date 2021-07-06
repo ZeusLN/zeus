@@ -31,6 +31,7 @@ import About from './views/Settings/About';
 // new views
 import Channels from './views/Channels';
 import Activity from './views/Activity';
+import Filter from './views/Filter';
 
 import Onboarding from './views/Onboarding';
 
@@ -112,6 +113,9 @@ const AppScenes = {
     },
     Activity: {
         screen: Activity
+    },
+    Filter: {
+        screen: Filter
     }
 };
 
