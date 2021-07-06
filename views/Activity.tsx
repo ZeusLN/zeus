@@ -84,11 +84,26 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                         renderItem={({ item }) => {
                             let displayName = item.model;
                             let subTitle = item.model;
-                            let rightTitle = '';
+                            let rightTitle = ' ';
                             if (item.model === 'Invoice') {
                                 // TODO: add strings to en
-                                displayName = item.isPaid ? 'You received' : 'Requested Payment';
-                                subTitle = item.isPaid ? 'Lightning' : `Lightning Invoice: ${item.expirationDate}`;
+                                displayName = item.isPaid
+                                    ? 'You received'
+                                    : 'Requested Payment';
+                                subTitle = item.isPaid
+                                    ? 'Lightning'
+                                    : `Lightning Invoice: ${item.expirationDate}`;
+                                rightTitle = PrivacyUtils.sensitiveValue(
+                                    getAmount(item.getAmount),
+                                    null,
+                                    true
+                                );
+                            }
+
+                            if (item.model === 'Payment') {
+                                // TODO: add strings to en
+                                displayName = 'You sent';
+                                subTitle = 'Lightning';
                                 rightTitle = PrivacyUtils.sensitiveValue(
                                     getAmount(item.getAmount),
                                     null,
@@ -102,7 +117,9 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                         title={displayName}
                                         subtitle={subTitle}
                                         rightTitle={rightTitle}
-                                        rightSubtitle={DateTimeUtils.listFormattedDateShort(item.getTimestamp)}
+                                        rightSubtitle={DateTimeUtils.listFormattedDateShort(
+                                            item.getTimestamp
+                                        )}
                                         containerStyle={{
                                             borderBottomWidth: 0,
                                             backgroundColor:
@@ -145,8 +162,13 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                                     : '#8a8999'
                                         }}
                                         rightTitleStyle={{
-                                            fontWeight: 500,
-                                            color: item.isPaid ? 'green' : theme === 'dark'
+                                            fontWeight: '600',
+                                            color:
+                                                item.model === 'Payment'
+                                                    ? 'red'
+                                                    : item.isPaid
+                                                    ? 'green'
+                                                    : theme === 'dark'
                                                     ? 'gray'
                                                     : '#8a8999'
                                         }}

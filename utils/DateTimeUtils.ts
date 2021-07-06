@@ -13,7 +13,7 @@ class DateTimeUtils {
     listFormattedDateShort = (timestamp: number | string) => {
         try {
             const date = new Date(Number(timestamp) * 1000);
-            return dateFormat(date, "mmmm d");
+            return dateFormat(date, 'mmmm d');
         } catch (error) {
             return timestamp || 'N/A';
         }
