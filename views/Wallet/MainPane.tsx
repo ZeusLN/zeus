@@ -300,25 +300,20 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
 
 const styles = StyleSheet.create({
     container: {
-        paddingBottom: 50,
+        height: 150,
         alignItems: 'center',
         backgroundColor: '#1f2328'
     },
     loadingContainer: {
-        paddingTop: 10,
-        paddingBottom: 50,
+        height: 150,
         paddingLeft: 10
     },
     errorContainer: {
         backgroundColor: '#cc3300', // dark red
-        paddingTop: 25,
-        paddingBottom: 50,
         paddingLeft: 10
     },
     errorContainerDark: {
         backgroundColor: '#992600', // dark dark red
-        paddingTop: 25,
-        paddingBottom: 50,
         paddingLeft: 10
     },
     lightningBalance: {
