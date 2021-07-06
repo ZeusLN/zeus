@@ -79,7 +79,7 @@ export default class Filter extends React.Component<ChannelsProps, {}> {
                         text: localeString('views.FilterActivity.title'),
                         style: { color: '#fff' }
                     }}
-                    backgroundColor='#1f2328'
+                    backgroundColor="#1f2328"
                 />
                 {loading ? (
                     <View style={{ padding: 50 }}>

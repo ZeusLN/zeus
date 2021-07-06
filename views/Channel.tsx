@@ -190,7 +190,7 @@ export default class ChannelView extends React.Component<
                         text: localeString('views.Channel.title'),
                         style: { color: '#fff' }
                     }}
-                    backgroundColor={theme === 'dark' ? '#261339' : 'black'}
+                    backgroundColor="#1f2328"
                 />
                 <View style={styles.content}>
                     <View style={styles.center}>

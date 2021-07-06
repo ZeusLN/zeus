@@ -204,9 +204,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
 
         if (loading) {
             mainPane = (
-                <View
-                    style={styles.loadingContainer}
-                >
+                <View style={styles.loadingContainer}>
                     <Header
                         rightComponent={<SettingsButton />}
                         backgroundColor="transparent"

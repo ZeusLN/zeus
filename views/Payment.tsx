@@ -105,7 +105,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                         text: localeString('views.Payment.title'),
                         style: { color: '#fff' }
                     }}
-                    backgroundColor={theme === 'dark' ? '#261339' : 'black'}
+                    backgroundColor="#1f2328"
                 />
                 <View style={styles.center}>
                     <TouchableOpacity onPress={() => changeUnits()}>
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     },
     darkThemeStyle: {
         flex: 1,
-        backgroundColor: 'black',
+        backgroundColor: '#1f2328',
         color: 'white'
     },
     content: {
