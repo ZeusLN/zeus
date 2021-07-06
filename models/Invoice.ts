@@ -55,6 +55,20 @@ export default class Invoice extends BaseModel {
     public expire_time?: number;
     public millisatoshis?: string;
 
+    @computed public get model(): string {
+        return 'Invoice';
+    }
+
+    @computed public get getTimestamp(): string {
+        return (
+            this.paid_at ||
+            this.creation_date ||
+            this.timestamp ||
+            this.settle_date ||
+            0
+        );
+    }
+
     @computed public get getMemo(): string {
         return (
             this.memo ||
@@ -99,7 +113,7 @@ export default class Invoice extends BaseModel {
         return Number(this.num_satoshis || 0);
     }
 
-    @computed public get listDate(): string {
+    @computed public get getDisplayTime(): string {
         return this.isPaid
             ? this.settleDate
             : DateTimeUtils.listFormattedDate(

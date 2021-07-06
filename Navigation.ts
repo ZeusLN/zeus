@@ -30,6 +30,7 @@ import About from './views/Settings/About';
 
 // new views
 import Channels from './views/Channels';
+import Activity from './views/Activity';
 
 import Onboarding from './views/Onboarding';
 
@@ -108,6 +109,9 @@ const AppScenes = {
     },
     Channels: {
         screen: Channels
+    },
+    Activity: {
+        screen: Activity
     }
 };
 

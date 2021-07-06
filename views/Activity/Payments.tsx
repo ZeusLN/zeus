@@ -80,7 +80,7 @@ export default class PaymentsView extends React.Component<PaymentsProps, {}> {
                                     )
                                 }
                                 subtitle={PrivacyUtils.sensitiveValue(
-                                    item.getCreationTime
+                                    item.getDisplayTime
                                 )}
                                 containerStyle={{
                                     borderBottomWidth: 0,

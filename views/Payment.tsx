@@ -65,13 +65,13 @@ export default class PaymentView extends React.Component<PaymentProps> {
 
         const payment: Payment = navigation.getParam('payment', null);
         const {
-            getCreationTime,
+            getDisplayTime,
             getFee,
             payment_hash,
             payment_preimage,
             enhancedPath
         } = payment;
-        const date = getCreationTime;
+        const date = getDisplayTime;
 
         const BackButton = () => (
             <Icon

@@ -20,6 +20,7 @@ export default class App extends React.PureComponent {
                 FeeStore={Stores.feeStore}
                 LnurlPayStore={Stores.lnurlPayStore}
                 UTXOsStore={Stores.utxosStore}
+                ActivityStore={Stores.activityStore}
             >
                 <View style={styles.container}>
                     <Navigation />
