@@ -1,9 +1,7 @@
 import * as React from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import { Avatar, Button, Header, Icon, ListItem } from 'react-native-elements';
-import Channel from './../models/Channel';
 import { inject, observer } from 'mobx-react';
-const hash = require('object-hash');
 import DateTimeUtils from './../utils/DateTimeUtils';
 import PrivacyUtils from './../utils/PrivacyUtils';
 import { localeString } from './../utils/LocaleUtils';
@@ -12,7 +10,7 @@ import ActivityStore from './../stores/ActivityStore';
 import UnitsStore from './../stores/UnitsStore';
 import SettingsStore from './../stores/SettingsStore';
 
-interface ChannelsProps {
+interface ActivityProps {
     navigation: any;
     refresh: any;
     ActivityStore: ActivityStore;
@@ -22,7 +20,7 @@ interface ChannelsProps {
 
 @inject('ActivityStore', 'UnitsStore', 'SettingsStore')
 @observer
-export default class Channels extends React.Component<ChannelsProps, {}> {
+export default class Activity extends React.Component<ActivityProps, {}> {
     async UNSAFE_componentWillMount() {
         const { ActivityStore } = this.props;
         const { refresh } = ActivityStore;
@@ -43,6 +41,23 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                 }
             />
         );
+    };
+
+    getRightTitleStyle = (item: any) => {
+        const { SettingsStore } = this.props;
+        const { settings } = SettingsStore;
+        const { theme } = settings;
+
+        if (item.model === 'Transaction') {
+            if (item.getAmount.includes('-')) return 'red';
+            return 'green';
+        }
+
+        if (item.model === 'Payment') return 'red';
+
+        if (item.isPaid) return 'green';
+
+        return theme === 'dark' ? 'gray' : '#8a8999';
     };
 
     render() {
@@ -184,6 +199,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                             }
                                         }}
                                         titleStyle={{
+                                            fontWeight: '600',
                                             color:
                                                 theme === 'dark'
                                                     ? 'white'
@@ -197,23 +213,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                         }}
                                         rightTitleStyle={{
                                             fontWeight: '600',
-                                            color:
-                                                item.model === 'Transaction' &&
-                                                item.getAmount.includes('-')
-                                                    ? 'red'
-                                                    : item.model ===
-                                                          'Transaction' &&
-                                                      !item.getAmount.includes(
-                                                          '-'
-                                                      )
-                                                    ? 'green'
-                                                    : item.model === 'Payment'
-                                                    ? 'red'
-                                                    : item.isPaid
-                                                    ? 'green'
-                                                    : theme === 'dark'
-                                                    ? 'gray'
-                                                    : '#8a8999'
+                                            color: this.getRightTitleStyle(item)
                                         }}
                                         rightSubtitleStyle={{
                                             color:
