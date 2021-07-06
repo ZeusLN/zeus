@@ -76,7 +76,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                         text: localeString('views.Invoice.title'),
                         style: { color: '#fff' }
                     }}
-                    backgroundColor={theme === 'dark' ? '#261339' : 'orange'}
+                    backgroundColor={theme === 'dark' ? '#1f2328' : 'orange'}
                 />
                 <View style={styles.center}>
                     <TouchableOpacity onPress={() => changeUnits()}>
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
     },
     darkThemeStyle: {
         flex: 1,
-        backgroundColor: 'black',
+        backgroundColor: '#1f2328',
         color: 'white'
     },
     amount: {

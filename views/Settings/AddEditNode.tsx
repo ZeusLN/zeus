@@ -562,11 +562,7 @@ export default class AddEditNode extends React.Component<
                         ),
                         style: { color: '#fff' }
                     }}
-                    backgroundColor={
-                        savedTheme === 'dark'
-                            ? '#261339'
-                            : 'rgba(92, 99,216, 1)'
-                    }
+                    backgroundColor="#1f2328"
                 />
                 {!!suggestImport && (
                     <View style={styles.clipboardImport}>

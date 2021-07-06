@@ -90,7 +90,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                         style: { color: '#fff' }
                     }}
                     rightComponent={<FilterButton />}
-                    backgroundColor='#1f2328'
+                    backgroundColor="#1f2328"
                 />
                 {loading ? (
                     <View style={{ padding: 50 }}>

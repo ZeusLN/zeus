@@ -465,7 +465,7 @@ export default class NodeInfo extends React.Component<
                         text: 'Node Info',
                         style: { color: '#fff' }
                     }}
-                    backgroundColor="black"
+                    backgroundColor="#1f2328"
                 />
 
                 <ButtonGroup
