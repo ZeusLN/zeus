@@ -47,6 +47,8 @@ export default class Activity extends React.Component<ActivityProps, {}> {
         const { settings } = SettingsStore;
         const { theme } = settings;
 
+        if (item.getAmount == 0) return 'gray';
+
         if (item.model === 'Transaction') {
             if (item.getAmount.includes('-')) return 'red';
             return 'green';
@@ -145,18 +147,24 @@ export default class Activity extends React.Component<ActivityProps, {}> {
 
                             if (item.model === 'Transaction') {
                                 // TODO: add strings to en
-                                displayName = !item.getAmount.includes('-')
-                                    ? 'You received'
-                                    : 'You sent';
+                                displayName =
+                                    item.getAmount == 0
+                                        ? 'Channel operation'
+                                        : !item.getAmount.includes('-')
+                                        ? 'You received'
+                                        : 'You sent';
                                 subTitle =
                                     item.num_confirmations == 0
                                         ? 'On-chain: Unconfirmed'
                                         : 'On-chain';
-                                rightTitle = PrivacyUtils.sensitiveValue(
-                                    getAmount(item.getAmount),
-                                    null,
-                                    true
-                                );
+                                rightTitle =
+                                    item.getAmount == 0
+                                        ? '-'
+                                        : PrivacyUtils.sensitiveValue(
+                                              getAmount(item.getAmount),
+                                              null,
+                                              true
+                                          );
                             }
 
                             return (
