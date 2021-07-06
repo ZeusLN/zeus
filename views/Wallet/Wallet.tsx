@@ -385,7 +385,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     <TouchableOpacity
                                         onPress={() =>
                                             this.props.navigation.navigate(
-                                                'Channels'
+                                                'Activity'
                                             )
                                         }
                                     >

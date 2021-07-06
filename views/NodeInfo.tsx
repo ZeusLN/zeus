@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
     },
     darkThemeStyle: {
         flex: 1,
-        backgroundColor: 'black',
+        backgroundColor: '#1f2328',
         color: 'white'
     },
     content: {

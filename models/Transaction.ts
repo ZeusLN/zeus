@@ -18,6 +18,14 @@ export default class Transaction extends BaseModel {
     public outputs: number;
     public address: string;
 
+    @computed public get model(): string {
+        return 'Transaction';
+    }
+
+    @computed public get getTimestamp(): string {
+        return this.time_stamp || 0;
+    }
+
     @computed public get isConfirmed(): boolean {
         return this.num_confirmations > 0 || this.status === 'confirmed';
     }
