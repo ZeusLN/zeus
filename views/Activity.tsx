@@ -12,7 +12,6 @@ import SettingsStore from './../stores/SettingsStore';
 
 interface ActivityProps {
     navigation: any;
-    refresh: any;
     ActivityStore: ActivityStore;
     UnitsStore: UnitsStore;
     SettingsStore: SettingsStore;
@@ -23,8 +22,8 @@ interface ActivityProps {
 export default class Activity extends React.Component<ActivityProps, {}> {
     async UNSAFE_componentWillMount() {
         const { ActivityStore } = this.props;
-        const { refresh } = ActivityStore;
-        refresh();
+        const { getActivity } = ActivityStore;
+        getActivity();
     }
 
     renderSeparator = () => {
@@ -68,7 +67,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
             SettingsStore
         } = this.props;
         const { getAmount, units } = UnitsStore;
-        const { loading, activity, refresh } = ActivityStore;
+        const { loading, activity, getActivity } = ActivityStore;
         const { settings } = SettingsStore;
         const { theme, lurkerMode } = settings;
 
@@ -163,12 +162,6 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                             return (
                                 <React.Fragment>
                                     <ListItem
-                                        title={displayName}
-                                        subtitle={subTitle}
-                                        rightTitle={rightTitle}
-                                        rightSubtitle={DateTimeUtils.listFormattedDateShort(
-                                            item.getTimestamp
-                                        )}
                                         containerStyle={{
                                             borderBottomWidth: 0,
                                             backgroundColor:
@@ -198,30 +191,58 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                                 });
                                             }
                                         }}
-                                        titleStyle={{
-                                            fontWeight: '600',
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'white'
-                                                    : '#1f2328'
-                                        }}
-                                        subtitleStyle={{
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'gray'
-                                                    : '#8a8999'
-                                        }}
-                                        rightTitleStyle={{
-                                            fontWeight: '600',
-                                            color: this.getRightTitleStyle(item)
-                                        }}
-                                        rightSubtitleStyle={{
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'gray'
-                                                    : '#8a8999'
-                                        }}
-                                    />
+                                    >
+                                        <ListItem.Content>
+                                            <ListItem.Title
+                                                right
+                                                style={{
+                                                    fontWeight: '600',
+                                                    color:
+                                                        theme === 'dark'
+                                                            ? 'white'
+                                                            : '#1f2328'
+                                                }}
+                                            >
+                                                {displayName}
+                                            </ListItem.Title>
+                                            <ListItem.Subtitle
+                                                right
+                                                style={{
+                                                    color:
+                                                        theme === 'dark'
+                                                            ? 'gray'
+                                                            : '#8a8999'
+                                                }}
+                                            >
+                                                {subTitle}
+                                            </ListItem.Subtitle>
+                                        </ListItem.Content>
+                                        <ListItem.Content right>
+                                            <ListItem.Title
+                                                right
+                                                style={{
+                                                    fontWeight: '600',
+                                                    color: this.getRightTitleStyle(
+                                                        item
+                                                    )
+                                                }}
+                                            >
+                                                {rightTitle}
+                                            </ListItem.Title>
+                                            <ListItem.Subtitle
+                                                right
+                                                style={
+                                                    theme === 'dark'
+                                                        ? styles.rightSubtitleStyleDark
+                                                        : styles.rightSubtitleStyle
+                                                }
+                                            >
+                                                {DateTimeUtils.listFormattedDateShort(
+                                                    item.getTimestamp
+                                                )}
+                                            </ListItem.Subtitle>
+                                        </ListItem.Content>
+                                    </ListItem>
                                 </React.Fragment>
                             );
                         }}
@@ -229,7 +250,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}
                         refreshing={loading}
-                        onRefresh={() => refresh()}
+                        onRefresh={() => getActivity()}
                     />
                 ) : (
                     <Button
@@ -239,7 +260,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                             size: 25,
                             color: theme === 'dark' ? 'white' : '#1f2328'
                         }}
-                        onPress={() => refresh()}
+                        onPress={() => getActivity()}
                         buttonStyle={{
                             backgroundColor: 'transparent',
                             borderRadius: 30
@@ -275,5 +296,11 @@ const styles = StyleSheet.create({
     button: {
         paddingTop: 15,
         paddingBottom: 10
+    },
+    rightSubtitleStyle: {
+        color: '#8a8999'
+    },
+    rightSubtitleStyleDark: {
+        color: 'gray'
     }
 });
