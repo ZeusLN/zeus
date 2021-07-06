@@ -113,9 +113,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         NodeInfoStore.reset();
         BalanceStore.reset();
-        PaymentsStore.reset();
-        InvoicesStore.reset();
-        TransactionsStore.reset();
         ChannelsStore.reset();
 
         // This awaits on settings, so should await on Tor being bootstrapped before making requests
@@ -148,16 +145,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         if (implementation === 'lndhub') {
             login({ login: username, password }).then(() => {
                 BalanceStore.getLightningBalance();
-                PaymentsStore.getPayments();
-                InvoicesStore.getInvoices();
             });
         } else {
             NodeInfoStore.getNodeInfo();
             BalanceStore.getBlockchainBalance();
             BalanceStore.getLightningBalance();
-            PaymentsStore.getPayments();
-            InvoicesStore.getInvoices();
-            TransactionsStore.getTransactions();
             ChannelsStore.getChannels();
             FeeStore.getFees();
         }
