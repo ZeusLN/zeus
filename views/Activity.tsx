@@ -4,6 +4,7 @@ import { Avatar, Button, Header, Icon, ListItem } from 'react-native-elements';
 import Channel from './../models/Channel';
 import { inject, observer } from 'mobx-react';
 const hash = require('object-hash');
+import DateTimeUtils from './../utils/DateTimeUtils';
 import PrivacyUtils from './../utils/PrivacyUtils';
 import { localeString } from './../utils/LocaleUtils';
 
@@ -52,9 +53,9 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
         const { settings } = SettingsStore;
         const { theme, lurkerMode } = settings;
 
-        const BackButton = () => (
+        const CloseButton = () => (
             <Icon
-                name="arrow-back"
+                name="close"
                 onPress={() => navigation.navigate('Wallet')}
                 color="#fff"
                 underlayColor="transparent"
@@ -70,7 +71,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                 }
             >
                 <Header
-                    leftComponent={<BackButton />}
+                    leftComponent={<CloseButton />}
                     centerComponent={{
                         text: localeString('general.activity'),
                         style: { color: '#fff' }
@@ -81,13 +82,27 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                     <FlatList
                         data={activity}
                         renderItem={({ item }) => {
-                            const displayName = item.model;
+                            let displayName = item.model;
+                            let subTitle = item.model;
+                            let rightTitle = '';
+                            if (item.model === 'Invoice') {
+                                // TODO: add strings to en
+                                displayName = item.isPaid ? 'You received' : 'Requested Payment';
+                                subTitle = item.isPaid ? 'Lightning' : `Lightning Invoice: ${item.expirationDate}`;
+                                rightTitle = PrivacyUtils.sensitiveValue(
+                                    getAmount(item.getAmount),
+                                    null,
+                                    true
+                                );
+                            }
 
                             return (
                                 <React.Fragment>
                                     <ListItem
                                         title={displayName}
-                                        subtitle={item.getDisplayTime}
+                                        subtitle={subTitle}
+                                        rightTitle={rightTitle}
+                                        rightSubtitle={DateTimeUtils.listFormattedDateShort(item.getTimestamp)}
                                         containerStyle={{
                                             borderBottomWidth: 0,
                                             backgroundColor:
@@ -124,6 +139,18 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                                     : '#1f2328'
                                         }}
                                         subtitleStyle={{
+                                            color:
+                                                theme === 'dark'
+                                                    ? 'gray'
+                                                    : '#8a8999'
+                                        }}
+                                        rightTitleStyle={{
+                                            fontWeight: 500,
+                                            color: item.isPaid ? 'green' : theme === 'dark'
+                                                    ? 'gray'
+                                                    : '#8a8999'
+                                        }}
+                                        rightSubtitleStyle={{
                                             color:
                                                 theme === 'dark'
                                                     ? 'gray'
