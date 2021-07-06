@@ -111,6 +111,22 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                 );
                             }
 
+                            if (item.model === 'Transaction') {
+                                // TODO: add strings to en
+                                displayName = !item.getAmount.includes('-')
+                                    ? 'You received'
+                                    : 'You sent';
+                                subTitle =
+                                    item.num_confirmations == 0
+                                        ? 'On-chain: Unconfirmed'
+                                        : 'On-chain';
+                                rightTitle = PrivacyUtils.sensitiveValue(
+                                    getAmount(item.getAmount),
+                                    null,
+                                    true
+                                );
+                            }
+
                             return (
                                 <React.Fragment>
                                     <ListItem
@@ -164,7 +180,16 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                         rightTitleStyle={{
                                             fontWeight: '600',
                                             color:
-                                                item.model === 'Payment'
+                                                item.model === 'Transaction' &&
+                                                item.getAmount.includes('-')
+                                                    ? 'red'
+                                                    : item.model ===
+                                                          'Transaction' &&
+                                                      !item.getAmount.includes(
+                                                          '-'
+                                                      )
+                                                    ? 'green'
+                                                    : item.model === 'Payment'
                                                     ? 'red'
                                                     : item.isPaid
                                                     ? 'green'
