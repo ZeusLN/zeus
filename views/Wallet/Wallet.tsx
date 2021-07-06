@@ -29,6 +29,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import WalletIcon from './../../images/SVG/Wallet.svg';
 import ChannelsIcon from './../../images/SVG/Channels.svg';
 import QRIcon from './../../images/SVG/QR.svg';
+import CaretUp from './../../images/SVG/Caret Up.svg';
 
 import handleAnything from './../../utils/handleAnything';
 
@@ -307,6 +308,16 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             BalanceStore={BalanceStore}
                             UnitsStore={UnitsStore}
                         />
+
+                        <TouchableOpacity
+                            onPress={() =>
+                                this.props.navigation.navigate('Activity')
+                            }
+                        >
+                            <CaretUp
+                                style={{ alignSelf: 'center', bottom: 100 }}
+                            />
+                        </TouchableOpacity>
                     </LinearGradient>
                 </View>
             );
@@ -385,7 +396,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     <TouchableOpacity
                                         onPress={() =>
                                             this.props.navigation.navigate(
-                                                'Activity'
+                                                'Channels'
                                             )
                                         }
                                     >
