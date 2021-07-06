@@ -205,11 +205,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
         if (loading) {
             mainPane = (
                 <View
-                    style={
-                        theme === 'dark'
-                            ? styles.loadingContainerDark
-                            : styles.loadingContainer
-                    }
+                    style={styles.loadingContainer}
                 >
                     <Header
                         rightComponent={<SettingsButton />}
@@ -311,13 +307,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#1f2328'
     },
     loadingContainer: {
-        backgroundColor: 'rgba(253, 164, 40, 0.5)',
-        paddingTop: 10,
-        paddingBottom: 50,
-        paddingLeft: 10
-    },
-    loadingContainerDark: {
-        backgroundColor: '#261339',
         paddingTop: 10,
         paddingBottom: 50,
         paddingLeft: 10

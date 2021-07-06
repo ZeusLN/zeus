@@ -22,7 +22,7 @@ interface ChannelsProps {
 
 @inject('ActivityStore', 'UnitsStore', 'SettingsStore')
 @observer
-export default class Channels extends React.Component<ChannelsProps, {}> {
+export default class Filter extends React.Component<ChannelsProps, {}> {
     async UNSAFE_componentWillMount() {
         const { ActivityStore } = this.props;
         const { refresh } = ActivityStore;
@@ -65,16 +65,6 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                 underlayColor="transparent"
             />
         );
-
-        const FilterButton = () => (
-            <Icon
-                name="filter-alt"
-                onPress={() => navigation.navigate('Filter')}
-                color="#fff"
-                underlayColor="transparent"
-            />
-        );
-
         return (
             <View
                 style={
@@ -86,10 +76,9 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                 <Header
                     leftComponent={<CloseButton />}
                     centerComponent={{
-                        text: localeString('general.activity'),
+                        text: localeString('views.FilterActivity.title'),
                         style: { color: '#fff' }
                     }}
-                    rightComponent={<FilterButton />}
                     backgroundColor='#1f2328'
                 />
                 {loading ? (

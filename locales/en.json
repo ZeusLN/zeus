@@ -321,6 +321,7 @@
     "views.Transaction.destAddress": "Destination Address",
     "views.Transaction.destAddresses": "Destination Addresses",
     "views.Activity.noActivity": "No activity yet",
+    "views.FilterActivity.title": "Filter Activity",
     "components.UTXOPicker.modal.title": "Select UTXOs to use",
     "components.UTXOPicker.modal.description": "Select the UTXOs to be used in this operation. You may want to only use specific UTXOs to preserve your privacy.",
     "components.UTXOPicker.modal.set": "Set UTXOs",
