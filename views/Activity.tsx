@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import { Avatar, Button, Header, Icon, ListItem } from 'react-native-elements';
 import Channel from './../models/Channel';
 import { inject, observer } from 'mobx-react';
@@ -23,6 +23,12 @@ interface ChannelsProps {
 @inject('ActivityStore', 'UnitsStore', 'SettingsStore')
 @observer
 export default class Channels extends React.Component<ChannelsProps, {}> {
+    async UNSAFE_componentWillMount() {
+        const { ActivityStore } = this.props;
+        const { refresh } = ActivityStore;
+        refresh();
+    }
+
     renderSeparator = () => {
         const { SettingsStore } = this.props;
         const { settings } = SettingsStore;
@@ -39,8 +45,6 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
         );
     };
 
-    refresh = () => console.log('refresh')();
-
     render() {
         const {
             navigation,
@@ -49,7 +53,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
             SettingsStore
         } = this.props;
         const { getAmount, units } = UnitsStore;
-        const { loading, activity } = ActivityStore;
+        const { loading, activity, refresh } = ActivityStore;
         const { settings } = SettingsStore;
         const { theme, lurkerMode } = settings;
 
@@ -63,7 +67,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
         );
 
         return (
-            <ScrollView
+            <View
                 style={
                     theme === 'dark'
                         ? styles.darkThemeStyle
@@ -78,7 +82,11 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                     }}
                     backgroundColor={theme === 'dark' ? '#261339' : '#1f2328'}
                 />
-                {(!!activity && activity.length > 0) || loading ? (
+                {loading ? (
+                    <View style={{ padding: 50 }}>
+                        <ActivityIndicator size="large" color="#0000ff" />
+                    </View>
+                ) : !!activity && activity.length > 0 ? (
                     <FlatList
                         data={activity}
                         renderItem={({ item }) => {
@@ -211,7 +219,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}
                         refreshing={loading}
-                        onRefresh={() => this.refresh()}
+                        onRefresh={() => refresh()}
                     />
                 ) : (
                     <Button
@@ -221,7 +229,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                             size: 25,
                             color: theme === 'dark' ? 'white' : '#1f2328'
                         }}
-                        onPress={() => this.refresh()}
+                        onPress={() => refresh()}
                         buttonStyle={{
                             backgroundColor: 'transparent',
                             borderRadius: 30
@@ -231,7 +239,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                         }}
                     />
                 )}
-            </ScrollView>
+            </View>
         );
     }
 }

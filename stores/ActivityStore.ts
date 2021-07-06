@@ -57,4 +57,14 @@ export default class ActivityStore {
             }
         );
     }
+
+    @action
+    public refresh = async () => {
+        this.loading = true;
+        this.activity = [];
+        await this.paymentsStore.getPayments();
+        await this.transactionsStore.getTransactions();
+        await this.invoicesStore.getInvoices();
+        this.loading = false;
+    };
 }
