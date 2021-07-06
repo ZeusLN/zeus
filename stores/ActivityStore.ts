@@ -1,4 +1,4 @@
-import { action, observable, reaction } from 'mobx';
+import { action, observable } from 'mobx';
 // LN
 import Payment from './../models/Payment';
 import Invoice from './../models/Invoice';
@@ -30,41 +30,32 @@ export default class ActivityStore {
         this.paymentsStore = paymentsStore;
         this.transactionsStore = transactionsStore;
         this.invoicesStore = invoicesStore;
-
-        reaction(
-            () =>
-                this.settingsStore.settings &&
-                this.paymentsStore.payments &&
-                this.transactionsStore.transactions &&
-                this.invoicesStore.invoices,
-            () => {
-                const activity = [];
-                const payments = this.paymentsStore.payments;
-                const transactions = this.transactionsStore.transactions;
-                const invoices = this.invoicesStore.invoices;
-
-                if (this.settingsStore.hasCredentials()) {
-                    // push payments, txs, invoices to one array
-                    activity.push.apply(
-                        activity,
-                        payments.concat(transactions).concat(invoices)
-                    );
-                    // sort activity by timestamp
-                    this.activity = activity.sort((a, b) =>
-                        a.getTimestamp < b.getTimestamp ? 1 : -1
-                    );
-                }
-            }
-        );
     }
 
     @action
-    public refresh = async () => {
+    public getActivity = async () => {
         this.loading = true;
         this.activity = [];
         await this.paymentsStore.getPayments();
         await this.transactionsStore.getTransactions();
         await this.invoicesStore.getInvoices();
+        const activity = [];
+        const payments = this.paymentsStore.payments;
+        const transactions = this.transactionsStore.transactions;
+        const invoices = this.invoicesStore.invoices;
+
+        // push payments, txs, invoices to one array
+        activity.push.apply(
+            activity,
+            payments.concat(transactions).concat(invoices)
+        );
+        // sort activity by timestamp
+        const sortedActivity = activity.sort((a, b) =>
+            a.getTimestamp < b.getTimestamp ? 1 : -1
+        );
+
+        this.activity = sortedActivity;
+
         this.loading = false;
     };
 }
