@@ -9,6 +9,15 @@ class DateTimeUtils {
             return timestamp || 'N/A';
         }
     };
+
+    listFormattedDateShort = (timestamp: number | string) => {
+        try {
+            const date = new Date(Number(timestamp) * 1000);
+            return dateFormat(date, "mmmm d");
+        } catch (error) {
+            return timestamp || 'N/A';
+        }
+    };
 }
 
 const dateTimeUtils = new DateTimeUtils();
