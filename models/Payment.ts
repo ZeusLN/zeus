@@ -39,7 +39,7 @@ export default class Payment extends BaseModel {
     }
 
     @computed public get model(): string {
-        return 'Payment';
+        return localeString('views.Payment.title');
     }
 
     @computed public get getTimestamp(): string {

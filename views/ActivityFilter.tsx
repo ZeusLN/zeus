@@ -124,7 +124,15 @@ export default class ActivityFilter extends React.Component<
                         }
                         buttonStyle={{ backgroundColor: 'white' }}
                         titleStyle={{ color: 'black' }}
-                        title={startDate ? 'Clear Start' : 'Set Start'}
+                        title={
+                            startDate
+                                ? localeString(
+                                      'views.ActivityFilter.clearStartDate'
+                                  )
+                                : localeString(
+                                      'views.ActivityFilter.setStartDate'
+                                  )
+                        }
                     />
                 </View>
                 <View style={{ padding: 5 }}>
@@ -135,7 +143,15 @@ export default class ActivityFilter extends React.Component<
                                 : this.setState({ setEndDate: !setEndDate })
                         }
                         buttonStyle={{ backgroundColor: 'orange' }}
-                        title={endDate ? 'Clear End' : 'Set End'}
+                        title={
+                            endDate
+                                ? localeString(
+                                      'views.ActivityFilter.clearEndDate'
+                                  )
+                                : localeString(
+                                      'views.ActivityFilter.setEndDate'
+                                  )
+                        }
                     />
                 </View>
             </View>
@@ -146,13 +162,23 @@ export default class ActivityFilter extends React.Component<
                 <>
                     {startDate && (
                         <Text
-                            style={{ color: 'white', paddingTop: 30 }}
-                        >{`Start Date: ${startDate.toString()}`}</Text>
+                            style={{
+                                color: theme === 'dark' ? 'white' : 'black',
+                                paddingTop: 30
+                            }}
+                        >{`${localeString(
+                            'views.ActivityFilter.startDate'
+                        )}: ${startDate.toString()}`}</Text>
                     )}
                     {endDate && (
                         <Text
-                            style={{ color: 'white', paddingTop: 30 }}
-                        >{`End Date: ${endDate.toString()}`}</Text>
+                            style={{
+                                color: theme === 'dark' ? 'white' : 'black',
+                                paddingTop: 30
+                            }}
+                        >{`${localeString(
+                            'views.ActivityFilter.endDate'
+                        )}: ${endDate.toString()}`}</Text>
                     )}
                 </>
                 {(setStartDate || setEndDate) && (
@@ -190,7 +216,15 @@ export default class ActivityFilter extends React.Component<
                                     });
                                 }}
                                 buttonStyle={{ backgroundColor: 'orange' }}
-                                title="Set"
+                                title={
+                                    setStartDate
+                                        ? localeString(
+                                              'views.ActivityFilter.setStartDate'
+                                          )
+                                        : localeString(
+                                              'views.ActivityFilter.setEndDate'
+                                          )
+                                }
                             />
                         </View>
                     </View>
@@ -200,37 +234,37 @@ export default class ActivityFilter extends React.Component<
 
         const FILTERS = [
             {
-                label: 'Lightning payments',
+                label: localeString('views.ActivityFilter.lightningPayments'),
                 value: lightning,
                 var: 'lightning',
                 type: 'Toggle'
             },
             {
-                label: 'On-chain payments',
+                label: localeString('views.ActivityFilter.onChainPayments'),
                 value: onChain,
                 var: 'onChain',
                 type: 'Toggle'
             },
             {
-                label: 'Channels',
+                label: localeString('views.Wallet.Wallet.channels'),
                 value: channels,
                 var: 'channels',
                 type: 'Toggle'
             },
             {
-                label: 'Sent',
+                label: localeString('general.sent'),
                 value: sent,
                 var: 'sent',
                 type: 'Toggle'
             },
             {
-                label: 'Received',
+                label: localeString('general.received'),
                 value: received,
                 var: 'received',
                 type: 'Toggle'
             },
             {
-                label: 'Date',
+                label: localeString('general.date'),
                 value: received,
                 var: 'received',
                 type: 'Date'
