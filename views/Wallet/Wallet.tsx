@@ -297,6 +297,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         />
 
                         <LayerBalances
+                            navigation={navigation}
                             BalanceStore={BalanceStore}
                             UnitsStore={UnitsStore}
                         />
