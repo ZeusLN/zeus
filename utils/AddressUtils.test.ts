@@ -325,6 +325,17 @@ describe('AddressUtils', () => {
                         'http://naf3121nfadoxnwer1s5x2rkirdqbmvuws2ojvgood.onion:3000'
                 });
             });
+
+            it('processes hosts from MyNode - alt encoding', () => {
+                expect(
+                    AddressUtils.processLNDHubAddress(
+                        'bluewallet:setlndhuburl?url=http://naf3121nfadoxnwer1s5x2rkirdqbmvuws2ojvgood.onion:3000'
+                    )
+                ).toEqual({
+                    host:
+                        'http://naf3121nfadoxnwer1s5x2rkirdqbmvuws2ojvgood.onion:3000'
+                });
+            });
         });
     });
 });
