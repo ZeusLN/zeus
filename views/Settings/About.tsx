@@ -2,7 +2,7 @@ import * as React from 'react';
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import { version, playStore } from './../../package.json';
+import { version } from './../../package.json';
 import { localeString } from './../../utils/LocaleUtils';
 
 import SettingsStore from './../../stores/SettingsStore';
@@ -126,30 +126,6 @@ export default class About extends React.Component<AboutProps, {}> {
                                         '03e1210c8d4b236a53191bb172701d76ec06dfa869a1afffcfd8f4e07d9129d898',
                                     host:
                                         'zg6ziy65wqhiczqfqupx26j5yjot5iuxftqtiyvika3xoydc5hx2mtyd.onion:9735'
-                                })
-                            }
-                            buttonStyle={{
-                                backgroundColor: 'grey',
-                                borderRadius: 30
-                            }}
-                        />
-                    </View>
-                )}
-                {!playStore && RESTUtils.supportsKeysend() && (
-                    <View style={styles.button}>
-                        <Button
-                            title={localeString('views.Settings.About.keysend')}
-                            icon={{
-                                name: 'send',
-                                size: 25,
-                                color: 'white'
-                            }}
-                            onPress={() =>
-                                navigation.navigate('Send', {
-                                    destination:
-                                        '03e1210c8d4b236a53191bb172701d76ec06dfa869a1afffcfd8f4e07d9129d898',
-                                    transactionType: 'Keysend',
-                                    isValid: true
                                 })
                             }
                             buttonStyle={{

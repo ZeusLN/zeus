@@ -86,9 +86,6 @@ Zeus is proud to be integrated on the following platforms:
 
 Google Play releases aren't fully featured due to Google policies. To get the fully featured version of Zeus on Android you must download the APK from the [Zeus website](https://zeusln.app), GitHub, or F-Droid. Google Play releases are managed on the `play-releases` branch. Commits used for Google Play builds will be marked in the release notes.
 
-#### Current features not included on Google Play releases
-* Keysend donation button
-
 ## Contributing
 
 Please be sure to run `npm run tsc` to check for type errors, `npm run test` to run all tests, and `npm run prettier` to run the prettier
@@ -102,7 +99,7 @@ Do not directly modify the files in `/locales` unless you are adding new copy to
 
 ## Release + Commit Verification
 
-All releases and all maintainer commits as of January 24, 2020 are signed by key `989CC718EBA8BB68` (zeusln@tutanota.com). The key can be found [in this repo](https://github.com/ZeusLN/zeus/blob/master/PGP.txt) and [on the ZeusLN.app website](https://zeusln.app/PGP.txt). 
+All releases and all maintainer commits as of January 24, 2020 are signed by key `989CC718EBA8BB68` (zeusln@tutanota.com). The key can be found [in this repo](https://github.com/ZeusLN/zeus/blob/master/PGP.txt) and [on the ZeusLN.app website](https://zeusln.app/PGP.txt).
 
 ## Donations
 
