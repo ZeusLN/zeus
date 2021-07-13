@@ -562,11 +562,7 @@ export default class AddEditNode extends React.Component<
                         ),
                         style: { color: '#fff' }
                     }}
-                    backgroundColor={
-                        savedTheme === 'dark'
-                            ? '#261339'
-                            : 'rgba(92, 99,216, 1)'
-                    }
+                    backgroundColor="#1f2328"
                 />
                 {!!suggestImport && (
                     <View style={styles.clipboardImport}>
@@ -1363,7 +1359,7 @@ const styles = StyleSheet.create({
     },
     darkThemeStyle: {
         flex: 1,
-        backgroundColor: 'black',
+        backgroundColor: '#1f2328',
         color: 'white'
     },
     textInput: {

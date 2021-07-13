@@ -17,6 +17,7 @@ import Lightning from './../../images/SVG/Lightning Circle.svg';
 interface LayerBalancesProps {
     BalanceStore: BalanceStore;
     UnitsStore: UnitsStore;
+    navigation: any;
 }
 
 //  To toggle LTR/RTL change to `true`
@@ -39,17 +40,25 @@ const Row = ({ item }: { item: DataRow }) => (
     </RectButton>
 );
 
-const SwipeableRow = ({ item, index }: { item: DataRow; index: number }) => {
+const SwipeableRow = ({
+    item,
+    index,
+    navigation
+}: {
+    item: DataRow;
+    index: number;
+    navigation: any;
+}) => {
     if (index === 1) {
         return (
-            <OnchainSwipeableRow>
+            <OnchainSwipeableRow navigation={navigation}>
                 <Row item={item} />
             </OnchainSwipeableRow>
         );
     }
 
     return (
-        <LightningSwipeableRow>
+        <LightningSwipeableRow navigation={navigation}>
             <Row item={item} />
         </LightningSwipeableRow>
     );
@@ -59,7 +68,7 @@ const SwipeableRow = ({ item, index }: { item: DataRow; index: number }) => {
 @observer
 export default class LayerBalances extends Component<LayerBalancesProps, {}> {
     render() {
-        const { BalanceStore, UnitsStore } = this.props;
+        const { BalanceStore, UnitsStore, navigation } = this.props;
 
         const {
             totalBlockchainBalance,
@@ -86,7 +95,11 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                 data={DATA}
                 ItemSeparatorComponent={() => <View style={styles.separator} />}
                 renderItem={({ item, index }) => (
-                    <SwipeableRow item={item} index={index} />
+                    <SwipeableRow
+                        item={item}
+                        index={index}
+                        navigation={navigation}
+                    />
                 )}
                 keyExtractor={(_item, index) => `message ${index}`}
                 style={{ top: 20 }}

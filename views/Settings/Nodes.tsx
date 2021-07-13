@@ -135,7 +135,7 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                             borderBottomWidth: 0,
                                             backgroundColor:
                                                 theme === 'dark'
-                                                    ? 'black'
+                                                    ? '#1f2328'
                                                     : 'white'
                                         }}
                                         onPress={() => {

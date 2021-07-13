@@ -465,7 +465,7 @@ export default class NodeInfo extends React.Component<
                         text: 'Node Info',
                         style: { color: '#fff' }
                     }}
-                    backgroundColor="black"
+                    backgroundColor="#1f2328"
                 />
 
                 <ButtonGroup
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
     },
     darkThemeStyle: {
         flex: 1,
-        backgroundColor: 'black',
+        backgroundColor: '#1f2328',
         color: 'white'
     },
     content: {
