@@ -115,6 +115,17 @@ export default class NodeInfo extends React.Component<
         }
     }
 
+    componentDidMount() {
+        const { navigation } = this.props;
+        const selectedIndex: number = navigation.getParam('selectedIndex');
+
+        if (selectedIndex) {
+            this.setState({
+                selectedIndex
+            });
+        }
+    }
+
     updateIndex = (selectedIndex: number) => {
         this.setState({
             selectedIndex
