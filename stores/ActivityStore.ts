@@ -189,4 +189,10 @@ export default class ActivityStore {
 
         this.loading = false;
     };
+
+    @action
+    public getActivityAndFilter = async (filters: any = this.filters) => {
+        await this.getActivity();
+        await this.setFilters(filters);
+    };
 }

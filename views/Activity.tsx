@@ -21,11 +21,10 @@ interface ActivityProps {
 @observer
 export default class Activity extends React.Component<ActivityProps, {}> {
     async UNSAFE_componentWillMount() {
-        console.log('mount');
         const { ActivityStore } = this.props;
-        const { getActivity, resetFilters } = ActivityStore;
+        const { getActivityAndFilter, resetFilters } = ActivityStore;
         await resetFilters();
-        getActivity();
+        getActivityAndFilter();
     }
 
     renderSeparator = () => {
@@ -71,7 +70,11 @@ export default class Activity extends React.Component<ActivityProps, {}> {
             SettingsStore
         } = this.props;
         const { getAmount, units } = UnitsStore;
-        const { loading, filteredActivity, getActivity } = ActivityStore;
+        const {
+            loading,
+            filteredActivity,
+            getActivityAndFilter
+        } = ActivityStore;
         const { settings } = SettingsStore;
         const { theme, lurkerMode } = settings;
 
@@ -264,7 +267,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}
                         refreshing={loading}
-                        onRefresh={() => getActivity()}
+                        onRefresh={() => getActivityAndFilter()}
                     />
                 ) : (
                     <Button
@@ -274,7 +277,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                             size: 25,
                             color: theme === 'dark' ? 'white' : '#1f2328'
                         }}
-                        onPress={() => getActivity()}
+                        onPress={() => getActivityAndFilter()}
                         buttonStyle={{
                             backgroundColor: 'transparent',
                             borderRadius: 30
