@@ -9,6 +9,7 @@ import SettingsStore from './SettingsStore';
 import PaymentsStore from './PaymentsStore';
 import InvoicesStore from './InvoicesStore';
 import TransactionsStore from './TransactionsStore';
+import { localeString } from './../utils/LocaleUtils';
 
 interface ActivityFilter {
     lightning: boolean;
@@ -125,7 +126,8 @@ export default class ActivityStore {
             filteredActivity = filteredActivity.filter(
                 (activity: any) =>
                     !(
-                        activity.model === 'Transaction' &&
+                        activity.model ===
+                            localeString('general.transaction') &&
                         activity.getAmount == 0
                     )
             );
@@ -135,8 +137,9 @@ export default class ActivityStore {
             filteredActivity = filteredActivity.filter(
                 (activity: any) =>
                     !(
-                        activity.model === 'Invoice' ||
-                        activity.model === 'Payment'
+                        activity.model ===
+                            localeString('views.Invoice.title') ||
+                        activity.model === localeString('views.Payment.title')
                     )
             );
         }
@@ -145,7 +148,8 @@ export default class ActivityStore {
             filteredActivity = filteredActivity.filter(
                 (activity: any) =>
                     !(
-                        activity.model === 'Transaction' &&
+                        activity.model ===
+                            localeString('general.transaction') &&
                         activity.getAmount != 0
                     )
             );
@@ -155,9 +159,10 @@ export default class ActivityStore {
             filteredActivity = filteredActivity.filter(
                 (activity: any) =>
                     !(
-                        (activity.model === 'Transaction' &&
+                        (activity.model ===
+                            localeString('general.transaction') &&
                             activity.getAmount < 0) ||
-                        activity.model === 'Payment'
+                        activity.model === localeString('views.Payment.title')
                     )
             );
         }
@@ -166,9 +171,10 @@ export default class ActivityStore {
             filteredActivity = filteredActivity.filter(
                 (activity: any) =>
                     !(
-                        (activity.model === 'Transaction' &&
+                        (activity.model ===
+                            localeString('general.transaction') &&
                             activity.getAmount > 0) ||
-                        activity.model === 'Invoice'
+                        activity.model === localeString('views.Invoice.title')
                     )
             );
         }

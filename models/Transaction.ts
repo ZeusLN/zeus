@@ -1,6 +1,7 @@
 import BaseModel from './BaseModel';
 import { computed } from 'mobx';
 import DateTimeUtils from './../utils/DateTimeUtils';
+import { localeString } from './../utils/LocaleUtils';
 
 export default class Transaction extends BaseModel {
     public amount: number;
@@ -20,7 +21,7 @@ export default class Transaction extends BaseModel {
     public address: string;
 
     @computed public get model(): string {
-        return 'Transaction';
+        return localeString('general.transaction');
     }
 
     @computed public get getTimestamp(): string {

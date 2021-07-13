@@ -50,12 +50,12 @@ export default class Activity extends React.Component<ActivityProps, {}> {
 
         if (item.getAmount == 0) return 'gray';
 
-        if (item.model === 'Transaction') {
+        if (item.model === localeString('general.transaction')) {
             if (item.getAmount.includes('-')) return 'red';
             return 'green';
         }
 
-        if (item.model === 'Payment') return 'red';
+        if (item.model === localeString('views.Payment.title')) return 'red';
 
         if (item.isPaid) return 'green';
 
@@ -124,16 +124,24 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                             let displayName = item.model;
                             let subTitle = item.model;
                             let rightTitle = ' ';
-                            if (item.model === 'Invoice') {
-                                // TODO: add strings to en
+                            if (
+                                item.model ===
+                                localeString('views.Invoice.title')
+                            ) {
                                 displayName = item.isPaid
-                                    ? 'You received'
-                                    : 'Requested Payment';
+                                    ? localeString('views.Activity.youReceived')
+                                    : localeString(
+                                          'views.Activity.requestedPayment'
+                                      );
                                 subTitle = item.isPaid
-                                    ? 'Lightning'
-                                    : `Lightning Invoice: ${
+                                    ? localeString('general.lightning')
+                                    : `${localeString(
+                                          'views.PaymentRequest.title'
+                                      )}: ${
                                           item.isExpired
-                                              ? 'Expired'
+                                              ? localeString(
+                                                    'views.Activity.expired'
+                                                )
                                               : item.expirationDate
                                       }`;
                                 rightTitle = PrivacyUtils.sensitiveValue(
@@ -143,10 +151,14 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                 );
                             }
 
-                            if (item.model === 'Payment') {
-                                // TODO: add strings to en
-                                displayName = 'You sent';
-                                subTitle = 'Lightning';
+                            if (
+                                item.model ===
+                                localeString('views.Payment.title')
+                            ) {
+                                displayName = localeString(
+                                    'views.Activity.youSent'
+                                );
+                                subTitle = localeString('general.lightning');
                                 rightTitle = PrivacyUtils.sensitiveValue(
                                     getAmount(item.getAmount),
                                     null,
@@ -154,18 +166,30 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                 );
                             }
 
-                            if (item.model === 'Transaction') {
-                                // TODO: add strings to en
+                            if (
+                                item.model ===
+                                localeString('general.transaction')
+                            ) {
                                 displayName =
                                     item.getAmount == 0
-                                        ? 'Channel operation'
+                                        ? localeString(
+                                              'views.Activity.channelOperation'
+                                          )
                                         : !item.getAmount.includes('-')
-                                        ? 'You received'
-                                        : 'You sent';
+                                        ? localeString(
+                                              'views.Activity.youReceived'
+                                          )
+                                        : localeString(
+                                              'views.Activity.youSent'
+                                          );
                                 subTitle =
                                     item.num_confirmations == 0
-                                        ? 'On-chain: Unconfirmed'
-                                        : 'On-chain';
+                                        ? `${localeString(
+                                              'general.onchain'
+                                          )}: ${localeString(
+                                              'general.unconfirmed'
+                                          )}`
+                                        : localeString('general.onchain');
                                 rightTitle =
                                     item.getAmount == 0
                                         ? '-'
@@ -187,13 +211,23 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                                     : 'white'
                                         }}
                                         onPress={() => {
-                                            if (item.model === 'Invoice') {
+                                            if (
+                                                item.model ===
+                                                localeString(
+                                                    'views.Invoice.title'
+                                                )
+                                            ) {
                                                 navigation.navigate('Invoice', {
                                                     invoice: item
                                                 });
                                             }
 
-                                            if (item.model === 'Transaction') {
+                                            if (
+                                                item.model ===
+                                                localeString(
+                                                    'general.transaction'
+                                                )
+                                            ) {
                                                 navigation.navigate(
                                                     'Transaction',
                                                     {
@@ -202,7 +236,12 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                                 );
                                             }
 
-                                            if (item.model === 'Payment') {
+                                            if (
+                                                item.model ===
+                                                localeString(
+                                                    'views.Payment.title'
+                                                )
+                                            ) {
                                                 navigation.navigate('Payment', {
                                                     payment: item
                                                 });
