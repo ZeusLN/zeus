@@ -38,7 +38,7 @@ export default class OnchainSwipeableRow extends Component<
             this.close();
 
             if (text === 'Receive') {
-                this.props.navigation.navigate('Receive');
+                this.props.navigation.navigate('Receive', { selectedIndex: 1 });
             } else {
                 Alert.alert(text);
             }
