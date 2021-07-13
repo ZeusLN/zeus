@@ -54,11 +54,19 @@ export default class Receive extends React.Component<
             'lnurlParams'
         );
 
+        const selectedIndex: number = navigation.getParam('selectedIndex');
+
         if (lnurl) {
             this.setState({
                 selectedIndex: 0,
                 memo: lnurl.defaultDescription,
                 value: Math.floor(lnurl.maxWithdrawable / 1000).toString()
+            });
+        }
+
+        if (selectedIndex) {
+            this.setState({
+                selectedIndex
             });
         }
     }
