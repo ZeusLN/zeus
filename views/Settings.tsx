@@ -210,7 +210,7 @@ export default class Settings extends React.Component<
                     }}
                     backgroundColor={
                         savedTheme === 'dark'
-                            ? '#261339'
+                            ? '#1f2328'
                             : 'rgba(92, 99,216, 1)'
                     }
                 />
@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
     },
     darkThemeStyle: {
         flex: 1,
-        backgroundColor: 'black',
+        backgroundColor: '#1f2328',
         color: 'white'
     },
     textInput: {

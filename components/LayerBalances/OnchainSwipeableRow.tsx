@@ -16,7 +16,14 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 import Coins from './../../images/SVG/Coins.svg';
 import Receive from './../../images/SVG/Receive.svg';
 
-export default class OnchainSwipeableRow extends Component {
+interface OnchainSwipeableRowProps {
+    navigation: any;
+}
+
+export default class OnchainSwipeableRow extends Component<
+    OnchainSwipeableRowProps,
+    {}
+> {
     private renderAction = (
         text: string,
         color: string,
@@ -29,7 +36,12 @@ export default class OnchainSwipeableRow extends Component {
         });
         const pressHandler = () => {
             this.close();
-            Alert.alert(text);
+
+            if (text === 'Receive') {
+                this.props.navigation.navigate('Receive');
+            } else {
+                Alert.alert(text);
+            }
         };
 
         return (

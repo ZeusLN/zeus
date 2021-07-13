@@ -102,7 +102,7 @@ export default class InvoicesView extends React.Component<InvoicesProps, {}> {
                             );
 
                             const date = PrivacyUtils.sensitiveValue(
-                                item.listDate,
+                                item.getDisplayTime,
                                 14
                             );
 

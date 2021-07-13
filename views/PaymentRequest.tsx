@@ -137,9 +137,7 @@ export default class PaymentRequest extends React.Component<
                         text: localeString('views.PaymentRequest.title'),
                         style: { color: '#fff' }
                     }}
-                    backgroundColor={
-                        theme === 'dark' ? '#261339' : 'rgba(92, 99,216, 1)'
-                    }
+                    backgroundColor="#1f2328"
                 />
 
                 {(loading || loadingFeeEstimate) && (

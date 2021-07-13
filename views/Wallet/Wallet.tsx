@@ -29,6 +29,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import WalletIcon from './../../images/SVG/Wallet.svg';
 import ChannelsIcon from './../../images/SVG/Channels.svg';
 import QRIcon from './../../images/SVG/QR.svg';
+import CaretUp from './../../images/SVG/Caret Up.svg';
 
 import handleAnything from './../../utils/handleAnything';
 
@@ -112,9 +113,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         NodeInfoStore.reset();
         BalanceStore.reset();
-        PaymentsStore.reset();
-        InvoicesStore.reset();
-        TransactionsStore.reset();
         ChannelsStore.reset();
 
         // This awaits on settings, so should await on Tor being bootstrapped before making requests
@@ -147,16 +145,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         if (implementation === 'lndhub') {
             login({ login: username, password }).then(() => {
                 BalanceStore.getLightningBalance();
-                PaymentsStore.getPayments();
-                InvoicesStore.getInvoices();
             });
         } else {
             NodeInfoStore.getNodeInfo();
             BalanceStore.getBlockchainBalance();
             BalanceStore.getLightningBalance();
-            PaymentsStore.getPayments();
-            InvoicesStore.getInvoices();
-            TransactionsStore.getTransactions();
             ChannelsStore.getChannels();
             FeeStore.getFees();
         }
@@ -304,9 +297,20 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         />
 
                         <LayerBalances
+                            navigation={navigation}
                             BalanceStore={BalanceStore}
                             UnitsStore={UnitsStore}
                         />
+
+                        <TouchableOpacity
+                            onPress={() =>
+                                this.props.navigation.navigate('Activity')
+                            }
+                        >
+                            <CaretUp
+                                style={{ alignSelf: 'center', bottom: 100 }}
+                            />
+                        </TouchableOpacity>
                     </LinearGradient>
                 </View>
             );

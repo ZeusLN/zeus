@@ -47,11 +47,7 @@ export default class CertInstallInstructions extends React.Component<
                         ),
                         style: { color: '#fff' }
                     }}
-                    backgroundColor={
-                        savedTheme === 'dark'
-                            ? '#261339'
-                            : 'rgba(92, 99,216, 1)'
-                    }
+                    backgroundColor="#1f2328"
                 />
                 <View style={{ padding: 8 }}>
                     {Platform.OS === 'android' && (

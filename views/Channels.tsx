@@ -90,7 +90,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                         text: localeString('views.Wallet.Wallet.channels'),
                         style: { color: '#fff' }
                     }}
-                    backgroundColor={theme === 'dark' ? '#261339' : '#1f2328'}
+                    backgroundColor={theme === 'dark' ? '#1f2328' : '#1f2328'}
                 />
                 {!NodeInfoStore.error && (
                     <View style={styles.button}>
