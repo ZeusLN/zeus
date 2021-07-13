@@ -191,27 +191,35 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { invoices, invoicesCount } = InvoicesStore;
         const { channels } = ChannelsStore;
         const { settings, implementation } = SettingsStore;
-        const { theme, lurkerMode } = settings;
+        const { theme } = settings;
 
         const paymentsCount = (payments && payments.length) || 0;
-        const paymentsButtonCount = lurkerMode
-            ? PrivacyUtils.hideValue(paymentsCount, 2, true)
-            : paymentsCount;
+        const paymentsButtonCount = PrivacyUtils.sensitiveValue(
+            paymentsCount,
+            2,
+            true
+        );
 
         const invoicesCountValue = invoicesCount || 0;
-        const invoicesButtonCount = lurkerMode
-            ? PrivacyUtils.hideValue(invoicesCountValue, 2, true)
-            : invoicesCountValue;
+        const invoicesButtonCount = PrivacyUtils.sensitiveValue(
+            invoicesCountValue,
+            2,
+            true
+        );
 
         const transactionsCount = (transactions && transactions.length) || 0;
-        const transactionsButtonCount = lurkerMode
-            ? PrivacyUtils.hideValue(transactionsCount, 2, true)
-            : transactionsCount;
+        const transactionsButtonCount = PrivacyUtils.sensitiveValue(
+            transactionsCount,
+            2,
+            true
+        );
 
         const channelsCount = (channels && channels.length) || 0;
-        const channelsButtonCount = lurkerMode
-            ? PrivacyUtils.hideValue(channelsCount, 2, true)
-            : channelsCount;
+        const channelsButtonCount = PrivacyUtils.sensitiveValue(
+            channelsCount,
+            2,
+            true
+        );
 
         const paymentsButton = () => (
             <React.Fragment>

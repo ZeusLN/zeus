@@ -269,10 +269,14 @@ PODS:
     - React-jsi (= 0.63.4)
   - rn-fetch-blob (0.12.0):
     - React-Core
-  - RNCAsyncStorage (1.11.0):
+  - RNCAsyncStorage (1.10.1):
     - React
+  - RNCClipboard (1.5.1):
+    - React-Core
   - RNCMaskedView (0.1.6):
     - React
+  - RNCPicker (1.16.1):
+    - React-Core
   - RNGestureHandler (1.5.3):
     - React
   - RNOS (1.2.6):
@@ -287,7 +291,7 @@ PODS:
     - React
   - RNSVG (9.13.6):
     - React
-  - RNVectorIcons (6.6.0):
+  - RNVectorIcons (7.1.0):
     - React
   - TcpSockets (3.3.2):
     - React
@@ -348,7 +352,9 @@ DEPENDENCIES:
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - rn-fetch-blob (from `../node_modules/rn-fetch-blob`)
   - "RNCAsyncStorage (from `../node_modules/@react-native-community/async-storage`)"
+  - "RNCClipboard (from `../node_modules/@react-native-community/clipboard`)"
   - "RNCMaskedView (from `../node_modules/@react-native-community/masked-view`)"
+  - "RNCPicker (from `../node_modules/@react-native-picker/picker`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - RNOS (from `../node_modules/react-native-os`)
   - RNPermissions (from `../node_modules/react-native-permissions`)
@@ -455,8 +461,12 @@ EXTERNAL SOURCES:
     :path: "../node_modules/rn-fetch-blob"
   RNCAsyncStorage:
     :path: "../node_modules/@react-native-community/async-storage"
+  RNCClipboard:
+    :path: "../node_modules/@react-native-community/clipboard"
   RNCMaskedView:
     :path: "../node_modules/@react-native-community/masked-view"
+  RNCPicker:
+    :path: "../node_modules/@react-native-picker/picker"
   RNGestureHandler:
     :path: "../node_modules/react-native-gesture-handler"
   RNOS:
@@ -552,8 +562,10 @@ SPEC CHECKSUMS:
   React-RCTVibration: ae4f914cfe8de7d4de95ae1ea6cc8f6315d73d9d
   ReactCommon: 73d79c7039f473b76db6ff7c6b159c478acbbb3b
   rn-fetch-blob: f065bb7ab7fb48dd002629f8bdcb0336602d3cba
-  RNCAsyncStorage: db711e29e5e0500d9bd21aa0c2e397efa45302b1
+  RNCAsyncStorage: f640ddf9266df777c38e112ea5881ead7188b59c
+  RNCClipboard: 5e299c6df8e0c98f3d7416b86ae563d3a9f768a3
   RNCMaskedView: e5b99bc191945f157adeede68da9d424462de177
+  RNCPicker: 61c7a0645b9e4ac67960aa7f22a3effcecfdfb8d
   RNGestureHandler: 02905abe54e1f6e59c081a10b4bd689721e17aa6
   RNOS: 6f2f9a70895bbbfbdad7196abd952e7b01d45027
   RNPermissions: 6db7e0a4d94c9c02390d11020b1d3d187aaf77e5
@@ -561,7 +573,7 @@ SPEC CHECKSUMS:
   RNScreens: b20bdb598fe95ac37aada88a5e92f36622549e49
   RNSecureKeyStore: f1ad870e53806453039f650720d2845c678d89c8
   RNSVG: 8ba35cbeb385a52fd960fd28db9d7d18b4c2974f
-  RNVectorIcons: 0bb4def82230be1333ddaeee9fcba45f0b288ed4
+  RNVectorIcons: bc69e6a278b14842063605de32bec61f0b251a59
   TcpSockets: 8d839b9b14f6f344d98e4642ded13ab3112b462d
   UMBarCodeScannerInterface: 550e7ffd7a789289260bde3d547be29407e75437
   UMCameraInterface: 51e4568d64e77615557afaad9a3acdaad5d32d9f
@@ -579,4 +591,4 @@ SPEC CHECKSUMS:
 
 PODFILE CHECKSUM: 2243eb408afe5fc9db70dd28a0433866950fdc69
 
-COCOAPODS: 1.10.0
+COCOAPODS: 1.10.1

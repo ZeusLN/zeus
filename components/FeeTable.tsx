@@ -10,7 +10,7 @@ import { Button } from 'react-native-elements';
 import FeeUtils from './../utils/FeeUtils';
 // import { Cell, Header, Row } from 'react-native-data-table';
 import { DataTable } from 'react-native-paper';
-import { isEmpty } from 'lodash';
+import isEmpty from 'lodash/isEmpty';
 import { inject, observer } from 'mobx-react';
 
 import FeeStore from './../stores/FeeStore';

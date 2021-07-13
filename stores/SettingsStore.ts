@@ -37,6 +37,7 @@ export const LOCALE_KEYS = [
     { key: 'Slovák', value: 'Slovák' },
     { key: 'Deutsch', value: 'Deutsch' },
     { key: 'Türkçe', value: 'Türkçe' },
+    { key: 'Hungarian', value: 'Hungarian' },
     // in progress
     { key: 'Ελληνικά', value: 'Ελληνικά' },
     { key: 'زبان فارسي', value: 'زبان فارسي' },
@@ -193,11 +194,15 @@ export default class SettingsStore {
 
     // LNDHub
     @action
-    public createAccount = (host: string, certVerification: boolean) => {
+    public createAccount = (
+        host: string,
+        certVerification: boolean,
+        enableTor?: boolean
+    ) => {
         this.createAccountSuccess = '';
         this.createAccountError = '';
         this.loading = true;
-        return RESTUtils.createAccount(host, certVerification)
+        return RESTUtils.createAccount(host, certVerification, enableTor)
             .then((data: any) => {
                 this.loading = false;
                 this.createAccountSuccess =

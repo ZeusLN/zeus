@@ -1,3 +1,5 @@
+import stores from '../stores/Stores';
+
 const numbersLibrary = 'ΑΒΓΔΕϚΣΤΖΗΘϝϟϡ–◦¤☼ΙΠΧΜ';
 const alphabetLibrary = 'ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ';
 
@@ -26,11 +28,15 @@ const zeusAffairs = [
 ];
 
 class PrivacyUtils {
-    hideValue = (
+    sensitiveValue = (
         input: string | number | Date | undefined,
         fixedLength?: number | null,
         numberSet?: boolean
     ) => {
+        const { settings } = stores.settingsStore;
+        const { lurkerMode } = settings;
+        if (!lurkerMode) return input;
+
         let output = '';
         const length = fixedLength || (input && input.toString().length) || 1;
         const wordlist = numberSet ? numbers : alphabet;

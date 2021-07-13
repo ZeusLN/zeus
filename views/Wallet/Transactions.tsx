@@ -65,7 +65,7 @@ export default class Transactions extends React.Component<TransactionsProps> {
         const { loading } = TransactionsStore;
         const { getAmount, units } = UnitsStore;
         const { settings } = SettingsStore;
-        const { theme, lurkerMode } = settings;
+        const { theme } = settings;
 
         const BalanceImage = (item: Transaction) => {
             const { getAmount, isConfirmed } = item;
@@ -107,38 +107,30 @@ export default class Transactions extends React.Component<TransactionsProps> {
                         renderItem={({ item }: any) => {
                             let subtitle;
                             if (item.getBlockHeight) {
-                                subtitle = lurkerMode
-                                    ? PrivacyUtils.hideValue(
-                                          item.getBlockHeight,
-                                          6,
-                                          true
-                                      )
-                                    : item.getBlockHeight;
+                                subtitle = PrivacyUtils.sensitiveValue(
+                                    item.getBlockHeight,
+                                    6,
+                                    true
+                                );
                             } else {
                                 subtitle = localeString(
                                     'views.Wallet.Transactions.awaitingConf'
                                 );
                             }
 
-                            const txAmount = lurkerMode
-                                ? PrivacyUtils.hideValue(
-                                      getAmount(item.getAmount),
-                                      7,
-                                      true
-                                  )
-                                : getAmount(item.getAmount);
+                            const txAmount = PrivacyUtils.sensitiveValue(
+                                getAmount(item.getAmount),
+                                7,
+                                true
+                            );
 
                             if (item.time_stamp) {
-                                const timeStamp = lurkerMode
-                                    ? PrivacyUtils.hideValue(
-                                          DateTimeUtils.listFormattedDate(
-                                              item.time_stamp
-                                          ),
-                                          14
-                                      )
-                                    : DateTimeUtils.listFormattedDate(
-                                          item.time_stamp
-                                      );
+                                const timeStamp = PrivacyUtils.sensitiveValue(
+                                    DateTimeUtils.listFormattedDate(
+                                        item.time_stamp
+                                    ),
+                                    14
+                                );
 
                                 subtitle.concat(` | ${timeStamp}`);
                             }

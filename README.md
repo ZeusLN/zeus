@@ -13,16 +13,20 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 
 ### App Store links
 * [Google Play](https://play.google.com/store/apps/details?id=app.zeusln.zeus)
-* [Apple TestFlight](https://testflight.apple.com/join/gpVFzEHN)
+* [Apple App Store](https://apps.apple.com/us/app/zeus-ln/id1456038895)
 * [F-Droid](https://f-droid.org/packages/app.zeusln.zeus/)
 
 ### Get in touch with us
 * Come chat with us on
 [Telegram](https://t.me/zeusLN)
+* Join our
+[developer Slack](https://zeusln.slack.com/join/shared_invite/zt-qw205nqa-o4VJJC0zPI7HiSfToZGoVw#/)
 * Keep up with us on
 [Twitter](https://twitter.com/ZeusLN)
 * Open a channel with
-[our node](https://1ml.com/node/03e1210c8d4b236a53191bb172701d76ec06dfa869a1afffcfd8f4e07d9129d898)
+[our main node](https://1ml.com/node/03e1210c8d4b236a53191bb172701d76ec06dfa869a1afffcfd8f4e07d9129d898)
+or
+[our Olympus node](https://1ml.com/node/02c2d8e5f8220c99d92f4fe808e7c5332d33d146db3e63a50f03663addfaa5a8df)
 
 ## Connecting to your node
 
@@ -32,16 +36,6 @@ Currently, to use Zeus, you must have a Bitcoin Lightning node running
 You must provide Zeus with your node's hostname, port number, and the macaroon you choose to use in **hex format**. If you need help converting your macaroon to hex format we wrote up a Node.js script that can use
 [here](https://github.com/ZeusLN/lnd-hex-macaroon-generator/). Alternatively, if you're running a Unix-based operating system (eg. macOS, Linux) you can run `xxd -ps -u -c 1000 /path/to/admin.macaroon` to generate your macaroon in hex format.
 
-If you would like to learn more about running your own node we suggest checking out the following guides:
-* If you're looking to run a full node on existing hardware running Windows or macOS, check out Pierre Rochard's
-[Lightning Power Node Launcher](https://github.com/PierreRochard/node-launcher).
-We recommend reading
-[this guide](https://medium.com/lightning-power-users/windows-macos-lightning-network-284bd5034340).
-* If you're looking to run a full node on a dedicated piece of hardware like a Raspberry Pi, check out Stadicus'
-[Raspibolt Tutorial](https://stadicus.github.io/RaspiBolt/) or
-[RaspiBlitz](https://github.com/rootzoll/raspiblitz/) or
-[myNode](https://mynodebtc.com/).
-
 ### Tor Connection Guides
 
 On Android Zeus has support for connecting to you node entirely over the Tor network. You can refer to these guides to set up a Tor hidden service on your lnd node. The instructions are generally interchangable and typically only require you to change your Tor path.
@@ -49,15 +43,24 @@ On Android Zeus has support for connecting to you node entirely over the Tor net
 * [Zeus over Tor guide for RaspiBolt](https://stadicus.github.io/RaspiBolt/raspibolt_72_zeus-over-tor.html)
 * [Zeus over Tor guide for FreeNAS by Seth586](https://github.com/seth586/guides/blob/master/FreeNAS/wallets/zeusln.md)
 * [Zeus over Tor guide for RaspiBlitz by openoms](https://github.com/openoms/bitcoin-tutorials/blob/master/Zeus_to_RaspiBlitz_through_Tor.md)
+* [Tor-Only Bitcoin & Lightning Guide by Lopp](https://blog.lopp.net/tor-only-bitcoin-lightning-guide/)
 
 ## Integrations
 
 Zeus is proud to be integrated on the following platforms:
 
-* [BTCPay Server](https://btcpayserver.org/)
+### Full node solutions
 * [nodl](https://www.nodl.it/)
 * [myNode](https://mynodebtc.com/) ([Standard guide](https://mynodebtc.com/guide/zeus), [Tor guide](https://mynodebtc.com/guide/zeus_tor))
 * [RaspiBlitz](https://github.com/rootzoll/raspiblitz)
+* [Umbrel](https://getumbrel.com/)
+
+### Payment platforms
+* [BTCPay Server](https://btcpayserver.org/)
+* [LNBits](https://lnbits.com/)
+
+### Android nodes
+* [Nayuta Core](https://nayuta.co/core/)
 
 ## Building Zeus from source
 
@@ -77,14 +80,11 @@ Zeus is proud to be integrated on the following platforms:
 [react-native's Getting Started page](https://facebook.github.io/react-native/docs/getting-started.html)
 2. install node dependencies with `npm i`
 3. `cd ios && pod install`
-4. open `ios/zeus.xcodeproj` in Xcode and hit Run
+4. open `ios/zeus.xcworkspace` in Xcode and hit Run
 
 ## Google Play Releases
 
 Google Play releases aren't fully featured due to Google policies. To get the fully featured version of Zeus on Android you must download the APK from the [Zeus website](https://zeusln.app), GitHub, or F-Droid. Google Play releases are managed on the `play-releases` branch. Commits used for Google Play builds will be marked in the release notes.
-
-#### Current features not included on Google Play releases
-* Keysend donation button
 
 ## Contributing
 
@@ -99,7 +99,7 @@ Do not directly modify the files in `/locales` unless you are adding new copy to
 
 ## Release + Commit Verification
 
-All releases and all maintainer commits as of January 24, 2020 are signed by key `A28823E23E1A70BF` (zeusln@tutanota.com). The key can be found [in this repo](https://github.com/ZeusLN/zeus/blob/master/PGP.txt) and [on the ZeusLN.app website](https://zeusln.app/PGP.txt). 
+All releases and all maintainer commits as of January 24, 2020 are signed by key `989CC718EBA8BB68` (zeusln@tutanota.com). The key can be found [in this repo](https://github.com/ZeusLN/zeus/blob/master/PGP.txt) and [on the ZeusLN.app website](https://zeusln.app/PGP.txt).
 
 ## Donations
 
