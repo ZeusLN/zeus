@@ -5,11 +5,11 @@ import {
     Text,
     View,
     I18nManager,
-    Alert,
     Image
 } from 'react-native';
 
 import { RectButton } from 'react-native-gesture-handler';
+import { localeString } from './../../utils/LocaleUtils';
 
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 
@@ -37,10 +37,10 @@ export default class OnchainSwipeableRow extends Component<
         const pressHandler = () => {
             this.close();
 
-            if (text === 'Receive') {
+            if (text === localeString('general.receive')) {
                 this.props.navigation.navigate('Receive', { selectedIndex: 1 });
-            } else {
-                Alert.alert(text);
+            } else if (text === localeString('general.coins')) {
+                console.log('Insert nav to coin control');
             }
         };
 
@@ -49,8 +49,12 @@ export default class OnchainSwipeableRow extends Component<
                 style={{ flex: 1, transform: [{ translateX: trans }] }}
             >
                 <RectButton style={[styles.action]} onPress={pressHandler}>
-                    {text === 'Coins' && <Coins fill="#ffd24b" />}
-                    {text === 'Receive' && <Receive fill="#ffd24b" />}
+                    {text === localeString('general.coins') && (
+                        <Coins fill="#ffd24b" />
+                    )}
+                    {text === localeString('general.receive') && (
+                        <Receive fill="#ffd24b" />
+                    )}
                     <Text style={styles.actionText}>{text}</Text>
                 </RectButton>
             </Animated.View>
@@ -68,8 +72,18 @@ export default class OnchainSwipeableRow extends Component<
                 flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row'
             }}
         >
-            {this.renderAction('Receive', '#C8C7CD', 150, progress)}
-            {this.renderAction('Coins', '#ffab00', 100, progress)}
+            {this.renderAction(
+                localeString('general.receive'),
+                '#C8C7CD',
+                150,
+                progress
+            )}
+            {this.renderAction(
+                localeString('general.coins'),
+                '#ffab00',
+                100,
+                progress
+            )}
         </View>
     );
 
