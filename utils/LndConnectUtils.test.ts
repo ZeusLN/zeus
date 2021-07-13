@@ -10,7 +10,8 @@ describe('LndConnectUtils', () => {
             ).toEqual({
                 host: 'https://8.8.0.0',
                 macaroonHex: '676F2073686F727479',
-                port: '2056'
+                port: '2056',
+                enableTor: false
             });
         });
 
@@ -22,7 +23,8 @@ describe('LndConnectUtils', () => {
             ).toEqual({
                 host: 'https://[2604:2000::]',
                 macaroonHex: '676F2073686F727479',
-                port: '2056'
+                port: '2056',
+                enableTor: false
             });
         });
 
@@ -34,7 +36,8 @@ describe('LndConnectUtils', () => {
             ).toEqual({
                 host: 'https://[2604:2000::]',
                 macaroonHex: '676F2073686F727479',
-                port: '2058'
+                port: '2058',
+                enableTor: false
             });
         });
 
@@ -46,7 +49,21 @@ describe('LndConnectUtils', () => {
             ).toEqual({
                 host: 'https://8.8.8.8',
                 macaroonHex: '676F2073686F727479',
-                port: '2059'
+                port: '2059',
+                enableTor: false
+            });
+        });
+
+        it('validates onion addresses correctly', () => {
+            expect(
+                LndConnectUtils.processLndConnectUrl(
+                    'lndconnect://fasm2nfsakmn2dd.onion:2059?otherParam=B&macaroon=Z28gc2hvcnR5&cert=asfdaa'
+                )
+            ).toEqual({
+                host: 'https://fasm2nfsakmn2dd.onion',
+                macaroonHex: '676F2073686F727479',
+                port: '2059',
+                enableTor: true
             });
         });
     });

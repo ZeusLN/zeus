@@ -41,7 +41,6 @@ export default class Nodes extends React.Component<NodesProps, {}> {
             SettingsStore
         } = this.props;
         const { setSettings, settings }: any = SettingsStore;
-        const { lurkerMode } = settings;
 
         const Node = (balanceImage: string) => (
             <Avatar
@@ -70,12 +69,14 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                     ? `${item.host}:${item.port}`
                                     : item.host;
 
-                            const title = lurkerMode
-                                ? PrivacyUtils.hideValue(displayName, 8)
-                                : displayName;
-                            const implementation = lurkerMode
-                                ? PrivacyUtils.hideValue(item.implementation, 8)
-                                : item.implementation || 'lnd';
+                            const title = PrivacyUtils.sensitiveValue(
+                                displayName,
+                                8
+                            );
+                            const implementation = PrivacyUtils.sensitiveValue(
+                                item.implementation || 'lnd',
+                                8
+                            );
 
                             const data = new Identicon(
                                 hash.sha1(

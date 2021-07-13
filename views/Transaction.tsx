@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { forEach, isNull } from 'lodash';
+import forEach from 'lodash/forEach';
+import isNull from 'lodash/isNull';
 import {
     StyleSheet,
     ScrollView,
@@ -42,7 +43,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
         );
         const { testnet } = NodeInfoStore;
         const { settings } = SettingsStore;
-        const { theme, lurkerMode } = settings;
+        const { theme } = settings;
 
         const {
             tx,
@@ -67,7 +68,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                     }
                 >
                     <Text style={styles.valueWithLink}>
-                        {lurkerMode ? PrivacyUtils.hideValue(address) : address}
+                        {PrivacyUtils.sensitiveValue(address)}
                     </Text>
                 </TouchableOpacity>
             )
@@ -82,12 +83,16 @@ export default class TransactionView extends React.Component<TransactionProps> {
             />
         );
 
-        const amountDisplay = lurkerMode
-            ? PrivacyUtils.hideValue(getAmount(amount), 8, true)
-            : getAmount(amount);
-        const totalFees = lurkerMode
-            ? PrivacyUtils.hideValue(getAmount(total_fees || 0), 4, true)
-            : getAmount(total_fees || 0);
+        const amountDisplay = PrivacyUtils.sensitiveValue(
+            getAmount(amount),
+            8,
+            true
+        );
+        const totalFees = PrivacyUtils.sensitiveValue(
+            getAmount(total_fees || 0),
+            4,
+            true
+        );
 
         return (
             <ScrollView
@@ -157,7 +162,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                         }
                     >
                         <Text style={styles.valueWithLink}>
-                            {lurkerMode ? PrivacyUtils.hideValue(tx) : tx}
+                            {PrivacyUtils.sensitiveValue(tx)}
                         </Text>
                     </TouchableOpacity>
 
@@ -181,9 +186,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                 }
                             >
                                 <Text style={styles.valueWithLink}>
-                                    {lurkerMode
-                                        ? PrivacyUtils.hideValue(block_hash)
-                                        : block_hash}
+                                    {PrivacyUtils.sensitiveValue(block_hash)}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -210,13 +213,11 @@ export default class TransactionView extends React.Component<TransactionProps> {
                             }
                         >
                             <Text style={styles.valueWithLink}>
-                                {lurkerMode
-                                    ? PrivacyUtils.hideValue(
-                                          block_height,
-                                          5,
-                                          true
-                                      )
-                                    : block_height}
+                                {PrivacyUtils.sensitiveValue(
+                                    block_height,
+                                    5,
+                                    true
+                                )}
                             </Text>
                         </TouchableOpacity>
                     )}
@@ -239,13 +240,11 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                         num_confirmations > 0 ? 'green' : 'red'
                                 }}
                             >
-                                {lurkerMode
-                                    ? PrivacyUtils.hideValue(
-                                          num_confirmations,
-                                          3,
-                                          true
-                                      )
-                                    : num_confirmations}
+                                {PrivacyUtils.sensitiveValue(
+                                    num_confirmations,
+                                    3,
+                                    true
+                                )}
                             </Text>
                         </View>
                     )}
@@ -291,12 +290,10 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                         : styles.value
                                 }
                             >
-                                {lurkerMode
-                                    ? PrivacyUtils.hideValue(
-                                          date.toString(),
-                                          14
-                                      )
-                                    : date.toString()}
+                                {PrivacyUtils.sensitiveValue(
+                                    date.toString(),
+                                    14
+                                )}
                             </Text>
                         </View>
                     )}

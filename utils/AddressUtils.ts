@@ -12,6 +12,7 @@ const btcBechPubkeyScriptHashTestnet = /^(tb1|TB1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/
 
 /* lndhub */
 const lndHubAddress = /^(lndhub:\/\/)\w+(:)\w+(@https?:\/\/[\w\-_.]+(:\d{1,5})?([\/\w]+)?)?$/;
+const blueWalletAddress = /^bluewallet:setlndhuburl\?url=(\S+)/;
 
 export const DEFAULT_LNDHUB = 'https://lndhub.herokuapp.com';
 
@@ -78,21 +79,27 @@ class AddressUtils {
             throw new Error('Could not process invalid LNDHub account address');
         }
 
-        input = input.replace('lndhub://', '');
-        let value;
-        let host;
+        if (input.includes('lndhub://')) {
+            input = input.replace('lndhub://', '');
+            let value;
+            let host;
 
-        if (input.indexOf('@') !== -1) {
-            const [namepass, serverURL] = input.split('@');
-            value = namepass;
-            host = serverURL;
+            if (input.indexOf('@') !== -1) {
+                const [namepass, serverURL] = input.split('@');
+                value = namepass;
+                host = serverURL;
+            } else {
+                value = input;
+                host = DEFAULT_LNDHUB;
+            }
+
+            const [username, password] = value.split(':');
+            return { username, password, host };
         } else {
-            value = input;
-            host = DEFAULT_LNDHUB;
+            input = input.replace('bluewallet:setlndhuburl?url=', '');
+            input = decodeURIComponent(input);
+            return { host: input };
         }
-
-        const [username, password] = value.split(':');
-        return { username, password, host };
     };
 
     isValidBitcoinAddress = (input: string, testnet: boolean) => {
@@ -111,7 +118,8 @@ class AddressUtils {
 
     isValidLightningPubKey = (input: string) => lnPubKey.test(input);
 
-    isValidLNDHubAddress = (input: string) => lndHubAddress.test(input);
+    isValidLNDHubAddress = (input: string) =>
+        lndHubAddress.test(input) || blueWalletAddress.test(input);
 }
 
 const addressUtils = new AddressUtils();

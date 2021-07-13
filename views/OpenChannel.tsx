@@ -1,13 +1,13 @@
 import * as React from 'react';
 import {
     ActivityIndicator,
-    Clipboard,
     ScrollView,
     StyleSheet,
     Text,
     View,
     TextInput
 } from 'react-native';
+import Clipboard from '@react-native-community/clipboard';
 import { inject, observer } from 'mobx-react';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import FeeTable from './../components/FeeTable';
@@ -59,18 +59,21 @@ export default class OpenChannel extends React.Component<
 > {
     constructor(props: any) {
         super(props);
-        const { navigation } = props;
+        const { navigation, SettingsStore } = props;
+        const { implementation } = SettingsStore;
         const node_pubkey_string = navigation.getParam(
             'node_pubkey_string',
             null
         );
         const host = navigation.getParam('host', null);
+        const sat_per_byte =
+            implementation === 'c-lightning-REST' ? 'normal' : '2';
 
         this.state = {
             node_pubkey_string: node_pubkey_string || '',
             local_funding_amount: '',
             min_confs: 1,
-            sat_per_byte: '2',
+            sat_per_byte,
             private: false,
             host: host || '',
             suggestImport: '',
@@ -164,7 +167,7 @@ export default class OpenChannel extends React.Component<
             channelSuccess
         } = ChannelsStore;
         const { confirmedBlockchainBalance } = BalanceStore;
-        const { settings } = SettingsStore;
+        const { implementation, settings } = SettingsStore;
         const { theme } = settings;
 
         const BackButton = () => (
@@ -380,7 +383,11 @@ export default class OpenChannel extends React.Component<
                     </Text>
                     <TextInput
                         keyboardType="numeric"
-                        placeholder="2"
+                        placeholder={
+                            implementation === 'c-lightning-REST'
+                                ? 'urgent / normal / slow'
+                                : '2'
+                        }
                         value={sat_per_byte}
                         onChangeText={(text: string) => this.setFee(text)}
                         numberOfLines={1}
