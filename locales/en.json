@@ -18,6 +18,8 @@
     "general.sent": "Sent",
     "general.received": "Received",
     "general.date": "Date",
+    "general.routing": "Routing",
+    "general.coins": "Coins",
     "components.CollapsedQr.show": "Show QR",
     "components.CollapsedQr.hide": "Hide QR",
     "components.CopyButton.copied": "Copied!",
