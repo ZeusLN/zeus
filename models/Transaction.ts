@@ -1,5 +1,6 @@
 import BaseModel from './BaseModel';
 import { computed } from 'mobx';
+import DateTimeUtils from './../utils/DateTimeUtils';
 
 export default class Transaction extends BaseModel {
     public amount: number;
@@ -24,6 +25,14 @@ export default class Transaction extends BaseModel {
 
     @computed public get getTimestamp(): string {
         return this.time_stamp || 0;
+    }
+
+    @computed public get getDisplayTime(): string {
+        return DateTimeUtils.listFormattedDate(this.time_stamp || 0);
+    }
+
+    @computed public get getDate(): string {
+        return DateTimeUtils.listDate(this.time_stamp || 0);
     }
 
     @computed public get isConfirmed(): boolean {

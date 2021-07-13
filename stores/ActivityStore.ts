@@ -10,11 +10,32 @@ import PaymentsStore from './PaymentsStore';
 import InvoicesStore from './InvoicesStore';
 import TransactionsStore from './TransactionsStore';
 
+interface ActivityFilter {
+    lightning: boolean;
+    onChain: boolean;
+    channels: boolean;
+    sent: boolean;
+    received: boolean;
+    startDate: any;
+    endDate: any;
+}
+
 export default class ActivityStore {
     @observable public loading: boolean = false;
     @observable public error: boolean = false;
     @observable public activity: Array<Invoice | Payment | Transaction> = [];
-
+    @observable public filteredActivity: Array<
+        Invoice | Payment | Transaction
+    > = [];
+    @observable public filters: ActivityFilter = {
+        lightning: true,
+        onChain: true,
+        channels: true,
+        sent: true,
+        received: true,
+        startDate: null,
+        endDate: null
+    };
     settingsStore: SettingsStore;
     paymentsStore: PaymentsStore;
     invoicesStore: InvoicesStore;
@@ -31,6 +52,28 @@ export default class ActivityStore {
         this.transactionsStore = transactionsStore;
         this.invoicesStore = invoicesStore;
     }
+
+    @action
+    public setStartDateFilter = (filter: any) => {
+        this.filters.startDate = filter;
+        this.setFilters(this.filters);
+    };
+
+    @action
+    public setEndDateFilter = (filter: any) => {
+        this.filters.endDate = filter;
+        this.setFilters(this.filters);
+    };
+
+    @action
+    public clearStartDateFilter = () => {
+        this.filters.startDate = null;
+    };
+
+    @action
+    public clearEndDateFilter = () => {
+        this.filters.endDate = null;
+    };
 
     @action
     public getActivity = async () => {
@@ -55,6 +98,94 @@ export default class ActivityStore {
         );
 
         this.activity = sortedActivity;
+        this.filteredActivity = this.activity;
+
+        this.loading = false;
+    };
+
+    @action
+    public resetFilters = async () => {
+        this.filters = {
+            lightning: true,
+            onChain: true,
+            channels: true,
+            sent: true,
+            received: true
+        };
+    };
+
+    @action
+    public setFilters = async (filters: any) => {
+        this.loading = true;
+
+        this.filters = filters;
+
+        let filteredActivity = this.activity;
+        if (filters.channels == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity: any) =>
+                    !(
+                        activity.model === 'Transaction' &&
+                        activity.getAmount == 0
+                    )
+            );
+        }
+
+        if (filters.lightning == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity: any) =>
+                    !(
+                        activity.model === 'Invoice' ||
+                        activity.model === 'Payment'
+                    )
+            );
+        }
+
+        if (filters.onChain == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity: any) =>
+                    !(
+                        activity.model === 'Transaction' &&
+                        activity.getAmount != 0
+                    )
+            );
+        }
+
+        if (filters.sent == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity: any) =>
+                    !(
+                        (activity.model === 'Transaction' &&
+                            activity.getAmount < 0) ||
+                        activity.model === 'Payment'
+                    )
+            );
+        }
+
+        if (filters.received == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity: any) =>
+                    !(
+                        (activity.model === 'Transaction' &&
+                            activity.getAmount > 0) ||
+                        activity.model === 'Invoice'
+                    )
+            );
+        }
+
+        if (filters.startDate) {
+            filteredActivity = filteredActivity.filter(
+                (activity: any) => +activity.getDate >= +filters.startDate
+            );
+        }
+
+        if (filters.endDate) {
+            filteredActivity = filteredActivity.filter(
+                (activity: any) => +activity.getDate <= +filters.endDate
+            );
+        }
+
+        this.filteredActivity = filteredActivity;
 
         this.loading = false;
     };

@@ -16,7 +16,14 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 import Receive from './../../images/SVG/Receive.svg';
 import Routing from './../../images/SVG/Routing.svg';
 
-export default class LightningSwipeableRow extends Component {
+interface LightningSwipeableRowProps {
+    navigation: any;
+}
+
+export default class LightningSwipeableRow extends Component<
+    LightningSwipeableRowProps,
+    {}
+> {
     private renderAction = (
         text: string,
         color: string,
@@ -29,7 +36,12 @@ export default class LightningSwipeableRow extends Component {
         });
         const pressHandler = () => {
             this.close();
-            Alert.alert(text);
+
+            if (text === 'Receive') {
+                this.props.navigation.navigate('Receive');
+            } else {
+                Alert.alert(text);
+            }
         };
 
         return (

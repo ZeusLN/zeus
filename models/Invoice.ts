@@ -121,6 +121,14 @@ export default class Invoice extends BaseModel {
               );
     }
 
+    @computed public get getDate(): string {
+        return this.isPaid
+            ? this.settleDate
+            : DateTimeUtils.listDate(
+                  this.expires_at || this.creation_date || this.timestamp || 0
+              );
+    }
+
     @computed public get settleDate(): Date {
         return DateTimeUtils.listFormattedDate(
             this.settle_date || this.paid_at || this.timestamp || 0
@@ -141,5 +149,15 @@ export default class Invoice extends BaseModel {
         return this.expires_at
             ? DateTimeUtils.listFormattedDate(this.expires_at)
             : localeString('models.Invoice.never');
+    }
+
+    @computed public isExpired(): boolean {
+        if (this.expiry) {
+            return (
+                new Date().getTime() / 1000 > this.creation_date + this.expiry
+            );
+        }
+
+        return false;
     }
 }

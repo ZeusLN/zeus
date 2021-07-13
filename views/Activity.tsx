@@ -21,8 +21,10 @@ interface ActivityProps {
 @observer
 export default class Activity extends React.Component<ActivityProps, {}> {
     async UNSAFE_componentWillMount() {
+        console.log('mount');
         const { ActivityStore } = this.props;
-        const { getActivity } = ActivityStore;
+        const { getActivity, resetFilters } = ActivityStore;
+        await resetFilters();
         getActivity();
     }
 
@@ -69,7 +71,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
             SettingsStore
         } = this.props;
         const { getAmount, units } = UnitsStore;
-        const { loading, activity, getActivity } = ActivityStore;
+        const { loading, filteredActivity, getActivity } = ActivityStore;
         const { settings } = SettingsStore;
         const { theme, lurkerMode } = settings;
 
@@ -85,7 +87,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
         const FilterButton = () => (
             <Icon
                 name="filter-alt"
-                onPress={() => navigation.navigate('Filter')}
+                onPress={() => navigation.navigate('ActivityFilter')}
                 color="#fff"
                 underlayColor="transparent"
             />
@@ -112,9 +114,9 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                     <View style={{ padding: 50 }}>
                         <ActivityIndicator size="large" color="#0000ff" />
                     </View>
-                ) : !!activity && activity.length > 0 ? (
+                ) : !!filteredActivity && filteredActivity.length > 0 ? (
                     <FlatList
-                        data={activity}
+                        data={filteredActivity}
                         renderItem={({ item }) => {
                             let displayName = item.model;
                             let subTitle = item.model;
@@ -126,7 +128,11 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                     : 'Requested Payment';
                                 subTitle = item.isPaid
                                     ? 'Lightning'
-                                    : `Lightning Invoice: ${item.expirationDate}`;
+                                    : `Lightning Invoice: ${
+                                          item.isExpired
+                                              ? 'Expired'
+                                              : item.expirationDate
+                                      }`;
                                 rightTitle = PrivacyUtils.sensitiveValue(
                                     getAmount(item.getAmount),
                                     null,
