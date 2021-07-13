@@ -9,13 +9,6 @@ Payout: 1,250,000 sats (0.0125 BTC)
 
 Currently, Zeus supports lnurl-fallback, lnurl-withdraw, and lnurl-pay but not lnurl-auth or lnurl-channel. lnurl-auth will allow users to log into lnurl-auth powered sites using their lightning node. LND doesn't support it natively but it appears Breez has found a workaround - that may be a good starting point. You'll most likely have to leverage Zeus' local database. Check out the spec [here](https://github.com/fiatjaf/lnurl-rfc/blob/master/lnurl-auth.md).
 
-## lnurl-channel
-Open PR: https://github.com/ZeusLN/zeus/pull/478/files
-
-Payout: 500,000 sats (0.005 BTC)
-
-lnurl-channel allows users to have a channel opened to them by scanning a QR code. Some services let you turn a balance into a channel in this manner. Check out the spec [here](https://github.com/fiatjaf/lnurl-rfc/blob/master/lnurl-channel.md).
-
 # Claimed Bounties
 
 ## Eclair support
@@ -49,3 +42,11 @@ Currently, Zeus on iOS cannot connect over Tor. Users looking to connect remotel
 
 Additional bounty patrons: [Ben Prentice](https://twitter.com/mrcoolbp), [Capitalist Dog](https://github.com/capitalistdog), anonymous
 
+## lnurl-channel
+Author: [pseudozach](https://github.com/pseudozach)
+
+[Pull Request](https://github.com/ZeusLN/zeus/pull/478/files)
+
+Payout: 500,000 sats (0.005 BTC)
+
+lnurl-channel allows users to have a channel opened to them by scanning a QR code. Some services let you turn a balance into a channel in this manner. Check out the spec [here](https://github.com/fiatjaf/lnurl-rfc/blob/master/lnurl-channel.md).
