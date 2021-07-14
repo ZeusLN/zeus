@@ -16,6 +16,7 @@ import UTXOPicker from './../components/UTXOPicker';
 import NodeUriUtils from './../utils/NodeUriUtils';
 import RESTUtils from './../utils/RESTUtils';
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
 
 import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
@@ -167,8 +168,7 @@ export default class OpenChannel extends React.Component<
             channelSuccess
         } = ChannelsStore;
         const { confirmedBlockchainBalance } = BalanceStore;
-        const { implementation, settings } = SettingsStore;
-        const { theme } = settings;
+        const { implementation } = SettingsStore;
 
         const BackButton = () => (
             <Icon
@@ -180,13 +180,7 @@ export default class OpenChannel extends React.Component<
         );
 
         return (
-            <ScrollView
-                style={
-                    theme === 'dark'
-                        ? styles.darkThemeStyle
-                        : styles.lightThemeStyle
-                }
-            >
+            <ScrollView style={styles.scrollView}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -258,12 +252,7 @@ export default class OpenChannel extends React.Component<
                         </Text>
                     )}
 
-                    <Text
-                        style={{
-                            textDecorationLine: 'underline',
-                            color: theme === 'dark' ? 'white' : 'black'
-                        }}
-                    >
+                    <Text style={styles.label}>
                         {localeString('views.OpenChannel.nodePubkey')}
                     </Text>
                     <TextInput
@@ -273,21 +262,12 @@ export default class OpenChannel extends React.Component<
                             this.setState({ node_pubkey_string: text })
                         }
                         numberOfLines={1}
-                        style={
-                            theme === 'dark'
-                                ? styles.textInputDark
-                                : styles.textInput
-                        }
+                        style={styles.textInput}
                         placeholderTextColor="gray"
                         editable={!openingChannel}
                     />
 
-                    <Text
-                        style={{
-                            textDecorationLine: 'underline',
-                            color: theme === 'dark' ? 'white' : 'black'
-                        }}
-                    >
+                    <Text style={styles.label}>
                         {localeString('views.OpenChannel.host')}
                     </Text>
                     <TextInput
@@ -297,21 +277,12 @@ export default class OpenChannel extends React.Component<
                             this.setState({ host: text })
                         }
                         numberOfLines={1}
-                        style={
-                            theme === 'dark'
-                                ? styles.textInputDark
-                                : styles.textInput
-                        }
+                        style={styles.textInput}
                         placeholderTextColor="gray"
                         editable={!openingChannel}
                     />
 
-                    <Text
-                        style={{
-                            textDecorationLine: 'underline',
-                            color: theme === 'dark' ? 'white' : 'black'
-                        }}
-                    >
+                    <Text style={styles.label}>
                         {localeString('views.OpenChannel.localAmt')}
                     </Text>
                     <TextInput
@@ -324,18 +295,14 @@ export default class OpenChannel extends React.Component<
                             this.setState({ local_funding_amount: text })
                         }
                         numberOfLines={1}
-                        style={
-                            theme === 'dark'
-                                ? styles.textInputDark
-                                : styles.textInput
-                        }
+                        style={styles.textInput}
                         placeholderTextColor="gray"
                         editable={!openingChannel}
                     />
                     {local_funding_amount === 'all' && (
                         <Text
                             style={{
-                                color: theme === 'dark' ? 'white' : 'black'
+                                color: themeColor('text')
                             }}
                         >
                             {`${
@@ -346,12 +313,7 @@ export default class OpenChannel extends React.Component<
                         </Text>
                     )}
 
-                    <Text
-                        style={{
-                            textDecorationLine: 'underline',
-                            color: theme === 'dark' ? 'white' : 'black'
-                        }}
-                    >
+                    <Text style={styles.label}>
                         {localeString('views.OpenChannel.numConf')}
                     </Text>
                     <TextInput
@@ -364,21 +326,12 @@ export default class OpenChannel extends React.Component<
                             })
                         }
                         numberOfLines={1}
-                        style={
-                            theme === 'dark'
-                                ? styles.textInputDark
-                                : styles.textInput
-                        }
+                        style={styles.textInput}
                         placeholderTextColor="gray"
                         editable={!openingChannel}
                     />
 
-                    <Text
-                        style={{
-                            textDecorationLine: 'underline',
-                            color: theme === 'dark' ? 'white' : 'black'
-                        }}
-                    >
+                    <Text style={styles.label}>
                         {localeString('views.OpenChannel.satsPerByte')}
                     </Text>
                     <TextInput
@@ -391,11 +344,7 @@ export default class OpenChannel extends React.Component<
                         value={sat_per_byte}
                         onChangeText={(text: string) => this.setFee(text)}
                         numberOfLines={1}
-                        style={
-                            theme === 'dark'
-                                ? styles.textInputDark
-                                : styles.textInput
-                        }
+                        style={styles.textInput}
                         placeholderTextColor="gray"
                         editable={!openingChannel}
                     />
@@ -429,10 +378,7 @@ export default class OpenChannel extends React.Component<
                             }}
                             onPress={() => connectPeer(this.state)}
                             buttonStyle={{
-                                backgroundColor:
-                                    theme === 'dark'
-                                        ? '#261339'
-                                        : 'rgba(92, 99,216, 1)',
+                                backgroundColor: '#261339',
                                 borderRadius: 30
                             }}
                         />
@@ -449,10 +395,7 @@ export default class OpenChannel extends React.Component<
                                 navigation.navigate('NodeQRCodeScanner')
                             }
                             buttonStyle={{
-                                backgroundColor:
-                                    theme === 'dark'
-                                        ? '#261339'
-                                        : 'rgba(92, 99,216, 1)',
+                                backgroundColor: '#261339',
                                 borderRadius: 30
                             }}
                         />
@@ -471,28 +414,24 @@ export default class OpenChannel extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
+    scrollView: {
         flex: 1,
-        backgroundColor: 'white'
-    },
-    darkThemeStyle: {
-        flex: 1,
-        backgroundColor: '#1f2328',
-        color: 'white'
+        backgroundColor: themeColor('background'),
+        color: themeColor('text')
     },
     textInput: {
         fontSize: 20,
-        color: 'black'
-    },
-    textInputDark: {
-        fontSize: 20,
-        color: 'white'
+        color: themeColor('text')
     },
     content: {
         paddingTop: 20,
         paddingBottom: 20,
         paddingLeft: 5,
         paddingRight: 5
+    },
+    label: {
+        textDecorationLine: 'underline',
+        color: themeColor('text')
     },
     button: {
         paddingTop: 10,

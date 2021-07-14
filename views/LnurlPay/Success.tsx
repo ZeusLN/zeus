@@ -2,15 +2,13 @@ import * as React from 'react';
 import { Alert, View, Text, TouchableOpacity, Linking } from 'react-native';
 import { LNURLPaySuccessAction, decipherAES } from 'js-lnurl';
 import { localeString } from './../../utils/LocaleUtils';
-
-import SettingsStore from './../../stores/SettingsStore';
+import { themeColor } from './../../utils/ThemeUtils';
 
 interface LnurlPaySuccessProps {
     color?: string;
     domain: any;
     successAction: LNURLPaySuccessAction;
     preimage: string;
-    SettingsStore: SettingsStore;
 }
 
 export default class LnurlPaySuccess extends React.Component<
@@ -35,15 +33,7 @@ export default class LnurlPaySuccess extends React.Component<
     };
 
     render() {
-        const {
-            color,
-            domain,
-            successAction,
-            preimage,
-            SettingsStore
-        } = this.props;
-        const { settings } = SettingsStore;
-        const { theme } = settings;
+        const { color, domain, successAction, preimage } = this.props;
 
         let body;
         if (successAction) {
@@ -53,10 +43,7 @@ export default class LnurlPaySuccess extends React.Component<
                     body = (
                         <Text
                             style={{
-                                color:
-                                    color || theme === 'dark'
-                                        ? 'white'
-                                        : 'black',
+                                color: color || themeColor('text'),
                                 fontSize: 40
                             }}
                         >
@@ -69,10 +56,7 @@ export default class LnurlPaySuccess extends React.Component<
                         <TouchableOpacity onPress={() => this.URLClicked()}>
                             <Text
                                 style={{
-                                    color:
-                                        color || theme === 'dark'
-                                            ? 'white'
-                                            : 'black',
+                                    color: color || themeColor('text'),
                                     fontSize: 18
                                 }}
                             >
@@ -92,10 +76,7 @@ export default class LnurlPaySuccess extends React.Component<
                         <React.Fragment>
                             <Text
                                 style={{
-                                    color:
-                                        color || theme === 'dark'
-                                            ? 'white'
-                                            : 'black',
+                                    color: color || themeColor('text'),
                                     fontSize: 18
                                 }}
                             >
@@ -103,10 +84,7 @@ export default class LnurlPaySuccess extends React.Component<
                             </Text>
                             <Text
                                 style={{
-                                    color:
-                                        color || theme === 'dark'
-                                            ? 'white'
-                                            : 'black',
+                                    color: color || themeColor('text'),
                                     fontSize: 18
                                 }}
                             >
@@ -129,7 +107,7 @@ export default class LnurlPaySuccess extends React.Component<
                         padding: 20,
                         fontWeight: 'bold',
                         fontSize: 22,
-                        color: color || theme === 'dark' ? 'white' : 'black'
+                        color: color || themeColor('text')
                     }}
                 >
                     {domain}

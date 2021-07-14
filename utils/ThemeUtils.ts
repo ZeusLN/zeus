@@ -8,6 +8,7 @@ export function themeColor(themeString: string): any {
         background: 'white',
         secondary: '#f7f7f7', // '#f0f0f0',
         text: 'black',
+        secondaryText: '#8a8999',
         highlight: 'orange',
         error: '#cc3300',
         gradient: [
@@ -19,16 +20,19 @@ export function themeColor(themeString: string): any {
             'lightgrey',
             'grey',
             'grey'
-        ]
+        ],
+        separator: '#CED0CE'
     };
 
     const Dark = {
         background: '#1f2328',
         secondary: '#2b3037',
         text: 'white',
+        secondaryText: 'gray',
         highlight: '#ffd24b',
         error: '#992600',
-        gradient: ['black', '#1f2328', '#1f2328', '#1f2328']
+        gradient: ['black', '#1f2328', '#1f2328', '#1f2328'],
+        separator: 'darkgray'
     };
 
     switch (theme) {

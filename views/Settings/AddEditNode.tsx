@@ -1004,7 +1004,6 @@ export default class AddEditNode extends React.Component<
                                                     ? ''
                                                     : `@${lndhubUrl}`)
                                             }
-                                            theme={savedTheme}
                                             hideText
                                         />
                                     )}

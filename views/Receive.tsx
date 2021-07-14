@@ -13,6 +13,7 @@ import { Button, ButtonGroup, Header, Icon } from 'react-native-elements';
 import CollapsedQR from './../components/CollapsedQR';
 import { inject, observer } from 'mobx-react';
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
 
 import InvoicesStore from './../stores/InvoicesStore';
 import SettingsStore from './../stores/SettingsStore';
@@ -117,7 +118,7 @@ export default class Receive extends React.Component<
             chainAddress,
             implementation
         } = SettingsStore;
-        const { theme, fiat } = settings;
+        const { fiat } = settings;
         const address = chainAddress;
 
         const rate =
@@ -171,13 +172,7 @@ export default class Receive extends React.Component<
         );
 
         return (
-            <View
-                style={
-                    theme === 'dark'
-                        ? styles.darkThemeStyle
-                        : styles.lightThemeStyle
-                }
-            >
+            <View style={styles.view}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -221,10 +216,7 @@ export default class Receive extends React.Component<
                             {error_msg && (
                                 <Text
                                     style={{
-                                        color:
-                                            theme === 'dark'
-                                                ? 'white'
-                                                : 'black',
+                                        ...styles.text,
                                         padding: 20
                                     }}
                                 >
@@ -243,14 +235,9 @@ export default class Receive extends React.Component<
                                     copyText={localeString(
                                         'views.Receive.copyInvoice'
                                     )}
-                                    theme={theme}
                                 />
                             )}
-                            <Text
-                                style={{
-                                    color: theme === 'dark' ? 'white' : 'black'
-                                }}
-                            >
+                            <Text style={styles.text}>
                                 {localeString('views.Receive.memo')}:
                             </Text>
                             <TextInput
@@ -263,21 +250,12 @@ export default class Receive extends React.Component<
                                 }
                                 numberOfLines={1}
                                 editable={true}
-                                style={
-                                    theme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
+                                style={styles.textInput}
                                 placeholderTextColor="gray"
                             />
 
                             <TouchableOpacity onPress={() => changeUnits()}>
-                                <Text
-                                    style={{
-                                        color:
-                                            theme === 'dark' ? 'white' : 'black'
-                                    }}
-                                >
+                                <Text style={styles.text}>
                                     {localeString('views.Receive.amount')} (
                                     {units === 'fiat' ? fiat : units})
                                     {lnurl &&
@@ -306,23 +284,12 @@ export default class Receive extends React.Component<
                                         ? false
                                         : true
                                 }
-                                style={
-                                    theme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
+                                style={styles.textInput}
                                 placeholderTextColor="gray"
                             />
                             {units !== 'sats' && (
                                 <TouchableOpacity onPress={() => changeUnits()}>
-                                    <Text
-                                        style={{
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'white'
-                                                    : 'black'
-                                        }}
-                                    >
+                                    <Text style={styles.text}>
                                         {UnitsStore.getAmount(
                                             satAmount,
                                             'sats'
@@ -332,14 +299,7 @@ export default class Receive extends React.Component<
                             )}
                             {units !== 'btc' && (
                                 <TouchableOpacity onPress={() => changeUnits()}>
-                                    <Text
-                                        style={{
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'white'
-                                                    : 'black'
-                                        }}
-                                    >
+                                    <Text style={styles.text}>
                                         {UnitsStore.getAmount(satAmount, 'btc')}{' '}
                                     </Text>
                                 </TouchableOpacity>
@@ -347,14 +307,7 @@ export default class Receive extends React.Component<
 
                             {units === 'fiat' && (
                                 <TouchableOpacity onPress={() => changeUnits()}>
-                                    <Text
-                                        style={{
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'white'
-                                                    : 'black'
-                                        }}
-                                    >
+                                    <Text style={styles.text}>
                                         {FiatStore.getRate()}{' '}
                                     </Text>
                                 </TouchableOpacity>
@@ -362,14 +315,7 @@ export default class Receive extends React.Component<
 
                             {implementation !== 'lndhub' && (
                                 <>
-                                    <Text
-                                        style={{
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'white'
-                                                    : 'black'
-                                        }}
-                                    >
+                                    <Text style={styles.text}>
                                         {localeString(
                                             'views.Receive.expiration'
                                         )}
@@ -384,11 +330,7 @@ export default class Receive extends React.Component<
                                         }
                                         numberOfLines={1}
                                         editable={true}
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.textInputDark
-                                                : styles.textInput
-                                        }
+                                        style={styles.textInput}
                                         placeholderTextColor="gray"
                                     />
                                 </>
@@ -430,12 +372,7 @@ export default class Receive extends React.Component<
                     {selectedIndex === 1 && (
                         <React.Fragment>
                             {!address && !loading && (
-                                <Text
-                                    style={{
-                                        color:
-                                            theme === 'dark' ? 'white' : 'black'
-                                    }}
-                                >
+                                <Text style={styles.text}>
                                     {localeString('views.Receive.noOnChain')}
                                 </Text>
                             )}
@@ -451,7 +388,6 @@ export default class Receive extends React.Component<
                                     copyText={localeString(
                                         'views.Receive.copyAddress'
                                     )}
-                                    theme={theme}
                                 />
                             )}
                             {!(implementation === 'lndhub' && address) && (
@@ -488,14 +424,10 @@ export default class Receive extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
+    view: {
         flex: 1,
-        backgroundColor: 'white'
-    },
-    darkThemeStyle: {
-        flex: 1,
-        backgroundColor: 'black',
-        color: 'white'
+        backgroundColor: themeColor('background'),
+        color: themeColor('text')
     },
     content: {
         paddingLeft: 20,
@@ -505,15 +437,12 @@ const styles = StyleSheet.create({
         paddingTop: 15,
         paddingBottom: 15
     },
+    text: {
+        color: themeColor('text')
+    },
     textInput: {
         fontSize: 20,
-        color: 'black',
-        paddingTop: 10,
-        paddingBottom: 10
-    },
-    textInputDark: {
-        fontSize: 20,
-        color: 'white',
+        color: themeColor('text'),
         paddingTop: 10,
         paddingBottom: 10
     }

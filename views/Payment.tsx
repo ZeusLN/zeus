@@ -11,6 +11,7 @@ import Payment from './../models/Payment';
 import { inject, observer } from 'mobx-react';
 import PrivacyUtils from './../utils/PrivacyUtils';
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
 
 import UnitsStore from './../stores/UnitsStore';
 import SettingsStore from './../stores/SettingsStore';
@@ -61,7 +62,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
         const { navigation, UnitsStore, SettingsStore } = this.props;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { settings } = SettingsStore;
-        const { theme, lurkerMode } = settings;
+        const { lurkerMode } = settings;
 
         const payment: Payment = navigation.getParam('payment', null);
         const {
@@ -92,13 +93,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
         const lnurlpaytx = this.state.lnurlpaytx;
 
         return (
-            <ScrollView
-                style={
-                    theme === 'dark'
-                        ? styles.darkThemeStyle
-                        : styles.lightThemeStyle
-                }
-            >
+            <ScrollView style={styles.scrollView}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -127,7 +122,6 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             navigation={navigation}
                             lnurlpaytx={lnurlpaytx}
                             preimage={payment_preimage}
-                            SettingsStore={SettingsStore}
                         />
                     </View>
                 )}
@@ -135,102 +129,47 @@ export default class PaymentView extends React.Component<PaymentProps> {
                 <View style={styles.content}>
                     {getFee && (
                         <View>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Payment.fee')}:
                             </Text>
                             <TouchableOpacity onPress={() => changeUnits()}>
-                                <Text
-                                    style={
-                                        theme === 'dark'
-                                            ? styles.valueDark
-                                            : styles.value
-                                    }
-                                >
-                                    {units && fee}
-                                </Text>
+                                <Text style={styles.value}>{units && fee}</Text>
                             </TouchableOpacity>
                         </View>
                     )}
 
                     {typeof payment_hash === 'string' && (
                         <>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Payment.paymentHash')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
+                            <Text style={styles.value}>
                                 {PrivacyUtils.sensitiveValue(payment_hash)}
                             </Text>
                         </>
                     )}
 
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.labelDark : styles.label
-                        }
-                    >
+                    <Text style={styles.label}>
                         {localeString('views.Payment.paymentPreimage')}:
                     </Text>
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.valueDark : styles.value
-                        }
-                    >
+                    <Text style={styles.value}>
                         {PrivacyUtils.sensitiveValue(payment_preimage)}
                     </Text>
 
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.labelDark : styles.label
-                        }
-                    >
+                    <Text style={styles.label}>
                         {localeString('views.Payment.creationDate')}:
                     </Text>
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.valueDark : styles.value
-                        }
-                    >
+                    <Text style={styles.value}>
                         {PrivacyUtils.sensitiveValue(date, 14)}
                     </Text>
 
                     {enhancedPath.length > 0 && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.labelDark
-                                    : styles.label
-                            }
-                        >
+                        <Text style={styles.label}>
                             {localeString('views.Payment.path')}:
                         </Text>
                     )}
                     {enhancedPath.length > 0 && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.valueDark
-                                    : styles.value
-                            }
-                            selectable
-                        >
+                        <Text style={styles.value} selectable>
                             {lurkerMode ? (
                                 PrivacyUtils.sensitiveValue(
                                     enhancedPath.join(', ')
@@ -247,14 +186,10 @@ export default class PaymentView extends React.Component<PaymentProps> {
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
+    scrollView: {
         flex: 1,
-        backgroundColor: 'white'
-    },
-    darkThemeStyle: {
-        flex: 1,
-        backgroundColor: '#1f2328',
-        color: 'white'
+        backgroundColor: 'white',
+        color: themeColor('text')
     },
     content: {
         paddingLeft: 20,
@@ -266,18 +201,12 @@ const styles = StyleSheet.create({
         paddingBottom: 15
     },
     label: {
-        paddingTop: 5
+        paddingTop: 5,
+        color: themeColor('text')
     },
     value: {
-        paddingBottom: 5
-    },
-    labelDark: {
-        paddingTop: 5,
-        color: 'white'
-    },
-    valueDark: {
         paddingBottom: 5,
-        color: 'white'
+        color: themeColor('text')
     },
     valueWithLink: {
         paddingBottom: 5,

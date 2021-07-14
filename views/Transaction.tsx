@@ -16,34 +16,26 @@ import PrivacyUtils from './../utils/PrivacyUtils';
 
 import NodeInfoStore from './../stores/NodeInfoStore';
 import UnitsStore from './../stores/UnitsStore';
-import SettingsStore from './../stores/SettingsStore';
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
 
 interface TransactionProps {
     navigation: any;
     NodeInfoStore: NodeInfoStore;
     UnitsStore: UnitsStore;
-    SettingsStore: SettingsStore;
 }
 
-@inject('NodeInfoStore', 'UnitsStore', 'SettingsStore')
+@inject('NodeInfoStore', 'UnitsStore')
 @observer
 export default class TransactionView extends React.Component<TransactionProps> {
     render() {
-        const {
-            NodeInfoStore,
-            UnitsStore,
-            SettingsStore,
-            navigation
-        } = this.props;
+        const { NodeInfoStore, UnitsStore, navigation } = this.props;
         const { changeUnits, getAmount, units } = UnitsStore;
         const transaction: Transaction = navigation.getParam(
             'transaction',
             null
         );
         const { testnet } = NodeInfoStore;
-        const { settings } = SettingsStore;
-        const { theme } = settings;
 
         const {
             tx,
@@ -95,13 +87,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
         );
 
         return (
-            <ScrollView
-                style={
-                    theme === 'dark'
-                        ? styles.darkThemeStyle
-                        : styles.lightThemeStyle
-                }
-            >
+            <ScrollView style={styles.scrollView}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -126,34 +112,18 @@ export default class TransactionView extends React.Component<TransactionProps> {
                 <View style={styles.content}>
                     {total_fees ? (
                         <View>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Transaction.totalFees')}:
                             </Text>
                             <TouchableOpacity onPress={() => changeUnits()}>
-                                <Text
-                                    style={
-                                        theme === 'dark'
-                                            ? styles.valueDark
-                                            : styles.value
-                                    }
-                                >
+                                <Text style={styles.value}>
                                     {units && totalFees}
                                 </Text>
                             </TouchableOpacity>
                         </View>
                     ) : null}
 
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.labelDark : styles.label
-                        }
-                    >
+                    <Text style={styles.label}>
                         {localeString('views.Transaction.transactionHash')}:
                     </Text>
                     <TouchableOpacity
@@ -168,13 +138,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
 
                     {!!block_hash && (
                         <View>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Transaction.blockHash')}:
                             </Text>
                             <TouchableOpacity
@@ -193,13 +157,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                     )}
 
                     {!!block_height && (
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.labelDark
-                                    : styles.label
-                            }
-                        >
+                        <Text style={styles.label}>
                             {localeString('views.Transaction.blockHeight')}:
                         </Text>
                     )}
@@ -224,13 +182,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
 
                     {!isNull(num_confirmations) && (
                         <View>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Transaction.numConf')}:
                             </Text>
                             <Text
@@ -251,45 +203,19 @@ export default class TransactionView extends React.Component<TransactionProps> {
 
                     {!!status && (
                         <View>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Transaction.status')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
-                                {status}
-                            </Text>
+                            <Text style={styles.value}>{status}</Text>
                         </View>
                     )}
 
                     {!!date && (
                         <View>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Transaction.timestamp')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
+                            <Text style={styles.value}>
                                 {PrivacyUtils.sensitiveValue(
                                     date.toString(),
                                     14
@@ -300,13 +226,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
 
                     {destAddresses && (
                         <View>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {destAddresses.length > 1
                                     ? `${localeString(
                                           'views.Transaction.destAddresses'
@@ -325,14 +245,10 @@ export default class TransactionView extends React.Component<TransactionProps> {
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
+    scrollView: {
         flex: 1,
-        backgroundColor: 'white'
-    },
-    darkThemeStyle: {
-        flex: 1,
-        backgroundColor: '#1f2328',
-        color: 'white'
+        backgroundColor: themeColor('background'),
+        color: themeColor('text')
     },
     content: {
         paddingLeft: 20,
@@ -344,18 +260,12 @@ const styles = StyleSheet.create({
         paddingBottom: 15
     },
     label: {
-        paddingTop: 5
+        paddingTop: 5,
+        color: themeColor('text')
     },
     value: {
-        paddingBottom: 5
-    },
-    labelDark: {
-        paddingTop: 5,
-        color: 'white'
-    },
-    valueDark: {
         paddingBottom: 5,
-        color: 'white'
+        color: themeColor('text')
     },
     valueWithLink: {
         paddingBottom: 5,

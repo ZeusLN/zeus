@@ -4,9 +4,9 @@ import { Button } from 'react-native-elements';
 import QRCode from 'react-native-qrcode-svg';
 import CopyButton from './CopyButton';
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
 
 interface CollapsedQRProps {
-    theme: any;
     value: string;
     showText?: string;
     collapseText?: string;
@@ -35,7 +35,6 @@ export default class CollapsedQR extends React.Component<
     render() {
         const { collapsed } = this.state;
         const {
-            theme,
             value,
             showText,
             copyText,
@@ -45,15 +44,7 @@ export default class CollapsedQR extends React.Component<
 
         return (
             <React.Fragment>
-                {!hideText && (
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.valueDark : styles.value
-                        }
-                    >
-                        {value}
-                    </Text>
-                )}
+                {!hideText && <Text style={styles.value}>{value}</Text>}
                 {!collapsed && (
                     <View style={styles.qrPadding}>
                         <QRCode value={value} size={200} />
@@ -91,11 +82,8 @@ export default class CollapsedQR extends React.Component<
 
 const styles = StyleSheet.create({
     value: {
-        marginBottom: 15
-    },
-    valueDark: {
         marginBottom: 15,
-        color: 'white'
+        color: themeColor('text')
     },
     qrPadding: {
         width: 250,
