@@ -45,7 +45,7 @@ export const LOCALE_KEYS = [
     { key: 'Nederlands', value: 'Nederlands' }
 ];
 
-export const DEFAULT_THEME = 'light';
+export const DEFAULT_THEME = 'dark';
 export const DEFAULT_FIAT = 'Disabled';
 export const DEFAULT_LOCALE = 'English';
 export default class SettingsStore {

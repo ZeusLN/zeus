@@ -6,6 +6,7 @@ import Nodes from './Settings/Nodes';
 import PrivacyUtils from './../utils/PrivacyUtils';
 import DropdownSetting from './../components/DropdownSetting';
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
 
 import SettingsStore, {
     LOCALE_KEYS,
@@ -85,7 +86,7 @@ export default class Settings extends React.Component<
         if (settings) {
             this.setState({
                 nodes: settings.nodes || [],
-                theme: settings.theme || 'light',
+                theme: settings.theme || 'dark',
                 lurkerMode: settings.lurkerMode || false,
                 passphrase: settings.passphrase || '',
                 passphraseConfirm: settings.passphrase || '',
@@ -175,7 +176,6 @@ export default class Settings extends React.Component<
             locale
         } = this.state;
         const { loading, settings } = SettingsStore;
-        const savedTheme = settings.theme;
         const selectedNode = settings.selectedNode;
 
         const themes: any = {
@@ -195,24 +195,14 @@ export default class Settings extends React.Component<
         const lurkerLabel = `Lurking ${PrivacyUtils.getLover()} Mode: hides sensitive values`;
 
         return (
-            <ScrollView
-                style={
-                    savedTheme === 'dark'
-                        ? styles.darkThemeStyle
-                        : styles.lightThemeStyle
-                }
-            >
+            <ScrollView style={styles.scrollView}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Settings.title'),
                         style: { color: '#fff' }
                     }}
-                    backgroundColor={
-                        savedTheme === 'dark'
-                            ? '#1f2328'
-                            : 'rgba(92, 99,216, 1)'
-                    }
+                    backgroundColor={themeColor('secondary')}
                 />
                 {passphraseError && (
                     <Text
@@ -284,8 +274,8 @@ export default class Settings extends React.Component<
                         this.setState({ theme: value })
                     }
                     values={[
-                        { key: 'Light', value: 'light' },
-                        { key: 'Dark', value: 'dark' }
+                        { key: 'Dark', value: 'dark' },
+                        { key: 'Light', value: 'light' }
                     ]}
                 />
 
@@ -309,7 +299,7 @@ export default class Settings extends React.Component<
                 {showPassphraseForm && (
                     <Text
                         style={{
-                            color: savedTheme === 'dark' ? 'white' : 'black',
+                            color: themeColor('text'),
                             paddingLeft: 10,
                             paddingTop: 10
                         }}
@@ -332,17 +322,13 @@ export default class Settings extends React.Component<
                         autoCapitalize="none"
                         autoCorrect={false}
                         secureTextEntry={true}
-                        style={
-                            savedTheme === 'dark'
-                                ? styles.textInputDark
-                                : styles.textInput
-                        }
+                        style={styles.textInput}
                     />
                 )}
                 {showPassphraseForm && (
                     <Text
                         style={{
-                            color: savedTheme === 'dark' ? 'white' : 'black',
+                            color: themeColor('text'),
                             paddingLeft: 10
                         }}
                     >
@@ -364,11 +350,7 @@ export default class Settings extends React.Component<
                         autoCapitalize="none"
                         autoCorrect={false}
                         secureTextEntry={true}
-                        style={
-                            savedTheme === 'dark'
-                                ? styles.textInputDark
-                                : styles.textInput
-                        }
+                        style={styles.textInput}
                     />
                 )}
                 <View style={styles.button}>
@@ -384,11 +366,7 @@ export default class Settings extends React.Component<
                             color: saved ? 'black' : 'white'
                         }}
                         buttonStyle={{
-                            backgroundColor: saved
-                                ? '#fff'
-                                : savedTheme === 'dark'
-                                ? '#261339'
-                                : 'rgba(92, 99,216, 1)',
+                            backgroundColor: saved ? '#fff' : '#261339',
                             borderRadius: 30,
                             width: 350,
                             alignSelf: 'center'
@@ -467,23 +445,14 @@ export default class Settings extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
+    scrollView: {
         flex: 1,
-        backgroundColor: 'white'
-    },
-    darkThemeStyle: {
-        flex: 1,
-        backgroundColor: '#1f2328',
-        color: 'white'
+        backgroundColor: themeColor('background'),
+        color: themeColor('text')
     },
     textInput: {
         fontSize: 20,
-        color: 'black',
-        paddingLeft: 10
-    },
-    textInputDark: {
-        fontSize: 20,
-        color: 'white',
+        color: themeColor('text'),
         paddingLeft: 10
     },
     error: {
