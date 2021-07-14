@@ -14,6 +14,7 @@ const hash = require('object-hash');
 import DateTimeUtils from './../utils/DateTimeUtils';
 import PrivacyUtils from './../utils/PrivacyUtils';
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
 import DatePicker from 'react-native-date-picker';
 
 import ActivityStore from './../stores/ActivityStore';
@@ -332,7 +333,7 @@ export default class ActivityFilter extends React.Component<
                                             }}
                                             trackColor={{
                                                 false: '#767577',
-                                                true: '#ffd24b'
+                                                true: themeColor('highlight')
                                             }}
                                         />
                                     </View>
