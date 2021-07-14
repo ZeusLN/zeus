@@ -4,6 +4,7 @@ import { Badge, Button, Header } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import PrivacyUtils from './../../utils/PrivacyUtils';
 import { localeString } from './../../utils/LocaleUtils';
+import { themeColor } from './../../utils/ThemeUtils';
 
 import NodeInfoStore from './../../stores/NodeInfoStore';
 import UnitsStore from './../../stores/UnitsStore';
@@ -42,9 +43,8 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
             lightningBalance,
             pendingOpenBalance
         } = BalanceStore;
-        const { settings, implementation } = SettingsStore;
+        const { implementation } = SettingsStore;
         const nodeAddress = SettingsStore.host || SettingsStore.url;
-        const { theme } = settings;
         const loading = NodeInfoStore.loading || BalanceStore.loading;
 
         const pendingUnconfirmedBalance =
@@ -54,7 +54,12 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
 
         const LightningBalance = () => (
             <>
-                <Text style={styles.lightningBalance}>
+                <Text
+                    style={{
+                        fontSize: 40,
+                        color: themeColor('text')
+                    }}
+                >
                     {units &&
                         PrivacyUtils.sensitiveValue(
                             getAmount(lightningBalance),
@@ -64,7 +69,12 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                     ⚡
                 </Text>
                 {pendingOpenBalance > 0 ? (
-                    <Text style={styles.pendingBalance}>
+                    <Text
+                        style={{
+                            fontSize: 20,
+                            color: themeColor('text')
+                        }}
+                    >
                         {units &&
                             PrivacyUtils.sensitiveValue(
                                 getAmount(pendingOpenBalance),
@@ -77,35 +87,14 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
             </>
         );
 
-        const BalanceView = () => (
-            <React.Fragment>
-                <LightningBalance />
-                <Text style={styles.blockchainBalance}>
-                    {units &&
-                        PrivacyUtils.sensitiveValue(
-                            getAmount(totalBlockchainBalance),
-                            8,
-                            true
-                        )}{' '}
-                    ⛓️
-                </Text>
-                {unconfirmedBlockchainBalance ? (
-                    <Text style={styles.pendingBalance}>
-                        {units &&
-                            PrivacyUtils.sensitiveValue(
-                                getAmount(unconfirmedBlockchainBalance),
-                                8,
-                                true
-                            )}{' '}
-                        pending
-                    </Text>
-                ) : null}
-            </React.Fragment>
-        );
-
         const BalanceViewCombined = () => (
             <React.Fragment>
-                <Text style={styles.lightningBalance}>
+                <Text
+                    style={{
+                        fontSize: 40,
+                        color: themeColor('text')
+                    }}
+                >
                     {units &&
                         PrivacyUtils.sensitiveValue(
                             getAmount(combinedBalanceValue),
@@ -114,7 +103,12 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                         )}
                 </Text>
                 {unconfirmedBlockchainBalance || pendingOpenBalance ? (
-                    <Text style={styles.pendingBalance}>
+                    <Text
+                        style={{
+                            fontSize: 20,
+                            color: themeColor('text')
+                        }}
+                    >
                         {units &&
                             PrivacyUtils.sensitiveValue(
                                 getAmount(pendingUnconfirmedBalance),
@@ -133,7 +127,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                 icon={{
                     name: 'more-horiz',
                     size: 25,
-                    color: '#fff'
+                    color: themeColor('text')
                 }}
                 buttonStyle={{
                     backgroundColor: 'transparent',
@@ -170,7 +164,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
             <TouchableOpacity
                 onPress={() => this.props.navigation.navigate('NodeInfo')}
             >
-                <NodeOn />
+                <NodeOn fill={themeColor('text')} />
             </TouchableOpacity>
         );
 
@@ -224,7 +218,13 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
             );
         } else if (!NodeInfoStore.error) {
             mainPane = (
-                <View style={styles.container}>
+                <View
+                    style={{
+                        height: 220,
+                        alignItems: 'center',
+                        backgroundColor: themeColor('secondary')
+                    }}
+                >
                     <Header
                         leftComponent={<NodeInfoBadge />}
                         rightComponent={<SettingsButton />}
@@ -244,11 +244,10 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
         } else {
             mainPane = (
                 <View
-                    style={
-                        theme === 'dark'
-                            ? styles.errorContainerDark
-                            : styles.errorContainer
-                    }
+                    style={{
+                        backgroundColor: themeColor('error'),
+                        paddingLeft: 10
+                    }}
                 >
                     <Text
                         style={{
@@ -299,36 +298,10 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        height: 220,
-        alignItems: 'center',
-        backgroundColor: '#1f2328'
-    },
     loadingContainer: {
         height: 220,
         paddingLeft: 10
     },
-    errorContainer: {
-        backgroundColor: '#cc3300', // dark red
-        paddingLeft: 10
-    },
-    errorContainerDark: {
-        backgroundColor: '#992600', // dark dark red
-        paddingLeft: 10
-    },
-    lightningBalance: {
-        fontSize: 40,
-        color: '#fff'
-    },
-    blockchainBalance: {
-        fontSize: 30,
-        color: '#fff'
-    },
-    pendingBalance: {
-        fontSize: 20,
-        color: '#fff'
-    },
-    settings: {},
     nodeInfo: {
         alignItems: 'flex-start',
         marginLeft: -15

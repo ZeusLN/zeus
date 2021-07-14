@@ -9,6 +9,8 @@ import LightningSwipeableRow from './LightningSwipeableRow';
 import BalanceStore from './../../stores/BalanceStore';
 import UnitsStore from './../../stores/UnitsStore';
 
+import { themeColor } from './../../utils/ThemeUtils';
+
 import { inject, observer } from 'mobx-react';
 
 import Bitcoin from './../../images/SVG/Bitcoin Circle.svg';
@@ -35,7 +37,7 @@ const Row = ({ item }: { item: DataRow }) => (
         ) : (
             <Lightning style={{ top: 5 }} />
         )}
-        <Text style={styles.layerTextDark}>{item.layer}</Text>
+        <Text style={styles.layerText}>{item.layer}</Text>
         <Text style={styles.balanceText}>{item.balance}</Text>
     </RectButton>
 );
@@ -115,18 +117,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         justifyContent: 'space-between',
         flexDirection: 'column',
-        backgroundColor: '#2b3037',
-        marginLeft: 15,
-        marginRight: 15,
-        borderRadius: 15
-    },
-    rectButtonDark: {
-        height: 80,
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        justifyContent: 'space-between',
-        flexDirection: 'column',
-        backgroundColor: 'white',
+        backgroundColor: themeColor('secondary'),
         marginLeft: 15,
         marginRight: 15,
         borderRadius: 15
@@ -141,16 +132,8 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 15,
         top: 30,
-        left: 75
-    },
-    layerTextDark: {
-        backgroundColor: 'transparent',
-        position: 'absolute',
-        fontWeight: 'bold',
-        fontSize: 15,
-        top: 30,
         left: 75,
-        color: 'white'
+        color: themeColor('text')
     },
     balanceText: {
         backgroundColor: 'transparent',
@@ -158,14 +141,6 @@ const styles = StyleSheet.create({
         right: 20,
         top: 30,
         color: '#999',
-        fontWeight: 'bold'
-    },
-    balanceTextDark: {
-        backgroundColor: 'transparent',
-        position: 'absolute',
-        right: 20,
-        top: 30,
-        color: 'white',
         fontWeight: 'bold'
     }
 });

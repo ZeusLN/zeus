@@ -10,6 +10,7 @@ import {
 
 import { RectButton } from 'react-native-gesture-handler';
 import { localeString } from './../../utils/LocaleUtils';
+import { themeColor } from './../../utils/ThemeUtils';
 
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 
@@ -26,7 +27,6 @@ export default class OnchainSwipeableRow extends Component<
 > {
     private renderAction = (
         text: string,
-        color: string,
         x: number,
         progress: Animated.AnimatedInterpolation
     ) => {
@@ -50,10 +50,10 @@ export default class OnchainSwipeableRow extends Component<
             >
                 <RectButton style={[styles.action]} onPress={pressHandler}>
                     {text === localeString('general.coins') && (
-                        <Coins fill="#ffd24b" />
+                        <Coins fill={themeColor('highlight')} />
                     )}
                     {text === localeString('general.receive') && (
-                        <Receive fill="#ffd24b" />
+                        <Receive fill={themeColor('highlight')} />
                     )}
                     <Text style={styles.actionText}>{text}</Text>
                 </RectButton>
@@ -72,18 +72,8 @@ export default class OnchainSwipeableRow extends Component<
                 flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row'
             }}
         >
-            {this.renderAction(
-                localeString('general.receive'),
-                '#C8C7CD',
-                150,
-                progress
-            )}
-            {this.renderAction(
-                localeString('general.coins'),
-                '#ffab00',
-                100,
-                progress
-            )}
+            {this.renderAction(localeString('general.receive'), 150, progress)}
+            {this.renderAction(localeString('general.coins'), 100, progress)}
         </View>
     );
 
