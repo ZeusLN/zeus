@@ -17,6 +17,7 @@ import { inject, observer } from 'mobx-react';
 const hash = require('object-hash');
 import PrivacyUtils from './../utils/PrivacyUtils';
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
 
 import ChannelsStore from './../stores/ChannelsStore';
 import FeeStore from './../stores/FeeStore';
@@ -97,7 +98,7 @@ export default class ChannelView extends React.Component<
         const { channelFees } = FeeStore;
         const { nodes } = ChannelsStore;
         const { settings, implementation } = SettingsStore;
-        const { theme, lurkerMode } = settings;
+        const { lurkerMode } = settings;
 
         const channel: Channel = navigation.getParam('channel', null);
         const {
@@ -177,13 +178,7 @@ export default class ChannelView extends React.Component<
         );
 
         return (
-            <ScrollView
-                style={
-                    theme === 'dark'
-                        ? styles.darkThemeStyle
-                        : styles.lightThemeStyle
-                }
-            >
+            <ScrollView style={styles.scrollView}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -194,23 +189,9 @@ export default class ChannelView extends React.Component<
                 />
                 <View style={styles.content}>
                     <View style={styles.center}>
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.aliasDark
-                                    : styles.alias
-                            }
-                        >
-                            {channelDisplay}
-                        </Text>
+                        <Text style={styles.alias}>{channelDisplay}</Text>
                         {remote_pubkey && (
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.pubkeyDark
-                                        : styles.pubkey
-                                }
-                            >
+                            <Text style={styles.pubkey}>
                                 {PrivacyUtils.sensitiveValue(remote_pubkey)}
                             </Text>
                         )}
@@ -224,48 +205,25 @@ export default class ChannelView extends React.Component<
                     <BalanceSlider
                         localBalance={lurkerMode ? 50 : localBalance}
                         remoteBalance={lurkerMode ? 50 : remoteBalance}
-                        theme={theme}
                     />
 
                     <View style={styles.balances}>
                         <TouchableOpacity onPress={() => changeUnits()}>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.balanceDark
-                                        : styles.balance
-                                }
-                            >{`${localeString(
+                            <Text style={styles.balance}>{`${localeString(
                                 'views.Channel.localBalance'
                             )}: ${units && channelBalanceLocal}`}</Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.balanceDark
-                                        : styles.balance
-                                }
-                            >{`${localeString(
+                            <Text style={styles.balance}>{`${localeString(
                                 'views.Channel.remoteBalance'
                             )}: ${units && channelBalanceRemote}`}</Text>
                             {unsettled_balance && (
-                                <Text
-                                    style={
-                                        theme === 'dark'
-                                            ? styles.balanceDark
-                                            : styles.balance
-                                    }
-                                >{`${localeString(
+                                <Text style={styles.balance}>{`${localeString(
                                     'views.Channel.unsettledBalance'
                                 )}: ${units && unsettledBalance}`}</Text>
                             )}
                         </TouchableOpacity>
                     </View>
 
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.labelDark : styles.label
-                        }
-                    >
+                    <Text style={styles.label}>
                         {localeString('views.Channel.status')}:
                     </Text>
                     <Text
@@ -279,11 +237,7 @@ export default class ChannelView extends React.Component<
                             : localeString('views.Channel.inactive')}
                     </Text>
 
-                    <Text
-                        style={
-                            theme === 'dark' ? styles.labelDark : styles.label
-                        }
-                    >
+                    <Text style={styles.label}>
                         {localeString('views.Channel.private')}:
                     </Text>
                     <Text
@@ -297,23 +251,11 @@ export default class ChannelView extends React.Component<
 
                     {total_satoshis_received && (
                         <View>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Channel.totalReceived')}:
                             </Text>
                             <TouchableOpacity onPress={() => changeUnits()}>
-                                <Text
-                                    style={
-                                        theme === 'dark'
-                                            ? styles.valueDark
-                                            : styles.value
-                                    }
-                                >
+                                <Text style={styles.value}>
                                     {units && totalSatoshisReceived}
                                 </Text>
                             </TouchableOpacity>
@@ -322,23 +264,11 @@ export default class ChannelView extends React.Component<
 
                     {total_satoshis_sent && (
                         <View>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Channel.totalSent')}:
                             </Text>
                             <TouchableOpacity onPress={() => changeUnits()}>
-                                <Text
-                                    style={
-                                        theme === 'dark'
-                                            ? styles.valueDark
-                                            : styles.value
-                                    }
-                                >
+                                <Text style={styles.value}>
                                     {units && totalSatoshisSent}
                                 </Text>
                             </TouchableOpacity>
@@ -347,23 +277,11 @@ export default class ChannelView extends React.Component<
 
                     {capacity && (
                         <View>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Channel.capacity')}:
                             </Text>
                             <TouchableOpacity onPress={() => changeUnits()}>
-                                <Text
-                                    style={
-                                        theme === 'dark'
-                                            ? styles.valueDark
-                                            : styles.value
-                                    }
-                                >
+                                <Text style={styles.value}>
                                     {units && capacityDisplay}
                                 </Text>
                             </TouchableOpacity>
@@ -372,22 +290,10 @@ export default class ChannelView extends React.Component<
 
                     {channelFee && channelFee.base_fee_msat && (
                         <View>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Channel.baseFee')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
+                            <Text style={styles.value}>
                                 {PrivacyUtils.sensitiveValue(
                                     channelFee.base_fee_msat,
                                     5,
@@ -399,22 +305,10 @@ export default class ChannelView extends React.Component<
 
                     {channelFee && channelFee.fee_rate && (
                         <View>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Channel.feeRate')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
+                            <Text style={styles.value}>
                                 {PrivacyUtils.sensitiveValue(
                                     channelFee.fee_rate * 1000000,
                                     2,
@@ -426,45 +320,19 @@ export default class ChannelView extends React.Component<
 
                     {commit_weight && (
                         <View>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Channel.commitWeight')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
-                                {commit_weight}
-                            </Text>
+                            <Text style={styles.value}>{commit_weight}</Text>
                         </View>
                     )}
 
                     {commit_fee && (
                         <View>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Channel.commitFee')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
+                            <Text style={styles.value}>
                                 {PrivacyUtils.sensitiveValue(
                                     commit_fee,
                                     4,
@@ -476,45 +344,19 @@ export default class ChannelView extends React.Component<
 
                     {csv_delay && (
                         <View>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Channel.csvDelay')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
-                                {csv_delay}
-                            </Text>
+                            <Text style={styles.value}>{csv_delay}</Text>
                         </View>
                     )}
 
                     {fee_per_kw && (
                         <View>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Channel.feePerKw')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
+                            <Text style={styles.value}>
                                 {PrivacyUtils.sensitiveValue(
                                     fee_per_kw,
                                     6,
@@ -597,10 +439,7 @@ export default class ChannelView extends React.Component<
                                 <React.Fragment>
                                     <Text
                                         style={{
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'white'
-                                                    : 'black'
+                                            color: themeColor('text')
                                         }}
                                     >
                                         {localeString(
@@ -620,11 +459,7 @@ export default class ChannelView extends React.Component<
                                         numberOfLines={1}
                                         autoCapitalize="none"
                                         autoCorrect={false}
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.textInputDark
-                                                : styles.textInput
-                                        }
+                                        style={styles.textInput}
                                     />
                                     {implementation === 'lnd' && (
                                         <CheckBox
@@ -674,14 +509,10 @@ export default class ChannelView extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
+    scrollView: {
         flex: 1,
-        backgroundColor: 'white'
-    },
-    darkThemeStyle: {
-        flex: 1,
-        backgroundColor: 'black',
-        color: 'white'
+        backgroundColor: themeColor('background'),
+        color: themeColor('text')
     },
     content: {
         paddingLeft: 20,
@@ -693,50 +524,30 @@ const styles = StyleSheet.create({
     alias: {
         fontSize: 20,
         paddingTop: 10,
-        paddingBottom: 10
-    },
-    aliasDark: {
-        fontSize: 20,
-        paddingTop: 10,
         paddingBottom: 10,
-        color: 'white'
+        color: themeColor('text')
     },
     pubkey: {
         paddingTop: 10,
-        paddingBottom: 30
-    },
-    pubkeyDark: {
-        paddingTop: 10,
         paddingBottom: 30,
-        color: 'white'
+        color: themeColor('text')
     },
     balance: {
         fontSize: 15,
-        alignItems: 'center',
-        fontWeight: 'bold'
-    },
-    balanceDark: {
-        fontSize: 15,
         fontWeight: 'bold',
-        color: 'white'
+        color: themeColor('text')
     },
     balances: {
         paddingBottom: 10,
         alignItems: 'center'
     },
-    label: {
-        paddingTop: 5
-    },
     value: {
-        paddingBottom: 5
-    },
-    labelDark: {
-        paddingTop: 5,
-        color: 'white'
-    },
-    valueDark: {
         paddingBottom: 5,
-        color: 'white'
+        color: themeColor('text')
+    },
+    label: {
+        paddingTop: 5,
+        color: themeColor('text')
     },
     valueWithLink: {
         paddingBottom: 5,
@@ -748,10 +559,6 @@ const styles = StyleSheet.create({
     },
     textInput: {
         fontSize: 20,
-        color: 'black'
-    },
-    textInputDark: {
-        fontSize: 20,
-        color: 'white'
+        color: themeColor('text')
     }
 });

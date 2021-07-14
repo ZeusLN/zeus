@@ -8,6 +8,7 @@ import { inject, observer } from 'mobx-react';
 const hash = require('object-hash');
 import PrivacyUtils from './../utils/PrivacyUtils';
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
 
 import ChannelsStore from './../stores/ChannelsStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
@@ -27,21 +28,7 @@ interface ChannelsProps {
 @inject('ChannelsStore', 'NodeInfoStore', 'UnitsStore', 'SettingsStore')
 @observer
 export default class Channels extends React.Component<ChannelsProps, {}> {
-    renderSeparator = () => {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-        const { theme } = settings;
-
-        return (
-            <View
-                style={
-                    theme === 'dark'
-                        ? styles.darkSeparator
-                        : styles.lightSeparator
-                }
-            />
-        );
-    };
+    renderSeparator = () => <View style={styles.separator} />;
 
     refresh = () => this.props.ChannelsStore.getChannels();
 
@@ -57,7 +44,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
         const { getAmount, units } = UnitsStore;
         const { nodes, loading } = ChannelsStore;
         const { settings } = SettingsStore;
-        const { theme, lurkerMode } = settings;
+        const { lurkerMode } = settings;
 
         const ChannelIcon = (balanceImage: string) => (
             <Avatar
@@ -77,20 +64,14 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
         );
 
         return (
-            <ScrollView
-                style={
-                    theme === 'dark'
-                        ? styles.darkThemeStyle
-                        : styles.lightThemeStyle
-                }
-            >
+            <ScrollView style={styles.scrollView}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Wallet.Wallet.channels'),
                         style: { color: '#fff' }
                     }}
-                    backgroundColor={theme === 'dark' ? '#1f2328' : '#1f2328'}
+                    backgroundColor={themeColor('secondary')}
                 />
                 {!NodeInfoStore.error && (
                     <View style={styles.button}>
@@ -102,10 +83,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                 color: 'white'
                             }}
                             buttonStyle={{
-                                backgroundColor:
-                                    theme === 'dark'
-                                        ? '#261339'
-                                        : 'rgba(92, 99,216, 1)',
+                                backgroundColor: '#261339',
                                 borderRadius: 30,
                                 width: 350,
                                 alignSelf: 'center'
@@ -178,10 +156,9 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                         )}: ${units && remoteBalanceDisplay}`}
                                         containerStyle={{
                                             borderBottomWidth: 0,
-                                            backgroundColor:
-                                                theme === 'dark'
-                                                    ? '#1f2328'
-                                                    : 'white'
+                                            backgroundColor: themeColor(
+                                                'background'
+                                            )
                                         }}
                                         onPress={() =>
                                             navigation.navigate('Channel', {
@@ -189,16 +166,10 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                             })
                                         }
                                         titleStyle={{
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'white'
-                                                    : '#1f2328'
+                                            color: themeColor('text')
                                         }}
                                         subtitleStyle={{
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'gray'
-                                                    : '#8a8999'
+                                            color: themeColor('secondaryText')
                                         }}
                                     />
                                     <BalanceSlider
@@ -208,7 +179,6 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                                         remoteBalance={
                                             lurkerMode ? 50 : item.remoteBalance
                                         }
-                                        theme={theme}
                                         list
                                     />
                                 </React.Fragment>
@@ -228,7 +198,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                         icon={{
                             name: 'error-outline',
                             size: 25,
-                            color: theme === 'dark' ? 'white' : '#1f2328'
+                            color: themeColor('text')
                         }}
                         onPress={() => this.refresh()}
                         buttonStyle={{
@@ -236,7 +206,7 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
                             borderRadius: 30
                         }}
                         titleStyle={{
-                            color: theme === 'dark' ? 'white' : '#1f2328'
+                            color: themeColor('text')
                         }}
                     />
                 )}
@@ -246,25 +216,15 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
+    scrollView: {
         flex: 1,
-        backgroundColor: 'white'
+        backgroundColor: themeColor('background'),
+        color: themeColor('text')
     },
-    darkThemeStyle: {
-        flex: 1,
-        backgroundColor: '#1f2328',
-        color: 'white'
-    },
-    lightSeparator: {
+    separator: {
         height: 1,
         width: '86%',
-        backgroundColor: '#CED0CE',
-        marginLeft: '14%'
-    },
-    darkSeparator: {
-        height: 1,
-        width: '86%',
-        backgroundColor: 'darkgray',
+        backgroundColor: themeColor('separator'),
         marginLeft: '14%'
     },
     button: {

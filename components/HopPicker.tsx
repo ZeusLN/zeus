@@ -284,7 +284,6 @@ export default class ChannelPicker extends React.Component<
                                                                 ? 50
                                                                 : item.remoteBalance
                                                         }
-                                                        theme={theme}
                                                         list
                                                     />
                                                 </>
