@@ -404,7 +404,6 @@ export default class ChannelView extends React.Component<
                         channelPoint={channel_point}
                         channelId={channelId}
                         FeeStore={FeeStore}
-                        SettingsStore={SettingsStore}
                     />
 
                     <View style={styles.button}>

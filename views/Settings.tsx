@@ -237,7 +237,6 @@ export default class Settings extends React.Component<
 
                 <DropdownSetting
                     title={localeString('views.Settings.locale')}
-                    theme={savedTheme}
                     selectedValue={locale}
                     onValueChange={(value: string) =>
                         this.setState({ locale: value })
@@ -247,7 +246,6 @@ export default class Settings extends React.Component<
 
                 <DropdownSetting
                     title={localeString('views.Settings.fiatRate')}
-                    theme={savedTheme}
                     selectedValue={fiat}
                     onValueChange={(value: string) =>
                         this.setState({ fiat: value })
@@ -280,7 +278,6 @@ export default class Settings extends React.Component<
 
                 <DropdownSetting
                     title={localeString('views.Settings.theme')}
-                    theme={savedTheme}
                     selectedValue={theme}
                     displayValue={themes[theme]}
                     onValueChange={(value: string) =>
@@ -294,7 +291,6 @@ export default class Settings extends React.Component<
 
                 <DropdownSetting
                     title={lurkerLabel}
-                    theme={savedTheme}
                     selectedValue={lurkerMode}
                     displayValue={
                         lurkerMode
