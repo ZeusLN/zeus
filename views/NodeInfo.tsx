@@ -341,10 +341,7 @@ export default class NodeInfo extends React.Component<
                     )}
                 </TouchableOpacity>
 
-                <SetFeesForm
-                    FeeStore={FeeStore}
-                    SettingsStore={SettingsStore}
-                />
+                <SetFeesForm FeeStore={FeeStore} />
             </React.Fragment>
         );
 

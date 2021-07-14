@@ -5,6 +5,7 @@ import { inject, observer } from 'mobx-react';
 import DateTimeUtils from './../utils/DateTimeUtils';
 import PrivacyUtils from './../utils/PrivacyUtils';
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
 
 import ActivityStore from './../stores/ActivityStore';
 import UnitsStore from './../stores/UnitsStore';
@@ -27,27 +28,9 @@ export default class Activity extends React.Component<ActivityProps, {}> {
         getActivityAndFilter();
     }
 
-    renderSeparator = () => {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-        const { theme } = settings;
-
-        return (
-            <View
-                style={
-                    theme === 'dark'
-                        ? styles.darkSeparator
-                        : styles.lightSeparator
-                }
-            />
-        );
-    };
+    renderSeparator = () => <View style={styles.separator} />;
 
     getRightTitleStyle = (item: any) => {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-        const { theme } = settings;
-
         if (item.getAmount == 0) return 'gray';
 
         if (item.model === localeString('general.transaction')) {
@@ -59,7 +42,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
 
         if (item.isPaid) return 'green';
 
-        return theme === 'dark' ? 'gray' : '#8a8999';
+        return themeColor('secondaryText');
     };
 
     render() {
@@ -76,7 +59,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
             getActivityAndFilter
         } = ActivityStore;
         const { settings } = SettingsStore;
-        const { theme, lurkerMode } = settings;
+        const { lurkerMode } = settings;
 
         const CloseButton = () => (
             <Icon
@@ -97,13 +80,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
         );
 
         return (
-            <View
-                style={
-                    theme === 'dark'
-                        ? styles.darkThemeStyle
-                        : styles.lightThemeStyle
-                }
-            >
+            <View style={styles.view}>
                 <Header
                     leftComponent={<CloseButton />}
                     centerComponent={{
@@ -205,10 +182,9 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                     <ListItem
                                         containerStyle={{
                                             borderBottomWidth: 0,
-                                            backgroundColor:
-                                                theme === 'dark'
-                                                    ? '#1f2328'
-                                                    : 'white'
+                                            backgroundColor: themeColor(
+                                                'background'
+                                            )
                                         }}
                                         onPress={() => {
                                             if (
@@ -253,10 +229,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                                 right
                                                 style={{
                                                     fontWeight: '600',
-                                                    color:
-                                                        theme === 'dark'
-                                                            ? 'white'
-                                                            : '#1f2328'
+                                                    color: themeColor('text')
                                                 }}
                                             >
                                                 {displayName}
@@ -264,10 +237,9 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                             <ListItem.Subtitle
                                                 right
                                                 style={{
-                                                    color:
-                                                        theme === 'dark'
-                                                            ? 'gray'
-                                                            : '#8a8999'
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
                                                 }}
                                             >
                                                 {subTitle}
@@ -288,9 +260,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                             <ListItem.Subtitle
                                                 right
                                                 style={
-                                                    theme === 'dark'
-                                                        ? styles.rightSubtitleStyleDark
-                                                        : styles.rightSubtitleStyle
+                                                    styles.rightSubtitleStyle
                                                 }
                                             >
                                                 {DateTimeUtils.listFormattedDateShort(
@@ -314,7 +284,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                         icon={{
                             name: 'error-outline',
                             size: 25,
-                            color: theme === 'dark' ? 'white' : '#1f2328'
+                            color: themeColor('text')
                         }}
                         onPress={() => getActivityAndFilter()}
                         buttonStyle={{
@@ -322,7 +292,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                             borderRadius: 30
                         }}
                         titleStyle={{
-                            color: theme === 'dark' ? 'white' : '#1f2328'
+                            color: themeColor('text')
                         }}
                     />
                 )}
@@ -332,31 +302,20 @@ export default class Activity extends React.Component<ActivityProps, {}> {
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
+    view: {
         flex: 1,
-        backgroundColor: 'white'
+        backgroundColor: themeColor('background'),
+        color: themeColor('text')
     },
-    darkThemeStyle: {
-        flex: 1,
-        backgroundColor: '#1f2328',
-        color: 'white'
-    },
-    lightSeparator: {
+    separator: {
         height: 0.4,
-        backgroundColor: '#CED0CE'
-    },
-    darkSeparator: {
-        height: 0.4,
-        backgroundColor: 'darkgray'
+        backgroundColor: themeColor('separator')
     },
     button: {
         paddingTop: 15,
         paddingBottom: 10
     },
     rightSubtitleStyle: {
-        color: '#8a8999'
-    },
-    rightSubtitleStyleDark: {
-        color: 'gray'
+        color: themeColor('secondaryText')
     }
 });
