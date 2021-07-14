@@ -164,7 +164,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
             <TouchableOpacity
                 onPress={() => this.props.navigation.navigate('NodeInfo')}
             >
-                <NodeOn fill={themeColor('text')} />
+                <NodeOn stroke={themeColor('text')} />
             </TouchableOpacity>
         );
 
