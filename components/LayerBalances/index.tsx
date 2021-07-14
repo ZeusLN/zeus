@@ -13,7 +13,7 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import { inject, observer } from 'mobx-react';
 
-import Bitcoin from './../../images/SVG/Bitcoin Circle.svg';
+import OnChain from './../../images/SVG/OnChain.svg';
 import Lightning from './../../images/SVG/Lightning Circle.svg';
 
 interface LayerBalancesProps {
@@ -33,7 +33,7 @@ type DataRow = {
 const Row = ({ item }: { item: DataRow }) => (
     <RectButton style={styles.rectButton}>
         {item.layer === 'On-chain' ? (
-            <Bitcoin style={{ top: 5 }} />
+            <OnChain style={{ top: 5 }} />
         ) : (
             <Lightning style={{ top: 5 }} />
         )}
