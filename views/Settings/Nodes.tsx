@@ -6,36 +6,24 @@ import Identicon from 'identicon.js';
 const hash = require('object-hash');
 import PrivacyUtils from './../../utils/PrivacyUtils';
 import { localeString } from './../../utils/LocaleUtils';
+import { themeColor } from './../../utils/ThemeUtils';
 
 interface NodesProps {
     nodes: any[];
     navigation: any;
     edit?: boolean;
     loading?: boolean;
-    theme?: string;
     selectedNode?: number;
     SettingsStore: SettingsStore;
 }
 
 export default class Nodes extends React.Component<NodesProps, {}> {
-    renderSeparator = () => {
-        const { theme } = this.props;
-        return (
-            <View
-                style={
-                    theme === 'dark'
-                        ? styles.darkSeparator
-                        : styles.lightSeparator
-                }
-            />
-        );
-    };
+    renderSeparator = () => <View style={styles.separator} />;
 
     render() {
         const {
             navigation,
             nodes,
-            theme,
             loading,
             selectedNode,
             SettingsStore
@@ -100,10 +88,7 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                                 icon={{
                                                     name: 'settings',
                                                     size: 25,
-                                                    color:
-                                                        theme === 'dark'
-                                                            ? 'white'
-                                                            : 'black'
+                                                    color: themeColor('text')
                                                 }}
                                                 buttonStyle={{
                                                     backgroundColor:
@@ -133,10 +118,9 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                         }
                                         containerStyle={{
                                             borderBottomWidth: 0,
-                                            backgroundColor:
-                                                theme === 'dark'
-                                                    ? '#1f2328'
-                                                    : 'white'
+                                            backgroundColor: themeColor(
+                                                'background'
+                                            )
                                         }}
                                         onPress={() => {
                                             setSettings(
@@ -159,16 +143,10 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                             });
                                         }}
                                         titleStyle={{
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'white'
-                                                    : 'black'
+                                            color: themeColor('text')
                                         }}
                                         subtitleStyle={{
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'gray'
-                                                    : '#8a8999'
+                                            color: themeColor('secondaryText')
                                         }}
                                     />
                                 </React.Fragment>
@@ -186,14 +164,14 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                         icon={{
                             name: 'error-outline',
                             size: 25,
-                            color: theme === 'dark' ? 'white' : 'black'
+                            color: themeColor('text')
                         }}
                         buttonStyle={{
                             backgroundColor: 'transparent',
                             borderRadius: 30
                         }}
                         titleStyle={{
-                            color: theme === 'dark' ? 'white' : 'black'
+                            color: themeColor('text')
                         }}
                     />
                 )}
@@ -233,16 +211,10 @@ export default class Nodes extends React.Component<NodesProps, {}> {
 }
 
 const styles = StyleSheet.create({
-    lightSeparator: {
+    separator: {
         height: 1,
         width: '86%',
-        backgroundColor: '#CED0CE',
-        marginLeft: '14%'
-    },
-    darkSeparator: {
-        height: 1,
-        width: '86%',
-        backgroundColor: 'darkgray',
+        backgroundColor: themeColor('separator'),
         marginLeft: '14%'
     },
     button: {

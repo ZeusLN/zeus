@@ -129,7 +129,6 @@ export default class SendingLightning extends React.Component<
                                 domain={LnurlPayStore.domain}
                                 successAction={LnurlPayStore.successAction}
                                 preimage={payment_preimage}
-                                SettingsStore={SettingsStore}
                             />
                         )}
                     {!!payment_hash && (

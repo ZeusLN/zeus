@@ -3,8 +3,7 @@ import { Platform, StyleSheet, Text, View, ScrollView } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { localeString } from './../../utils/LocaleUtils';
-
-import SettingsStore from './../../stores/SettingsStore';
+import { themeColor } from './../../utils/ThemeUtils';
 
 interface CertInstallInstructionsProps {
     navigation: any;
@@ -18,10 +17,7 @@ export default class CertInstallInstructions extends React.Component<
     {}
 > {
     render() {
-        const { navigation, SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-        const savedTheme = settings.theme;
-
+        const { navigation } = this.props;
         const BackButton = () => (
             <Icon
                 name="arrow-back"
@@ -32,13 +28,7 @@ export default class CertInstallInstructions extends React.Component<
         );
 
         return (
-            <ScrollView
-                style={
-                    savedTheme === 'dark'
-                        ? styles.darkThemeStyle
-                        : styles.lightThemeStyle
-                }
-            >
+            <ScrollView style={styles.scrollView}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -51,13 +41,7 @@ export default class CertInstallInstructions extends React.Component<
                 />
                 <View style={{ padding: 8 }}>
                     {Platform.OS === 'android' && (
-                        <Text
-                            style={
-                                savedTheme === 'dark'
-                                    ? styles.darkThemeText
-                                    : styles.lightThemeText
-                            }
-                        >
+                        <Text style={styles.text}>
                             {localeString(
                                 'views.Settings.CertInstallInstructions.graph1'
                             )}
@@ -65,48 +49,24 @@ export default class CertInstallInstructions extends React.Component<
                     )}
                     {Platform.OS === 'ios' && (
                         <View>
-                            <Text
-                                style={
-                                    savedTheme === 'dark'
-                                        ? styles.darkThemeText
-                                        : styles.lightThemeText
-                                }
-                            >
+                            <Text style={styles.text}>
                                 {localeString(
                                     'views.Settings.CertInstallInstructions.graph2'
                                 )}
                             </Text>
-                            <Text
-                                style={
-                                    savedTheme === 'dark'
-                                        ? styles.darkThemeText
-                                        : styles.lightThemeText
-                                }
-                            >
+                            <Text style={styles.text}>
                                 {localeString(
                                     'views.Settings.CertInstallInstructions.graph3'
                                 )}
                             </Text>
-                            <Text
-                                style={
-                                    savedTheme === 'dark'
-                                        ? styles.darkThemeText
-                                        : styles.lightThemeText
-                                }
-                            >
+                            <Text style={styles.text}>
                                 {localeString(
                                     'views.Settings.CertInstallInstructions.graph4'
                                 )}
                             </Text>
                         </View>
                     )}
-                    <Text
-                        style={
-                            savedTheme === 'dark'
-                                ? styles.darkThemeText
-                                : styles.lightThemeText
-                        }
-                    >
+                    <Text style={styles.text}>
                         {localeString(
                             'views.Settings.CertInstallInstructions.graph5'
                         )}
@@ -118,23 +78,14 @@ export default class CertInstallInstructions extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
+    scrollView: {
         flex: 1,
-        backgroundColor: 'white'
+        backgroundColor: themeColor('background'),
+        color: themeColor('text')
     },
-    darkThemeStyle: {
-        flex: 1,
-        backgroundColor: 'black',
-        color: 'white'
-    },
-    lightThemeText: {
+    text: {
         fontSize: 15,
-        color: 'black',
-        paddingTop: 12
-    },
-    darkThemeText: {
-        fontSize: 15,
-        color: 'white',
+        color: themeColor('text'),
         paddingTop: 12
     }
 });

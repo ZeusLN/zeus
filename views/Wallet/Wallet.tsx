@@ -10,6 +10,8 @@ import MainPane from './MainPane';
 import { inject, observer } from 'mobx-react';
 import PrivacyUtils from './../../utils/PrivacyUtils';
 import { localeString } from './../../utils/LocaleUtils';
+import { themeColor } from './../../utils/ThemeUtils';
+import Clipboard from '@react-native-community/clipboard';
 
 import BalanceStore from './../../stores/BalanceStore';
 import ChannelsStore from './../../stores/ChannelsStore';
@@ -68,6 +70,8 @@ interface WalletState {
 )
 @observer
 export default class Wallet extends React.Component<WalletProps, WalletState> {
+    clipboard: string;
+
     state = {
         units: 'sats',
         selectedIndex: 0
@@ -87,9 +91,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             );
     }
 
-    UNSAFE_componentWillMount = () => {
+    async UNSAFE_componentWillMount() {
+        this.clipboard = await Clipboard.getString();
         this.getSettingsAndRefresh();
-    };
+    }
 
     UNSAFE_componentWillReceiveProps = (nextProps: any) => {
         const { navigation } = nextProps;
@@ -193,8 +198,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { payments } = PaymentsStore;
         const { invoices, invoicesCount } = InvoicesStore;
         const { channels } = ChannelsStore;
-        const { settings, implementation } = SettingsStore;
-        const { theme } = settings;
+        const { implementation } = SettingsStore;
 
         const paymentsCount = (payments && payments.length) || 0;
         const paymentsButtonCount = PrivacyUtils.sensitiveValue(
@@ -226,10 +230,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         const paymentsButton = () => (
             <React.Fragment>
-                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
+                <Text style={{ color: themeColor('text') }}>
                     {paymentsButtonCount}
                 </Text>
-                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
+                <Text style={{ color: themeColor('text') }}>
                     {localeString('views.Wallet.Wallet.payments')}
                 </Text>
             </React.Fragment>
@@ -237,10 +241,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         const invoicesButton = () => (
             <React.Fragment>
-                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
+                <Text style={{ color: themeColor('text') }}>
                     {invoicesButtonCount}
                 </Text>
-                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
+                <Text style={{ color: themeColor('text') }}>
                     {localeString('views.Wallet.Wallet.invoices')}
                 </Text>
             </React.Fragment>
@@ -248,10 +252,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         const transactionsButton = () => (
             <React.Fragment>
-                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
+                <Text style={{ color: themeColor('text') }}>
                     {transactionsButtonCount}
                 </Text>
-                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
+                <Text style={{ color: themeColor('text') }}>
                     {localeString('views.Wallet.Wallet.onchain')}
                 </Text>
             </React.Fragment>
@@ -259,33 +263,25 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         const channelsButton = () => (
             <React.Fragment>
-                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
+                <Text style={{ color: themeColor('text') }}>
                     {channelsButtonCount}
                 </Text>
-                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
+                <Text style={{ color: themeColor('text') }}>
                     {localeString('views.Wallet.Wallet.channels')}
                 </Text>
             </React.Fragment>
         );
 
-        const lightThemeGradient = ['white', 'grey', 'black'];
-        const darkThemeGradient = ['black', '#1f2328', '#1f2328', '#1f2328'];
-
         const WalletScreen = () => {
             return (
                 <View
                     style={{
-                        backgroundColor:
-                            theme === 'dark' ? '#1f2328' : 'transparent',
+                        backgroundColor: themeColor('background'),
                         flex: 1
                     }}
                 >
                     <LinearGradient
-                        colors={
-                            theme === 'dark'
-                                ? darkThemeGradient
-                                : lightThemeGradient
-                        }
+                        colors={themeColor('gradient')}
                         style={{ flex: 1 }}
                     >
                         <MainPane
@@ -335,8 +331,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             ...DefaultTheme,
             colors: {
                 ...DefaultTheme.colors,
-                card: '#2b3037',
-                border: '#2b3037'
+                card: themeColor('secondary'),
+                border: themeColor('secondary')
             }
         };
 
@@ -353,7 +349,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 let iconName;
 
                                 if (route.name === 'Wallet') {
-                                    return <WalletIcon />;
+                                    return (
+                                        <WalletIcon
+                                            fill={themeColor('highlight')}
+                                        />
+                                    );
                                 }
                                 if (route.name === scanAndSend) {
                                     return (
@@ -364,23 +364,39 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                                 width: 90,
                                                 borderRadius: 90,
                                                 bottom: 5,
-                                                backgroundColor: '#2b3037',
+                                                backgroundColor: themeColor(
+                                                    'secondary'
+                                                ),
                                                 justifyContent: 'center',
                                                 alignItems: 'center',
                                                 shadowColor: 'black',
                                                 shadowRadius: 5,
                                                 shadowOpacity: 0.8
                                             }}
-                                            onPress={() =>
-                                                this.props.navigation.navigate(
-                                                    'AddressQRCodeScanner'
-                                                )
-                                            }
+                                            onPress={() => {
+                                                const {
+                                                    navigation
+                                                } = this.props;
+                                                // if clipboard is loaded check for potential matches, otherwise do nothing
+                                                handleAnything(this.clipboard)
+                                                    .then(([route, props]) => {
+                                                        navigation.navigate(
+                                                            route,
+                                                            props
+                                                        );
+                                                    })
+                                                    .catch(() =>
+                                                        navigation.navigate(
+                                                            'AddressQRCodeScanner'
+                                                        )
+                                                    );
+                                            }}
                                         >
                                             <QRIcon
                                                 style={{
                                                     padding: 25
                                                 }}
+                                                fill={themeColor('highlight')}
                                             />
                                         </TouchableOpacity>
                                     );
@@ -399,9 +415,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             }
                         })}
                         tabBarOptions={{
-                            activeTintColor: '#ffd24b',
+                            activeTintColor: themeColor('highlight'),
                             inactiveTintColor: 'gray',
-                            backgroundColor: '#ffd24b'
+                            backgroundColor: themeColor('highlight')
                         }}
                     >
                         <Tab.Screen name="Wallet" component={WalletScreen} />
