@@ -11,6 +11,7 @@ import {
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
 
 import InvoicesStore from './../stores/InvoicesStore';
 import TransactionsStore from './../stores/TransactionsStore';
@@ -105,8 +106,7 @@ export default class PaymentRequest extends React.Component<
 
         const date = new Date(Number(timestamp) * 1000).toString();
 
-        const { settings, implementation } = SettingsStore;
-        const { theme } = settings;
+        const { implementation } = SettingsStore;
 
         const isLnd: boolean = implementation === 'lnd';
 
@@ -124,13 +124,7 @@ export default class PaymentRequest extends React.Component<
         );
 
         return (
-            <View
-                style={
-                    theme === 'dark'
-                        ? styles.darkThemeStyle
-                        : styles.lightThemeStyle
-                }
-            >
+            <View style={styles.scrollView}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -147,13 +141,7 @@ export default class PaymentRequest extends React.Component<
                 <ScrollView>
                     {!!getPayReqError && (
                         <View style={styles.content}>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.PaymentRequest.error')}:{' '}
                                 {getPayReqError}
                             </Text>
@@ -167,13 +155,7 @@ export default class PaymentRequest extends React.Component<
                                     <TouchableOpacity
                                         onPress={() => changeUnits()}
                                     >
-                                        <Text
-                                            style={
-                                                theme === 'dark'
-                                                    ? styles.amountDark
-                                                    : styles.amount
-                                            }
-                                        >
+                                        <Text style={styles.amount}>
                                             {units &&
                                                 getAmount(requestAmount || 0)}
                                         </Text>
@@ -182,10 +164,7 @@ export default class PaymentRequest extends React.Component<
                                 {setCustomAmount && (
                                     <Text
                                         style={{
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'white'
-                                                    : 'black'
+                                            color: themeColor('text')
                                         }}
                                     >
                                         {localeString(
@@ -208,11 +187,7 @@ export default class PaymentRequest extends React.Component<
                                             })
                                         }
                                         numberOfLines={1}
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.textInputDark
-                                                : styles.textInput
-                                        }
+                                        style={styles.textInput}
                                         placeholderTextColor="gray"
                                     />
                                 )}
@@ -231,10 +206,7 @@ export default class PaymentRequest extends React.Component<
                                             icon={{
                                                 name: 'edit',
                                                 size: 25,
-                                                color:
-                                                    theme === 'dark'
-                                                        ? 'black'
-                                                        : 'white'
+                                                color: themeColor('background')
                                             }}
                                             onPress={() => {
                                                 if (setCustomAmount) {
@@ -250,16 +222,12 @@ export default class PaymentRequest extends React.Component<
                                             }}
                                             style={styles.button}
                                             titleStyle={{
-                                                color:
-                                                    theme === 'dark'
-                                                        ? 'black'
-                                                        : 'white'
+                                                color: themeColor('background')
                                             }}
                                             buttonStyle={{
-                                                backgroundColor:
-                                                    theme === 'dark'
-                                                        ? 'white'
-                                                        : 'black',
+                                                backgroundColor: themeColor(
+                                                    'text'
+                                                ),
                                                 borderRadius: 30
                                             }}
                                         />
@@ -272,25 +240,13 @@ export default class PaymentRequest extends React.Component<
                                     <TouchableOpacity
                                         onPress={() => changeUnits()}
                                     >
-                                        <Text
-                                            style={
-                                                theme === 'dark'
-                                                    ? styles.labelDark
-                                                    : styles.label
-                                            }
-                                        >
+                                        <Text style={styles.label}>
                                             {localeString(
                                                 'views.PaymentRequest.feeEstimate'
                                             )}
                                             :
                                         </Text>
-                                        <Text
-                                            style={
-                                                theme === 'dark'
-                                                    ? styles.valueDark
-                                                    : styles.value
-                                            }
-                                        >
+                                        <Text style={styles.value}>
                                             {units && getAmount(feeEstimate)}
                                         </Text>
                                     </TouchableOpacity>
@@ -299,25 +255,13 @@ export default class PaymentRequest extends React.Component<
 
                             {!!successProbability && (
                                 <React.Fragment>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.labelDark
-                                                : styles.label
-                                        }
-                                    >
+                                    <Text style={styles.label}>
                                         {localeString(
                                             'views.PaymentRequest.successProbability'
                                         )}
                                         :
                                     </Text>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.valueDark
-                                                : styles.value
-                                        }
-                                    >
+                                    <Text style={styles.value}>
                                         {`${successProbability}%`}
                                     </Text>
                                 </React.Fragment>
@@ -325,25 +269,13 @@ export default class PaymentRequest extends React.Component<
 
                             {!!description && (
                                 <React.Fragment>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.labelDark
-                                                : styles.label
-                                        }
-                                    >
+                                    <Text style={styles.label}>
                                         {localeString(
                                             'views.PaymentRequest.description'
                                         )}
                                         :
                                     </Text>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.valueDark
-                                                : styles.value
-                                        }
-                                    >
+                                    <Text style={styles.value}>
                                         {description}
                                     </Text>
                                 </React.Fragment>
@@ -351,77 +283,37 @@ export default class PaymentRequest extends React.Component<
 
                             {!!timestamp && (
                                 <React.Fragment>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.labelDark
-                                                : styles.label
-                                        }
-                                    >
+                                    <Text style={styles.label}>
                                         {localeString(
                                             'views.PaymentRequest.timestamp'
                                         )}
                                         :
                                     </Text>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.valueDark
-                                                : styles.value
-                                        }
-                                    >
-                                        {date}
-                                    </Text>
+                                    <Text style={styles.value}>{date}</Text>
                                 </React.Fragment>
                             )}
 
                             {!!expiry && (
                                 <React.Fragment>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.labelDark
-                                                : styles.label
-                                        }
-                                    >
+                                    <Text style={styles.label}>
                                         {localeString(
                                             'views.PaymentRequest.expiry'
                                         )}
                                         :
                                     </Text>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.valueDark
-                                                : styles.value
-                                        }
-                                    >
-                                        {expiry}
-                                    </Text>
+                                    <Text style={styles.value}>{expiry}</Text>
                                 </React.Fragment>
                             )}
 
                             {!!cltv_expiry && (
                                 <React.Fragment>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.labelDark
-                                                : styles.label
-                                        }
-                                    >
+                                    <Text style={styles.label}>
                                         {localeString(
                                             'views.PaymentRequest.cltvExpiry'
                                         )}
                                         :
                                     </Text>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.valueDark
-                                                : styles.value
-                                        }
-                                    >
+                                    <Text style={styles.value}>
                                         {cltv_expiry}
                                     </Text>
                                 </React.Fragment>
@@ -429,25 +321,13 @@ export default class PaymentRequest extends React.Component<
 
                             {!!destination && (
                                 <React.Fragment>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.labelDark
-                                                : styles.label
-                                        }
-                                    >
+                                    <Text style={styles.label}>
                                         {localeString(
                                             'views.PaymentRequest.destination'
                                         )}
                                         :
                                     </Text>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.valueDark
-                                                : styles.value
-                                        }
-                                    >
+                                    <Text style={styles.value}>
                                         {destination}
                                     </Text>
                                 </React.Fragment>
@@ -455,25 +335,13 @@ export default class PaymentRequest extends React.Component<
 
                             {!!payment_hash && (
                                 <React.Fragment>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.labelDark
-                                                : styles.label
-                                        }
-                                    >
+                                    <Text style={styles.label}>
                                         {localeString(
                                             'views.PaymentRequest.paymentHash'
                                         )}
                                         :
                                     </Text>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.valueDark
-                                                : styles.value
-                                        }
-                                    >
+                                    <Text style={styles.value}>
                                         {payment_hash}
                                     </Text>
                                 </React.Fragment>
@@ -552,13 +420,7 @@ export default class PaymentRequest extends React.Component<
 
                     {enableMultiPathPayment && (
                         <View style={styles.mppForm}>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.PaymentRequest.maxParts')}:
                             </Text>
                             <TextInput
@@ -571,32 +433,16 @@ export default class PaymentRequest extends React.Component<
                                     })
                                 }
                                 numberOfLines={1}
-                                style={
-                                    theme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
+                                style={styles.textInput}
                                 placeholderTextColor="gray"
                             />
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString(
                                     'views.PaymentRequest.maxPartsDescription'
                                 )}
                                 :
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.PaymentRequest.timeout')}:
                             </Text>
                             <TextInput
@@ -609,20 +455,10 @@ export default class PaymentRequest extends React.Component<
                                     })
                                 }
                                 numberOfLines={1}
-                                style={
-                                    theme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
+                                style={styles.textInput}
                                 placeholderTextColor="gray"
                             />
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.PaymentRequest.feeLimit')}:
                             </Text>
                             <TextInput
@@ -635,11 +471,7 @@ export default class PaymentRequest extends React.Component<
                                     })
                                 }
                                 numberOfLines={1}
-                                style={
-                                    theme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
+                                style={styles.textInput}
                                 placeholderTextColor="gray"
                             />
                         </View>
@@ -688,31 +520,21 @@ export default class PaymentRequest extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
+    scrollView: {
         flex: 1,
-        backgroundColor: 'white'
-    },
-    darkThemeStyle: {
-        flex: 1,
-        backgroundColor: 'black',
-        color: 'white'
+        backgroundColor: themeColor('background'),
+        color: themeColor('text')
     },
     content: {
         padding: 20
     },
     label: {
-        paddingTop: 5
+        paddingTop: 5,
+        color: themeColor('text')
     },
     value: {
-        paddingBottom: 5
-    },
-    labelDark: {
-        paddingTop: 5,
-        color: 'white'
-    },
-    valueDark: {
         paddingBottom: 5,
-        color: 'white'
+        color: themeColor('text')
     },
     button: {
         paddingTop: 15,
@@ -722,12 +544,8 @@ const styles = StyleSheet.create({
     },
     amount: {
         fontSize: 25,
-        fontWeight: 'bold'
-    },
-    amountDark: {
-        fontSize: 25,
         fontWeight: 'bold',
-        color: 'white'
+        color: themeColor('text')
     },
     center: {
         alignItems: 'center',
@@ -736,11 +554,7 @@ const styles = StyleSheet.create({
     },
     textInput: {
         fontSize: 20,
-        color: 'black'
-    },
-    textInputDark: {
-        fontSize: 20,
-        color: 'white'
+        color: themeColor('text')
     },
     mppForm: {
         paddingLeft: 20,

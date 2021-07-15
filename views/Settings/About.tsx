@@ -1,26 +1,20 @@
 import * as React from 'react';
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
-import { inject, observer } from 'mobx-react';
-import { version } from './../../package.json';
+import { version, playStore } from './../../package.json';
 import { localeString } from './../../utils/LocaleUtils';
+import { themeColor } from './../../utils/ThemeUtils';
 
-import SettingsStore from './../../stores/SettingsStore';
 import UrlUtils from './../../utils/UrlUtils';
 import RESTUtils from './../../utils/RESTUtils';
 
 interface AboutProps {
     navigation: any;
-    SettingsStore: SettingsStore;
 }
 
-@inject('SettingsStore')
-@observer
 export default class About extends React.Component<AboutProps, {}> {
     render() {
-        const { navigation, SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-        const savedTheme = settings.theme;
+        const { navigation } = this.props;
 
         const BackButton = () => (
             <Icon
@@ -32,13 +26,7 @@ export default class About extends React.Component<AboutProps, {}> {
         );
 
         return (
-            <ScrollView
-                style={
-                    savedTheme === 'dark'
-                        ? styles.darkThemeStyle
-                        : styles.lightThemeStyle
-                }
-            >
+            <ScrollView style={styles.scrollView}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -47,32 +35,14 @@ export default class About extends React.Component<AboutProps, {}> {
                     }}
                     backgroundColor="black"
                 />
-                <Text
-                    style={
-                        savedTheme === 'dark'
-                            ? styles.darkThemeTextLarge
-                            : styles.lightThemeTextLarge
-                    }
-                >
+                <Text style={styles.textLarge}>
                     {localeString('views.Settings.About.version')}:{' '}
                     {playStore ? `v${version}-play` : `v${version}`}
                 </Text>
-                <Text
-                    style={
-                        savedTheme === 'dark'
-                            ? styles.darkThemeText
-                            : styles.lightThemeText
-                    }
-                >
+                <Text style={styles.text}>
                     {localeString('views.Settings.About.gpl')}
                 </Text>
-                <Text
-                    style={
-                        savedTheme === 'dark'
-                            ? styles.darkThemeText
-                            : styles.lightThemeText
-                    }
-                >
+                <Text style={styles.text}>
                     {localeString('views.Settings.About.thanks')}: the Human
                     Rights Foundation, Matt Odell, Jameson Lopp, fiatjaf, Suheb,
                     shesek, k3tan, __B__T__C__, gabidi, Sifir Apps, Zap, Blue
@@ -80,13 +50,7 @@ export default class About extends React.Component<AboutProps, {}> {
                     {`${localeString('views.Settings.About.and')} `}
                     Lightning Labs.
                 </Text>
-                <Text
-                    style={
-                        savedTheme === 'dark'
-                            ? styles.darkThemeText
-                            : styles.lightThemeText
-                    }
-                >
+                <Text style={styles.text}>
                     {localeString('views.Settings.About.created')}
                 </Text>
                 <View style={styles.button}>
@@ -174,33 +138,19 @@ export default class About extends React.Component<AboutProps, {}> {
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
+    scrollView: {
         flex: 1,
-        backgroundColor: 'white'
+        backgroundColor: themeColor('background'),
+        color: themeColor('text')
     },
-    darkThemeStyle: {
-        flex: 1,
-        backgroundColor: 'black',
-        color: 'white'
-    },
-    lightThemeText: {
+    text: {
         fontSize: 15,
-        color: 'black',
+        color: themeColor('text'),
         padding: 12
     },
-    darkThemeText: {
-        fontSize: 15,
-        color: 'white',
-        padding: 12
-    },
-    lightThemeTextLarge: {
+    textLarge: {
         fontSize: 20,
-        color: 'black',
-        padding: 12
-    },
-    darkThemeTextLarge: {
-        fontSize: 20,
-        color: 'white',
+        color: themeColor('text'),
         padding: 12
     },
     button: {

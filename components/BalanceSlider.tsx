@@ -6,7 +6,6 @@ interface BalanceSliderProps {
     localBalance: string | number;
     remoteBalance: string | number;
     list?: boolean;
-    theme?: string;
 }
 
 export default class BalanceSlider extends React.Component<
@@ -14,7 +13,7 @@ export default class BalanceSlider extends React.Component<
     {}
 > {
     render() {
-        const { localBalance, remoteBalance, list, theme } = this.props;
+        const { localBalance, remoteBalance, list } = this.props;
 
         const totalBalance =
             Number(localBalance || 0) + Number(remoteBalance || 0);
@@ -25,10 +24,8 @@ export default class BalanceSlider extends React.Component<
             <View style={list ? styles.sliderList : styles.slider}>
                 <Slider
                     value={ratio}
-                    maximumTrackTintColor={'orange'}
-                    minimumTrackTintColor={
-                        theme === 'dark' ? '#2b74b4' : 'rgba(92, 99,216, 1)'
-                    }
+                    maximumTrackTintColor="orange"
+                    minimumTrackTintColor="#2b74b4"
                     trackStyle={styles.trackStyle}
                     thumbStyle={styles.thumbStyle}
                     disabled

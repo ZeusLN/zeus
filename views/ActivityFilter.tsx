@@ -14,6 +14,7 @@ const hash = require('object-hash');
 import DateTimeUtils from './../utils/DateTimeUtils';
 import PrivacyUtils from './../utils/PrivacyUtils';
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
 import DatePicker from 'react-native-date-picker';
 
 import ActivityStore from './../stores/ActivityStore';
@@ -47,21 +48,7 @@ export default class ActivityFilter extends React.Component<
         workingEndDate: null
     };
 
-    renderSeparator = () => {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-        const { theme } = settings;
-
-        return (
-            <View
-                style={
-                    theme === 'dark'
-                        ? styles.darkSeparator
-                        : styles.lightSeparator
-                }
-            />
-        );
-    };
+    renderSeparator = () => <View style={styles.separator} />;
 
     render() {
         const {
@@ -96,7 +83,7 @@ export default class ActivityFilter extends React.Component<
             endDate
         } = filters;
         const { settings } = SettingsStore;
-        const { theme, lurkerMode } = settings;
+        const { lurkerMode } = settings;
 
         const CloseButton = () => (
             <Icon
@@ -161,22 +148,12 @@ export default class ActivityFilter extends React.Component<
             <>
                 <>
                     {startDate && (
-                        <Text
-                            style={{
-                                color: theme === 'dark' ? 'white' : 'black',
-                                paddingTop: 30
-                            }}
-                        >{`${localeString(
+                        <Text style={styles.text}>{`${localeString(
                             'views.ActivityFilter.startDate'
                         )}: ${startDate.toString()}`}</Text>
                     )}
                     {endDate && (
-                        <Text
-                            style={{
-                                color: theme === 'dark' ? 'white' : 'black',
-                                paddingTop: 30
-                            }}
-                        >{`${localeString(
+                        <Text style={styles.text}>{`${localeString(
                             'views.ActivityFilter.endDate'
                         )}: ${endDate.toString()}`}</Text>
                     )}
@@ -277,13 +254,7 @@ export default class ActivityFilter extends React.Component<
         ];
 
         return (
-            <View
-                style={
-                    theme === 'dark'
-                        ? styles.darkThemeStyle
-                        : styles.lightThemeStyle
-                }
-            >
+            <View style={styles.view}>
                 <Header
                     leftComponent={<CloseButton />}
                     centerComponent={{
@@ -299,16 +270,12 @@ export default class ActivityFilter extends React.Component<
                             <ListItem
                                 containerStyle={{
                                     borderBottomWidth: 0,
-                                    backgroundColor:
-                                        theme === 'dark' ? '#1f2328' : 'white'
+                                    backgroundColor: themeColor('background')
                                 }}
                             >
                                 <ListItem.Title
                                     style={{
-                                        color:
-                                            theme === 'dark'
-                                                ? 'white'
-                                                : '#1f2328'
+                                        color: themeColor('text')
                                     }}
                                 >
                                     {item.label}
@@ -332,7 +299,7 @@ export default class ActivityFilter extends React.Component<
                                             }}
                                             trackColor={{
                                                 false: '#767577',
-                                                true: '#ffd24b'
+                                                true: themeColor('highlight')
                                             }}
                                         />
                                     </View>
@@ -361,22 +328,18 @@ export default class ActivityFilter extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
+    view: {
         flex: 1,
-        backgroundColor: 'white'
+        backgroundColor: themeColor('background'),
+        color: themeColor('text')
     },
-    darkThemeStyle: {
-        flex: 1,
-        backgroundColor: '#1f2328',
-        color: 'white'
+    text: {
+        color: themeColor('text'),
+        paddingTop: 30
     },
-    lightSeparator: {
+    separator: {
         height: 0.4,
-        backgroundColor: '#CED0CE'
-    },
-    darkSeparator: {
-        height: 0.4,
-        backgroundColor: 'darkgray'
+        backgroundColor: themeColor('separator')
     },
     button: {
         paddingTop: 15,
