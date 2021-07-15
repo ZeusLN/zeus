@@ -36,13 +36,18 @@ export function themeColor(themeString: string): any {
     };
 
     const Junkie = {
-        background: '#1f2328',
+        background: 'rgb(51, 51, 51)',
         secondary: 'rgb(191, 0, 28)',
         text: 'white',
         secondaryText: 'lightgray',
         highlight: 'rgb(249, 212, 0)',
         error: '#992600',
-        gradient: ['black', '#1f2328', '#1f2328', '#1f2328'],
+        gradient: [
+            'black',
+            'rgb(51, 51, 51)',
+            'rgb(51, 51, 51)',
+            'rgb(51, 51, 51)'
+        ],
         separator: 'darkgray'
     };
 
