@@ -187,7 +187,7 @@ export default class Settings extends React.Component<
             <Icon
                 name="arrow-back"
                 onPress={() => navigation.navigate('Wallet', { refresh: true })}
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
@@ -195,12 +195,18 @@ export default class Settings extends React.Component<
         const lurkerLabel = `Lurking ${PrivacyUtils.getLover()} Mode: hides sensitive values`;
 
         return (
-            <ScrollView style={styles.scrollView}>
+            <ScrollView
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background'),
+                    color: themeColor('text')
+                }}
+            >
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Settings.title'),
-                        style: { color: '#fff' }
+                        style: { color: themeColor('text') }
                     }}
                     backgroundColor={themeColor('secondary')}
                 />
@@ -275,7 +281,8 @@ export default class Settings extends React.Component<
                     }
                     values={[
                         { key: 'Dark', value: 'dark' },
-                        { key: 'Light', value: 'light' }
+                        { key: 'Light', value: 'light' },
+                        { key: 'Junkie', value: 'junkie' }
                     ]}
                 />
 
@@ -322,7 +329,11 @@ export default class Settings extends React.Component<
                         autoCapitalize="none"
                         autoCorrect={false}
                         secureTextEntry={true}
-                        style={styles.textInput}
+                        style={{
+                            fontSize: 20,
+                            color: themeColor('text'),
+                            paddingLeft: 10
+                        }}
                     />
                 )}
                 {showPassphraseForm && (
@@ -350,7 +361,11 @@ export default class Settings extends React.Component<
                         autoCapitalize="none"
                         autoCorrect={false}
                         secureTextEntry={true}
-                        style={styles.textInput}
+                        style={{
+                            fontSize: 20,
+                            color: themeColor('text'),
+                            paddingLeft: 10
+                        }}
                     />
                 )}
                 <View style={styles.button}>
@@ -445,16 +460,6 @@ export default class Settings extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    scrollView: {
-        flex: 1,
-        backgroundColor: themeColor('background'),
-        color: themeColor('text')
-    },
-    textInput: {
-        fontSize: 20,
-        color: themeColor('text'),
-        paddingLeft: 10
-    },
     error: {
         color: 'red'
     },

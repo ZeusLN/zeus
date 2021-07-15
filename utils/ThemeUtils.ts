@@ -6,7 +6,7 @@ export function themeColor(themeString: string): any {
 
     const Light = {
         background: 'white',
-        secondary: '#f7f7f7', // '#f0f0f0',
+        secondary: '#f0f0f0',
         text: 'black',
         secondaryText: '#8a8999',
         highlight: 'orange',
@@ -35,9 +35,22 @@ export function themeColor(themeString: string): any {
         separator: 'darkgray'
     };
 
+    const Junkie = {
+        background: '#1f2328',
+        secondary: 'rgb(191, 0, 28)',
+        text: 'white',
+        secondaryText: 'lightgray',
+        highlight: 'rgb(249, 212, 0)',
+        error: '#992600',
+        gradient: ['black', '#1f2328', '#1f2328', '#1f2328'],
+        separator: 'darkgray'
+    };
+
     switch (theme) {
         case 'light':
             return Light[themeString] || Dark[themeString];
+        case 'junkie':
+            return Junkie[themeString] || Dark[themeString];
         default:
             return Dark[themeString];
     }

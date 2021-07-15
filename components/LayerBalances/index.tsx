@@ -31,14 +31,28 @@ type DataRow = {
 };
 
 const Row = ({ item }: { item: DataRow }) => (
-    <RectButton style={styles.rectButton}>
+    <RectButton
+        style={{
+            ...styles.rectButton,
+            backgroundColor: themeColor('secondary')
+        }}
+    >
         {item.layer === 'On-chain' ? (
             <OnChain style={{ top: 5 }} />
         ) : (
             <Lightning style={{ top: 5 }} />
         )}
-        <Text style={styles.layerText}>{item.layer}</Text>
-        <Text style={styles.balanceText}>{item.balance}</Text>
+        <Text style={{ ...styles.layerText, color: themeColor('text') }}>
+            {item.layer}
+        </Text>
+        <Text
+            style={{
+                ...styles.balanceText,
+                color: themeColor('secondaryText')
+            }}
+        >
+            {item.balance}
+        </Text>
     </RectButton>
 );
 
@@ -117,7 +131,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         justifyContent: 'space-between',
         flexDirection: 'column',
-        backgroundColor: themeColor('secondary'),
         marginLeft: 15,
         marginRight: 15,
         borderRadius: 15
@@ -132,15 +145,13 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 15,
         top: 30,
-        left: 75,
-        color: themeColor('text')
+        left: 75
     },
     balanceText: {
         backgroundColor: 'transparent',
         position: 'absolute',
         right: 20,
         top: 30,
-        color: '#999',
         fontWeight: 'bold'
     }
 });
