@@ -2,7 +2,6 @@ import * as React from 'react';
 import {
     ActionSheetIOS,
     Platform,
-    StyleSheet,
     View,
     Text,
     TouchableOpacity
@@ -61,7 +60,10 @@ export default class DropdownSetting extends React.Component<
                             onValueChange={(itemValue: string) =>
                                 onValueChange(itemValue)
                             }
-                            style={styles.picker}
+                            style={{
+                                height: 50,
+                                color: themeColor('text')
+                            }}
                         >
                             {pickerValuesAndroid}
                         </Picker>
@@ -112,10 +114,3 @@ export default class DropdownSetting extends React.Component<
         );
     }
 }
-
-const styles = StyleSheet.create({
-    picker: {
-        height: 50,
-        color: themeColor('text')
-    }
-});
