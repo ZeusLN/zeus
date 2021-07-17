@@ -5,8 +5,7 @@ import {
     Text,
     View,
     ScrollView,
-    TextInput,
-    TouchableOpacity
+    TextInput
 } from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
@@ -39,8 +38,6 @@ export default class SignMessage extends React.Component<
         const { MessageSignStore } = this.props;
         MessageSignStore.resetSignature();
     }
-
-    debugger;
 
     render() {
         const { navigation, SettingsStore, MessageSignStore } = this.props;
