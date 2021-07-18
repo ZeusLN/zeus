@@ -38,6 +38,7 @@
     "views.LnurlChannel.uri": "Remote Node ID",
     "views.LnurlChannel.nodeid": "Local Node ID",
     "views.LnurlChannel.success": "Lnurl Channel requested successfully",
+    "views.LnurlAuth.loginSuccess" : "Authenticated successfully",
     "views.Settings.About.about": "About Zeus",
     "views.Settings.About.version": "Version",
     "views.Settings.About.gpl": "Zeus is distributed under the GNU Affero General Public License (AGPL v3). The full license is available on our GitHub repo.",
