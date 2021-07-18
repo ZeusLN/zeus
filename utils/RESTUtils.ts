@@ -71,6 +71,7 @@ class RESTUtils {
     getForwardingHistory = (...args: any[]) =>
         this.call('getForwardingHistory', args);
     getUTXOs = (...args: any[]) => this.call('getUTXOs', args);
+    signMessage = (...args: any[]) => this.call('signMessage', args);
     // lndhub
     createAccount = (...args: any[]) => this.call('createAccount', args);
     login = (...args: any[]) => this.call('login', args);

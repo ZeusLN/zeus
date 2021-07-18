@@ -246,6 +246,8 @@ export default class LND {
                 urlParams[1]}`
         );
     getForwardingHistory = (data: any) => this.postRequest('/v1/switch', data);
+    signMessage = (data: any) =>
+        this.postRequest('/v1/signmessage', {msg: Buffer.from(data.message).toString('base64')});
 
     // LndHub
     createAccount = (

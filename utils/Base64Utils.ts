@@ -71,6 +71,18 @@ class Base64Utils {
 
     hexToBase64 = (str: string = '') =>
         this.byteToBase64(this.hexStringToByte(str));
+
+    stringToUint8Array = (str: string) => {
+      return Uint8Array.from(str, x => x.charCodeAt(0))
+    };
+    hexToUint8Array = (hexString: string) => {
+      return new Uint8Array(hexString.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
+    };
+    bytesToHexString = (bytes) => {
+      return bytes.reduce(function (memo, i) {
+        return memo + ('0' + i.toString(16)).slice(-2); //padd with leading 0 if <16
+      }, "");
+    };
 }
 
 const base64Utils = new Base64Utils();
