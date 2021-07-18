@@ -2,7 +2,7 @@ import * as React from 'react';
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import { version } from './../../package.json';
+import { version, playStore } from './../../package.json';
 import { localeString } from './../../utils/LocaleUtils';
 
 import SettingsStore from './../../stores/SettingsStore';
