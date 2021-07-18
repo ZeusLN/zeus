@@ -451,6 +451,23 @@ export default class Settings extends React.Component<
                         style={styles.button}
                     />
                 </View>
+
+                <View style={styles.button}>
+                    <Button
+                        title={localeString(
+                            'views.Settings.signMessage.button'
+                        )}
+                        buttonStyle={{
+                            backgroundColor: 'green',
+                            borderRadius: 30,
+                            width: 350,
+                            alignSelf: 'center'
+                        }}
+                        onPress={() => navigation.navigate('SignMessage')}
+                        style={styles.button}
+                    />
+                </View>
+
                 <View style={styles.button}>
                     <Button
                         title={localeString('views.Settings.intro')}
