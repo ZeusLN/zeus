@@ -134,8 +134,6 @@ export default class LnurlAuth extends React.Component<
 
                 this.setState({ preparingSignature: false });
                 this.setState({ signatureSuccess: true });
-
-                // this.sendValues(linkingKeyPub, Base64Utils.bytesToHexString(signedMessageDER));
             })
             .catch((error: any) => {
                 // handle error
