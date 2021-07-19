@@ -29,6 +29,7 @@ import Settings from './views/Settings';
 import AddEditNode from './views/Settings/AddEditNode';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import About from './views/Settings/About';
+import SignMessage from './views/Settings/SignMessage';
 
 import Onboarding from './views/Onboarding';
 
@@ -59,6 +60,9 @@ const AppScenes = {
     },
     About: {
         screen: About
+    },
+    SignMessage: {
+        screen: SignMessage
     },
     Transaction: {
         screen: Transaction
