@@ -10,8 +10,9 @@ import { localeString } from './../utils/LocaleUtils';
 import RESTUtils from './../utils/RESTUtils';
 import Base64Utils from './../utils/Base64Utils';
 import { Hash as sha256Hash, HMAC as sha256HMAC } from 'fast-sha256';
-var EC = require('elliptic').ec;
-var ec = new EC('secp256k1');
+
+const EC = require('elliptic').ec;
+const ec = new EC('secp256k1');
 
 const LNURLAUTH_CANONICAL_PHRASE =
     'DO NOT EVER SIGN THIS TEXT WITH YOUR PRIVATE KEYS! IT IS ONLY USED FOR DERIVATION OF LNURL-AUTH HASHING-KEY, DISCLOSING ITS SIGNATURE WILL COMPROMISE YOUR LNURL-AUTH IDENTITY AND MAY LEAD TO LOSS OF FUNDS!';
