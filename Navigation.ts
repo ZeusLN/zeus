@@ -33,6 +33,7 @@ import About from './views/Settings/About';
 import Channels from './views/Channels';
 import Activity from './views/Activity';
 import ActivityFilter from './views/ActivityFilter';
+import CoinControl from './views/CoinControl';
 
 import Onboarding from './views/Onboarding';
 
@@ -120,6 +121,9 @@ const AppScenes = {
     },
     ActivityFilter: {
         screen: ActivityFilter
+    },
+    CoinControl: {
+        screen: CoinControl
     }
 };
 
