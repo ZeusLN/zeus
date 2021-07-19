@@ -1,6 +1,7 @@
 import { action, observable } from 'mobx';
 import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
+import Utxo from './../models/Utxo';
 
 export default class UTXOsStore {
     @observable public loading: boolean = false;
@@ -23,10 +24,12 @@ export default class UTXOsStore {
     public getUTXOs = () => {
         this.errorMsg = '';
         this.loading = true;
-        RESTUtils.getUTXOs()
+        RESTUtils.getUTXOs({ max_confs: 10 })
             .then((data: any) => {
                 this.loading = false;
-                this.utxos = data.outputs || data;
+                this.utxos = data.utxos.map(
+                    (utxo: any) => new Utxo(utxo)
+                );
                 this.error = false;
             })
             .catch((error: any) => {
