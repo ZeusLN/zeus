@@ -2,19 +2,19 @@ import * as React from 'react';
 import RNFetchBlob from 'rn-fetch-blob';
 import { Alert, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Button, Header, Icon, CheckBox } from 'react-native-elements';
+import { Button, Header, Icon } from 'react-native-elements';
 import querystring from 'querystring-es3';
 import url from 'url';
 import SettingsStore from './../stores/SettingsStore';
 import { localeString } from './../utils/LocaleUtils';
-import NodeUriUtils from './../utils/NodeUriUtils';
 import RESTUtils from './../utils/RESTUtils';
 import Base64Utils from './../utils/Base64Utils';
-import sha256, { Hash as sha256Hash, HMAC as sha256HMAC } from "fast-sha256";
+import { Hash as sha256Hash, HMAC as sha256HMAC } from 'fast-sha256';
 var EC = require('elliptic').ec;
 var ec = new EC('secp256k1');
 
-const LNURLAUTH_CANONICAL_PHRASE = "DO NOT EVER SIGN THIS TEXT WITH YOUR PRIVATE KEYS! IT IS ONLY USED FOR DERIVATION OF LNURL-AUTH HASHING-KEY, DISCLOSING ITS SIGNATURE WILL COMPROMISE YOUR LNURL-AUTH IDENTITY AND MAY LEAD TO LOSS OF FUNDS!";
+const LNURLAUTH_CANONICAL_PHRASE =
+    'DO NOT EVER SIGN THIS TEXT WITH YOUR PRIVATE KEYS! IT IS ONLY USED FOR DERIVATION OF LNURL-AUTH HASHING-KEY, DISCLOSING ITS SIGNATURE WILL COMPROMISE YOUR LNURL-AUTH IDENTITY AND MAY LEAD TO LOSS OF FUNDS!';
 
 interface LnurlAuthProps {
     navigation: any;
@@ -30,6 +30,7 @@ interface LnurlAuthState {
     preparingSignature: boolean;
     authenticating: boolean;
     signatureSuccess: boolean;
+    lnurlAuthSuccess: boolean;
     errorMsgAuth: string;
 }
 
@@ -54,6 +55,7 @@ export default class LnurlAuth extends React.Component<
                 preparingSignature: false,
                 authenticating: false,
                 signatureSuccess: false,
+                lnurlAuthSuccess: false,
                 errorMsgAuth: ''
             };
 
@@ -79,6 +81,7 @@ export default class LnurlAuth extends React.Component<
             preparingSignature: false,
             authenticating: false,
             signatureSuccess: false,
+            lnurlAuthSuccess: false,
             errorMsgAuth: 'Error'
         };
     }
@@ -95,33 +98,43 @@ export default class LnurlAuth extends React.Component<
         };
 
         RESTUtils.signMessage(body)
-            .then((signature) => {
+            .then((signature: any) => {
                 // got the signed message, now build linkingkey
 
                 // from https://github.com/hsjoberg/blixt-wallet/blob/931c625666633915412bf7d8947ef6c2c5ce92b3/src/state/LNURL.ts
                 // 1. The following canonical phrase is defined: [...].
                 // 2. LN WALLET obtains an RFC6979 deterministic signature of sha256(utf8ToBytes(canonical phrase)) using secp256k1 with node private key.
                 // 3. LN WALLET defines hashingKey as PrivateKey(sha256(obtained signature)).
-                const hashingKey = new sha256Hash().update(Base64Utils.stringToUint8Array(signature.signature)).digest();
+                const hashingKey = new sha256Hash()
+                    .update(Base64Utils.stringToUint8Array(signature.signature))
+                    .digest();
                 // // 4. SERVICE domain name is extracted from auth LNURL and then service-specific linkingPrivKey is defined as PrivateKey(hmacSha256(hashingKey, service domain name)).
-                const linkingKeyPriv = new sha256HMAC(hashingKey).update(Base64Utils.stringToUint8Array(this.state.domain)).digest();
-              
+                const linkingKeyPriv = new sha256HMAC(hashingKey)
+                    .update(Base64Utils.stringToUint8Array(this.state.domain))
+                    .digest();
+
                 const linkingKeyPair = ec.keyFromPrivate(linkingKeyPriv, true);
                 const pubPoint = linkingKeyPair.getPublic();
                 // Need to compress the key
-                const linkingKeyPub = pubPoint.encodeCompressed("hex")
+                const linkingKeyPub = pubPoint.encodeCompressed('hex');
 
-                const signedMessage = ec.sign(Base64Utils.hexToUint8Array(this.state.k1), linkingKeyPriv);
+                const signedMessage = ec.sign(
+                    Base64Utils.hexToUint8Array(this.state.k1),
+                    linkingKeyPriv
+                );
                 const signedMessageDER = signedMessage.toDER();
 
                 this.setState({ linkingKeyPub: linkingKeyPub });
-                this.setState({ signedMessageDER: Base64Utils.bytesToHexString(signedMessageDER) });
+                this.setState({
+                    signedMessageDER: Base64Utils.bytesToHexString(
+                        signedMessageDER
+                    )
+                });
 
                 this.setState({ preparingSignature: false });
                 this.setState({ signatureSuccess: true });
 
                 // this.sendValues(linkingKeyPub, Base64Utils.bytesToHexString(signedMessageDER));
-
             })
             .catch((error: any) => {
                 // handle error
@@ -133,11 +146,11 @@ export default class LnurlAuth extends React.Component<
         this.triggerSign();
     }
 
-    sendValues(linkingKeyPub: string, signedMessageDER: string) {
+    sendValues() {
         this.setState({ authenticating: true });
 
         const { navigation } = this.props;
-        const { domain, k1 } = this.state;
+        const { domain } = this.state;
         const lnurl = navigation.getParam('lnurlParams');
         const u = url.parse(lnurl.callback);
         const qs = querystring.parse(u.query);
@@ -185,10 +198,9 @@ export default class LnurlAuth extends React.Component<
 
     render() {
         const { SettingsStore, navigation } = this.props;
-        const { domain, privateChannel } = this.state;
+        const { domain } = this.state;
         const { settings } = SettingsStore;
         const { theme } = settings;
-        const lnurl = navigation.getParam('lnurlParams');
 
         const BackButton = () => (
             <Icon
@@ -240,7 +252,10 @@ export default class LnurlAuth extends React.Component<
                                 this.sendValues();
                             }}
                             style={styles.button}
-                            disabled={!this.state.signatureSuccess || this.state.authenticating}
+                            disabled={
+                                !this.state.signatureSuccess ||
+                                this.state.authenticating
+                            }
                             buttonStyle={{
                                 backgroundColor: 'orange',
                                 borderRadius: 30
@@ -249,7 +264,8 @@ export default class LnurlAuth extends React.Component<
                     </View>
 
                     <View style={styles.content}>
-                        {(this.state.preparingSignature || this.state.authenticating) && (
+                        {(this.state.preparingSignature ||
+                            this.state.authenticating) && (
                             <ActivityIndicator size="large" color="#0000ff" />
                         )}
                         {this.state.lnurlAuthSuccess && (
@@ -257,7 +273,10 @@ export default class LnurlAuth extends React.Component<
                                 {localeString('views.LnurlAuth.loginSuccess')}
                             </Text>
                         )}
-                        {!this.state.preparingSignature && !this.state.signatureSuccess && !this.state.authenticating && !this.state.lnurlAuthSuccess && (
+                        {!this.state.preparingSignature &&
+                            !this.state.signatureSuccess &&
+                            !this.state.authenticating &&
+                            !this.state.lnurlAuthSuccess && (
                                 <Text style={{ color: 'red' }}>
                                     {this.state.errorMsgAuth ||
                                         localeString('general.error')}
