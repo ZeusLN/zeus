@@ -4,6 +4,8 @@ import { Avatar, Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import DateTimeUtils from './../utils/DateTimeUtils';
 import PrivacyUtils from './../utils/PrivacyUtils';
+import RESTUtils from './../utils/RESTUtils';
+import Pill from './../components/Pill';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
@@ -23,8 +25,11 @@ interface CoinControlProps {
 export default class CoinControl extends React.Component<CoinControlProps, {}> {
     async UNSAFE_componentWillMount() {
         const { UTXOsStore } = this.props;
-        const { getUTXOs } = UTXOsStore;
+        const { getUTXOs, listAccounts } = UTXOsStore;
         getUTXOs();
+        if (RestUtils.supportsAccounts()) {
+            listAccounts();
+        }
     }
 
     renderSeparator = () => <View style={styles.separator} />;
@@ -41,6 +46,18 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
         const { settings } = SettingsStore;
         const { lurkerMode } = settings;
 
+        const AddPill = () => (
+            <Pill title={localeString('general.add').toUpperCase()} />
+        );
+        const FrozenPill = () => (
+            <Pill
+                title={localeString('general.frozen')}
+                textColor="white"
+                borderColor="darkred"
+                backgroundColor="darkred"
+            />
+        );
+
         const CloseButton = () => (
             <Icon
                 name="close"
@@ -55,7 +72,12 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                 <Header
                     leftComponent={<CloseButton />}
                     centerComponent={{
-                        text: utxos.length > 0 ? `${localeString('general.coins')} (${utxos.length})` : localeString('general.coins'),
+                        text:
+                            utxos.length > 0
+                                ? `${localeString('general.coins')} (${
+                                      utxos.length
+                                  })`
+                                : localeString('general.coins'),
                         style: { color: '#fff' }
                     }}
                     backgroundColor="#1f2328"
@@ -68,9 +90,8 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                     <FlatList
                         data={utxos}
                         renderItem={({ item }) => {
-                            let displayName = 'a';
-                            let subTitle = 'b';
-                            let rightTitle = 'c';
+                            const displayName = getAmount(item.getAmount);
+                            const subTitle = item.address;
 
                             return (
                                 <React.Fragment>
@@ -81,8 +102,10 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                                                 'background'
                                             )
                                         }}
-                                        onPress={(item: any) => {
-                                            console.log(JSON.stringify(item));
+                                        onPress={() => {
+                                            navigation.navigate('Utxo', {
+                                                utxo: item
+                                            });
                                         }}
                                     >
                                         <ListItem.Content>
@@ -100,30 +123,15 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                                                 style={{
                                                     color: themeColor(
                                                         'secondaryText'
-                                                    )
+                                                    ),
+                                                    fontSize: 10
                                                 }}
                                             >
                                                 {subTitle}
                                             </ListItem.Subtitle>
                                         </ListItem.Content>
                                         <ListItem.Content right>
-                                            <ListItem.Title
-                                                right
-                                                style={{
-                                                    fontWeight: '600',
-                                                    color: themeColor('text')
-                                                }}
-                                            >
-                                                {rightTitle}
-                                            </ListItem.Title>
-                                            <ListItem.Subtitle
-                                                right
-                                                style={
-                                                    styles.rightSubtitleStyle
-                                                }
-                                            >
-                                                {'timestamp'}
-                                            </ListItem.Subtitle>
+                                            <FrozenPill />
                                         </ListItem.Content>
                                     </ListItem>
                                 </React.Fragment>

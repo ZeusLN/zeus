@@ -10,6 +10,7 @@ interface Outpoint {
 
 export default class Utxo extends BaseModel {
     @observable address: string;
+    account: string;
     confirmations: string;
     outpoint: Outpoint;
     pk_script: string;
@@ -27,6 +28,6 @@ export default class Utxo extends BaseModel {
     }
 
     @computed public get getOutpoint(): string {
-        return `${this.txid_str}:${this.output_index}`;
+        return `${this.outpoint.txid_str}:${this.outpoint.output_index}`;
     }
 }
