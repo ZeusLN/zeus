@@ -34,6 +34,7 @@ import Channels from './views/Channels';
 import Activity from './views/Activity';
 import ActivityFilter from './views/ActivityFilter';
 import CoinControl from './views/CoinControl';
+import Utxo from './views/UTXO';
 
 import Onboarding from './views/Onboarding';
 
@@ -124,6 +125,9 @@ const AppScenes = {
     },
     CoinControl: {
         screen: CoinControl
+    },
+    Utxo: {
+        screen: Utxo
     }
 };
 
