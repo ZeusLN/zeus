@@ -204,7 +204,14 @@ export default class LnurlAuth extends React.Component<
 
     render() {
         const { SettingsStore, navigation } = this.props;
-        const { domain } = this.state;
+        const {
+            domain,
+            preparingSignature,
+            signatureSuccess,
+            authenticating,
+            lnurlAuthSuccess,
+            errorMsgAuth
+        } = this.state;
         const { settings } = SettingsStore;
         const { theme } = settings;
 
@@ -258,10 +265,7 @@ export default class LnurlAuth extends React.Component<
                                 this.sendValues();
                             }}
                             style={styles.button}
-                            disabled={
-                                !this.state.signatureSuccess ||
-                                this.state.authenticating
-                            }
+                            disabled={!signatureSuccess || authenticating}
                             buttonStyle={{
                                 backgroundColor: 'orange',
                                 borderRadius: 30
@@ -270,21 +274,20 @@ export default class LnurlAuth extends React.Component<
                     </View>
 
                     <View style={styles.content}>
-                        {(this.state.preparingSignature ||
-                            this.state.authenticating) && (
+                        {(preparingSignature || authenticating) && (
                             <ActivityIndicator size="large" color="#0000ff" />
                         )}
-                        {this.state.lnurlAuthSuccess && (
+                        {lnurlAuthSuccess && (
                             <Text style={{ color: 'green' }}>
                                 {localeString('views.LnurlAuth.loginSuccess')}
                             </Text>
                         )}
-                        {!this.state.preparingSignature &&
-                            !this.state.signatureSuccess &&
-                            !this.state.authenticating &&
-                            !this.state.lnurlAuthSuccess && (
+                        {!preparingSignature &&
+                            !signatureSuccess &&
+                            !authenticating &&
+                            !lnurlAuthSuccess && (
                                 <Text style={{ color: 'red' }}>
-                                    {this.state.errorMsgAuth ||
+                                    {errorMsgAuth ||
                                         localeString('general.error')}
                                 </Text>
                             )}
