@@ -125,20 +125,21 @@ export default class LnurlAuth extends React.Component<
                 );
                 const signedMessageDER = signedMessage.toDER();
 
-                this.setState({ linkingKeyPub: linkingKeyPub });
                 this.setState({
+                    linkingKeyPub: linkingKeyPub,
                     signedMessageDER: Base64Utils.bytesToHexString(
                         signedMessageDER
-                    )
+                    ),
+                    preparingSignature: false,
+                    signatureSuccess: true
                 });
-
-                this.setState({ preparingSignature: false });
-                this.setState({ signatureSuccess: true });
             })
             .catch((error: any) => {
                 // handle error
-                this.setState({ preparingSignature: false });
-                this.setState({ errorMsgAuth: error.toString() });
+                this.setState({
+                    preparingSignature: false,
+                    errorMsgAuth: error.toString()
+                });
             });
     }
     componentDidMount() {
@@ -165,9 +166,11 @@ export default class LnurlAuth extends React.Component<
                     const data = response.json();
                     return data;
                 } catch (err) {
-                    this.setState({ signatureSuccess: false });
-                    this.setState({ authenticating: false });
-                    this.setState({ errorMsgAuth: response.text() });
+                    this.setState({
+                        signatureSuccess: false,
+                        authenticating: false,
+                        errorMsgAuth: response.text()
+                    });
                     return { status: 'ERROR', reason: response.text() };
                 }
             })
@@ -177,9 +180,11 @@ export default class LnurlAuth extends React.Component<
             }))
             .then((data: any) => {
                 if (data.status === 'ERROR') {
-                    this.setState({ authenticating: false });
-                    this.setState({ signatureSuccess: false });
-                    this.setState({ errorMsgAuth: data.reason });
+                    this.setState({
+                        authenticating: false,
+                        signatureSuccess: false,
+                        errorMsgAuth: data.reason
+                    });
                     Alert.alert(
                         `[error] ${domain} says:`,
                         data.reason,
@@ -188,9 +193,11 @@ export default class LnurlAuth extends React.Component<
                     );
                     return;
                 } else {
-                    this.setState({ authenticating: false });
-                    this.setState({ signatureSuccess: false });
-                    this.setState({ lnurlAuthSuccess: true });
+                    this.setState({
+                        authenticating: false,
+                        signatureSuccess: false,
+                        lnurlAuthSuccess: true
+                    });
                 }
             });
     }
