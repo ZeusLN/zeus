@@ -5,7 +5,7 @@ import ActivityResult from 'react-native-activity-result-fork';
 import Permissions, { PERMISSIONS, RESULTS } from 'react-native-permissions';
 import {
     CameraKitCamera,
-    CameraKitCameraScreen
+    CameraScreen
 } from 'react-native-camera-kit';
 
 const QRINTENT = 'com.google.zxing.client.android.SCAN';
@@ -20,14 +20,12 @@ interface QRProps {
 }
 
 interface QRState {
-    complete: boolean;
     hasCameraPermission: boolean | null;
     useInternalScanner: boolean;
 }
 
 export default class QRCodeScanner extends React.Component<QRProps, QRState> {
     state = {
-        complete: false,
         hasCameraPermission: null,
         useInternalScanner: Platform.OS !== 'android' // only try to use the external scanner on android
     };
@@ -102,7 +100,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
     }
 
     render() {
-        const { complete, hasCameraPermission } = this.state;
+        const { hasCameraPermission } = this.state;
         const { title, text, handleQRScanned, goBack } = this.props;
 
         if (!this.state.useInternalScanner) {
@@ -116,11 +114,6 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
 
         if (hasCameraPermission === false) {
             return <Text>No access to camera</Text>;
-        }
-
-        // scan has completed, prevent additional scanning
-        if (complete) {
-            return null;
         }
 
         return (
@@ -140,11 +133,10 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                 <View style={styles.content}>
                     <Text>{text}</Text>
                 </View>
-                <CameraKitCameraScreen
+                <CameraScreen
                     laserColor={'orange'}
                     scanBarcode={true}
                     onReadCode={(event: any) => {
-                        this.setState({ complete: true });
                         handleQRScanned(event.nativeEvent.codeStringValue);
                     }}
                     hideControls={true}
