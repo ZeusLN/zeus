@@ -35,6 +35,8 @@ import Activity from './views/Activity';
 import ActivityFilter from './views/ActivityFilter';
 import CoinControl from './views/CoinControl';
 import Utxo from './views/UTXO';
+import ImportAccount from './views/ImportAccount';
+import ImportAccountQRScanner from './views/ImportAccountQRScanner';
 
 import Onboarding from './views/Onboarding';
 
@@ -128,6 +130,12 @@ const AppScenes = {
     },
     Utxo: {
         screen: Utxo
+    },
+    ImportAccount: {
+        screen: ImportAccount
+    },
+    ImportAccountQRScanner: {
+        screen: ImportAccountQRScanner
     }
 };
 
