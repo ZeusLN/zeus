@@ -72,6 +72,7 @@ class RESTUtils {
         this.call('getForwardingHistory', args);
     getUTXOs = (...args: any[]) => this.call('getUTXOs', args);
     listAccounts = (...args: any[]) => this.call('listAccounts', args);
+    importAccount = (...args: any[]) => this.call('importAccount', args);
 
     // lndhub
     createAccount = (...args: any[]) => this.call('createAccount', args);
@@ -83,6 +84,7 @@ class RESTUtils {
     supportsMPP = () => this.call('supportsMPP');
     supportsCoinControl = () => this.call('supportsCoinControl');
     supportsHopPicking = () => this.call('supportsHopPicking');
+    supportsAccounts = () => this.call('supportsAccounts');
 }
 
 const restUtils = new RESTUtils();
