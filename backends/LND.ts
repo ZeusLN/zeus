@@ -255,6 +255,8 @@ export default class LND {
         this.getRequest('/v1/utxos?min_confs=0&max_confs=200000', data);
     bumpFee = (data: any) => this.postRequest('/v2/wallet/bumpfee', data);
     listAccounts = () => this.getRequest('/v2/wallet/accounts');
+    importAccount = (data: any) =>
+        this.postRequest('/v2/wallet/accounts/import', data);
 
     // LndHub
     createAccount = (

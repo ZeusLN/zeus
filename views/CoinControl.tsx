@@ -27,7 +27,7 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
         const { UTXOsStore } = this.props;
         const { getUTXOs, listAccounts } = UTXOsStore;
         getUTXOs();
-        if (RestUtils.supportsAccounts()) {
+        if (RESTUtils.supportsAccounts()) {
             listAccounts();
         }
     }
