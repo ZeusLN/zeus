@@ -7,6 +7,7 @@ import Wallet from './views/Wallet/Wallet';
 import Send from './views/Send';
 import LnurlPay from './views/LnurlPay/LnurlPay';
 import LnurlChannel from './views/LnurlChannel';
+import LnurlAuth from './views/LnurlAuth';
 import Receive from './views/Receive';
 import PaymentRequest from './views/PaymentRequest';
 import AddressQRScanner from './views/AddressQRScanner';
@@ -86,6 +87,9 @@ const AppScenes = {
     },
     LnurlChannel: {
         screen: LnurlChannel
+    },
+    LnurlAuth: {
+        screen: LnurlAuth
     },
     PaymentRequest: {
         screen: PaymentRequest
