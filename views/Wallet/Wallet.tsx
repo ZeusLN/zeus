@@ -34,6 +34,7 @@ import QRIcon from './../../images/SVG/QR.svg';
 import CaretUp from './../../images/SVG/Caret Up.svg';
 
 import handleAnything from './../../utils/handleAnything';
+import ChannelsPane from '../Channels/ChannelsPane';
 
 interface WalletProps {
     enterSetup: any;
@@ -312,6 +313,19 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             );
         };
 
+        const ChannelsScreen = () => {
+            return (
+                <View
+                    style={{
+                        backgroundColor: themeColor('background'),
+                        flex: 1
+                    }}
+                >
+                    <ChannelsPane navigation={navigation} />
+                </View>
+            );
+        };
+
         const buttons = [
             { element: paymentsButton },
             { element: invoicesButton },
@@ -349,11 +363,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 let iconName;
 
                                 if (route.name === 'Wallet') {
-                                    return (
-                                        <WalletIcon
-                                            fill={themeColor('highlight')}
-                                        />
-                                    );
+                                    return <WalletIcon fill={color} />;
                                 }
                                 if (route.name === scanAndSend) {
                                     return (
@@ -401,23 +411,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         </TouchableOpacity>
                                     );
                                 }
-                                return (
-                                    <TouchableOpacity
-                                        onPress={() =>
-                                            this.props.navigation.navigate(
-                                                'Channels'
-                                            )
-                                        }
-                                    >
-                                        <ChannelsIcon />
-                                    </TouchableOpacity>
-                                );
+                                return <ChannelsIcon fill={color} />;
                             }
                         })}
                         tabBarOptions={{
                             activeTintColor: themeColor('highlight'),
-                            inactiveTintColor: 'gray',
-                            backgroundColor: themeColor('highlight')
+                            inactiveTintColor: 'gray'
                         }}
                     >
                         <Tab.Screen name="Wallet" component={WalletScreen} />
@@ -426,8 +425,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             component={WalletScreen}
                         />
                         <Tab.Screen
-                            name={localeString('views.Wallet.Wallet.channels')}
-                            component={WalletScreen}
+                            name={'Channels'}
+                            component={ChannelsScreen}
                         />
                     </Tab.Navigator>
                 </NavigationContainer>
