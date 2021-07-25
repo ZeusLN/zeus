@@ -22,6 +22,7 @@ export function themeColor(themeString: string): any {
             'grey'
         ],
         separator: '#CED0CE'
+        // TODO: pick outbound and inbound colors for light and junkie themes
     };
 
     const Dark = {
@@ -32,7 +33,9 @@ export function themeColor(themeString: string): any {
         highlight: '#ffd24b',
         error: '#992600',
         gradient: ['black', '#1f2328', '#1f2328', '#1f2328'],
-        separator: 'darkgray'
+        separator: 'darkgray',
+        outbound: '#FFD93F',
+        inbound: '#FFF0CA'
     };
 
     const Junkie = {
