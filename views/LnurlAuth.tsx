@@ -92,10 +92,6 @@ export default class LnurlAuth extends React.Component<
 
         const body = {
             msg: Base64Utils.btoa(LNURLAUTH_CANONICAL_PHRASE),
-            key_loc: {
-                key_family: 0,
-                key_index: 0
-            }
         };
 
         RESTUtils.signMessage(body)
