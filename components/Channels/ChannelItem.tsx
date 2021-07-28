@@ -22,7 +22,9 @@ export function ChannelItem({
     largestTotal?: number;
     status: Status;
 }) {
-    const percentOfLargest = largestTotal ? (inbound + outbound) / largestTotal : 1.0;
+    const percentOfLargest = largestTotal
+        ? (inbound + outbound) / largestTotal
+        : 1.0;
     return (
         <View
             style={{
