@@ -32,6 +32,9 @@ build/
 local.properties
 *.iml
 
+# pseudozach android env
+android/
+
 # Visual Studio Code
 #
 .vscode/

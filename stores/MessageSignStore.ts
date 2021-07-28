@@ -18,10 +18,6 @@ export default class MessageSignStore {
         this.loading = true;
         const body = {
             msg: Base64Utils.btoa(text),
-            key_loc: {
-                key_family: 0,
-                key_index: 0
-            }
         };
 
         RESTUtils.signMessage(body)
