@@ -461,7 +461,7 @@ export default class Eclair {
     };
 
     signMessage = (message: any) =>
-        this.api('signmessage', { 
+        this.api('signmessage', {
             msg: `${message}`
         });
 
