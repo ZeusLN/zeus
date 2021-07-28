@@ -90,9 +90,7 @@ export default class LnurlAuth extends React.Component<
     triggerSign() {
         this.setState({ preparingSignature: true });
 
-        const body = {
-            msg: Base64Utils.btoa(LNURLAUTH_CANONICAL_PHRASE),
-        };
+        const body = Base64Utils.btoa(LNURLAUTH_CANONICAL_PHRASE);
 
         RESTUtils.signMessage(body)
             .then((signature: any) => {
