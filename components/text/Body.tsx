@@ -8,6 +8,11 @@ export function Body({
     bold = false,
     small = false,
     children
+}: {
+    secondary?: boolean;
+    bold?: boolean;
+    small?: boolean;
+    children: React.ReactNode;
 }) {
     return (
         <Text

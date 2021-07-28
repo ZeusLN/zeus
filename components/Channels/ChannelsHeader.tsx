@@ -4,9 +4,10 @@ import { StyleSheet, View } from 'react-native';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Svg, { G, Circle } from 'react-native-svg';
-import { Body } from '../../components/text/Body';
-import { Row } from '../../components/layout/Row';
-import { Spacer } from '../../components/layout/Spacer';
+import { Body } from '../text/Body';
+import { Row } from '../layout/Row';
+import { Spacer } from '../layout/Spacer';
+import { Sats } from '../Sats';
 
 const outboundYellow = themeColor('outbound');
 const inboundYellow = themeColor('inbound');
@@ -45,6 +46,7 @@ function Donut({ radius = 42, strokeWidth = 6 }) {
                         strokeDasharray={`${outboundLength}, ${circumference -
                             outboundLength}`}
                     />
+                    {/* Inbound */}
                     <Circle
                         cx="50%"
                         cy="50%"
@@ -56,6 +58,7 @@ function Donut({ radius = 42, strokeWidth = 6 }) {
                         strokeDasharray={`${inboundLength}, ${circumference -
                             inboundLength}`}
                     />
+                    {/* Offline */}
                     <Circle
                         cx="50%"
                         cy="50%"
@@ -67,6 +70,7 @@ function Donut({ radius = 42, strokeWidth = 6 }) {
                         strokeDasharray={`${offlineLength}, ${circumference -
                             offlineLength}`}
                     />
+                    {/* Hidden circle behind in case we're bad at math */}
                     <Circle
                         cx="50%"
                         cy="50%"
@@ -83,47 +87,31 @@ function Donut({ radius = 42, strokeWidth = 6 }) {
     );
 }
 
-function Dot({ radius = 4, color = 'pink' }) {
-    return (
-        <View style={{ width: radius * 2, height: radius * 2 }}>
-            <Svg
-                height={radius * 2}
-                width={radius * 2}
-                viewBox={`0 0 ${radius * 2} ${radius * 2}`}
-            >
-                <G origin={`${radius}, ${radius}`}>
-                    <Circle cx="50%" cy="50%" r={radius} fill={color} />
-                </G>
-            </Svg>
-        </View>
-    );
-}
-
 function TotalRow({
     kind,
     amount,
     color
 }: {
     kind: string;
-    amount: string;
+    amount: number;
     color: string;
 }) {
     return (
-        <Row justify="space-between" style={{ paddingTop: 4 }}>
+        <Row justify="space-between">
             <Row>
-                <Dot color={color} />
+                <View
+                    style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 8,
+                        backgroundColor: color
+                    }}
+                />
                 <Spacer width={8} />
+                {/* TODO: localize */}
                 <Body secondary>Total {kind}</Body>
             </Row>
-            <Row align="flex-end">
-                <Body>{amount}</Body>
-                <Spacer width={2} />
-                <View style={{ paddingBottom: 1.5 }}>
-                    <Body secondary small>
-                        sats
-                    </Body>
-                </View>
-            </Row>
+            <Sats sats={amount} />
         </Row>
     );
 }
@@ -134,37 +122,14 @@ export function ChannelsHeader() {
             <View style={styles.donut}>
                 <Donut />
             </View>
-            <View>
-                <TotalRow
-                    kind="outbound"
-                    amount={'74,000'}
-                    color={outboundYellow}
-                />
-                <TotalRow
-                    kind="inbound"
-                    amount={'79,000'}
-                    color={inboundYellow}
-                />
-                <TotalRow
-                    kind="offline"
-                    amount={'18,000'}
-                    color={offlineGray}
-                />
-            </View>
+            <TotalRow kind="outbound" amount={74000} color={outboundYellow} />
+            <TotalRow kind="inbound" amount={79000} color={inboundYellow} />
+            <TotalRow kind="offline" amount={18000} color={offlineGray} />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    row: {
-        flexDirection: 'row',
-        alignItems: 'center'
-    },
-    totalRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-    },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -179,6 +144,8 @@ const styles = StyleSheet.create({
     },
     wrapper: {
         display: 'flex',
+        justifyContent: 'space-between',
+        height: 200,
         paddingBottom: 16,
         paddingLeft: 16,
         paddingRight: 16,
@@ -186,6 +153,7 @@ const styles = StyleSheet.create({
         borderBottomLeftRadius: 20,
         borderBottomRightRadius: 20,
         color: themeColor('text'),
+        // TODO: this shadow stuff probably needs tweaking on iOS
         shadowColor: '#000',
         shadowOffset: {
             width: 0,

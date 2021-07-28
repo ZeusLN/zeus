@@ -1,11 +1,5 @@
 import * as React from 'react';
-import {
-    FlatList,
-    ScrollView,
-    StyleSheet,
-    View,
-    SafeAreaView
-} from 'react-native';
+import { FlatList, ScrollView, StyleSheet, View } from 'react-native';
 import { Avatar, Button, Header, Icon, ListItem } from 'react-native-elements';
 import Channel from './../models/Channel';
 import BalanceSlider from './../components/BalanceSlider';
@@ -69,7 +63,155 @@ export default class Channels extends React.Component<ChannelsProps, {}> {
             />
         );
 
-        return <ScrollView style={styles.scrollView}></ScrollView>;
+        return (
+            <ScrollView style={styles.scrollView}>
+                <Header
+                    leftComponent={<BackButton />}
+                    centerComponent={{
+                        text: localeString('views.Wallet.Wallet.channels'),
+                        style: { color: '#fff' }
+                    }}
+                    backgroundColor={themeColor('secondary')}
+                />
+                {!NodeInfoStore.error && (
+                    <View style={styles.button}>
+                        <Button
+                            title={localeString('views.Wallet.Channels.open')}
+                            icon={{
+                                name: 'swap-horiz',
+                                size: 25,
+                                color: 'white'
+                            }}
+                            buttonStyle={{
+                                backgroundColor: '#261339',
+                                borderRadius: 30,
+                                width: 350,
+                                alignSelf: 'center'
+                            }}
+                            onPress={() => navigation.navigate('OpenChannel')}
+                            style={{
+                                paddingTop: 10,
+                                width: 250,
+                                alignSelf: 'center'
+                            }}
+                        />
+                    </View>
+                )}
+                {(!!channels && channels.length > 0) || loading ? (
+                    <FlatList
+                        data={channels}
+                        renderItem={({ item }) => {
+                            const displayName =
+                                item.alias ||
+                                (nodes[item.remote_pubkey] &&
+                                    nodes[item.remote_pubkey].alias) ||
+                                item.remote_pubkey ||
+                                item.channelId;
+
+                            const channelTitle = PrivacyUtils.sensitiveValue(
+                                displayName,
+                                8
+                            );
+
+                            const data = new Identicon(
+                                hash.sha1(channelTitle),
+                                255
+                            ).toString();
+
+                            const localBalanceDisplay = PrivacyUtils.sensitiveValue(
+                                getAmount(item.localBalance || 0),
+                                7,
+                                true
+                            );
+                            const remoteBalanceDisplay = PrivacyUtils.sensitiveValue(
+                                getAmount(item.remoteBalance || 0),
+                                7,
+                                true
+                            );
+
+                            return (
+                                <React.Fragment>
+                                    <ListItem
+                                        title={channelTitle}
+                                        leftElement={ChannelIcon(
+                                            `data:image/png;base64,${data}`
+                                        )}
+                                        subtitle={`${
+                                            !item.isActive
+                                                ? `${localeString(
+                                                      'views.Wallet.Channels.inactive'
+                                                  )} | `
+                                                : ''
+                                        }${
+                                            item.private
+                                                ? `${localeString(
+                                                      'views.Wallet.Channels.private'
+                                                  )} | `
+                                                : ''
+                                        }${localeString(
+                                            'views.Wallet.Channels.local'
+                                        )}: ${units &&
+                                            localBalanceDisplay} | ${localeString(
+                                            'views.Wallet.Channels.remote'
+                                        )}: ${units && remoteBalanceDisplay}`}
+                                        containerStyle={{
+                                            borderBottomWidth: 0,
+                                            backgroundColor: themeColor(
+                                                'background'
+                                            )
+                                        }}
+                                        onPress={() =>
+                                            navigation.navigate('Channel', {
+                                                channel: item
+                                            })
+                                        }
+                                        titleStyle={{
+                                            color: themeColor('text')
+                                        }}
+                                        subtitleStyle={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    />
+                                    <BalanceSlider
+                                        localBalance={
+                                            lurkerMode ? 50 : item.localBalance
+                                        }
+                                        remoteBalance={
+                                            lurkerMode ? 50 : item.remoteBalance
+                                        }
+                                        list
+                                    />
+                                </React.Fragment>
+                            );
+                        }}
+                        keyExtractor={(item, index) =>
+                            `${item.remote_pubkey}-${index}`
+                        }
+                        ItemSeparatorComponent={this.renderSeparator}
+                        onEndReachedThreshold={50}
+                        refreshing={loading}
+                        onRefresh={() => this.refresh()}
+                    />
+                ) : (
+                    <Button
+                        title={localeString('views.Wallet.Channels.noChannels')}
+                        icon={{
+                            name: 'error-outline',
+                            size: 25,
+                            color: themeColor('text')
+                        }}
+                        onPress={() => this.refresh()}
+                        buttonStyle={{
+                            backgroundColor: 'transparent',
+                            borderRadius: 30
+                        }}
+                        titleStyle={{
+                            color: themeColor('text')
+                        }}
+                    />
+                )}
+            </ScrollView>
+        );
     }
 }
 
