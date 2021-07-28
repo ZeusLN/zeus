@@ -115,6 +115,10 @@ export default class CLightningREST extends LND {
         });
     getRoutes = () => this.getRequest('N/A');
     getUTXOs = () => this.getRequest('/v1/listFunds');
+    signMessage = (message: any) =>
+        this.postRequest('/v1/utility/signMessage', {
+            message: `${message}`
+        });
 
     supportsMPP = () => false;
     supportsCoinControl = () => this.supports('v0.8.2', 'v0.4.0');
