@@ -354,6 +354,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             'general.send'
         )}`;
 
+        // TODO: reorg? maybe just detect if on channels page and shrink middle button
         return (
             <View style={{ flex: 1 }}>
                 <NavigationContainer theme={Theme}>
@@ -424,6 +425,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             name={scanAndSend}
                             component={WalletScreen}
                         />
+                        {/* TODO: the icon isn't taking on the color like the wallet one does */}
                         <Tab.Screen
                             name={'Channels'}
                             component={ChannelsScreen}
