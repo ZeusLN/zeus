@@ -427,7 +427,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         />
                         {/* TODO: the icon isn't taking on the color like the wallet one does */}
                         <Tab.Screen
-                            name={'Channels'}
+                            name={localeString('views.Wallet.Wallet.channels')}
                             component={ChannelsScreen}
                         />
                     </Tab.Navigator>
