@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Image, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
-import { Badge, Button, Header } from 'react-native-elements';
+import { Badge, Button } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import PrivacyUtils from './../../utils/PrivacyUtils';
 import { localeString } from './../../utils/LocaleUtils';
@@ -11,11 +11,10 @@ import UnitsStore from './../../stores/UnitsStore';
 import BalanceStore from './../../stores/BalanceStore';
 import SettingsStore from './../../stores/SettingsStore';
 
-import NodeOn from './../../images/SVG/Node On.svg';
-
 const TorIcon = require('./../../images/tor.png');
 
 import { version, playStore } from './../../package.json';
+import { WalletHeader } from '../../components/WalletHeader';
 
 interface MainPaneProps {
     navigation: any;
@@ -121,22 +120,6 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
             </React.Fragment>
         );
 
-        const SettingsButton = () => (
-            <Button
-                title=""
-                icon={{
-                    name: 'more-horiz',
-                    size: 25,
-                    color: themeColor('text')
-                }}
-                buttonStyle={{
-                    backgroundColor: 'transparent',
-                    marginRight: -10
-                }}
-                onPress={() => navigation.navigate('Settings')}
-            />
-        );
-
         let infoValue = 'ⓘ';
         if (NodeInfoStore.nodeInfo.isTestNet) {
             infoValue = localeString('views.Wallet.MainPane.testnet');
@@ -158,14 +141,6 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                     <LightningBalance />
                 </TouchableOpacity>
             </>
-        );
-
-        const NodeInfoBadge = () => (
-            <TouchableOpacity
-                onPress={() => this.props.navigation.navigate('NodeInfo')}
-            >
-                <NodeOn stroke={themeColor('text')} />
-            </TouchableOpacity>
         );
 
         const NetworkBadge = () => (
@@ -199,13 +174,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
         if (loading) {
             mainPane = (
                 <View style={styles.loadingContainer}>
-                    <Header
-                        rightComponent={<SettingsButton />}
-                        backgroundColor="transparent"
-                        containerStyle={{
-                            borderBottomWidth: 0
-                        }}
-                    />
+                    <WalletHeader navigation={navigation} loading={true} />
                     <Button
                         title=""
                         loading
@@ -225,14 +194,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                         backgroundColor: themeColor('secondary')
                     }}
                 >
-                    <Header
-                        leftComponent={<NodeInfoBadge />}
-                        rightComponent={<SettingsButton />}
-                        backgroundColor="transparent"
-                        containerStyle={{
-                            borderBottomWidth: 0
-                        }}
-                    />
+                    <WalletHeader navigation={navigation} />
                     {implementation === 'lndhub' ? (
                         <LndHubBalance />
                     ) : (
