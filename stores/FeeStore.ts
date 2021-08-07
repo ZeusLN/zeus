@@ -52,6 +52,27 @@ export default class FeeStore {
             });
     };
 
+    @action
+    public getOnchainFeesviaMempool = () => {
+        this.loading = true;
+        RNFetchBlob.fetch('get', 'https://mempool.space/api/v1/fees/recommended')
+            .then((response: any) => {
+                const status = response.info().status;
+                if (status == 200) {
+                    const mempoolfeedata = response.json();
+                    this.loading = false;
+                    this.dataFrame = mempoolfeedata;
+                } else {
+                    this.dataFrame = {};
+                    this.loading = false;
+                }
+            })
+            .catch(() => {
+                this.dataFrame = {};
+                this.loading = false;
+            });
+    };    
+
     resetFees = () => {
         this.fees = {};
         this.loading = false;
