@@ -55,7 +55,10 @@ export default class FeeStore {
     @action
     public getOnchainFeesviaMempool = () => {
         this.loading = true;
-        RNFetchBlob.fetch('get', 'https://mempool.space/api/v1/fees/recommended')
+        RNFetchBlob.fetch(
+            'get',
+            'https://mempool.space/api/v1/fees/recommended'
+        )
             .then((response: any) => {
                 const status = response.info().status;
                 if (status == 200) {
@@ -71,7 +74,7 @@ export default class FeeStore {
                 this.dataFrame = {};
                 this.loading = false;
             });
-    };    
+    };
 
     resetFees = () => {
         this.fees = {};
