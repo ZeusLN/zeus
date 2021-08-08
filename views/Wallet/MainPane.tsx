@@ -15,6 +15,7 @@ const TorIcon = require('./../../images/tor.png');
 
 import { version, playStore } from './../../package.json';
 import { WalletHeader } from '../../components/WalletHeader';
+import { Value } from '../../components/Value';
 
 interface MainPaneProps {
     navigation: any;
@@ -53,71 +54,23 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
 
         const LightningBalance = () => (
             <>
-                <Text
-                    style={{
-                        fontSize: 40,
-                        color: themeColor('text')
-                    }}
-                >
-                    {units &&
-                        PrivacyUtils.sensitiveValue(
-                            getAmount(lightningBalance),
-                            8,
-                            true
-                        )}{' '}
-                    ⚡
-                </Text>
+                <Value jumbo={true} sats={lightningBalance} sensitive />
                 {pendingOpenBalance > 0 ? (
-                    <Text
-                        style={{
-                            fontSize: 20,
-                            color: themeColor('text')
-                        }}
-                    >
-                        {units &&
-                            PrivacyUtils.sensitiveValue(
-                                getAmount(pendingOpenBalance),
-                                8,
-                                true
-                            )}{' '}
-                        pending open
-                    </Text>
+                    <Value jumbo={true} sats={pendingOpenBalance} sensitive />
                 ) : null}
             </>
         );
-
         const BalanceViewCombined = () => (
-            <React.Fragment>
-                <Text
-                    style={{
-                        fontSize: 40,
-                        color: themeColor('text')
-                    }}
-                >
-                    {units &&
-                        PrivacyUtils.sensitiveValue(
-                            getAmount(combinedBalanceValue),
-                            null,
-                            true
-                        )}
-                </Text>
+            <>
+                <Value jumbo={true} sats={combinedBalanceValue} sensitive />
                 {unconfirmedBlockchainBalance || pendingOpenBalance ? (
-                    <Text
-                        style={{
-                            fontSize: 20,
-                            color: themeColor('text')
-                        }}
-                    >
-                        {units &&
-                            PrivacyUtils.sensitiveValue(
-                                getAmount(pendingUnconfirmedBalance),
-                                null,
-                                true
-                            )}{' '}
-                        pending
-                    </Text>
+                    <Value
+                        jumbo={true}
+                        sats={pendingUnconfirmedBalance}
+                        sensitive
+                    />
                 ) : null}
-            </React.Fragment>
+            </>
         );
 
         let infoValue = 'ⓘ';

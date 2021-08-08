@@ -7,6 +7,16 @@ type Units = 'sats' | 'btc' | 'fiat';
 
 export const satoshisPerBTC = 100000000;
 
+interface ValueDisplayProps {
+    amount: string;
+    unit: Units;
+    symbol?: string;
+    negative?: boolean;
+    plural?: boolean;
+    rtl?: boolean;
+    space?: boolean;
+}
+
 export default class UnitsStore {
     @observable public units: Units = 'sats';
     settingsStore: SettingsStore;
@@ -46,6 +56,65 @@ export default class UnitsStore {
 
     numberWithCommas = (x: string | number) =>
         x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+    @action getUnformattedAmount = (
+        value: string | number = 0,
+        fixedUnits?: string
+    ): ValueDisplayProps => {
+        const { settings } = this.settingsStore;
+        const { fiat } = settings;
+        const units = fixedUnits || this.units;
+
+        const wholeSats = value.toString().split('.')[0];
+        const sats = (wholeSats && Number(wholeSats)) || 0;
+        const negative = sats < 0;
+        const absValueSats = Math.abs(sats);
+
+        if (units === 'btc') {
+            return {
+                amount: FeeUtils.toFixed(absValueSats / satoshisPerBTC),
+                unit: 'btc',
+                negative,
+                space: false
+            };
+        } else if (units === 'sats') {
+            return {
+                amount: this.numberWithCommas(absValueSats),
+                unit: 'sats',
+                negative,
+                plural: !(Number(value) === 1 || Number(value) === -1)
+            };
+        } else {
+            const currency = fiat;
+
+            // TODO: is this the right place to catch this?
+            if (!currency || currency === 'Disabled') {
+                return {
+                    amount: 'Disabled',
+                    unit: 'fiat',
+                    symbol: '$'
+                };
+            }
+
+            // TODO: what should we do when this is undefined?
+            const rate =
+                this.fiatStore.fiatRates[currency] &&
+                this.fiatStore.fiatRates[currency]['15m'];
+            const { symbol, space, rtl } = this.fiatStore.getSymbol();
+
+            return {
+                amount: (
+                    FeeUtils.toFixed(absValueSats / satoshisPerBTC) * rate
+                ).toFixed(2),
+                unit: 'fiat',
+                symbol,
+                negative,
+                plural: false,
+                rtl,
+                space
+            };
+        }
+    };
 
     @action
     public getAmount = (value: string | number = 0, fixedUnits?: string) => {
