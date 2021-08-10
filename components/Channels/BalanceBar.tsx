@@ -22,7 +22,7 @@ export function BalanceBar({
 
     // If we're supposed to show proportionally set the miniumum to 20% of the width
     // Otherwise take the full width
-    const width = showProportionally ? Math.max(0.2, percentOfLargest) : 1.0;
+    const width = showProportionally ? Math.max(0.03, percentOfLargest) : 1.0;
     return (
         <Row flex={width}>
             <View

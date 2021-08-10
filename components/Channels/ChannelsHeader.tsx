@@ -13,18 +13,18 @@ const outboundYellow = themeColor('outbound');
 const inboundYellow = themeColor('inbound');
 const offlineGray = themeColor('secondaryText');
 
-function Donut({ radius = 42, strokeWidth = 6 }) {
+function Donut(props) {
+    const radius = 42,
+        strokeWidth = 6;
+    const { totalInbound, totalOutbound, totalOffline } = props;
     const halfCircle = radius + strokeWidth;
     const circumference = 2 * Math.PI * radius;
     const color = 'black';
 
-    const outbound = 75;
-    const inbound = 79;
-    const offline = 18;
-    const total = outbound + inbound + offline;
-    const outboundLength = (outbound / total) * circumference;
-    const inboundLength = (inbound / total) * circumference;
-    const offlineLength = (offline / total) * circumference;
+    const total = totalInbound + totalOutbound + totalOffline;
+    const outboundLength = (totalOutbound / total) * circumference;
+    const inboundLength = (totalInbound / total) * circumference;
+    const offlineLength = (totalOffline / total) * circumference;
 
     return (
         <View style={{ width: radius * 2, height: radius * 2 }}>
@@ -116,15 +116,32 @@ function TotalRow({
     );
 }
 
-export function ChannelsHeader() {
+export function ChannelsHeader(props) {
+    const { totalInbound, totalOutbound, totalOffline } = props;
     return (
         <View style={styles.wrapper}>
             <View style={styles.donut}>
-                <Donut />
+                <Donut
+                    totalInbound={totalInbound}
+                    totalOutbound={totalOutbound}
+                    totalOffline={totalOffline}
+                />
             </View>
-            <TotalRow kind="outbound" amount={74000} color={outboundYellow} />
-            <TotalRow kind="inbound" amount={79000} color={inboundYellow} />
-            <TotalRow kind="offline" amount={18000} color={offlineGray} />
+            <TotalRow
+                kind="outbound"
+                amount={totalOutbound}
+                color={outboundYellow}
+            />
+            <TotalRow
+                kind="inbound"
+                amount={totalInbound}
+                color={inboundYellow}
+            />
+            <TotalRow
+                kind="offline"
+                amount={totalOffline}
+                color={offlineGray}
+            />
         </View>
     );
 }
