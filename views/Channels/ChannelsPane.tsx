@@ -9,9 +9,6 @@ import { Spacer } from '../../components/layout/Spacer';
 
 import { inject, observer } from 'mobx-react';
 import ChannelsStore from '../../stores/ChannelsStore';
-import NodeInfoStore from '../../stores/NodeInfoStore';
-import UnitsStore from '../../stores/UnitsStore';
-import SettingsStore from '../../stores/SettingsStore';
 
 // TODO: does this belong in the model? Or can it be computed from the model?
 export enum Status {
@@ -24,12 +21,9 @@ export enum Status {
 interface ChannelsProps {
     navigation: any;
     ChannelsStore: ChannelsStore;
-    NodeInfoStore: NodeInfoStore;
-    UnitsStore: UnitsStore;
-    SettingsStore: SettingsStore;
 }
 
-@inject('ChannelsStore', 'NodeInfoStore', 'UnitsStore', 'SettingsStore')
+@inject('ChannelsStore')
 @observer
 export default class ChannelsPane extends React.PureComponent<
     ChannelsProps,
@@ -73,12 +67,13 @@ export default class ChannelsPane extends React.PureComponent<
             getChannels,
             totalInbound,
             totalOutbound,
-            totalOffline
+            totalOffline,
+            channels
         } = ChannelsStore;
         return (
             <View style={{ flex: 1 }}>
                 <WalletHeader
-                    navigation={this.props.navigation}
+                    navigation={navigation}
                     title={this.headerString}
                     channels
                 />
@@ -88,7 +83,7 @@ export default class ChannelsPane extends React.PureComponent<
                     totalOffline={totalOffline}
                 />
                 <FlatList
-                    data={this.props.ChannelsStore.channels}
+                    data={channels}
                     renderItem={this.renderItem}
                     ListFooterComponent={<Spacer height={100} />}
                     onRefresh={() => getChannels()}
