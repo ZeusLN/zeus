@@ -54,6 +54,7 @@ export default class ChannelsStore {
         );
     }
 
+    @action
     reset = () => {
         this.loading = false;
         this.error = false;
@@ -70,6 +71,10 @@ export default class ChannelsStore {
         this.peerSuccess = false;
         this.channelSuccess = false;
         this.channelRequest = null;
+        this.largestChannelSats = 0;
+        this.totalOutbound = 0;
+        this.totalInbound = 0;
+        this.totalOffline = 0;
     };
 
     @action
