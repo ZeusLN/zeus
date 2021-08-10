@@ -106,7 +106,7 @@ export default class ChannelsStore {
                         channelRemoteBalance + channelLocalBalance;
                     if (channelTotal > this.largestChannelSats)
                         this.largestChannelSats = channelTotal;
-                    if (channel.isActive == true) {
+                    if (!channel.isActive) {
                         this.totalOffline += channelTotal;
                     } else {
                         this.totalInbound += channelRemoteBalance;
