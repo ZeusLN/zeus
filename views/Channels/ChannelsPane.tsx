@@ -48,9 +48,13 @@ export default class ChannelsPane extends React.PureComponent<
             item.remote_pubkey ||
             item.channelId;
         return (
-            <TouchableHighlight onPress={() => navigation.navigate('Channel', {
-                channel: item
-            })}>
+            <TouchableHighlight
+                onPress={() =>
+                    navigation.navigate('Channel', {
+                        channel: item
+                    })
+                }
+            >
                 <ChannelItem
                     title={displayName}
                     status={item.isActive ? Status.Good : Status.Offline}
@@ -76,6 +80,7 @@ export default class ChannelsPane extends React.PureComponent<
                 <WalletHeader
                     navigation={this.props.navigation}
                     title={this.headerString}
+                    channels
                 />
                 <ChannelsHeader
                     totalInbound={totalInbound}
