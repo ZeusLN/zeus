@@ -8,7 +8,8 @@ import * as React from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { Button } from 'react-native-elements';
 import FeeUtils from './../utils/FeeUtils';
-// import { Cell, Header, Row } from 'react-native-data-table';
+import { themeColor } from './../utils/ThemeUtils';
+
 import { DataTable } from 'react-native-paper';
 import isEmpty from 'lodash/isEmpty';
 import { inject, observer } from 'mobx-react';
@@ -128,9 +129,8 @@ export default class FeeTable extends React.Component<
                         <View style={this.styler(indexText)}>
                             <Text
                                 style={{
-                                    backgroundColor:
-                                        theme === 'dark' ? 'black' : 'white',
-                                    color: theme === 'dark' ? 'white' : 'black',
+                                    backgroundColor: themeColor('background'),
+                                    color: themeColor('text'),
                                     width: 100
                                 }}
                             >
@@ -150,7 +150,7 @@ export default class FeeTable extends React.Component<
                     icon={{
                         name: 'view-module',
                         size: 25,
-                        color: theme === 'dark' ? 'black' : 'white'
+                        color: themeColor('background')
                     }}
                     containerStyle={{
                         marginBottom: 20,
@@ -158,11 +158,11 @@ export default class FeeTable extends React.Component<
                         alignSelf: 'center'
                     }}
                     buttonStyle={{
-                        backgroundColor: theme === 'dark' ? 'white' : 'black',
+                        backgroundColor: themeColor('text'),
                         borderRadius: 30
                     }}
                     titleStyle={{
-                        color: theme === 'dark' ? 'black' : 'white'
+                        color: themeColor('background')
                     }}
                     onPress={() =>
                         collapsed ? this.openTable() : this.closeTable()

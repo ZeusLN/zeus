@@ -18,6 +18,7 @@ import { inject, observer } from 'mobx-react';
 import AddressUtils, { DEFAULT_LNDHUB } from './../../utils/AddressUtils';
 import LndConnectUtils from './../../utils/LndConnectUtils';
 import { localeString } from './../../utils/LocaleUtils';
+import { themeColor } from './../../utils/ThemeUtils';
 import CollapsedQR from './../../components/CollapsedQR';
 import SettingsStore from './../../stores/SettingsStore';
 
@@ -376,7 +377,6 @@ export default class AddEditNode extends React.Component<
             settings,
             createAccount
         } = SettingsStore;
-        const savedTheme = settings.theme;
 
         const BackButton = () => (
             <Icon
@@ -421,11 +421,7 @@ export default class AddEditNode extends React.Component<
             <>
                 {Platform.OS !== 'ios' && (
                     <View>
-                        <Text
-                            style={{
-                                color: savedTheme === 'dark' ? 'white' : 'black'
-                            }}
-                        >
+                        <Text style={styles.text}>
                             {localeString(
                                 'views.Settings.AddEditNode.nodeInterface'
                             )}
@@ -447,11 +443,7 @@ export default class AddEditNode extends React.Component<
                                     });
                                 }
                             }}
-                            style={
-                                savedTheme === 'dark'
-                                    ? styles.pickerDark
-                                    : styles.picker
-                            }
+                            style={styles.picker}
                         >
                             <Picker.Item label="lnd" value="lnd" />
                             <Picker.Item
@@ -470,11 +462,7 @@ export default class AddEditNode extends React.Component<
 
                 {Platform.OS === 'ios' && (
                     <View>
-                        <Text
-                            style={{
-                                color: savedTheme === 'dark' ? 'white' : 'black'
-                            }}
-                        >
+                        <Text style={styles.text}>
                             {localeString(
                                 'views.Settings.AddEditNode.nodeInterface'
                             )}
@@ -530,16 +518,7 @@ export default class AddEditNode extends React.Component<
                                 )
                             }
                         >
-                            <Text
-                                style={{
-                                    color:
-                                        savedTheme === 'dark'
-                                            ? 'white'
-                                            : 'black'
-                                }}
-                            >
-                                {implementation}
-                            </Text>
+                            <Text style={styles.text}>{implementation}</Text>
                         </TouchableOpacity>
                     </View>
                 )}
@@ -547,13 +526,7 @@ export default class AddEditNode extends React.Component<
         );
 
         return (
-            <ScrollView
-                style={
-                    savedTheme === 'dark'
-                        ? styles.darkThemeStyle
-                        : styles.lightThemeStyle
-                }
-            >
+            <ScrollView style={styles.scrollView}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -562,11 +535,7 @@ export default class AddEditNode extends React.Component<
                         ),
                         style: { color: '#fff' }
                     }}
-                    backgroundColor={
-                        savedTheme === 'dark'
-                            ? '#261339'
-                            : 'rgba(92, 99,216, 1)'
-                    }
+                    backgroundColor="#1f2328"
                 />
                 {!!suggestImport && (
                     <View style={styles.clipboardImport}>
@@ -778,14 +747,7 @@ export default class AddEditNode extends React.Component<
                     {(implementation === 'spark' ||
                         implementation == 'eclair') && (
                         <>
-                            <Text
-                                style={{
-                                    color:
-                                        savedTheme === 'dark'
-                                            ? 'white'
-                                            : 'black'
-                                }}
-                            >
+                            <Text style={styles.text}>
                                 {localeString(
                                     'views.Settings.AddEditNode.host'
                                 )}
@@ -800,25 +762,14 @@ export default class AddEditNode extends React.Component<
                                     })
                                 }
                                 numberOfLines={1}
-                                style={
-                                    savedTheme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
+                                style={styles.textInput}
                                 editable={!loading}
                                 placeholderTextColor="gray"
                             />
 
                             {implementation === 'spark' && (
                                 <>
-                                    <Text
-                                        style={{
-                                            color:
-                                                savedTheme === 'dark'
-                                                    ? 'white'
-                                                    : 'black'
-                                        }}
-                                    >
+                                    <Text style={styles.text}>
                                         {localeString(
                                             'views.Settings.AddEditNode.accessKey'
                                         )}
@@ -833,11 +784,7 @@ export default class AddEditNode extends React.Component<
                                             });
                                         }}
                                         numberOfLines={1}
-                                        style={
-                                            savedTheme === 'dark'
-                                                ? styles.textInputDark
-                                                : styles.textInput
-                                        }
+                                        style={styles.textInput}
                                         editable={!loading}
                                         placeholderTextColor="gray"
                                     />
@@ -845,14 +792,7 @@ export default class AddEditNode extends React.Component<
                             )}
                             {implementation === 'eclair' && (
                                 <>
-                                    <Text
-                                        style={{
-                                            color:
-                                                savedTheme === 'dark'
-                                                    ? 'white'
-                                                    : 'black'
-                                        }}
-                                    >
+                                    <Text style={styles.text}>
                                         {localeString(
                                             'views.Settings.AddEditNode.password'
                                         )}
@@ -867,11 +807,7 @@ export default class AddEditNode extends React.Component<
                                             });
                                         }}
                                         numberOfLines={1}
-                                        style={
-                                            savedTheme === 'dark'
-                                                ? styles.textInputDark
-                                                : styles.textInput
-                                        }
+                                        style={styles.textInput}
                                         editable={!loading}
                                         placeholderTextColor="gray"
                                     />
@@ -881,14 +817,7 @@ export default class AddEditNode extends React.Component<
                     )}
                     {implementation === 'lndhub' && (
                         <>
-                            <Text
-                                style={{
-                                    color:
-                                        savedTheme === 'dark'
-                                            ? 'white'
-                                            : 'black'
-                                }}
-                            >
+                            <Text style={styles.text}>
                                 {localeString(
                                     'views.Settings.AddEditNode.host'
                                 )}
@@ -903,11 +832,7 @@ export default class AddEditNode extends React.Component<
                                     })
                                 }
                                 numberOfLines={1}
-                                style={
-                                    savedTheme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
+                                style={styles.textInput}
                                 editable={!loading}
                                 placeholderTextColor="gray"
                             />
@@ -932,14 +857,7 @@ export default class AddEditNode extends React.Component<
 
                             {existingAccount && (
                                 <>
-                                    <Text
-                                        style={{
-                                            color:
-                                                savedTheme === 'dark'
-                                                    ? 'white'
-                                                    : 'black'
-                                        }}
-                                    >
+                                    <Text style={styles.text}>
                                         {localeString(
                                             'views.Settings.AddEditNode.username'
                                         )}
@@ -954,23 +872,12 @@ export default class AddEditNode extends React.Component<
                                             })
                                         }
                                         numberOfLines={1}
-                                        style={
-                                            savedTheme === 'dark'
-                                                ? styles.textInputDark
-                                                : styles.textInput
-                                        }
+                                        style={styles.textInput}
                                         editable={!loading}
                                         placeholderTextColor="gray"
                                     />
 
-                                    <Text
-                                        style={{
-                                            color:
-                                                savedTheme === 'dark'
-                                                    ? 'white'
-                                                    : 'black'
-                                        }}
-                                    >
+                                    <Text style={styles.text}>
                                         {localeString(
                                             'views.Settings.AddEditNode.password'
                                         )}
@@ -985,11 +892,7 @@ export default class AddEditNode extends React.Component<
                                             })
                                         }
                                         numberOfLines={1}
-                                        style={
-                                            savedTheme === 'dark'
-                                                ? styles.textInputDark
-                                                : styles.textInput
-                                        }
+                                        style={styles.textInput}
                                         editable={!loading}
                                         secureTextEntry={saved}
                                         placeholderTextColor="gray"
@@ -1008,7 +911,6 @@ export default class AddEditNode extends React.Component<
                                                     ? ''
                                                     : `@${lndhubUrl}`)
                                             }
-                                            theme={savedTheme}
                                             hideText
                                         />
                                     )}
@@ -1019,14 +921,7 @@ export default class AddEditNode extends React.Component<
                     {(implementation === 'lnd' ||
                         implementation === 'c-lightning-REST') && (
                         <>
-                            <Text
-                                style={{
-                                    color:
-                                        savedTheme === 'dark'
-                                            ? 'white'
-                                            : 'black'
-                                }}
-                            >
+                            <Text style={styles.text}>
                                 {localeString(
                                     'views.Settings.AddEditNode.host'
                                 )}
@@ -1041,23 +936,12 @@ export default class AddEditNode extends React.Component<
                                     })
                                 }
                                 numberOfLines={1}
-                                style={
-                                    savedTheme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
+                                style={styles.textInput}
                                 editable={!loading}
                                 placeholderTextColor="gray"
                             />
 
-                            <Text
-                                style={{
-                                    color:
-                                        savedTheme === 'dark'
-                                            ? 'white'
-                                            : 'black'
-                                }}
-                            >
+                            <Text style={styles.text}>
                                 {localeString(
                                     'views.Settings.AddEditNode.restPort'
                                 )}
@@ -1073,23 +957,12 @@ export default class AddEditNode extends React.Component<
                                     })
                                 }
                                 numberOfLines={1}
-                                style={
-                                    savedTheme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
+                                style={styles.textInput}
                                 editable={!loading}
                                 placeholderTextColor="gray"
                             />
 
-                            <Text
-                                style={{
-                                    color:
-                                        savedTheme === 'dark'
-                                            ? 'white'
-                                            : 'black'
-                                }}
-                            >
+                            <Text style={styles.text}>
                                 {localeString(
                                     'views.Settings.AddEditNode.macaroon'
                                 )}
@@ -1104,11 +977,7 @@ export default class AddEditNode extends React.Component<
                                     })
                                 }
                                 numberOfLines={1}
-                                style={
-                                    savedTheme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
+                                style={styles.textInput}
                                 editable={!loading}
                                 placeholderTextColor="gray"
                             />
@@ -1208,11 +1077,7 @@ export default class AddEditNode extends React.Component<
                             }
                         }}
                         buttonStyle={{
-                            backgroundColor: saved
-                                ? '#fff'
-                                : savedTheme === 'dark'
-                                ? '#261339'
-                                : 'rgba(92, 99,216, 1)',
+                            backgroundColor: saved ? '#fff' : '#261339',
                             borderRadius: 30
                         }}
                         titleStyle={{
@@ -1262,7 +1127,7 @@ export default class AddEditNode extends React.Component<
                             icon={{
                                 name: 'crop-free',
                                 size: 25,
-                                color: savedTheme === 'dark' ? 'black' : 'white'
+                                color: themeColor('background')
                             }}
                             onPress={() =>
                                 navigation.navigate(
@@ -1273,12 +1138,11 @@ export default class AddEditNode extends React.Component<
                                 )
                             }
                             buttonStyle={{
-                                backgroundColor:
-                                    savedTheme === 'dark' ? 'white' : 'black',
+                                backgroundColor: themeColor('text'),
                                 borderRadius: 30
                             }}
                             titleStyle={{
-                                color: savedTheme === 'dark' ? 'black' : 'white'
+                                color: themeColor('background')
                             }}
                         />
                     </View>
@@ -1357,22 +1221,17 @@ export default class AddEditNode extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
+    scrollView: {
         flex: 1,
-        backgroundColor: 'white'
+        backgroundColor: themeColor('background'),
+        color: themeColor('text')
     },
-    darkThemeStyle: {
-        flex: 1,
-        backgroundColor: 'black',
-        color: 'white'
+    text: {
+        color: themeColor('text')
     },
     textInput: {
         fontSize: 20,
-        color: 'black'
-    },
-    textInputDark: {
-        fontSize: 20,
-        color: 'white'
+        color: themeColor('text')
     },
     error: {
         color: 'red'
@@ -1388,12 +1247,8 @@ const styles = StyleSheet.create({
     },
     picker: {
         height: 50,
-        width: 100
-    },
-    pickerDark: {
-        height: 50,
         width: 100,
-        color: 'white'
+        color: themeColor('text')
     },
     button: {
         paddingTop: 10,

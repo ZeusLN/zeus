@@ -199,6 +199,8 @@ PODS:
   - React-jsinspector (0.63.4)
   - react-native-camera-kit (8.0.4):
     - React
+  - react-native-date-picker (3.3.2):
+    - React-Core
   - react-native-randombytes (3.5.3):
     - React
   - react-native-safe-area-context (0.6.2):
@@ -336,6 +338,7 @@ DEPENDENCIES:
   - React-jsiexecutor (from `../node_modules/react-native/ReactCommon/jsiexecutor`)
   - React-jsinspector (from `../node_modules/react-native/ReactCommon/jsinspector`)
   - react-native-camera-kit (from `../node_modules/react-native-camera-kit`)
+  - react-native-date-picker (from `../node_modules/react-native-date-picker`)
   - react-native-randombytes (from `../node_modules/react-native-randombytes`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - react-native-tor (from `../node_modules/react-native-tor`)
@@ -429,6 +432,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/jsinspector"
   react-native-camera-kit:
     :path: "../node_modules/react-native-camera-kit"
+  react-native-date-picker:
+    :path: "../node_modules/react-native-date-picker"
   react-native-randombytes:
     :path: "../node_modules/react-native-randombytes"
   react-native-safe-area-context:
@@ -547,6 +552,7 @@ SPEC CHECKSUMS:
   React-jsiexecutor: 93bd528844ad21dc07aab1c67cb10abae6df6949
   React-jsinspector: 58aef7155bc9a9683f5b60b35eccea8722a4f53a
   react-native-camera-kit: ded127598a48890a360fbf5e26cf7c44fcc5b873
+  react-native-date-picker: 96a07ca27a6225da8a3935324d85046028456b0f
   react-native-randombytes: 991545e6eaaf700b4ee384c291ef3d572e0b2ca8
   react-native-safe-area-context: a1d322930b8c5d04ebeb77cc47cc97575ad27203
   react-native-tor: e353bd8725453c8c47bbd5c13d62daea6062cc4b
