@@ -38,7 +38,21 @@ export default class Payment extends BaseModel {
         this.nodes = nodes;
     }
 
-    @computed public get getCreationTime(): string {
+    @computed public get model(): string {
+        return localeString('views.Payment.title');
+    }
+
+    @computed public get getTimestamp(): string {
+        return this.creation_date || this.created_at || this.timestamp || 0;
+    }
+
+    @computed public get getDate(): string {
+        return DateTimeUtils.listDate(
+            this.creation_date || this.created_at || this.timestamp || 0
+        );
+    }
+
+    @computed public get getDisplayTime(): string {
         return DateTimeUtils.listFormattedDate(
             this.creation_date || this.created_at || this.timestamp || 0
         );

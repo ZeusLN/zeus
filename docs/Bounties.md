@@ -54,3 +54,4 @@ Author: [pseudozach](https://github.com/pseudozach)
 Payout: 1,250,000 sats (0.0125 BTC)
 
 Currently, Zeus supports lnurl-fallback, lnurl-withdraw, and lnurl-pay but not lnurl-auth or lnurl-channel. lnurl-auth will allow users to log into lnurl-auth powered sites using their lightning node. LND doesn't support it natively but it appears Breez has found a workaround - that may be a good starting point. You'll most likely have to leverage Zeus' local database. Check out the spec [here](https://github.com/fiatjaf/lnurl-rfc/blob/master/lnurl-auth.md).
+

@@ -27,6 +27,7 @@ import FeeTable from './../components/FeeTable';
 
 import RESTUtils from './../utils/RESTUtils';
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
 
 interface SendProps {
     exitSetup: any;
@@ -198,7 +199,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         } = this.state;
         const { confirmedBlockchainBalance } = BalanceStore;
         const { implementation, settings } = SettingsStore;
-        const { theme, fiat } = settings;
+        const { fiat } = settings;
         const { units, changeUnits } = UnitsStore;
         const { fiatRates }: any = FiatStore;
 
@@ -244,7 +245,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     <Text
                         style={{
                             textDecorationLine: 'underline',
-                            color: theme === 'dark' ? 'white' : 'black'
+                            color: themeColor('text')
                         }}
                     >
                         {localeString('views.Send.amount')} (
@@ -257,11 +258,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     onChangeText={(text: string) =>
                         this.setState({ amount: text })
                     }
-                    style={
-                        theme === 'dark'
-                            ? styles.textInputDark
-                            : styles.textInput
-                    }
+                    style={styles.textInput}
                     placeholderTextColor="gray"
                 />
                 {units !== 'sats' && amount !== 'all' && (
@@ -269,7 +266,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         <Text
                             style={{
                                 textDecorationLine: 'underline',
-                                color: theme === 'dark' ? 'white' : 'black'
+                                color: themeColor('text')
                             }}
                         >
                             {satAmount} {localeString('views.Send.satoshis')}
@@ -279,7 +276,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                 {amount === 'all' && (
                     <Text
                         style={{
-                            color: theme === 'dark' ? 'white' : 'black'
+                            color: themeColor('text')
                         }}
                     >
                         {`${
@@ -292,7 +289,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                 <Text
                     style={{
                         textDecorationLine: 'underline',
-                        color: theme === 'dark' ? 'white' : 'black'
+                        color: themeColor('text')
                     }}
                 >
                     {localeString('views.Send.feeSats')}:
@@ -304,11 +301,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     onChangeText={(text: string) =>
                         this.setState({ fee: text })
                     }
-                    style={
-                        theme === 'dark'
-                            ? styles.textInputDark
-                            : styles.textInput
-                    }
+                    style={styles.textInput}
                     placeholderTextColor="gray"
                 />
                 {RESTUtils.supportsCoinControl() && (
@@ -337,13 +330,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         );
 
         return (
-            <ScrollView
-                style={
-                    theme === 'dark'
-                        ? styles.darkThemeStyle
-                        : styles.lightThemeStyle
-                }
-            >
+            <ScrollView style={styles.scrollView}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -356,7 +343,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     <Text
                         style={{
                             textDecorationLine: 'underline',
-                            color: theme === 'dark' ? 'white' : 'black'
+                            color: themeColor('text')
                         }}
                     >
                         {paymentOptions.join(', ')}
@@ -367,17 +354,13 @@ export default class Send extends React.Component<SendProps, SendState> {
                         onChangeText={(text: string) => {
                             this.validateAddress(text);
                         }}
-                        style={
-                            theme === 'dark'
-                                ? styles.textInputDark
-                                : styles.textInput
-                        }
+                        style={styles.textInput}
                         placeholderTextColor="gray"
                     />
                     {!isValid && !!destination && (
                         <Text
                             style={{
-                                color: theme === 'dark' ? 'white' : 'black'
+                                color: themeColor('text')
                             }}
                         >
                             {localeString('views.Send.mustBeValid')}{' '}
@@ -388,7 +371,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         <Text
                             style={{
                                 paddingTop: 10,
-                                color: theme === 'dark' ? 'white' : 'black'
+                                color: themeColor('text')
                             }}
                         >{`${transactionType} Transaction`}</Text>
                     )}
@@ -397,7 +380,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <Text
                                 style={{
                                     textDecorationLine: 'underline',
-                                    color: theme === 'dark' ? 'white' : 'black'
+                                    color: themeColor('text')
                                 }}
                             >
                                 {localeString('views.Send.onChainNotSupported')}{' '}
@@ -412,8 +395,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 <Text
                                     style={{
                                         textDecorationLine: 'underline',
-                                        color:
-                                            theme === 'dark' ? 'white' : 'black'
+                                        color: themeColor('text')
                                     }}
                                 >
                                     {localeString('views.Send.amount')} (
@@ -426,11 +408,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 onChangeText={(text: string) =>
                                     this.setState({ amount: text })
                                 }
-                                style={
-                                    theme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
+                                style={styles.textInput}
                                 placeholderTextColor="gray"
                             />
                             {units !== 'sats' && (
@@ -438,10 +416,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     <Text
                                         style={{
                                             textDecorationLine: 'underline',
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'white'
-                                                    : 'black'
+                                            color: themeColor('text')
                                         }}
                                     >
                                         {satAmount}{' '}
@@ -473,8 +448,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 <Text
                                     style={{
                                         textDecorationLine: 'underline',
-                                        color:
-                                            theme === 'dark' ? 'white' : 'black'
+                                        color: themeColor('text')
                                     }}
                                 >
                                     {localeString('views.Send.sorry')},{' '}
@@ -517,10 +491,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 navigation.navigate('AddressQRCodeScanner')
                             }
                             buttonStyle={{
-                                backgroundColor:
-                                    theme === 'dark'
-                                        ? '#261339'
-                                        : 'rgba(92, 99,216, 1)',
+                                backgroundColor: '#261339',
                                 borderRadius: 30
                             }}
                         />
@@ -537,11 +508,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             confirmationTarget: text
                                         })
                                     }
-                                    style={
-                                        theme === 'dark'
-                                            ? styles.textInputDark
-                                            : styles.textInput
-                                    }
+                                    style={styles.textInput}
                                     placeholderTextColor="gray"
                                 />
                             </View>
@@ -559,7 +526,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         <React.Fragment>
                             <Text
                                 style={{
-                                    color: theme === 'dark' ? 'white' : 'black'
+                                    color: themeColor('text')
                                 }}
                             >
                                 {error_msg}
@@ -573,24 +540,14 @@ export default class Send extends React.Component<SendProps, SendState> {
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
+    scrollView: {
         flex: 1,
-        backgroundColor: 'white'
-    },
-    darkThemeStyle: {
-        flex: 1,
-        backgroundColor: 'black',
-        color: 'white'
+        backgroundColor: themeColor('background'),
+        color: themeColor('text')
     },
     textInput: {
         fontSize: 20,
-        color: 'black',
-        paddingTop: 10,
-        paddingBottom: 10
-    },
-    textInputDark: {
-        fontSize: 20,
-        color: 'white',
+        color: themeColor('text'),
         paddingTop: 10,
         paddingBottom: 10
     },
