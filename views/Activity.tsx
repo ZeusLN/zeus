@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import {
+    ActivityIndicator,
+    FlatList,
+    StyleSheet,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { Avatar, Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import DateTimeUtils from './../utils/DateTimeUtils';
@@ -10,6 +16,8 @@ import { themeColor } from './../utils/ThemeUtils';
 import ActivityStore from './../stores/ActivityStore';
 import UnitsStore from './../stores/UnitsStore';
 import SettingsStore from './../stores/SettingsStore';
+
+import Filter from './../images/SVG/Filter On.svg';
 
 interface ActivityProps {
     navigation: any;
@@ -71,12 +79,11 @@ export default class Activity extends React.Component<ActivityProps, {}> {
         );
 
         const FilterButton = () => (
-            <Icon
-                name="filter-alt"
+            <TouchableOpacity
                 onPress={() => navigation.navigate('ActivityFilter')}
-                color="#fff"
-                underlayColor="transparent"
-            />
+            >
+                <Filter />
+            </TouchableOpacity>
         );
 
         return (
