@@ -551,7 +551,7 @@ SPEC CHECKSUMS:
   React-jsi: a0418934cf48f25b485631deb27c64dc40fb4c31
   React-jsiexecutor: 93bd528844ad21dc07aab1c67cb10abae6df6949
   React-jsinspector: 58aef7155bc9a9683f5b60b35eccea8722a4f53a
-  react-native-camera-kit: ded127598a48890a360fbf5e26cf7c44fcc5b873
+  react-native-camera-kit: 498a6d111a904834e0824e9073cfadef7303235f
   react-native-date-picker: 96a07ca27a6225da8a3935324d85046028456b0f
   react-native-randombytes: 991545e6eaaf700b4ee384c291ef3d572e0b2ca8
   react-native-safe-area-context: a1d322930b8c5d04ebeb77cc47cc97575ad27203
