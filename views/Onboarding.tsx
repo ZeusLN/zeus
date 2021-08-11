@@ -201,7 +201,6 @@ export default class Onboarding extends React.Component<
                 <View style={{ alignItems: 'center', top: 25 }}>
                     <DropdownSetting
                         title={localeString('views.Settings.locale')}
-                        theme="light"
                         selectedValue={locale || DEFAULT_LOCALE}
                         onValueChange={(value: string) => changeLocale(value)}
                         values={LOCALE_KEYS}
