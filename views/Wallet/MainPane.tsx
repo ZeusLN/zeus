@@ -1,10 +1,10 @@
 import * as React from 'react';
 import { Image, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
-import { Badge, Button, Header } from 'react-native-elements';
+import { Badge, Button } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import LinearGradient from 'react-native-linear-gradient';
 import PrivacyUtils from './../../utils/PrivacyUtils';
 import { localeString } from './../../utils/LocaleUtils';
+import { themeColor } from './../../utils/ThemeUtils';
 
 import NodeInfoStore from './../../stores/NodeInfoStore';
 import UnitsStore from './../../stores/UnitsStore';
@@ -14,6 +14,7 @@ import SettingsStore from './../../stores/SettingsStore';
 const TorIcon = require('./../../images/tor.png');
 
 import { version, playStore } from './../../package.json';
+import { WalletHeader } from '../../components/WalletHeader';
 
 interface MainPaneProps {
     navigation: any;
@@ -23,20 +24,9 @@ interface MainPaneProps {
     SettingsStore: SettingsStore;
 }
 
-interface MainPaneState {
-    combinedBalance: boolean;
-}
-
 @inject('UnitsStore', 'SettingsStore')
 @observer
-export default class MainPane extends React.Component<
-    MainPaneProps,
-    MainPaneState
-> {
-    state = {
-        combinedBalance: false
-    };
-
+export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
     render() {
         const {
             NodeInfoStore,
@@ -45,7 +35,6 @@ export default class MainPane extends React.Component<
             SettingsStore,
             navigation
         } = this.props;
-        const { combinedBalance } = this.state;
         const { changeUnits, getAmount, units } = UnitsStore;
         const {
             totalBlockchainBalance,
@@ -53,9 +42,8 @@ export default class MainPane extends React.Component<
             lightningBalance,
             pendingOpenBalance
         } = BalanceStore;
-        const { settings, implementation } = SettingsStore;
+        const { implementation } = SettingsStore;
         const nodeAddress = SettingsStore.host || SettingsStore.url;
-        const { theme } = settings;
         const loading = NodeInfoStore.loading || BalanceStore.loading;
 
         const pendingUnconfirmedBalance =
@@ -65,7 +53,12 @@ export default class MainPane extends React.Component<
 
         const LightningBalance = () => (
             <>
-                <Text style={styles.lightningBalance}>
+                <Text
+                    style={{
+                        fontSize: 40,
+                        color: themeColor('text')
+                    }}
+                >
                     {units &&
                         PrivacyUtils.sensitiveValue(
                             getAmount(lightningBalance),
@@ -75,7 +68,12 @@ export default class MainPane extends React.Component<
                     ⚡
                 </Text>
                 {pendingOpenBalance > 0 ? (
-                    <Text style={styles.pendingBalance}>
+                    <Text
+                        style={{
+                            fontSize: 20,
+                            color: themeColor('text')
+                        }}
+                    >
                         {units &&
                             PrivacyUtils.sensitiveValue(
                                 getAmount(pendingOpenBalance),
@@ -88,35 +86,14 @@ export default class MainPane extends React.Component<
             </>
         );
 
-        const BalanceView = () => (
-            <React.Fragment>
-                <LightningBalance />
-                <Text style={styles.blockchainBalance}>
-                    {units &&
-                        PrivacyUtils.sensitiveValue(
-                            getAmount(totalBlockchainBalance),
-                            8,
-                            true
-                        )}{' '}
-                    ⛓️
-                </Text>
-                {unconfirmedBlockchainBalance ? (
-                    <Text style={styles.pendingBalance}>
-                        {units &&
-                            PrivacyUtils.sensitiveValue(
-                                getAmount(unconfirmedBlockchainBalance),
-                                8,
-                                true
-                            )}{' '}
-                        pending
-                    </Text>
-                ) : null}
-            </React.Fragment>
-        );
-
         const BalanceViewCombined = () => (
             <React.Fragment>
-                <Text style={styles.lightningBalance}>
+                <Text
+                    style={{
+                        fontSize: 40,
+                        color: themeColor('text')
+                    }}
+                >
                     {units &&
                         PrivacyUtils.sensitiveValue(
                             getAmount(combinedBalanceValue),
@@ -125,7 +102,12 @@ export default class MainPane extends React.Component<
                         )}
                 </Text>
                 {unconfirmedBlockchainBalance || pendingOpenBalance ? (
-                    <Text style={styles.pendingBalance}>
+                    <Text
+                        style={{
+                            fontSize: 20,
+                            color: themeColor('text')
+                        }}
+                    >
                         {units &&
                             PrivacyUtils.sensitiveValue(
                                 getAmount(pendingUnconfirmedBalance),
@@ -138,22 +120,6 @@ export default class MainPane extends React.Component<
             </React.Fragment>
         );
 
-        const SettingsButton = () => (
-            <Button
-                title=""
-                icon={{
-                    name: 'settings',
-                    size: 25,
-                    color: '#fff'
-                }}
-                buttonStyle={{
-                    backgroundColor: 'transparent',
-                    marginRight: -10
-                }}
-                onPress={() => navigation.navigate('Settings')}
-            />
-        );
-
         let infoValue = 'ⓘ';
         if (NodeInfoStore.nodeInfo.isTestNet) {
             infoValue = localeString('views.Wallet.MainPane.testnet');
@@ -163,19 +129,8 @@ export default class MainPane extends React.Component<
 
         const DefaultBalance = () => (
             <>
-                <TouchableOpacity
-                    onPress={() => changeUnits()}
-                    onLongPress={() =>
-                        this.setState({
-                            combinedBalance: !combinedBalance
-                        })
-                    }
-                >
-                    {combinedBalance ? (
-                        <BalanceViewCombined />
-                    ) : (
-                        <BalanceView />
-                    )}
+                <TouchableOpacity onPress={() => changeUnits()}>
+                    <BalanceViewCombined />
                 </TouchableOpacity>
             </>
         );
@@ -188,7 +143,7 @@ export default class MainPane extends React.Component<
             </>
         );
 
-        const NodeInfoBadge = () => (
+        const NetworkBadge = () => (
             <View style={styles.nodeInfo}>
                 {nodeAddress && nodeAddress.includes('.onion') ? (
                     <TouchableOpacity
@@ -218,20 +173,8 @@ export default class MainPane extends React.Component<
 
         if (loading) {
             mainPane = (
-                <View
-                    style={
-                        theme === 'dark'
-                            ? styles.loadingContainerDark
-                            : styles.loadingContainer
-                    }
-                >
-                    <Header
-                        rightComponent={<SettingsButton />}
-                        backgroundColor="transparent"
-                        containerStyle={{
-                            borderBottomWidth: 0
-                        }}
-                    />
+                <View style={styles.loadingContainer}>
+                    <WalletHeader navigation={navigation} loading={true} />
                     <Button
                         title=""
                         loading
@@ -244,107 +187,29 @@ export default class MainPane extends React.Component<
             );
         } else if (!NodeInfoStore.error) {
             mainPane = (
-                <View>
-                    <LinearGradient
-                        colors={
-                            theme === 'dark'
-                                ? darkThemeGradient
-                                : lightThemeGradient
-                        }
-                        style={styles.container}
-                    >
-                        <Header
-                            leftComponent={<NodeInfoBadge />}
-                            rightComponent={<SettingsButton />}
-                            backgroundColor="transparent"
-                            containerStyle={{
-                                borderBottomWidth: 0
-                            }}
-                        />
-                        {implementation === 'lndhub' ? (
-                            <LndHubBalance />
-                        ) : (
-                            <DefaultBalance />
-                        )}
-                        <View style={styles.buttons}>
-                            <Button
-                                title={localeString('general.send')}
-                                icon={{
-                                    name: 'arrow-upward',
-                                    size: 25,
-                                    color: 'red'
-                                }}
-                                buttonStyle={{
-                                    backgroundColor:
-                                        theme === 'dark' ? 'black' : 'white',
-                                    borderRadius: 30
-                                }}
-                                containerStyle={{
-                                    marginRight: 10
-                                }}
-                                titleStyle={{
-                                    color: theme === 'dark' ? 'white' : 'black'
-                                }}
-                                onPress={() => navigation.navigate('Send')}
-                                raised={theme !== 'dark'}
-                            />
-                            <Button
-                                title={localeString('general.receive')}
-                                icon={{
-                                    name: 'arrow-downward',
-                                    size: 25,
-                                    color: 'green'
-                                }}
-                                buttonStyle={{
-                                    backgroundColor:
-                                        theme === 'dark' ? 'black' : 'white',
-                                    borderRadius: 30
-                                }}
-                                containerStyle={{
-                                    marginLeft: 10,
-                                    marginRight: 10
-                                }}
-                                titleStyle={{
-                                    color: theme === 'dark' ? 'white' : 'black'
-                                }}
-                                onPress={() => navigation.navigate('Receive')}
-                                raised={theme !== 'dark'}
-                            />
-                            <Button
-                                title={localeString('general.scan')}
-                                icon={{
-                                    name: 'crop-free',
-                                    size: 25,
-                                    color: '#f1a58c'
-                                }}
-                                buttonStyle={{
-                                    backgroundColor:
-                                        theme === 'dark' ? 'black' : 'white',
-                                    borderRadius: 20
-                                }}
-                                containerStyle={{
-                                    marginLeft: 10
-                                }}
-                                titleStyle={{
-                                    color: theme === 'dark' ? 'white' : 'black'
-                                }}
-                                onPress={() =>
-                                    navigation.navigate('AddressQRCodeScanner')
-                                }
-                                raised={theme !== 'dark'}
-                            />
-                        </View>
-                    </LinearGradient>
+                <View
+                    style={{
+                        height: 220,
+                        alignItems: 'center',
+                        backgroundColor: themeColor('secondary')
+                    }}
+                >
+                    <WalletHeader navigation={navigation} />
+                    {implementation === 'lndhub' ? (
+                        <LndHubBalance />
+                    ) : (
+                        <DefaultBalance />
+                    )}
+                    {infoValue !== 'ⓘ' && <NetworkBadge />}
                 </View>
             );
         } else {
             mainPane = (
                 <View
-                    style={
-                        theme === 'dark'
-                            ? styles.errorContainerDark
-                            : styles.errorContainer
-                    }
+                    style={{
+                        backgroundColor: themeColor('error'),
+                        paddingLeft: 10
+                    }}
                 >
                     <Text
                         style={{
@@ -394,60 +259,13 @@ export default class MainPane extends React.Component<
     }
 }
 
-const lightThemeGradient = ['#FAB57F', 'orange', '#ee7600'];
-const darkThemeGradient = ['#33194d', '#261339', 'black'];
-
 const styles = StyleSheet.create({
-    container: {
-        paddingBottom: 50,
-        paddingLeft: 10
-    },
     loadingContainer: {
-        backgroundColor: 'rgba(253, 164, 40, 0.5)',
-        paddingTop: 10,
-        paddingBottom: 50,
+        height: 220,
         paddingLeft: 10
     },
-    loadingContainerDark: {
-        backgroundColor: '#261339',
-        paddingTop: 10,
-        paddingBottom: 50,
-        paddingLeft: 10
-    },
-    errorContainer: {
-        backgroundColor: '#cc3300', // dark red
-        paddingTop: 25,
-        paddingBottom: 50,
-        paddingLeft: 10
-    },
-    errorContainerDark: {
-        backgroundColor: '#992600', // dark dark red
-        paddingTop: 25,
-        paddingBottom: 50,
-        paddingLeft: 10
-    },
-    lightningBalance: {
-        fontSize: 40,
-        color: '#fff'
-    },
-    blockchainBalance: {
-        fontSize: 30,
-        color: '#fff'
-    },
-    pendingBalance: {
-        fontSize: 20,
-        color: '#fff'
-    },
-    settings: {},
     nodeInfo: {
         alignItems: 'flex-start',
         marginLeft: -15
-    },
-    buttons: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: 20,
-        marginBottom: -30
     }
 });

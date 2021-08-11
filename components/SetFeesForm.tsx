@@ -2,12 +2,11 @@ import * as React from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from 'react-native-elements';
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
 
 import FeeStore from './../stores/FeeStore';
-import SettingsStore from './../stores/SettingsStore';
 
 interface SetFeesFormProps {
-    SettingsStore: SettingsStore;
     FeeStore: FeeStore;
     baseFeeMsat?: string;
     feeRate?: string;
@@ -41,15 +40,12 @@ export default class SetFeesForm extends React.Component<
             newFeeRatePPM
         } = this.state;
         const {
-            SettingsStore,
             FeeStore,
             baseFeeMsat,
             feeRate,
             channelPoint,
             channelId
         } = this.props;
-        const { settings } = SettingsStore;
-        const { theme } = settings;
         const { setFees, loading, setFeesError, setFeesSuccess } = FeeStore;
 
         return (
@@ -76,11 +72,7 @@ export default class SetFeesForm extends React.Component<
                 {showNewFeesForm && (
                     <React.Fragment>
                         {loading && (
-                            <Text
-                                style={{
-                                    color: theme === 'dark' ? 'white' : 'black'
-                                }}
-                            >
+                            <Text style={styles.text}>
                                 {localeString('components.SetFeesForm.setting')}
                             </Text>
                         )}
@@ -103,11 +95,7 @@ export default class SetFeesForm extends React.Component<
                             </Text>
                         )}
 
-                        <Text
-                            style={{
-                                color: theme === 'dark' ? 'white' : 'black'
-                            }}
-                        >
+                        <Text style={styles.text}>
                             {localeString('components.SetFeesForm.baseFee')}
                         </Text>
                         <TextInput
@@ -123,17 +111,9 @@ export default class SetFeesForm extends React.Component<
                             numberOfLines={1}
                             autoCapitalize="none"
                             autoCorrect={false}
-                            style={
-                                theme === 'dark'
-                                    ? styles.textInputDark
-                                    : styles.textInput
-                            }
+                            style={styles.textInput}
                         />
-                        <Text
-                            style={{
-                                color: theme === 'dark' ? 'white' : 'black'
-                            }}
-                        >
+                        <Text style={styles.text}>
                             {localeString('components.SetFeesForm.ppm')}
                         </Text>
                         <TextInput
@@ -149,11 +129,7 @@ export default class SetFeesForm extends React.Component<
                             numberOfLines={1}
                             autoCapitalize="none"
                             autoCorrect={false}
-                            style={
-                                theme === 'dark'
-                                    ? styles.textInputDark
-                                    : styles.textInput
-                            }
+                            style={styles.textInput}
                         />
 
                         <View style={styles.button}>
@@ -171,10 +147,7 @@ export default class SetFeesForm extends React.Component<
                                     this.setState({ feesSubmitted: true });
                                 }}
                                 buttonStyle={{
-                                    backgroundColor:
-                                        theme === 'dark'
-                                            ? '#261339'
-                                            : 'rgba(92, 99,216, 1)',
+                                    backgroundColor: '#261339',
                                     borderRadius: 30
                                 }}
                             />
@@ -187,13 +160,12 @@ export default class SetFeesForm extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    text: {
+        color: themeColor('text')
+    },
     textInput: {
         fontSize: 20,
-        color: 'black'
-    },
-    textInputDark: {
-        fontSize: 20,
-        color: 'white'
+        color: themeColor('text')
     },
     button: {
         paddingTop: 15,

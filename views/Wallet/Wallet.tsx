@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { Linking, Text, View } from 'react-native';
-import { ButtonGroup } from 'react-native-elements';
+import { Image, Linking, Text, View, TouchableOpacity } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import { Button, ButtonGroup } from 'react-native-elements';
 import Transactions from './Transactions';
 import Payments from './Payments';
 import Invoices from './Invoices';
@@ -9,6 +10,8 @@ import MainPane from './MainPane';
 import { inject, observer } from 'mobx-react';
 import PrivacyUtils from './../../utils/PrivacyUtils';
 import { localeString } from './../../utils/LocaleUtils';
+import { themeColor } from './../../utils/ThemeUtils';
+import Clipboard from '@react-native-community/clipboard';
 
 import BalanceStore from './../../stores/BalanceStore';
 import ChannelsStore from './../../stores/ChannelsStore';
@@ -20,8 +23,18 @@ import SettingsStore from './../../stores/SettingsStore';
 import FiatStore from './../../stores/FiatStore';
 import TransactionsStore from './../../stores/TransactionsStore';
 import UnitsStore from './../../stores/UnitsStore';
+import LayerBalances from './../../components/LayerBalances';
+
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+
+import WalletIcon from './../../images/SVG/Wallet.svg';
+import ChannelsIcon from './../../images/SVG/Channels.svg';
+import QRIcon from './../../images/SVG/QR.svg';
+import CaretUp from './../../images/SVG/Caret Up.svg';
 
 import handleAnything from './../../utils/handleAnything';
+import ChannelsPane from '../Channels/ChannelsPane';
 
 interface WalletProps {
     enterSetup: any;
@@ -58,6 +71,8 @@ interface WalletState {
 )
 @observer
 export default class Wallet extends React.Component<WalletProps, WalletState> {
+    clipboard: string;
+
     state = {
         units: 'sats',
         selectedIndex: 0
@@ -77,9 +92,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             );
     }
 
-    UNSAFE_componentWillMount = () => {
+    async UNSAFE_componentWillMount() {
+        this.clipboard = await Clipboard.getString();
         this.getSettingsAndRefresh();
-    };
+    }
 
     UNSAFE_componentWillReceiveProps = (nextProps: any) => {
         const { navigation } = nextProps;
@@ -103,9 +119,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         NodeInfoStore.reset();
         BalanceStore.reset();
-        PaymentsStore.reset();
-        InvoicesStore.reset();
-        TransactionsStore.reset();
         ChannelsStore.reset();
 
         // This awaits on settings, so should await on Tor being bootstrapped before making requests
@@ -138,16 +151,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         if (implementation === 'lndhub') {
             login({ login: username, password }).then(() => {
                 BalanceStore.getLightningBalance();
-                PaymentsStore.getPayments();
-                InvoicesStore.getInvoices();
             });
         } else {
             NodeInfoStore.getNodeInfo();
             BalanceStore.getBlockchainBalance();
             BalanceStore.getLightningBalance();
-            PaymentsStore.getPayments();
-            InvoicesStore.getInvoices();
-            TransactionsStore.getTransactions();
             ChannelsStore.getChannels();
             FeeStore.getFees();
         }
@@ -173,6 +181,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     };
 
     render() {
+        const Tab = createBottomTabNavigator();
         const {
             ChannelsStore,
             InvoicesStore,
@@ -190,8 +199,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { payments } = PaymentsStore;
         const { invoices, invoicesCount } = InvoicesStore;
         const { channels } = ChannelsStore;
-        const { settings, implementation } = SettingsStore;
-        const { theme } = settings;
+        const { implementation } = SettingsStore;
 
         const paymentsCount = (payments && payments.length) || 0;
         const paymentsButtonCount = PrivacyUtils.sensitiveValue(
@@ -223,10 +231,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         const paymentsButton = () => (
             <React.Fragment>
-                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
+                <Text style={{ color: themeColor('text') }}>
                     {paymentsButtonCount}
                 </Text>
-                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
+                <Text style={{ color: themeColor('text') }}>
                     {localeString('views.Wallet.Wallet.payments')}
                 </Text>
             </React.Fragment>
@@ -234,10 +242,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         const invoicesButton = () => (
             <React.Fragment>
-                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
+                <Text style={{ color: themeColor('text') }}>
                     {invoicesButtonCount}
                 </Text>
-                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
+                <Text style={{ color: themeColor('text') }}>
                     {localeString('views.Wallet.Wallet.invoices')}
                 </Text>
             </React.Fragment>
@@ -245,10 +253,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         const transactionsButton = () => (
             <React.Fragment>
-                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
+                <Text style={{ color: themeColor('text') }}>
                     {transactionsButtonCount}
                 </Text>
-                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
+                <Text style={{ color: themeColor('text') }}>
                     {localeString('views.Wallet.Wallet.onchain')}
                 </Text>
             </React.Fragment>
@@ -256,14 +264,67 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         const channelsButton = () => (
             <React.Fragment>
-                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
+                <Text style={{ color: themeColor('text') }}>
                     {channelsButtonCount}
                 </Text>
-                <Text style={{ color: theme === 'dark' ? 'white' : 'black' }}>
+                <Text style={{ color: themeColor('text') }}>
                     {localeString('views.Wallet.Wallet.channels')}
                 </Text>
             </React.Fragment>
         );
+
+        const WalletScreen = () => {
+            return (
+                <View
+                    style={{
+                        backgroundColor: themeColor('background'),
+                        flex: 1
+                    }}
+                >
+                    <LinearGradient
+                        colors={themeColor('gradient')}
+                        style={{ flex: 1 }}
+                    >
+                        <MainPane
+                            navigation={navigation}
+                            NodeInfoStore={NodeInfoStore}
+                            UnitsStore={UnitsStore}
+                            BalanceStore={BalanceStore}
+                            SettingsStore={SettingsStore}
+                        />
+
+                        <LayerBalances
+                            navigation={navigation}
+                            BalanceStore={BalanceStore}
+                            UnitsStore={UnitsStore}
+                        />
+
+                        <TouchableOpacity
+                            onPress={() =>
+                                this.props.navigation.navigate('Activity')
+                            }
+                        >
+                            <CaretUp
+                                style={{ alignSelf: 'center', bottom: 100 }}
+                            />
+                        </TouchableOpacity>
+                    </LinearGradient>
+                </View>
+            );
+        };
+
+        const ChannelsScreen = () => {
+            return (
+                <View
+                    style={{
+                        backgroundColor: themeColor('background'),
+                        flex: 1
+                    }}
+                >
+                    <ChannelsPane navigation={navigation} />
+                </View>
+            );
+        };
 
         const buttons = [
             { element: paymentsButton },
@@ -280,106 +341,97 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const selectedButtons =
             implementation === 'lndhub' ? lndHubButtons : buttons;
 
+        const Theme = {
+            ...DefaultTheme,
+            colors: {
+                ...DefaultTheme.colors,
+                card: themeColor('secondary'),
+                border: themeColor('secondary')
+            }
+        };
+
+        const scanAndSend = `${localeString('general.scan')} / ${localeString(
+            'general.send'
+        )}`;
+
+        // TODO: reorg? maybe just detect if on channels page and shrink middle button
         return (
             <View style={{ flex: 1 }}>
-                <MainPane
-                    navigation={navigation}
-                    NodeInfoStore={NodeInfoStore}
-                    UnitsStore={UnitsStore}
-                    BalanceStore={BalanceStore}
-                    SettingsStore={SettingsStore}
-                />
+                <NavigationContainer theme={Theme}>
+                    <Tab.Navigator
+                        screenOptions={({ route }) => ({
+                            tabBarIcon: ({ focused, color, size }) => {
+                                let iconName;
 
-                {theme !== 'dark' && (
-                    <ButtonGroup
-                        onPress={this.updateIndex}
-                        selectedIndex={selectedIndex}
-                        buttons={selectedButtons}
-                        containerStyle={{
-                            height: 50,
-                            marginTop: 0,
-                            marginLeft: 0,
-                            marginRight: 0,
-                            marginBottom: 0,
-                            backgroundColor: '#f2f2f2'
+                                if (route.name === 'Wallet') {
+                                    return <WalletIcon fill={color} />;
+                                }
+                                if (route.name === scanAndSend) {
+                                    return (
+                                        <TouchableOpacity
+                                            style={{
+                                                position: 'absolute',
+                                                height: 90,
+                                                width: 90,
+                                                borderRadius: 90,
+                                                bottom: 5,
+                                                backgroundColor: themeColor(
+                                                    'secondary'
+                                                ),
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
+                                                shadowColor: 'black',
+                                                shadowRadius: 5,
+                                                shadowOpacity: 0.8
+                                            }}
+                                            onPress={() => {
+                                                const {
+                                                    navigation
+                                                } = this.props;
+                                                // if clipboard is loaded check for potential matches, otherwise do nothing
+                                                handleAnything(this.clipboard)
+                                                    .then(([route, props]) => {
+                                                        navigation.navigate(
+                                                            route,
+                                                            props
+                                                        );
+                                                    })
+                                                    .catch(() =>
+                                                        navigation.navigate(
+                                                            'AddressQRCodeScanner'
+                                                        )
+                                                    );
+                                            }}
+                                        >
+                                            <QRIcon
+                                                style={{
+                                                    padding: 25
+                                                }}
+                                                fill={themeColor('highlight')}
+                                            />
+                                        </TouchableOpacity>
+                                    );
+                                }
+                                return <ChannelsIcon fill={color} />;
+                            }
+                        })}
+                        tabBarOptions={{
+                            activeTintColor: themeColor('highlight'),
+                            inactiveTintColor: 'gray'
                         }}
-                        selectedButtonStyle={{
-                            backgroundColor: 'white'
-                        }}
-                    />
-                )}
-
-                {theme === 'dark' && (
-                    <ButtonGroup
-                        onPress={this.updateIndex}
-                        selectedIndex={selectedIndex}
-                        buttons={selectedButtons}
-                        containerStyle={{
-                            height: 50,
-                            marginTop: 0,
-                            marginLeft: 0,
-                            marginRight: 0,
-                            marginBottom: 0,
-                            backgroundColor: 'black',
-                            borderTopWidth: 0,
-                            borderLeftWidth: 0,
-                            borderRightWidth: 0,
-                            borderBottomWidth: 1,
-                            borderRadius: 0
-                        }}
-                        selectedButtonStyle={{
-                            backgroundColor: '#261339'
-                        }}
-                        selectedTextStyle={{
-                            color: 'white'
-                        }}
-                        innerBorderStyle={{
-                            color: 'black'
-                        }}
-                    />
-                )}
-
-                {selectedIndex == 0 && (
-                    <Payments
-                        payments={payments}
-                        navigation={navigation}
-                        refresh={this.refresh}
-                        PaymentsStore={PaymentsStore}
-                        UnitsStore={UnitsStore}
-                        SettingsStore={SettingsStore}
-                    />
-                )}
-                {selectedIndex == 1 && (
-                    <Invoices
-                        invoices={invoices}
-                        navigation={navigation}
-                        refresh={this.refresh}
-                        InvoicesStore={InvoicesStore}
-                        UnitsStore={UnitsStore}
-                        SettingsStore={SettingsStore}
-                    />
-                )}
-                {selectedIndex == 2 && (
-                    <Transactions
-                        transactions={transactions}
-                        navigation={navigation}
-                        refresh={this.refresh}
-                        TransactionsStore={TransactionsStore}
-                        UnitsStore={UnitsStore}
-                        SettingsStore={SettingsStore}
-                    />
-                )}
-                {selectedIndex == 3 && (
-                    <Channels
-                        channels={channels}
-                        navigation={navigation}
-                        refresh={this.refresh}
-                        ChannelsStore={ChannelsStore}
-                        NodeInfoStore={NodeInfoStore}
-                        UnitsStore={UnitsStore}
-                        SettingsStore={SettingsStore}
-                    />
-                )}
+                    >
+                        <Tab.Screen name="Wallet" component={WalletScreen} />
+                        <Tab.Screen
+                            name={scanAndSend}
+                            component={WalletScreen}
+                        />
+                        {/* TODO: the icon isn't taking on the color like the wallet one does */}
+                        <Tab.Screen
+                            name={localeString('views.Wallet.Wallet.channels')}
+                            component={ChannelsScreen}
+                        />
+                    </Tab.Navigator>
+                </NavigationContainer>
             </View>
         );
     }
