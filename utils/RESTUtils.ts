@@ -73,11 +73,13 @@ class RESTUtils {
     getUTXOs = (...args: any[]) => this.call('getUTXOs', args);
     listAccounts = (...args: any[]) => this.call('listAccounts', args);
     importAccount = (...args: any[]) => this.call('importAccount', args);
+    signMessage = (...args: any[]) => this.call('signMessage', args);
 
     // lndhub
     createAccount = (...args: any[]) => this.call('createAccount', args);
     login = (...args: any[]) => this.call('login', args);
 
+    supportsMessageSigning = () => this.call('supportsMessageSigning');
     supportsOnchainSends = () => this.call('supportsOnchainSends');
     supportsKeysend = () => this.call('supportsKeysend');
     supportsChannelManagement = () => this.call('supportsChannelManagement');
