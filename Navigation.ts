@@ -32,7 +32,6 @@ import About from './views/Settings/About';
 import SignMessage from './views/Settings/SignMessage';
 
 // new views
-import Channels from './views/Channels';
 import Activity from './views/Activity';
 import ActivityFilter from './views/ActivityFilter';
 
@@ -119,9 +118,6 @@ const AppScenes = {
     },
     NodeInfo: {
         screen: NodeInfo
-    },
-    Channels: {
-        screen: Channels
     },
     Activity: {
         screen: Activity
