@@ -15,7 +15,7 @@ import NodeQRScanner from './views/NodeQRScanner';
 import OpenChannel from './views/OpenChannel';
 import SendingOnChain from './views/SendingOnChain';
 import SendingLightning from './views/SendingLightning';
-import Channel from './views/Channel';
+import Channel from './views/Channels/Channel';
 import Payment from './views/Payment';
 import Invoice from './views/Invoice';
 import BTCPayConfigQRScanner from './views/BTCPayConfigQRScanner';

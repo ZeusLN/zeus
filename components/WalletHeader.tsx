@@ -20,6 +20,23 @@ const SettingsButton = ({ navigation }: { navigation: any }) => (
         onPress={() => navigation.navigate('Settings')}
     />
 );
+
+const OpenChannelButton = ({ navigation }: { navigation: any }) => (
+    <Button
+        title=""
+        icon={{
+            name: 'add',
+            size: 25,
+            color: themeColor('text')
+        }}
+        buttonStyle={{
+            backgroundColor: 'transparent',
+            marginRight: -10
+        }}
+        onPress={() => navigation.navigate('OpenChannel')}
+    />
+);
+
 const NodeInfoBadge = ({ navigation }: { navigation: any }) => (
     <TouchableOpacity onPress={() => navigation.navigate('NodeInfo')}>
         <NodeOn stroke={themeColor('text')} />
@@ -29,11 +46,13 @@ const NodeInfoBadge = ({ navigation }: { navigation: any }) => (
 export function WalletHeader({
     navigation,
     loading = false,
-    title
+    title,
+    channels = false
 }: {
     navigation: any;
     loading?: boolean;
     title?: string;
+    channels?: boolean;
 }) {
     return (
         <Header
@@ -41,7 +60,13 @@ export function WalletHeader({
                 loading ? undefined : <NodeInfoBadge navigation={navigation} />
             }
             centerComponent={title ? <Body bold>{title}</Body> : undefined}
-            rightComponent={<SettingsButton navigation={navigation} />}
+            rightComponent={
+                channels ? (
+                    <OpenChannelButton navigation={navigation} />
+                ) : (
+                    <SettingsButton navigation={navigation} />
+                )
+            }
             backgroundColor="transparent"
             containerStyle={{
                 borderBottomWidth: 0
