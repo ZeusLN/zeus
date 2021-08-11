@@ -274,6 +274,7 @@ export default class LND {
         );
     };
 
+    supportsMessageSigning = () => true;
     supportsOnchainSends = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
