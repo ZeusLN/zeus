@@ -102,6 +102,14 @@ export default async function(data: string): Promise<any> {
                         }
                     ];
                     break;
+                case 'login':
+                    return [
+                        'LnurlAuth',
+                        {
+                            lnurlParams: params
+                        }
+                    ];
+                    break;
                 default:
                     throw new Error(
                         params.status === 'ERROR'
