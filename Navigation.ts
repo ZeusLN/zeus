@@ -7,6 +7,7 @@ import Wallet from './views/Wallet/Wallet';
 import Send from './views/Send';
 import LnurlPay from './views/LnurlPay/LnurlPay';
 import LnurlChannel from './views/LnurlChannel';
+import LnurlAuth from './views/LnurlAuth';
 import Receive from './views/Receive';
 import PaymentRequest from './views/PaymentRequest';
 import AddressQRScanner from './views/AddressQRScanner';
@@ -14,7 +15,7 @@ import NodeQRScanner from './views/NodeQRScanner';
 import OpenChannel from './views/OpenChannel';
 import SendingOnChain from './views/SendingOnChain';
 import SendingLightning from './views/SendingLightning';
-import Channel from './views/Channel';
+import Channel from './views/Channels/Channel';
 import Payment from './views/Payment';
 import Invoice from './views/Invoice';
 import BTCPayConfigQRScanner from './views/BTCPayConfigQRScanner';
@@ -28,6 +29,7 @@ import Settings from './views/Settings';
 import AddEditNode from './views/Settings/AddEditNode';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import About from './views/Settings/About';
+import SignMessage from './views/Settings/SignMessage';
 
 // new views
 import Channels from './views/Channels';
@@ -68,6 +70,9 @@ const AppScenes = {
     About: {
         screen: About
     },
+    SignMessage: {
+        screen: SignMessage
+    },
     Transaction: {
         screen: Transaction
     },
@@ -91,6 +96,9 @@ const AppScenes = {
     },
     LnurlChannel: {
         screen: LnurlChannel
+    },
+    LnurlAuth: {
+        screen: LnurlAuth
     },
     PaymentRequest: {
         screen: PaymentRequest

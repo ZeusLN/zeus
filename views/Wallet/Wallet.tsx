@@ -34,6 +34,7 @@ import QRIcon from './../../images/SVG/QR.svg';
 import CaretUp from './../../images/SVG/Caret Up.svg';
 
 import handleAnything from './../../utils/handleAnything';
+import ChannelsPane from '../Channels/ChannelsPane';
 
 interface WalletProps {
     enterSetup: any;
@@ -312,6 +313,19 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             );
         };
 
+        const ChannelsScreen = () => {
+            return (
+                <View
+                    style={{
+                        backgroundColor: themeColor('background'),
+                        flex: 1
+                    }}
+                >
+                    <ChannelsPane navigation={navigation} />
+                </View>
+            );
+        };
+
         const buttons = [
             { element: paymentsButton },
             { element: invoicesButton },
@@ -340,6 +354,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             'general.send'
         )}`;
 
+        // TODO: reorg? maybe just detect if on channels page and shrink middle button
         return (
             <View style={{ flex: 1 }}>
                 <NavigationContainer theme={Theme}>
@@ -349,11 +364,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 let iconName;
 
                                 if (route.name === 'Wallet') {
-                                    return (
-                                        <WalletIcon
-                                            fill={themeColor('highlight')}
-                                        />
-                                    );
+                                    return <WalletIcon fill={color} />;
                                 }
                                 if (route.name === scanAndSend) {
                                     return (
@@ -371,7 +382,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                                 alignItems: 'center',
                                                 shadowColor: 'black',
                                                 shadowRadius: 5,
-                                                shadowOpacity: 0.8
+                                                shadowOpacity: 0.8,
+                                                elevation: 2
                                             }}
                                             onPress={() => {
                                                 const {
@@ -401,23 +413,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         </TouchableOpacity>
                                     );
                                 }
-                                return (
-                                    <TouchableOpacity
-                                        onPress={() =>
-                                            this.props.navigation.navigate(
-                                                'Channels'
-                                            )
-                                        }
-                                    >
-                                        <ChannelsIcon />
-                                    </TouchableOpacity>
-                                );
+                                return <ChannelsIcon fill={color} />;
                             }
                         })}
                         tabBarOptions={{
                             activeTintColor: themeColor('highlight'),
-                            inactiveTintColor: 'gray',
-                            backgroundColor: themeColor('highlight')
+                            inactiveTintColor: 'gray'
                         }}
                     >
                         <Tab.Screen name="Wallet" component={WalletScreen} />
@@ -425,9 +426,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             name={scanAndSend}
                             component={WalletScreen}
                         />
+                        {/* TODO: the icon isn't taking on the color like the wallet one does */}
                         <Tab.Screen
                             name={localeString('views.Wallet.Wallet.channels')}
-                            component={WalletScreen}
+                            component={ChannelsScreen}
                         />
                     </Tab.Navigator>
                 </NavigationContainer>

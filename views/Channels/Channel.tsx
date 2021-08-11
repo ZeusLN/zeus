@@ -9,20 +9,20 @@ import {
     View
 } from 'react-native';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
-import Channel from './../models/Channel';
-import BalanceSlider from './../components/BalanceSlider';
-import SetFeesForm from './../components/SetFeesForm';
+import Channel from './../../models/Channel';
+import BalanceSlider from './../../components/BalanceSlider';
+import SetFeesForm from './../../components/SetFeesForm';
 import Identicon from 'identicon.js';
 import { inject, observer } from 'mobx-react';
 const hash = require('object-hash');
-import PrivacyUtils from './../utils/PrivacyUtils';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import PrivacyUtils from './../../utils/PrivacyUtils';
+import { localeString } from './../../utils/LocaleUtils';
+import { themeColor } from './../../utils/ThemeUtils';
 
-import ChannelsStore from './../stores/ChannelsStore';
-import FeeStore from './../stores/FeeStore';
-import UnitsStore from './../stores/UnitsStore';
-import SettingsStore from './../stores/SettingsStore';
+import ChannelsStore from './../../stores/ChannelsStore';
+import FeeStore from './../../stores/FeeStore';
+import UnitsStore from './../../stores/UnitsStore';
+import SettingsStore from './../../stores/SettingsStore';
 
 interface ChannelProps {
     navigation: any;
