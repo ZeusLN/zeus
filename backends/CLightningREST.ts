@@ -120,6 +120,7 @@ export default class CLightningREST extends LND {
             message: message
         });
 
+    supportsMessageSigning = () => true;
     supportsMPP = () => false;
     supportsCoinControl = () => this.supports('v0.8.2', 'v0.4.0');
     supportsHopPicking = () => false;

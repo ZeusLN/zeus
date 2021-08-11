@@ -465,6 +465,7 @@ export default class Eclair {
             msg: message
         });
 
+    supportsMessageSigning = () => true;
     supportsOnchainSends = () => true;
     supportsKeysend = () => false;
     supportsChannelManagement = () => true;

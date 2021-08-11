@@ -17,6 +17,7 @@ export default class MessageSignStore {
     public signMessage = (text: string) => {
         this.loading = true;
         const body = Base64Utils.btoa(text);
+        console.log("text, body ", text, body);
 
         RESTUtils.signMessage(body)
             .then((data: any) => {
