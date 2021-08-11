@@ -23,7 +23,7 @@ export function ChannelItem({
     status: Status;
 }) {
     const percentOfLargest = largestTotal
-        ? (inbound + outbound) / largestTotal
+        ? (Number(inbound) + Number(outbound)) / largestTotal
         : 1.0;
     return (
         <View
@@ -36,13 +36,15 @@ export function ChannelItem({
             }}
         >
             <Row justify="space-between">
-                <Body>{title}</Body>
+                <View style={{ flex: 1, paddingRight: 10 }}>
+                    <Body>{title}</Body>
+                </View>
                 <Tag status={status} />
             </Row>
             <Row>
                 <BalanceBar
-                    left={outbound}
-                    right={inbound}
+                    left={Number(outbound)}
+                    right={Number(inbound)}
                     offline={status === Status.Offline}
                     percentOfLargest={percentOfLargest}
                     showProportionally={true}

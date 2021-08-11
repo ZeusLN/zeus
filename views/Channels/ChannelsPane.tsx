@@ -1,11 +1,14 @@
 import * as React from 'react';
-import { FlatList, View } from 'react-native';
+import { FlatList, View, TouchableHighlight } from 'react-native';
 
 import { ChannelsHeader } from '../../components/Channels/ChannelsHeader';
 import { WalletHeader } from '../../components/WalletHeader';
 import { ChannelItem } from '../../components/Channels/ChannelItem';
 import { localeString } from '../../utils/LocaleUtils';
 import { Spacer } from '../../components/layout/Spacer';
+
+import { inject, observer } from 'mobx-react';
+import ChannelsStore from '../../stores/ChannelsStore';
 
 // TODO: does this belong in the model? Or can it be computed from the model?
 export enum Status {
@@ -17,75 +20,77 @@ export enum Status {
 
 interface ChannelsProps {
     navigation: any;
+    ChannelsStore: ChannelsStore;
 }
 
+@inject('ChannelsStore')
+@observer
 export default class ChannelsPane extends React.PureComponent<
     ChannelsProps,
     {}
 > {
-    largest = 20000 + 20000;
-    dummyChannelsData = [
-        {
-            title: 'looptest',
-            status: Status.Good,
-            inbound: 20000,
-            outbound: 20000
-        },
-        {
-            title: 'evan.k',
-            status: Status.Stable,
-            inbound: 14000,
-            outbound: 12000
-        },
-        {
-            title: 'bosch',
-            status: Status.Unstable,
-            inbound: 6000,
-            outbound: 18000
-        },
-        {
-            title: 'bosch but offline',
-            status: Status.Offline,
-            inbound: 6000,
-            outbound: 18000
-        },
-        {
-            title: 'futurepaul',
-            status: Status.Offline,
-            inbound: 420,
-            outbound: 6000
-        }
-    ];
-
     headerString = `${localeString('views.Wallet.Wallet.channels')} (${
-        this.dummyChannelsData.length
+        this.props.ChannelsStore.channels.length
     })`;
 
     renderItem = ({ item }) => {
+        const { ChannelsStore, navigation } = this.props;
+        const { nodes, largestChannelSats } = ChannelsStore;
+        const displayName =
+            item.alias ||
+            (nodes[item.remote_pubkey] && nodes[item.remote_pubkey].alias) ||
+            item.remote_pubkey ||
+            item.channelId;
         return (
-            <ChannelItem
-                title={item.title}
-                status={item.status}
-                inbound={item.inbound}
-                outbound={item.outbound}
-                largestTotal={this.largest}
-            />
+            <TouchableHighlight
+                onPress={() =>
+                    navigation.navigate('Channel', {
+                        channel: item
+                    })
+                }
+            >
+                <ChannelItem
+                    title={displayName}
+                    status={item.isActive ? Status.Good : Status.Offline}
+                    inbound={item.remoteBalance}
+                    outbound={item.localBalance}
+                    largestTotal={largestChannelSats}
+                />
+            </TouchableHighlight>
         );
     };
 
     render() {
+        const { ChannelsStore, navigation } = this.props;
+        const {
+            loading,
+            getChannels,
+            totalInbound,
+            totalOutbound,
+            totalOffline,
+            channels
+        } = ChannelsStore;
         return (
             <View style={{ flex: 1 }}>
                 <WalletHeader
-                    navigation={this.props.navigation}
+                    navigation={navigation}
                     title={this.headerString}
+                    channels
                 />
-                <ChannelsHeader />
+                <ChannelsHeader
+                    totalInbound={totalInbound}
+                    totalOutbound={totalOutbound}
+                    totalOffline={totalOffline}
+                />
                 <FlatList
-                    data={this.dummyChannelsData}
+                    data={channels}
                     renderItem={this.renderItem}
-                    keyExtractor={item => item.title}
                     ListFooterComponent={<Spacer height={100} />}
+                    onRefresh={() => getChannels()}
+                    refreshing={loading}
+                    keyExtractor={(item, index) =>
+                        `${item.remote_pubkey}-${index}`
+                    }
                 />
             </View>
         );

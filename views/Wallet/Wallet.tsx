@@ -382,7 +382,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                                 alignItems: 'center',
                                                 shadowColor: 'black',
                                                 shadowRadius: 5,
-                                                shadowOpacity: 0.8
+                                                shadowOpacity: 0.8,
+                                                elevation: 2
                                             }}
                                             onPress={() => {
                                                 const {
