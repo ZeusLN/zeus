@@ -187,7 +187,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                             }
                         >
                             <CaretUp
-                                style={{ alignSelf: 'center', bottom: 100 }}
+                                style={{ alignSelf: 'center', marginBottom: 100 }}
                             />
                         </TouchableOpacity>
                     </LinearGradient>
