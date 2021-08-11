@@ -246,6 +246,10 @@ export default class LND {
                 urlParams[1]}`
         );
     getForwardingHistory = (data: any) => this.postRequest('/v1/switch', data);
+    signMessage = (message: string) =>
+        this.postRequest('/v1/signmessage', {
+            msg: message
+        });
 
     // LndHub
     createAccount = (
@@ -270,6 +274,7 @@ export default class LND {
         );
     };
 
+    supportsMessageSigning = () => true;
     supportsOnchainSends = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
