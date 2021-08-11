@@ -9,7 +9,7 @@ export default class FeeStore {
     @observable public fees: any = {};
     @observable public channelFees: any = {};
     @observable public dataFrame: any = {};
-    @observable public mempooldataFrame: any = {};
+    @observable public recommendedFees: any = {};
     @observable public loading: boolean = false;
     @observable public error: boolean = false;
     @observable public setFeesError: boolean = false;
@@ -63,16 +63,15 @@ export default class FeeStore {
             .then((response: any) => {
                 const status = response.info().status;
                 if (status == 200) {
-                    const mempoolfeedata = response.json();
                     this.loading = false;
-                    this.mempooldataFrame = mempoolfeedata;
+                    this.recommendedFees = response.json();
                 } else {
-                    this.mempooldataFrame = {};
+                    this.recommendedFees = {};
                     this.loading = false;
                 }
             })
             .catch(() => {
-                this.mempooldataFrame = {};
+                this.recommendedFees = {};
                 this.loading = false;
             });
     };
