@@ -309,6 +309,7 @@ export default class Spark {
         };
     };
 
+    supportsMessageSigning = () => false;
     supportsOnchainSends = () => true;
     supportsKeysend = () => false;
     supportsChannelManagement = () => true;
