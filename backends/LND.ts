@@ -246,7 +246,6 @@ export default class LND {
                 urlParams[1]}`
         );
     getForwardingHistory = (data: any) => this.postRequest('/v1/switch', data);
-<<<<<<< HEAD
     // Coin Control
     fundPsbt = (data: any) => this.postRequest('/v2/wallet/psbt/fund', data);
     finalizePsbt = (data: any) =>
@@ -258,12 +257,10 @@ export default class LND {
     listAccounts = () => this.getRequest('/v2/wallet/accounts');
     importAccount = (data: any) =>
         this.postRequest('/v2/wallet/accounts/import', data);
-=======
     signMessage = (message: string) =>
         this.postRequest('/v1/signmessage', {
             msg: message
         });
->>>>>>> upstream/redesign
 
     // LndHub
     createAccount = (
