@@ -1,6 +1,7 @@
 import { action, observable } from 'mobx';
 import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
+import Base64Utils from './../utils/Base64Utils';
 import Utxo from './../models/Utxo';
 
 export default class UTXOsStore {
@@ -11,6 +12,7 @@ export default class UTXOsStore {
     @observable public utxos: Utxo = [];
     // accounts
     @observable public loadingAccounts: boolean = false;
+    @observable public importingAccount: boolean = false;
     @observable public accounts: any = [];
     //
     settingsStore: SettingsStore;
@@ -53,6 +55,32 @@ export default class UTXOsStore {
                 this.error = false;
             })
             .catch((error: any) => {
+                // handle error
+                this.errorMsg = error.toString();
+                this.getUtxosError();
+            });
+    };
+
+    @action
+    public importAccount = data => {
+        console.log('importAccount');
+        this.errorMsg = '';
+        this.importingAccount = true;
+        console.log(data);
+        const mfk = Base64Utils.hexToBase64(data.master_key_fingerprint);
+        console.log(mfk);
+        const newData = {name: data.name, extended_public_key: data.extended_public_key, master_key_fingerprint: mfk, dry_run: true};
+        console.log(newData);
+        RESTUtils.importAccount(newData)
+            .then((data: any) => {
+                this.importingAccount = false;
+                console.log('!!!')
+                console.log(data);
+                this.error = false;
+            })
+            .catch((error: any) => {
+                console.log('error');
+                console.log(error);
                 // handle error
                 this.errorMsg = error.toString();
                 this.getUtxosError();

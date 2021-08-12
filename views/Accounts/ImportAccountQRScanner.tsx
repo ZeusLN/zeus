@@ -1,13 +1,13 @@
 import * as React from 'react';
 import { Alert } from 'react-native';
-import QRCodeScanner from './../components/QRCodeScanner';
-import LndConnectUtils from './../utils/LndConnectUtils';
-import { localeString } from './../utils/LocaleUtils';
+import QRCodeScanner from './../../components/QRCodeScanner';
+import LndConnectUtils from './../../utils/LndConnectUtils';
+import { localeString } from './../../utils/LocaleUtils';
 import {
     decodeUR,
     extractSingleWorkload,
     BlueURDecoder
-} from './../zeus_modules/ur';
+} from './../../zeus_modules/ur';
 const createHash = require('create-hash');
 
 interface ImportAccountQRScannerProps {
