@@ -1,7 +1,6 @@
 import { action, observable } from 'mobx';
 import RESTUtils from './../utils/RESTUtils';
 import Base64Utils from './../utils/Base64Utils';
-import SignMessage from './../views/Settings/SignMessage';
 
 export default class MessageSignStore {
     @observable public loading: boolean = false;

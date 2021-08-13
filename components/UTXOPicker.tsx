@@ -309,7 +309,7 @@ export default class UTXOPicker extends React.Component<
                             </Text>
                         ) : (
                             <Picker
-                                selectedValue={selectedValue}
+                                selectedValue={`${selectedValue}`}
                                 onValueChange={(itemValue: string) => {
                                     if (itemValue === 'No selection') {
                                         this.clearSelection();

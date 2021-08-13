@@ -59,7 +59,7 @@ export default class Invoice extends BaseModel {
         return 'Invoice';
     }
 
-    @computed public get getTimestamp(): string {
+    @computed public get getTimestamp(): string | number {
         return (
             this.paid_at ||
             this.creation_date ||
@@ -121,7 +121,7 @@ export default class Invoice extends BaseModel {
               );
     }
 
-    @computed public get getDate(): string {
+    @computed public get getDate(): string | number | Date {
         return this.isPaid
             ? this.settleDate
             : DateTimeUtils.listDate(
@@ -154,7 +154,8 @@ export default class Invoice extends BaseModel {
     @computed public isExpired(): boolean {
         if (this.expiry) {
             return (
-                new Date().getTime() / 1000 > this.creation_date + this.expiry
+                new Date().getTime() / 1000 >
+                Number(this.creation_date) + Number(this.expiry)
             );
         }
 

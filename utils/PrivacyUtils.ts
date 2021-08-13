@@ -37,7 +37,7 @@ class PrivacyUtils {
         const { lurkerMode } = settings;
         if (!lurkerMode) return input;
 
-        let output = '';
+        let output: string = '';
         const length = fixedLength || (input && input.toString().length) || 1;
         const wordlist = numberSet ? numbers : alphabet;
 

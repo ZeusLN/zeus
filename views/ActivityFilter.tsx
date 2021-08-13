@@ -1,31 +1,17 @@
 import * as React from 'react';
-import {
-    ActivityIndicator,
-    FlatList,
-    StyleSheet,
-    Switch,
-    Text,
-    View
-} from 'react-native';
-import { Avatar, Button, Header, Icon, ListItem } from 'react-native-elements';
-import Channel from './../models/Channel';
+import { FlatList, StyleSheet, Switch, Text, View } from 'react-native';
+import { Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-const hash = require('object-hash');
-import DateTimeUtils from './../utils/DateTimeUtils';
-import PrivacyUtils from './../utils/PrivacyUtils';
+
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 import DatePicker from 'react-native-date-picker';
 
 import ActivityStore from './../stores/ActivityStore';
-import UnitsStore from './../stores/UnitsStore';
-import SettingsStore from './../stores/SettingsStore';
 
 interface ActivityFilterProps {
     navigation: any;
     ActivityStore: ActivityStore;
-    UnitsStore: UnitsStore;
-    SettingsStore: SettingsStore;
 }
 
 interface ActivityFilterState {
@@ -35,7 +21,7 @@ interface ActivityFilterState {
     workingEndDate: any;
 }
 
-@inject('ActivityStore', 'UnitsStore', 'SettingsStore')
+@inject('ActivityStore')
 @observer
 export default class ActivityFilter extends React.Component<
     ActivityFilterProps,
@@ -44,26 +30,20 @@ export default class ActivityFilter extends React.Component<
     state = {
         setStartDate: false,
         setEndDate: false,
-        workingStartDate: null,
-        workingEndDate: null
+        workingStartDate: undefined,
+        workingEndDate: undefined
     };
 
     renderSeparator = () => <View style={styles.separator} />;
 
     render() {
-        const {
-            navigation,
-            ActivityStore,
-            UnitsStore,
-            SettingsStore
-        } = this.props;
+        const { navigation, ActivityStore } = this.props;
         const {
             setStartDate,
             setEndDate,
             workingStartDate,
             workingEndDate
         } = this.state;
-        const { getAmount, units } = UnitsStore;
         const {
             loading,
             setFilters,
@@ -82,8 +62,6 @@ export default class ActivityFilter extends React.Component<
             startDate,
             endDate
         } = filters;
-        const { settings } = SettingsStore;
-        const { lurkerMode } = settings;
 
         const CloseButton = () => (
             <Icon
@@ -188,8 +166,8 @@ export default class ActivityFilter extends React.Component<
                                     this.setState({
                                         setStartDate: false,
                                         setEndDate: false,
-                                        workingStartDate: null,
-                                        workingEndDate: null
+                                        workingStartDate: undefined,
+                                        workingEndDate: undefined
                                     });
                                 }}
                                 buttonStyle={{ backgroundColor: 'orange' }}
@@ -291,9 +269,10 @@ export default class ActivityFilter extends React.Component<
                                         <Switch
                                             value={item.value}
                                             onValueChange={() => {
-                                                let newFilters = filters;
-                                                newFilters[item.var] = !filters[
-                                                    item.var
+                                                let newFilters: any = filters;
+                                                const index = `${item.var}`;
+                                                newFilters[index] = !filters[
+                                                    index
                                                 ];
                                                 setFilters(newFilters);
                                             }}
@@ -317,7 +296,9 @@ export default class ActivityFilter extends React.Component<
                             </ListItem>
                         </>
                     )}
-                    keyExtractor={(item, index) => `${item.model}-${index}`}
+                    keyExtractor={(item: any, index: any) =>
+                        `${item.model}-${index}`
+                    }
                     ItemSeparatorComponent={this.renderSeparator}
                     onEndReachedThreshold={50}
                     refreshing={loading}
