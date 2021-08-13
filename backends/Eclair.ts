@@ -473,6 +473,7 @@ export default class Eclair {
     supportsCoinControl = () => false;
     supportsHopPicking = () => false;
     supportsRouting = () => true;
+    supportsNodeInfo = () => true;
 }
 
 const mapInvoice = (isPending: any) => ({

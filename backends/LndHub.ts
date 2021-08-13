@@ -75,4 +75,5 @@ export default class LndHub extends LND {
     supportsCoinControl = () => false;
     supportsHopPicking = () => false;
     supportsRouting = () => false;
+    supportsNodeInfo = () => false;
 }
