@@ -73,7 +73,6 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                         buttonNegative: 'Cancel'
                     }}
                     captureAudio={false}
-                    autoFocus
                 />
             </React.Fragment>
         );
