@@ -243,10 +243,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             <React.Fragment>
                 <TouchableOpacity onPress={() => changeUnits()}>
                     <Text
-                        style={{
-                            textDecorationLine: 'underline',
-                            color: themeColor('text')
-                        }}
+                        style={styles.label}
                     >
                         {localeString('views.Send.amount')} (
                         {units === 'fiat' ? fiat : units})
@@ -264,10 +261,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                 {units !== 'sats' && amount !== 'all' && (
                     <TouchableOpacity onPress={() => changeUnits()}>
                         <Text
-                            style={{
-                                textDecorationLine: 'underline',
-                                color: themeColor('text')
-                            }}
+                            style={styles.label}
                         >
                             {satAmount} {localeString('views.Send.satoshis')}
                         </Text>
@@ -275,9 +269,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                 )}
                 {amount === 'all' && (
                     <Text
-                        style={{
-                            color: themeColor('text')
-                        }}
+                        style={styles.text}
                     >
                         {`${
                             utxoBalance > 0
@@ -287,10 +279,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     </Text>
                 )}
                 <Text
-                    style={{
-                        textDecorationLine: 'underline',
-                        color: themeColor('text')
-                    }}
+                    style={styles.label}
                 >
                     {localeString('views.Send.feeSats')}:
                 </Text>
@@ -299,7 +288,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     placeholder="2"
                     value={fee}
                     onChangeText={(text: string) =>
-                        this.setState({ fee: text })
+                        this.setFee(text)
                     }
                     style={styles.textInput}
                     placeholderTextColor="gray"
@@ -341,10 +330,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                 />
                 <View style={styles.content}>
                     <Text
-                        style={{
-                            textDecorationLine: 'underline',
-                            color: themeColor('text')
-                        }}
+                        style={styles.label}
                     >
                         {paymentOptions.join(', ')}
                     </Text>
@@ -359,9 +345,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     />
                     {!isValid && !!destination && (
                         <Text
-                            style={{
-                                color: themeColor('text')
-                            }}
+                            style={styles.text}
                         >
                             {localeString('views.Send.mustBeValid')}{' '}
                             {paymentOptions.join(', ')}
@@ -371,17 +355,14 @@ export default class Send extends React.Component<SendProps, SendState> {
                         <Text
                             style={{
                                 paddingTop: 10,
-                                color: themeColor('text')
+                                ...styles.text
                             }}
                         >{`${transactionType} Transaction`}</Text>
                     )}
                     {transactionType === 'On-chain' &&
                         !RESTUtils.supportsOnchainSends() && (
                             <Text
-                                style={{
-                                    textDecorationLine: 'underline',
-                                    color: themeColor('text')
-                                }}
+                                style={styles.label}
                             >
                                 {localeString('views.Send.onChainNotSupported')}{' '}
                                 {implementation}
@@ -393,10 +374,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         <React.Fragment>
                             <TouchableOpacity onPress={() => changeUnits()}>
                                 <Text
-                                    style={{
-                                        textDecorationLine: 'underline',
-                                        color: themeColor('text')
-                                    }}
+                                    style={styles.label}
                                 >
                                     {localeString('views.Send.amount')} (
                                     {units === 'fiat' ? fiat : units})
@@ -414,10 +392,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             {units !== 'sats' && (
                                 <TouchableOpacity onPress={() => changeUnits()}>
                                     <Text
-                                        style={{
-                                            textDecorationLine: 'underline',
-                                            color: themeColor('text')
-                                        }}
+                                        style={styles.label}
                                     >
                                         {satAmount}{' '}
                                         {localeString('views.Send.satoshis')}
@@ -446,10 +421,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         !RESTUtils.supportsKeysend() && (
                             <React.Fragment>
                                 <Text
-                                    style={{
-                                        textDecorationLine: 'underline',
-                                        color: themeColor('text')
-                                    }}
+                                    style={styles.label}
                                 >
                                     {localeString('views.Send.sorry')},{' '}
                                     {implementation}{' '}
@@ -525,9 +497,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     {!!error_msg && (
                         <React.Fragment>
                             <Text
-                                style={{
-                                    color: themeColor('text')
-                                }}
+                                style={styles.text}
                             >
                                 {error_msg}
                             </Text>
@@ -543,6 +513,13 @@ const styles = StyleSheet.create({
     scrollView: {
         flex: 1,
         backgroundColor: themeColor('background'),
+        color: themeColor('text')
+    },
+    label: {
+        textDecorationLine: 'underline',
+        color: themeColor('text')
+    },
+    text: {
         color: themeColor('text')
     },
     textInput: {
