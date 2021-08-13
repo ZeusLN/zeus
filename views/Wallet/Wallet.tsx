@@ -7,6 +7,7 @@ import Channels from './Channels';
 import MainPane from './MainPane';
 import { inject, observer } from 'mobx-react';
 import PrivacyUtils from './../../utils/PrivacyUtils';
+import { restartTor } from './../../utils/TorUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 import Clipboard from '@react-native-community/clipboard';
@@ -104,6 +105,12 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         });
     }
 
+    restartTorAndReload = async () => {
+        this.props.NodeInfoStore.setLoading();
+        await restartTor();
+        await this.getSettingsAndRefresh();
+    };
+
     refresh = () => {
         const {
             NodeInfoStore,
@@ -152,8 +159,8 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             SettingsStore,
             navigation
         } = this.props;
-
-        const { implementation } = SettingsStore;
+        const { error, loading } = NodeInfoStore;
+        const { implementation, enableTor } = SettingsStore;
 
         const WalletScreen = () => {
             return (
@@ -174,6 +181,26 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                             BalanceStore={BalanceStore}
                             SettingsStore={SettingsStore}
                         />
+
+                        {error && !loading && enableTor && (
+                            <View style={{ marginTop: 10 }}>
+                                <Button
+                                    title={localeString(
+                                        'views.Wallet.restartTor'
+                                    )}
+                                    icon={{
+                                        name: 'sync',
+                                        size: 25,
+                                        color: 'white'
+                                    }}
+                                    buttonStyle={{
+                                        backgroundColor: 'gray',
+                                        borderRadius: 30
+                                    }}
+                                    onPress={() => this.restartTorAndReload()}
+                                />
+                            </View>
+                        )}
 
                         <LayerBalances
                             navigation={navigation}

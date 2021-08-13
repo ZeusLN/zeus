@@ -32,4 +32,10 @@ const doTorRequest = async <T extends RequestMethod>(
             break;
     }
 };
-export { doTorRequest, RequestMethod };
+
+const restartTor = async () => {
+    await tor.stopIfRunning();
+    await tor.startIfNotStarted();
+};
+
+export { doTorRequest, restartTor, RequestMethod };
