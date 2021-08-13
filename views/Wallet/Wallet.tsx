@@ -106,8 +106,9 @@ export default class Wallet extends React.Component<WalletProps, {}> {
     }
 
     restartTorAndReload = async () => {
+        this.props.NodeInfoStore.setLoading();
         await restartTor();
-        await getSettingsAndRefresh();
+        await this.getSettingsAndRefresh();
     };
 
     refresh = () => {
@@ -158,7 +159,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             SettingsStore,
             navigation
         } = this.props;
-
+        const { error, loading } = NodeInfoStore;
         const { implementation, enableTor } = SettingsStore;
 
         const WalletScreen = () => {
@@ -181,20 +182,24 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                             SettingsStore={SettingsStore}
                         />
 
-                        {!!NodeInfoStore.errorMsg && enableTor && (
-                            <Button
-                                title="Restart Tor and Try Again"
-                                icon={{
-                                    name: 'sync',
-                                    size: 25,
-                                    color: 'white'
-                                }}
-                                buttonStyle={{
-                                    backgroundColor: 'gray',
-                                    borderRadius: 30
-                                }}
-                                onPress={() => this.restartTorAndReload()}
-                            />
+                        {error && !loading && enableTor && (
+                            <View style={{ marginTop: 10 }}>
+                                <Button
+                                    title={localeString(
+                                        'views.Wallet.restartTor'
+                                    )}
+                                    icon={{
+                                        name: 'sync',
+                                        size: 25,
+                                        color: 'white'
+                                    }}
+                                    buttonStyle={{
+                                        backgroundColor: 'gray',
+                                        borderRadius: 30
+                                    }}
+                                    onPress={() => this.restartTorAndReload()}
+                                />
+                            </View>
                         )}
 
                         <LayerBalances
