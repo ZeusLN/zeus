@@ -13,16 +13,14 @@ import { localeString } from './../utils/LocaleUtils';
 
 import TransactionsStore from './../stores/TransactionsStore';
 import LnurlPayStore from './../stores/LnurlPayStore';
-import SettingsStore from './../stores/SettingsStore';
 
 interface SendingLightningProps {
     navigation: any;
     TransactionsStore: TransactionsStore;
     LnurlPayStore: LnurlPayStore;
-    SettingsStore: SettingsStore;
 }
 
-@inject('TransactionsStore', 'LnurlPayStore', 'SettingsStore')
+@inject('TransactionsStore', 'LnurlPayStore')
 @observer
 export default class SendingLightning extends React.Component<
     SendingLightningProps,
@@ -53,12 +51,7 @@ export default class SendingLightning extends React.Component<
     }
 
     render() {
-        const {
-            TransactionsStore,
-            LnurlPayStore,
-            SettingsStore,
-            navigation
-        } = this.props;
+        const { TransactionsStore, LnurlPayStore, navigation } = this.props;
         const {
             loading,
             error,

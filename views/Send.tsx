@@ -477,7 +477,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <View style={styles.feeTableButton}>
                                 <FeeTable
                                     setFee={this.setFee}
-                                    SettingsStore={SettingsStore}
                                     FeeStore={FeeStore}
                                 />
                             </View>
