@@ -35,8 +35,8 @@ import SignMessage from './views/Settings/SignMessage';
 import Channels from './views/Channels';
 import Activity from './views/Activity';
 import ActivityFilter from './views/ActivityFilter';
-import CoinControl from './views/CoinControl';
-import Utxo from './views/UTXO';
+import CoinControl from './views/UTXOs/CoinControl';
+import Utxo from './views/UTXOs/UTXO';
 import ImportAccount from './views/Accounts/ImportAccount';
 import ImportAccountQRScanner from './views/Accounts/ImportAccountQRScanner';
 

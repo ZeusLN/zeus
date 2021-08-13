@@ -7,15 +7,15 @@ import {
     View
 } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
-import UrlUtils from './../utils/UrlUtils';
-import Utxo from './../models/Utxo';
+import UrlUtils from './../../utils/UrlUtils';
+import Utxo from './../../models/Utxo';
 import { inject, observer } from 'mobx-react';
-import PrivacyUtils from './../utils/PrivacyUtils';
+import PrivacyUtils from './../../utils/PrivacyUtils';
 
-import NodeInfoStore from './../stores/NodeInfoStore';
-import UnitsStore from './../stores/UnitsStore';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import NodeInfoStore from './../../stores/NodeInfoStore';
+import UnitsStore from './../../stores/UnitsStore';
+import { localeString } from './../../utils/LocaleUtils';
+import { themeColor } from './../../utils/ThemeUtils';
 
 interface UTXOProps {
     navigation: any;
