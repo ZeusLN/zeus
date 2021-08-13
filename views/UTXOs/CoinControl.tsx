@@ -2,16 +2,16 @@ import * as React from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import { Avatar, Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import DateTimeUtils from './../utils/DateTimeUtils';
-import PrivacyUtils from './../utils/PrivacyUtils';
-import RESTUtils from './../utils/RESTUtils';
-import Pill from './../components/Pill';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import DateTimeUtils from './../../utils/DateTimeUtils';
+import PrivacyUtils from './../../utils/PrivacyUtils';
+import RESTUtils from './../../utils/RESTUtils';
+import Pill from './../../components/Pill';
+import { localeString } from './../../utils/LocaleUtils';
+import { themeColor } from './../../utils/ThemeUtils';
 
-import UTXOsStore from './../stores/UTXOsStore';
-import UnitsStore from './../stores/UnitsStore';
-import SettingsStore from './../stores/SettingsStore';
+import UTXOsStore from './../../stores/UTXOsStore';
+import UnitsStore from './../../stores/UnitsStore';
+import SettingsStore from './../../stores/SettingsStore';
 
 interface CoinControlProps {
     navigation: any;
@@ -130,9 +130,11 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                                                 {subTitle}
                                             </ListItem.Subtitle>
                                         </ListItem.Content>
+                                        {/*
                                         <ListItem.Content right>
                                             <FrozenPill />
                                         </ListItem.Content>
+                                        */}
                                     </ListItem>
                                 </React.Fragment>
                             );
