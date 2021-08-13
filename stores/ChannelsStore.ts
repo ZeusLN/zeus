@@ -23,6 +23,11 @@ export default class ChannelsStore {
     @observable public channelSuccess: boolean = false;
     @observable channelRequest: any;
     closeChannelSuccess: boolean;
+    // redesign
+    @observable public largestChannelSats: number = 0;
+    @observable public totalOutbound: number = 0;
+    @observable public totalInbound: number = 0;
+    @observable public totalOffline: number = 0;
 
     settingsStore: SettingsStore;
 
@@ -47,34 +52,9 @@ export default class ChannelsStore {
                 }
             }
         );
-
-        reaction(
-            () => this.channels,
-            () => {
-                if (
-                    this.channels &&
-                    this.settingsStore.implementation !== 'c-lightning-REST'
-                ) {
-                    this.channels.forEach((channel: Channel) => {
-                        if (!this.nodes[channel.remote_pubkey]) {
-                            this.getNodeInfo(channel.remote_pubkey).then(
-                                (nodeInfo: any) => {
-                                    if (!nodeInfo) return;
-
-                                    this.nodes[
-                                        channel.remote_pubkey
-                                    ] = nodeInfo;
-                                    this.aliasesById[channel.chan_id] =
-                                        nodeInfo.alias;
-                                }
-                            );
-                        }
-                    });
-                }
-            }
-        );
     }
 
+    @action
     reset = () => {
         this.loading = false;
         this.error = false;
@@ -91,6 +71,10 @@ export default class ChannelsStore {
         this.peerSuccess = false;
         this.channelSuccess = false;
         this.channelRequest = null;
+        this.largestChannelSats = 0;
+        this.totalOutbound = 0;
+        this.totalInbound = 0;
+        this.totalOffline = 0;
     };
 
     @action
@@ -110,12 +94,46 @@ export default class ChannelsStore {
     @action
     public getChannels = () => {
         this.channels = [];
+        this.largestChannelSats = 0;
+        this.totalOutbound = 0;
+        this.totalInbound = 0;
+        this.totalOffline = 0;
         this.loading = true;
         RESTUtils.getChannels()
             .then((data: any) => {
-                this.channels = data.channels.map(
+                const channels = data.channels.map(
                     (channel: any) => new Channel(channel)
                 );
+                channels.forEach((channel: Channel) => {
+                    const channelRemoteBalance = Number(channel.remoteBalance);
+                    const channelLocalBalance = Number(channel.localBalance);
+                    const channelTotal =
+                        channelRemoteBalance + channelLocalBalance;
+                    if (channelTotal > this.largestChannelSats)
+                        this.largestChannelSats = channelTotal;
+                    if (!channel.isActive) {
+                        this.totalOffline += channelTotal;
+                    } else {
+                        this.totalInbound += channelRemoteBalance;
+                        this.totalOutbound += channelLocalBalance;
+                    }
+                    if (
+                        this.settingsStore.implementation !==
+                            'c-lightning-REST' &&
+                        !this.nodes[channel.remote_pubkey]
+                    ) {
+                        this.getNodeInfo(channel.remote_pubkey).then(
+                            (nodeInfo: any) => {
+                                if (!nodeInfo) return;
+
+                                this.nodes[channel.remote_pubkey] = nodeInfo;
+                                this.aliasesById[channel.chan_id] =
+                                    nodeInfo.alias;
+                            }
+                        );
+                    }
+                });
+                this.channels = channels;
                 this.error = false;
                 this.loading = false;
             })

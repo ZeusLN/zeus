@@ -57,9 +57,9 @@ export default class TransactionsStore {
     };
 
     @action
-    public getTransactions = () => {
+    public getTransactions = async () => {
         this.loading = true;
-        RESTUtils.getTransactions()
+        await RESTUtils.getTransactions()
             .then((data: any) => {
                 this.transactions = data.transactions
                     .slice()
@@ -165,8 +165,9 @@ export default class TransactionsStore {
                 this.payment_preimage = result.payment_preimage;
                 this.payment_hash = result.payment_hash;
                 if (
-                    response.payment_error !== '' &&
-                    result.status !== 'SUCCEEDED'
+                    result.status !== 'complete' &&
+                    result.status !== 'SUCCEEDED' &&
+                    result.payment_error !== ''
                 ) {
                     this.error = true;
                     this.payment_error =

@@ -29,9 +29,9 @@ export default class PaymentsStore {
     };
 
     @action
-    public getPayments = () => {
+    public getPayments = async () => {
         this.loading = true;
-        RESTUtils.getPayments()
+        await RESTUtils.getPayments()
             .then((data: any) => {
                 const payments = data.transaction || data.payments || data;
                 this.payments = payments

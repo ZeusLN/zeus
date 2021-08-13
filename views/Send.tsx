@@ -27,6 +27,7 @@ import FeeTable from './../components/FeeTable';
 
 import RESTUtils from './../utils/RESTUtils';
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
 
 interface SendProps {
     exitSetup: any;
@@ -198,7 +199,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         } = this.state;
         const { confirmedBlockchainBalance } = BalanceStore;
         const { implementation, settings } = SettingsStore;
-        const { theme, fiat } = settings;
+        const { fiat } = settings;
         const { units, changeUnits } = UnitsStore;
         const { fiatRates }: any = FiatStore;
 
@@ -238,112 +239,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             paymentOptions.push(localeString('views.Send.keysendAddress'));
         }
 
-        const OnChain = () => (
-            <React.Fragment>
-                <TouchableOpacity onPress={() => changeUnits()}>
-                    <Text
-                        style={{
-                            textDecorationLine: 'underline',
-                            color: theme === 'dark' ? 'white' : 'black'
-                        }}
-                    >
-                        {localeString('views.Send.amount')} (
-                        {units === 'fiat' ? fiat : units})
-                    </Text>
-                </TouchableOpacity>
-                <TextInput
-                    keyboardType="numeric"
-                    value={amount}
-                    onChangeText={(text: string) =>
-                        this.setState({ amount: text })
-                    }
-                    style={
-                        theme === 'dark'
-                            ? styles.textInputDark
-                            : styles.textInput
-                    }
-                    placeholderTextColor="gray"
-                />
-                {units !== 'sats' && amount !== 'all' && (
-                    <TouchableOpacity onPress={() => changeUnits()}>
-                        <Text
-                            style={{
-                                textDecorationLine: 'underline',
-                                color: theme === 'dark' ? 'white' : 'black'
-                            }}
-                        >
-                            {satAmount} {localeString('views.Send.satoshis')}
-                        </Text>
-                    </TouchableOpacity>
-                )}
-                {amount === 'all' && (
-                    <Text
-                        style={{
-                            color: theme === 'dark' ? 'white' : 'black'
-                        }}
-                    >
-                        {`${
-                            utxoBalance > 0
-                                ? utxoBalance
-                                : confirmedBlockchainBalance
-                        } ${localeString('views.Receive.satoshis')}`}
-                    </Text>
-                )}
-                <Text
-                    style={{
-                        textDecorationLine: 'underline',
-                        color: theme === 'dark' ? 'white' : 'black'
-                    }}
-                >
-                    {localeString('views.Send.feeSats')}:
-                </Text>
-                <TextInput
-                    keyboardType="numeric"
-                    placeholder="2"
-                    value={fee}
-                    onChangeText={(text: string) =>
-                        this.setState({ fee: text })
-                    }
-                    style={
-                        theme === 'dark'
-                            ? styles.textInputDark
-                            : styles.textInput
-                    }
-                    placeholderTextColor="gray"
-                />
-                {RESTUtils.supportsCoinControl() && (
-                    <UTXOPicker
-                        onValueChange={this.selectUTXOs}
-                        UTXOsStore={UTXOsStore}
-                    />
-                )}
-                <View style={styles.button}>
-                    <Button
-                        title={localeString('views.Send.sendCoins')}
-                        icon={{
-                            name: 'send',
-                            size: 25,
-                            color: 'white'
-                        }}
-                        onPress={() => this.sendCoins(satAmount)}
-                        style={styles.button}
-                        buttonStyle={{
-                            backgroundColor: 'orange',
-                            borderRadius: 30
-                        }}
-                    />
-                </View>
-            </React.Fragment>
-        );
-
         return (
-            <ScrollView
-                style={
-                    theme === 'dark'
-                        ? styles.darkThemeStyle
-                        : styles.lightThemeStyle
-                }
-            >
+            <ScrollView style={styles.scrollView}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -353,12 +250,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     backgroundColor="grey"
                 />
                 <View style={styles.content}>
-                    <Text
-                        style={{
-                            textDecorationLine: 'underline',
-                            color: theme === 'dark' ? 'white' : 'black'
-                        }}
-                    >
+                    <Text style={styles.label}>
                         {paymentOptions.join(', ')}
                     </Text>
                     <TextInput
@@ -367,19 +259,11 @@ export default class Send extends React.Component<SendProps, SendState> {
                         onChangeText={(text: string) => {
                             this.validateAddress(text);
                         }}
-                        style={
-                            theme === 'dark'
-                                ? styles.textInputDark
-                                : styles.textInput
-                        }
+                        style={styles.textInput}
                         placeholderTextColor="gray"
                     />
                     {!isValid && !!destination && (
-                        <Text
-                            style={{
-                                color: theme === 'dark' ? 'white' : 'black'
-                            }}
-                        >
+                        <Text style={styles.text}>
                             {localeString('views.Send.mustBeValid')}{' '}
                             {paymentOptions.join(', ')}
                         </Text>
@@ -388,34 +272,103 @@ export default class Send extends React.Component<SendProps, SendState> {
                         <Text
                             style={{
                                 paddingTop: 10,
-                                color: theme === 'dark' ? 'white' : 'black'
+                                ...styles.text
                             }}
                         >{`${transactionType} Transaction`}</Text>
                     )}
                     {transactionType === 'On-chain' &&
                         !RESTUtils.supportsOnchainSends() && (
-                            <Text
-                                style={{
-                                    textDecorationLine: 'underline',
-                                    color: theme === 'dark' ? 'white' : 'black'
-                                }}
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Send.onChainNotSupported')}{' '}
                                 {implementation}
                             </Text>
                         )}
                     {transactionType === 'On-chain' &&
-                        RESTUtils.supportsOnchainSends() && <OnChain />}
+                        RESTUtils.supportsOnchainSends() && (
+                            <React.Fragment>
+                                <TouchableOpacity onPress={() => changeUnits()}>
+                                    <Text style={styles.label}>
+                                        {localeString('views.Send.amount')} (
+                                        {units === 'fiat' ? fiat : units})
+                                    </Text>
+                                </TouchableOpacity>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    value={amount}
+                                    onChangeText={(text: string) =>
+                                        this.setState({ amount: text })
+                                    }
+                                    style={styles.textInput}
+                                    placeholderTextColor="gray"
+                                />
+                                {units !== 'sats' && amount !== 'all' && (
+                                    <TouchableOpacity
+                                        onPress={() => changeUnits()}
+                                    >
+                                        <Text style={styles.label}>
+                                            {satAmount}{' '}
+                                            {localeString(
+                                                'views.Send.satoshis'
+                                            )}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                                {amount === 'all' && (
+                                    <Text style={styles.text}>
+                                        {`${
+                                            utxoBalance > 0
+                                                ? utxoBalance
+                                                : confirmedBlockchainBalance
+                                        } ${localeString(
+                                            'views.Receive.satoshis'
+                                        )}`}
+                                    </Text>
+                                )}
+                                <Text style={styles.label}>
+                                    {localeString('views.Send.feeSats')}:
+                                </Text>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    placeholder="2"
+                                    value={fee}
+                                    onChangeText={(text: string) =>
+                                        this.setFee(text)
+                                    }
+                                    style={styles.textInput}
+                                    placeholderTextColor="gray"
+                                />
+                                {RESTUtils.supportsCoinControl() && (
+                                    <UTXOPicker
+                                        onValueChange={this.selectUTXOs}
+                                        UTXOsStore={UTXOsStore}
+                                    />
+                                )}
+                                <View style={styles.button}>
+                                    <Button
+                                        title={localeString(
+                                            'views.Send.sendCoins'
+                                        )}
+                                        icon={{
+                                            name: 'send',
+                                            size: 25,
+                                            color: 'white'
+                                        }}
+                                        onPress={() =>
+                                            this.sendCoins(satAmount)
+                                        }
+                                        style={styles.button}
+                                        buttonStyle={{
+                                            backgroundColor: 'orange',
+                                            borderRadius: 30
+                                        }}
+                                    />
+                                </View>
+                            </React.Fragment>
+                        )}
                     {transactionType === 'Keysend' && implementation === 'lnd' && (
                         <React.Fragment>
                             <TouchableOpacity onPress={() => changeUnits()}>
-                                <Text
-                                    style={{
-                                        textDecorationLine: 'underline',
-                                        color:
-                                            theme === 'dark' ? 'white' : 'black'
-                                    }}
-                                >
+                                <Text style={styles.label}>
                                     {localeString('views.Send.amount')} (
                                     {units === 'fiat' ? fiat : units})
                                 </Text>
@@ -426,24 +379,12 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 onChangeText={(text: string) =>
                                     this.setState({ amount: text })
                                 }
-                                style={
-                                    theme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
+                                style={styles.textInput}
                                 placeholderTextColor="gray"
                             />
                             {units !== 'sats' && (
                                 <TouchableOpacity onPress={() => changeUnits()}>
-                                    <Text
-                                        style={{
-                                            textDecorationLine: 'underline',
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'white'
-                                                    : 'black'
-                                        }}
-                                    >
+                                    <Text style={styles.label}>
                                         {satAmount}{' '}
                                         {localeString('views.Send.satoshis')}
                                     </Text>
@@ -470,13 +411,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     {transactionType === 'Keysend' &&
                         !RESTUtils.supportsKeysend() && (
                             <React.Fragment>
-                                <Text
-                                    style={{
-                                        textDecorationLine: 'underline',
-                                        color:
-                                            theme === 'dark' ? 'white' : 'black'
-                                    }}
-                                >
+                                <Text style={styles.label}>
                                     {localeString('views.Send.sorry')},{' '}
                                     {implementation}{' '}
                                     {localeString(
@@ -517,10 +452,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 navigation.navigate('AddressQRCodeScanner')
                             }
                             buttonStyle={{
-                                backgroundColor:
-                                    theme === 'dark'
-                                        ? '#261339'
-                                        : 'rgba(92, 99,216, 1)',
+                                backgroundColor: '#261339',
                                 borderRadius: 30
                             }}
                         />
@@ -537,11 +469,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             confirmationTarget: text
                                         })
                                     }
-                                    style={
-                                        theme === 'dark'
-                                            ? styles.textInputDark
-                                            : styles.textInput
-                                    }
+                                    style={styles.textInput}
                                     placeholderTextColor="gray"
                                 />
                             </View>
@@ -565,13 +493,7 @@ export default class Send extends React.Component<SendProps, SendState> {
 
                     {!!error_msg && (
                         <React.Fragment>
-                            <Text
-                                style={{
-                                    color: theme === 'dark' ? 'white' : 'black'
-                                }}
-                            >
-                                {error_msg}
-                            </Text>
+                            <Text style={styles.text}>{error_msg}</Text>
                         </React.Fragment>
                     )}
                 </View>
@@ -581,24 +503,21 @@ export default class Send extends React.Component<SendProps, SendState> {
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
+    scrollView: {
         flex: 1,
-        backgroundColor: 'white'
+        backgroundColor: themeColor('background'),
+        color: themeColor('text')
     },
-    darkThemeStyle: {
-        flex: 1,
-        backgroundColor: 'black',
-        color: 'white'
+    label: {
+        textDecorationLine: 'underline',
+        color: themeColor('text')
+    },
+    text: {
+        color: themeColor('text')
     },
     textInput: {
         fontSize: 20,
-        color: 'black',
-        paddingTop: 10,
-        paddingBottom: 10
-    },
-    textInputDark: {
-        fontSize: 20,
-        color: 'white',
+        color: themeColor('text'),
         paddingTop: 10,
         paddingBottom: 10
     },

@@ -80,9 +80,9 @@ export default class InvoicesStore {
     };
 
     @action
-    public getInvoices = () => {
+    public getInvoices = async () => {
         this.loading = true;
-        RESTUtils.getInvoices()
+        await RESTUtils.getInvoices()
             .then((data: any) => {
                 this.invoices = data.payments || data.invoices || data;
                 this.invoices = this.invoices.map(

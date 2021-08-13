@@ -12,24 +12,21 @@ import { inject, observer } from 'mobx-react';
 import PrivacyUtils from './../utils/PrivacyUtils';
 import CollapsedQR from './../components/CollapsedQR';
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
 
 import UnitsStore from './../stores/UnitsStore';
-import SettingsStore from './../stores/SettingsStore';
 
 interface InvoiceProps {
     navigation: any;
     UnitsStore: UnitsStore;
-    SettingsStore: SettingsStore;
 }
 
-@inject('UnitsStore', 'SettingsStore')
+@inject('UnitsStore')
 @observer
 export default class InvoiceView extends React.Component<InvoiceProps> {
     render() {
-        const { navigation, UnitsStore, SettingsStore } = this.props;
+        const { navigation, UnitsStore } = this.props;
         const { changeUnits, getAmount, units } = UnitsStore;
-        const { settings } = SettingsStore;
-        const { theme } = settings;
 
         const invoice: Invoice = navigation.getParam('invoice', null);
         const {
@@ -63,30 +60,18 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
         );
 
         return (
-            <ScrollView
-                style={
-                    theme === 'dark'
-                        ? styles.darkThemeStyle
-                        : styles.lightThemeStyle
-                }
-            >
+            <ScrollView style={styles.scrollView}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Invoice.title'),
                         style: { color: '#fff' }
                     }}
-                    backgroundColor={theme === 'dark' ? '#261339' : 'orange'}
+                    backgroundColor={themeColor('secondary')}
                 />
                 <View style={styles.center}>
                     <TouchableOpacity onPress={() => changeUnits()}>
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.amountDark
-                                    : styles.amount
-                            }
-                        >{`${
+                        <Text style={styles.amount}>{`${
                             isPaid
                                 ? localeString('views.Invoice.paid')
                                 : localeString('views.Invoice.unpaid')
@@ -97,22 +82,10 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                 <View style={styles.content}>
                     {getMemo && (
                         <React.Fragment>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Invoice.memo')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
+                            <Text style={styles.value}>
                                 {PrivacyUtils.sensitiveValue(getMemo)}
                             </Text>
                         </React.Fragment>
@@ -120,22 +93,10 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
 
                     {!!receipt && (
                         <React.Fragment>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Invoice.receipt')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
+                            <Text style={styles.value}>
                                 {PrivacyUtils.sensitiveValue(receipt)}
                             </Text>
                         </React.Fragment>
@@ -143,22 +104,10 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
 
                     {isPaid && (
                         <React.Fragment>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Invoice.settleDate')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
+                            <Text style={styles.value}>
                                 {PrivacyUtils.sensitiveValue(
                                     invoice.settleDate,
                                     14
@@ -169,22 +118,10 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
 
                     {!!creation_date && (
                         <React.Fragment>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Invoice.creationDate')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
+                            <Text style={styles.value}>
                                 {PrivacyUtils.sensitiveValue(
                                     invoice.creationDate,
                                     14
@@ -195,22 +132,10 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
 
                     {!!expirationDate && (
                         <React.Fragment>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Invoice.expiration')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
+                            <Text style={styles.value}>
                                 {PrivacyUtils.sensitiveValue(
                                     expirationDate,
                                     14
@@ -221,45 +146,19 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
 
                     {!!privateInvoice && (
                         <React.Fragment>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Invoice.private')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
-                                {privateInvoice}
-                            </Text>
+                            <Text style={styles.value}>{privateInvoice}</Text>
                         </React.Fragment>
                     )}
 
                     {!!fallback_addr && (
                         <React.Fragment>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Invoice.fallbackAddress')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
+                            <Text style={styles.value}>
                                 {PrivacyUtils.sensitiveValue(fallback_addr)}
                             </Text>
                         </React.Fragment>
@@ -267,45 +166,19 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
 
                     {!!cltv_expiry && (
                         <React.Fragment>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Invoice.cltvExpiry')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
-                                {cltv_expiry}
-                            </Text>
+                            <Text style={styles.value}>{cltv_expiry}</Text>
                         </React.Fragment>
                     )}
 
                     {!!r_hash && typeof r_hash === 'string' && (
                         <React.Fragment>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Invoice.rHash')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
+                            <Text style={styles.value}>
                                 {PrivacyUtils.sensitiveValue(r_hash)}
                             </Text>
                         </React.Fragment>
@@ -313,22 +186,10 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
 
                     {!!r_preimage && (
                         <React.Fragment>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Invoice.rPreimage')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
+                            <Text style={styles.value}>
                                 {PrivacyUtils.sensitiveValue(r_preimage)}
                             </Text>
                         </React.Fragment>
@@ -336,22 +197,10 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
 
                     {!!description_hash && (
                         <React.Fragment>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Invoice.descriptionHash')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
+                            <Text style={styles.value}>
                                 {PrivacyUtils.sensitiveValue(description_hash)}
                             </Text>
                         </React.Fragment>
@@ -359,22 +208,10 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
 
                     {!!payment_request && (
                         <React.Fragment>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Invoice.paymentRequest')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
+                            <Text style={styles.value}>
                                 {PrivacyUtils.sensitiveValue(payment_request)}
                             </Text>
                         </React.Fragment>
@@ -383,7 +220,6 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                     {!!payment_request && (
                         <CollapsedQR
                             value={payment_request}
-                            theme={theme}
                             copyText={localeString(
                                 'views.Invoice.copyPaymentRequest'
                             )}
@@ -397,23 +233,15 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
+    scrollView: {
         flex: 1,
-        backgroundColor: 'white'
-    },
-    darkThemeStyle: {
-        flex: 1,
-        backgroundColor: 'black',
-        color: 'white'
+        backgroundColor: themeColor('background'),
+        color: themeColor('text')
     },
     amount: {
         fontSize: 25,
-        fontWeight: 'bold'
-    },
-    amountDark: {
-        fontSize: 25,
         fontWeight: 'bold',
-        color: 'white'
+        color: themeColor('text')
     },
     content: {
         paddingLeft: 20,
@@ -425,17 +253,11 @@ const styles = StyleSheet.create({
         paddingBottom: 15
     },
     label: {
-        paddingTop: 5
+        paddingTop: 5,
+        color: themeColor('text')
     },
     value: {
-        paddingBottom: 5
-    },
-    labelDark: {
-        paddingTop: 5,
-        color: 'white'
-    },
-    valueDark: {
         paddingBottom: 5,
-        color: 'white'
+        color: themeColor('text')
     }
 });

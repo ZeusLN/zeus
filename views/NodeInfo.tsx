@@ -15,6 +15,7 @@ import isNil from 'lodash/isNil';
 import { version, playStore } from './../package.json';
 import PrivacyUtils from './../utils/PrivacyUtils';
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
 
 import NodeInfoStore from './../stores/NodeInfoStore';
 import FeeStore from './../stores/FeeStore';
@@ -115,6 +116,17 @@ export default class NodeInfo extends React.Component<
         }
     }
 
+    componentDidMount() {
+        const { navigation } = this.props;
+        const selectedIndex: number = navigation.getParam('selectedIndex');
+
+        if (selectedIndex) {
+            this.setState({
+                selectedIndex
+            });
+        }
+    }
+
     updateIndex = (selectedIndex: number) => {
         this.setState({
             selectedIndex
@@ -143,7 +155,7 @@ export default class NodeInfo extends React.Component<
         } = FeeStore;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { settings, implementation } = SettingsStore;
-        const { theme, lurkerMode } = settings;
+        const { lurkerMode } = settings;
 
         const generalInfoButton = () => (
             <React.Fragment>
@@ -191,7 +203,6 @@ export default class NodeInfo extends React.Component<
                     <React.Fragment key={key}>
                         <CollapsedQR
                             value={uri}
-                            theme={theme}
                             copyText={localeString('views.NodeInfo.copyUri')}
                         />
                     </React.Fragment>
@@ -203,63 +214,37 @@ export default class NodeInfo extends React.Component<
 
         const NodeInfoView = () => (
             <React.Fragment>
-                <Text
-                    style={theme === 'dark' ? styles.labelDark : styles.label}
-                >
+                <Text style={styles.label}>
                     {localeString('views.NodeInfo.alias')}:
                 </Text>
-                <Text
-                    style={theme === 'dark' ? styles.valueDark : styles.value}
-                >
+                <Text style={styles.value}>
                     {PrivacyUtils.sensitiveValue(nodeInfo.alias, 10)}
                 </Text>
 
                 {nodeInfo.version && (
                     <>
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.labelDark
-                                    : styles.label
-                            }
-                        >
+                        <Text style={styles.label}>
                             {localeString(
                                 'views.NodeInfo.implementationVersion'
                             )}
                             :
                         </Text>
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.valueDark
-                                    : styles.value
-                            }
-                        >
+                        <Text style={styles.value}>
                             {PrivacyUtils.sensitiveValue(nodeInfo.version, 12)}
                         </Text>
                     </>
                 )}
 
-                <Text
-                    style={theme === 'dark' ? styles.labelDark : styles.label}
-                >
+                <Text style={styles.label}>
                     {localeString('views.NodeInfo.zeusVersion')}:
                 </Text>
-                <Text
-                    style={theme === 'dark' ? styles.valueDark : styles.value}
-                >
+                <Text style={styles.value}>
                     {playStore ? `v${version}-play` : `v${version}`}
                 </Text>
 
                 {!!nodeInfo.synced_to_chain && (
                     <React.Fragment>
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.labelDark
-                                    : styles.label
-                            }
-                        >
+                        <Text style={styles.label}>
                             {localeString('views.NodeInfo.synced')}:
                         </Text>
                         <Text
@@ -275,43 +260,21 @@ export default class NodeInfo extends React.Component<
                     </React.Fragment>
                 )}
 
-                <Text
-                    style={theme === 'dark' ? styles.labelDark : styles.label}
-                >
+                <Text style={styles.label}>
                     {localeString('views.NodeInfo.blockHeight')}:
                 </Text>
-                <Text
-                    style={theme === 'dark' ? styles.valueDark : styles.value}
-                >
-                    {nodeInfo.currentBlockHeight}
-                </Text>
+                <Text style={styles.value}>{nodeInfo.currentBlockHeight}</Text>
 
                 {nodeInfo.block_hash && (
                     <React.Fragment>
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.labelDark
-                                    : styles.label
-                            }
-                        >
+                        <Text style={styles.label}>
                             {localeString('views.NodeInfo.blockHash')}:
                         </Text>
-                        <Text
-                            style={
-                                theme === 'dark'
-                                    ? styles.valueDark
-                                    : styles.value
-                            }
-                        >
-                            {nodeInfo.block_hash}
-                        </Text>
+                        <Text style={styles.value}>{nodeInfo.block_hash}</Text>
                     </React.Fragment>
                 )}
 
-                <Text
-                    style={theme === 'dark' ? styles.labelDark : styles.label}
-                >
+                <Text style={styles.label}>
                     {localeString('views.NodeInfo.uris')}:
                 </Text>
                 {nodeInfo.getURIs &&
@@ -331,22 +294,10 @@ export default class NodeInfo extends React.Component<
                 <TouchableOpacity onPress={() => changeUnits()}>
                     {!isNil(dayEarned) && (
                         <React.Fragment>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.NodeInfo.earnedToday')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
+                            <Text style={styles.value}>
                                 {units &&
                                     PrivacyUtils.sensitiveValue(
                                         getAmount(dayEarned),
@@ -359,22 +310,10 @@ export default class NodeInfo extends React.Component<
 
                     {!isNil(weekEarned) && (
                         <React.Fragment>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.NodeInfo.earnedWeek')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
+                            <Text style={styles.value}>
                                 {units &&
                                     PrivacyUtils.sensitiveValue(
                                         getAmount(weekEarned),
@@ -387,22 +326,10 @@ export default class NodeInfo extends React.Component<
 
                     {!isNil(monthEarned) && (
                         <React.Fragment>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.NodeInfo.earnedMonth')}:
                             </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.valueDark
-                                        : styles.value
-                                }
-                            >
+                            <Text style={styles.value}>
                                 {units &&
                                     PrivacyUtils.sensitiveValue(
                                         getAmount(monthEarned),
@@ -414,10 +341,7 @@ export default class NodeInfo extends React.Component<
                     )}
                 </TouchableOpacity>
 
-                <SetFeesForm
-                    FeeStore={FeeStore}
-                    SettingsStore={SettingsStore}
-                />
+                <SetFeesForm FeeStore={FeeStore} />
             </React.Fragment>
         );
 
@@ -437,7 +361,7 @@ export default class NodeInfo extends React.Component<
                             style={{
                                 paddingTop: 10,
                                 paddingBottom: 10,
-                                color: theme === 'dark' ? 'white' : 'black'
+                                color: themeColor('text')
                             }}
                         >
                             <ForwardingHistory
@@ -452,20 +376,14 @@ export default class NodeInfo extends React.Component<
         );
 
         return (
-            <ScrollView
-                style={
-                    theme === 'dark'
-                        ? styles.darkThemeStyle
-                        : styles.lightThemeStyle
-                }
-            >
+            <ScrollView style={styles.scrollView}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: 'Node Info',
                         style: { color: '#fff' }
                     }}
-                    backgroundColor="black"
+                    backgroundColor="#1f2328"
                 />
 
                 <ButtonGroup
@@ -491,21 +409,22 @@ export default class NodeInfo extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
+    scrollView: {
         flex: 1,
-        backgroundColor: 'white'
-    },
-    darkThemeStyle: {
-        flex: 1,
-        backgroundColor: 'black',
-        color: 'white'
+        backgroundColor: themeColor('background'),
+        color: themeColor('text')
     },
     content: {
         paddingLeft: 20,
         paddingRight: 20
     },
     label: {
-        paddingTop: 5
+        paddingTop: 5,
+        color: themeColor('text')
+    },
+    value: {
+        paddingBottom: 5,
+        color: themeColor('text')
     },
     qrPadding: {
         width: 250,
@@ -514,16 +433,5 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingTop: 25,
         marginBottom: 10
-    },
-    value: {
-        paddingBottom: 5
-    },
-    labelDark: {
-        paddingTop: 5,
-        color: 'white'
-    },
-    valueDark: {
-        paddingBottom: 5,
-        color: 'white'
     }
 });

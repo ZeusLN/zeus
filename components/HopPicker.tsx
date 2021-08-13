@@ -14,6 +14,8 @@ import { Picker } from '@react-native-picker/picker';
 import { Avatar, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
+
 import Identicon from 'identicon.js';
 const hash = require('object-hash');
 
@@ -129,22 +131,13 @@ export default class ChannelPicker extends React.Component<
                     visible={showChannelModal}
                 >
                     <View style={styles.centeredView}>
-                        <View
-                            style={
-                                theme === 'dark'
-                                    ? styles.modalDark
-                                    : styles.modal
-                            }
-                        >
+                        <View style={styles.modal}>
                             {showChannelModal && (
                                 <>
                                     <Text
                                         style={{
                                             fontSize: 25,
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'white'
-                                                    : 'black'
+                                            color: themeColor('text')
                                         }}
                                     >
                                         {localeString(
@@ -155,10 +148,7 @@ export default class ChannelPicker extends React.Component<
                                         style={{
                                             paddingTop: 20,
                                             paddingBottom: 20,
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'white'
-                                                    : 'black'
+                                            color: themeColor('text')
                                         }}
                                     >
                                         {localeString(
@@ -227,10 +217,9 @@ export default class ChannelPicker extends React.Component<
                                                             remoteBalanceDisplay}`}
                                                         containerStyle={{
                                                             borderBottomWidth: 0,
-                                                            backgroundColor:
-                                                                theme === 'dark'
-                                                                    ? 'black'
-                                                                    : 'white'
+                                                            backgroundColor: themeColor(
+                                                                'background'
+                                                            )
                                                         }}
                                                         leftElement={
                                                             channelSelected ===
@@ -257,20 +246,18 @@ export default class ChannelPicker extends React.Component<
                                                                 channelSelected ===
                                                                 item
                                                                     ? 'orange'
-                                                                    : theme ===
-                                                                      'dark'
-                                                                    ? 'white'
-                                                                    : 'black'
+                                                                    : themeColor(
+                                                                          'text'
+                                                                      )
                                                         }}
                                                         subtitleStyle={{
                                                             color:
                                                                 channelSelected ===
                                                                 item
                                                                     ? 'orange'
-                                                                    : theme ===
-                                                                      'dark'
-                                                                    ? 'gray'
-                                                                    : '#8a8999'
+                                                                    : themeColor(
+                                                                          'secondaryText'
+                                                                      )
                                                         }}
                                                     />
                                                     <BalanceSlider
@@ -284,7 +271,6 @@ export default class ChannelPicker extends React.Component<
                                                                 ? 50
                                                                 : item.remoteBalance
                                                         }
-                                                        theme={theme}
                                                         list
                                                     />
                                                 </>
@@ -355,7 +341,7 @@ export default class ChannelPicker extends React.Component<
                     <View style={styles.field}>
                         <Text
                             style={{
-                                color: theme === 'dark' ? 'white' : 'black',
+                                color: themeColor('text'),
                                 paddingLeft: 10
                             }}
                         >
@@ -369,8 +355,7 @@ export default class ChannelPicker extends React.Component<
                                     style={{
                                         padding: 10,
                                         fontSize: 16,
-                                        color:
-                                            theme === 'dark' ? 'white' : 'black'
+                                        color: themeColor('text')
                                     }}
                                 >
                                     {valueSet}
@@ -388,11 +373,7 @@ export default class ChannelPicker extends React.Component<
                                         this.openPicker();
                                     }
                                 }}
-                                style={
-                                    theme === 'dark'
-                                        ? styles.pickerDark
-                                        : styles.picker
-                                }
+                                style={styles.picker}
                             >
                                 {pickerValuesAndroid}
                             </Picker>
@@ -404,7 +385,7 @@ export default class ChannelPicker extends React.Component<
                     <View style={styles.field}>
                         <Text
                             style={{
-                                color: theme === 'dark' ? 'white' : 'black',
+                                color: themeColor('text'),
                                 textDecorationLine: 'underline'
                             }}
                         >
@@ -429,7 +410,7 @@ export default class ChannelPicker extends React.Component<
                         >
                             <Text
                                 style={{
-                                    color: theme === 'dark' ? 'white' : 'black'
+                                    color: themeColor('text')
                                 }}
                             >
                                 {valueSet ? valueSet : 'No selection'}
@@ -449,11 +430,7 @@ const styles = StyleSheet.create({
     },
     picker: {
         height: 50,
-        color: 'black'
-    },
-    pickerDark: {
-        height: 50,
-        color: 'white'
+        color: themeColor('text')
     },
     button: {
         paddingTop: 10,
@@ -461,22 +438,8 @@ const styles = StyleSheet.create({
     },
     modal: {
         margin: 20,
-        backgroundColor: 'white',
-        borderRadius: 20,
-        padding: 35,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5
-    },
-    modalDark: {
-        margin: 20,
-        color: 'white',
-        backgroundColor: 'black',
+        color: themeColor('text'),
+        backgroundColor: themeColor('background'),
         borderRadius: 20,
         padding: 35,
         shadowColor: '#000',
