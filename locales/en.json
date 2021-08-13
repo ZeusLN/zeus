@@ -173,7 +173,7 @@
     "views.Lockscreen.incorrect": "Incorrect Passphrase",
     "views.Lockscreen.passphrase": "Passphrase",
     "views.Lockscreen.login": "Log In",
-    "views.NodeInfo.generalInfo": "General Info",
+    "views.NodeInfo.title": "Node Info",
     "views.NodeInfo.feeReport": "Fee Report",
     "views.NodeInfo.forwarding": "Forwarding",
     "views.NodeInfo.copyUri": "Copy URI",

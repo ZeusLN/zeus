@@ -139,7 +139,7 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: 'Node Info',
+                        text: localeString('views.NodeInfo.title'),
                         style: { color: '#fff' }
                     }}
                     backgroundColor="#1f2328"

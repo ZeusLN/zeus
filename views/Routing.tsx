@@ -265,7 +265,7 @@ export default class Routing extends React.Component<
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: 'Routing',
+                        text: localeString('general.routing'),
                         style: { color: '#fff' }
                     }}
                     backgroundColor="#1f2328"
