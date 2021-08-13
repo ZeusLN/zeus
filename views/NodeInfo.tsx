@@ -1,10 +1,5 @@
 import * as React from 'react';
-import {
-    StyleSheet,
-    ScrollView,
-    Text,
-    View
-} from 'react-native';
+import { StyleSheet, ScrollView, Text, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import CollapsedQR from './../components/CollapsedQR';
 import { inject, observer } from 'mobx-react';
@@ -22,26 +17,16 @@ interface NodeInfoProps {
     SettingsStore: SettingsStore;
 }
 
-@inject(
-    'NodeInfoStore',
-    'SettingsStore'
-)
+@inject('NodeInfoStore', 'SettingsStore')
 @observer
-export default class NodeInfo extends React.Component<
-    NodeInfoProps,
-    {}
-> {
+export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
     UNSAFE_componentWillMount() {
         const { NodeInfoStore } = this.props;
         NodeInfoStore.getNodeInfo();
     }
 
     render() {
-        const {
-            navigation,
-            NodeInfoStore,
-            SettingsStore
-        } = this.props;
+        const { navigation, NodeInfoStore, SettingsStore } = this.props;
         const { nodeInfo } = NodeInfoStore;
         const { settings } = SettingsStore;
         const { lurkerMode } = settings;

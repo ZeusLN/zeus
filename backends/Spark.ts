@@ -316,4 +316,5 @@ export default class Spark {
     supportsMPP = () => false;
     supportsCoinControl = () => false;
     supportsHopPicking = () => false;
+    supportsRouting = () => true;
 }

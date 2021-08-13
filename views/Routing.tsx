@@ -86,12 +86,7 @@ const ForwardingHistory = ({ events, getAmount, aliasesById }: any) => {
     return eventsDisplay.join('\n');
 };
 
-@inject(
-    'FeeStore',
-    'UnitsStore',
-    'ChannelsStore',
-    'SettingsStore'
-)
+@inject('FeeStore', 'UnitsStore', 'ChannelsStore', 'SettingsStore')
 @observer
 export default class Routing extends React.Component<
     RoutingProps,
@@ -276,17 +271,19 @@ export default class Routing extends React.Component<
                     backgroundColor="#1f2328"
                 />
 
-                {implementation === 'lnd' && <ButtonGroup
-                    onPress={this.updateIndex}
-                    selectedIndex={selectedIndex}
-                    buttons={buttons}
-                    selectedButtonStyle={{
-                        backgroundColor: 'white'
-                    }}
-                    containerStyle={{
-                        backgroundColor: '#f2f2f2'
-                    }}
-                />}
+                {implementation === 'lnd' && (
+                    <ButtonGroup
+                        onPress={this.updateIndex}
+                        selectedIndex={selectedIndex}
+                        buttons={buttons}
+                        selectedButtonStyle={{
+                            backgroundColor: 'white'
+                        }}
+                        containerStyle={{
+                            backgroundColor: '#f2f2f2'
+                        }}
+                    />
+                )}
 
                 <View style={styles.content}>
                     {selectedIndex === 0 && <FeeReportView />}
