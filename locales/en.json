@@ -194,7 +194,7 @@
     "views.NodeInfo.ForwardingHistory.dstChannelId": "Destination Channel ID",
     "views.NodeInfo.ForwardingHistory.amtIn": "Amount In",
     "views.NodeInfo.ForwardingHistory.amtOut": "Amount Out",
-    "views.NodeInfo.ForwardingHistory.fee": "fee",
+    "views.NodeInfo.ForwardingHistory.fee": "Fee",
     "views.NodeInfo.ForwardingHistory.error": "Error fetching forwarding history",
     "views.NodeQRScanner.title": "Lightning Node QR Scanner",
     "views.NodeQRScanner.text": "Scan a valid Lightning Node",
