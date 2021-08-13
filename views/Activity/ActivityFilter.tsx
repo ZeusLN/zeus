@@ -3,11 +3,11 @@ import { FlatList, StyleSheet, Switch, Text, View } from 'react-native';
 import { Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import { localeString } from './../../utils/LocaleUtils';
+import { themeColor } from './../../utils/ThemeUtils';
 import DatePicker from 'react-native-date-picker';
 
-import ActivityStore from './../stores/ActivityStore';
+import ActivityStore from './../../stores/ActivityStore';
 
 interface ActivityFilterProps {
     navigation: any;

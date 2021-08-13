@@ -8,15 +8,15 @@ import {
 } from 'react-native';
 import { Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import DateTimeUtils from './../utils/DateTimeUtils';
-import PrivacyUtils from './../utils/PrivacyUtils';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import DateTimeUtils from './../../utils/DateTimeUtils';
+import PrivacyUtils from './../../utils/PrivacyUtils';
+import { localeString } from './../../utils/LocaleUtils';
+import { themeColor } from './../../utils/ThemeUtils';
 
-import ActivityStore from './../stores/ActivityStore';
-import UnitsStore from './../stores/UnitsStore';
+import ActivityStore from './../../stores/ActivityStore';
+import UnitsStore from './../../stores/UnitsStore';
 
-import Filter from './../images/SVG/Filter On.svg';
+import Filter from './../../images/SVG/Filter On.svg';
 
 interface ActivityProps {
     navigation: any;
