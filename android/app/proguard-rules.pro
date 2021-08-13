@@ -19,3 +19,4 @@
 -keep class com.sifir.** { *;}
 -keep interface com.sifir.** { *;}
 -keep enum com.sifir.** { *;}
+-keep public class com.horcrux.svg.** {*;}
