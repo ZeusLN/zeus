@@ -26,14 +26,14 @@ class VersionUtils {
             return false;
         }
         if (
-            user.coreVersion <= min.coreVersion &&
+            user.coreVersion == min.coreVersion &&
             user.mainVersion < min.mainVersion
         ) {
             return false;
         }
         if (
-            user.coreVersion <= min.coreVersion &&
-            user.mainVersion <= min.mainVersion &&
+            user.coreVersion == min.coreVersion &&
+            user.mainVersion == min.mainVersion &&
             user.minorVersion < min.minorVersion
         ) {
             return false;
@@ -46,13 +46,13 @@ class VersionUtils {
             if (eos.coreVersion < user.coreVersion) {
                 return false;
             } else if (
-                eos.coreVersion <= user.coreVersion &&
+                eos.coreVersion == user.coreVersion &&
                 eos.mainVersion < user.mainVersion
             ) {
                 return false;
             } else if (
-                eos.coreVersion <= user.coreVersion &&
-                eos.mainVersion <= user.mainVersion &&
+                eos.coreVersion == user.coreVersion &&
+                eos.mainVersion == user.mainVersion &&
                 eos.minorVersion < user.minorVersion
             ) {
                 return false;
