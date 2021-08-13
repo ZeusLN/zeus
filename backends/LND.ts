@@ -251,7 +251,7 @@ export default class LND {
             num_max_events: 10000000
         };
         return this.postRequest('/v1/switch', req);
-    }
+    };
     signMessage = (message: string) =>
         this.postRequest('/v1/signmessage', {
             msg: message
