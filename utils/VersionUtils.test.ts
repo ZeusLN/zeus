@@ -45,5 +45,59 @@ describe('VersionUtils', () => {
                 false
             );
         });
+
+        it('Determines if users version is supported when an end of support version is specified', () => {
+            expect(
+                VersionUtils.isSupportedVersion(
+                    'v2.3.0-beta-1',
+                    'v1.0.2',
+                    'v3.2.2'
+                )
+            ).toEqual(true);
+            expect(
+                VersionUtils.isSupportedVersion(
+                    'v0.3.0-beta-1',
+                    'v0.0.2',
+                    'v0.2.2'
+                )
+            ).toEqual(false);
+            expect(
+                VersionUtils.isSupportedVersion(
+                    'v0.3.0-beta-1',
+                    'v0.0.2',
+                    'v0.3.1'
+                )
+            ).toEqual(true);
+            expect(
+                VersionUtils.isSupportedVersion('v0.3.0', 'v0.0.2', 'v0.3.0')
+            ).toEqual(true);
+            expect(
+                VersionUtils.isSupportedVersion(
+                    'v0.3.0-beta-1',
+                    'v0.0.2',
+                    'v0.3.0'
+                )
+            ).toEqual(true);
+            expect(
+                VersionUtils.isSupportedVersion(
+                    'v0.3.0-beta-1',
+                    'v0.0.2',
+                    'v0.3.1-alpha-2'
+                )
+            ).toEqual(true);
+            expect(
+                VersionUtils.isSupportedVersion('v0.3.1', 'v0.0.2', 'v0.3.1')
+            ).toEqual(true);
+            expect(
+                VersionUtils.isSupportedVersion(
+                    'v0.3.1-beta-1',
+                    'v0.0.2',
+                    'v0.3.1'
+                )
+            ).toEqual(true);
+            expect(
+                VersionUtils.isSupportedVersion('v0.3.2', 'v0.0.2', 'v0.3.1')
+            ).toEqual(false);
+        });
     });
 });
