@@ -85,6 +85,7 @@ class RESTUtils {
     supportsCoinControl = () => this.call('supportsCoinControl');
     supportsHopPicking = () => this.call('supportsHopPicking');
     supportsRouting = () => this.call('supportsRouting');
+    supportsNodeInfo = () => this.call('supportsNodeInfo');
 }
 
 const restUtils = new RESTUtils();

@@ -125,4 +125,5 @@ export default class CLightningREST extends LND {
     supportsCoinControl = () => this.supports('v0.8.2', 'v0.4.0');
     supportsHopPicking = () => false;
     supportsRouting = () => true;
+    supportsNodeInfo = () => true;
 }

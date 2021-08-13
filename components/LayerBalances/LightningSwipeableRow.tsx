@@ -50,10 +50,9 @@ export default class LightningSwipeableRow extends Component<
                 style={{ flex: 1, transform: [{ translateX: trans }] }}
             >
                 <RectButton style={[styles.action]} onPress={pressHandler}>
-                    {text === localeString('general.routing') &&
-                        RESTUtils.supportsRouting() && (
-                            <Routing fill={themeColor('highlight')} />
-                        )}
+                    {text === localeString('general.routing') && (
+                        <Routing fill={themeColor('highlight')} />
+                    )}
                     {text === localeString('general.receive') && (
                         <Receive fill={themeColor('highlight')} />
                     )}
@@ -75,7 +74,12 @@ export default class LightningSwipeableRow extends Component<
             }}
         >
             {this.renderAction(localeString('general.receive'), 150, progress)}
-            {this.renderAction(localeString('general.routing'), 100, progress)}
+            {RESTUtils.supportsRouting() &&
+                this.renderAction(
+                    localeString('general.routing'),
+                    100,
+                    progress
+                )}
         </View>
     );
 
