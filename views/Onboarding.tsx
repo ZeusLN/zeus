@@ -204,6 +204,7 @@ export default class Onboarding extends React.Component<
                         selectedValue={locale || DEFAULT_LOCALE}
                         onValueChange={(value: string) => changeLocale(value)}
                         values={LOCALE_KEYS}
+                        color="#000"
                     />
                 </View>
             </View>
