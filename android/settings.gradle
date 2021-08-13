@@ -8,8 +8,6 @@ project(':react-native-secure-key-store').projectDir = new File(rootProject.proj
 include ':react-native-linear-gradient'
 project(':react-native-linear-gradient').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-linear-gradient/android')
 apply from: file("../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesSettingsGradle(settings)
-include ':rncamerakit'
-project(':rncamerakit').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-camera-kit/android/')
 include ':react-native-secure-key-store'
 project(':react-native-secure-key-store').projectDir = new File(rootProject.projectDir, 	'../node_modules/react-native-secure-key-store/android')
 include ':react-native-tor'

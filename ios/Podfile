@@ -38,8 +38,6 @@ target 'zeus' do
 
   pod 'BVLinearGradient', :path => '../node_modules/react-native-linear-gradient'
 
-  pod 'react-native-camera-kit', :path => '../node_modules/react-native-camera-kit'
-
   pod 'react-native-randombytes', :path => '../node_modules/react-native-randombytes'
 
   # pod 'RNSecureKeyStore', :path => '../node_modules/react-native-secure-key-store'
