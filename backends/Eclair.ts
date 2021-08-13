@@ -472,6 +472,7 @@ export default class Eclair {
     supportsMPP = () => false;
     supportsCoinControl = () => false;
     supportsHopPicking = () => false;
+    supportsRouting = () => true;
 }
 
 const mapInvoice = (isPending: any) => ({

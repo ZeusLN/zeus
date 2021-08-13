@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 
 import { RectButton } from 'react-native-gesture-handler';
+import RESTUtils from './../../utils/RESTUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -49,9 +50,10 @@ export default class LightningSwipeableRow extends Component<
                 style={{ flex: 1, transform: [{ translateX: trans }] }}
             >
                 <RectButton style={[styles.action]} onPress={pressHandler}>
-                    {text === localeString('general.routing') && (
-                        <Routing fill={themeColor('highlight')} />
-                    )}
+                    {text === localeString('general.routing') &&
+                        RESTUtils.supportsRouting() && (
+                            <Routing fill={themeColor('highlight')} />
+                        )}
                     {text === localeString('general.receive') && (
                         <Receive fill={themeColor('highlight')} />
                     )}
