@@ -134,6 +134,7 @@ android {
         versionCode 25
         versionName "0.5.2"
         multiDexEnabled true
+        missingDimensionStrategy 'react-native-camera', 'general'
     }
     signingConfigs {
         release {
