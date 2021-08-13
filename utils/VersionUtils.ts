@@ -14,31 +14,52 @@ class VersionUtils {
         };
     };
 
-    isSupportedVersion = (userVersion: string, targetVersion: string) => {
+    isSupportedVersion = (
+        userVersion: string,
+        minVersion: string,
+        eosVersion?: string
+    ) => {
         const user = this.parseVersion(userVersion);
-        const target = this.parseVersion(targetVersion);
+        const min = this.parseVersion(minVersion);
 
+        if (user.coreVersion < min.coreVersion) {
+            return false;
+        }
         if (
-            (user.coreVersion || target.coreVersion) &&
-            user.coreVersion > target.coreVersion
+            user.coreVersion == min.coreVersion &&
+            user.mainVersion < min.mainVersion
         ) {
-            return true;
-        } else if (
-            (user.mainVersion || target.mainVersion) &&
-            user.coreVersion === target.coreVersion &&
-            user.mainVersion > target.mainVersion
+            return false;
+        }
+        if (
+            user.coreVersion == min.coreVersion &&
+            user.mainVersion == min.mainVersion &&
+            user.minorVersion < min.minorVersion
         ) {
-            return true;
-        } else if (
-            (user.minorVersion || target.minorVersion) &&
-            user.coreVersion === target.coreVersion &&
-            user.mainVersion === target.mainVersion &&
-            user.minorVersion >= target.minorVersion
-        ) {
-            return true;
+            return false;
         }
 
-        return false;
+        // end of support version
+        if (eosVersion) {
+            const eos = this.parseVersion(eosVersion);
+
+            if (eos.coreVersion < user.coreVersion) {
+                return false;
+            } else if (
+                eos.coreVersion == user.coreVersion &&
+                eos.mainVersion < user.mainVersion
+            ) {
+                return false;
+            } else if (
+                eos.coreVersion == user.coreVersion &&
+                eos.mainVersion == user.mainVersion &&
+                eos.minorVersion < user.minorVersion
+            ) {
+                return false;
+            }
+        }
+
+        return true;
     };
 }
 
