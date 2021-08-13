@@ -245,7 +245,13 @@ export default class LND {
             `/v1/graph/routes/${urlParams && urlParams[0]}/${urlParams &&
                 urlParams[1]}`
         );
-    getForwardingHistory = (data: any) => this.postRequest('/v1/switch', data);
+    getForwardingHistory = (data: any) => {
+        const req = {
+            ...data,
+            num_max_events: 10000000
+        };
+        return this.postRequest('/v1/switch', req);
+    }
     signMessage = (message: string) =>
         this.postRequest('/v1/signmessage', {
             msg: message
