@@ -65,7 +65,7 @@ export default class Eclair {
                 });
         }
         setTimeout(
-            id => {
+            (id: string) => {
                 delete calls[id];
             },
             9000,

@@ -42,11 +42,11 @@ export default class Payment extends BaseModel {
         return localeString('views.Payment.title');
     }
 
-    @computed public get getTimestamp(): string {
+    @computed public get getTimestamp(): string | number {
         return this.creation_date || this.created_at || this.timestamp || 0;
     }
 
-    @computed public get getDate(): string {
+    @computed public get getDate(): string | Date {
         return DateTimeUtils.listDate(
             this.creation_date || this.created_at || this.timestamp || 0
         );

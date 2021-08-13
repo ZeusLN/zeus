@@ -188,6 +188,9 @@ const styles = StyleSheet.create({
     error: {
         color: 'red'
     },
+    button: {
+        padding: 5
+    },
     form: {
         paddingTop: 20,
         paddingLeft: 5,

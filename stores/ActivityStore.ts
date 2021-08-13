@@ -12,6 +12,7 @@ import TransactionsStore from './TransactionsStore';
 import { localeString } from './../utils/LocaleUtils';
 
 interface ActivityFilter {
+    [index: string]: any;
     lightning: boolean;
     onChain: boolean;
     channels: boolean;
@@ -83,7 +84,7 @@ export default class ActivityStore {
         await this.paymentsStore.getPayments();
         await this.transactionsStore.getTransactions();
         await this.invoicesStore.getInvoices();
-        const activity = [];
+        const activity: any = [];
         const payments = this.paymentsStore.payments;
         const transactions = this.transactionsStore.transactions;
         const invoices = this.invoicesStore.invoices;
@@ -94,7 +95,7 @@ export default class ActivityStore {
             payments.concat(transactions).concat(invoices)
         );
         // sort activity by timestamp
-        const sortedActivity = activity.sort((a, b) =>
+        const sortedActivity = activity.sort((a: any, b: any) =>
             a.getTimestamp < b.getTimestamp ? 1 : -1
         );
 
@@ -111,7 +112,9 @@ export default class ActivityStore {
             onChain: true,
             channels: true,
             sent: true,
-            received: true
+            received: true,
+            startDate: null,
+            endDate: null
         };
     };
 
