@@ -460,6 +460,12 @@ export default class Eclair {
             });
     };
 
+    signMessage = (message: string) =>
+        this.api('signmessage', {
+            msg: message
+        });
+
+    supportsMessageSigning = () => true;
     supportsOnchainSends = () => true;
     supportsKeysend = () => false;
     supportsChannelManagement = () => true;

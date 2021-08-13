@@ -15,7 +15,7 @@ import NodeQRScanner from './views/NodeQRScanner';
 import OpenChannel from './views/OpenChannel';
 import SendingOnChain from './views/SendingOnChain';
 import SendingLightning from './views/SendingLightning';
-import Channel from './views/Channel';
+import Channel from './views/Channels/Channel';
 import Payment from './views/Payment';
 import Invoice from './views/Invoice';
 import BTCPayConfigQRScanner from './views/BTCPayConfigQRScanner';
@@ -30,6 +30,10 @@ import AddEditNode from './views/Settings/AddEditNode';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import About from './views/Settings/About';
 import SignMessage from './views/Settings/SignMessage';
+
+// new views
+import Activity from './views/Activity';
+import ActivityFilter from './views/ActivityFilter';
 
 import Onboarding from './views/Onboarding';
 
@@ -119,6 +123,12 @@ const AppScenes = {
     },
     NodeInfo: {
         screen: NodeInfo
+    },
+    Activity: {
+        screen: Activity
+    },
+    ActivityFilter: {
+        screen: ActivityFilter
     }
 };
 

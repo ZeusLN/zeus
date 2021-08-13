@@ -1,20 +1,17 @@
 import * as React from 'react';
 import { Text, ScrollView, Image } from 'react-native';
 
-import SettingsStore from './../../stores/SettingsStore';
+import { themeColor } from './../../utils/ThemeUtils';
 
 interface LnurlPayMetadataProps {
     metadata: string;
-    SettingsStore: SettingsStore;
 }
 
 export default class LnurlPayMetadata extends React.Component<
     LnurlPayMetadataProps
 > {
     render() {
-        const { metadata, SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-        const { theme } = settings;
+        const { metadata } = this.props;
 
         var keypairs: Array<Array<string>>;
         try {
@@ -55,7 +52,7 @@ export default class LnurlPayMetadata extends React.Component<
                 ) : null}
                 <Text
                     style={{
-                        color: theme === 'dark' ? 'white' : 'black'
+                        color: themeColor('text')
                     }}
                 >
                     {text}
