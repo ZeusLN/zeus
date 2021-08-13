@@ -55,7 +55,7 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                           .replace('http://', '')
                                     : item.port
                                     ? `${item.host}:${item.port}`
-                                    : item.host;
+                                    : item.host || 'Unknown';
 
                             const title = PrivacyUtils.sensitiveValue(
                                 displayName,
@@ -78,7 +78,7 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                             return (
                                 <React.Fragment>
                                     <ListItem
-                                        title={title}
+                                        title={`${title}`}
                                         leftElement={Node(
                                             `data:image/png;base64,${data}`
                                         )}
@@ -114,7 +114,7 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                             selectedNode === index ||
                                             (!selectedNode && index === 0)
                                                 ? `Active | ${implementation}`
-                                                : implementation
+                                                : `${implementation}`
                                         }
                                         containerStyle={{
                                             borderBottomWidth: 0,

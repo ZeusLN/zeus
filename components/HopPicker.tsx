@@ -195,7 +195,7 @@ export default class ChannelPicker extends React.Component<
                                             return (
                                                 <>
                                                     <ListItem
-                                                        title={channelTitle}
+                                                        title={`${channelTitle}`}
                                                         subtitle={`${
                                                             !item.isActive
                                                                 ? `${localeString(
@@ -363,7 +363,7 @@ export default class ChannelPicker extends React.Component<
                             </TouchableOpacity>
                         ) : (
                             <Picker
-                                selectedValue={selectedValue}
+                                selectedValue={`${selectedValue}`}
                                 onValueChange={(itemValue: string) => {
                                     if (itemValue === 'No selection') {
                                         this.clearSelection();
