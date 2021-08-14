@@ -168,7 +168,21 @@ export default class Send extends React.Component<SendProps, SendState> {
         const { TransactionsStore, navigation } = this.props;
         const { destination, amount } = this.state;
 
-        TransactionsStore.sendPayment(null, amount, destination);
+        if (RESTUtils.supportsAMP()) {
+            TransactionsStore.sendPayment(
+                null,
+                amount,
+                destination,
+                null,
+                '20',
+                null,
+                null,
+                null,
+                RESTUtils.supportsAMP()
+            );
+        } else {
+            TransactionsStore.sendPayment(null, amount, destination);
+        }
 
         navigation.navigate('SendingLightning');
     };
