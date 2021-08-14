@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
         color: themeColor('text')
     },
     button: {
-        paddingTop: 15,
+        paddingTop: 30,
         paddingBottom: 15,
         paddingLeft: 10,
         paddingRight: 10
