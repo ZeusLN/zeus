@@ -256,6 +256,8 @@
     "views.PaymentRequest.paymentHash": "Payment Hash",
     "views.PaymentRequest.enableMpp": "Enable multi-path payment",
     "views.PaymentRequest.disableMpp": "Disable multi-path payment",
+    "views.PaymentRequest.enableAmp": "Enable atomic multi-path payment",
+    "views.PaymentRequest.disableAmp": "Disable atomic multi-path payment",
     "views.PaymentRequest.maxParts": "Max parts",
     "views.PaymentRequest.maxPartsDescription": "The maximum number of partial payments that may be used to complete the full amount.",
     "views.PaymentRequest.timeout": "Timeout (seconds)",

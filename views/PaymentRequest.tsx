@@ -36,6 +36,7 @@ interface InvoiceState {
     setCustomAmount: boolean;
     customAmount: string;
     enableMultiPathPayment: boolean;
+    enableAtomicMultiPathPayment: boolean;
     maxParts: string;
     timeoutSeconds: string;
     feeLimitSat: string;
@@ -59,6 +60,7 @@ export default class PaymentRequest extends React.Component<
         setCustomAmount: false,
         customAmount: '',
         enableMultiPathPayment: false,
+        enableAtomicMultiPathPayment: false,
         maxParts: '2',
         timeoutSeconds: '20',
         feeLimitSat: '10',
@@ -382,10 +384,6 @@ export default class PaymentRequest extends React.Component<
                         </View>
                     )}
 
-                    <View>
-                        <Text>{RESTUtils.supportsMPP()}</Text>
-                    </View>
-
                     {!!pay_req && RESTUtils.supportsMPP() && (
                         <View style={styles.button}>
                             <Button
@@ -410,6 +408,38 @@ export default class PaymentRequest extends React.Component<
                                 }}
                                 buttonStyle={{
                                     backgroundColor: enableMultiPathPayment
+                                        ? 'red'
+                                        : 'green',
+                                    borderRadius: 30
+                                }}
+                            />
+                        </View>
+                    )}
+
+                    {!!pay_req && RESTUtils.supportsAMP() && (
+                        <View style={styles.button}>
+                            <Button
+                                title={
+                                    enableMultiPathPayment
+                                        ? localeString(
+                                              'views.PaymentRequest.disableAmp'
+                                          )
+                                        : localeString(
+                                              'views.PaymentRequest.enableAmp'
+                                          )
+                                }
+                                icon={{
+                                    name: 'call-split',
+                                    size: 25,
+                                    color: 'white'
+                                }}
+                                onPress={() => {
+                                    this.setState({
+                                        enableAtomicMultiPathPayment: !enableAtomicMultiPathPayment
+                                    });
+                                }}
+                                buttonStyle={{
+                                    backgroundColor: enableAtomicMultiPathPayment
                                         ? 'red'
                                         : 'green',
                                     borderRadius: 30
@@ -501,7 +531,8 @@ export default class PaymentRequest extends React.Component<
                                             ? feeLimitSat
                                             : null,
                                         outgoingChanIds,
-                                        lastHopPubkey
+                                        lastHopPubkey,
+                                        enableAtomicMultiPathPayment
                                     );
 
                                     navigation.navigate('SendingLightning');

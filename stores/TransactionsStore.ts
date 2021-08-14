@@ -102,6 +102,7 @@ export default class TransactionsStore {
         fee_limit_sat?: string | null,
         outgoing_chan_ids?: Array<string> | null,
         last_hop_pubkey?: string | null
+        amp:? boolean | null
     ) => {
         this.loading = true;
         this.error_msg = null;
@@ -138,6 +139,11 @@ export default class TransactionsStore {
             data.fee_limit_sat = Number(fee_limit_sat);
         }
 
+        // atomic multi-path payments
+        if (amp) {
+            data.amp = true;
+        }
+
         // first hop
         if (outgoing_chan_ids) {
             data.outgoing_chan_ids = outgoing_chan_ids;
@@ -148,7 +154,7 @@ export default class TransactionsStore {
             data.last_hop_pubkey = Base64Utils.hexToBase64(last_hop_pubkey);
         }
 
-        const payFunc = max_parts
+        const payFunc = (amp || max_parts)
             ? RESTUtils.payLightningInvoiceV2
             : RESTUtils.payLightningInvoice;
 
