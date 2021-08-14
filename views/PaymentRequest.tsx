@@ -112,7 +112,7 @@ export default class PaymentRequest extends React.Component<
 
         const date = new Date(Number(timestamp) * 1000).toString();
 
-        const { implementation } = SettingsStore;
+        const { implementation, enableTor } = SettingsStore;
 
         const isLnd: boolean = implementation === 'lnd';
 
@@ -409,28 +409,32 @@ export default class PaymentRequest extends React.Component<
                                 </React.Fragment>
                             )}
 
-                            {!!pay_req && RESTUtils.supportsMPP() && (
-                                <React.Fragment>
-                                    <Text style={{ ...styles.label, top: 25 }}>
-                                        {localeString(
-                                            'views.PaymentRequest.mpp'
-                                        )}
-                                        :
-                                    </Text>
-                                    <Switch
-                                        value={enableMultiPathPayment}
-                                        onValueChange={() =>
-                                            this.setState({
-                                                enableMultiPathPayment: !enableMultiPathPayment
-                                            })
-                                        }
-                                        trackColor={{
-                                            false: '#767577',
-                                            true: themeColor('highlight')
-                                        }}
-                                    />
-                                </React.Fragment>
-                            )}
+                            {!!pay_req &&
+                                RESTUtils.supportsMPP() &&
+                                !enableTor && (
+                                    <React.Fragment>
+                                        <Text
+                                            style={{ ...styles.label, top: 25 }}
+                                        >
+                                            {localeString(
+                                                'views.PaymentRequest.mpp'
+                                            )}
+                                            :
+                                        </Text>
+                                        <Switch
+                                            value={enableMultiPathPayment}
+                                            onValueChange={() =>
+                                                this.setState({
+                                                    enableMultiPathPayment: !enableMultiPathPayment
+                                                })
+                                            }
+                                            trackColor={{
+                                                false: '#767577',
+                                                true: themeColor('highlight')
+                                            }}
+                                        />
+                                    </React.Fragment>
+                                )}
 
                             {(enableMultiPathPayment ||
                                 enableAtomicMultiPathPayment) && (
