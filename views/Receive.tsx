@@ -1,17 +1,19 @@
 import * as React from 'react';
 import {
     ActivityIndicator,
+    ScrollView,
     StyleSheet,
+    Switch,
     Text,
     TextInput,
-    View,
-    ScrollView,
-    TouchableOpacity
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import { Button, ButtonGroup, Header, Icon } from 'react-native-elements';
 import CollapsedQR from './../components/CollapsedQR';
 import { inject, observer } from 'mobx-react';
+import RESTUtils from './../utils/RESTUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
@@ -34,6 +36,7 @@ interface ReceiveState {
     memo: string;
     value: string;
     expiry: string;
+    ampInvoice: boolean;
 }
 
 @inject('InvoicesStore', 'SettingsStore', 'UnitsStore', 'FiatStore')
@@ -46,7 +49,8 @@ export default class Receive extends React.Component<
         selectedIndex: 0,
         memo: '',
         value: '100',
-        expiry: '3600'
+        expiry: '3600',
+        ampInvoice: false
     };
 
     componentDidMount() {
@@ -101,7 +105,7 @@ export default class Receive extends React.Component<
             FiatStore,
             navigation
         } = this.props;
-        const { selectedIndex, memo, value, expiry } = this.state;
+        const { selectedIndex, memo, value, expiry, ampInvoice } = this.state;
         const { units, changeUnits } = UnitsStore;
         const { fiatRates }: any = FiatStore;
 
@@ -336,6 +340,29 @@ export default class Receive extends React.Component<
                                 </>
                             )}
 
+                            {RESTUtils.supportsAMP() && (
+                                <>
+                                    <Text style={{ ...styles.text, top: 20 }}>
+                                        {localeString(
+                                            'views.Receive.ampInvoice'
+                                        )}
+                                        :
+                                    </Text>
+                                    <Switch
+                                        value={ampInvoice}
+                                        onValueChange={() =>
+                                            this.setState({
+                                                ampInvoice: !ampInvoice
+                                            })
+                                        }
+                                        trackColor={{
+                                            false: '#767577',
+                                            true: themeColor('highlight')
+                                        }}
+                                    />
+                                </>
+                            )}
+
                             <View style={styles.button}>
                                 <Button
                                     title={
@@ -358,7 +385,8 @@ export default class Receive extends React.Component<
                                             memo,
                                             satAmount.toString(),
                                             expiry,
-                                            lnurl
+                                            lnurl,
+                                            ampInvoice
                                         )
                                     }
                                     buttonStyle={{
@@ -434,7 +462,7 @@ const styles = StyleSheet.create({
         paddingRight: 20
     },
     button: {
-        paddingTop: 15,
+        paddingTop: 25,
         paddingBottom: 15
     },
     text: {
