@@ -68,17 +68,17 @@ export default class LND {
         return await calls[id];
     };
 
-    supports = (supportedVersion: string, apiVersion?: string) => {
+    supports = (minVersion: string, eosVersion?: string, minApiVersion?: string) => {
         const { nodeInfo } = stores.nodeInfoStore;
         const { version, api_version } = nodeInfo;
         const { isSupportedVersion } = VersionUtils;
         if (apiVersion) {
             return (
-                isSupportedVersion(version, supportedVersion) &&
-                isSupportedVersion(api_version, apiVersion)
+                isSupportedVersion(version, minVersion, eosVersion) &&
+                isSupportedVersion(api_version, minApiVersion)
             );
         }
-        return isSupportedVersion(version, supportedVersion);
+        return isSupportedVersion(version, minVersion, eosVersion);
     };
 
     wsReq = (route: string, method: string, data?: any) => {
@@ -284,7 +284,8 @@ export default class LND {
     supportsOnchainSends = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
-    supportsMPP = () => this.supports('v0.11.0');
+    supportsMPP = () => this.supports('v0.11.0', 'v0.13.0');
+    supportsAMP = () => this.supports('v0.13.0');
     supportsCoinControl = () => false;
     supportsHopPicking = () => this.supports('v0.11.0');
     supportsRouting = () => true;
