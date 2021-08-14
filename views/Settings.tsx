@@ -4,6 +4,7 @@ import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Nodes from './Settings/Nodes';
 import PrivacyUtils from './../utils/PrivacyUtils';
+import RESTUtils from './../utils/RESTUtils';
 import DropdownSetting from './../components/DropdownSetting';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
@@ -434,7 +435,7 @@ export default class Settings extends React.Component<
                     />
                 </View>
 
-                <View style={styles.button}>
+                {RESTUtils.supportsMessageSigning() && <View style={styles.button}>
                     <Button
                         title={localeString(
                             'views.Settings.signMessage.button'
@@ -448,7 +449,7 @@ export default class Settings extends React.Component<
                         onPress={() => navigation.navigate('SignMessage')}
                         style={styles.button}
                     />
-                </View>
+                </View>}
 
                 <View style={styles.button}>
                     <Button
