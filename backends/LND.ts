@@ -226,6 +226,8 @@ export default class LND {
     payLightningInvoice = (data: any) =>
         this.postRequest('/v1/channels/transactions', data);
     payLightningInvoiceV2 = (data: any) =>
+        this.postRequest('/v2/router/send', data);
+    payLightningInvoiceV2Streaming = (data: any) =>
         this.wsReq('/v2/router/send', 'POST', data);
     closeChannel = (urlParams?: Array<string>) => {
         if (urlParams && urlParams.length === 4) {

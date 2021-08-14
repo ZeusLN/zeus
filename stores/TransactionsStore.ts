@@ -142,6 +142,7 @@ export default class TransactionsStore {
         // atomic multi-path payments
         if (amp) {
             data.amp = true;
+            data.no_inflight_updates = true;
         }
 
         // first hop
@@ -154,10 +155,11 @@ export default class TransactionsStore {
             data.last_hop_pubkey = Base64Utils.hexToBase64(last_hop_pubkey);
         }
 
-        const payFunc =
-            amp || max_parts
-                ? RESTUtils.payLightningInvoiceV2
-                : RESTUtils.payLightningInvoice;
+        const payFunc = amp
+            ? RESTUtils.payLightningInvoiceV2
+            : max_parts
+            ? RESTUtils.payLightningInvoiceV2Streaming
+            : RESTUtils.payLightningInvoice;
 
         // backwards compatibility with v1
         if (!max_parts && outgoing_chan_ids) {
