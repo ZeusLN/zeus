@@ -121,21 +121,30 @@ export default class TransactionsStore {
             data.amt = amount;
         }
         if (pubkey) {
-            const preimage = randomBytes(preimageByteLength);
-            const secret = preimage.toString('base64');
-            const payment_hash = Buffer.from(sha256(preimage), 'hex').toString(
-                'base64'
-            );
+            if (!amp) {
+                const preimage = randomBytes(preimageByteLength);
+                const secret = preimage.toString('base64');
+                const payment_hash = Buffer.from(
+                    sha256(preimage),
+                    'hex'
+                ).toString('base64');
 
-            data.dest_string = pubkey;
-            data.dest_custom_records = { [keySendPreimageType]: secret };
-            data.payment_hash = payment_hash;
+                data.dest_string = pubkey;
+                data.dest_custom_records = { [keySendPreimageType]: secret };
+                data.payment_hash = payment_hash;
+            } else {
+                data.dest = Base64Utils.hexToBase64(pubkey);
+            }
         }
 
         // multi-path payments
         if (max_parts) {
             data.max_parts = max_parts;
+        }
+        if (timeout_seconds) {
             data.timeout_seconds = timeout_seconds;
+        }
+        if (fee_limit_sat) {
             data.fee_limit_sat = Number(fee_limit_sat);
         }
 
