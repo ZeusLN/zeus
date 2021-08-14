@@ -82,6 +82,7 @@ class RESTUtils {
     supportsKeysend = () => this.call('supportsKeysend');
     supportsChannelManagement = () => this.call('supportsChannelManagement');
     supportsMPP = () => this.call('supportsMPP');
+    supportsAMP = () => this.call('supportsAMP');
     supportsCoinControl = () => this.call('supportsCoinControl');
     supportsHopPicking = () => this.call('supportsHopPicking');
     supportsRouting = () => this.call('supportsRouting');

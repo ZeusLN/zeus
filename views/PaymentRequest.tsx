@@ -3,6 +3,7 @@ import {
     ActivityIndicator,
     ScrollView,
     StyleSheet,
+    Switch,
     Text,
     TextInput,
     TouchableOpacity,
@@ -81,6 +82,7 @@ export default class PaymentRequest extends React.Component<
             setCustomAmount,
             customAmount,
             enableMultiPathPayment,
+            enableAtomicMultiPathPayment,
             maxParts,
             timeoutSeconds,
             feeLimitSat,
@@ -381,6 +383,29 @@ export default class PaymentRequest extends React.Component<
                                     }
                                 </>
                             )}
+
+                            {!!pay_req && RESTUtils.supportsAMP() && (
+                                <React.Fragment>
+                                    <Text style={{ ...styles.label, top: 25 }}>
+                                        {localeString(
+                                            'views.PaymentRequest.amp'
+                                        )}
+                                        :
+                                    </Text>
+                                    <Switch
+                                        value={enableAtomicMultiPathPayment}
+                                        onValueChange={() =>
+                                            this.setState({
+                                                enableAtomicMultiPathPayment: !enableAtomicMultiPathPayment
+                                            })
+                                        }
+                                        trackColor={{
+                                            false: '#767577',
+                                            true: themeColor('highlight')
+                                        }}
+                                    />
+                                </React.Fragment>
+                            )}
                         </View>
                     )}
 
@@ -408,38 +433,6 @@ export default class PaymentRequest extends React.Component<
                                 }}
                                 buttonStyle={{
                                     backgroundColor: enableMultiPathPayment
-                                        ? 'red'
-                                        : 'green',
-                                    borderRadius: 30
-                                }}
-                            />
-                        </View>
-                    )}
-
-                    {!!pay_req && RESTUtils.supportsAMP() && (
-                        <View style={styles.button}>
-                            <Button
-                                title={
-                                    enableMultiPathPayment
-                                        ? localeString(
-                                              'views.PaymentRequest.disableAmp'
-                                          )
-                                        : localeString(
-                                              'views.PaymentRequest.enableAmp'
-                                          )
-                                }
-                                icon={{
-                                    name: 'call-split',
-                                    size: 25,
-                                    color: 'white'
-                                }}
-                                onPress={() => {
-                                    this.setState({
-                                        enableAtomicMultiPathPayment: !enableAtomicMultiPathPayment
-                                    });
-                                }}
-                                buttonStyle={{
-                                    backgroundColor: enableAtomicMultiPathPayment
                                         ? 'red'
                                         : 'green',
                                     borderRadius: 30
@@ -507,6 +500,27 @@ export default class PaymentRequest extends React.Component<
                         </View>
                     )}
 
+                    {enableAtomicMultiPathPayment && (
+                        <View style={styles.mppForm}>
+                            <Text style={styles.label}>
+                                {localeString('views.PaymentRequest.timeout')}:
+                            </Text>
+                            <TextInput
+                                keyboardType="numeric"
+                                placeholder="20"
+                                value={timeoutSeconds}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        timeoutSeconds: text
+                                    })
+                                }
+                                numberOfLines={1}
+                                style={styles.textInput}
+                                placeholderTextColor="gray"
+                            />
+                        </View>
+                    )}
+
                     {!!pay_req && (
                         <View style={styles.button}>
                             <Button
@@ -524,7 +538,8 @@ export default class PaymentRequest extends React.Component<
                                         enableMultiPathPayment
                                             ? maxParts
                                             : null,
-                                        enableMultiPathPayment
+                                        enableMultiPathPayment ||
+                                            enableAtomicMultiPathPayment
                                             ? timeoutSeconds
                                             : null,
                                         enableMultiPathPayment

@@ -101,8 +101,8 @@ export default class TransactionsStore {
         timeout_seconds?: string | null,
         fee_limit_sat?: string | null,
         outgoing_chan_ids?: Array<string> | null,
-        last_hop_pubkey?: string | null
-        amp:? boolean | null
+        last_hop_pubkey?: string | null,
+        amp?: boolean | null
     ) => {
         this.loading = true;
         this.error_msg = null;
@@ -142,6 +142,7 @@ export default class TransactionsStore {
         // atomic multi-path payments
         if (amp) {
             data.amp = true;
+            data.timeout_seconds = timeout_seconds;
         }
 
         // first hop
@@ -154,9 +155,10 @@ export default class TransactionsStore {
             data.last_hop_pubkey = Base64Utils.hexToBase64(last_hop_pubkey);
         }
 
-        const payFunc = (amp || max_parts)
-            ? RESTUtils.payLightningInvoiceV2
-            : RESTUtils.payLightningInvoice;
+        const payFunc =
+            amp || max_parts
+                ? RESTUtils.payLightningInvoiceV2
+                : RESTUtils.payLightningInvoice;
 
         // backwards compatibility with v1
         if (!max_parts && outgoing_chan_ids) {
@@ -190,7 +192,10 @@ export default class TransactionsStore {
             .catch((err: Error) => {
                 this.error = true;
                 this.loading = false;
-                this.error_msg = err.message || 'Error sending payment';
+                this.error_msg =
+                    typeof err === 'string'
+                        ? err
+                        : err.message || 'Error sending payment';
             });
     };
 }

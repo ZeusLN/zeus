@@ -151,7 +151,7 @@ export default class Invoice extends BaseModel {
             : localeString('models.Invoice.never');
     }
 
-    @computed public isExpired(): boolean {
+    @computed public get isExpired(): boolean {
         if (this.expiry) {
             return (
                 new Date().getTime() / 1000 >

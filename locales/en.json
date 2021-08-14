@@ -256,8 +256,7 @@
     "views.PaymentRequest.paymentHash": "Payment Hash",
     "views.PaymentRequest.enableMpp": "Enable multi-path payment",
     "views.PaymentRequest.disableMpp": "Disable multi-path payment",
-    "views.PaymentRequest.enableAmp": "Enable atomic multi-path payment",
-    "views.PaymentRequest.disableAmp": "Disable atomic multi-path payment",
+    "views.PaymentRequest.amp": "Attempt atomic multi-path payment",
     "views.PaymentRequest.maxParts": "Max parts",
     "views.PaymentRequest.maxPartsDescription": "The maximum number of partial payments that may be used to complete the full amount.",
     "views.PaymentRequest.timeout": "Timeout (seconds)",
@@ -360,5 +359,6 @@
     "components.UTXOPicker.modal.set": "Set UTXOs",
     "components.ChannelPicker.modal.title": "Select Channel to use",
     "components.ChannelPicker.modal.description": "Select the Channel to be used in this operation. You may want to only use specific channels to preserve your privacy.",
-    "components.ChannelPicker.modal.set": "Set Channel"
+    "components.ChannelPicker.modal.set": "Set Channel",
+    "backends.LND.wsReq.warning": "You may have to enable Certificate Verification to make these kind of calls"
 }
