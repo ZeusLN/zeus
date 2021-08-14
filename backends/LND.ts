@@ -3,6 +3,7 @@ import stores from '../stores/Stores';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import ErrorUtils from './../utils/ErrorUtils';
 import VersionUtils from './../utils/VersionUtils';
+import { localeString } from './../utils/LocaleUtils';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 
 interface Headers {
@@ -68,11 +69,15 @@ export default class LND {
         return await calls[id];
     };
 
-    supports = (minVersion: string, eosVersion?: string, minApiVersion?: string) => {
+    supports = (
+        minVersion: string,
+        eosVersion?: string,
+        minApiVersion?: string
+    ) => {
         const { nodeInfo } = stores.nodeInfoStore;
         const { version, api_version } = nodeInfo;
         const { isSupportedVersion } = VersionUtils;
-        if (apiVersion) {
+        if (minApiVersion) {
             return (
                 isSupportedVersion(version, minVersion, eosVersion) &&
                 isSupportedVersion(api_version, minApiVersion)
@@ -119,8 +124,9 @@ export default class LND {
             });
 
             ws.addEventListener('error', (e: any) => {
-                const certWarning =
-                    "You may have to install this node's certificate to the device to make these kind of calls";
+                console.log('~~');
+                console.log(e);
+                const certWarning = localeString('backends.LND.wsReq.warning');
                 // an error occurred
                 reject(
                     e.message ? `${certWarning} (${e.message})` : certWarning
