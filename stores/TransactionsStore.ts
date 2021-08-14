@@ -142,7 +142,6 @@ export default class TransactionsStore {
         // atomic multi-path payments
         if (amp) {
             data.amp = true;
-            data.timeout_seconds = timeout_seconds;
         }
 
         // first hop

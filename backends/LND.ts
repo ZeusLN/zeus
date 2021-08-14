@@ -124,8 +124,6 @@ export default class LND {
             });
 
             ws.addEventListener('error', (e: any) => {
-                console.log('~~');
-                console.log(e);
                 const certWarning = localeString('backends.LND.wsReq.warning');
                 // an error occurred
                 reject(
