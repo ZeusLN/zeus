@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 
 import { RectButton } from 'react-native-gesture-handler';
+import RESTUtils from './../../utils/RESTUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -40,9 +41,7 @@ export default class LightningSwipeableRow extends Component<
             if (text === localeString('general.receive')) {
                 this.props.navigation.navigate('Receive');
             } else if (text === localeString('general.routing')) {
-                this.props.navigation.navigate('NodeInfo', {
-                    selectedIndex: 2
-                });
+                this.props.navigation.navigate('Routing');
             }
         };
 
@@ -75,7 +74,12 @@ export default class LightningSwipeableRow extends Component<
             }}
         >
             {this.renderAction(localeString('general.receive'), 150, progress)}
-            {this.renderAction(localeString('general.routing'), 100, progress)}
+            {RESTUtils.supportsRouting() &&
+                this.renderAction(
+                    localeString('general.routing'),
+                    100,
+                    progress
+                )}
         </View>
     );
 
