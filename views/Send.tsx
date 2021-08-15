@@ -483,10 +483,10 @@ export default class Send extends React.Component<SendProps, SendState> {
                             </View>
                         ))}
                     {transactionType === 'On-chain' && (
-                        <View style= {styles.editfeebutton}>
-                            <Button    
-                            onPress= {() => navigation.navigate('EditFee')}                    
-                            title="Edit network fees"
+                        <View style={styles.editfeebutton}>
+                            <Button
+                                onPress={() => navigation.navigate('EditFee')}
+                                title="Edit network fees"
                             />
                         </View>
                     )}
@@ -536,6 +536,6 @@ const styles = StyleSheet.create({
     editfeebutton: {
         paddingTop: 15,
         alignItems: 'center',
-        color:"pink"
+        color: 'pink'
     }
 });

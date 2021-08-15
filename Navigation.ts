@@ -37,7 +37,7 @@ import ActivityFilter from './views/ActivityFilter';
 
 import Onboarding from './views/Onboarding';
 
-import EditFee from './views/EditFee'
+import EditFee from './views/EditFee';
 
 const AppScenes = {
     Lockscreen: {
@@ -87,7 +87,7 @@ const AppScenes = {
     },
     Send: {
         screen: Send
-    },    
+    },
     LnurlPay: {
         screen: LnurlPay
     },
