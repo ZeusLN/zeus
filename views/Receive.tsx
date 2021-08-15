@@ -37,6 +37,7 @@ interface ReceiveState {
     value: string;
     expiry: string;
     ampInvoice: boolean;
+    routeHints: boolean;
 }
 
 @inject('InvoicesStore', 'SettingsStore', 'UnitsStore', 'FiatStore')
@@ -50,7 +51,8 @@ export default class Receive extends React.Component<
         memo: '',
         value: '100',
         expiry: '3600',
-        ampInvoice: false
+        ampInvoice: false,
+        routeHints: false
     };
 
     componentDidMount() {
@@ -105,7 +107,7 @@ export default class Receive extends React.Component<
             FiatStore,
             navigation
         } = this.props;
-        const { selectedIndex, memo, value, expiry, ampInvoice } = this.state;
+        const { selectedIndex, memo, value, expiry, ampInvoice, routeHints } = this.state;
         const { units, changeUnits } = UnitsStore;
         const { fiatRates }: any = FiatStore;
 
@@ -340,6 +342,29 @@ export default class Receive extends React.Component<
                                 </>
                             )}
 
+                            {implementation === 'lnd' && (
+                                <>
+                                    <Text style={{ ...styles.text, top: 20 }}>
+                                        {localeString(
+                                            'views.Receive.routeHints'
+                                        )}
+                                        :
+                                    </Text>
+                                    <Switch
+                                        value={routeHints}
+                                        onValueChange={() =>
+                                            this.setState({
+                                                routeHints: !routeHints
+                                            })
+                                        }
+                                        trackColor={{
+                                            false: '#767577',
+                                            true: themeColor('highlight')
+                                        }}
+                                    />
+                                </>
+                            )}
+
                             {RESTUtils.supportsAMP() && (
                                 <>
                                     <Text style={{ ...styles.text, top: 20 }}>
@@ -386,7 +411,8 @@ export default class Receive extends React.Component<
                                             satAmount.toString(),
                                             expiry,
                                             lnurl,
-                                            ampInvoice
+                                            ampInvoice,
+                                            routeHints
                                         )
                                     }
                                     buttonStyle={{
