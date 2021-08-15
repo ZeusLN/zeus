@@ -278,6 +278,7 @@
     "views.Receive.getAddress": "Get Address",
     "views.Receive.getNewAddress": "Get New Address",
     "views.Receive.ampInvoice": "AMP Invoice",
+    "views.Receive.routeHints": "Include route hints",
     "views.Send.title": "Send",
     "views.Send.lnPayment": "Lightning payment request",
     "views.Send.btcAddress": "Bitcoin address",

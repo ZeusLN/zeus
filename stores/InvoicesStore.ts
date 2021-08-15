@@ -104,7 +104,8 @@ export default class InvoicesStore {
         value: string,
         expiry: string = '3600',
         lnurl?: LNURLWithdrawParams,
-        ampInvoice?: boolean
+        ampInvoice?: boolean,
+        routeHints?: boolean
     ) => {
         this.payment_request = null;
         this.creatingInvoice = true;
@@ -118,6 +119,7 @@ export default class InvoicesStore {
         };
 
         if (ampInvoice) req.is_amp = true;
+        if (routeHints) req.private = true;
 
         RESTUtils.createInvoice(req)
             .then((data: any) => {
