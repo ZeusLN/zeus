@@ -11,6 +11,19 @@ import Base64Utils from './../utils/Base64Utils';
 const keySendPreimageType = '5482373484';
 const preimageByteLength = 32;
 
+interface SendPaymentReq {
+    payment_request?: string;
+    amount?: string;
+    pubkey?: string;
+    max_parts?: string | null;
+    max_shard_amt?: string;
+    timeout_seconds?: string | null;
+    fee_limit_sat?: string | null;
+    outgoing_chan_ids?: any;
+    last_hop_pubkey?: string | null;
+    amp?: boolean;
+}
+
 export default class TransactionsStore {
     @observable loading: boolean = false;
     @observable error: boolean = false;
@@ -93,17 +106,19 @@ export default class TransactionsStore {
             });
     };
 
-    sendPayment = (
-        payment_request?: string | null,
-        amount?: string | null,
-        pubkey?: string | null,
-        max_parts?: string | null,
-        timeout_seconds?: string | null,
-        fee_limit_sat?: string | null,
-        outgoing_chan_ids?: Array<string> | null,
-        last_hop_pubkey?: string | null,
-        amp?: boolean | null
-    ) => {
+    @action
+    public sendPayment = ({
+        payment_request,
+        amount,
+        pubkey,
+        max_parts,
+        max_shard_amt,
+        timeout_seconds,
+        fee_limit_sat,
+        outgoing_chan_ids,
+        last_hop_pubkey,
+        amp
+    }: SendPaymentReq) => {
         this.loading = true;
         this.error_msg = null;
         this.error = false;
@@ -152,6 +167,9 @@ export default class TransactionsStore {
         if (amp) {
             data.amp = true;
             data.no_inflight_updates = true;
+        }
+        if (max_shard_amt) {
+            data.max_shard_size_msat = Number(max_shard_amt) * 1000;
         }
 
         // first hop
