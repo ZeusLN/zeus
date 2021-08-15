@@ -39,6 +39,7 @@ interface InvoiceState {
     enableMultiPathPayment: boolean;
     enableAtomicMultiPathPayment: boolean;
     maxParts: string;
+    maxShardAmt: string;
     timeoutSeconds: string;
     feeLimitSat: string;
     outgoingChanIds: Array<string> | null;
@@ -62,7 +63,8 @@ export default class PaymentRequest extends React.Component<
         customAmount: '',
         enableMultiPathPayment: false,
         enableAtomicMultiPathPayment: false,
-        maxParts: '2',
+        maxParts: '16',
+        maxShardAmt: '',
         timeoutSeconds: '20',
         feeLimitSat: '10',
         outgoingChanIds: null,
@@ -84,6 +86,7 @@ export default class PaymentRequest extends React.Component<
             enableMultiPathPayment,
             enableAtomicMultiPathPayment,
             maxParts,
+            maxShardAmt,
             timeoutSeconds,
             feeLimitSat,
             outgoingChanIds,
@@ -436,33 +439,8 @@ export default class PaymentRequest extends React.Component<
                                     </React.Fragment>
                                 )}
 
-                            {(enableMultiPathPayment ||
-                                enableAtomicMultiPathPayment) && (
+                            {ampOrMppEnabled && (
                                 <React.Fragment>
-                                    <Text style={styles.label}>
-                                        {localeString(
-                                            'views.PaymentRequest.maxParts'
-                                        )}
-                                        :
-                                    </Text>
-                                    <TextInput
-                                        keyboardType="numeric"
-                                        placeholder="2 (or greater)"
-                                        value={maxParts}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                maxParts: text
-                                            })
-                                        }
-                                        numberOfLines={1}
-                                        style={styles.textInput}
-                                        placeholderTextColor="gray"
-                                    />
-                                    <Text style={styles.label}>
-                                        {localeString(
-                                            'views.PaymentRequest.maxPartsDescription'
-                                        )}
-                                    </Text>
                                     <Text style={styles.label}>
                                         {localeString(
                                             'views.PaymentRequest.timeout'
@@ -483,9 +461,40 @@ export default class PaymentRequest extends React.Component<
                                         placeholderTextColor="gray"
                                     />
                                     <Text style={styles.label}>
+                                        {enableMultiPathPayment
+                                            ? localeString(
+                                                  'views.PaymentRequest.maxParts'
+                                              )
+                                            : `${localeString(
+                                                  'views.PaymentRequest.maxParts'
+                                              )} (${localeString(
+                                                  'general.optional'
+                                              )})`}
+                                        :
+                                    </Text>
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        value={maxParts}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                maxParts: text
+                                            })
+                                        }
+                                        numberOfLines={1}
+                                        style={styles.textInput}
+                                        placeholderTextColor="gray"
+                                    />
+                                    <Text style={styles.label}>
                                         {localeString(
-                                            'views.PaymentRequest.feeLimit'
+                                            'views.PaymentRequest.maxPartsDescription'
                                         )}
+                                    </Text>
+                                    <Text style={styles.label}>
+                                        {`${localeString(
+                                            'views.PaymentRequest.feeLimit'
+                                        )} (${localeString(
+                                            'general.optional'
+                                        )})`}
                                         :
                                     </Text>
                                     <TextInput
@@ -495,6 +504,33 @@ export default class PaymentRequest extends React.Component<
                                         onChangeText={(text: string) =>
                                             this.setState({
                                                 feeLimitSat: text
+                                            })
+                                        }
+                                        numberOfLines={1}
+                                        style={styles.textInput}
+                                        placeholderTextColor="gray"
+                                    />
+                                </React.Fragment>
+                            )}
+
+                            {enableAtomicMultiPathPayment && (
+                                <React.Fragment>
+                                    <Text style={styles.label}>
+                                        {`${localeString(
+                                            'views.PaymentRequest.maxShardAmt'
+                                        )} (${localeString(
+                                            'general.sats'
+                                        )}) (${localeString(
+                                            'general.optional'
+                                        )})`}
+                                        :
+                                    </Text>
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        value={maxShardAmt}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                maxShardAmt: text
                                             })
                                         }
                                         numberOfLines={1}
@@ -514,23 +550,23 @@ export default class PaymentRequest extends React.Component<
                                             color: 'white'
                                         }}
                                         onPress={() => {
-                                            TransactionsStore.sendPayment(
-                                                paymentRequest,
-                                                customAmount,
-                                                null,
-                                                ampOrMppEnabled
+                                            TransactionsStore.sendPayment({
+                                                payment_request: paymentRequest,
+                                                amount: customAmount,
+                                                max_parts: ampOrMppEnabled
                                                     ? maxParts
                                                     : null,
-                                                ampOrMppEnabled
+                                                max_shard_amt: maxShardAmt,
+                                                timeout_seconds: ampOrMppEnabled
                                                     ? timeoutSeconds
                                                     : null,
-                                                ampOrMppEnabled
+                                                fee_limit_sat: ampOrMppEnabled
                                                     ? feeLimitSat
                                                     : null,
-                                                outgoingChanIds,
-                                                lastHopPubkey,
-                                                enableAtomicMultiPathPayment
-                                            );
+                                                outgoing_chan_ids: outgoingChanIds,
+                                                last_hop_pubkey: lastHopPubkey,
+                                                amp: enableAtomicMultiPathPayment
+                                            });
 
                                             navigation.navigate(
                                                 'SendingLightning'

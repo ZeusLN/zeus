@@ -107,7 +107,14 @@ export default class Receive extends React.Component<
             FiatStore,
             navigation
         } = this.props;
-        const { selectedIndex, memo, value, expiry, ampInvoice, routeHints } = this.state;
+        const {
+            selectedIndex,
+            memo,
+            value,
+            expiry,
+            ampInvoice,
+            routeHints
+        } = this.state;
         const { units, changeUnits } = UnitsStore;
         const { fiatRates }: any = FiatStore;
 
