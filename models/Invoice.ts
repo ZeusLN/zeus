@@ -49,6 +49,7 @@ export default class Invoice extends BaseModel {
     public timestamp?: string | number;
     public destination?: string;
     public num_satoshis?: string | number;
+    public features?: any;
     // lndhub
     public amt?: number;
     public ispaid?: boolean;

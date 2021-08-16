@@ -262,7 +262,7 @@
     "views.PaymentRequest.maxShardAmt": "Max shard amount",
     "views.PaymentRequest.maxPartsDescription": "The maximum number of partial payments that may be used to complete the full amount.",
     "views.PaymentRequest.timeout": "Timeout (seconds)",
-    "views.PaymentRequest.feeLimit": "Fee limit (satoshis)",
+    "views.PaymentRequest.feeLimit": "Fee limit",
     "views.PaymentRequest.payInvoice": "Pay this invoice",
     "views.Receive.title": "Receive",
     "views.Receive.successCreate": "Successfully created invoice",
