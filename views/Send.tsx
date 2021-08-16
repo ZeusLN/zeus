@@ -187,10 +187,10 @@ export default class Send extends React.Component<SendProps, SendState> {
             TransactionsStore.sendPayment({
                 amount,
                 pubkey: destination,
-                // max_parts: maxParts,
-                // max_shard_amt: maxShardAmt,
+                max_parts: maxParts,
+                max_shard_amt: maxShardAmt,
                 timeout_seconds: timeoutSeconds,
-                // fee_limit_sat: feeLimitSat,
+                fee_limit_sat: feeLimitSat,
                 amp: true
             });
         } else {
