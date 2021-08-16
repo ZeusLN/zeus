@@ -93,7 +93,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             maxParts: '16',
             maxShardAmt: '',
             timeoutSeconds: '20',
-            feeLimitSat: '10'
+            feeLimitSat: ''
         };
     }
 

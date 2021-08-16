@@ -66,7 +66,7 @@ export default class PaymentRequest extends React.Component<
         maxParts: '16',
         maxShardAmt: '',
         timeoutSeconds: '20',
-        feeLimitSat: '10',
+        feeLimitSat: '',
         outgoingChanIds: null,
         lastHopPubkey: null
     };
