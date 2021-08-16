@@ -102,8 +102,6 @@ export default class PaymentRequest extends React.Component<
             feeEstimate
         } = InvoicesStore;
         const { units, changeUnits, getAmount } = UnitsStore;
-        const ampOrMppEnabled: boolean =
-            enableMultiPathPayment || enableAtomicMultiPathPayment;
 
         const requestAmount = pay_req && pay_req.getRequestAmount;
         const expiry = pay_req && pay_req.expiry;
@@ -112,6 +110,20 @@ export default class PaymentRequest extends React.Component<
         const description = pay_req && pay_req.description;
         const payment_hash = pay_req && pay_req.payment_hash;
         const timestamp = pay_req && pay_req.timestamp;
+
+        let lockAtomicMultiPathPayment: boolean = false;
+        if (
+            pay_req &&
+            pay_req.features &&
+            pay_req.features['30'] &&
+            pay_req.features['30'].is_required
+        ) {
+            lockAtomicMultiPathPayment = true;
+        }
+
+        const enableAmp: boolean =
+            enableAtomicMultiPathPayment || lockAtomicMultiPathPayment;
+        const ampOrMppEnabled: boolean = enableMultiPathPayment || enableAmp;
 
         const date = new Date(Number(timestamp) * 1000).toString();
 
@@ -398,7 +410,7 @@ export default class PaymentRequest extends React.Component<
                                         :
                                     </Text>
                                     <Switch
-                                        value={enableAtomicMultiPathPayment}
+                                        value={enableAmp}
                                         onValueChange={() =>
                                             this.setState({
                                                 enableAtomicMultiPathPayment: !enableAtomicMultiPathPayment
@@ -408,6 +420,7 @@ export default class PaymentRequest extends React.Component<
                                             false: '#767577',
                                             true: themeColor('highlight')
                                         }}
+                                        disabled={lockAtomicMultiPathPayment}
                                     />
                                 </React.Fragment>
                             )}
@@ -493,6 +506,8 @@ export default class PaymentRequest extends React.Component<
                                         {`${localeString(
                                             'views.PaymentRequest.feeLimit'
                                         )} (${localeString(
+                                            'general.sats'
+                                        )}) (${localeString(
                                             'general.optional'
                                         )})`}
                                         :
@@ -513,7 +528,7 @@ export default class PaymentRequest extends React.Component<
                                 </React.Fragment>
                             )}
 
-                            {enableAtomicMultiPathPayment && (
+                            {enableAmp && (
                                 <React.Fragment>
                                     <Text style={styles.label}>
                                         {`${localeString(
@@ -565,7 +580,7 @@ export default class PaymentRequest extends React.Component<
                                                     : null,
                                                 outgoing_chan_ids: outgoingChanIds,
                                                 last_hop_pubkey: lastHopPubkey,
-                                                amp: enableAtomicMultiPathPayment
+                                                amp: enableAmp
                                             });
 
                                             navigation.navigate(
