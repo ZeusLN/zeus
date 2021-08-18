@@ -1072,7 +1072,7 @@ export default class AddEditNode extends React.Component<
                             color: saved ? 'black' : 'white'
                         }}
                         onPress={() => {
-                            if (!saved && !certVerification) {
+                            if (!saved && !certVerification && !enableTor) {
                                 this.setState({ showCertModal: true });
                             } else {
                                 this.saveNodeConfiguration();
