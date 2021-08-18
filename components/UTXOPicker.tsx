@@ -15,6 +15,7 @@ import { Avatar, ListItem } from 'react-native-elements';
 import remove from 'lodash/remove';
 import { inject, observer } from 'mobx-react';
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
 
 import stores from './../stores/Stores';
 import UTXOsStore from './../stores/UTXOsStore';
@@ -151,22 +152,13 @@ export default class UTXOPicker extends React.Component<
                     visible={showUtxoModal}
                 >
                     <View style={styles.centeredView}>
-                        <View
-                            style={
-                                theme === 'dark'
-                                    ? styles.modalDark
-                                    : styles.modal
-                            }
-                        >
+                        <View style={styles.modal}>
                             {showUtxoModal && (
                                 <>
                                     <Text
                                         style={{
                                             fontSize: 25,
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'white'
-                                                    : 'black'
+                                            color: themeColor('text')
                                         }}
                                     >
                                         {localeString(
@@ -177,10 +169,7 @@ export default class UTXOPicker extends React.Component<
                                         style={{
                                             paddingTop: 20,
                                             paddingBottom: 20,
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'white'
-                                                    : 'black'
+                                            color: themeColor('text')
                                         }}
                                     >
                                         {localeString(
@@ -193,10 +182,7 @@ export default class UTXOPicker extends React.Component<
                                             fontSize: 20,
                                             paddingTop: 20,
                                             paddingBottom: 20,
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'white'
-                                                    : 'black'
+                                            color: themeColor('text')
                                         }}
                                     >
                                         {`${selectedBalance} ${localeString(
@@ -215,10 +201,9 @@ export default class UTXOPicker extends React.Component<
                                                 )}`}
                                                 containerStyle={{
                                                     borderBottomWidth: 0,
-                                                    backgroundColor:
-                                                        theme === 'dark'
-                                                            ? 'black'
-                                                            : 'white'
+                                                    backgroundColor: themeColor(
+                                                        'background'
+                                                    )
                                                 }}
                                                 leftElement={
                                                     utxosPicked.includes(
@@ -241,18 +226,16 @@ export default class UTXOPicker extends React.Component<
                                                         `${item.txid}:${item.output}`
                                                     )
                                                         ? 'orange'
-                                                        : theme === 'dark'
-                                                        ? 'white'
-                                                        : 'black'
+                                                        : themeColor('text')
                                                 }}
                                                 subtitleStyle={{
                                                     color: utxosPicked.includes(
                                                         `${item.txid}:${item.output}`
                                                     )
                                                         ? 'orange'
-                                                        : theme === 'dark'
-                                                        ? 'gray'
-                                                        : '#8a8999'
+                                                        : themeColor(
+                                                              'secondaryText'
+                                                          )
                                                 }}
                                             />
                                         )}
@@ -308,7 +291,7 @@ export default class UTXOPicker extends React.Component<
                     <View>
                         <Text
                             style={{
-                                color: theme === 'dark' ? 'white' : 'black',
+                                color: themeColor('text'),
                                 paddingLeft: 10
                             }}
                         >
@@ -319,14 +302,14 @@ export default class UTXOPicker extends React.Component<
                                 style={{
                                     padding: 10,
                                     fontSize: 16,
-                                    color: theme === 'dark' ? 'white' : 'black'
+                                    color: themeColor('text')
                                 }}
                             >
                                 {this.displayValues()}
                             </Text>
                         ) : (
                             <Picker
-                                selectedValue={selectedValue}
+                                selectedValue={`${selectedValue}`}
                                 onValueChange={(itemValue: string) => {
                                     if (itemValue === 'No selection') {
                                         this.clearSelection();
@@ -336,11 +319,7 @@ export default class UTXOPicker extends React.Component<
                                         this.openPicker();
                                     }
                                 }}
-                                style={
-                                    theme === 'dark'
-                                        ? styles.pickerDark
-                                        : styles.picker
-                                }
+                                style={styles.picker}
                             >
                                 {pickerValuesAndroid}
                             </Picker>
@@ -352,7 +331,7 @@ export default class UTXOPicker extends React.Component<
                     <View>
                         <Text
                             style={{
-                                color: theme === 'dark' ? 'white' : 'black',
+                                color: themeColor('text'),
                                 textDecorationLine: 'underline'
                             }}
                         >
@@ -377,7 +356,7 @@ export default class UTXOPicker extends React.Component<
                         >
                             <Text
                                 style={{
-                                    color: theme === 'dark' ? 'white' : 'black'
+                                    color: themeColor('text')
                                 }}
                             >
                                 {utxosSet.length > 0
@@ -395,11 +374,7 @@ export default class UTXOPicker extends React.Component<
 const styles = StyleSheet.create({
     picker: {
         height: 50,
-        color: 'black'
-    },
-    pickerDark: {
-        height: 50,
-        color: 'white'
+        color: themeColor('text')
     },
     button: {
         paddingTop: 10,
@@ -407,22 +382,8 @@ const styles = StyleSheet.create({
     },
     modal: {
         margin: 20,
-        backgroundColor: 'white',
-        borderRadius: 20,
-        padding: 35,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5
-    },
-    modalDark: {
-        margin: 20,
-        color: 'white',
-        backgroundColor: 'black',
+        color: themeColor('text'),
+        backgroundColor: themeColor('background'),
         borderRadius: 20,
         padding: 35,
         shadowColor: '#000',

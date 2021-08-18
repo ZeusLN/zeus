@@ -34,10 +34,16 @@ export default class NodeInfoStore {
         this.errorMsg = '';
     };
 
+    @action
     getNodeInfoError = () => {
         this.error = true;
         this.loading = false;
         this.nodeInfo = {};
+    };
+
+    @action
+    setLoading = () => {
+        this.loading = true;
     };
 
     @action

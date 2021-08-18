@@ -65,7 +65,7 @@ export default class Eclair {
                 });
         }
         setTimeout(
-            id => {
+            (id: string) => {
                 delete calls[id];
             },
             9000,
@@ -460,12 +460,21 @@ export default class Eclair {
             });
     };
 
+    signMessage = (message: string) =>
+        this.api('signmessage', {
+            msg: message
+        });
+
+    supportsMessageSigning = () => true;
     supportsOnchainSends = () => true;
     supportsKeysend = () => false;
     supportsChannelManagement = () => true;
     supportsMPP = () => false;
+    supportsAMP = () => false;
     supportsCoinControl = () => false;
     supportsHopPicking = () => false;
+    supportsRouting = () => true;
+    supportsNodeInfo = () => true;
 }
 
 const mapInvoice = (isPending: any) => ({

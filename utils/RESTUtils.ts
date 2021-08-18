@@ -63,6 +63,8 @@ class RESTUtils {
         this.call('payLightningInvoice', args);
     payLightningInvoiceV2 = (...args: any[]) =>
         this.call('payLightningInvoiceV2', args);
+    payLightningInvoiceV2Streaming = (...args: any[]) =>
+        this.call('payLightningInvoiceV2Streaming', args);
     closeChannel = (...args: any[]) => this.call('closeChannel', args);
     getNodeInfo = (...args: any[]) => this.call('getNodeInfo', args);
     getFees = (...args: any[]) => this.call('getFees', args);
@@ -71,16 +73,22 @@ class RESTUtils {
     getForwardingHistory = (...args: any[]) =>
         this.call('getForwardingHistory', args);
     getUTXOs = (...args: any[]) => this.call('getUTXOs', args);
+    signMessage = (...args: any[]) => this.call('signMessage', args);
+
     // lndhub
     createAccount = (...args: any[]) => this.call('createAccount', args);
     login = (...args: any[]) => this.call('login', args);
 
+    supportsMessageSigning = () => this.call('supportsMessageSigning');
     supportsOnchainSends = () => this.call('supportsOnchainSends');
     supportsKeysend = () => this.call('supportsKeysend');
     supportsChannelManagement = () => this.call('supportsChannelManagement');
     supportsMPP = () => this.call('supportsMPP');
+    supportsAMP = () => this.call('supportsAMP');
     supportsCoinControl = () => this.call('supportsCoinControl');
     supportsHopPicking = () => this.call('supportsHopPicking');
+    supportsRouting = () => this.call('supportsRouting');
+    supportsNodeInfo = () => this.call('supportsNodeInfo');
 }
 
 const restUtils = new RESTUtils();

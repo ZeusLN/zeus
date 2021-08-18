@@ -4,8 +4,10 @@ import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Nodes from './Settings/Nodes';
 import PrivacyUtils from './../utils/PrivacyUtils';
+import RESTUtils from './../utils/RESTUtils';
 import DropdownSetting from './../components/DropdownSetting';
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
 
 import SettingsStore, {
     LOCALE_KEYS,
@@ -85,7 +87,7 @@ export default class Settings extends React.Component<
         if (settings) {
             this.setState({
                 nodes: settings.nodes || [],
-                theme: settings.theme || 'light',
+                theme: settings.theme || 'dark',
                 lurkerMode: settings.lurkerMode || false,
                 passphrase: settings.passphrase || '',
                 passphraseConfirm: settings.passphrase || '',
@@ -175,7 +177,6 @@ export default class Settings extends React.Component<
             locale
         } = this.state;
         const { loading, settings } = SettingsStore;
-        const savedTheme = settings.theme;
         const selectedNode = settings.selectedNode;
 
         const themes: any = {
@@ -187,7 +188,7 @@ export default class Settings extends React.Component<
             <Icon
                 name="arrow-back"
                 onPress={() => navigation.navigate('Wallet', { refresh: true })}
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
@@ -195,24 +196,14 @@ export default class Settings extends React.Component<
         const lurkerLabel = `Lurking ${PrivacyUtils.getLover()} Mode: hides sensitive values`;
 
         return (
-            <ScrollView
-                style={
-                    savedTheme === 'dark'
-                        ? styles.darkThemeStyle
-                        : styles.lightThemeStyle
-                }
-            >
+            <ScrollView style={styles.scrollView}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Settings.title'),
-                        style: { color: '#fff' }
+                        style: { color: themeColor('text') }
                     }}
-                    backgroundColor={
-                        savedTheme === 'dark'
-                            ? '#261339'
-                            : 'rgba(92, 99,216, 1)'
-                    }
+                    backgroundColor={themeColor('secondary')}
                 />
                 {passphraseError && (
                     <Text
@@ -229,7 +220,6 @@ export default class Settings extends React.Component<
                     <Nodes
                         nodes={nodes}
                         navigation={navigation}
-                        theme={savedTheme}
                         loading={loading}
                         selectedNode={selectedNode}
                         SettingsStore={SettingsStore}
@@ -238,7 +228,6 @@ export default class Settings extends React.Component<
 
                 <DropdownSetting
                     title={localeString('views.Settings.locale')}
-                    theme={savedTheme}
                     selectedValue={locale}
                     onValueChange={(value: string) =>
                         this.setState({ locale: value })
@@ -248,7 +237,6 @@ export default class Settings extends React.Component<
 
                 <DropdownSetting
                     title={localeString('views.Settings.fiatRate')}
-                    theme={savedTheme}
                     selectedValue={fiat}
                     onValueChange={(value: string) =>
                         this.setState({ fiat: value })
@@ -281,21 +269,20 @@ export default class Settings extends React.Component<
 
                 <DropdownSetting
                     title={localeString('views.Settings.theme')}
-                    theme={savedTheme}
                     selectedValue={theme}
                     displayValue={themes[theme]}
                     onValueChange={(value: string) =>
                         this.setState({ theme: value })
                     }
                     values={[
+                        { key: 'Dark', value: 'dark' },
                         { key: 'Light', value: 'light' },
-                        { key: 'Dark', value: 'dark' }
+                        { key: 'Junkie', value: 'junkie' }
                     ]}
                 />
 
                 <DropdownSetting
                     title={lurkerLabel}
-                    theme={savedTheme}
                     selectedValue={lurkerMode}
                     displayValue={
                         lurkerMode
@@ -314,7 +301,7 @@ export default class Settings extends React.Component<
                 {showPassphraseForm && (
                     <Text
                         style={{
-                            color: savedTheme === 'dark' ? 'white' : 'black',
+                            color: themeColor('text'),
                             paddingLeft: 10,
                             paddingTop: 10
                         }}
@@ -337,17 +324,17 @@ export default class Settings extends React.Component<
                         autoCapitalize="none"
                         autoCorrect={false}
                         secureTextEntry={true}
-                        style={
-                            savedTheme === 'dark'
-                                ? styles.textInputDark
-                                : styles.textInput
-                        }
+                        style={{
+                            fontSize: 20,
+                            color: themeColor('text'),
+                            paddingLeft: 10
+                        }}
                     />
                 )}
                 {showPassphraseForm && (
                     <Text
                         style={{
-                            color: savedTheme === 'dark' ? 'white' : 'black',
+                            color: themeColor('text'),
                             paddingLeft: 10
                         }}
                     >
@@ -369,11 +356,11 @@ export default class Settings extends React.Component<
                         autoCapitalize="none"
                         autoCorrect={false}
                         secureTextEntry={true}
-                        style={
-                            savedTheme === 'dark'
-                                ? styles.textInputDark
-                                : styles.textInput
-                        }
+                        style={{
+                            fontSize: 20,
+                            color: themeColor('text'),
+                            paddingLeft: 10
+                        }}
                     />
                 )}
                 <View style={styles.button}>
@@ -389,11 +376,7 @@ export default class Settings extends React.Component<
                             color: saved ? 'black' : 'white'
                         }}
                         buttonStyle={{
-                            backgroundColor: saved
-                                ? '#fff'
-                                : savedTheme === 'dark'
-                                ? '#261339'
-                                : 'rgba(92, 99,216, 1)',
+                            backgroundColor: saved ? '#fff' : '#261339',
                             borderRadius: 30,
                             width: 350,
                             alignSelf: 'center'
@@ -451,6 +434,25 @@ export default class Settings extends React.Component<
                         style={styles.button}
                     />
                 </View>
+
+                {RESTUtils.supportsMessageSigning() && (
+                    <View style={styles.button}>
+                        <Button
+                            title={localeString(
+                                'views.Settings.signMessage.button'
+                            )}
+                            buttonStyle={{
+                                backgroundColor: 'green',
+                                borderRadius: 30,
+                                width: 350,
+                                alignSelf: 'center'
+                            }}
+                            onPress={() => navigation.navigate('SignMessage')}
+                            style={styles.button}
+                        />
+                    </View>
+                )}
+
                 <View style={styles.button}>
                     <Button
                         title={localeString('views.Settings.intro')}
@@ -472,24 +474,10 @@ export default class Settings extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
+    scrollView: {
         flex: 1,
-        backgroundColor: 'white'
-    },
-    darkThemeStyle: {
-        flex: 1,
-        backgroundColor: 'black',
-        color: 'white'
-    },
-    textInput: {
-        fontSize: 20,
-        color: 'black',
-        paddingLeft: 10
-    },
-    textInputDark: {
-        fontSize: 20,
-        color: 'white',
-        paddingLeft: 10
+        backgroundColor: themeColor('background'),
+        color: themeColor('text')
     },
     error: {
         color: 'red'

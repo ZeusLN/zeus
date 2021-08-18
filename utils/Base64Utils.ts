@@ -71,6 +71,20 @@ class Base64Utils {
 
     hexToBase64 = (str: string = '') =>
         this.byteToBase64(this.hexStringToByte(str));
+
+    stringToUint8Array = (str: string) =>
+        Uint8Array.from(str, x => x.charCodeAt(0));
+
+    hexToUint8Array = (hexString: string) =>
+        new Uint8Array(
+            hexString.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16))
+        );
+
+    bytesToHexString = (bytes: any) =>
+        bytes.reduce(
+            (memo: any, i: number) => memo + ('0' + i.toString(16)).slice(-2),
+            ''
+        );
 }
 
 const base64Utils = new Base64Utils();
