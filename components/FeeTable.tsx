@@ -8,16 +8,15 @@ import * as React from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { Button } from 'react-native-elements';
 import FeeUtils from './../utils/FeeUtils';
-// import { Cell, Header, Row } from 'react-native-data-table';
+import { themeColor } from './../utils/ThemeUtils';
+
 import { DataTable } from 'react-native-paper';
 import isEmpty from 'lodash/isEmpty';
 import { inject, observer } from 'mobx-react';
 
 import FeeStore from './../stores/FeeStore';
-import SettingsStore from './../stores/SettingsStore';
 
 interface FeeTableProps {
-    SettingsStore: SettingsStore;
     FeeStore: FeeStore;
     setFee: (value: string) => void;
 }
@@ -26,7 +25,7 @@ interface FeeTableState {
     collapsed: boolean;
 }
 
-@inject('SettingsStore', 'FeeStore')
+@inject('FeeStore')
 @observer
 export default class FeeTable extends React.Component<
     FeeTableProps,
@@ -79,10 +78,8 @@ export default class FeeTable extends React.Component<
 
     render() {
         const { collapsed } = this.state;
-        const { FeeStore, SettingsStore, setFee } = this.props;
+        const { FeeStore, setFee } = this.props;
         const { dataFrame, loading } = FeeStore;
-        const { settings } = SettingsStore;
-        const { theme } = settings;
 
         const df = dataFrame;
         let headers: any;
@@ -128,9 +125,8 @@ export default class FeeTable extends React.Component<
                         <View style={this.styler(indexText)}>
                             <Text
                                 style={{
-                                    backgroundColor:
-                                        theme === 'dark' ? 'black' : 'white',
-                                    color: theme === 'dark' ? 'white' : 'black',
+                                    backgroundColor: themeColor('background'),
+                                    color: themeColor('text'),
                                     width: 100
                                 }}
                             >
@@ -150,7 +146,7 @@ export default class FeeTable extends React.Component<
                     icon={{
                         name: 'view-module',
                         size: 25,
-                        color: theme === 'dark' ? 'black' : 'white'
+                        color: themeColor('background')
                     }}
                     containerStyle={{
                         marginBottom: 20,
@@ -158,11 +154,11 @@ export default class FeeTable extends React.Component<
                         alignSelf: 'center'
                     }}
                     buttonStyle={{
-                        backgroundColor: theme === 'dark' ? 'white' : 'black',
+                        backgroundColor: themeColor('text'),
                         borderRadius: 30
                     }}
                     titleStyle={{
-                        color: theme === 'dark' ? 'black' : 'white'
+                        color: themeColor('background')
                     }}
                     onPress={() =>
                         collapsed ? this.openTable() : this.closeTable()

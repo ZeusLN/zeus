@@ -3,6 +3,7 @@ import {
     ActivityIndicator,
     ScrollView,
     StyleSheet,
+    Switch,
     Text,
     TextInput,
     TouchableOpacity,
@@ -11,6 +12,7 @@ import {
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
 
 import InvoicesStore from './../stores/InvoicesStore';
 import TransactionsStore from './../stores/TransactionsStore';
@@ -35,7 +37,9 @@ interface InvoiceState {
     setCustomAmount: boolean;
     customAmount: string;
     enableMultiPathPayment: boolean;
+    enableAtomicMultiPathPayment: boolean;
     maxParts: string;
+    maxShardAmt: string;
     timeoutSeconds: string;
     feeLimitSat: string;
     outgoingChanIds: Array<string> | null;
@@ -58,9 +62,11 @@ export default class PaymentRequest extends React.Component<
         setCustomAmount: false,
         customAmount: '',
         enableMultiPathPayment: false,
-        maxParts: '2',
+        enableAtomicMultiPathPayment: false,
+        maxParts: '16',
+        maxShardAmt: '',
         timeoutSeconds: '20',
-        feeLimitSat: '10',
+        feeLimitSat: '',
         outgoingChanIds: null,
         lastHopPubkey: null
     };
@@ -78,7 +84,9 @@ export default class PaymentRequest extends React.Component<
             setCustomAmount,
             customAmount,
             enableMultiPathPayment,
+            enableAtomicMultiPathPayment,
             maxParts,
+            maxShardAmt,
             timeoutSeconds,
             feeLimitSat,
             outgoingChanIds,
@@ -103,10 +111,23 @@ export default class PaymentRequest extends React.Component<
         const payment_hash = pay_req && pay_req.payment_hash;
         const timestamp = pay_req && pay_req.timestamp;
 
+        let lockAtomicMultiPathPayment: boolean = false;
+        if (
+            pay_req &&
+            pay_req.features &&
+            pay_req.features['30'] &&
+            pay_req.features['30'].is_required
+        ) {
+            lockAtomicMultiPathPayment = true;
+        }
+
+        const enableAmp: boolean =
+            enableAtomicMultiPathPayment || lockAtomicMultiPathPayment;
+        const ampOrMppEnabled: boolean = enableMultiPathPayment || enableAmp;
+
         const date = new Date(Number(timestamp) * 1000).toString();
 
-        const { settings, implementation } = SettingsStore;
-        const { theme } = settings;
+        const { implementation, enableTor } = SettingsStore;
 
         const isLnd: boolean = implementation === 'lnd';
 
@@ -124,22 +145,14 @@ export default class PaymentRequest extends React.Component<
         );
 
         return (
-            <View
-                style={
-                    theme === 'dark'
-                        ? styles.darkThemeStyle
-                        : styles.lightThemeStyle
-                }
-            >
+            <View style={styles.scrollView}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.PaymentRequest.title'),
                         style: { color: '#fff' }
                     }}
-                    backgroundColor={
-                        theme === 'dark' ? '#261339' : 'rgba(92, 99,216, 1)'
-                    }
+                    backgroundColor="#1f2328"
                 />
 
                 {(loading || loadingFeeEstimate) && (
@@ -149,13 +162,7 @@ export default class PaymentRequest extends React.Component<
                 <ScrollView>
                     {!!getPayReqError && (
                         <View style={styles.content}>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.PaymentRequest.error')}:{' '}
                                 {getPayReqError}
                             </Text>
@@ -169,13 +176,7 @@ export default class PaymentRequest extends React.Component<
                                     <TouchableOpacity
                                         onPress={() => changeUnits()}
                                     >
-                                        <Text
-                                            style={
-                                                theme === 'dark'
-                                                    ? styles.amountDark
-                                                    : styles.amount
-                                            }
-                                        >
+                                        <Text style={styles.amount}>
                                             {units &&
                                                 getAmount(requestAmount || 0)}
                                         </Text>
@@ -184,10 +185,7 @@ export default class PaymentRequest extends React.Component<
                                 {setCustomAmount && (
                                     <Text
                                         style={{
-                                            color:
-                                                theme === 'dark'
-                                                    ? 'white'
-                                                    : 'black'
+                                            color: themeColor('text')
                                         }}
                                     >
                                         {localeString(
@@ -210,11 +208,7 @@ export default class PaymentRequest extends React.Component<
                                             })
                                         }
                                         numberOfLines={1}
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.textInputDark
-                                                : styles.textInput
-                                        }
+                                        style={styles.textInput}
                                         placeholderTextColor="gray"
                                     />
                                 )}
@@ -233,10 +227,7 @@ export default class PaymentRequest extends React.Component<
                                             icon={{
                                                 name: 'edit',
                                                 size: 25,
-                                                color:
-                                                    theme === 'dark'
-                                                        ? 'black'
-                                                        : 'white'
+                                                color: themeColor('background')
                                             }}
                                             onPress={() => {
                                                 if (setCustomAmount) {
@@ -252,16 +243,12 @@ export default class PaymentRequest extends React.Component<
                                             }}
                                             style={styles.button}
                                             titleStyle={{
-                                                color:
-                                                    theme === 'dark'
-                                                        ? 'black'
-                                                        : 'white'
+                                                color: themeColor('background')
                                             }}
                                             buttonStyle={{
-                                                backgroundColor:
-                                                    theme === 'dark'
-                                                        ? 'white'
-                                                        : 'black',
+                                                backgroundColor: themeColor(
+                                                    'text'
+                                                ),
                                                 borderRadius: 30
                                             }}
                                         />
@@ -274,25 +261,13 @@ export default class PaymentRequest extends React.Component<
                                     <TouchableOpacity
                                         onPress={() => changeUnits()}
                                     >
-                                        <Text
-                                            style={
-                                                theme === 'dark'
-                                                    ? styles.labelDark
-                                                    : styles.label
-                                            }
-                                        >
+                                        <Text style={styles.label}>
                                             {localeString(
                                                 'views.PaymentRequest.feeEstimate'
                                             )}
                                             :
                                         </Text>
-                                        <Text
-                                            style={
-                                                theme === 'dark'
-                                                    ? styles.valueDark
-                                                    : styles.value
-                                            }
-                                        >
+                                        <Text style={styles.value}>
                                             {units && getAmount(feeEstimate)}
                                         </Text>
                                     </TouchableOpacity>
@@ -301,25 +276,13 @@ export default class PaymentRequest extends React.Component<
 
                             {!!successProbability && (
                                 <React.Fragment>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.labelDark
-                                                : styles.label
-                                        }
-                                    >
+                                    <Text style={styles.label}>
                                         {localeString(
                                             'views.PaymentRequest.successProbability'
                                         )}
                                         :
                                     </Text>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.valueDark
-                                                : styles.value
-                                        }
-                                    >
+                                    <Text style={styles.value}>
                                         {`${successProbability}%`}
                                     </Text>
                                 </React.Fragment>
@@ -327,25 +290,13 @@ export default class PaymentRequest extends React.Component<
 
                             {!!description && (
                                 <React.Fragment>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.labelDark
-                                                : styles.label
-                                        }
-                                    >
+                                    <Text style={styles.label}>
                                         {localeString(
                                             'views.PaymentRequest.description'
                                         )}
                                         :
                                     </Text>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.valueDark
-                                                : styles.value
-                                        }
-                                    >
+                                    <Text style={styles.value}>
                                         {description}
                                     </Text>
                                 </React.Fragment>
@@ -353,77 +304,37 @@ export default class PaymentRequest extends React.Component<
 
                             {!!timestamp && (
                                 <React.Fragment>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.labelDark
-                                                : styles.label
-                                        }
-                                    >
+                                    <Text style={styles.label}>
                                         {localeString(
                                             'views.PaymentRequest.timestamp'
                                         )}
                                         :
                                     </Text>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.valueDark
-                                                : styles.value
-                                        }
-                                    >
-                                        {date}
-                                    </Text>
+                                    <Text style={styles.value}>{date}</Text>
                                 </React.Fragment>
                             )}
 
                             {!!expiry && (
                                 <React.Fragment>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.labelDark
-                                                : styles.label
-                                        }
-                                    >
+                                    <Text style={styles.label}>
                                         {localeString(
                                             'views.PaymentRequest.expiry'
                                         )}
                                         :
                                     </Text>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.valueDark
-                                                : styles.value
-                                        }
-                                    >
-                                        {expiry}
-                                    </Text>
+                                    <Text style={styles.value}>{expiry}</Text>
                                 </React.Fragment>
                             )}
 
                             {!!cltv_expiry && (
                                 <React.Fragment>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.labelDark
-                                                : styles.label
-                                        }
-                                    >
+                                    <Text style={styles.label}>
                                         {localeString(
                                             'views.PaymentRequest.cltvExpiry'
                                         )}
                                         :
                                     </Text>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.valueDark
-                                                : styles.value
-                                        }
-                                    >
+                                    <Text style={styles.value}>
                                         {cltv_expiry}
                                     </Text>
                                 </React.Fragment>
@@ -431,25 +342,13 @@ export default class PaymentRequest extends React.Component<
 
                             {!!destination && (
                                 <React.Fragment>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.labelDark
-                                                : styles.label
-                                        }
-                                    >
+                                    <Text style={styles.label}>
                                         {localeString(
                                             'views.PaymentRequest.destination'
                                         )}
                                         :
                                     </Text>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.valueDark
-                                                : styles.value
-                                        }
-                                    >
+                                    <Text style={styles.value}>
                                         {destination}
                                     </Text>
                                 </React.Fragment>
@@ -457,25 +356,13 @@ export default class PaymentRequest extends React.Component<
 
                             {!!payment_hash && (
                                 <React.Fragment>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.labelDark
-                                                : styles.label
-                                        }
-                                    >
+                                    <Text style={styles.label}>
                                         {localeString(
                                             'views.PaymentRequest.paymentHash'
                                         )}
                                         :
                                     </Text>
-                                    <Text
-                                        style={
-                                            theme === 'dark'
-                                                ? styles.valueDark
-                                                : styles.value
-                                        }
-                                    >
+                                    <Text style={styles.value}>
                                         {payment_hash}
                                     </Text>
                                 </React.Fragment>
@@ -513,174 +400,202 @@ export default class PaymentRequest extends React.Component<
                                     }
                                 </>
                             )}
-                        </View>
-                    )}
 
-                    <View>
-                        <Text>{RESTUtils.supportsMPP()}</Text>
-                    </View>
+                            {!!pay_req && RESTUtils.supportsAMP() && (
+                                <React.Fragment>
+                                    <Text style={{ ...styles.label, top: 25 }}>
+                                        {localeString(
+                                            'views.PaymentRequest.amp'
+                                        )}
+                                        :
+                                    </Text>
+                                    <Switch
+                                        value={enableAmp}
+                                        onValueChange={() =>
+                                            this.setState({
+                                                enableAtomicMultiPathPayment: !enableAtomicMultiPathPayment
+                                            })
+                                        }
+                                        trackColor={{
+                                            false: '#767577',
+                                            true: themeColor('highlight')
+                                        }}
+                                        disabled={lockAtomicMultiPathPayment}
+                                    />
+                                </React.Fragment>
+                            )}
 
-                    {!!pay_req && RESTUtils.supportsMPP() && (
-                        <View style={styles.button}>
-                            <Button
-                                title={
-                                    enableMultiPathPayment
-                                        ? localeString(
-                                              'views.PaymentRequest.disableMpp'
-                                          )
-                                        : localeString(
-                                              'views.PaymentRequest.enableMpp'
-                                          )
-                                }
-                                icon={{
-                                    name: 'call-split',
-                                    size: 25,
-                                    color: 'white'
-                                }}
-                                onPress={() => {
-                                    this.setState({
-                                        enableMultiPathPayment: !enableMultiPathPayment
-                                    });
-                                }}
-                                buttonStyle={{
-                                    backgroundColor: enableMultiPathPayment
-                                        ? 'red'
-                                        : 'green',
-                                    borderRadius: 30
-                                }}
-                            />
-                        </View>
-                    )}
-
-                    {enableMultiPathPayment && (
-                        <View style={styles.mppForm}>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
-                                {localeString('views.PaymentRequest.maxParts')}:
-                            </Text>
-                            <TextInput
-                                keyboardType="numeric"
-                                placeholder="2 (or greater)"
-                                value={maxParts}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        maxParts: text
-                                    })
-                                }
-                                numberOfLines={1}
-                                style={
-                                    theme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
-                                placeholderTextColor="gray"
-                            />
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
-                                {localeString(
-                                    'views.PaymentRequest.maxPartsDescription'
+                            {!!pay_req &&
+                                RESTUtils.supportsMPP() &&
+                                !enableTor && (
+                                    <React.Fragment>
+                                        <Text
+                                            style={{ ...styles.label, top: 25 }}
+                                        >
+                                            {localeString(
+                                                'views.PaymentRequest.mpp'
+                                            )}
+                                            :
+                                        </Text>
+                                        <Switch
+                                            value={enableMultiPathPayment}
+                                            onValueChange={() =>
+                                                this.setState({
+                                                    enableMultiPathPayment: !enableMultiPathPayment
+                                                })
+                                            }
+                                            trackColor={{
+                                                false: '#767577',
+                                                true: themeColor('highlight')
+                                            }}
+                                        />
+                                    </React.Fragment>
                                 )}
-                                :
-                            </Text>
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
-                                {localeString('views.PaymentRequest.timeout')}:
-                            </Text>
-                            <TextInput
-                                keyboardType="numeric"
-                                placeholder="20"
-                                value={timeoutSeconds}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        timeoutSeconds: text
-                                    })
-                                }
-                                numberOfLines={1}
-                                style={
-                                    theme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
-                                placeholderTextColor="gray"
-                            />
-                            <Text
-                                style={
-                                    theme === 'dark'
-                                        ? styles.labelDark
-                                        : styles.label
-                                }
-                            >
-                                {localeString('views.PaymentRequest.feeLimit')}:
-                            </Text>
-                            <TextInput
-                                keyboardType="numeric"
-                                placeholder="100"
-                                value={feeLimitSat}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        feeLimitSat: text
-                                    })
-                                }
-                                numberOfLines={1}
-                                style={
-                                    theme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
-                                placeholderTextColor="gray"
-                            />
-                        </View>
-                    )}
 
-                    {!!pay_req && (
-                        <View style={styles.button}>
-                            <Button
-                                title="Pay this invoice"
-                                icon={{
-                                    name: 'send',
-                                    size: 25,
-                                    color: 'white'
-                                }}
-                                onPress={() => {
-                                    TransactionsStore.sendPayment(
-                                        paymentRequest,
-                                        customAmount,
-                                        null,
-                                        enableMultiPathPayment
-                                            ? maxParts
-                                            : null,
-                                        enableMultiPathPayment
-                                            ? timeoutSeconds
-                                            : null,
-                                        enableMultiPathPayment
-                                            ? feeLimitSat
-                                            : null,
-                                        outgoingChanIds,
-                                        lastHopPubkey
-                                    );
+                            {ampOrMppEnabled && (
+                                <React.Fragment>
+                                    <Text style={styles.label}>
+                                        {localeString(
+                                            'views.PaymentRequest.timeout'
+                                        )}
+                                        :
+                                    </Text>
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        placeholder="20"
+                                        value={timeoutSeconds}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                timeoutSeconds: text
+                                            })
+                                        }
+                                        numberOfLines={1}
+                                        style={styles.textInput}
+                                        placeholderTextColor="gray"
+                                    />
+                                    <Text style={styles.label}>
+                                        {enableMultiPathPayment
+                                            ? localeString(
+                                                  'views.PaymentRequest.maxParts'
+                                              )
+                                            : `${localeString(
+                                                  'views.PaymentRequest.maxParts'
+                                              )} (${localeString(
+                                                  'general.optional'
+                                              )})`}
+                                        :
+                                    </Text>
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        value={maxParts}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                maxParts: text
+                                            })
+                                        }
+                                        numberOfLines={1}
+                                        style={styles.textInput}
+                                        placeholderTextColor="gray"
+                                    />
+                                    <Text style={styles.label}>
+                                        {localeString(
+                                            'views.PaymentRequest.maxPartsDescription'
+                                        )}
+                                    </Text>
+                                    <Text style={styles.label}>
+                                        {`${localeString(
+                                            'views.PaymentRequest.feeLimit'
+                                        )} (${localeString(
+                                            'general.sats'
+                                        )}) (${localeString(
+                                            'general.optional'
+                                        )})`}
+                                        :
+                                    </Text>
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        placeholder="100"
+                                        value={feeLimitSat}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                feeLimitSat: text
+                                            })
+                                        }
+                                        numberOfLines={1}
+                                        style={styles.textInput}
+                                        placeholderTextColor="gray"
+                                    />
+                                </React.Fragment>
+                            )}
 
-                                    navigation.navigate('SendingLightning');
-                                }}
-                                buttonStyle={{
-                                    backgroundColor: 'orange',
-                                    borderRadius: 30
-                                }}
-                            />
+                            {enableAmp && (
+                                <React.Fragment>
+                                    <Text style={styles.label}>
+                                        {`${localeString(
+                                            'views.PaymentRequest.maxShardAmt'
+                                        )} (${localeString(
+                                            'general.sats'
+                                        )}) (${localeString(
+                                            'general.optional'
+                                        )})`}
+                                        :
+                                    </Text>
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        value={maxShardAmt}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                maxShardAmt: text
+                                            })
+                                        }
+                                        numberOfLines={1}
+                                        style={styles.textInput}
+                                        placeholderTextColor="gray"
+                                    />
+                                </React.Fragment>
+                            )}
+
+                            {!!pay_req && (
+                                <View style={styles.button}>
+                                    <Button
+                                        title="Pay this invoice"
+                                        icon={{
+                                            name: 'send',
+                                            size: 25,
+                                            color: 'white'
+                                        }}
+                                        onPress={() => {
+                                            TransactionsStore.sendPayment({
+                                                payment_request: paymentRequest,
+                                                amount: customAmount,
+                                                max_parts: ampOrMppEnabled
+                                                    ? maxParts
+                                                    : null,
+                                                max_shard_amt: ampOrMppEnabled
+                                                    ? maxShardAmt
+                                                    : null,
+                                                timeout_seconds: ampOrMppEnabled
+                                                    ? timeoutSeconds
+                                                    : null,
+                                                fee_limit_sat: ampOrMppEnabled
+                                                    ? feeLimitSat
+                                                    : null,
+                                                outgoing_chan_ids: outgoingChanIds,
+                                                last_hop_pubkey: lastHopPubkey,
+                                                amp: enableAmp
+                                            });
+
+                                            navigation.navigate(
+                                                'SendingLightning'
+                                            );
+                                        }}
+                                        buttonStyle={{
+                                            backgroundColor: 'orange',
+                                            borderRadius: 30
+                                        }}
+                                    />
+                                </View>
+                            )}
                         </View>
                     )}
                 </ScrollView>
@@ -690,46 +605,32 @@ export default class PaymentRequest extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
+    scrollView: {
         flex: 1,
-        backgroundColor: 'white'
-    },
-    darkThemeStyle: {
-        flex: 1,
-        backgroundColor: 'black',
-        color: 'white'
+        backgroundColor: themeColor('background'),
+        color: themeColor('text')
     },
     content: {
         padding: 20
     },
     label: {
-        paddingTop: 5
+        paddingTop: 5,
+        color: themeColor('text')
     },
     value: {
-        paddingBottom: 5
-    },
-    labelDark: {
-        paddingTop: 5,
-        color: 'white'
-    },
-    valueDark: {
         paddingBottom: 5,
-        color: 'white'
+        color: themeColor('text')
     },
     button: {
-        paddingTop: 15,
+        paddingTop: 30,
         paddingBottom: 15,
         paddingLeft: 10,
         paddingRight: 10
     },
     amount: {
         fontSize: 25,
-        fontWeight: 'bold'
-    },
-    amountDark: {
-        fontSize: 25,
         fontWeight: 'bold',
-        color: 'white'
+        color: themeColor('text')
     },
     center: {
         alignItems: 'center',
@@ -738,11 +639,7 @@ const styles = StyleSheet.create({
     },
     textInput: {
         fontSize: 20,
-        color: 'black'
-    },
-    textInputDark: {
-        fontSize: 20,
-        color: 'white'
+        color: themeColor('text')
     },
     mppForm: {
         paddingLeft: 20,

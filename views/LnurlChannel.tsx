@@ -5,17 +5,17 @@ import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon, CheckBox } from 'react-native-elements';
 import querystring from 'querystring-es3';
 import url from 'url';
-import SettingsStore from './../stores/SettingsStore';
+
 import ChannelsStore from './../stores/ChannelsStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
 
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
 import NodeUriUtils from './../utils/NodeUriUtils';
 import RESTUtils from './../utils/RESTUtils';
 
 interface LnurlChannelProps {
     navigation: any;
-    SettingsStore: SettingsStore;
     ChannelsStore: ChannelsStore;
     NodeInfoStore: NodeInfoStore;
 }
@@ -32,7 +32,7 @@ interface LnurlChannelState {
     errorMsgPeer: string;
 }
 
-@inject('SettingsStore', 'ChannelsStore', 'NodeInfoStore')
+@inject('ChannelsStore', 'NodeInfoStore')
 @observer
 export default class LnurlChannel extends React.Component<
     LnurlChannelProps,
@@ -169,10 +169,8 @@ export default class LnurlChannel extends React.Component<
     }
 
     render() {
-        const { SettingsStore, navigation } = this.props;
+        const { navigation } = this.props;
         const { domain, privateChannel } = this.state;
-        const { settings } = SettingsStore;
-        const { theme } = settings;
         const lnurl = navigation.getParam('lnurlParams');
 
         const BackButton = () => (
@@ -185,13 +183,7 @@ export default class LnurlChannel extends React.Component<
         );
 
         return (
-            <View
-                style={
-                    theme === 'dark'
-                        ? styles.darkThemeStyle
-                        : styles.lightThemeStyle
-                }
-            >
+            <View style={styles.view}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -206,28 +198,18 @@ export default class LnurlChannel extends React.Component<
                             padding: 20,
                             fontWeight: 'bold',
                             fontSize: 22,
-                            color: theme === 'dark' ? 'white' : 'black'
+                            color: themeColor('text')
                         }}
                     >
                         {domain}
                     </Text>
                 </View>
                 <View style={styles.content}>
-                    <Text
-                        style={{
-                            color: theme === 'dark' ? 'white' : 'black'
-                        }}
-                    >
+                    <Text style={styles.text}>
                         {localeString('views.LnurlChannel.uri')}
                         {':'}
                     </Text>
-                    <Text
-                        style={{
-                            color: theme === 'dark' ? 'white' : 'black'
-                        }}
-                    >
-                        {lnurl.uri}
-                    </Text>
+                    <Text style={styles.text}>{lnurl.uri}</Text>
 
                     <View style={{ padding: 10 }}>
                         <CheckBox
@@ -290,24 +272,17 @@ export default class LnurlChannel extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
+    view: {
         flex: 1,
-        backgroundColor: 'white'
+        backgroundColor: themeColor('background'),
+        color: themeColor('text')
     },
-    darkThemeStyle: {
-        flex: 1,
-        backgroundColor: 'black',
-        color: 'white'
+    text: {
+        color: themeColor('text')
     },
     textInput: {
         fontSize: 20,
-        color: 'black',
-        paddingTop: 10,
-        paddingBottom: 10
-    },
-    textInputDark: {
-        fontSize: 20,
-        color: 'white',
+        color: themeColor('text'),
         paddingTop: 10,
         paddingBottom: 10
     },

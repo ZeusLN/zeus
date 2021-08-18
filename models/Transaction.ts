@@ -1,5 +1,7 @@
 import BaseModel from './BaseModel';
 import { computed } from 'mobx';
+import DateTimeUtils from './../utils/DateTimeUtils';
+import { localeString } from './../utils/LocaleUtils';
 
 export default class Transaction extends BaseModel {
     public amount: number;
@@ -17,6 +19,22 @@ export default class Transaction extends BaseModel {
     public txid: string;
     public outputs: number;
     public address: string;
+
+    @computed public get model(): string {
+        return localeString('general.transaction');
+    }
+
+    @computed public get getTimestamp(): string | number {
+        return this.time_stamp || 0;
+    }
+
+    @computed public get getDisplayTime(): string {
+        return DateTimeUtils.listFormattedDate(this.time_stamp || 0);
+    }
+
+    @computed public get getDate(): string | Date {
+        return DateTimeUtils.listDate(this.time_stamp || 0);
+    }
 
     @computed public get isConfirmed(): boolean {
         return this.num_confirmations > 0 || this.status === 'confirmed';

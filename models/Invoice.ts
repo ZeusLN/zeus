@@ -49,11 +49,26 @@ export default class Invoice extends BaseModel {
     public timestamp?: string | number;
     public destination?: string;
     public num_satoshis?: string | number;
+    public features?: any;
     // lndhub
     public amt?: number;
     public ispaid?: boolean;
     public expire_time?: number;
     public millisatoshis?: string;
+
+    @computed public get model(): string {
+        return 'Invoice';
+    }
+
+    @computed public get getTimestamp(): string | number {
+        return (
+            this.paid_at ||
+            this.creation_date ||
+            this.timestamp ||
+            this.settle_date ||
+            0
+        );
+    }
 
     @computed public get getMemo(): string {
         return (
@@ -99,10 +114,18 @@ export default class Invoice extends BaseModel {
         return Number(this.num_satoshis || 0);
     }
 
-    @computed public get listDate(): string {
+    @computed public get getDisplayTime(): string {
         return this.isPaid
             ? this.settleDate
             : DateTimeUtils.listFormattedDate(
+                  this.expires_at || this.creation_date || this.timestamp || 0
+              );
+    }
+
+    @computed public get getDate(): string | number | Date {
+        return this.isPaid
+            ? this.settleDate
+            : DateTimeUtils.listDate(
                   this.expires_at || this.creation_date || this.timestamp || 0
               );
     }
@@ -127,5 +150,16 @@ export default class Invoice extends BaseModel {
         return this.expires_at
             ? DateTimeUtils.listFormattedDate(this.expires_at)
             : localeString('models.Invoice.never');
+    }
+
+    @computed public get isExpired(): boolean {
+        if (this.expiry) {
+            return (
+                new Date().getTime() / 1000 >
+                Number(this.creation_date) + Number(this.expiry)
+            );
+        }
+
+        return false;
     }
 }

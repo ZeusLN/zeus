@@ -7,14 +7,13 @@ import querystring from 'querystring-es3';
 import url from 'url';
 import InvoicesStore from './../../stores/InvoicesStore';
 import LnurlPayStore from './../../stores/LnurlPayStore';
-import SettingsStore from './../../stores/SettingsStore';
 import LnurlPayMetadata from './Metadata';
 import { localeString } from './../../utils/LocaleUtils';
+import { themeColor } from './../../utils/ThemeUtils';
 
 interface LnurlPayProps {
     navigation: any;
     InvoicesStore: InvoicesStore;
-    SettingsStore: SettingsStore;
     LnurlPayStore: LnurlPayStore;
 }
 
@@ -138,10 +137,8 @@ export default class LnurlPay extends React.Component<
     }
 
     render() {
-        const { SettingsStore, navigation } = this.props;
+        const { navigation } = this.props;
         const { amount, domain, comment } = this.state;
-        const { settings } = SettingsStore;
-        const { theme } = settings;
         const lnurl = navigation.getParam('lnurlParams');
 
         const BackButton = () => (
@@ -154,13 +151,7 @@ export default class LnurlPay extends React.Component<
         );
 
         return (
-            <View
-                style={
-                    theme === 'dark'
-                        ? styles.darkThemeStyle
-                        : styles.lightThemeStyle
-                }
-            >
+            <View style={styles.view}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{ text: 'Send', style: { color: '#fff' } }}
@@ -172,18 +163,14 @@ export default class LnurlPay extends React.Component<
                             padding: 20,
                             fontWeight: 'bold',
                             fontSize: 22,
-                            color: theme === 'dark' ? 'white' : 'black'
+                            color: themeColor('text')
                         }}
                     >
                         {domain}
                     </Text>
                 </View>
                 <View style={styles.content}>
-                    <Text
-                        style={{
-                            color: theme === 'dark' ? 'white' : 'black'
-                        }}
-                    >
+                    <Text style={styles.text}>
                         {localeString('views.LnurlPay.LnurlPay.amount')}
                         {lnurl && lnurl.minSendable !== lnurl.maxSendable
                             ? ` (${Math.ceil(
@@ -203,19 +190,11 @@ export default class LnurlPay extends React.Component<
                                 ? false
                                 : true
                         }
-                        style={
-                            theme === 'dark'
-                                ? styles.textInputDark
-                                : styles.textInput
-                        }
+                        style={styles.textInput}
                     />
                     {lnurl.commentAllowed > 0 ? (
                         <>
-                            <Text
-                                style={{
-                                    color: theme === 'dark' ? 'white' : 'black'
-                                }}
-                            >
+                            <Text style={styles.text}>
                                 {localeString(
                                     'views.LnurlPay.LnurlPay.comment'
                                 ) + ` (${lnurl.commentAllowed} char)`}
@@ -227,11 +206,7 @@ export default class LnurlPay extends React.Component<
                                     this.setState({ comment: text });
                                 }}
                                 numberOfLines={1}
-                                style={
-                                    theme === 'dark'
-                                        ? styles.textInputDark
-                                        : styles.textInput
-                                }
+                                style={styles.textInput}
                             />
                         </>
                     ) : null}
@@ -255,10 +230,7 @@ export default class LnurlPay extends React.Component<
                     </View>
                 </View>
                 <View style={styles.content}>
-                    <LnurlPayMetadata
-                        metadata={lnurl.metadata}
-                        SettingsStore={SettingsStore}
-                    />
+                    <LnurlPayMetadata metadata={lnurl.metadata} />
                 </View>
             </View>
         );
@@ -266,24 +238,17 @@ export default class LnurlPay extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
+    view: {
         flex: 1,
-        backgroundColor: 'white'
+        backgroundColor: themeColor('background'),
+        color: themeColor('text')
     },
-    darkThemeStyle: {
-        flex: 1,
-        backgroundColor: 'black',
-        color: 'white'
+    text: {
+        color: themeColor('text')
     },
     textInput: {
         fontSize: 20,
-        color: 'black',
-        paddingTop: 10,
-        paddingBottom: 10
-    },
-    textInputDark: {
-        fontSize: 20,
-        color: 'white',
+        color: themeColor('text'),
         paddingTop: 10,
         paddingBottom: 10
     },

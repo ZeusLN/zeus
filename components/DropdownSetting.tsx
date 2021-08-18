@@ -2,20 +2,20 @@ import * as React from 'react';
 import {
     ActionSheetIOS,
     Platform,
-    StyleSheet,
     View,
     Text,
     TouchableOpacity
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import { themeColor } from './../utils/ThemeUtils';
 
 interface DropdownSettingProps {
     title: string;
     selectedValue: string | boolean;
     displayValue?: string;
-    theme?: string;
     onValueChange: (value: any) => void;
     values: Array<any>;
+    color?: string;
 }
 
 export default class DropdownSetting extends React.Component<
@@ -24,12 +24,12 @@ export default class DropdownSetting extends React.Component<
 > {
     render() {
         const {
-            theme,
             title,
             selectedValue,
             displayValue,
             onValueChange,
-            values
+            values,
+            color
         } = this.props;
 
         const pickerValuesAndroid: Array<any> = [];
@@ -51,22 +51,21 @@ export default class DropdownSetting extends React.Component<
                     <View>
                         <Text
                             style={{
-                                color: theme === 'dark' ? 'white' : 'black',
+                                color: color || themeColor('text'),
                                 paddingLeft: 10
                             }}
                         >
                             {title}
                         </Text>
                         <Picker
-                            selectedValue={selectedValue}
+                            selectedValue={`${selectedValue}`}
                             onValueChange={(itemValue: string) =>
                                 onValueChange(itemValue)
                             }
-                            style={
-                                theme === 'dark'
-                                    ? styles.pickerDark
-                                    : styles.picker
-                            }
+                            style={{
+                                height: 50,
+                                color: color || themeColor('text')
+                            }}
                         >
                             {pickerValuesAndroid}
                         </Picker>
@@ -77,7 +76,7 @@ export default class DropdownSetting extends React.Component<
                     <View>
                         <Text
                             style={{
-                                color: theme === 'dark' ? 'white' : 'black',
+                                color: color || themeColor('text'),
                                 textDecorationLine: 'underline',
                                 paddingLeft: 10,
                                 paddingTop: 10
@@ -104,7 +103,7 @@ export default class DropdownSetting extends React.Component<
                         >
                             <Text
                                 style={{
-                                    color: theme === 'dark' ? 'white' : 'black',
+                                    color: color || themeColor('text'),
                                     paddingLeft: 10
                                 }}
                             >
@@ -117,14 +116,3 @@ export default class DropdownSetting extends React.Component<
         );
     }
 }
-
-const styles = StyleSheet.create({
-    picker: {
-        height: 50,
-        color: 'black'
-    },
-    pickerDark: {
-        height: 50,
-        color: 'white'
-    }
-});

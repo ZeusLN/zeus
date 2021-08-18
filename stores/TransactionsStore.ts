@@ -11,6 +11,19 @@ import Base64Utils from './../utils/Base64Utils';
 const keySendPreimageType = '5482373484';
 const preimageByteLength = 32;
 
+interface SendPaymentReq {
+    payment_request?: string;
+    amount?: string;
+    pubkey?: string;
+    max_parts?: string | null;
+    max_shard_amt?: string | null;
+    timeout_seconds?: string | null;
+    fee_limit_sat?: string | null;
+    outgoing_chan_ids?: any;
+    last_hop_pubkey?: string | null;
+    amp?: boolean;
+}
+
 export default class TransactionsStore {
     @observable loading: boolean = false;
     @observable error: boolean = false;
@@ -57,9 +70,9 @@ export default class TransactionsStore {
     };
 
     @action
-    public getTransactions = () => {
+    public getTransactions = async () => {
         this.loading = true;
-        RESTUtils.getTransactions()
+        await RESTUtils.getTransactions()
             .then((data: any) => {
                 this.transactions = data.transactions
                     .slice()
@@ -93,16 +106,19 @@ export default class TransactionsStore {
             });
     };
 
-    sendPayment = (
-        payment_request?: string | null,
-        amount?: string | null,
-        pubkey?: string | null,
-        max_parts?: string | null,
-        timeout_seconds?: string | null,
-        fee_limit_sat?: string | null,
-        outgoing_chan_ids?: Array<string> | null,
-        last_hop_pubkey?: string | null
-    ) => {
+    @action
+    public sendPayment = ({
+        payment_request,
+        amount,
+        pubkey,
+        max_parts,
+        max_shard_amt,
+        timeout_seconds,
+        fee_limit_sat,
+        outgoing_chan_ids,
+        last_hop_pubkey,
+        amp
+    }: SendPaymentReq) => {
         this.loading = true;
         this.error_msg = null;
         this.error = false;
@@ -120,22 +136,40 @@ export default class TransactionsStore {
             data.amt = amount;
         }
         if (pubkey) {
-            const preimage = randomBytes(preimageByteLength);
-            const secret = preimage.toString('base64');
-            const payment_hash = Buffer.from(sha256(preimage), 'hex').toString(
-                'base64'
-            );
+            if (!amp) {
+                const preimage = randomBytes(preimageByteLength);
+                const secret = preimage.toString('base64');
+                const payment_hash = Buffer.from(
+                    sha256(preimage),
+                    'hex'
+                ).toString('base64');
 
-            data.dest_string = pubkey;
-            data.dest_custom_records = { [keySendPreimageType]: secret };
-            data.payment_hash = payment_hash;
+                data.dest_string = pubkey;
+                data.dest_custom_records = { [keySendPreimageType]: secret };
+                data.payment_hash = payment_hash;
+            } else {
+                data.dest = Base64Utils.hexToBase64(pubkey);
+            }
         }
 
         // multi-path payments
         if (max_parts) {
             data.max_parts = max_parts;
+        }
+        if (timeout_seconds) {
             data.timeout_seconds = timeout_seconds;
+        }
+        if (fee_limit_sat) {
             data.fee_limit_sat = Number(fee_limit_sat);
+        }
+
+        // atomic multi-path payments
+        if (amp) {
+            data.amp = true;
+            data.no_inflight_updates = true;
+        }
+        if (max_shard_amt) {
+            data.max_shard_size_msat = Number(max_shard_amt) * 1000;
         }
 
         // first hop
@@ -148,8 +182,10 @@ export default class TransactionsStore {
             data.last_hop_pubkey = Base64Utils.hexToBase64(last_hop_pubkey);
         }
 
-        const payFunc = max_parts
+        const payFunc = amp
             ? RESTUtils.payLightningInvoiceV2
+            : max_parts
+            ? RESTUtils.payLightningInvoiceV2Streaming
             : RESTUtils.payLightningInvoice;
 
         // backwards compatibility with v1
@@ -165,8 +201,9 @@ export default class TransactionsStore {
                 this.payment_preimage = result.payment_preimage;
                 this.payment_hash = result.payment_hash;
                 if (
-                    response.payment_error !== '' &&
-                    result.status !== 'SUCCEEDED'
+                    result.status !== 'complete' &&
+                    result.status !== 'SUCCEEDED' &&
+                    result.payment_error !== ''
                 ) {
                     this.error = true;
                     this.payment_error =
@@ -183,7 +220,10 @@ export default class TransactionsStore {
             .catch((err: Error) => {
                 this.error = true;
                 this.loading = false;
-                this.error_msg = err.message || 'Error sending payment';
+                this.error_msg =
+                    typeof err === 'string'
+                        ? err
+                        : err.message || 'Error sending payment';
             });
     };
 }

@@ -309,10 +309,13 @@ export default class Spark {
         };
     };
 
+    supportsMessageSigning = () => false;
     supportsOnchainSends = () => true;
     supportsKeysend = () => false;
     supportsChannelManagement = () => true;
     supportsMPP = () => false;
+    supportsAMP = () => false;
     supportsCoinControl = () => false;
     supportsHopPicking = () => false;
+    supportsRouting = () => true;
 }

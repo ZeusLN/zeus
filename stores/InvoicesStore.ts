@@ -80,9 +80,9 @@ export default class InvoicesStore {
     };
 
     @action
-    public getInvoices = () => {
+    public getInvoices = async () => {
         this.loading = true;
-        RESTUtils.getInvoices()
+        await RESTUtils.getInvoices()
             .then((data: any) => {
                 this.invoices = data.payments || data.invoices || data;
                 this.invoices = this.invoices.map(
@@ -103,18 +103,25 @@ export default class InvoicesStore {
         memo: string,
         value: string,
         expiry: string = '3600',
-        lnurl?: LNURLWithdrawParams
+        lnurl?: LNURLWithdrawParams,
+        ampInvoice?: boolean,
+        routeHints?: boolean
     ) => {
         this.payment_request = null;
         this.creatingInvoice = true;
         this.creatingInvoiceError = false;
         this.error_msg = null;
 
-        RESTUtils.createInvoice({
+        let req: any = {
             memo,
             value,
             expiry
-        })
+        };
+
+        if (ampInvoice) req.is_amp = true;
+        if (routeHints) req.private = true;
+
+        RESTUtils.createInvoice(req)
             .then((data: any) => {
                 const invoice = new Invoice(data);
                 this.payment_request = invoice.getPaymentRequest;

@@ -67,10 +67,14 @@ export default class LndHub extends LND {
             amount: Number(data.amt && data.amt * 1000)
         });
 
+    supportsMessageSigning = () => false;
     supportsOnchainSends = () => false;
     supportsKeysend = () => false;
     supportsChannelManagement = () => false;
     supportsMPP = () => false;
+    supportsAMP = () => false;
     supportsCoinControl = () => false;
     supportsHopPicking = () => false;
+    supportsRouting = () => false;
+    supportsNodeInfo = () => false;
 }
