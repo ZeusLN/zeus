@@ -16,7 +16,7 @@ interface SendPaymentReq {
     amount?: string;
     pubkey?: string;
     max_parts?: string | null;
-    max_shard_amt?: string;
+    max_shard_amt?: string | null;
     timeout_seconds?: string | null;
     fee_limit_sat?: string | null;
     outgoing_chan_ids?: any;
