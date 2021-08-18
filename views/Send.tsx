@@ -535,7 +535,6 @@ const styles = StyleSheet.create({
     },
     editfeebutton: {
         paddingTop: 15,
-        alignItems: 'center',
-        color: 'pink'
+        alignItems: 'center'
     }
 });
