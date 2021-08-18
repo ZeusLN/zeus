@@ -1000,24 +1000,26 @@ export default class AddEditNode extends React.Component<
                             }
                         />
                     </View>
-                    <View
-                        style={{
-                            marginTop: 5
-                        }}
-                    >
-                        <CheckBox
-                            title={localeString(
-                                'views.Settings.AddEditNode.certificateVerification'
-                            )}
-                            checked={certVerification}
-                            onPress={() =>
-                                this.setState({
-                                    certVerification: !certVerification,
-                                    saved: false
-                                })
-                            }
-                        />
-                    </View>
+                    {!enableTor && (
+                        <View
+                            style={{
+                                marginTop: 5
+                            }}
+                        >
+                            <CheckBox
+                                title={localeString(
+                                    'views.Settings.AddEditNode.certificateVerification'
+                                )}
+                                checked={certVerification}
+                                onPress={() =>
+                                    this.setState({
+                                        certVerification: !certVerification,
+                                        saved: false
+                                    })
+                                }
+                            />
+                        </View>
+                    )}
                 </View>
 
                 {!existingAccount && implementation === 'lndhub' && (
@@ -1086,7 +1088,9 @@ export default class AddEditNode extends React.Component<
                     />
                 </View>
 
-                {!saved && certVerification && <CertInstallInstructions />}
+                {!saved && certVerification && !enableTor && (
+                    <CertInstallInstructions />
+                )}
 
                 {saved && !newEntry && (
                     <View style={styles.button}>
