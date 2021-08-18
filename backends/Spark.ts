@@ -314,6 +314,7 @@ export default class Spark {
     supportsKeysend = () => false;
     supportsChannelManagement = () => true;
     supportsMPP = () => false;
+    supportsAMP = () => false;
     supportsCoinControl = () => false;
     supportsHopPicking = () => false;
     supportsRouting = () => true;

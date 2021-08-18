@@ -63,6 +63,8 @@ class RESTUtils {
         this.call('payLightningInvoice', args);
     payLightningInvoiceV2 = (...args: any[]) =>
         this.call('payLightningInvoiceV2', args);
+    payLightningInvoiceV2Streaming = (...args: any[]) =>
+        this.call('payLightningInvoiceV2Streaming', args);
     closeChannel = (...args: any[]) => this.call('closeChannel', args);
     getNodeInfo = (...args: any[]) => this.call('getNodeInfo', args);
     getFees = (...args: any[]) => this.call('getFees', args);
@@ -82,6 +84,7 @@ class RESTUtils {
     supportsKeysend = () => this.call('supportsKeysend');
     supportsChannelManagement = () => this.call('supportsChannelManagement');
     supportsMPP = () => this.call('supportsMPP');
+    supportsAMP = () => this.call('supportsAMP');
     supportsCoinControl = () => this.call('supportsCoinControl');
     supportsHopPicking = () => this.call('supportsHopPicking');
     supportsRouting = () => this.call('supportsRouting');
