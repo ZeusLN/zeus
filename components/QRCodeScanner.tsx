@@ -12,12 +12,12 @@ interface QRProps {
 }
 
 interface QRState {
-    hasCameraPermission: boolean | null;
+    cameraStatus: any;
 }
 
 export default class QRCodeScanner extends React.Component<QRProps, QRState> {
     state = {
-        hasCameraPermission: null
+        cameraStatus: RNCamera.Constants.CameraStatus.PENDING_AUTHORIZATION
     };
 
     async componentDidMount() {
@@ -25,22 +25,28 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
             await Permissions.request(PERMISSIONS.ANDROID.CAMERA).then(
                 (response: any) => {
                     this.setState({
-                        hasCameraPermission: response === RESULTS.GRANTED
+                        cameraStatus: response === RESULTS.GRANTED
                     });
                 }
             );
         }
     }
 
+    handleCameraStatusChange = (event: any) => {
+        this.setState({
+            cameraStatus: event.cameraStatus
+        });
+    };
+
     render() {
-        const { hasCameraPermission } = this.state;
+        const { cameraStatus } = this.state;
         const { title, text, handleQRScanned, goBack } = this.props;
 
-        if (hasCameraPermission === null) {
+        if (cameraStatus === RNCamera.Constants.CameraStatus.PENDING_AUTHORIZATION) {
             return <Text>Requesting for camera permission</Text>;
         }
 
-        if (hasCameraPermission === false) {
+        if (cameraStatus === RNCamera.Constants.CameraStatus.NOT_AUTHORIZED) {
             return <Text>No access to camera</Text>;
         }
 
@@ -73,6 +79,8 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                         buttonNegative: 'Cancel'
                     }}
                     captureAudio={false}
+                    onStatusChange={this.handleCameraStatusChange}
+                    barCodeTypes={[RNCamera.Constants.BarCodeType.qr]}
                 />
             </React.Fragment>
         );
