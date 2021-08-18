@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
     StyleSheet,
+    RefreshControl,
     Text,
     TextInput,
     View,
@@ -9,12 +10,15 @@ import {
     SafeAreaView,
     Button
 } from 'react-native';
+import { Icon, Header } from 'react-native-elements';
+import Spinner from '../images/SVG/spinning-circles.svg';
 import { themeColor } from '../utils/ThemeUtils';
 import FeeStore from './../stores/FeeStore';
 import { inject, observer } from 'mobx-react';
 
 interface NodeInfoProps {
     FeeStore: FeeStore;
+    navigation: any;
 }
 
 interface SendState {
@@ -35,51 +39,72 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
         };
     }
     render() {
+        const { navigation } = this.props;
         const { FeeStore } = this.props;
-        const { recommendedFees } = FeeStore;
+        const BackButton = () => (
+            <Icon
+                name="arrow-back"
+                onPress={() => navigation.navigate('Send')}
+                color="#fff"
+                underlayColor="transparent"
+            />
+        );
+        const { recommendedFees, loading } = FeeStore;
         return (
             <SafeAreaView style={styles.maincontainer}>
                 <View style={styles.container}>
-                    <Text style={styles.maintext}>Edit network fee</Text>
-                    <View
-                        style={styles.feeboxes}
-                    >
-                        <Text style={styles.feetext}>
-                            Fastest Fee
-                            {
-                                '                                                   '
-                            }
-                            {recommendedFees['fastestFee']}
-                        </Text>
+                    <View style={{flex:0.05,flexWrap:'wrap'}}>
+                        <BackButton />
+                        <Text style={styles.maintext}>Edit network fee</Text>
                     </View>
-                    <View
-                        style={styles.feeboxes}
-                    >
-                        <Text style={styles.feetext}>
-                            Half Hour Fee
-                            {'                                               '}
-                            {recommendedFees['halfHourFee']}
-                        </Text>
+
+                    <View style={styles.feeboxes}>
+                        <Text style={styles.feetitle}>Fastest Fee</Text>
+                        {loading ? (
+                            <View style={styles.loadingicon}>
+                                <Spinner />
+                            </View>
+                        ) : (
+                            <Text style={styles.feetext}>
+                                {recommendedFees['fastestFee']}
+                            </Text>
+                        )}
                     </View>
-                    <View
-                        style={styles.feeboxes}
-                    >
-                        <Text style={styles.feetext}>
-                            Hour Fee
-                            {
-                                '                                                        '
-                            }
-                            {recommendedFees['hourFee']}
-                        </Text>
+                    <View style={styles.feeboxes}>
+                        <Text style={styles.feetitle}>Half Hour Fee</Text>
+                        {loading ? (
+                            <View style={styles.loadingicon}>
+                                <Spinner />
+                            </View>
+                        ) : (
+                            <Text style={styles.feetext}>
+                                {recommendedFees['halfHourFee']}
+                            </Text>
+                        )}
                     </View>
-                    <View
-                        style={styles.feeboxes}
-                    >
-                        <Text style={styles.feetext}>
-                            Minimum Fee
-                            {'                                               '}
-                            {recommendedFees['minimumFee']}
-                        </Text>
+                    <View style={styles.feeboxes}>
+                        <Text style={styles.feetitle}> Hour Fee</Text>
+                        {loading ? (
+                            <View style={styles.loadingicon}>
+                                <Spinner />
+                            </View>
+                        ) : (
+                            <Text style={styles.feetext}>
+                                {recommendedFees['hourFee']}
+                            </Text>
+                        )}
+                    </View>
+                    <View style={styles.feeboxes}>
+                        <Text style={styles.feetitle}> Minimum Fee</Text>
+                        {loading ? (
+                            <View style={styles.loadingicon}>
+                                <Spinner />
+                            </View>
+                        ) : (
+                            <Text style={styles.feetext}>
+                                {recommendedFees['minimumFee']}
+                            </Text>
+                        )}
                     </View>
                 </View>
                 <View>
@@ -93,7 +118,7 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                             borderWidth: 1,
                             borderColor: '#A7A9AC',
                             borderRadius: 4,
-                            color: 'white',
+                            color: themeColor('text'),
                             fontSize: 20
                         }}
                         keyboardType="numeric"
@@ -127,20 +152,30 @@ const styles = StyleSheet.create({
     },
     maintext: {
         color: themeColor('text'),
-        fontSize: 18,
+        fontSize: 18
     },
-    feeboxes:{
+    feeboxes: {
         height: 75,
         width: 350,
         borderWidth: 1,
         borderColor: '#A7A9AC',
         borderRadius: 4
     },
+    feetitle: {
+        color: '#fff',
+        fontSize: 18,
+        left: 10,
+        top: 20
+    },
+    loadingicon: {
+        left: '82%',
+        top: -17
+    },
     feetext: {
         color: themeColor('text'),
         fontSize: 18,
-        top: 10,
-        left: 10
+        left: '90%',
+        top: -4
     },
     custom: {
         color: '#A7A9AC',
