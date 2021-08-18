@@ -1,17 +1,19 @@
 import * as React from 'react';
 import {
     ActivityIndicator,
+    ScrollView,
     StyleSheet,
+    Switch,
     Text,
     TextInput,
-    View,
-    ScrollView,
-    TouchableOpacity
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import { Button, ButtonGroup, Header, Icon } from 'react-native-elements';
 import CollapsedQR from './../components/CollapsedQR';
 import { inject, observer } from 'mobx-react';
+import RESTUtils from './../utils/RESTUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
@@ -34,6 +36,8 @@ interface ReceiveState {
     memo: string;
     value: string;
     expiry: string;
+    ampInvoice: boolean;
+    routeHints: boolean;
 }
 
 @inject('InvoicesStore', 'SettingsStore', 'UnitsStore', 'FiatStore')
@@ -46,7 +50,9 @@ export default class Receive extends React.Component<
         selectedIndex: 0,
         memo: '',
         value: '100',
-        expiry: '3600'
+        expiry: '3600',
+        ampInvoice: false,
+        routeHints: false
     };
 
     componentDidMount() {
@@ -101,7 +107,14 @@ export default class Receive extends React.Component<
             FiatStore,
             navigation
         } = this.props;
-        const { selectedIndex, memo, value, expiry } = this.state;
+        const {
+            selectedIndex,
+            memo,
+            value,
+            expiry,
+            ampInvoice,
+            routeHints
+        } = this.state;
         const { units, changeUnits } = UnitsStore;
         const { fiatRates }: any = FiatStore;
 
@@ -336,6 +349,52 @@ export default class Receive extends React.Component<
                                 </>
                             )}
 
+                            {implementation === 'lnd' && (
+                                <>
+                                    <Text style={{ ...styles.text, top: 20 }}>
+                                        {localeString(
+                                            'views.Receive.routeHints'
+                                        )}
+                                        :
+                                    </Text>
+                                    <Switch
+                                        value={routeHints}
+                                        onValueChange={() =>
+                                            this.setState({
+                                                routeHints: !routeHints
+                                            })
+                                        }
+                                        trackColor={{
+                                            false: '#767577',
+                                            true: themeColor('highlight')
+                                        }}
+                                    />
+                                </>
+                            )}
+
+                            {RESTUtils.supportsAMP() && (
+                                <>
+                                    <Text style={{ ...styles.text, top: 20 }}>
+                                        {localeString(
+                                            'views.Receive.ampInvoice'
+                                        )}
+                                        :
+                                    </Text>
+                                    <Switch
+                                        value={ampInvoice}
+                                        onValueChange={() =>
+                                            this.setState({
+                                                ampInvoice: !ampInvoice
+                                            })
+                                        }
+                                        trackColor={{
+                                            false: '#767577',
+                                            true: themeColor('highlight')
+                                        }}
+                                    />
+                                </>
+                            )}
+
                             <View style={styles.button}>
                                 <Button
                                     title={
@@ -358,7 +417,9 @@ export default class Receive extends React.Component<
                                             memo,
                                             satAmount.toString(),
                                             expiry,
-                                            lnurl
+                                            lnurl,
+                                            ampInvoice,
+                                            routeHints
                                         )
                                     }
                                     buttonStyle={{
@@ -434,7 +495,7 @@ const styles = StyleSheet.create({
         paddingRight: 20
     },
     button: {
-        paddingTop: 15,
+        paddingTop: 25,
         paddingBottom: 15
     },
     text: {
