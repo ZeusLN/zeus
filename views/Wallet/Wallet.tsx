@@ -212,13 +212,13 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                             onPress={() =>
                                 this.props.navigation.navigate('Activity')
                             }
+                            style={{
+                                alignSelf: 'center',
+                                bottom: 85,
+                                padding: 25
+                            }}
                         >
-                            <CaretUp
-                                style={{
-                                    alignSelf: 'center',
-                                    marginBottom: 100
-                                }}
-                            />
+                            <CaretUp />
                         </TouchableOpacity>
                     </LinearGradient>
                 </View>
@@ -265,49 +265,64 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                 }
                                 if (route.name === scanAndSend) {
                                     return (
-                                        <TouchableOpacity
+                                        <View
                                             style={{
-                                                position: 'absolute',
-                                                height: 90,
-                                                width: 90,
-                                                borderRadius: 90,
-                                                bottom: 5,
-                                                backgroundColor: themeColor(
-                                                    'secondary'
-                                                ),
-                                                justifyContent: 'center',
-                                                alignItems: 'center',
-                                                shadowColor: 'black',
-                                                shadowRadius: 5,
-                                                shadowOpacity: 0.8,
-                                                elevation: 2
-                                            }}
-                                            onPress={() => {
-                                                const {
-                                                    navigation
-                                                } = this.props;
-                                                // if clipboard is loaded check for potential matches, otherwise do nothing
-                                                handleAnything(this.clipboard)
-                                                    .then(([route, props]) => {
-                                                        navigation.navigate(
-                                                            route,
-                                                            props
-                                                        );
-                                                    })
-                                                    .catch(() =>
-                                                        navigation.navigate(
-                                                            'AddressQRCodeScanner'
-                                                        )
-                                                    );
+                                                bottom: 75,
+                                                alignItems: 'center'
                                             }}
                                         >
-                                            <QRIcon
+                                            <TouchableOpacity
                                                 style={{
-                                                    padding: 25
+                                                    position: 'absolute',
+                                                    height: 90,
+                                                    width: 90,
+                                                    borderRadius: 90,
+                                                    backgroundColor: themeColor(
+                                                        'secondary'
+                                                    ),
+                                                    justifyContent: 'center',
+                                                    alignItems: 'center',
+                                                    shadowColor: 'black',
+                                                    shadowRadius: 5,
+                                                    shadowOpacity: 0.8,
+                                                    elevation: 2
                                                 }}
-                                                fill={themeColor('highlight')}
-                                            />
-                                        </TouchableOpacity>
+                                                onPress={() => {
+                                                    const {
+                                                        navigation
+                                                    } = this.props;
+                                                    // if clipboard is loaded check for potential matches, otherwise do nothing
+                                                    handleAnything(
+                                                        this.clipboard
+                                                    )
+                                                        .then(
+                                                            ([
+                                                                route,
+                                                                props
+                                                            ]) => {
+                                                                navigation.navigate(
+                                                                    route,
+                                                                    props
+                                                                );
+                                                            }
+                                                        )
+                                                        .catch(() =>
+                                                            navigation.navigate(
+                                                                'AddressQRCodeScanner'
+                                                            )
+                                                        );
+                                                }}
+                                            >
+                                                <QRIcon
+                                                    style={{
+                                                        padding: 25
+                                                    }}
+                                                    fill={themeColor(
+                                                        'highlight'
+                                                    )}
+                                                />
+                                            </TouchableOpacity>
+                                        </View>
                                     );
                                 }
                                 return <ChannelsIcon fill={color} />;
