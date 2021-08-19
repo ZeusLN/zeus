@@ -7,6 +7,7 @@ import SettingsStore from './SettingsStore';
 
 export default class FeeStore {
     @observable public fees: any = {};
+    @observable public earnedDuringTimeframe: number = 0;
     @observable public channelFees: any = {};
     @observable public dataFrame: any = {};
     @observable public loading: boolean = false;
@@ -136,11 +137,19 @@ export default class FeeStore {
     @action
     public getForwardingHistory = (params?: any) => {
         this.loading = true;
+        this.earnedDuringTimeframe = 0;
         RESTUtils.getForwardingHistory(params)
             .then((data: any) => {
                 this.forwardingEvents = data.forwarding_events
                     .map((event: any) => new ForwardEvent(event))
                     .reverse();
+
+                // Add up fees earned for this timeframe
+                this.forwardingEvents.map(
+                    (event: ForwardEvent) =>
+                        (this.earnedDuringTimeframe += Number(event.fee))
+                );
+
                 this.lastOffsetIndex = data.last_offset_index;
                 this.loading = false;
             })
