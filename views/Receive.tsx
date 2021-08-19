@@ -368,6 +368,9 @@ export default class Receive extends React.Component<
                                             false: '#767577',
                                             true: themeColor('highlight')
                                         }}
+                                        style={{
+                                            alignSelf: 'flex-end'
+                                        }}
                                     />
                                 </>
                             )}
@@ -390,6 +393,9 @@ export default class Receive extends React.Component<
                                         trackColor={{
                                             false: '#767577',
                                             true: themeColor('highlight')
+                                        }}
+                                        style={{
+                                            alignSelf: 'flex-end'
                                         }}
                                     />
                                 </>
