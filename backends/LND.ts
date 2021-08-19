@@ -251,10 +251,13 @@ export default class LND {
             `/v1/graph/routes/${urlParams && urlParams[0]}/${urlParams &&
                 urlParams[1]}`
         );
-    getForwardingHistory = (data: any) => {
+    getForwardingHistory = (hours?: number = 24) => {
         const req = {
-            ...data,
-            num_max_events: 10000000
+            num_max_events: 10000000,
+            start_time: Math.round(
+                new Date(Date.now() - hours * 60 * 60 * 1000).getTime() / 1000
+            ).toString(),
+            end_time: Math.round(new Date().getTime() / 1000).toString()
         };
         return this.postRequest('/v1/switch', req);
     };

@@ -22,7 +22,7 @@ import BTCPayConfigQRScanner from './views/BTCPayConfigQRScanner';
 import LNDConnectConfigQRScanner from './views/LNDConnectConfigQRScanner';
 import LNDHubQRScanner from './views/LNDHubQRScanner';
 import NodeInfo from './views/NodeInfo';
-import Routing from './views/Routing';
+import Routing from './views/Routing/Routing';
 import Lockscreen from './views/Lockscreen';
 
 // Settings views
