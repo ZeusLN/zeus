@@ -122,7 +122,7 @@ export default class Routing extends React.PureComponent<
         const oneDButton = () => (
             <Text
                 style={{
-                    color: selectedIndex === 0 ? themeColor('text') : 'black'
+                    color: selectedIndex === 0 ? 'black' : 'white'
                 }}
             >
                 D
@@ -131,7 +131,7 @@ export default class Routing extends React.PureComponent<
         const oneWButton = () => (
             <Text
                 style={{
-                    color: selectedIndex === 1 ? themeColor('text') : 'black'
+                    color: selectedIndex === 1 ? 'black' : 'white'
                 }}
             >
                 1W
@@ -140,7 +140,7 @@ export default class Routing extends React.PureComponent<
         const oneMButton = () => (
             <Text
                 style={{
-                    color: selectedIndex === 2 ? themeColor('text') : 'black'
+                    color: selectedIndex === 2 ? 'black' : 'white'
                 }}
             >
                 1M
@@ -149,7 +149,7 @@ export default class Routing extends React.PureComponent<
         const threeMButton = () => (
             <Text
                 style={{
-                    color: selectedIndex === 3 ? themeColor('text') : 'black'
+                    color: selectedIndex === 3 ? 'black' : 'white'
                 }}
             >
                 3M
@@ -158,7 +158,7 @@ export default class Routing extends React.PureComponent<
         const sixMButton = () => (
             <Text
                 style={{
-                    color: selectedIndex === 4 ? themeColor('text') : 'black'
+                    color: selectedIndex === 4 ? 'black' : 'white'
                 }}
             >
                 6M
@@ -167,7 +167,7 @@ export default class Routing extends React.PureComponent<
         const oneYButton = () => (
             <Text
                 style={{
-                    color: selectedIndex === 5 ? themeColor('text') : 'black'
+                    color: selectedIndex === 5 ? 'black' : 'white'
                 }}
             >
                 1Y
@@ -211,10 +211,19 @@ export default class Routing extends React.PureComponent<
                             selectedIndex={selectedIndex}
                             buttons={buttons}
                             selectedButtonStyle={{
-                                backgroundColor: themeColor('highlight')
+                                backgroundColor: themeColor('highlight'),
+                                borderRadius: 12
                             }}
                             containerStyle={{
-                                backgroundColor: '#f2f2f2'
+                                backgroundColor: themeColor('secondary'),
+                                borderRadius: 12,
+                                borderColor: themeColor('secondary')
+                            }}
+                            innerBorderStyle={{
+                                color: themeColor('secondary')
+                            }}
+                            innerBorderStyle={{
+                                color: themeColor('secondary')
                             }}
                         />
                         {loading && (
