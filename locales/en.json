@@ -33,6 +33,7 @@
     "components.SetFeesForm.error": "Error setting fees",
     "components.SetFeesForm.baseFee": "Base Fee msat",
     "components.SetFeesForm.ppm": "PPM (Parts Per Million)",
+    "components.SetFeesForm.timeLockDelta": "Timelock Delta (blocks)",
     "components.SetFeesForm.submit": "Submit New Fees",
     "components.QRCodeScanner.noCameraAccess": "No access to camera",
     "models.Channel.unknownId": "Unknown Channel ID",

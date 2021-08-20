@@ -52,10 +52,10 @@ const styles = StyleSheet.create({
     view: {
         flex: 1,
         backgroundColor: themeColor('background'),
-        color: themeColor('text'),
-        padding: 15
+        color: themeColor('text')
     },
     form: {
-        top: 20
+        top: 5,
+        padding: 15
     }
 });
