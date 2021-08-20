@@ -23,6 +23,7 @@ import LNDConnectConfigQRScanner from './views/LNDConnectConfigQRScanner';
 import LNDHubQRScanner from './views/LNDHubQRScanner';
 import NodeInfo from './views/NodeInfo';
 import Routing from './views/Routing/Routing';
+import RoutingEvent from './views/Routing/RoutingEvent';
 import Lockscreen from './views/Lockscreen';
 
 // Settings views
@@ -122,6 +123,9 @@ const AppScenes = {
     },
     Routing: {
         screen: Routing
+    },
+    RoutingEvent: {
+        screen: RoutingEvent
     },
     Activity: {
         screen: Activity

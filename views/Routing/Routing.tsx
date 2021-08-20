@@ -240,6 +240,13 @@ export default class Routing extends React.PureComponent<
                                 {localeString('views.Routing.noEvents')}
                             </Text>
                         )}
+                        {forwardingHistoryError && !loading && (
+                            <Text style={{ color: 'red' }}>
+                                {localeString(
+                                    'views.NodeInfo.ForwardingHistory.error'
+                                )}
+                            </Text>
+                        )}
                     </View>
                 )}
             </View>
