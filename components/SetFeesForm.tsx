@@ -12,6 +12,7 @@ interface SetFeesFormProps {
     feeRate?: string;
     channelPoint?: string;
     channelId?: string;
+    expanded?: boolean;
 }
 
 interface SetFeesFormState {
@@ -44,32 +45,41 @@ export default class SetFeesForm extends React.Component<
             baseFeeMsat,
             feeRate,
             channelPoint,
-            channelId
+            channelId,
+            expanded
         } = this.props;
         const { setFees, loading, setFeesError, setFeesSuccess } = FeeStore;
 
         return (
             <React.Fragment>
-                <View style={styles.button}>
-                    <Button
-                        title={
-                            showNewFeesForm
-                                ? localeString('components.SetFeesForm.hide')
-                                : localeString('components.SetFeesForm.setNew')
-                        }
-                        onPress={() =>
-                            this.setState({ showNewFeesForm: !showNewFeesForm })
-                        }
-                        buttonStyle={{
-                            backgroundColor: showNewFeesForm
-                                ? 'black'
-                                : 'green',
-                            borderRadius: 30
-                        }}
-                    />
-                </View>
+                {!expanded && (
+                    <View style={styles.button}>
+                        <Button
+                            title={
+                                showNewFeesForm
+                                    ? localeString(
+                                          'components.SetFeesForm.hide'
+                                      )
+                                    : localeString(
+                                          'components.SetFeesForm.setNew'
+                                      )
+                            }
+                            onPress={() =>
+                                this.setState({
+                                    showNewFeesForm: !showNewFeesForm
+                                })
+                            }
+                            buttonStyle={{
+                                backgroundColor: showNewFeesForm
+                                    ? 'black'
+                                    : 'green',
+                                borderRadius: 30
+                            }}
+                        />
+                    </View>
+                )}
 
-                {showNewFeesForm && (
+                {(expanded || showNewFeesForm) && (
                     <React.Fragment>
                         {loading && (
                             <Text style={styles.text}>

@@ -5,7 +5,7 @@ import {
     View,
     StyleSheet,
     Text,
-    TouchableHighlight
+    TouchableOpacity
 } from 'react-native';
 import { ButtonGroup, Header, Icon } from 'react-native-elements';
 
@@ -21,6 +21,8 @@ import { inject, observer } from 'mobx-react';
 
 import FeeStore from '../../stores/FeeStore';
 import SettingsStore from '../../stores/SettingsStore';
+
+import Pie from '../../images/SVG/Pie.svg';
 
 interface RoutingProps {
     navigation: any;
@@ -60,17 +62,10 @@ export default class Routing extends React.PureComponent<
         }
     }
 
-    headerString =
-        this.props.FeeStore.forwardingEvents.length > 0
-            ? `${localeString('general.routing')} (${
-                  this.props.FeeStore.forwardingEvents.length
-              })`
-            : localeString('general.routing');
-
     renderItem = ({ item }) => {
         const { navigation } = this.props;
         return (
-            <TouchableHighlight
+            <TouchableOpacity
                 onPress={() =>
                     navigation.navigate('RoutingEvent', {
                         routingEvent: item
@@ -83,7 +78,7 @@ export default class Routing extends React.PureComponent<
                     amountOut={item.amt_out}
                     date={item.getDateShort}
                 />
-            </TouchableHighlight>
+            </TouchableOpacity>
         );
     };
 
@@ -102,13 +97,26 @@ export default class Routing extends React.PureComponent<
         } = FeeStore;
         const { implementation } = SettingsStore;
 
-        const CloseButton = () => (
+        const headerString =
+            forwardingEvents.length > 0
+                ? `${localeString('general.routing')} (${
+                      forwardingEvents.length
+                  })`
+                : localeString('general.routing');
+
+        const BackButton = () => (
             <Icon
                 name="arrow-back"
                 onPress={() => navigation.navigate('Wallet')}
                 color={themeColor('text')}
                 underlayColor="transparent"
             />
+        );
+
+        const FeeBadge = ({ navigation }: { navigation: any }) => (
+            <TouchableOpacity onPress={() => navigation.navigate('SetFees')}>
+                <Pie stroke={themeColor('highlight')} />
+            </TouchableOpacity>
         );
 
         const oneDButton = () => (
@@ -178,11 +186,12 @@ export default class Routing extends React.PureComponent<
         return (
             <View style={styles.view}>
                 <Header
-                    leftComponent={<CloseButton />}
+                    leftComponent={<BackButton />}
                     centerComponent={{
-                        text: this.headerString,
+                        text: headerString,
                         style: { color: themeColor('text') }
                     }}
+                    rightComponent={<FeeBadge navigation={navigation} />}
                     backgroundColor={themeColor('background')}
                 />
                 <RoutingHeader
