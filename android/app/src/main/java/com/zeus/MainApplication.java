@@ -18,7 +18,6 @@ import android.content.Context;
 import com.reactlibrary.securekeystore.RNSecureKeyStorePackage;
 
 import com.facebook.soloader.SoLoader;
-import com.microsoft.ActivityResultPackage;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;

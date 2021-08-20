@@ -53,6 +53,10 @@ interface SendState {
     utxos: Array<string>;
     utxoBalance: number;
     confirmationTarget: string;
+    maxParts: string;
+    maxShardAmt: string;
+    timeoutSeconds: string;
+    feeLimitSat: string;
 }
 
 @inject(
@@ -85,7 +89,11 @@ export default class Send extends React.Component<SendProps, SendState> {
             utxos: [],
             utxoBalance: 0,
             confirmationTarget: '60',
-            error_msg: ''
+            error_msg: '',
+            maxParts: '16',
+            maxShardAmt: '',
+            timeoutSeconds: '20',
+            feeLimitSat: ''
         };
     }
 
@@ -166,9 +174,28 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     sendKeySendPayment = () => {
         const { TransactionsStore, navigation } = this.props;
-        const { destination, amount } = this.state;
+        const {
+            destination,
+            amount,
+            maxParts,
+            maxShardAmt,
+            timeoutSeconds,
+            feeLimitSat
+        } = this.state;
 
-        TransactionsStore.sendPayment(null, amount, destination);
+        if (RESTUtils.supportsAMP()) {
+            TransactionsStore.sendPayment({
+                amount,
+                pubkey: destination,
+                max_parts: maxParts,
+                max_shard_amt: maxShardAmt,
+                timeout_seconds: timeoutSeconds,
+                fee_limit_sat: feeLimitSat,
+                amp: true
+            });
+        } else {
+            TransactionsStore.sendPayment({ amount, pubkey: destination });
+        }
 
         navigation.navigate('SendingLightning');
     };
@@ -195,7 +222,11 @@ export default class Send extends React.Component<SendProps, SendState> {
             fee,
             confirmationTarget,
             utxoBalance,
-            error_msg
+            error_msg,
+            maxParts,
+            maxShardAmt,
+            timeoutSeconds,
+            feeLimitSat
         } = this.state;
         const { confirmedBlockchainBalance } = BalanceStore;
         const { implementation, settings } = SettingsStore;
@@ -239,96 +270,6 @@ export default class Send extends React.Component<SendProps, SendState> {
             paymentOptions.push(localeString('views.Send.keysendAddress'));
         }
 
-        const OnChain = () => (
-            <React.Fragment>
-                <TouchableOpacity onPress={() => changeUnits()}>
-                    <Text
-                        style={{
-                            textDecorationLine: 'underline',
-                            color: themeColor('text')
-                        }}
-                    >
-                        {localeString('views.Send.amount')} (
-                        {units === 'fiat' ? fiat : units})
-                    </Text>
-                </TouchableOpacity>
-                <TextInput
-                    keyboardType="numeric"
-                    value={amount}
-                    onChangeText={(text: string) =>
-                        this.setState({ amount: text })
-                    }
-                    style={styles.textInput}
-                    placeholderTextColor="gray"
-                />
-                {units !== 'sats' && amount !== 'all' && (
-                    <TouchableOpacity onPress={() => changeUnits()}>
-                        <Text
-                            style={{
-                                textDecorationLine: 'underline',
-                                color: themeColor('text')
-                            }}
-                        >
-                            {satAmount} {localeString('views.Send.satoshis')}
-                        </Text>
-                    </TouchableOpacity>
-                )}
-                {amount === 'all' && (
-                    <Text
-                        style={{
-                            color: themeColor('text')
-                        }}
-                    >
-                        {`${
-                            utxoBalance > 0
-                                ? utxoBalance
-                                : confirmedBlockchainBalance
-                        } ${localeString('views.Receive.satoshis')}`}
-                    </Text>
-                )}
-                <Text
-                    style={{
-                        textDecorationLine: 'underline',
-                        color: themeColor('text')
-                    }}
-                >
-                    {localeString('views.Send.feeSats')}:
-                </Text>
-                <TextInput
-                    keyboardType="numeric"
-                    placeholder="2"
-                    value={fee}
-                    onChangeText={(text: string) =>
-                        this.setState({ fee: text })
-                    }
-                    style={styles.textInput}
-                    placeholderTextColor="gray"
-                />
-                {RESTUtils.supportsCoinControl() && (
-                    <UTXOPicker
-                        onValueChange={this.selectUTXOs}
-                        UTXOsStore={UTXOsStore}
-                    />
-                )}
-                <View style={styles.button}>
-                    <Button
-                        title={localeString('views.Send.sendCoins')}
-                        icon={{
-                            name: 'send',
-                            size: 25,
-                            color: 'white'
-                        }}
-                        onPress={() => this.sendCoins(satAmount)}
-                        style={styles.button}
-                        buttonStyle={{
-                            backgroundColor: 'orange',
-                            borderRadius: 30
-                        }}
-                    />
-                </View>
-            </React.Fragment>
-        );
-
         return (
             <ScrollView style={styles.scrollView}>
                 <Header
@@ -340,12 +281,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     backgroundColor="grey"
                 />
                 <View style={styles.content}>
-                    <Text
-                        style={{
-                            textDecorationLine: 'underline',
-                            color: themeColor('text')
-                        }}
-                    >
+                    <Text style={styles.label}>
                         {paymentOptions.join(', ')}
                     </Text>
                     <TextInput
@@ -358,11 +294,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         placeholderTextColor="gray"
                     />
                     {!isValid && !!destination && (
-                        <Text
-                            style={{
-                                color: themeColor('text')
-                            }}
-                        >
+                        <Text style={styles.text}>
                             {localeString('views.Send.mustBeValid')}{' '}
                             {paymentOptions.join(', ')}
                         </Text>
@@ -371,86 +303,246 @@ export default class Send extends React.Component<SendProps, SendState> {
                         <Text
                             style={{
                                 paddingTop: 10,
-                                color: themeColor('text')
+                                ...styles.text
                             }}
                         >{`${transactionType} Transaction`}</Text>
                     )}
                     {transactionType === 'On-chain' &&
                         !RESTUtils.supportsOnchainSends() && (
-                            <Text
-                                style={{
-                                    textDecorationLine: 'underline',
-                                    color: themeColor('text')
-                                }}
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.Send.onChainNotSupported')}{' '}
                                 {implementation}
                             </Text>
                         )}
                     {transactionType === 'On-chain' &&
-                        RESTUtils.supportsOnchainSends() && <OnChain />}
-                    {transactionType === 'Keysend' && implementation === 'lnd' && (
-                        <React.Fragment>
-                            <TouchableOpacity onPress={() => changeUnits()}>
-                                <Text
-                                    style={{
-                                        textDecorationLine: 'underline',
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString('views.Send.amount')} (
-                                    {units === 'fiat' ? fiat : units})
-                                </Text>
-                            </TouchableOpacity>
-                            <TextInput
-                                keyboardType="numeric"
-                                value={amount}
-                                onChangeText={(text: string) =>
-                                    this.setState({ amount: text })
-                                }
-                                style={styles.textInput}
-                                placeholderTextColor="gray"
-                            />
-                            {units !== 'sats' && (
+                        RESTUtils.supportsOnchainSends() && (
+                            <React.Fragment>
                                 <TouchableOpacity onPress={() => changeUnits()}>
-                                    <Text
-                                        style={{
-                                            textDecorationLine: 'underline',
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {satAmount}{' '}
-                                        {localeString('views.Send.satoshis')}
+                                    <Text style={styles.label}>
+                                        {localeString('views.Send.amount')} (
+                                        {units === 'fiat' ? fiat : units})
                                     </Text>
                                 </TouchableOpacity>
-                            )}
-                            <View style={styles.button}>
-                                <Button
-                                    title={localeString('general.send')}
-                                    icon={{
-                                        name: 'send',
-                                        size: 25,
-                                        color: 'white'
-                                    }}
-                                    onPress={() => this.sendKeySendPayment()}
-                                    style={styles.button}
-                                    buttonStyle={{
-                                        backgroundColor: 'orange',
-                                        borderRadius: 30
-                                    }}
+                                <TextInput
+                                    keyboardType="numeric"
+                                    value={amount}
+                                    onChangeText={(text: string) =>
+                                        this.setState({ amount: text })
+                                    }
+                                    style={styles.textInput}
+                                    placeholderTextColor="gray"
                                 />
-                            </View>
-                        </React.Fragment>
-                    )}
+                                {units !== 'sats' && amount !== 'all' && (
+                                    <TouchableOpacity
+                                        onPress={() => changeUnits()}
+                                    >
+                                        <Text style={styles.label}>
+                                            {satAmount}{' '}
+                                            {localeString(
+                                                'views.Send.satoshis'
+                                            )}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                                {amount === 'all' && (
+                                    <Text style={styles.text}>
+                                        {`${
+                                            utxoBalance > 0
+                                                ? utxoBalance
+                                                : confirmedBlockchainBalance
+                                        } ${localeString(
+                                            'views.Receive.satoshis'
+                                        )}`}
+                                    </Text>
+                                )}
+                                <Text style={styles.label}>
+                                    {localeString('views.Send.feeSats')}:
+                                </Text>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    placeholder="2"
+                                    value={fee}
+                                    onChangeText={(text: string) =>
+                                        this.setFee(text)
+                                    }
+                                    style={styles.textInput}
+                                    placeholderTextColor="gray"
+                                />
+                                {RESTUtils.supportsCoinControl() && (
+                                    <UTXOPicker
+                                        onValueChange={this.selectUTXOs}
+                                        UTXOsStore={UTXOsStore}
+                                    />
+                                )}
+                                <View style={styles.button}>
+                                    <Button
+                                        title={localeString(
+                                            'views.Send.sendCoins'
+                                        )}
+                                        icon={{
+                                            name: 'send',
+                                            size: 25,
+                                            color: 'white'
+                                        }}
+                                        onPress={() =>
+                                            this.sendCoins(satAmount)
+                                        }
+                                        style={styles.button}
+                                        buttonStyle={{
+                                            backgroundColor: 'orange',
+                                            borderRadius: 30
+                                        }}
+                                    />
+                                </View>
+                            </React.Fragment>
+                        )}
+                    {transactionType === 'Keysend' &&
+                        RESTUtils.supportsKeysend() && (
+                            <React.Fragment>
+                                <TouchableOpacity onPress={() => changeUnits()}>
+                                    <Text style={styles.label}>
+                                        {localeString('views.Send.amount')} (
+                                        {units === 'fiat' ? fiat : units})
+                                    </Text>
+                                </TouchableOpacity>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    value={amount}
+                                    onChangeText={(text: string) =>
+                                        this.setState({ amount: text })
+                                    }
+                                    style={styles.textInput}
+                                    placeholderTextColor="gray"
+                                />
+                                {units !== 'sats' && (
+                                    <TouchableOpacity
+                                        onPress={() => changeUnits()}
+                                    >
+                                        <Text style={styles.label}>
+                                            {satAmount}{' '}
+                                            {localeString(
+                                                'views.Send.satoshis'
+                                            )}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                                {RESTUtils.supportsAMP() && (
+                                    <React.Fragment>
+                                        <Text style={styles.label}>
+                                            {localeString(
+                                                'views.PaymentRequest.timeout'
+                                            )}
+                                            :
+                                        </Text>
+                                        <TextInput
+                                            keyboardType="numeric"
+                                            placeholder="20"
+                                            value={timeoutSeconds}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    timeoutSeconds: text
+                                                })
+                                            }
+                                            numberOfLines={1}
+                                            style={styles.textInput}
+                                            placeholderTextColor="gray"
+                                        />
+                                        <Text style={styles.label}>
+                                            {`${localeString(
+                                                'views.PaymentRequest.maxParts'
+                                            )} (${localeString(
+                                                'general.optional'
+                                            )})`}
+                                            :
+                                        </Text>
+                                        <TextInput
+                                            keyboardType="numeric"
+                                            value={maxParts}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    maxParts: text
+                                                })
+                                            }
+                                            numberOfLines={1}
+                                            style={styles.textInput}
+                                            placeholderTextColor="gray"
+                                        />
+                                        <Text style={styles.text}>
+                                            {localeString(
+                                                'views.PaymentRequest.maxPartsDescription'
+                                            )}
+                                        </Text>
+                                        <Text style={styles.label}>
+                                            {`${localeString(
+                                                'views.PaymentRequest.feeLimit'
+                                            )} (${localeString(
+                                                'general.sats'
+                                            )}) (${localeString(
+                                                'general.optional'
+                                            )})`}
+                                            :
+                                        </Text>
+                                        <TextInput
+                                            keyboardType="numeric"
+                                            placeholder="100"
+                                            value={feeLimitSat}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    feeLimitSat: text
+                                                })
+                                            }
+                                            numberOfLines={1}
+                                            style={styles.textInput}
+                                            placeholderTextColor="gray"
+                                        />
+                                        <Text style={styles.label}>
+                                            {`${localeString(
+                                                'views.PaymentRequest.maxShardAmt'
+                                            )} (${localeString(
+                                                'general.sats'
+                                            )}) (${localeString(
+                                                'general.optional'
+                                            )})`}
+                                            :
+                                        </Text>
+                                        <TextInput
+                                            keyboardType="numeric"
+                                            value={maxShardAmt}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    maxShardAmt: text
+                                                })
+                                            }
+                                            numberOfLines={1}
+                                            style={styles.textInput}
+                                            placeholderTextColor="gray"
+                                        />
+                                    </React.Fragment>
+                                )}
+                                <View style={styles.button}>
+                                    <Button
+                                        title={localeString('general.send')}
+                                        icon={{
+                                            name: 'send',
+                                            size: 25,
+                                            color: 'white'
+                                        }}
+                                        onPress={() =>
+                                            this.sendKeySendPayment()
+                                        }
+                                        style={styles.button}
+                                        buttonStyle={{
+                                            backgroundColor: 'orange',
+                                            borderRadius: 30
+                                        }}
+                                    />
+                                </View>
+                            </React.Fragment>
+                        )}
                     {transactionType === 'Keysend' &&
                         !RESTUtils.supportsKeysend() && (
                             <React.Fragment>
-                                <Text
-                                    style={{
-                                        textDecorationLine: 'underline',
-                                        color: themeColor('text')
-                                    }}
-                                >
+                                <Text style={styles.label}>
                                     {localeString('views.Send.sorry')},{' '}
                                     {implementation}{' '}
                                     {localeString(
@@ -516,7 +608,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <View style={styles.feeTableButton}>
                                 <FeeTable
                                     setFee={this.setFee}
-                                    SettingsStore={SettingsStore}
                                     FeeStore={FeeStore}
                                 />
                             </View>
@@ -524,13 +615,7 @@ export default class Send extends React.Component<SendProps, SendState> {
 
                     {!!error_msg && (
                         <React.Fragment>
-                            <Text
-                                style={{
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {error_msg}
-                            </Text>
+                            <Text style={styles.text}>{error_msg}</Text>
                         </React.Fragment>
                     )}
                 </View>
@@ -544,6 +629,14 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: themeColor('background'),
         color: themeColor('text')
+    },
+    label: {
+        textDecorationLine: 'underline',
+        color: themeColor('text')
+    },
+    text: {
+        color: themeColor('text'),
+        paddingBottom: 5
     },
     textInput: {
         fontSize: 20,

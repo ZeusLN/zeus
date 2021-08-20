@@ -2,13 +2,12 @@ import * as React from 'react';
 import { Image, Linking, Text, View, TouchableOpacity } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { Button, ButtonGroup } from 'react-native-elements';
-import Transactions from './Transactions';
-import Payments from './Payments';
-import Invoices from './Invoices';
+
 import Channels from './Channels';
 import MainPane from './MainPane';
 import { inject, observer } from 'mobx-react';
 import PrivacyUtils from './../../utils/PrivacyUtils';
+import { restartTor } from './../../utils/TorUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 import Clipboard from '@react-native-community/clipboard';
@@ -16,12 +15,10 @@ import Clipboard from '@react-native-community/clipboard';
 import BalanceStore from './../../stores/BalanceStore';
 import ChannelsStore from './../../stores/ChannelsStore';
 import FeeStore from './../../stores/FeeStore';
-import InvoicesStore from './../../stores/InvoicesStore';
+
 import NodeInfoStore from './../../stores/NodeInfoStore';
-import PaymentsStore from './../../stores/PaymentsStore';
 import SettingsStore from './../../stores/SettingsStore';
 import FiatStore from './../../stores/FiatStore';
-import TransactionsStore from './../../stores/TransactionsStore';
 import UnitsStore from './../../stores/UnitsStore';
 import LayerBalances from './../../components/LayerBalances';
 
@@ -43,40 +40,24 @@ interface WalletProps {
     BalanceStore: BalanceStore;
     ChannelsStore: ChannelsStore;
     FeeStore: FeeStore;
-    InvoicesStore: InvoicesStore;
     NodeInfoStore: NodeInfoStore;
-    PaymentsStore: PaymentsStore;
     SettingsStore: SettingsStore;
-    TransactionsStore: TransactionsStore;
     UnitsStore: UnitsStore;
     FiatStore: FiatStore;
-}
-
-interface WalletState {
-    units: String;
-    selectedIndex: number;
 }
 
 @inject(
     'BalanceStore',
     'ChannelsStore',
-    'InvoicesStore',
     'NodeInfoStore',
     'FeeStore',
-    'PaymentsStore',
     'SettingsStore',
-    'TransactionsStore',
     'UnitsStore',
     'FiatStore'
 )
 @observer
-export default class Wallet extends React.Component<WalletProps, WalletState> {
+export default class Wallet extends React.Component<WalletProps, {}> {
     clipboard: string;
-
-    state = {
-        units: 'sats',
-        selectedIndex: 0
-    };
 
     componentDidMount() {
         Linking.getInitialURL()
@@ -111,9 +92,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             SettingsStore,
             NodeInfoStore,
             BalanceStore,
-            PaymentsStore,
-            InvoicesStore,
-            TransactionsStore,
             ChannelsStore
         } = this.props;
 
@@ -127,14 +105,17 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         });
     }
 
+    restartTorAndReload = async () => {
+        this.props.NodeInfoStore.setLoading();
+        await restartTor();
+        await this.getSettingsAndRefresh();
+    };
+
     refresh = () => {
         const {
             NodeInfoStore,
             BalanceStore,
-            TransactionsStore,
             ChannelsStore,
-            InvoicesStore,
-            PaymentsStore,
             FeeStore,
             SettingsStore,
             FiatStore
@@ -169,109 +150,17 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
     };
 
-    updateIndex = (selectedIndex: number) => {
-        this.setState({ selectedIndex });
-    };
-
-    changeUnits = () => {
-        const { units } = this.state;
-        this.setState({
-            units: units == 'sats' ? 'bitcoin' : 'sats'
-        });
-    };
-
     render() {
         const Tab = createBottomTabNavigator();
         const {
-            ChannelsStore,
-            InvoicesStore,
             NodeInfoStore,
-            PaymentsStore,
-            TransactionsStore,
             UnitsStore,
             BalanceStore,
             SettingsStore,
             navigation
         } = this.props;
-        const { selectedIndex } = this.state;
-
-        const { transactions } = TransactionsStore;
-        const { payments } = PaymentsStore;
-        const { invoices, invoicesCount } = InvoicesStore;
-        const { channels } = ChannelsStore;
-        const { implementation } = SettingsStore;
-
-        const paymentsCount = (payments && payments.length) || 0;
-        const paymentsButtonCount = PrivacyUtils.sensitiveValue(
-            paymentsCount,
-            2,
-            true
-        );
-
-        const invoicesCountValue = invoicesCount || 0;
-        const invoicesButtonCount = PrivacyUtils.sensitiveValue(
-            invoicesCountValue,
-            2,
-            true
-        );
-
-        const transactionsCount = (transactions && transactions.length) || 0;
-        const transactionsButtonCount = PrivacyUtils.sensitiveValue(
-            transactionsCount,
-            2,
-            true
-        );
-
-        const channelsCount = (channels && channels.length) || 0;
-        const channelsButtonCount = PrivacyUtils.sensitiveValue(
-            channelsCount,
-            2,
-            true
-        );
-
-        const paymentsButton = () => (
-            <React.Fragment>
-                <Text style={{ color: themeColor('text') }}>
-                    {paymentsButtonCount}
-                </Text>
-                <Text style={{ color: themeColor('text') }}>
-                    {localeString('views.Wallet.Wallet.payments')}
-                </Text>
-            </React.Fragment>
-        );
-
-        const invoicesButton = () => (
-            <React.Fragment>
-                <Text style={{ color: themeColor('text') }}>
-                    {invoicesButtonCount}
-                </Text>
-                <Text style={{ color: themeColor('text') }}>
-                    {localeString('views.Wallet.Wallet.invoices')}
-                </Text>
-            </React.Fragment>
-        );
-
-        const transactionsButton = () => (
-            <React.Fragment>
-                <Text style={{ color: themeColor('text') }}>
-                    {transactionsButtonCount}
-                </Text>
-                <Text style={{ color: themeColor('text') }}>
-                    {localeString('views.Wallet.Wallet.onchain')}
-                </Text>
-            </React.Fragment>
-        );
-
-        const channelsButton = () => (
-            <React.Fragment>
-                <Text style={{ color: themeColor('text') }}>
-                    {channelsButtonCount}
-                </Text>
-                <Text style={{ color: themeColor('text') }}>
-                    {localeString('views.Wallet.Wallet.channels')}
-                </Text>
-            </React.Fragment>
-        );
+        const { error, loading } = NodeInfoStore;
+        const { implementation, enableTor } = SettingsStore;
 
         const WalletScreen = () => {
             return (
@@ -293,6 +182,26 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             SettingsStore={SettingsStore}
                         />
 
+                        {error && !loading && enableTor && (
+                            <View style={{ marginTop: 10 }}>
+                                <Button
+                                    title={localeString(
+                                        'views.Wallet.restartTor'
+                                    )}
+                                    icon={{
+                                        name: 'sync',
+                                        size: 25,
+                                        color: 'white'
+                                    }}
+                                    buttonStyle={{
+                                        backgroundColor: 'gray',
+                                        borderRadius: 30
+                                    }}
+                                    onPress={() => this.restartTorAndReload()}
+                                />
+                            </View>
+                        )}
+
                         <LayerBalances
                             navigation={navigation}
                             BalanceStore={BalanceStore}
@@ -303,10 +212,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             onPress={() =>
                                 this.props.navigation.navigate('Activity')
                             }
+                            style={{
+                                alignSelf: 'center',
+                                bottom: 85,
+                                padding: 25
+                            }}
                         >
-                            <CaretUp
-                                style={{ alignSelf: 'center', bottom: 100 }}
-                            />
+                            <CaretUp />
                         </TouchableOpacity>
                     </LinearGradient>
                 </View>
@@ -325,21 +237,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 </View>
             );
         };
-
-        const buttons = [
-            { element: paymentsButton },
-            { element: invoicesButton },
-            { element: transactionsButton },
-            { element: channelsButton }
-        ];
-
-        const lndHubButtons = [
-            { element: paymentsButton },
-            { element: invoicesButton }
-        ];
-
-        const selectedButtons =
-            implementation === 'lndhub' ? lndHubButtons : buttons;
 
         const Theme = {
             ...DefaultTheme,
@@ -368,49 +265,64 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 }
                                 if (route.name === scanAndSend) {
                                     return (
-                                        <TouchableOpacity
+                                        <View
                                             style={{
-                                                position: 'absolute',
-                                                height: 90,
-                                                width: 90,
-                                                borderRadius: 90,
-                                                bottom: 5,
-                                                backgroundColor: themeColor(
-                                                    'secondary'
-                                                ),
-                                                justifyContent: 'center',
-                                                alignItems: 'center',
-                                                shadowColor: 'black',
-                                                shadowRadius: 5,
-                                                shadowOpacity: 0.8,
-                                                elevation: 2
-                                            }}
-                                            onPress={() => {
-                                                const {
-                                                    navigation
-                                                } = this.props;
-                                                // if clipboard is loaded check for potential matches, otherwise do nothing
-                                                handleAnything(this.clipboard)
-                                                    .then(([route, props]) => {
-                                                        navigation.navigate(
-                                                            route,
-                                                            props
-                                                        );
-                                                    })
-                                                    .catch(() =>
-                                                        navigation.navigate(
-                                                            'AddressQRCodeScanner'
-                                                        )
-                                                    );
+                                                bottom: 75,
+                                                alignItems: 'center'
                                             }}
                                         >
-                                            <QRIcon
+                                            <TouchableOpacity
                                                 style={{
-                                                    padding: 25
+                                                    position: 'absolute',
+                                                    height: 90,
+                                                    width: 90,
+                                                    borderRadius: 90,
+                                                    backgroundColor: themeColor(
+                                                        'secondary'
+                                                    ),
+                                                    justifyContent: 'center',
+                                                    alignItems: 'center',
+                                                    shadowColor: 'black',
+                                                    shadowRadius: 5,
+                                                    shadowOpacity: 0.8,
+                                                    elevation: 2
                                                 }}
-                                                fill={themeColor('highlight')}
-                                            />
-                                        </TouchableOpacity>
+                                                onPress={() => {
+                                                    const {
+                                                        navigation
+                                                    } = this.props;
+                                                    // if clipboard is loaded check for potential matches, otherwise do nothing
+                                                    handleAnything(
+                                                        this.clipboard
+                                                    )
+                                                        .then(
+                                                            ([
+                                                                route,
+                                                                props
+                                                            ]) => {
+                                                                navigation.navigate(
+                                                                    route,
+                                                                    props
+                                                                );
+                                                            }
+                                                        )
+                                                        .catch(() =>
+                                                            navigation.navigate(
+                                                                'AddressQRCodeScanner'
+                                                            )
+                                                        );
+                                                }}
+                                            >
+                                                <QRIcon
+                                                    style={{
+                                                        padding: 25
+                                                    }}
+                                                    fill={themeColor(
+                                                        'highlight'
+                                                    )}
+                                                />
+                                            </TouchableOpacity>
+                                        </View>
                                     );
                                 }
                                 return <ChannelsIcon fill={color} />;

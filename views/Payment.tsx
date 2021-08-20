@@ -188,7 +188,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
 const styles = StyleSheet.create({
     scrollView: {
         flex: 1,
-        backgroundColor: 'white',
+        backgroundColor: themeColor('background'),
         color: themeColor('text')
     },
     content: {

@@ -1,17 +1,17 @@
 const dateFormat = require('dateformat');
 
 class DateTimeUtils {
-    listDate = (timestamp: number | string) =>
+    listDate = (timestamp: number | string | Date) =>
         new Date(Number(timestamp) * 1000);
     listFormattedDate = (
-        timestamp: number | string,
+        timestamp: number | string | Date,
         format: string = "ddd, mmm d 'yy, HH:MM:ss Z"
     ) => {
         try {
             const date = this.listDate(timestamp);
-            return dateFormat(date, format);
+            return dateFormat(date, format).toString();
         } catch (error) {
-            return timestamp || 'N/A';
+            return timestamp.toString() || 'N/A';
         }
     };
 
