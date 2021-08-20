@@ -251,7 +251,7 @@ export default class LND {
             `/v1/graph/routes/${urlParams && urlParams[0]}/${urlParams &&
                 urlParams[1]}`
         );
-    getForwardingHistory = (hours?: number = 24) => {
+    getForwardingHistory = (hours: number = 24) => {
         const req = {
             num_max_events: 10000000,
             start_time: Math.round(

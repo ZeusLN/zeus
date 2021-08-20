@@ -57,6 +57,7 @@
     "views.Routing.RoutingHeader.monthEarned": "Earned this month",
     "views.Routing.noEvents": "No routing events for selected timeframe",
     "views.Routing.RoutingEvent.title": "You received",
+    "views.Routing.SetFees": "Your node fees",
     "views.Settings.About.about": "About Zeus",
     "views.Settings.About.version": "Version",
     "views.Settings.About.gpl": "Zeus is distributed under the GNU Affero General Public License (AGPL v3). The full license is available on our GitHub repo.",
