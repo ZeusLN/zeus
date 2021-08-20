@@ -56,6 +56,8 @@ export default class FeeStore {
     @action
     public getOnchainFeesviaMempool = () => {
         this.loading = true;
+        this.error = false;
+        this.recommendedFees = {};
         RNFetchBlob.fetch(
             'get',
             'https://mempool.space/api/v1/fees/recommended'
@@ -68,6 +70,7 @@ export default class FeeStore {
                 } else {
                     this.recommendedFees = {};
                     this.loading = false;
+                    this.error = true;
                 }
             })
             .catch(() => {
