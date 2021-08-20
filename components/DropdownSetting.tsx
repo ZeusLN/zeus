@@ -15,6 +15,7 @@ interface DropdownSettingProps {
     displayValue?: string;
     onValueChange: (value: any) => void;
     values: Array<any>;
+    color?: string;
 }
 
 export default class DropdownSetting extends React.Component<
@@ -27,7 +28,8 @@ export default class DropdownSetting extends React.Component<
             selectedValue,
             displayValue,
             onValueChange,
-            values
+            values,
+            color
         } = this.props;
 
         const pickerValuesAndroid: Array<any> = [];
@@ -49,20 +51,20 @@ export default class DropdownSetting extends React.Component<
                     <View>
                         <Text
                             style={{
-                                color: themeColor('text'),
+                                color: color || themeColor('text'),
                                 paddingLeft: 10
                             }}
                         >
                             {title}
                         </Text>
                         <Picker
-                            selectedValue={selectedValue}
+                            selectedValue={`${selectedValue}`}
                             onValueChange={(itemValue: string) =>
                                 onValueChange(itemValue)
                             }
                             style={{
                                 height: 50,
-                                color: themeColor('text')
+                                color: color || themeColor('text')
                             }}
                         >
                             {pickerValuesAndroid}
@@ -74,7 +76,7 @@ export default class DropdownSetting extends React.Component<
                     <View>
                         <Text
                             style={{
-                                color: themeColor('text'),
+                                color: color || themeColor('text'),
                                 textDecorationLine: 'underline',
                                 paddingLeft: 10,
                                 paddingTop: 10
@@ -101,7 +103,7 @@ export default class DropdownSetting extends React.Component<
                         >
                             <Text
                                 style={{
-                                    color: themeColor('text'),
+                                    color: color || themeColor('text'),
                                     paddingLeft: 10
                                 }}
                             >

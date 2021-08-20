@@ -4,7 +4,7 @@ export function themeColor(themeString: string): any {
     const { settings } = stores.settingsStore;
     const { theme } = settings;
 
-    const Light = {
+    const Light: { [key: string]: any } = {
         background: 'white',
         secondary: '#f0f0f0',
         text: 'black',
@@ -25,7 +25,7 @@ export function themeColor(themeString: string): any {
         // TODO: pick outbound and inbound colors for light and junkie themes
     };
 
-    const Dark = {
+    const Dark: { [key: string]: any } = {
         background: '#1f2328',
         secondary: '#2b3037',
         text: 'white',
@@ -38,7 +38,7 @@ export function themeColor(themeString: string): any {
         inbound: '#FFF0CA'
     };
 
-    const Junkie = {
+    const Junkie: { [key: string]: any } = {
         background: 'rgb(51, 51, 51)',
         secondary: 'rgb(191, 0, 28)',
         text: 'white',
@@ -51,7 +51,9 @@ export function themeColor(themeString: string): any {
             'rgb(51, 51, 51)',
             'rgb(51, 51, 51)'
         ],
-        separator: 'darkgray'
+        separator: 'darkgray',
+        outbound: '#FFD93F',
+        inbound: '#FFF0CA'
     };
 
     switch (theme) {

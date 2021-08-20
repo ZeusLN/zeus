@@ -401,11 +401,7 @@ export default class OpenChannel extends React.Component<
                         />
                     </View>
                     <View style={styles.button}>
-                        <FeeTable
-                            setFee={this.setFee}
-                            FeeStore={FeeStore}
-                            SettingsStore={SettingsStore}
-                        />
+                        <FeeTable setFee={this.setFee} FeeStore={FeeStore} />
                     </View>
                 </View>
             </ScrollView>

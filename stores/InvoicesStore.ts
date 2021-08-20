@@ -103,18 +103,25 @@ export default class InvoicesStore {
         memo: string,
         value: string,
         expiry: string = '3600',
-        lnurl?: LNURLWithdrawParams
+        lnurl?: LNURLWithdrawParams,
+        ampInvoice?: boolean,
+        routeHints?: boolean
     ) => {
         this.payment_request = null;
         this.creatingInvoice = true;
         this.creatingInvoiceError = false;
         this.error_msg = null;
 
-        RESTUtils.createInvoice({
+        let req: any = {
             memo,
             value,
             expiry
-        })
+        };
+
+        if (ampInvoice) req.is_amp = true;
+        if (routeHints) req.private = true;
+
+        RESTUtils.createInvoice(req)
             .then((data: any) => {
                 const invoice = new Invoice(data);
                 this.payment_request = invoice.getPaymentRequest;

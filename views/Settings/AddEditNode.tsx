@@ -1000,24 +1000,26 @@ export default class AddEditNode extends React.Component<
                             }
                         />
                     </View>
-                    <View
-                        style={{
-                            marginTop: 5
-                        }}
-                    >
-                        <CheckBox
-                            title={localeString(
-                                'views.Settings.AddEditNode.certificateVerification'
-                            )}
-                            checked={certVerification}
-                            onPress={() =>
-                                this.setState({
-                                    certVerification: !certVerification,
-                                    saved: false
-                                })
-                            }
-                        />
-                    </View>
+                    {!enableTor && (
+                        <View
+                            style={{
+                                marginTop: 5
+                            }}
+                        >
+                            <CheckBox
+                                title={localeString(
+                                    'views.Settings.AddEditNode.certificateVerification'
+                                )}
+                                checked={certVerification}
+                                onPress={() =>
+                                    this.setState({
+                                        certVerification: !certVerification,
+                                        saved: false
+                                    })
+                                }
+                            />
+                        </View>
+                    )}
                 </View>
 
                 {!existingAccount && implementation === 'lndhub' && (
@@ -1070,7 +1072,7 @@ export default class AddEditNode extends React.Component<
                             color: saved ? 'black' : 'white'
                         }}
                         onPress={() => {
-                            if (!saved && !certVerification) {
+                            if (!saved && !certVerification && !enableTor) {
                                 this.setState({ showCertModal: true });
                             } else {
                                 this.saveNodeConfiguration();
@@ -1086,7 +1088,9 @@ export default class AddEditNode extends React.Component<
                     />
                 </View>
 
-                {!saved && certVerification && <CertInstallInstructions />}
+                {!saved && certVerification && !enableTor && (
+                    <CertInstallInstructions />
+                )}
 
                 {saved && !newEntry && (
                     <View style={styles.button}>
@@ -1247,7 +1251,6 @@ const styles = StyleSheet.create({
     },
     picker: {
         height: 50,
-        width: 100,
         color: themeColor('text')
     },
     button: {

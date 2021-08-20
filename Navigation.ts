@@ -22,6 +22,7 @@ import BTCPayConfigQRScanner from './views/BTCPayConfigQRScanner';
 import LNDConnectConfigQRScanner from './views/LNDConnectConfigQRScanner';
 import LNDHubQRScanner from './views/LNDHubQRScanner';
 import NodeInfo from './views/NodeInfo';
+import Routing from './views/Routing';
 import Lockscreen from './views/Lockscreen';
 
 // Settings views
@@ -32,9 +33,9 @@ import About from './views/Settings/About';
 import SignMessage from './views/Settings/SignMessage';
 
 // new views
+import Activity from './views/Activity/Activity';
+import ActivityFilter from './views/Activity/ActivityFilter';
 import Channels from './views/Channels';
-import Activity from './views/Activity';
-import ActivityFilter from './views/ActivityFilter';
 import CoinControl from './views/UTXOs/CoinControl';
 import Utxo from './views/UTXOs/UTXO';
 import ImportAccount from './views/Accounts/ImportAccount';
@@ -124,8 +125,8 @@ const AppScenes = {
     NodeInfo: {
         screen: NodeInfo
     },
-    Channels: {
-        screen: Channels
+    Routing: {
+        screen: Routing
     },
     Activity: {
         screen: Activity

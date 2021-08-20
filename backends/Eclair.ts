@@ -65,7 +65,7 @@ export default class Eclair {
                 });
         }
         setTimeout(
-            id => {
+            (id: string) => {
                 delete calls[id];
             },
             9000,
@@ -470,8 +470,11 @@ export default class Eclair {
     supportsKeysend = () => false;
     supportsChannelManagement = () => true;
     supportsMPP = () => false;
+    supportsAMP = () => false;
     supportsCoinControl = () => false;
     supportsHopPicking = () => false;
+    supportsRouting = () => true;
+    supportsNodeInfo = () => true;
 }
 
 const mapInvoice = (isPending: any) => ({
