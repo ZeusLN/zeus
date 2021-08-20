@@ -148,6 +148,7 @@
     "views.Channel.closingRate": "(Optional) Sat per byte closing fee",
     "views.Channel.forceClose": "Force close",
     "views.Channel.confirmClose": "Confirm Channel Close",
+    "views.EditFee.error": "Error fetching fee rates",
     "views.Invoice.title": "Invoice",
     "views.Invoice.paid": "Paid",
     "views.Invoice.unpaid": "Unpaid",

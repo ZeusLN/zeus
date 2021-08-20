@@ -15,6 +15,8 @@ import Spinner from '../images/SVG/spinning-circles.svg';
 import { themeColor } from '../utils/ThemeUtils';
 import FeeStore from './../stores/FeeStore';
 import { inject, observer } from 'mobx-react';
+import { localeString } from '../utils/LocaleUtils';
+import Refresh from '../images/SVG/Refresh.svg';
 
 interface NodeInfoProps {
     FeeStore: FeeStore;
@@ -41,6 +43,12 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
     render() {
         const { navigation } = this.props;
         const { FeeStore } = this.props;
+        const {
+            recommendedFees,
+            loading,
+            error,
+            getOnchainFeesviaMempool
+        } = FeeStore;
         const BackButton = () => (
             <Icon
                 name="arrow-back"
@@ -49,89 +57,93 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                 underlayColor="transparent"
             />
         );
-        const { recommendedFees, loading } = FeeStore;
+        const ReloadButton = () => (
+            <TouchableOpacity onPress={() => getOnchainFeesviaMempool()}>
+                <Refresh stroke={themeColor('text')} />
+            </TouchableOpacity>
+        );
         return (
-            <SafeAreaView style={styles.maincontainer}>
-                <View style={styles.container}>
-                    <View style={{flex:0.05,flexWrap:'wrap'}}>
-                        <BackButton />
-                        <Text style={styles.maintext}>Edit network fee</Text>
-                    </View>
-
-                    <View style={styles.feeboxes}>
-                        <Text style={styles.feetitle}>Fastest Fee</Text>
-                        {loading ? (
-                            <View style={styles.loadingicon}>
-                                <Spinner />
-                            </View>
-                        ) : (
-                            <Text style={styles.feetext}>
-                                {recommendedFees['fastestFee']}
-                            </Text>
-                        )}
-                    </View>
-                    <View style={styles.feeboxes}>
-                        <Text style={styles.feetitle}>Half Hour Fee</Text>
-                        {loading ? (
-                            <View style={styles.loadingicon}>
-                                <Spinner />
-                            </View>
-                        ) : (
-                            <Text style={styles.feetext}>
-                                {recommendedFees['halfHourFee']}
-                            </Text>
-                        )}
-                    </View>
-                    <View style={styles.feeboxes}>
-                        <Text style={styles.feetitle}> Hour Fee</Text>
-                        {loading ? (
-                            <View style={styles.loadingicon}>
-                                <Spinner />
-                            </View>
-                        ) : (
-                            <Text style={styles.feetext}>
-                                {recommendedFees['hourFee']}
-                            </Text>
-                        )}
-                    </View>
-                    <View style={styles.feeboxes}>
-                        <Text style={styles.feetitle}> Minimum Fee</Text>
-                        {loading ? (
-                            <View style={styles.loadingicon}>
-                                <Spinner />
-                            </View>
-                        ) : (
-                            <Text style={styles.feetext}>
-                                {recommendedFees['minimumFee']}
-                            </Text>
-                        )}
-                    </View>
-                </View>
-                <View>
+            <View style={styles.maincontainer}>
+                <Header
+                    centerComponent={{
+                        text: 'Edit network fee',
+                        style: { color: themeColor('text') }
+                    }}
+                    backgroundColor={themeColor('background')}
+                    leftComponent={<BackButton />}
+                    rightComponent={<ReloadButton />}
+                />
+                {loading && !error && (
                     <View>
-                        <Text style={styles.custom}>Custom</Text>
+                        <Spinner />
                     </View>
-                    <TextInput
-                        style={{
-                            height: 75,
-                            width: 350,
-                            borderWidth: 1,
-                            borderColor: '#A7A9AC',
-                            borderRadius: 4,
-                            color: themeColor('text'),
-                            fontSize: 20
-                        }}
-                        keyboardType="numeric"
-                        defaultValue={this.state.customfee}
-                        onChangeText={(text: string) =>
-                            this.setState({ customfee: text })
-                        }
-                    ></TextInput>
-                    <View style={styles.button}>
-                        <Button title="CONFIRM FEE" color="yellow" />
+                )}
+                {recommendedFees['fastestFee'] && !loading && (
+                    <View style={styles.feescontainer}>
+                        <View style={styles.container}>
+                            <View style={styles.feeboxes}>
+                                <Text style={styles.feetitle}>Fastest Fee</Text>
+                                <Text style={styles.feetext}>
+                                    {recommendedFees['fastestFee']}
+                                </Text>
+                            </View>
+                            <View style={styles.feeboxes}>
+                                <Text style={styles.feetitle}>
+                                    Half Hour Fee
+                                </Text>
+                                <Text style={styles.feetext}>
+                                    {recommendedFees['halfHourFee']}
+                                </Text>
+                            </View>
+                            <View style={styles.feeboxes}>
+                                <Text style={styles.feetitle}>Hour Fee</Text>
+                                <Text style={styles.feetext}>
+                                    {recommendedFees['hourFee']}
+                                </Text>
+                            </View>
+                            <View style={styles.feeboxes}>
+                                <Text style={styles.feetitle}>Minimum Fee</Text>
+                                <Text style={styles.feetext}>
+                                    {recommendedFees['minimumFee']}
+                                </Text>
+                            </View>
+                        </View>
+                        <View>
+                            <View>
+                                <Text style={styles.custom}>Custom</Text>
+                            </View>
+                            <View style={{ justifyContent: 'space-evenly' }}>
+                                <TextInput
+                                    style={styles.feeboxes}
+                                    keyboardType="numeric"
+                                    defaultValue={this.state.customfee}
+                                    onChangeText={(text: string) =>
+                                        this.setState({ customfee: text })
+                                    }
+                                ></TextInput>
+
+                                <TouchableOpacity style={styles.Confirmbutton}>
+                                    <Text
+                                        style={{
+                                            fontSize: 18,
+                                            textAlign: 'center',
+                                            top: 8,
+                                            fontWeight: 'bold'
+                                        }}
+                                    >
+                                        CONFIRM FEE
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
                     </View>
-                </View>
-            </SafeAreaView>
+                )}
+                {error && !loading && (
+                    <Text style={{ fontSize: 30, color: 'red' }}>
+                        {localeString('views.EditFee.error')}
+                    </Text>
+                )}
+            </View>
         );
     }
 }
@@ -143,6 +155,7 @@ const styles = StyleSheet.create({
         flexDirection: 'column',
         justifyContent: 'space-evenly'
     },
+    feescontainer: {},
     container: {
         flex: 1,
         backgroundColor: themeColor('background'),
@@ -152,14 +165,16 @@ const styles = StyleSheet.create({
     },
     maintext: {
         color: themeColor('text'),
-        fontSize: 18
+        fontSize: 18,
+        top: -15
     },
     feeboxes: {
-        height: 75,
+        height: 65,
         width: 350,
         borderWidth: 1,
         borderColor: '#A7A9AC',
-        borderRadius: 4
+        borderRadius: 4,
+        top: -45
     },
     feetitle: {
         color: '#fff',
@@ -180,11 +195,12 @@ const styles = StyleSheet.create({
     custom: {
         color: '#A7A9AC',
         fontSize: 20,
-        top: -10
+        top: -55
     },
-    button: {
+    Confirmbutton: {
         alignItems: 'stretch',
-        height: 60,
-        paddingTop: 24
+        height: 40,
+        backgroundColor: 'yellow',
+        top: 0
     }
 });
