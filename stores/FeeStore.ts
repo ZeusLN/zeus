@@ -13,6 +13,7 @@ export default class FeeStore {
     @observable public loading: boolean = false;
     @observable public error: boolean = false;
     @observable public setFeesError: boolean = false;
+    @observable public setFeesErrorMsg: string;
     @observable public setFeesSuccess: boolean = false;
 
     @observable public dayEarned: string | number;
@@ -58,11 +59,6 @@ export default class FeeStore {
         this.loading = false;
     };
 
-    feesError = () => {
-        this.loading = false;
-        this.setFeesError = true;
-    };
-
     @action
     public getFees = () => {
         this.loading = true;
@@ -91,17 +87,19 @@ export default class FeeStore {
     public setFees = (
         newBaseFeeMsat: string,
         newFeeRatePPM: any,
+        timeLockDelta: number = 4,
         channelPoint?: string,
         channelId?: string
     ) => {
         this.loading = true;
         this.setFeesError = false;
+        this.setFeesErrorMsg = '';
         this.setFeesSuccess = false;
 
         const data: any = {
             base_fee_msat: newBaseFeeMsat,
             fee_rate: newFeeRatePPM,
-            time_lock_delta: 4
+            time_lock_delta: timeLockDelta
         };
 
         if (channelId) {
@@ -124,8 +122,10 @@ export default class FeeStore {
                 this.loading = false;
                 this.setFeesSuccess = true;
             })
-            .catch(() => {
-                this.feesError();
+            .catch((err: any) => {
+                this.setFeesErrorMsg = err.toString();
+                this.loading = false;
+                this.setFeesError = true;
             });
     };
 

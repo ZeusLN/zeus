@@ -4,6 +4,8 @@ import { Button } from 'react-native-elements';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
+import { inject, observer } from 'mobx-react';
+
 import FeeStore from './../stores/FeeStore';
 
 interface SetFeesFormProps {
@@ -20,8 +22,11 @@ interface SetFeesFormState {
     feesSubmitted: boolean;
     newBaseFeeMsat: string;
     newFeeRatePPM: string;
+    timeLockDelta: string;
 }
 
+@inject('FeeStore')
+@observer
 export default class SetFeesForm extends React.Component<
     SetFeesFormProps,
     SetFeesFormState
@@ -30,7 +35,8 @@ export default class SetFeesForm extends React.Component<
         showNewFeesForm: false,
         feesSubmitted: false,
         newBaseFeeMsat: '1',
-        newFeeRatePPM: '1'
+        newFeeRatePPM: '1',
+        timeLockDelta: '144'
     };
 
     render() {
@@ -38,7 +44,8 @@ export default class SetFeesForm extends React.Component<
             showNewFeesForm,
             feesSubmitted,
             newBaseFeeMsat,
-            newFeeRatePPM
+            newFeeRatePPM,
+            timeLockDelta
         } = this.state;
         const {
             FeeStore,
@@ -48,7 +55,13 @@ export default class SetFeesForm extends React.Component<
             channelId,
             expanded
         } = this.props;
-        const { setFees, loading, setFeesError, setFeesSuccess } = FeeStore;
+        const {
+            setFees,
+            loading,
+            setFeesError,
+            setFeesErrorMsg,
+            setFeesSuccess
+        } = FeeStore;
 
         return (
             <React.Fragment>
@@ -101,7 +114,11 @@ export default class SetFeesForm extends React.Component<
                                     color: 'red'
                                 }}
                             >
-                                {localeString('components.SetFeesForm.error')}
+                                {setFeesErrorMsg
+                                    ? setFeesErrorMsg
+                                    : localeString(
+                                          'components.SetFeesForm.error'
+                                      )}
                             </Text>
                         )}
 
@@ -123,6 +140,7 @@ export default class SetFeesForm extends React.Component<
                             autoCorrect={false}
                             style={styles.textInput}
                         />
+
                         <Text style={styles.text}>
                             {localeString('components.SetFeesForm.ppm')}
                         </Text>
@@ -142,6 +160,27 @@ export default class SetFeesForm extends React.Component<
                             style={styles.textInput}
                         />
 
+                        <Text style={styles.text}>
+                            {localeString(
+                                'components.SetFeesForm.timeLockDelta'
+                            )}
+                        </Text>
+                        <TextInput
+                            keyboardType="numeric"
+                            placeholder={'144'}
+                            placeholderTextColor="darkgray"
+                            value={timeLockDelta}
+                            onChangeText={(text: string) =>
+                                this.setState({
+                                    timeLockDelta: text
+                                })
+                            }
+                            numberOfLines={1}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            style={styles.textInput}
+                        />
+
                         <View style={styles.button}>
                             <Button
                                 title={localeString(
@@ -151,6 +190,7 @@ export default class SetFeesForm extends React.Component<
                                     setFees(
                                         newBaseFeeMsat,
                                         newFeeRatePPM,
+                                        Number(timeLockDelta),
                                         channelPoint,
                                         channelId
                                     );
