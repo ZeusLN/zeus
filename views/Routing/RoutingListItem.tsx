@@ -20,8 +20,8 @@ export function RoutingListItem({
     return (
         <View
             style={{
-                padding: 16,
-                height: 110,
+                padding: 10,
+                height: 90,
                 justifyContent: 'space-around',
                 borderBottomColor: themeColor('secondary'),
                 borderBottomWidth: 1

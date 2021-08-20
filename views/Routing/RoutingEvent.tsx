@@ -9,12 +9,11 @@ import {
     View
 } from 'react-native';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
-import Channel from './../../models/Channel';
-import BalanceSlider from './../../components/BalanceSlider';
+import ForwardEvent from './../../models/ForwardEvent';
+
 import SetFeesForm from './../../components/SetFeesForm';
-import Identicon from 'identicon.js';
 import { inject, observer } from 'mobx-react';
-const hash = require('object-hash');
+
 import PrivacyUtils from './../../utils/PrivacyUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -24,7 +23,7 @@ import FeeStore from './../../stores/FeeStore';
 import UnitsStore from './../../stores/UnitsStore';
 import SettingsStore from './../../stores/SettingsStore';
 
-interface ChannelProps {
+interface RoutingEventProps {
     navigation: any;
     ChannelsStore: ChannelsStore;
     FeeStore: FeeStore;
@@ -32,59 +31,12 @@ interface ChannelProps {
     SettingsStore: SettingsStore;
 }
 
-interface ChannelState {
-    confirmCloseChannel: boolean;
-    satPerByte: string;
-    forceClose: boolean;
-}
-
 @inject('ChannelsStore', 'UnitsStore', 'FeeStore', 'SettingsStore')
 @observer
-export default class ChannelView extends React.Component<
-    ChannelProps,
-    ChannelState
+export default class RoutingEvent extends React.Component<
+    RoutingEventProps,
+    {}
 > {
-    state = {
-        confirmCloseChannel: false,
-        satPerByte: '',
-        forceClose: false
-    };
-
-    closeChannel = (
-        channelPoint: string,
-        channelId: string,
-        satPerByte?: string | null,
-        forceClose?: boolean | null
-    ) => {
-        const { ChannelsStore, navigation } = this.props;
-
-        // lnd
-        if (channelPoint) {
-            const [funding_txid_str, output_index] = channelPoint.split(':');
-
-            if (satPerByte) {
-                ChannelsStore.closeChannel(
-                    { funding_txid_str, output_index },
-                    null,
-                    satPerByte,
-                    forceClose
-                );
-            } else {
-                ChannelsStore.closeChannel(
-                    { funding_txid_str, output_index },
-                    null,
-                    null,
-                    forceClose
-                );
-            }
-        } else if (channelId) {
-            // c-lightning, eclair
-            ChannelsStore.closeChannel(null, channelId, satPerByte, forceClose);
-        }
-
-        navigation.navigate('Wallet');
-    };
-
     render() {
         const {
             navigation,
@@ -93,85 +45,31 @@ export default class ChannelView extends React.Component<
             FeeStore,
             SettingsStore
         } = this.props;
-        const { confirmCloseChannel, satPerByte, forceClose } = this.state;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { channelFees } = FeeStore;
-        const { nodes } = ChannelsStore;
+        const { aliasesById } = ChannelsStore;
         const { settings, implementation } = SettingsStore;
         const { lurkerMode } = settings;
 
-        const channel: Channel = navigation.getParam('channel', null);
+        const routingEvent: ForwardEvent = navigation.getParam(
+            'routingEvent',
+            null
+        );
         const {
-            channel_point,
-            commit_weight,
-            localBalance,
-            commit_fee,
-            csv_delay,
-            fee_per_kw,
-            total_satoshis_received,
-            isActive,
-            remoteBalance,
-            unsettled_balance,
-            total_satoshis_sent,
-            remote_pubkey,
-            capacity,
-            alias,
-            channelId
-        } = channel;
-        const privateChannel = channel.private;
+            chan_id_in,
+            chan_id_out,
+            amt_in,
+            amt_out,
+            fee,
+            getTime
+        } = routingEvent;
 
-        const channelName =
-            (nodes[remote_pubkey] && nodes[remote_pubkey].alias) ||
-            alias ||
-            channelId;
-
-        const channelDisplay = PrivacyUtils.sensitiveValue(channelName, 8);
-
-        const data = new Identicon(
-            hash.sha1(alias || remote_pubkey || channelId),
-            255
-        ).toString();
-
-        const channelFee = channelFees[channel_point];
-
-        const channelBalanceLocal = PrivacyUtils.sensitiveValue(
-            getAmount(localBalance || 0),
-            8,
-            true
-        );
-        const channelBalanceRemote = PrivacyUtils.sensitiveValue(
-            getAmount(remoteBalance || 0),
-            8,
-            true
-        );
-
-        const unsettledBalance = PrivacyUtils.sensitiveValue(
-            getAmount(unsettled_balance),
-            8,
-            true
-        );
-
-        const totalSatoshisReceived = PrivacyUtils.sensitiveValue(
-            getAmount(total_satoshis_received || 0),
-            8,
-            true
-        );
-        const totalSatoshisSent = PrivacyUtils.sensitiveValue(
-            getAmount(total_satoshis_sent || 0),
-            8,
-            true
-        );
-
-        const capacityDisplay = PrivacyUtils.sensitiveValue(
-            getAmount(capacity),
-            5,
-            true
-        );
+        // const channelFee = channelFees[channel_point];
 
         const BackButton = () => (
             <Icon
                 name="arrow-back"
-                onPress={() => navigation.navigate('Wallet')}
+                onPress={() => navigation.navigate('Routing')}
                 color="#fff"
                 underlayColor="transparent"
             />
@@ -182,120 +80,69 @@ export default class ChannelView extends React.Component<
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: localeString('views.Channel.title'),
-                        style: { color: '#fff' }
+                        text: localeString('views.Routing.RoutingEvent.title'),
+                        style: { color: themeColor('text') }
                     }}
-                    backgroundColor="#1f2328"
+                    backgroundColor={themeColor('background')}
                 />
                 <View style={styles.content}>
                     <View style={styles.center}>
-                        <Text style={styles.alias}>{channelDisplay}</Text>
-                        {remote_pubkey && (
-                            <Text style={styles.pubkey}>
-                                {PrivacyUtils.sensitiveValue(remote_pubkey)}
-                            </Text>
-                        )}
-
-                        <Image
-                            source={{ uri: `data:image/png;base64,${data}` }}
-                            style={{ width: 200, height: 200 }}
-                        />
-                    </View>
-
-                    <BalanceSlider
-                        localBalance={lurkerMode ? 50 : localBalance}
-                        remoteBalance={lurkerMode ? 50 : remoteBalance}
-                    />
-
-                    <View style={styles.balances}>
                         <TouchableOpacity onPress={() => changeUnits()}>
-                            <Text style={styles.balance}>{`${localeString(
-                                'views.Channel.localBalance'
-                            )}: ${units && channelBalanceLocal}`}</Text>
-                            <Text style={styles.balance}>{`${localeString(
-                                'views.Channel.remoteBalance'
-                            )}: ${units && channelBalanceRemote}`}</Text>
-                            {unsettled_balance && (
-                                <Text style={styles.balance}>{`${localeString(
-                                    'views.Channel.unsettledBalance'
-                                )}: ${units && unsettledBalance}`}</Text>
-                            )}
+                            <Text style={styles.fee}>
+                                {PrivacyUtils.sensitiveValue(
+                                    getAmount(fee),
+                                    3,
+                                    true
+                                )}
+                            </Text>
                         </TouchableOpacity>
                     </View>
 
-                    <Text style={styles.label}>
-                        {localeString('views.Channel.status')}:
-                    </Text>
-                    <Text
-                        style={{
-                            ...styles.value,
-                            color: isActive ? 'green' : 'red'
-                        }}
-                    >
-                        {isActive
-                            ? localeString('views.Channel.active')
-                            : localeString('views.Channel.inactive')}
-                    </Text>
-
-                    <Text style={styles.label}>
-                        {localeString('views.Channel.private')}:
-                    </Text>
-                    <Text
-                        style={{
-                            ...styles.value,
-                            color: privateChannel ? 'green' : '#808000'
-                        }}
-                    >
-                        {privateChannel ? 'True' : 'False'}
-                    </Text>
-
-                    {total_satoshis_received && (
+                    {chan_id_in && (
                         <View>
                             <Text style={styles.label}>
-                                {localeString('views.Channel.totalReceived')}:
-                            </Text>
-                            <TouchableOpacity onPress={() => changeUnits()}>
-                                <Text style={styles.value}>
-                                    {units && totalSatoshisReceived}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {total_satoshis_sent && (
-                        <View>
-                            <Text style={styles.label}>
-                                {localeString('views.Channel.totalSent')}:
-                            </Text>
-                            <TouchableOpacity onPress={() => changeUnits()}>
-                                <Text style={styles.value}>
-                                    {units && totalSatoshisSent}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {capacity && (
-                        <View>
-                            <Text style={styles.label}>
-                                {localeString('views.Channel.capacity')}:
-                            </Text>
-                            <TouchableOpacity onPress={() => changeUnits()}>
-                                <Text style={styles.value}>
-                                    {units && capacityDisplay}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {channelFee && channelFee.base_fee_msat && (
-                        <View>
-                            <Text style={styles.label}>
-                                {localeString('views.Channel.baseFee')}:
+                                {localeString(
+                                    'views.NodeInfo.ForwardingHistory.srcChannelId'
+                                )}
+                                :
                             </Text>
                             <Text style={styles.value}>
                                 {PrivacyUtils.sensitiveValue(
-                                    channelFee.base_fee_msat,
+                                    aliasesById[chan_id_in] || chan_id_in,
+                                    10
+                                )}
+                            </Text>
+                        </View>
+                    )}
+
+                    {chan_id_out && (
+                        <View>
+                            <Text style={styles.label}>
+                                {localeString(
+                                    'views.NodeInfo.ForwardingHistory.dstChannelId'
+                                )}
+                                :
+                            </Text>
+                            <Text style={styles.value}>
+                                {PrivacyUtils.sensitiveValue(
+                                    aliasesById[chan_id_out] || chan_id_out,
+                                    10
+                                )}
+                            </Text>
+                        </View>
+                    )}
+
+                    {amt_in && (
+                        <View>
+                            <Text style={styles.label}>
+                                {localeString(
+                                    'views.NodeInfo.ForwardingHistory.amtIn'
+                                )}
+                                :
+                            </Text>
+                            <Text style={styles.value}>
+                                {PrivacyUtils.sensitiveValue(
+                                    getAmount(amt_in),
                                     5,
                                     true
                                 )}
@@ -303,203 +150,54 @@ export default class ChannelView extends React.Component<
                         </View>
                     )}
 
-                    {channelFee && channelFee.fee_rate && (
+                    {amt_out && (
                         <View>
                             <Text style={styles.label}>
-                                {localeString('views.Channel.feeRate')}:
+                                {localeString(
+                                    'views.NodeInfo.ForwardingHistory.amtOut'
+                                )}
+                                :
                             </Text>
                             <Text style={styles.value}>
                                 {PrivacyUtils.sensitiveValue(
-                                    channelFee.fee_rate * 1000000,
-                                    2,
+                                    getAmount(amt_out),
+                                    5,
                                     true
                                 )}
                             </Text>
                         </View>
                     )}
 
-                    {commit_weight && (
+                    {getTime && (
                         <View>
                             <Text style={styles.label}>
-                                {localeString('views.Channel.commitWeight')}:
-                            </Text>
-                            <Text style={styles.value}>{commit_weight}</Text>
-                        </View>
-                    )}
-
-                    {commit_fee && (
-                        <View>
-                            <Text style={styles.label}>
-                                {localeString('views.Channel.commitFee')}:
+                                {localeString(
+                                    'views.NodeInfo.ForwardingHistory.timestamp'
+                                )}
+                                :
                             </Text>
                             <Text style={styles.value}>
-                                {PrivacyUtils.sensitiveValue(
-                                    commit_fee,
-                                    4,
-                                    true
-                                )}
+                                {PrivacyUtils.sensitiveValue(getTime, 6, true)}
                             </Text>
                         </View>
                     )}
 
-                    {csv_delay && (
-                        <View>
-                            <Text style={styles.label}>
-                                {localeString('views.Channel.csvDelay')}:
-                            </Text>
-                            <Text style={styles.value}>{csv_delay}</Text>
-                        </View>
-                    )}
-
-                    {fee_per_kw && (
-                        <View>
-                            <Text style={styles.label}>
-                                {localeString('views.Channel.feePerKw')}:
-                            </Text>
-                            <Text style={styles.value}>
-                                {PrivacyUtils.sensitiveValue(
-                                    fee_per_kw,
-                                    6,
-                                    true
-                                )}
-                            </Text>
-                        </View>
-                    )}
-
-                    {implementation === 'lnd' && (
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString('views.Channel.keysend')}
-                                icon={{
-                                    name: 'send',
-                                    size: 25,
-                                    color: '#fff'
-                                }}
-                                onPress={() =>
-                                    navigation.navigate('Send', {
-                                        destination: remote_pubkey,
-                                        transactionType: 'Keysend',
-                                        isValid: true
-                                    })
-                                }
-                                buttonStyle={{
-                                    backgroundColor: 'grey',
-                                    borderRadius: 30
-                                }}
-                            />
-                        </View>
-                    )}
-
-                    <SetFeesForm
-                        baseFeeMsat={
-                            channelFee &&
-                            channelFee.base_fee_msat &&
-                            channelFee.base_fee_msat.toString()
-                        }
-                        feeRate={
-                            channelFee &&
-                            channelFee.fee_rate &&
-                            channelFee.fee_rate.toString()
-                        }
-                        channelPoint={channel_point}
-                        channelId={channelId}
-                        FeeStore={FeeStore}
-                    />
-
-                    <View style={styles.button}>
-                        <Button
-                            title={
-                                confirmCloseChannel
-                                    ? localeString('views.Channel.cancelClose')
-                                    : localeString('views.Channel.close')
+                    {false && (
+                        <SetFeesForm
+                            baseFeeMsat={
+                                channelFee &&
+                                channelFee.base_fee_msat &&
+                                channelFee.base_fee_msat.toString()
                             }
-                            icon={{
-                                name: confirmCloseChannel ? 'cancel' : 'delete',
-                                size: 25,
-                                color: '#fff'
-                            }}
-                            onPress={() =>
-                                this.setState({
-                                    confirmCloseChannel: !confirmCloseChannel
-                                })
+                            feeRate={
+                                channelFee &&
+                                channelFee.fee_rate &&
+                                channelFee.fee_rate.toString()
                             }
-                            buttonStyle={{
-                                backgroundColor: confirmCloseChannel
-                                    ? 'black'
-                                    : 'red',
-                                borderRadius: 30
-                            }}
+                            channelPoint={channel_point}
+                            channelId={channelId}
+                            FeeStore={FeeStore}
                         />
-                    </View>
-
-                    {confirmCloseChannel && (
-                        <React.Fragment>
-                            {(implementation === 'lnd' || !implementation) && (
-                                <React.Fragment>
-                                    <Text
-                                        style={{
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Channel.closingRate'
-                                        )}
-                                    </Text>
-                                    <TextInput
-                                        keyboardType="numeric"
-                                        placeholder={'2'}
-                                        placeholderTextColor="darkgray"
-                                        value={satPerByte}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                satPerByte: text
-                                            })
-                                        }
-                                        numberOfLines={1}
-                                        autoCapitalize="none"
-                                        autoCorrect={false}
-                                        style={styles.textInput}
-                                    />
-                                    {implementation === 'lnd' && (
-                                        <CheckBox
-                                            title={localeString(
-                                                'views.Channel.forceClose'
-                                            )}
-                                            checked={forceClose}
-                                            onPress={() =>
-                                                this.setState({
-                                                    forceClose: !forceClose
-                                                })
-                                            }
-                                        />
-                                    )}
-                                </React.Fragment>
-                            )}
-                            <View style={styles.button}>
-                                <Button
-                                    title={localeString(
-                                        'views.Channel.confirmClose'
-                                    )}
-                                    icon={{
-                                        name: 'delete-forever',
-                                        size: 25,
-                                        color: '#fff'
-                                    }}
-                                    onPress={() =>
-                                        this.closeChannel(
-                                            channel_point,
-                                            channelId,
-                                            satPerByte,
-                                            forceClose
-                                        )
-                                    }
-                                    buttonStyle={{
-                                        backgroundColor: 'red',
-                                        borderRadius: 30
-                                    }}
-                                />
-                            </View>
-                        </React.Fragment>
                     )}
                 </View>
             </ScrollView>
@@ -526,19 +224,17 @@ const styles = StyleSheet.create({
         paddingBottom: 10,
         color: themeColor('text')
     },
-    pubkey: {
+    fee: {
         paddingTop: 10,
         paddingBottom: 30,
-        color: themeColor('text')
+        color: themeColor('highlight'),
+        fontSize: 35,
+        fontWeight: 'bold'
     },
     balance: {
         fontSize: 15,
         fontWeight: 'bold',
         color: themeColor('text')
-    },
-    balances: {
-        paddingBottom: 10,
-        alignItems: 'center'
     },
     value: {
         paddingBottom: 5,
