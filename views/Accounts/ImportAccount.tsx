@@ -34,10 +34,7 @@ interface ImportAccountState {
     address_type: string;
 }
 
-@inject(
-    'SettingsStore',
-    'UTXOsStore'
-)
+@inject('SettingsStore', 'UTXOsStore')
 @observer
 export default class ImportAccount extends React.Component<
     ImportAccountProps,
@@ -59,9 +56,13 @@ export default class ImportAccount extends React.Component<
         console.log('~~~');
         console.log(qrResponse);
         const parsed = JSON.parse(qrResponse);
-        const name = parsed.keystore && parsed.keystore.label || '';
-        const extended_public_key = parsed.ExtPubKey || parsed.keystore && parsed.keystore.xpub || '';
-        const master_key_fingerprint = parsed.MasterFingerprint || parsed.keystore && parsed.keystore.ckcc_xfp.toString() || '';
+        const name = (parsed.keystore && parsed.keystore.label) || '';
+        const extended_public_key =
+            parsed.ExtPubKey || (parsed.keystore && parsed.keystore.xpub) || '';
+        const master_key_fingerprint =
+            parsed.MasterFingerprint ||
+            (parsed.keystore && parsed.keystore.ckcc_xfp.toString()) ||
+            '';
         const address_type = parsed.wallet_type || '';
 
         this.setState({
@@ -95,18 +96,14 @@ export default class ImportAccount extends React.Component<
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: localeString(
-                            'views.ImportAccount.title'
-                        ),
+                        text: localeString('views.ImportAccount.title'),
                         style: { color: themeColor('text') }
                     }}
                     backgroundColor="grey"
                 />
                 <View style={styles.content}>
                     <Text style={styles.label}>
-                        {localeString(
-                            'views.ImportAccount.name'
-                        )}
+                        {localeString('views.ImportAccount.name')}
                     </Text>
                     <TextInput
                         placeholder={'My airgapped hardware wallet'}
@@ -120,12 +117,12 @@ export default class ImportAccount extends React.Component<
                         placeholderTextColor="gray"
                     />
                     <Text style={styles.label}>
-                        {localeString(
-                            'views.ImportAccount.extendedPubKey'
-                        )}
+                        {localeString('views.ImportAccount.extendedPubKey')}
                     </Text>
                     <TextInput
-                        placeholder={'xpub6CrfKnKeMWmHvuVWVsggTAPH2cwEHVnuHoVoqFcqZDgFAs1eM4UzjYsnjocuAHdzKp13uEn86RpZCBsY54iwvV5uLoxdvJHYiSFhgp5Pead'}
+                        placeholder={
+                            'xpub6CrfKnKeMWmHvuVWVsggTAPH2cwEHVnuHoVoqFcqZDgFAs1eM4UzjYsnjocuAHdzKp13uEn86RpZCBsY54iwvV5uLoxdvJHYiSFhgp5Pead'
+                        }
                         value={extended_public_key}
                         onChangeText={(text: string) =>
                             this.setState({
@@ -154,9 +151,7 @@ export default class ImportAccount extends React.Component<
                         placeholderTextColor="gray"
                     />
                     <Text style={styles.label}>
-                        {localeString(
-                            'views.ImportAccount.addressType'
-                        )}
+                        {localeString('views.ImportAccount.addressType')}
                     </Text>
                     <TextInput
                         placeholder={'mkf'}
@@ -172,7 +167,10 @@ export default class ImportAccount extends React.Component<
                     <Button
                         title="ImportAccount"
                         onPress={() =>
-                            this.props.UTXOsStore.importAccount({ ...this.state, dry_run: true })
+                            this.props.UTXOsStore.importAccount({
+                                ...this.state,
+                                dry_run: true
+                            })
                         }
                     />
                     <Button
