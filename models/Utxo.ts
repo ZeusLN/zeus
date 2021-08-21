@@ -20,7 +20,7 @@ export default class Utxo extends BaseModel {
     }
 
     @computed public get getAmount(): number | string {
-        return this.amount_sat;
+        return this.amount_sat || this.value;
     }
 
     @computed public get getConfs(): number {
@@ -28,6 +28,8 @@ export default class Utxo extends BaseModel {
     }
 
     @computed public get getOutpoint(): string {
-        return `${this.outpoint.txid_str}:${this.outpoint.output_index}`;
+        return this.outpoint.txid_str
+            ? `${this.outpoint.txid_str}:${this.outpoint.output_index}`
+            : `${item.txid}:${item.output}`;
     }
 }

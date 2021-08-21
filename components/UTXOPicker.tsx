@@ -99,17 +99,16 @@ export default class UTXOPicker extends React.Component<
         const { utxosSelected, selectedBalance } = this.state;
         let newArray: string[] = [];
         utxosSelected.forEach((utxo: string) => newArray.push(utxo));
-        const { txid, output } = item;
-        const itemId: string = `${txid}:${output}`;
+        const itemId: string = item.getOutpoint;
         let balance;
         if (!newArray.includes(itemId)) {
             newArray.push(itemId);
-            balance = selectedBalance + item.value;
+            balance = selectedBalance + Number(item.getAmount);
         } else {
             newArray = remove(newArray, function(n) {
                 return n !== itemId;
             });
-            balance = selectedBalance - item.value;
+            balance = selectedBalance - Number(item.getAmount);
         }
 
         this.setState({ utxosSelected: newArray, selectedBalance: balance });
@@ -195,8 +194,8 @@ export default class UTXOPicker extends React.Component<
                                         renderItem={({ item }: any) => (
                                             <ListItem
                                                 key={item.txid}
-                                                title={`${item.txid}:${item.output}`}
-                                                subtitle={`${item.value.toString()} ${localeString(
+                                                title={item.getOutpoint}
+                                                subtitle={`${item.getAmount.toString()} ${localeString(
                                                     'views.Send.satoshis'
                                                 )}`}
                                                 containerStyle={{
@@ -207,7 +206,7 @@ export default class UTXOPicker extends React.Component<
                                                 }}
                                                 leftElement={
                                                     utxosPicked.includes(
-                                                        `${item.txid}:${item.output}`
+                                                        item.getOutpoint
                                                     )
                                                         ? theme === 'dark'
                                                             ? Icon(SelectedDark)
@@ -223,14 +222,14 @@ export default class UTXOPicker extends React.Component<
                                                 }
                                                 titleStyle={{
                                                     color: utxosPicked.includes(
-                                                        `${item.txid}:${item.output}`
+                                                        item.getOutpoint
                                                     )
                                                         ? 'orange'
                                                         : themeColor('text')
                                                 }}
                                                 subtitleStyle={{
                                                     color: utxosPicked.includes(
-                                                        `${item.txid}:${item.output}`
+                                                        item.getOutpoint
                                                     )
                                                         ? 'orange'
                                                         : themeColor(

@@ -435,21 +435,21 @@ export default class Settings extends React.Component<
                     />
                 </View>
 
-                {false && <View style={styles.button}>
-                    <Button
-                        title={localeString(
-                            'views.ImportAccount.title'
-                        )}
-                        buttonStyle={{
-                            backgroundColor: 'green',
-                            borderRadius: 30,
-                            width: 350,
-                            alignSelf: 'center'
-                        }}
-                        onPress={() => navigation.navigate('ImportAccount')}
-                        style={styles.button}
-                    />
-                </View>}
+                {false && (
+                    <View style={styles.button}>
+                        <Button
+                            title={localeString('views.ImportAccount.title')}
+                            buttonStyle={{
+                                backgroundColor: 'green',
+                                borderRadius: 30,
+                                width: 350,
+                                alignSelf: 'center'
+                            }}
+                            onPress={() => navigation.navigate('ImportAccount')}
+                            style={styles.button}
+                        />
+                    </View>
+                )}
 
                 {RESTUtils.supportsMessageSigning() && (
                     <View style={styles.button}>
