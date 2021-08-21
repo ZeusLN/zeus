@@ -7,7 +7,7 @@ import { BalanceBar } from '../../components/Channels/BalanceBar';
 import { Row } from '../../components/layout/Row';
 import { Status } from '../../views/Channels/ChannelsPane';
 import { Tag } from './Tag';
-import { Value } from '../../components/Value';
+import { Amount } from '../Amount';
 
 export function ChannelItem({
     title,
@@ -51,8 +51,8 @@ export function ChannelItem({
                 />
             </Row>
             <Row justify="space-between">
-                <Value sats={outbound} />
-                <Value sats={inbound} />
+                <Amount sats={outbound} sensitive />
+                <Amount sats={inbound} sensitive />
             </Row>
         </View>
     );
