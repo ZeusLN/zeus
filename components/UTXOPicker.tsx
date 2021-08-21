@@ -20,10 +20,7 @@ import { themeColor } from './../utils/ThemeUtils';
 import stores from './../stores/Stores';
 import UTXOsStore from './../stores/UTXOsStore';
 
-const SelectedLight = require('./../images/selected-light.png');
-const SelectedDark = require('./../images/selected-dark.png');
-const UnselectedLight = require('./../images/unselected-light.png');
-const UnselectedDark = require('./../images/unselected-dark.png');
+import Bitcoin from './../images/SVG/Bitcoin Circle.svg';
 
 interface UTXOPickerProps {
     title?: string;
@@ -208,14 +205,8 @@ export default class UTXOPicker extends React.Component<
                                                     utxosPicked.includes(
                                                         item.getOutpoint
                                                     )
-                                                        ? theme === 'dark'
-                                                            ? Icon(SelectedDark)
-                                                            : Icon(
-                                                                  SelectedLight
-                                                              )
-                                                        : theme === 'dark'
-                                                        ? Icon(UnselectedDark)
-                                                        : Icon(UnselectedLight)
+                                                        ? Bitcoin
+                                                        : null
                                                 }
                                                 onPress={() =>
                                                     this.toggleItem(item)
@@ -291,7 +282,7 @@ export default class UTXOPicker extends React.Component<
                         <Text
                             style={{
                                 color: themeColor('text'),
-                                paddingLeft: 10
+                                textDecorationLine: 'underline'
                             }}
                         >
                             {title || DEFAULT_TITLE}
