@@ -87,12 +87,93 @@ export default class TransactionsStore {
             });
     };
 
+    public sendCoinsLNDCoinControl = (
+        transactionRequest: TransactionRequest
+    ) => {
+        const { utxos, addr, amount, sat_per_byte } = transactionRequest;
+        const inputs: any = [];
+        const outputs: any = [];
+
+        utxos.forEach(input => {
+            const [txid_str, output_index] = input.split(':');
+            inputs.push({ txid_str, output_index: Number(output_index) });
+        });
+
+        outputs.push({ key: addr, value: Number(amount) });
+
+        const fundPsbtRequest = {
+            raw: {
+                outputs,
+                inputs
+            },
+            sat_per_vbyte: Number(sat_per_byte)
+        };
+
+        console.log('fundPsbtRequest');
+        console.log(fundPsbtRequest);
+
+        RESTUtils.fundPsbt(fundPsbtRequest)
+            .then((data: any) => {
+                const funded_psbt = data.funded_psbt;
+                console.log('fundPSBT result');
+                console.log(data);
+
+                RESTUtils.finalizePsbt({ funded_psbt })
+                    .then((data: any) => {
+                        const signed_psbt = data.signed_psbt;
+                        console.log('finalizePSBT result');
+                        console.log(data);
+
+                        RESTUtils.publishTransaction({ tx_hex: signed_psbt })
+                            .then((data: any) => {
+                                console.log('publishTransaction result');
+                                console.log(data);
+
+                                this.txid = signed_psbt;
+                                this.loading = false;
+                            })
+                            .catch((error: any) => {
+                                // handle error
+                                console.log('publishTransaction err');
+                                console.log(error);
+                                this.error_msg =
+                                    error.publish_error || error.message;
+                                this.error = true;
+                                this.loading = false;
+                            });
+                    })
+                    .catch((error: any) => {
+                        // handle error
+                        console.log('finalizePSBT err');
+                        console.log(error);
+                        this.error_msg = error.message;
+                        this.error = true;
+                        this.loading = false;
+                    });
+            })
+            .catch((error: any) => {
+                // handle error
+                console.log('fundPSBT err');
+                console.log(error);
+                this.error_msg = error.message;
+                this.error = true;
+                this.loading = false;
+            });
+    };
+
     @action
     public sendCoins = (transactionRequest: TransactionRequest) => {
         this.error = false;
         this.error_msg = null;
         this.txid = null;
         this.loading = true;
+        if (
+            this.settingsStore.implementation === 'lnd' &&
+            transactionRequest.utxos &&
+            transactionRequest.utxos.length > 0
+        ) {
+            return this.sendCoinsLNDCoinControl(transactionRequest);
+        }
         RESTUtils.sendCoins(transactionRequest)
             .then((data: any) => {
                 this.txid = data.txid;

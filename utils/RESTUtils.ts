@@ -77,6 +77,12 @@ class RESTUtils {
     importAccount = (...args: any[]) => this.call('importAccount', args);
     signMessage = (...args: any[]) => this.call('signMessage', args);
 
+    fundPsbt = (...args: any[]) => this.call('fundPsbt', args);
+    finalizePsbt = (...args: any[]) => this.call('finalizePsbt', args);
+    publishTransaction = (...args: any[]) =>
+        this.call('publishTransaction', args);
+    bumpFee = (...args: any[]) => this.call('bumpFee', args);
+
     // lndhub
     createAccount = (...args: any[]) => this.call('createAccount', args);
     login = (...args: any[]) => this.call('login', args);
