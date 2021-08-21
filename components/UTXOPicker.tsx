@@ -288,15 +288,19 @@ export default class UTXOPicker extends React.Component<
                             {title || DEFAULT_TITLE}
                         </Text>
                         {utxosSet.length > 0 ? (
-                            <Text
-                                style={{
-                                    padding: 10,
-                                    fontSize: 16,
-                                    color: themeColor('text')
-                                }}
+                            <TouchableOpacity
+                                onPress={() => this.clearSelection()}
                             >
-                                {this.displayValues()}
-                            </Text>
+                                <Text
+                                    style={{
+                                        padding: 10,
+                                        fontSize: 16,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {this.displayValues()}
+                                </Text>
+                            </TouchableOpacity>
                         ) : (
                             <Picker
                                 selectedValue={`${selectedValue}`}
