@@ -65,7 +65,7 @@ export default class UnitsStore {
         const { fiat } = settings;
         const units = fixedUnits || this.units;
 
-        const wholeSats = value.toString().split('.')[0];
+        const [wholeSats] = value.toString().split('.');
         const sats = (wholeSats && Number(wholeSats)) || 0;
         const negative = sats < 0;
         const absValueSats = Math.abs(sats);
@@ -122,7 +122,7 @@ export default class UnitsStore {
         const { fiat } = settings;
         const units = fixedUnits || this.units;
 
-        const wholeSats = value.toString().split('.')[0];
+        const [wholeSats] = value.toString().split('.');
         if (units === 'btc') {
             // handle negative values
             const valueToProcess = (wholeSats && wholeSats.toString()) || '0';

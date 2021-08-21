@@ -7,7 +7,7 @@ import Svg, { G, Circle } from 'react-native-svg';
 import { Body } from '../text/Body';
 import { Row } from '../layout/Row';
 import { Spacer } from '../layout/Spacer';
-import { Value } from '../Value';
+import { Amount } from '../Amount';
 
 const outboundYellow = themeColor('outbound');
 const inboundYellow = themeColor('inbound');
@@ -111,7 +111,7 @@ function TotalRow({
                 {/* TODO: localize */}
                 <Body secondary>Total {kind}</Body>
             </Row>
-            <Value sats={amount} />
+            <Amount sats={amount} sensitive />
         </Row>
     );
 }

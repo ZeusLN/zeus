@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { StyleSheet, Text, View, I18nManager, Alert } from 'react-native';
+import { StyleSheet, Text, View, I18nManager } from 'react-native';
 
 import { FlatList, RectButton } from 'react-native-gesture-handler';
 
@@ -15,7 +15,7 @@ import { inject, observer } from 'mobx-react';
 
 import OnChain from './../../images/SVG/OnChain.svg';
 import Lightning from './../../images/SVG/Lightning Circle.svg';
-import { Value } from '../Value';
+import { Amount } from '../Amount';
 import { Spacer } from '../layout/Spacer';
 
 interface LayerBalancesProps {
@@ -47,7 +47,7 @@ const Row = ({ item }: { item: DataRow }) => (
             </Text>
         </View>
 
-        <Value sats={item.balance} sensitive />
+        <Amount sats={item.balance} sensitive />
     </RectButton>
 );
 
