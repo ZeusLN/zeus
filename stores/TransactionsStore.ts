@@ -92,14 +92,14 @@ export default class TransactionsStore {
     ) => {
         const { utxos, addr, amount, sat_per_byte } = transactionRequest;
         const inputs: any = [];
-        const outputs: any = [];
+        let outputs: any = {};
 
         utxos.forEach(input => {
             const [txid_str, output_index] = input.split(':');
             inputs.push({ txid_str, output_index: Number(output_index) });
         });
 
-        outputs.push({ key: addr, value: Number(amount) });
+        outputs[addr] = Number(amount);
 
         const fundPsbtRequest = {
             raw: {
