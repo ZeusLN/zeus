@@ -116,7 +116,7 @@ export default class LnurlAuth extends React.Component<
                 const signedMessage = ec.sign(
                     Base64Utils.hexToUint8Array(this.state.k1),
                     linkingKeyPriv,
-                    {canonical: true}
+                    { canonical: true }
                 );
                 const signedMessageDER = signedMessage.toDER();
 
