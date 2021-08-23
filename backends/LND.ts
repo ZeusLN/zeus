@@ -1,7 +1,6 @@
 import RNFetchBlob from 'rn-fetch-blob';
 import stores from '../stores/Stores';
 import OpenChannelRequest from './../models/OpenChannelRequest';
-import ErrorUtils from './../utils/ErrorUtils';
 import VersionUtils from './../utils/VersionUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
@@ -56,9 +55,6 @@ export default class LND {
                         const errorInfo = response.json();
                         throw new Error(
                             (errorInfo.error && errorInfo.error.message) ||
-                                ErrorUtils.errorToUserFriendly(
-                                    errorInfo.code
-                                ) ||
                                 errorInfo.message ||
                                 errorInfo.error
                         );
