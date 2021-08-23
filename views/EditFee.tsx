@@ -1,14 +1,11 @@
 import * as React from 'react';
 import {
     StyleSheet,
-    RefreshControl,
     Text,
     TextInput,
     View,
-    ScrollView,
     TouchableOpacity,
-    SafeAreaView,
-    Button
+    TouchableWithoutFeedback
 } from 'react-native';
 import { Icon, Header } from 'react-native-elements';
 import Spinner from '../images/SVG/spinning-circles.svg';
@@ -24,7 +21,8 @@ interface NodeInfoProps {
 }
 
 interface SendState {
-    customfee: string;
+    customFee: string;
+    feeBoxColor: any;
 }
 
 @inject('FeeStore')
@@ -37,7 +35,8 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
     constructor(props: any) {
         super(props);
         this.state = {
-            customfee: ''
+            customFee: '',
+            feeBoxColor: '#A7A9AC'
         };
     }
     render() {
@@ -63,83 +62,91 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
             </TouchableOpacity>
         );
         return (
-            <View style={styles.maincontainer}>
+            <View style={styles.mainContainer}>
                 <Header
                     centerComponent={{
                         text: 'Edit network fee',
-                        style: { color: themeColor('text') }
+                        style: { color: themeColor('text'), fontSize: 18 }
                     }}
                     backgroundColor={themeColor('background')}
                     leftComponent={<BackButton />}
                     rightComponent={<ReloadButton />}
                 />
                 {loading && !error && (
-                    <View>
+                    <View style={{ top: '40%', left: '45%' }}>
                         <Spinner />
                     </View>
                 )}
                 {recommendedFees['fastestFee'] && !loading && (
-                    <View style={styles.feescontainer}>
-                        <View style={styles.container}>
-                            <View style={styles.feeboxes}>
-                                <Text style={styles.feetitle}>Fastest Fee</Text>
-                                <Text style={styles.feetext}>
-                                    {recommendedFees['fastestFee']}
-                                </Text>
-                            </View>
-                            <View style={styles.feeboxes}>
-                                <Text style={styles.feetitle}>
-                                    Half Hour Fee
-                                </Text>
-                                <Text style={styles.feetext}>
-                                    {recommendedFees['halfHourFee']}
-                                </Text>
-                            </View>
-                            <View style={styles.feeboxes}>
-                                <Text style={styles.feetitle}>Hour Fee</Text>
-                                <Text style={styles.feetext}>
-                                    {recommendedFees['hourFee']}
-                                </Text>
-                            </View>
-                            <View style={styles.feeboxes}>
-                                <Text style={styles.feetitle}>Minimum Fee</Text>
-                                <Text style={styles.feetext}>
-                                    {recommendedFees['minimumFee']}
-                                </Text>
-                            </View>
+                    <View style={styles.container}>
+                        <View style={styles.feeBoxes}>
+                            <Text style={styles.feeTitle}>
+                                {localeString('views.EditFee.fastestFee')}
+                            </Text>
+                            <Text style={styles.feeText}>
+                                {recommendedFees['fastestFee']}
+                            </Text>
+                        </View>
+                        <View style={styles.feeBoxes}>
+                            <Text style={styles.feeTitle}>
+                                {localeString('views.EditFee.halfHourFee')}
+                            </Text>
+                            <Text style={styles.feeText}>
+                                {recommendedFees['halfHourFee']}
+                            </Text>
+                        </View>
+                        <View style={styles.feeBoxes}>
+                            <Text style={styles.feeTitle}>
+                                {localeString('views.EditFee.hourFee')}
+                            </Text>
+                            <Text style={styles.feeText}>
+                                {recommendedFees['hourFee']}
+                            </Text>
+                        </View>
+                        <View style={styles.feeBoxes}>
+                            <Text style={styles.feeTitle}>
+                                {localeString('views.EditFee.minimumFee')}
+                            </Text>
+                            <Text style={styles.feeText}>
+                                {recommendedFees['hourFee']}
+                            </Text>
                         </View>
                         <View>
-                            <View>
-                                <Text style={styles.custom}>Custom</Text>
-                            </View>
-                            <View style={{ justifyContent: 'space-evenly' }}>
-                                <TextInput
-                                    style={styles.feeboxes}
-                                    keyboardType="numeric"
-                                    defaultValue={this.state.customfee}
-                                    onChangeText={(text: string) =>
-                                        this.setState({ customfee: text })
-                                    }
-                                ></TextInput>
-
-                                <TouchableOpacity style={styles.Confirmbutton}>
-                                    <Text
-                                        style={{
-                                            fontSize: 18,
-                                            textAlign: 'center',
-                                            top: 8,
-                                            fontWeight: 'bold'
-                                        }}
-                                    >
-                                        CONFIRM FEE
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
+                            <Text style={styles.custom}>
+                                {localeString('views.EditFee.custom')}
+                            </Text>
                         </View>
+                        <TextInput
+                            style={{ ...styles.feeBoxes, top: 30 }}
+                            keyboardType="numeric"
+                            defaultValue={this.state.customFee}
+                            onChangeText={(text: string) =>
+                                this.setState({ customFee: text })
+                            }
+                        ></TextInput>
+                        <TouchableOpacity style={styles.confirmButton}>
+                            <Text
+                                style={{
+                                    fontSize: 18,
+                                    textAlign: 'center',
+                                    fontWeight: 'bold',
+                                    top: 8
+                                }}
+                            >
+                                {localeString('views.EditFee.confirmFee')}
+                            </Text>
+                        </TouchableOpacity>
                     </View>
                 )}
                 {error && !loading && (
-                    <Text style={{ fontSize: 30, color: 'red' }}>
+                    <Text
+                        style={{
+                            fontSize: 30,
+                            color: 'red',
+                            textAlign: 'center',
+                            top: '40%'
+                        }}
+                    >
                         {localeString('views.EditFee.error')}
                     </Text>
                 )}
@@ -148,45 +155,31 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
     }
 }
 const styles = StyleSheet.create({
-    maincontainer: {
+    mainContainer: {
         flex: 1,
-        backgroundColor: themeColor('background'),
-        alignItems: 'center',
-        flexDirection: 'column',
-        justifyContent: 'space-evenly'
+        backgroundColor: themeColor('background')
     },
-    feescontainer: {},
     container: {
         flex: 1,
         backgroundColor: themeColor('background'),
         alignItems: 'center',
-        flexDirection: 'column',
-        justifyContent: 'space-evenly'
+        justifyContent: 'space-around'
     },
-    maintext: {
-        color: themeColor('text'),
-        fontSize: 18,
-        top: -15
-    },
-    feeboxes: {
+    feeBoxes: {
         height: 65,
         width: 350,
+        top: 30,
         borderWidth: 1,
-        borderColor: '#A7A9AC',
         borderRadius: 4,
-        top: -45
+        borderColor: '#A7A9AC'
     },
-    feetitle: {
+    feeTitle: {
         color: '#fff',
         fontSize: 18,
         left: 10,
         top: 20
     },
-    loadingicon: {
-        left: '82%',
-        top: -17
-    },
-    feetext: {
+    feeText: {
         color: themeColor('text'),
         fontSize: 18,
         left: '90%',
@@ -195,12 +188,14 @@ const styles = StyleSheet.create({
     custom: {
         color: '#A7A9AC',
         fontSize: 20,
-        top: -55
+        top: 55,
+        left: '-36%'
     },
-    Confirmbutton: {
-        alignItems: 'stretch',
+    confirmButton: {
+        width: 350,
         height: 40,
         backgroundColor: 'yellow',
-        top: 0
+        bottom: -18,
+        borderRadius: 4
     }
 });
