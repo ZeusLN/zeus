@@ -36,6 +36,8 @@ export default class TransactionsStore {
     @observable payment_error: any;
     @observable onchain_address: string;
     @observable txid: string | null;
+    // in lieu of receiving txid on LND's publishTransaction
+    @observable publishSuccess: boolean = false;
     // c-lightning
     @observable status: string | null;
 
@@ -66,6 +68,7 @@ export default class TransactionsStore {
         this.payment_error = null;
         this.onchain_address = '';
         this.txid = null;
+        this.publishSuccess = false;
         this.status = null;
     };
 
@@ -109,33 +112,21 @@ export default class TransactionsStore {
             sat_per_vbyte: Number(sat_per_byte)
         };
 
-        console.log('fundPsbtRequest');
-        console.log(fundPsbtRequest);
-
         RESTUtils.fundPsbt(fundPsbtRequest)
             .then((data: any) => {
                 const funded_psbt = data.funded_psbt;
-                console.log('fundPSBT result');
-                console.log(data);
 
                 RESTUtils.finalizePsbt({ funded_psbt })
                     .then((data: any) => {
-                        const signed_psbt = data.signed_psbt;
-                        console.log('finalizePSBT result');
-                        console.log(data);
+                        const raw_final_tx = data.raw_final_tx;
 
-                        RESTUtils.publishTransaction({ tx_hex: signed_psbt })
+                        RESTUtils.publishTransaction({ tx_hex: raw_final_tx })
                             .then((data: any) => {
-                                console.log('publishTransaction result');
-                                console.log(data);
-
-                                this.txid = signed_psbt;
+                                this.publishSuccess = true;
                                 this.loading = false;
                             })
                             .catch((error: any) => {
                                 // handle error
-                                console.log('publishTransaction err');
-                                console.log(error);
                                 this.error_msg =
                                     error.publish_error || error.message;
                                 this.error = true;
@@ -144,8 +135,6 @@ export default class TransactionsStore {
                     })
                     .catch((error: any) => {
                         // handle error
-                        console.log('finalizePSBT err');
-                        console.log(error);
                         this.error_msg = error.message;
                         this.error = true;
                         this.loading = false;
@@ -153,8 +142,6 @@ export default class TransactionsStore {
             })
             .catch((error: any) => {
                 // handle error
-                console.log('fundPSBT err');
-                console.log(error);
                 this.error_msg = error.message;
                 this.error = true;
                 this.loading = false;
@@ -166,6 +153,7 @@ export default class TransactionsStore {
         this.error = false;
         this.error_msg = null;
         this.txid = null;
+        this.publishSuccess = false;
         this.loading = true;
         if (
             this.settingsStore.implementation === 'lnd' &&
@@ -177,6 +165,7 @@ export default class TransactionsStore {
         RESTUtils.sendCoins(transactionRequest)
             .then((data: any) => {
                 this.txid = data.txid;
+                this.publishSuccess = true;
                 this.loading = false;
             })
             .catch((error: any) => {
