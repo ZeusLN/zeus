@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    ActivityIndicator,
     Image,
     ScrollView,
     StyleSheet,
@@ -36,6 +37,7 @@ interface ChannelState {
     confirmCloseChannel: boolean;
     satPerByte: string;
     forceClose: boolean;
+    channel: Channel;
 }
 
 @inject('ChannelsStore', 'UnitsStore', 'FeeStore', 'SettingsStore')
@@ -44,11 +46,23 @@ export default class ChannelView extends React.Component<
     ChannelProps,
     ChannelState
 > {
-    state = {
-        confirmCloseChannel: false,
-        satPerByte: '',
-        forceClose: false
-    };
+    constructor(props: any) {
+        super(props);
+        const { navigation, ChannelsStore, SettingsStore } = props;
+        const channel: Channel = navigation.getParam('channel', null);
+        const { implementation } = SettingsStore;
+
+        this.state = {
+            confirmCloseChannel: false,
+            satPerByte: '',
+            forceClose: false,
+            channel: channel
+        };
+
+        if (implementation === 'lnd') {
+            ChannelsStore.getChannelInfo(channel.channelId);
+        }
+    }
 
     closeChannel = (
         channelPoint: string,
@@ -93,14 +107,18 @@ export default class ChannelView extends React.Component<
             FeeStore,
             SettingsStore
         } = this.props;
-        const { confirmCloseChannel, satPerByte, forceClose } = this.state;
+        const {
+            channel,
+            confirmCloseChannel,
+            satPerByte,
+            forceClose
+        } = this.state;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { channelFees } = FeeStore;
-        const { nodes } = ChannelsStore;
+        const { loading, nodes, chanInfo } = ChannelsStore;
         const { settings, implementation } = SettingsStore;
         const { lurkerMode } = settings;
 
-        const channel: Channel = navigation.getParam('channel', null);
         const {
             channel_point,
             commit_weight,
@@ -364,6 +382,63 @@ export default class ChannelView extends React.Component<
                                 )}
                             </Text>
                         </View>
+                    )}
+
+                    {implementation === 'lnd' && (
+                        <React.Fragment>
+                            {loading && (
+                                <ActivityIndicator
+                                    size="large"
+                                    color="#0000ff"
+                                />
+                            )}
+                            {chanInfo[channelId].node1_policy && (
+                                <React.Fragment>
+                                    <View>
+                                        <Text style={styles.label}>
+                                            {JSON.stringify(
+                                                chanInfo[channelId].yourPolicy
+                                            )}
+                                            :
+                                        </Text>
+                                        <Text style={styles.value}>
+                                            {PrivacyUtils.sensitiveValue(
+                                                chanInfo[channelId].node1_policy
+                                                    .fee_base_msat,
+                                                6,
+                                                true
+                                            )}
+                                        </Text>
+                                    </View>
+                                    <View>
+                                        <Text style={styles.label}>
+                                            {'Node 1: fee_rate_milli_msat'}:
+                                        </Text>
+                                        <Text style={styles.value}>
+                                            {PrivacyUtils.sensitiveValue(
+                                                chanInfo[channelId].node1_policy
+                                                    .fee_rate_milli_msat,
+                                                6,
+                                                true
+                                            )}
+                                        </Text>
+                                    </View>
+                                    <View>
+                                        <Text style={styles.label}>
+                                            {'Node 1: max_htlc_msat'}:
+                                        </Text>
+                                        <Text style={styles.value}>
+                                            {PrivacyUtils.sensitiveValue(
+                                                chanInfo[channelId].node1_policy
+                                                    .max_htlc_msat,
+                                                6,
+                                                true
+                                            )}
+                                        </Text>
+                                    </View>
+                                </React.Fragment>
+                            )}
+                        </React.Fragment>
                     )}
 
                     {implementation === 'lnd' && (
