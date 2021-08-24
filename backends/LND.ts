@@ -203,6 +203,8 @@ export default class LND {
             transactions: data.transactions.reverse()
         }));
     getChannels = () => this.getRequest('/v1/channels');
+    getChannelInfo = (chanId: string) =>
+        this.getRequest(`/v1/graph/edge/${chanId}`);
     getBlockchainBalance = () => this.getRequest('/v1/balance/blockchain');
     getLightningBalance = () => this.getRequest('/v1/balance/channels');
     sendCoins = (data: any) =>
