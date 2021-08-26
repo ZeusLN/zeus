@@ -9,7 +9,6 @@ import com.facebook.react.shell.MainReactPackage;
 
 import com.facebook.react.ReactApplication;
 import com.BV.LinearGradient.LinearGradientPackage;
-import com.wix.RNCameraKit.RNCameraKitPackage;
 import com.swmansion.gesturehandler.react.RNGestureHandlerPackage;
 import com.oblador.vectoricons.VectorIconsPackage;
 import com.facebook.react.ReactNativeHost;
@@ -19,7 +18,6 @@ import android.content.Context;
 import com.reactlibrary.securekeystore.RNSecureKeyStorePackage;
 
 import com.facebook.soloader.SoLoader;
-import com.microsoft.ActivityResultPackage;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;

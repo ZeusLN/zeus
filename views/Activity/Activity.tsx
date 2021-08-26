@@ -6,27 +6,25 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { Avatar, Button, Header, Icon, ListItem } from 'react-native-elements';
+import { Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import DateTimeUtils from './../utils/DateTimeUtils';
-import PrivacyUtils from './../utils/PrivacyUtils';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import DateTimeUtils from './../../utils/DateTimeUtils';
+import PrivacyUtils from './../../utils/PrivacyUtils';
+import { localeString } from './../../utils/LocaleUtils';
+import { themeColor } from './../../utils/ThemeUtils';
 
-import ActivityStore from './../stores/ActivityStore';
-import UnitsStore from './../stores/UnitsStore';
-import SettingsStore from './../stores/SettingsStore';
+import ActivityStore from './../../stores/ActivityStore';
+import UnitsStore from './../../stores/UnitsStore';
 
-import Filter from './../images/SVG/Filter On.svg';
+import Filter from './../../images/SVG/Filter On.svg';
 
 interface ActivityProps {
     navigation: any;
     ActivityStore: ActivityStore;
     UnitsStore: UnitsStore;
-    SettingsStore: SettingsStore;
 }
 
-@inject('ActivityStore', 'UnitsStore', 'SettingsStore')
+@inject('ActivityStore', 'UnitsStore')
 @observer
 export default class Activity extends React.Component<ActivityProps, {}> {
     async UNSAFE_componentWillMount() {
@@ -54,20 +52,13 @@ export default class Activity extends React.Component<ActivityProps, {}> {
     };
 
     render() {
-        const {
-            navigation,
-            ActivityStore,
-            UnitsStore,
-            SettingsStore
-        } = this.props;
-        const { getAmount, units } = UnitsStore;
+        const { navigation, ActivityStore, UnitsStore } = this.props;
+        const { getAmount } = UnitsStore;
         const {
             loading,
             filteredActivity,
             getActivityAndFilter
         } = ActivityStore;
-        const { settings } = SettingsStore;
-        const { lurkerMode } = settings;
 
         const CloseButton = () => (
             <Icon
@@ -104,10 +95,10 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                 ) : !!filteredActivity && filteredActivity.length > 0 ? (
                     <FlatList
                         data={filteredActivity}
-                        renderItem={({ item }) => {
+                        renderItem={({ item }: { item: any }) => {
                             let displayName = item.model;
                             let subTitle = item.model;
-                            let rightTitle = ' ';
+                            let rightTitle: any = ' ';
                             if (
                                 item.model ===
                                 localeString('views.Invoice.title')

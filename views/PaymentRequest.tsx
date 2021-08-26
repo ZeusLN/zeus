@@ -3,6 +3,7 @@ import {
     ActivityIndicator,
     ScrollView,
     StyleSheet,
+    Switch,
     Text,
     TextInput,
     TouchableOpacity,
@@ -36,7 +37,9 @@ interface InvoiceState {
     setCustomAmount: boolean;
     customAmount: string;
     enableMultiPathPayment: boolean;
+    enableAtomicMultiPathPayment: boolean;
     maxParts: string;
+    maxShardAmt: string;
     timeoutSeconds: string;
     feeLimitSat: string;
     outgoingChanIds: Array<string> | null;
@@ -59,9 +62,11 @@ export default class PaymentRequest extends React.Component<
         setCustomAmount: false,
         customAmount: '',
         enableMultiPathPayment: false,
-        maxParts: '2',
+        enableAtomicMultiPathPayment: false,
+        maxParts: '16',
+        maxShardAmt: '',
         timeoutSeconds: '20',
-        feeLimitSat: '10',
+        feeLimitSat: '',
         outgoingChanIds: null,
         lastHopPubkey: null
     };
@@ -79,7 +84,9 @@ export default class PaymentRequest extends React.Component<
             setCustomAmount,
             customAmount,
             enableMultiPathPayment,
+            enableAtomicMultiPathPayment,
             maxParts,
+            maxShardAmt,
             timeoutSeconds,
             feeLimitSat,
             outgoingChanIds,
@@ -104,9 +111,23 @@ export default class PaymentRequest extends React.Component<
         const payment_hash = pay_req && pay_req.payment_hash;
         const timestamp = pay_req && pay_req.timestamp;
 
+        let lockAtomicMultiPathPayment: boolean = false;
+        if (
+            pay_req &&
+            pay_req.features &&
+            pay_req.features['30'] &&
+            pay_req.features['30'].is_required
+        ) {
+            lockAtomicMultiPathPayment = true;
+        }
+
+        const enableAmp: boolean =
+            enableAtomicMultiPathPayment || lockAtomicMultiPathPayment;
+        const ampOrMppEnabled: boolean = enableMultiPathPayment || enableAmp;
+
         const date = new Date(Number(timestamp) * 1000).toString();
 
-        const { implementation } = SettingsStore;
+        const { implementation, enableTor } = SettingsStore;
 
         const isLnd: boolean = implementation === 'lnd';
 
@@ -379,138 +400,202 @@ export default class PaymentRequest extends React.Component<
                                     }
                                 </>
                             )}
-                        </View>
-                    )}
 
-                    <View>
-                        <Text>{RESTUtils.supportsMPP()}</Text>
-                    </View>
+                            {!!pay_req && RESTUtils.supportsAMP() && (
+                                <React.Fragment>
+                                    <Text style={{ ...styles.label, top: 25 }}>
+                                        {localeString(
+                                            'views.PaymentRequest.amp'
+                                        )}
+                                        :
+                                    </Text>
+                                    <Switch
+                                        value={enableAmp}
+                                        onValueChange={() =>
+                                            this.setState({
+                                                enableAtomicMultiPathPayment: !enableAtomicMultiPathPayment
+                                            })
+                                        }
+                                        trackColor={{
+                                            false: '#767577',
+                                            true: themeColor('highlight')
+                                        }}
+                                        disabled={lockAtomicMultiPathPayment}
+                                    />
+                                </React.Fragment>
+                            )}
 
-                    {!!pay_req && RESTUtils.supportsMPP() && (
-                        <View style={styles.button}>
-                            <Button
-                                title={
-                                    enableMultiPathPayment
-                                        ? localeString(
-                                              'views.PaymentRequest.disableMpp'
-                                          )
-                                        : localeString(
-                                              'views.PaymentRequest.enableMpp'
-                                          )
-                                }
-                                icon={{
-                                    name: 'call-split',
-                                    size: 25,
-                                    color: 'white'
-                                }}
-                                onPress={() => {
-                                    this.setState({
-                                        enableMultiPathPayment: !enableMultiPathPayment
-                                    });
-                                }}
-                                buttonStyle={{
-                                    backgroundColor: enableMultiPathPayment
-                                        ? 'red'
-                                        : 'green',
-                                    borderRadius: 30
-                                }}
-                            />
-                        </View>
-                    )}
-
-                    {enableMultiPathPayment && (
-                        <View style={styles.mppForm}>
-                            <Text style={styles.label}>
-                                {localeString('views.PaymentRequest.maxParts')}:
-                            </Text>
-                            <TextInput
-                                keyboardType="numeric"
-                                placeholder="2 (or greater)"
-                                value={maxParts}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        maxParts: text
-                                    })
-                                }
-                                numberOfLines={1}
-                                style={styles.textInput}
-                                placeholderTextColor="gray"
-                            />
-                            <Text style={styles.label}>
-                                {localeString(
-                                    'views.PaymentRequest.maxPartsDescription'
+                            {!!pay_req &&
+                                RESTUtils.supportsMPP() &&
+                                !enableTor && (
+                                    <React.Fragment>
+                                        <Text
+                                            style={{ ...styles.label, top: 25 }}
+                                        >
+                                            {localeString(
+                                                'views.PaymentRequest.mpp'
+                                            )}
+                                            :
+                                        </Text>
+                                        <Switch
+                                            value={enableMultiPathPayment}
+                                            onValueChange={() =>
+                                                this.setState({
+                                                    enableMultiPathPayment: !enableMultiPathPayment
+                                                })
+                                            }
+                                            trackColor={{
+                                                false: '#767577',
+                                                true: themeColor('highlight')
+                                            }}
+                                        />
+                                    </React.Fragment>
                                 )}
-                                :
-                            </Text>
-                            <Text style={styles.label}>
-                                {localeString('views.PaymentRequest.timeout')}:
-                            </Text>
-                            <TextInput
-                                keyboardType="numeric"
-                                placeholder="20"
-                                value={timeoutSeconds}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        timeoutSeconds: text
-                                    })
-                                }
-                                numberOfLines={1}
-                                style={styles.textInput}
-                                placeholderTextColor="gray"
-                            />
-                            <Text style={styles.label}>
-                                {localeString('views.PaymentRequest.feeLimit')}:
-                            </Text>
-                            <TextInput
-                                keyboardType="numeric"
-                                placeholder="100"
-                                value={feeLimitSat}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        feeLimitSat: text
-                                    })
-                                }
-                                numberOfLines={1}
-                                style={styles.textInput}
-                                placeholderTextColor="gray"
-                            />
-                        </View>
-                    )}
 
-                    {!!pay_req && (
-                        <View style={styles.button}>
-                            <Button
-                                title="Pay this invoice"
-                                icon={{
-                                    name: 'send',
-                                    size: 25,
-                                    color: 'white'
-                                }}
-                                onPress={() => {
-                                    TransactionsStore.sendPayment(
-                                        paymentRequest,
-                                        customAmount,
-                                        null,
-                                        enableMultiPathPayment
-                                            ? maxParts
-                                            : null,
-                                        enableMultiPathPayment
-                                            ? timeoutSeconds
-                                            : null,
-                                        enableMultiPathPayment
-                                            ? feeLimitSat
-                                            : null,
-                                        outgoingChanIds,
-                                        lastHopPubkey
-                                    );
+                            {ampOrMppEnabled && (
+                                <React.Fragment>
+                                    <Text style={styles.label}>
+                                        {localeString(
+                                            'views.PaymentRequest.timeout'
+                                        )}
+                                        :
+                                    </Text>
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        placeholder="20"
+                                        value={timeoutSeconds}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                timeoutSeconds: text
+                                            })
+                                        }
+                                        numberOfLines={1}
+                                        style={styles.textInput}
+                                        placeholderTextColor="gray"
+                                    />
+                                    <Text style={styles.label}>
+                                        {enableMultiPathPayment
+                                            ? localeString(
+                                                  'views.PaymentRequest.maxParts'
+                                              )
+                                            : `${localeString(
+                                                  'views.PaymentRequest.maxParts'
+                                              )} (${localeString(
+                                                  'general.optional'
+                                              )})`}
+                                        :
+                                    </Text>
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        value={maxParts}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                maxParts: text
+                                            })
+                                        }
+                                        numberOfLines={1}
+                                        style={styles.textInput}
+                                        placeholderTextColor="gray"
+                                    />
+                                    <Text style={styles.label}>
+                                        {localeString(
+                                            'views.PaymentRequest.maxPartsDescription'
+                                        )}
+                                    </Text>
+                                    <Text style={styles.label}>
+                                        {`${localeString(
+                                            'views.PaymentRequest.feeLimit'
+                                        )} (${localeString(
+                                            'general.sats'
+                                        )}) (${localeString(
+                                            'general.optional'
+                                        )})`}
+                                        :
+                                    </Text>
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        placeholder="100"
+                                        value={feeLimitSat}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                feeLimitSat: text
+                                            })
+                                        }
+                                        numberOfLines={1}
+                                        style={styles.textInput}
+                                        placeholderTextColor="gray"
+                                    />
+                                </React.Fragment>
+                            )}
 
-                                    navigation.navigate('SendingLightning');
-                                }}
-                                buttonStyle={{
-                                    backgroundColor: 'orange',
-                                    borderRadius: 30
-                                }}
-                            />
+                            {enableAmp && (
+                                <React.Fragment>
+                                    <Text style={styles.label}>
+                                        {`${localeString(
+                                            'views.PaymentRequest.maxShardAmt'
+                                        )} (${localeString(
+                                            'general.sats'
+                                        )}) (${localeString(
+                                            'general.optional'
+                                        )})`}
+                                        :
+                                    </Text>
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        value={maxShardAmt}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                maxShardAmt: text
+                                            })
+                                        }
+                                        numberOfLines={1}
+                                        style={styles.textInput}
+                                        placeholderTextColor="gray"
+                                    />
+                                </React.Fragment>
+                            )}
+
+                            {!!pay_req && (
+                                <View style={styles.button}>
+                                    <Button
+                                        title="Pay this invoice"
+                                        icon={{
+                                            name: 'send',
+                                            size: 25,
+                                            color: 'white'
+                                        }}
+                                        onPress={() => {
+                                            TransactionsStore.sendPayment({
+                                                payment_request: paymentRequest,
+                                                amount: customAmount,
+                                                max_parts: ampOrMppEnabled
+                                                    ? maxParts
+                                                    : null,
+                                                max_shard_amt: ampOrMppEnabled
+                                                    ? maxShardAmt
+                                                    : null,
+                                                timeout_seconds: ampOrMppEnabled
+                                                    ? timeoutSeconds
+                                                    : null,
+                                                fee_limit_sat: ampOrMppEnabled
+                                                    ? feeLimitSat
+                                                    : null,
+                                                outgoing_chan_ids: outgoingChanIds,
+                                                last_hop_pubkey: lastHopPubkey,
+                                                amp: enableAmp
+                                            });
+
+                                            navigation.navigate(
+                                                'SendingLightning'
+                                            );
+                                        }}
+                                        buttonStyle={{
+                                            backgroundColor: 'orange',
+                                            borderRadius: 30
+                                        }}
+                                    />
+                                </View>
+                            )}
                         </View>
                     )}
                 </ScrollView>
@@ -537,7 +622,7 @@ const styles = StyleSheet.create({
         color: themeColor('text')
     },
     button: {
-        paddingTop: 15,
+        paddingTop: 30,
         paddingBottom: 15,
         paddingLeft: 10,
         paddingRight: 10

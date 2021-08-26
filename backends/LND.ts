@@ -3,6 +3,7 @@ import stores from '../stores/Stores';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import ErrorUtils from './../utils/ErrorUtils';
 import VersionUtils from './../utils/VersionUtils';
+import { localeString } from './../utils/LocaleUtils';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 
 interface Headers {
@@ -68,17 +69,21 @@ export default class LND {
         return await calls[id];
     };
 
-    supports = (supportedVersion: string, apiVersion?: string) => {
+    supports = (
+        minVersion: string,
+        eosVersion?: string,
+        minApiVersion?: string
+    ) => {
         const { nodeInfo } = stores.nodeInfoStore;
         const { version, api_version } = nodeInfo;
         const { isSupportedVersion } = VersionUtils;
-        if (apiVersion) {
+        if (minApiVersion) {
             return (
-                isSupportedVersion(version, supportedVersion) &&
-                isSupportedVersion(api_version, apiVersion)
+                isSupportedVersion(version, minVersion, eosVersion) &&
+                isSupportedVersion(api_version, minApiVersion)
             );
         }
-        return isSupportedVersion(version, supportedVersion);
+        return isSupportedVersion(version, minVersion, eosVersion);
     };
 
     wsReq = (route: string, method: string, data?: any) => {
@@ -119,8 +124,7 @@ export default class LND {
             });
 
             ws.addEventListener('error', (e: any) => {
-                const certWarning =
-                    "You may have to install this node's certificate to the device to make these kind of calls";
+                const certWarning = localeString('backends.LND.wsReq.warning');
                 // an error occurred
                 reject(
                     e.message ? `${certWarning} (${e.message})` : certWarning
@@ -222,6 +226,8 @@ export default class LND {
     payLightningInvoice = (data: any) =>
         this.postRequest('/v1/channels/transactions', data);
     payLightningInvoiceV2 = (data: any) =>
+        this.postRequest('/v2/router/send', data);
+    payLightningInvoiceV2Streaming = (data: any) =>
         this.wsReq('/v2/router/send', 'POST', data);
     closeChannel = (urlParams?: Array<string>) => {
         if (urlParams && urlParams.length === 4) {
@@ -284,7 +290,10 @@ export default class LND {
     supportsOnchainSends = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
-    supportsMPP = () => this.supports('v0.11.0');
+    supportsMPP = () => this.supports('v0.11.0', 'v0.13.0');
+    supportsAMP = () => this.supports('v0.13.0');
     supportsCoinControl = () => false;
     supportsHopPicking = () => this.supports('v0.11.0');
+    supportsRouting = () => true;
+    supportsNodeInfo = () => true;
 }

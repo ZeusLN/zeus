@@ -21,8 +21,6 @@
         "*" : ["typings/*"]
     }
   },
-  "files": [
-      "node_modules/typescript/lib/lib.es6.d.ts"
-  ],
-  "exclude": ["node_modules", "typings"]
+  "exclude": ["node_modules"],
+  "include": ["backends/*", "components/*",  "models/*", "stores/*", "utils/*", "views/*", "typings/*"]
 }
