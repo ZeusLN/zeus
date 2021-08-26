@@ -4,6 +4,7 @@ import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Nodes from './Settings/Nodes';
 import PrivacyUtils from './../utils/PrivacyUtils';
+import RESTUtils from './../utils/RESTUtils';
 import DropdownSetting from './../components/DropdownSetting';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
@@ -195,13 +196,7 @@ export default class Settings extends React.Component<
         const lurkerLabel = `Lurking ${PrivacyUtils.getLover()} Mode: hides sensitive values`;
 
         return (
-            <ScrollView
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background'),
-                    color: themeColor('text')
-                }}
-            >
+            <ScrollView style={styles.scrollView}>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -440,21 +435,23 @@ export default class Settings extends React.Component<
                     />
                 </View>
 
-                <View style={styles.button}>
-                    <Button
-                        title={localeString(
-                            'views.Settings.signMessage.button'
-                        )}
-                        buttonStyle={{
-                            backgroundColor: 'green',
-                            borderRadius: 30,
-                            width: 350,
-                            alignSelf: 'center'
-                        }}
-                        onPress={() => navigation.navigate('SignMessage')}
-                        style={styles.button}
-                    />
-                </View>
+                {RESTUtils.supportsMessageSigning() && (
+                    <View style={styles.button}>
+                        <Button
+                            title={localeString(
+                                'views.Settings.signMessage.button'
+                            )}
+                            buttonStyle={{
+                                backgroundColor: 'green',
+                                borderRadius: 30,
+                                width: 350,
+                                alignSelf: 'center'
+                            }}
+                            onPress={() => navigation.navigate('SignMessage')}
+                            style={styles.button}
+                        />
+                    </View>
+                )}
 
                 <View style={styles.button}>
                     <Button
@@ -477,6 +474,11 @@ export default class Settings extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    scrollView: {
+        flex: 1,
+        backgroundColor: themeColor('background'),
+        color: themeColor('text')
+    },
     error: {
         color: 'red'
     },

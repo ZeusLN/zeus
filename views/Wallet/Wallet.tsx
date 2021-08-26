@@ -7,6 +7,8 @@ import Channels from './Channels';
 import MainPane from './MainPane';
 import { inject, observer } from 'mobx-react';
 import PrivacyUtils from './../../utils/PrivacyUtils';
+import RESTUtils from './../../utils/RESTUtils';
+import { restartTor } from './../../utils/TorUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 import Clipboard from '@react-native-community/clipboard';
@@ -104,6 +106,12 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         });
     }
 
+    restartTorAndReload = async () => {
+        this.props.NodeInfoStore.setLoading();
+        await restartTor();
+        await this.getSettingsAndRefresh();
+    };
+
     refresh = () => {
         const {
             NodeInfoStore,
@@ -152,8 +160,8 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             SettingsStore,
             navigation
         } = this.props;
-
-        const { implementation } = SettingsStore;
+        const { error, loading } = NodeInfoStore;
+        const { implementation, enableTor } = SettingsStore;
 
         const WalletScreen = () => {
             return (
@@ -175,6 +183,26 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                             SettingsStore={SettingsStore}
                         />
 
+                        {error && !loading && enableTor && (
+                            <View style={{ marginTop: 10 }}>
+                                <Button
+                                    title={localeString(
+                                        'views.Wallet.restartTor'
+                                    )}
+                                    icon={{
+                                        name: 'sync',
+                                        size: 25,
+                                        color: 'white'
+                                    }}
+                                    buttonStyle={{
+                                        backgroundColor: 'gray',
+                                        borderRadius: 30
+                                    }}
+                                    onPress={() => this.restartTorAndReload()}
+                                />
+                            </View>
+                        )}
+
                         <LayerBalances
                             navigation={navigation}
                             BalanceStore={BalanceStore}
@@ -185,13 +213,13 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                             onPress={() =>
                                 this.props.navigation.navigate('Activity')
                             }
+                            style={{
+                                alignSelf: 'center',
+                                bottom: 85,
+                                padding: 25
+                            }}
                         >
-                            <CaretUp
-                                style={{
-                                    alignSelf: 'center',
-                                    marginBottom: 100
-                                }}
-                            />
+                            <CaretUp />
                         </TouchableOpacity>
                     </LinearGradient>
                 </View>
@@ -238,57 +266,76 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                 }
                                 if (route.name === scanAndSend) {
                                     return (
-                                        <TouchableOpacity
+                                        <View
                                             style={{
-                                                position: 'absolute',
-                                                height: 90,
-                                                width: 90,
-                                                borderRadius: 90,
-                                                bottom: 5,
-                                                backgroundColor: themeColor(
-                                                    'secondary'
-                                                ),
-                                                justifyContent: 'center',
-                                                alignItems: 'center',
-                                                shadowColor: 'black',
-                                                shadowRadius: 5,
-                                                shadowOpacity: 0.8,
-                                                elevation: 2
-                                            }}
-                                            onPress={() => {
-                                                const {
-                                                    navigation
-                                                } = this.props;
-                                                // if clipboard is loaded check for potential matches, otherwise do nothing
-                                                handleAnything(this.clipboard)
-                                                    .then(([route, props]) => {
-                                                        navigation.navigate(
-                                                            route,
-                                                            props
-                                                        );
-                                                    })
-                                                    .catch(() =>
-                                                        navigation.navigate(
-                                                            'AddressQRCodeScanner'
-                                                        )
-                                                    );
+                                                bottom: 75,
+                                                alignItems: 'center'
                                             }}
                                         >
-                                            <QRIcon
+                                            <TouchableOpacity
                                                 style={{
-                                                    padding: 25
+                                                    position: 'absolute',
+                                                    height: 90,
+                                                    width: 90,
+                                                    borderRadius: 90,
+                                                    backgroundColor: themeColor(
+                                                        'secondary'
+                                                    ),
+                                                    justifyContent: 'center',
+                                                    alignItems: 'center',
+                                                    shadowColor: 'black',
+                                                    shadowRadius: 5,
+                                                    shadowOpacity: 0.8,
+                                                    elevation: 2
                                                 }}
-                                                fill={themeColor('highlight')}
-                                            />
-                                        </TouchableOpacity>
+                                                onPress={() => {
+                                                    const {
+                                                        navigation
+                                                    } = this.props;
+                                                    // if clipboard is loaded check for potential matches, otherwise do nothing
+                                                    handleAnything(
+                                                        this.clipboard
+                                                    )
+                                                        .then(
+                                                            ([
+                                                                route,
+                                                                props
+                                                            ]) => {
+                                                                navigation.navigate(
+                                                                    route,
+                                                                    props
+                                                                );
+                                                            }
+                                                        )
+                                                        .catch(() =>
+                                                            navigation.navigate(
+                                                                'AddressQRCodeScanner'
+                                                            )
+                                                        );
+                                                }}
+                                            >
+                                                <QRIcon
+                                                    style={{
+                                                        padding: 25
+                                                    }}
+                                                    fill={themeColor(
+                                                        'highlight'
+                                                    )}
+                                                />
+                                            </TouchableOpacity>
+                                        </View>
                                     );
                                 }
-                                return <ChannelsIcon fill={color} />;
+                                if (RESTUtils.supportsChannelManagement()) {
+                                    return <ChannelsIcon fill={color} />;
+                                }
                             }
                         })}
                         tabBarOptions={{
                             activeTintColor: themeColor('highlight'),
-                            inactiveTintColor: 'gray'
+                            inactiveTintColor: RESTUtils.supportsChannelManagement()
+                                ? 'gray'
+                                : themeColor('highlight')
                         }}
                     >
                         <Tab.Screen name="Wallet" component={WalletScreen} />
@@ -296,11 +343,16 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                             name={scanAndSend}
                             component={WalletScreen}
                         />
-                        {/* TODO: the icon isn't taking on the color like the wallet one does */}
-                        <Tab.Screen
-                            name={localeString('views.Wallet.Wallet.channels')}
-                            component={ChannelsScreen}
-                        />
+                        {RESTUtils.supportsChannelManagement() ? (
+                            <Tab.Screen
+                                name={localeString(
+                                    'views.Wallet.Wallet.channels'
+                                )}
+                                component={ChannelsScreen}
+                            />
+                        ) : (
+                            <Tab.Screen name={' '} component={WalletScreen} />
+                        )}
                     </Tab.Navigator>
                 </NavigationContainer>
             </View>

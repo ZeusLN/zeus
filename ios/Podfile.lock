@@ -197,8 +197,14 @@ PODS:
     - React-cxxreact (= 0.63.4)
     - React-jsi (= 0.63.4)
   - React-jsinspector (0.63.4)
-  - react-native-camera-kit (8.0.4):
-    - React
+  - react-native-camera (4.0.1):
+    - React-Core
+    - react-native-camera/RCT (= 4.0.1)
+    - react-native-camera/RN (= 4.0.1)
+  - react-native-camera/RCT (4.0.1):
+    - React-Core
+  - react-native-camera/RN (4.0.1):
+    - React-Core
   - react-native-date-picker (3.3.2):
     - React-Core
   - react-native-randombytes (3.5.3):
@@ -283,8 +289,6 @@ PODS:
     - React
   - RNOS (1.2.6):
     - React
-  - RNPermissions (2.0.9):
-    - React
   - RNReanimated (1.7.0):
     - React
   - RNScreens (2.0.0-alpha.29):
@@ -337,7 +341,7 @@ DEPENDENCIES:
   - React-jsi (from `../node_modules/react-native/ReactCommon/jsi`)
   - React-jsiexecutor (from `../node_modules/react-native/ReactCommon/jsiexecutor`)
   - React-jsinspector (from `../node_modules/react-native/ReactCommon/jsinspector`)
-  - react-native-camera-kit (from `../node_modules/react-native-camera-kit`)
+  - react-native-camera (from `../node_modules/react-native-camera`)
   - react-native-date-picker (from `../node_modules/react-native-date-picker`)
   - react-native-randombytes (from `../node_modules/react-native-randombytes`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
@@ -360,7 +364,6 @@ DEPENDENCIES:
   - "RNCPicker (from `../node_modules/@react-native-picker/picker`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - RNOS (from `../node_modules/react-native-os`)
-  - RNPermissions (from `../node_modules/react-native-permissions`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNSecureKeyStore (from `../node_modules/react-native-secure-key-store/ios`)
@@ -430,8 +433,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/jsiexecutor"
   React-jsinspector:
     :path: "../node_modules/react-native/ReactCommon/jsinspector"
-  react-native-camera-kit:
-    :path: "../node_modules/react-native-camera-kit"
+  react-native-camera:
+    :path: "../node_modules/react-native-camera"
   react-native-date-picker:
     :path: "../node_modules/react-native-date-picker"
   react-native-randombytes:
@@ -476,8 +479,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-gesture-handler"
   RNOS:
     :path: "../node_modules/react-native-os"
-  RNPermissions:
-    :path: "../node_modules/react-native-permissions"
   RNReanimated:
     :path: "../node_modules/react-native-reanimated"
   RNScreens:
@@ -551,7 +552,7 @@ SPEC CHECKSUMS:
   React-jsi: a0418934cf48f25b485631deb27c64dc40fb4c31
   React-jsiexecutor: 93bd528844ad21dc07aab1c67cb10abae6df6949
   React-jsinspector: 58aef7155bc9a9683f5b60b35eccea8722a4f53a
-  react-native-camera-kit: 498a6d111a904834e0824e9073cfadef7303235f
+  react-native-camera: 11166fe7e3a673493c152f52966e8ab1c5cdcacc
   react-native-date-picker: 96a07ca27a6225da8a3935324d85046028456b0f
   react-native-randombytes: 991545e6eaaf700b4ee384c291ef3d572e0b2ca8
   react-native-safe-area-context: a1d322930b8c5d04ebeb77cc47cc97575ad27203
@@ -574,7 +575,6 @@ SPEC CHECKSUMS:
   RNCPicker: 61c7a0645b9e4ac67960aa7f22a3effcecfdfb8d
   RNGestureHandler: 02905abe54e1f6e59c081a10b4bd689721e17aa6
   RNOS: 6f2f9a70895bbbfbdad7196abd952e7b01d45027
-  RNPermissions: 6db7e0a4d94c9c02390d11020b1d3d187aaf77e5
   RNReanimated: 031fe8d9ea93c2bd689a40f05320ef9d96f74d7f
   RNScreens: b20bdb598fe95ac37aada88a5e92f36622549e49
   RNSecureKeyStore: f1ad870e53806453039f650720d2845c678d89c8
@@ -595,6 +595,6 @@ SPEC CHECKSUMS:
   UMTaskManagerInterface: ee5b1ee1056eb338ff2d521ba79460d8cd0bae7d
   Yoga: 4bd86afe9883422a7c4028c00e34790f560923d6
 
-PODFILE CHECKSUM: 2243eb408afe5fc9db70dd28a0433866950fdc69
+PODFILE CHECKSUM: eadd0daa88f55ec5e20c2853042807ac96f267a3
 
 COCOAPODS: 1.10.1

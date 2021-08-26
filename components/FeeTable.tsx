@@ -15,10 +15,8 @@ import isEmpty from 'lodash/isEmpty';
 import { inject, observer } from 'mobx-react';
 
 import FeeStore from './../stores/FeeStore';
-import SettingsStore from './../stores/SettingsStore';
 
 interface FeeTableProps {
-    SettingsStore: SettingsStore;
     FeeStore: FeeStore;
     setFee: (value: string) => void;
 }
@@ -27,7 +25,7 @@ interface FeeTableState {
     collapsed: boolean;
 }
 
-@inject('SettingsStore', 'FeeStore')
+@inject('FeeStore')
 @observer
 export default class FeeTable extends React.Component<
     FeeTableProps,
@@ -80,10 +78,8 @@ export default class FeeTable extends React.Component<
 
     render() {
         const { collapsed } = this.state;
-        const { FeeStore, SettingsStore, setFee } = this.props;
+        const { FeeStore, setFee } = this.props;
         const { dataFrame, loading } = FeeStore;
-        const { settings } = SettingsStore;
-        const { theme } = settings;
 
         const df = dataFrame;
         let headers: any;

@@ -24,7 +24,7 @@ export default class Transaction extends BaseModel {
         return localeString('general.transaction');
     }
 
-    @computed public get getTimestamp(): string {
+    @computed public get getTimestamp(): string | number {
         return this.time_stamp || 0;
     }
 
@@ -32,7 +32,7 @@ export default class Transaction extends BaseModel {
         return DateTimeUtils.listFormattedDate(this.time_stamp || 0);
     }
 
-    @computed public get getDate(): string {
+    @computed public get getDate(): string | Date {
         return DateTimeUtils.listDate(this.time_stamp || 0);
     }
 

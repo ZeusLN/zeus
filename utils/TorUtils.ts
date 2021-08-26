@@ -1,5 +1,5 @@
 import Tor, { RequestMethod } from 'react-native-tor';
-const tor = Tor({ bootstrapTimeoutMs: 35000 });
+const tor = Tor();
 const doTorRequest = async <T extends RequestMethod>(
     url: string,
     method: T,
@@ -32,4 +32,10 @@ const doTorRequest = async <T extends RequestMethod>(
             break;
     }
 };
-export { doTorRequest, RequestMethod };
+
+const restartTor = async () => {
+    await tor.stopIfRunning();
+    await tor.startIfNotStarted();
+};
+
+export { doTorRequest, restartTor, RequestMethod };
