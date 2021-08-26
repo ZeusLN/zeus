@@ -22,7 +22,8 @@ interface NodeInfoProps {
 
 interface SendState {
     customFee: string;
-    feeBoxColor: any;
+    selectedFee: string;
+    fee: string;
 }
 
 @inject('FeeStore')
@@ -32,13 +33,16 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
         const { FeeStore } = this.props;
         FeeStore.getOnchainFeesviaMempool();
     }
+
     constructor(props: any) {
         super(props);
         this.state = {
             customFee: '',
-            feeBoxColor: '#A7A9AC'
+            selectedFee: '',
+            fee: ''
         };
     }
+
     render() {
         const { navigation } = this.props;
         const { FeeStore } = this.props;
@@ -79,52 +83,168 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                 )}
                 {recommendedFees['fastestFee'] && !loading && (
                     <View style={styles.container}>
-                        <View style={styles.feeBoxes}>
-                            <Text style={styles.feeTitle}>
-                                {localeString('views.EditFee.fastestFee')}
-                            </Text>
-                            <Text style={styles.feeText}>
-                                {recommendedFees['fastestFee']}
-                            </Text>
-                        </View>
-                        <View style={styles.feeBoxes}>
-                            <Text style={styles.feeTitle}>
-                                {localeString('views.EditFee.halfHourFee')}
-                            </Text>
-                            <Text style={styles.feeText}>
-                                {recommendedFees['halfHourFee']}
-                            </Text>
-                        </View>
-                        <View style={styles.feeBoxes}>
-                            <Text style={styles.feeTitle}>
-                                {localeString('views.EditFee.hourFee')}
-                            </Text>
-                            <Text style={styles.feeText}>
-                                {recommendedFees['hourFee']}
-                            </Text>
-                        </View>
-                        <View style={styles.feeBoxes}>
-                            <Text style={styles.feeTitle}>
-                                {localeString('views.EditFee.minimumFee')}
-                            </Text>
-                            <Text style={styles.feeText}>
-                                {recommendedFees['hourFee']}
-                            </Text>
-                        </View>
+                        <TouchableWithoutFeedback
+                            onPress={() =>
+                                this.setState({
+                                    selectedFee: 'fastestFee',
+                                    fee: recommendedFees[
+                                        'fastestFee'
+                                    ].toString()
+                                })
+                            }
+                        >
+                            <View
+                                style={{
+                                    ...styles.feeBoxes,
+                                    borderColor:
+                                        this.state.selectedFee === 'fastestFee'
+                                            ? '#FFD93F'
+                                            : '#A7A9AC',
+                                    borderWidth:
+                                        this.state.selectedFee === 'fastestFee'
+                                            ? 2
+                                            : 1
+                                }}
+                            >
+                                <Text style={styles.feeTitle}>
+                                    {localeString('views.EditFee.fastestFee')}
+                                </Text>
+                                <Text style={styles.feeText}>
+                                    {recommendedFees['fastestFee']}
+                                </Text>
+                            </View>
+                        </TouchableWithoutFeedback>
+                        <TouchableWithoutFeedback
+                            onPress={() =>
+                                this.setState({
+                                    selectedFee: 'halfHourFee',
+                                    fee: recommendedFees[
+                                        'halfHourFee'
+                                    ].toString()
+                                })
+                            }
+                        >
+                            <View
+                                style={{
+                                    ...styles.feeBoxes,
+                                    borderColor:
+                                        this.state.selectedFee === 'halfHourFee'
+                                            ? '#FFD93F'
+                                            : '#A7A9AC',
+                                    borderWidth:
+                                        this.state.selectedFee === 'halfHourFee'
+                                            ? 2
+                                            : 1
+                                }}
+                            >
+                                <Text style={styles.feeTitle}>
+                                    {localeString('views.EditFee.halfHourFee')}
+                                </Text>
+                                <Text style={styles.feeText}>
+                                    {recommendedFees['halfHourFee']}
+                                </Text>
+                            </View>
+                        </TouchableWithoutFeedback>
+
+                        <TouchableWithoutFeedback
+                            onPress={() =>
+                                this.setState({
+                                    selectedFee: 'hourFee',
+                                    fee: recommendedFees['hourFee'].toString()
+                                })
+                            }
+                        >
+                            <View
+                                style={{
+                                    ...styles.feeBoxes,
+                                    borderColor:
+                                        this.state.selectedFee === 'hourFee'
+                                            ? '#FFD93F'
+                                            : '#A7A9AC',
+                                    borderWidth:
+                                        this.state.selectedFee === 'hourFee'
+                                            ? 2
+                                            : 1
+                                }}
+                            >
+                                <Text style={styles.feeTitle}>
+                                    {localeString('views.EditFee.hourFee')}
+                                </Text>
+                                <Text style={styles.feeText}>
+                                    {recommendedFees['hourFee']}
+                                </Text>
+                            </View>
+                        </TouchableWithoutFeedback>
+                        <TouchableWithoutFeedback
+                            onPress={() =>
+                                this.setState({
+                                    selectedFee: 'minimumFee',
+                                    fee: recommendedFees[
+                                        'minimumFee'
+                                    ].toString()
+                                })
+                            }
+                        >
+                            <View
+                                style={{
+                                    ...styles.feeBoxes,
+                                    borderColor:
+                                        this.state.selectedFee === 'minimumFee'
+                                            ? '#FFD93F'
+                                            : '#A7A9AC',
+                                    borderWidth:
+                                        this.state.selectedFee === 'minimumFee'
+                                            ? 2
+                                            : 1
+                                }}
+                            >
+                                <Text style={styles.feeTitle}>
+                                    {localeString('views.EditFee.minimumFee')}
+                                </Text>
+                                <Text style={styles.feeText}>
+                                    {recommendedFees['minimumFee']}
+                                </Text>
+                            </View>
+                        </TouchableWithoutFeedback>
+
                         <View>
                             <Text style={styles.custom}>
                                 {localeString('views.EditFee.custom')}
                             </Text>
                         </View>
                         <TextInput
-                            style={{ ...styles.feeBoxes, top: 30 }}
+                            style={{
+                                ...styles.feeBoxes,
+                                top: 30,
+                                borderColor:
+                                    this.state.selectedFee === 'custom'
+                                        ? '#FFD93F'
+                                        : '#A7A9AC',
+                                borderWidth:
+                                    this.state.selectedFee === 'custom' ? 2 : 1,
+                                color: '#FFFFFF',
+                                fontSize: 18
+                            }}
                             keyboardType="numeric"
                             defaultValue={this.state.customFee}
                             onChangeText={(text: string) =>
-                                this.setState({ customFee: text })
+                                this.setState({
+                                    customFee: text,
+                                    fee: text,
+                                    selectedFee: 'custom'
+                                })
                             }
                         ></TextInput>
-                        <TouchableOpacity style={styles.confirmButton}>
+
+                        <TouchableOpacity
+                            style={styles.confirmButton}
+                            onPress={() => {
+                                this.props.navigation.state.params.onNavigateBack(
+                                    this.state.fee
+                                );
+                                this.props.navigation.goBack();
+                            }}
+                        >
                             <Text
                                 style={{
                                     fontSize: 18,
@@ -133,7 +253,9 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                                     top: 8
                                 }}
                             >
-                                {localeString('views.EditFee.confirmFee')}
+                                {localeString(
+                                    'views.EditFee.confirmFee'
+                                ).toUpperCase()}
                             </Text>
                         </TouchableOpacity>
                     </View>
@@ -169,9 +291,7 @@ const styles = StyleSheet.create({
         height: 65,
         width: 350,
         top: 30,
-        borderWidth: 1,
-        borderRadius: 4,
-        borderColor: '#A7A9AC'
+        borderRadius: 4
     },
     feeTitle: {
         color: '#fff',
