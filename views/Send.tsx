@@ -177,6 +177,12 @@ export default class Send extends React.Component<SendProps, SendState> {
         this.setState({ fee: text });
     };
 
+    handleOnNavigateBack = (fee: string) => {
+        this.setState({
+            fee
+        });
+    };
+
     render() {
         const {
             SettingsStore,
@@ -483,10 +489,17 @@ export default class Send extends React.Component<SendProps, SendState> {
                             </View>
                         ))}
                     {transactionType === 'On-chain' && (
-                        <View style={styles.editfeebutton}>
+                        <View style={styles.editFeeButton}>
                             <Button
-                                onPress={() => navigation.navigate('EditFee')}
-                                title="Edit network fees"
+                                onPress={() =>
+                                    navigation.navigate('EditFee', {
+                                        onNavigateBack: this
+                                            .handleOnNavigateBack
+                                    })
+                                }
+                                title={localeString(
+                                    'views.Send.editNetworkFees'
+                                )}
                             />
                         </View>
                     )}
@@ -533,7 +546,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         minHeight: 75
     },
-    editfeebutton: {
+    editFeeButton: {
         paddingTop: 15,
         alignItems: 'center'
     }
