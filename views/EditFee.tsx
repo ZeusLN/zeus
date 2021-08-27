@@ -3,12 +3,12 @@ import {
     StyleSheet,
     Text,
     TextInput,
+    ActivityIndicator,
     View,
     TouchableOpacity,
     TouchableWithoutFeedback
 } from 'react-native';
 import { Icon, Header } from 'react-native-elements';
-import Spinner from '../images/SVG/spinning-circles.svg';
 import { themeColor } from '../utils/ThemeUtils';
 import FeeStore from './../stores/FeeStore';
 import { inject, observer } from 'mobx-react';
@@ -29,11 +29,6 @@ interface SendState {
 @inject('FeeStore')
 @observer
 export default class EditFee extends React.Component<NodeInfoProps, SendState> {
-    UNSAFE_componentWillMount() {
-        const { FeeStore } = this.props;
-        FeeStore.getOnchainFeesviaMempool();
-    }
-
     constructor(props: any) {
         super(props);
         this.state = {
@@ -43,9 +38,14 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
         };
     }
 
-    render() {
-        const { navigation } = this.props;
+    UNSAFE_componentWillMount() {
         const { FeeStore } = this.props;
+        FeeStore.getOnchainFeesviaMempool();
+    }
+
+    render() {
+        const { navigation, FeeStore } = this.props;
+        const { selectedFee } = this.state;
         const {
             recommendedFees,
             loading,
@@ -77,8 +77,8 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                     rightComponent={<ReloadButton />}
                 />
                 {loading && !error && (
-                    <View style={{ top: '40%', left: '45%' }}>
-                        <Spinner />
+                    <View style={{ flex: 1, justifyContent: 'center' }}>
+                        <ActivityIndicator size="large" color="#0000ff" />
                     </View>
                 )}
                 {recommendedFees['fastestFee'] && !loading && (
@@ -97,13 +97,11 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                                 style={{
                                     ...styles.feeBoxes,
                                     borderColor:
-                                        this.state.selectedFee === 'fastestFee'
-                                            ? '#FFD93F'
+                                        selectedFee === 'fastestFee'
+                                            ? 'rgba(255, 217, 63, .6)'
                                             : '#A7A9AC',
                                     borderWidth:
-                                        this.state.selectedFee === 'fastestFee'
-                                            ? 2
-                                            : 1
+                                        selectedFee === 'fastestFee' ? 3 : 1
                                 }}
                             >
                                 <Text style={styles.feeTitle}>
@@ -128,13 +126,11 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                                 style={{
                                     ...styles.feeBoxes,
                                     borderColor:
-                                        this.state.selectedFee === 'halfHourFee'
-                                            ? '#FFD93F'
+                                        selectedFee === 'halfHourFee'
+                                            ? 'rgba(255, 217, 63, .6)'
                                             : '#A7A9AC',
                                     borderWidth:
-                                        this.state.selectedFee === 'halfHourFee'
-                                            ? 2
-                                            : 1
+                                        selectedFee === 'halfHourFee' ? 3 : 1
                                 }}
                             >
                                 <Text style={styles.feeTitle}>
@@ -158,13 +154,11 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                                 style={{
                                     ...styles.feeBoxes,
                                     borderColor:
-                                        this.state.selectedFee === 'hourFee'
-                                            ? '#FFD93F'
+                                        selectedFee === 'hourFee'
+                                            ? 'rgba(255, 217, 63, .6)'
                                             : '#A7A9AC',
                                     borderWidth:
-                                        this.state.selectedFee === 'hourFee'
-                                            ? 2
-                                            : 1
+                                        selectedFee === 'hourFee' ? 3 : 1
                                 }}
                             >
                                 <Text style={styles.feeTitle}>
@@ -189,13 +183,11 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                                 style={{
                                     ...styles.feeBoxes,
                                     borderColor:
-                                        this.state.selectedFee === 'minimumFee'
-                                            ? '#FFD93F'
+                                        selectedFee === 'minimumFee'
+                                            ? 'rgba(255, 217, 63, .6)'
                                             : '#A7A9AC',
                                     borderWidth:
-                                        this.state.selectedFee === 'minimumFee'
-                                            ? 2
-                                            : 1
+                                        selectedFee === 'minimumFee' ? 3 : 1
                                 }}
                             >
                                 <Text style={styles.feeTitle}>
@@ -217,11 +209,10 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                                 ...styles.feeBoxes,
                                 top: 30,
                                 borderColor:
-                                    this.state.selectedFee === 'custom'
+                                    selectedFee === 'custom'
                                         ? '#FFD93F'
                                         : '#A7A9AC',
-                                borderWidth:
-                                    this.state.selectedFee === 'custom' ? 2 : 1,
+                                borderWidth: selectedFee === 'custom' ? 2 : 1,
                                 color: '#FFFFFF',
                                 fontSize: 18
                             }}

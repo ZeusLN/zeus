@@ -5,7 +5,8 @@ import {
     TextInput,
     View,
     ScrollView,
-    TouchableOpacity
+    TouchableOpacity,
+    TouchableWithoutFeedback
 } from 'react-native';
 import Clipboard from '@react-native-community/clipboard';
 import { inject, observer } from 'mobx-react';
@@ -364,16 +365,34 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 <Text style={styles.label}>
                                     {localeString('views.Send.feeSats')}:
                                 </Text>
-                                <TextInput
-                                    keyboardType="numeric"
-                                    placeholder="2"
-                                    value={fee}
-                                    onChangeText={(text: string) =>
-                                        this.setFee(text)
+                                <TouchableWithoutFeedback
+                                    onPress={() =>
+                                        navigation.navigate('EditFee', {
+                                            onNavigateBack: this
+                                                .handleOnNavigateBack
+                                        })
                                     }
-                                    style={styles.textInput}
-                                    placeholderTextColor="gray"
-                                />
+                                >
+                                    <View
+                                        style={{
+                                            ...styles.editFeeBox,
+
+                                            borderColor:
+                                                'rgba(255, 217, 63, .6)',
+                                            borderWidth: 3
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                fontSize: 18
+                                            }}
+                                        >
+                                            {fee}
+                                        </Text>
+                                    </View>
+                                </TouchableWithoutFeedback>
+
                                 {RESTUtils.supportsCoinControl() && (
                                     <UTXOPicker
                                         onValueChange={this.selectUTXOs}
@@ -618,21 +637,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 />
                             </View>
                         ))}
-                    {transactionType === 'On-chain' && (
-                        <View style={styles.editFeeButton}>
-                            <Button
-                                onPress={() =>
-                                    navigation.navigate('EditFee', {
-                                        onNavigateBack: this
-                                            .handleOnNavigateBack
-                                    })
-                                }
-                                title={localeString(
-                                    'views.Send.editNetworkFees'
-                                )}
-                            />
-                        </View>
-                    )}
 
                     {!!error_msg && (
                         <React.Fragment>
@@ -650,6 +654,14 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: themeColor('background'),
         color: themeColor('text')
+    },
+    editFeeBox: {
+        height: 65,
+        padding: 15,
+        marginTop: 15,
+        borderRadius: 4,
+        borderColor: '#FFD93F',
+        borderWidth: 2
     },
     label: {
         textDecorationLine: 'underline',
@@ -670,7 +682,7 @@ const styles = StyleSheet.create({
     },
     button: {
         alignItems: 'center',
-        paddingTop: 15
+        paddingTop: 30
     },
     feeTableButton: {
         paddingTop: 15,
