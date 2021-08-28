@@ -69,11 +69,15 @@ export default class LightningSwipeableRow extends Component<
         <View
             style={{
                 marginLeft: 15,
-                width: 150,
+                width: RESTUtils.supportsRouting() ? 150 : 75,
                 flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row'
             }}
         >
-            {this.renderAction(localeString('general.receive'), 150, progress)}
+            {this.renderAction(
+                localeString('general.receive'),
+                RESTUtils.supportsRouting() ? 150 : 75,
+                progress
+            )}
             {RESTUtils.supportsRouting() &&
                 this.renderAction(
                     localeString('general.routing'),
