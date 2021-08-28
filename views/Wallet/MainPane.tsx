@@ -92,10 +92,6 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
             infoValue = localeString('views.Wallet.MainPane.regnet');
         }
 
-        const DefaultBalance = () => <BalanceViewCombined />;
-
-        const LndHubBalance = () => <LightningBalance />;
-
         const NetworkBadge = () => (
             <View style={styles.nodeInfo}>
                 {nodeAddress && nodeAddress.includes('.onion') ? (
@@ -149,9 +145,9 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                 >
                     <WalletHeader navigation={navigation} />
                     {implementation === 'lndhub' ? (
-                        <LndHubBalance />
+                        <LightningBalance />
                     ) : (
-                        <DefaultBalance />
+                        <BalanceViewCombined />
                     )}
                     {infoValue !== 'ⓘ' && <NetworkBadge />}
                 </View>
