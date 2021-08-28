@@ -110,8 +110,15 @@ export default class Send extends React.Component<SendProps, SendState> {
         }
     }
 
-    selectUTXOs = (utxos: Array<string>, utxoBalance: number) =>
-        this.setState({ utxos, amount: 'all', utxoBalance });
+    selectUTXOs = (utxos: Array<string>, utxoBalance: number) => {
+          const { settingsStore } = this.props;
+          const { implementation } = settingsStore;
+          let newState = { utxos, utxoBalance };
+          if (implementation === 'c-lightning-REST') {
+              newState.amount = 'all';
+          }
+          this.setState(newState);
+    }
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
         const { navigation } = nextProps;
