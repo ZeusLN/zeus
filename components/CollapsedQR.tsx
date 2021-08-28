@@ -6,6 +6,8 @@ import CopyButton from './CopyButton';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
+const secondaryLogo = require('../images/secondary.png');
+
 interface CollapsedQRProps {
     value: string;
     showText?: string;
@@ -47,7 +49,7 @@ export default class CollapsedQR extends React.Component<
                 {!hideText && <Text style={styles.value}>{value}</Text>}
                 {!collapsed && (
                     <View style={styles.qrPadding}>
-                        <QRCode value={value} size={300} />
+                        <QRCode value={value} size={350} logo={secondaryLogo} />
                     </View>
                 )}
                 <Button
@@ -87,12 +89,10 @@ const styles = StyleSheet.create({
         paddingLeft: 20
     },
     qrPadding: {
-        width: 350,
-        height: 350,
         backgroundColor: 'white',
         alignItems: 'center',
         alignSelf: 'center',
-        paddingTop: 25,
+        padding: 5,
         marginBottom: 10
     }
 });
