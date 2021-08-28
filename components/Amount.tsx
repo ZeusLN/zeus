@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
 import { Body } from './text/Body';
 import { Row } from './layout/Row';
 import { Spacer } from './layout/Spacer';
@@ -133,6 +133,7 @@ interface AmountProps {
     jumboText?: boolean;
     credit?: boolean;
     debit?: boolean;
+    toggleable?: boolean;
 }
 
 @inject('UnitsStore')
@@ -146,7 +147,8 @@ export class Amount extends React.Component<AmountProps, {}> {
             sensitiveLength = 4,
             jumboText = false,
             credit = false,
-            debit = false
+            debit = false,
+            toggleable = false
         } = this.props;
         const UnitsStore = this.props.UnitsStore!;
 
@@ -165,6 +167,19 @@ export class Amount extends React.Component<AmountProps, {}> {
                 sensitiveLength,
                 true
             ) as string;
+        }
+
+        if (toggleable) {
+            return (
+                <TouchableOpacity onPress={() => UnitsStore.changeUnits()}>
+                    <AmountDisplay
+                        {...unformattedAmount}
+                        jumboText={jumboText}
+                        credit={credit}
+                        debit={debit}
+                    />
+                </TouchableOpacity>
+            );
         }
 
         return (

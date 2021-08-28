@@ -80,7 +80,7 @@ export function RoutingHeader(props) {
             <View style={styles.wrapper}>
                 {!fullSize && (
                     <View style={{ alignItems: 'center' }}>
-                        <Amount sats={timeframeEarned} jumboText />
+                        <Amount sats={timeframeEarned} jumboText toggleable />
                         <Text style={{ color: themeColor('text') }}>
                             {localeString(
                                 'views.Routing.RoutingHeader.timeframeEarned'
