@@ -4,7 +4,7 @@ import { Body } from './text/Body';
 import { Row } from './layout/Row';
 import { Spacer } from './layout/Spacer';
 import { inject, observer } from 'mobx-react';
-import type UnitsStore from '../stores/UnitsStore';
+import UnitsStore from '../stores/UnitsStore';
 import PrivacyUtils from '../utils/PrivacyUtils';
 
 export const satoshisPerBTC = 100000000;
@@ -20,6 +20,8 @@ interface AmountDisplayProps {
     rtl?: boolean;
     space?: boolean;
     jumboText?: boolean;
+    credit?: boolean;
+    debit?: boolean;
 }
 
 function AmountDisplay({
@@ -30,7 +32,9 @@ function AmountDisplay({
     plural = false,
     rtl = false,
     space = false,
-    jumboText = false
+    jumboText = false,
+    credit = false,
+    debit = false
 }: AmountDisplayProps) {
     if (unit === 'fiat' && !symbol) {
         console.error('Must include a symbol when rendering fiat');
@@ -42,10 +46,17 @@ function AmountDisplay({
         case 'sats':
             return (
                 <Row align="flex-end">
-                    <Body jumbo={jumboText}>{amount}</Body>
+                    <Body jumbo={jumboText} credit={credit} debit={debit}>
+                        {amount}
+                    </Body>
                     <Spacer width={2} />
                     <View style={{ paddingBottom: jumboText ? 8 : 1.5 }}>
-                        <Body secondary small={!jumboText}>
+                        <Body
+                            secondary
+                            small={!jumboText}
+                            credit={credit}
+                            debit={debit}
+                        >
                             {plural ? 'sats' : 'sat'}
                         </Body>
                     </View>
@@ -56,22 +67,56 @@ function AmountDisplay({
             if (rtl) {
                 return (
                     <Row align="flex-end">
-                        <Body jumbo={jumboText}>
+                        <Body jumbo={jumboText} credit={credit} debit={debit}>
                             {negative ? '-' : ''}
                             {amount}
                         </Body>
-                        {space ? <Body jumbo={jumboText}>{' '}</Body> : <Spacer width={1} />} 
-                        <Body secondary jumbo={jumboText}>{actualSymbol}</Body>
+                        {space ? (
+                            <Body
+                                jumbo={jumboText}
+                                credit={credit}
+                                debit={debit}
+                            >
+                                {' '}
+                            </Body>
+                        ) : (
+                            <Spacer width={1} />
+                        )}
+                        <Body
+                            secondary
+                            jumbo={jumboText}
+                            credit={credit}
+                            debit={debit}
+                        >
+                            {actualSymbol}
+                        </Body>
                     </Row>
                 );
             } else {
                 return (
                     <Row align="flex-end">
-                        <Body secondary jumbo={jumboText}>{actualSymbol}</Body>
-                        {space ? <Body jumbo={jumboText}>{' '}</Body> : <Spacer width={1} />} 
-                        <Body jumbo={jumboText}>
+                        <Body
+                            secondary
+                            jumbo={jumboText}
+                            credit={credit}
+                            debit={debit}
+                        >
+                            {actualSymbol}
+                        </Body>
+                        {space ? (
+                            <Body
+                                jumbo={jumboText}
+                                credit={credit}
+                                debit={debit}
+                            >
+                                {' '}
+                            </Body>
+                        ) : (
+                            <Spacer width={1} />
+                        )}
+                        <Body jumbo={jumboText} credit={credit} debit={debit}>
                             {negative ? '-' : ''}
-                            {amount}
+                            {amount.toString()}
                         </Body>
                     </Row>
                 );
@@ -86,31 +131,49 @@ interface AmountProps {
     sensitive?: boolean;
     sensitiveLength?: number;
     jumboText?: boolean;
+    credit?: boolean;
+    debit?: boolean;
 }
 
 @inject('UnitsStore')
 @observer
 export class Amount extends React.Component<AmountProps, {}> {
     render() {
-        const { sats: value, fixedUnits, sensitive = false, sensitiveLength = 4, jumboText = false } = this.props;
+        const {
+            sats: value,
+            fixedUnits,
+            sensitive = false,
+            sensitiveLength = 4,
+            jumboText = false,
+            credit = false,
+            debit = false
+        } = this.props;
         const UnitsStore = this.props.UnitsStore!;
 
         // TODO: This doesn't feel like the right place for this but it makes the component "reactive"
-        const units = fixedUnits ? fixedUnits : UnitsStore.units; 
+        const units = fixedUnits ? fixedUnits : UnitsStore.units;
 
-        let unformattedAmount = UnitsStore.getUnformattedAmount(
-            value,
-            units 
-        );
+        let unformattedAmount = UnitsStore.getUnformattedAmount(value, units);
 
         if (sensitive) {
             let amount = unformattedAmount.amount;
 
             // This should be a string because sensitiveValue can only return a date if you pass it a date
             // TODO: can we do better than hardcoding these?
-            unformattedAmount.amount = PrivacyUtils.sensitiveValue(amount, sensitiveLength, true) as string;
+            unformattedAmount.amount = PrivacyUtils.sensitiveValue(
+                amount,
+                sensitiveLength,
+                true
+            ) as string;
         }
 
-        return <AmountDisplay {...unformattedAmount} jumboText={jumboText} />;
+        return (
+            <AmountDisplay
+                {...unformattedAmount}
+                jumboText={jumboText}
+                credit={credit}
+                debit={debit}
+            />
+        );
     }
 }
