@@ -85,7 +85,8 @@ export default class CollapsedQR extends React.Component<
 const styles = StyleSheet.create({
     value: {
         marginBottom: 15,
-        color: themeColor('text')
+        color: themeColor('secondaryText'),
+        paddingLeft: 20
     },
     qrPadding: {
         backgroundColor: 'white',
