@@ -5,6 +5,7 @@ import {
     StyleSheet,
     Text,
     TextInput,
+    TouchableOpacity,
     View
 } from 'react-native';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
@@ -48,7 +49,7 @@ export default class RoutingEvent extends React.Component<
         } = this.props;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { channelFees } = FeeStore;
-        const { aliasesById } = ChannelsStore;
+        const { aliasesById, channels } = ChannelsStore;
         const { settings, implementation } = SettingsStore;
         const { lurkerMode } = settings;
 
@@ -64,6 +65,17 @@ export default class RoutingEvent extends React.Component<
             fee,
             getTime
         } = routingEvent;
+
+        const chanInFilter = channels.filter(
+            channel => channel.channelId === chan_id_in
+        );
+        const chanIn = chanInFilter[0];
+        const chanOutFilter = channels.filter(
+            channel => channel.channelId === chan_id_out
+        );
+        const chanOut = chanOutFilter[0];
+        const chanInLabel = aliasesById[chan_id_in] || chan_id_in;
+        const chanOutLabel = aliasesById[chan_id_out] || chan_id_out;
 
         // const channelFee = channelFees[channel_point];
 
@@ -102,7 +114,27 @@ export default class RoutingEvent extends React.Component<
                             keyValue={localeString(
                                 'views.NodeInfo.ForwardingHistory.srcChannelId'
                             )}
-                            value={aliasesById[chan_id_in] || chan_id_in}
+                            value={
+                                chanIn ? (
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            navigation.navigate('Channel', {
+                                                channel: chanIn
+                                            })
+                                        }
+                                    >
+                                        <Text
+                                            style={{
+                                                color: themeColor('highlight')
+                                            }}
+                                        >
+                                            {chanInLabel}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ) : (
+                                    chanInLabel
+                                )
+                            }
                             sensitive
                         />
                     )}
@@ -112,7 +144,27 @@ export default class RoutingEvent extends React.Component<
                             keyValue={localeString(
                                 'views.NodeInfo.ForwardingHistory.dstChannelId'
                             )}
-                            value={aliasesById[chan_id_out] || chan_id_out}
+                            value={
+                                chanOut ? (
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            navigation.navigate('Channel', {
+                                                channel: chanOut
+                                            })
+                                        }
+                                    >
+                                        <Text
+                                            style={{
+                                                color: themeColor('highlight')
+                                            }}
+                                        >
+                                            {chanOutLabel}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ) : (
+                                    chanOutLabel
+                                )
+                            }
                             sensitive
                         />
                     )}
