@@ -23,7 +23,7 @@ export default function KeyValue({
     const rtl = false;
     const Key = <Body>{keyValue}</Body>;
     const Value =
-        typeof value === 'string' ? (
+        typeof value === 'string' || typeof value === 'number' ? (
             <Text
                 style={{
                     color: color || themeColor('secondaryText')

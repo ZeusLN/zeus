@@ -315,7 +315,7 @@ export default class ChannelView extends React.Component<
                     {csv_delay && (
                         <KeyValue
                             keyValue={localeString('views.Channel.csvDelay')}
-                            value={csv_delay.toString()}
+                            value={csv_delay}
                         />
                     )}
 
