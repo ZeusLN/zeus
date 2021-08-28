@@ -3,7 +3,6 @@ import Channel from './../models/Channel';
 import ChannelInfo from './../models/ChannelInfo';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import CloseChannelRequest from './../models/CloseChannelRequest';
-import NodeInfoStore from './NodeInfoStore';
 import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
 

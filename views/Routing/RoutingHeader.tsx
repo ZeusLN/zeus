@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -8,6 +8,7 @@ import { Body } from '../../components/text/Body';
 import { Row } from '../../components/layout/Row';
 import { Spacer } from '../../components/layout/Spacer';
 import { Sats } from '../../components/Sats';
+import { Amount } from '../../components/Amount';
 
 function TotalRow({
     kind,
@@ -78,29 +79,37 @@ export function RoutingHeader(props) {
         <View>
             <View style={styles.wrapper}>
                 {!fullSize && (
-                    <TotalRow
-                        kind={localeString(
-                            'views.Routing.RoutingHeader.timeframeEarned'
-                        )}
-                        amount={timeframeEarned}
-                    />
+                    <View style={{ alignItems: 'center' }}>
+                        <Amount sats={timeframeEarned} jumboText />
+                        <Text style={{ color: themeColor('text') }}>
+                            {localeString(
+                                'views.Routing.RoutingHeader.timeframeEarned'
+                            )}
+                        </Text>
+                    </View>
                 )}
-                <TotalRow
-                    kind={localeString('views.Routing.RoutingHeader.dayEarned')}
-                    amount={dayEarned}
-                />
-                <TotalRow
-                    kind={localeString(
-                        'views.Routing.RoutingHeader.weekEarned'
-                    )}
-                    amount={weekEarned}
-                />
-                <TotalRow
-                    kind={localeString(
-                        'views.Routing.RoutingHeader.monthEarned'
-                    )}
-                    amount={monthEarned}
-                />
+                {fullSize && (
+                    <>
+                        <TotalRow
+                            kind={localeString(
+                                'views.Routing.RoutingHeader.dayEarned'
+                            )}
+                            amount={dayEarned}
+                        />
+                        <TotalRow
+                            kind={localeString(
+                                'views.Routing.RoutingHeader.weekEarned'
+                            )}
+                            amount={weekEarned}
+                        />
+                        <TotalRow
+                            kind={localeString(
+                                'views.Routing.RoutingHeader.monthEarned'
+                            )}
+                            amount={monthEarned}
+                        />
+                    </>
+                )}
             </View>
         </View>
     );
