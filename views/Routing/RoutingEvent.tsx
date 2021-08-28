@@ -232,43 +232,5 @@ const styles = StyleSheet.create({
     amount: {
         alignItems: 'center',
         padding: 10
-    },
-    alias: {
-        fontSize: 20,
-        paddingTop: 10,
-        paddingBottom: 10,
-        color: themeColor('text')
-    },
-    fee: {
-        paddingTop: 10,
-        paddingBottom: 30,
-        color: themeColor('highlight'),
-        fontSize: 35,
-        fontWeight: 'bold'
-    },
-    balance: {
-        fontSize: 15,
-        fontWeight: 'bold',
-        color: themeColor('text')
-    },
-    value: {
-        paddingBottom: 5,
-        color: themeColor('text')
-    },
-    label: {
-        paddingTop: 5,
-        color: themeColor('text')
-    },
-    valueWithLink: {
-        paddingBottom: 5,
-        color: 'rgba(92, 99,216, 1)'
-    },
-    button: {
-        paddingTop: 15,
-        paddingBottom: 15
-    },
-    textInput: {
-        fontSize: 20,
-        color: themeColor('text')
     }
 });
