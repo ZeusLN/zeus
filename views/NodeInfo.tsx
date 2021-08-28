@@ -2,9 +2,10 @@ import * as React from 'react';
 import { StyleSheet, ScrollView, Text, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import CollapsedQR from './../components/CollapsedQR';
+import KeyValue from './../components/KeyValue';
+
 import { inject, observer } from 'mobx-react';
-import { version, playStore } from './../package.json';
-import PrivacyUtils from './../utils/PrivacyUtils';
+import { version } from './../package.json';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
@@ -59,75 +60,56 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
 
         const NodeInfoView = () => (
             <React.Fragment>
-                <Text style={styles.label}>
-                    {localeString('views.NodeInfo.alias')}:
-                </Text>
-                <Text style={styles.value}>
-                    {PrivacyUtils.sensitiveValue(nodeInfo.alias, 10)}
-                </Text>
+                <KeyValue
+                    keyValue={localeString('views.NodeInfo.alias')}
+                    value={nodeInfo.alias}
+                    sensitive
+                />
 
                 {nodeInfo.version && (
-                    <>
-                        <Text style={styles.label}>
-                            {localeString(
-                                'views.NodeInfo.implementationVersion'
-                            )}
-                            :
-                        </Text>
-                        <Text style={styles.value}>
-                            {PrivacyUtils.sensitiveValue(nodeInfo.version, 12)}
-                        </Text>
-                    </>
+                    <KeyValue
+                        keyValue={localeString(
+                            'views.NodeInfo.implementationVersion'
+                        )}
+                        value={nodeInfo.version}
+                        sensitive
+                    />
                 )}
 
-                <Text style={styles.label}>
-                    {localeString('views.NodeInfo.zeusVersion')}:
-                </Text>
-                <Text style={styles.value}>
-                    {playStore ? `v${version}-play` : `v${version}`}
-                </Text>
+                {nodeInfo.version && (
+                    <KeyValue
+                        keyValue={localeString('views.NodeInfo.zeusVersion')}
+                        value={`v${version}`}
+                    />
+                )}
 
                 {!!nodeInfo.synced_to_chain && (
-                    <React.Fragment>
-                        <Text style={styles.label}>
-                            {localeString('views.NodeInfo.synced')}:
-                        </Text>
-                        <Text
-                            style={{
-                                ...styles.value,
-                                color: nodeInfo.synced_to_chain
-                                    ? 'green'
-                                    : 'red'
-                            }}
-                        >
-                            {nodeInfo.synced_to_chain ? 'True' : 'False'}
-                        </Text>
-                    </React.Fragment>
+                    <KeyValue
+                        keyValue={localeString('views.NodeInfo.synced')}
+                        value={nodeInfo.synced_to_chain ? 'True' : 'False'}
+                        color={nodeInfo.synced_to_chain ? 'green' : 'red'}
+                    />
                 )}
 
-                <Text style={styles.label}>
-                    {localeString('views.NodeInfo.blockHeight')}:
-                </Text>
-                <Text style={styles.value}>{nodeInfo.currentBlockHeight}</Text>
+                <KeyValue
+                    keyValue={localeString('views.NodeInfo.blockHeight')}
+                    value={nodeInfo.currentBlockHeight}
+                />
 
                 {nodeInfo.block_hash && (
-                    <React.Fragment>
-                        <Text style={styles.label}>
-                            {localeString('views.NodeInfo.blockHash')}:
-                        </Text>
-                        <Text style={styles.value}>{nodeInfo.block_hash}</Text>
-                    </React.Fragment>
+                    <KeyValue
+                        keyValue={localeString('views.NodeInfo.blockHash')}
+                        value={nodeInfo.block_hash}
+                    />
                 )}
 
-                <Text style={styles.label}>
-                    {localeString('views.NodeInfo.uris')}:
-                </Text>
+                <KeyValue keyValue={localeString('views.NodeInfo.uris')} />
                 {nodeInfo.getURIs &&
                 nodeInfo.getURIs.length > 0 &&
                 !lurkerMode ? (
                     <URIs uris={nodeInfo.getURIs} />
                 ) : (
-                    <Text style={{ ...styles.value, color: 'red' }}>
+                    <Text style={styles.error}>
                         {localeString('views.NodeInfo.noUris')}
                     </Text>
                 )}
@@ -163,12 +145,8 @@ const styles = StyleSheet.create({
         paddingLeft: 20,
         paddingRight: 20
     },
-    label: {
-        paddingTop: 5,
-        color: themeColor('text')
-    },
-    value: {
+    error: {
         paddingBottom: 5,
-        color: themeColor('text')
+        color: 'red'
     }
 });
