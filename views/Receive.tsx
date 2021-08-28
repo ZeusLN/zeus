@@ -219,9 +219,6 @@ export default class Receive extends React.Component<
                     innerBorderStyle={{
                         color: themeColor('secondary')
                     }}
-                    innerBorderStyle={{
-                        color: themeColor('secondary')
-                    }}
                 />
 
                 <ScrollView style={styles.content}>
