@@ -21,7 +21,7 @@ export default function KeyValue({
         /* TODO: rig up RTL */
     }
     const rtl = false;
-    const Key = <Body secondary>{keyValue}</Body>;
+    const Key = <Body>{keyValue}</Body>;
     const Value =
         typeof value === 'string' ? (
             <Text
