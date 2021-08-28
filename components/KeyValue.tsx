@@ -13,7 +13,7 @@ export default function KeyValue({
     sensitive
 }: {
     keyValue: string;
-    value?: string;
+    value?: any;
     color?: string;
     sensitive?: boolean;
 }) {
@@ -22,15 +22,18 @@ export default function KeyValue({
     }
     const rtl = false;
     const Key = <Body secondary>{keyValue}</Body>;
-    const Value = (
-        <Text
-            style={{
-                color: color || themeColor('secondaryText')
-            }}
-        >
-            {sensitive ? PrivacyUtils.sensitiveValue(value) : value}
-        </Text>
-    );
+    const Value =
+        typeof value === 'string' ? (
+            <Text
+                style={{
+                    color: color || themeColor('secondaryText')
+                }}
+            >
+                {sensitive ? PrivacyUtils.sensitiveValue(value) : value}
+            </Text>
+        ) : (
+            value
+        );
     return (
         <View style={{ paddingTop: 10, paddingBottom: 10 }}>
             <Row justify="space-between">

@@ -5,13 +5,14 @@ import {
     StyleSheet,
     Text,
     TextInput,
-    TouchableOpacity,
     View
 } from 'react-native';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import ForwardEvent from './../../models/ForwardEvent';
 
 import SetFeesForm from './../../components/SetFeesForm';
+import KeyValue from './../../components/KeyValue';
+import { Amount } from './../../components/Amount';
 import { inject, observer } from 'mobx-react';
 
 import PrivacyUtils from './../../utils/PrivacyUtils';
@@ -86,100 +87,61 @@ export default class RoutingEvent extends React.Component<
                     backgroundColor={themeColor('background')}
                 />
                 <View style={styles.content}>
-                    <View style={styles.center}>
-                        <TouchableOpacity onPress={() => changeUnits()}>
-                            <Text style={styles.fee}>
-                                {PrivacyUtils.sensitiveValue(
-                                    getAmount(fee),
-                                    3,
-                                    true
-                                )}
-                            </Text>
-                        </TouchableOpacity>
+                    <View style={styles.amount}>
+                        <Amount
+                            sats={fee}
+                            jumboText
+                            toggleable
+                            credit
+                            sensitive
+                        />
                     </View>
 
                     {chan_id_in && (
-                        <View>
-                            <Text style={styles.label}>
-                                {localeString(
-                                    'views.NodeInfo.ForwardingHistory.srcChannelId'
-                                )}
-                                :
-                            </Text>
-                            <Text style={styles.value}>
-                                {PrivacyUtils.sensitiveValue(
-                                    aliasesById[chan_id_in] || chan_id_in,
-                                    10
-                                )}
-                            </Text>
-                        </View>
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.NodeInfo.ForwardingHistory.srcChannelId'
+                            )}
+                            value={aliasesById[chan_id_in] || chan_id_in}
+                            sensitive
+                        />
                     )}
 
                     {chan_id_out && (
-                        <View>
-                            <Text style={styles.label}>
-                                {localeString(
-                                    'views.NodeInfo.ForwardingHistory.dstChannelId'
-                                )}
-                                :
-                            </Text>
-                            <Text style={styles.value}>
-                                {PrivacyUtils.sensitiveValue(
-                                    aliasesById[chan_id_out] || chan_id_out,
-                                    10
-                                )}
-                            </Text>
-                        </View>
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.NodeInfo.ForwardingHistory.dstChannelId'
+                            )}
+                            value={aliasesById[chan_id_out] || chan_id_out}
+                            sensitive
+                        />
                     )}
 
                     {amt_in && (
-                        <View>
-                            <Text style={styles.label}>
-                                {localeString(
-                                    'views.NodeInfo.ForwardingHistory.amtIn'
-                                )}
-                                :
-                            </Text>
-                            <Text style={styles.value}>
-                                {PrivacyUtils.sensitiveValue(
-                                    getAmount(amt_in),
-                                    5,
-                                    true
-                                )}
-                            </Text>
-                        </View>
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.NodeInfo.ForwardingHistory.amtIn'
+                            )}
+                            value={<Amount sats={amt_in} sensitive />}
+                        />
                     )}
 
                     {amt_out && (
-                        <View>
-                            <Text style={styles.label}>
-                                {localeString(
-                                    'views.NodeInfo.ForwardingHistory.amtOut'
-                                )}
-                                :
-                            </Text>
-                            <Text style={styles.value}>
-                                {PrivacyUtils.sensitiveValue(
-                                    getAmount(amt_out),
-                                    5,
-                                    true
-                                )}
-                            </Text>
-                        </View>
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.NodeInfo.ForwardingHistory.amtOut'
+                            )}
+                            value={<Amount sats={amt_out} sensitive />}
+                        />
                     )}
 
                     {getTime && (
-                        <View>
-                            <Text style={styles.label}>
-                                {localeString(
-                                    'views.NodeInfo.ForwardingHistory.timestamp'
-                                )}
-                                :
-                            </Text>
-                            <Text style={styles.value}>
-                                {PrivacyUtils.sensitiveValue(getTime, 6, true)}
-                            </Text>
-                        </View>
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.NodeInfo.ForwardingHistory.timestamp'
+                            )}
+                            value={getTime}
+                        />
                     )}
 
                     {false && (
@@ -215,8 +177,9 @@ const styles = StyleSheet.create({
         paddingLeft: 20,
         paddingRight: 20
     },
-    center: {
-        alignItems: 'center'
+    amount: {
+        alignItems: 'center',
+        padding: 10
     },
     alias: {
         fontSize: 20,
