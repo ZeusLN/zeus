@@ -109,7 +109,7 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
                 !lurkerMode ? (
                     <URIs uris={nodeInfo.getURIs} />
                 ) : (
-                    <Text style={{ ...styles.value, color: 'red' }}>
+                    <Text style={styles.error}>
                         {localeString('views.NodeInfo.noUris')}
                     </Text>
                 )}
@@ -145,12 +145,8 @@ const styles = StyleSheet.create({
         paddingLeft: 20,
         paddingRight: 20
     },
-    label: {
-        paddingTop: 5,
-        color: themeColor('text')
-    },
-    value: {
+    error: {
         paddingBottom: 5,
-        color: themeColor('text')
+        color: 'red'
     }
 });
