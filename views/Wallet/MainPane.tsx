@@ -2,7 +2,6 @@ import * as React from 'react';
 import { Image, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Badge, Button } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import PrivacyUtils from './../../utils/PrivacyUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -15,6 +14,7 @@ const TorIcon = require('./../../images/tor.png');
 
 import { version, playStore } from './../../package.json';
 import { WalletHeader } from '../../components/WalletHeader';
+import { Amount } from '../../components/Amount';
 
 interface MainPaneProps {
     navigation: any;
@@ -35,7 +35,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
             SettingsStore,
             navigation
         } = this.props;
-        const { changeUnits, getAmount, units } = UnitsStore;
+        const { changeUnits } = UnitsStore;
         const {
             totalBlockchainBalance,
             unconfirmedBlockchainBalance,
@@ -53,71 +53,23 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
 
         const LightningBalance = () => (
             <>
-                <Text
-                    style={{
-                        fontSize: 40,
-                        color: themeColor('text')
-                    }}
-                >
-                    {units &&
-                        PrivacyUtils.sensitiveValue(
-                            getAmount(lightningBalance),
-                            8,
-                            true
-                        )}{' '}
-                    ⚡
-                </Text>
+                <Amount sats={lightningBalance} sensitive jumboText />
                 {pendingOpenBalance > 0 ? (
-                    <Text
-                        style={{
-                            fontSize: 20,
-                            color: themeColor('text')
-                        }}
-                    >
-                        {units &&
-                            PrivacyUtils.sensitiveValue(
-                                getAmount(pendingOpenBalance),
-                                8,
-                                true
-                            )}{' '}
-                        pending open
-                    </Text>
+                    <Amount sats={pendingOpenBalance} sensitive jumboText />
                 ) : null}
             </>
         );
-
         const BalanceViewCombined = () => (
-            <React.Fragment>
-                <Text
-                    style={{
-                        fontSize: 40,
-                        color: themeColor('text')
-                    }}
-                >
-                    {units &&
-                        PrivacyUtils.sensitiveValue(
-                            getAmount(combinedBalanceValue),
-                            null,
-                            true
-                        )}
-                </Text>
+            <>
+                <Amount sats={combinedBalanceValue} sensitive jumboText />
                 {unconfirmedBlockchainBalance || pendingOpenBalance ? (
-                    <Text
-                        style={{
-                            fontSize: 20,
-                            color: themeColor('text')
-                        }}
-                    >
-                        {units &&
-                            PrivacyUtils.sensitiveValue(
-                                getAmount(pendingUnconfirmedBalance),
-                                null,
-                                true
-                            )}{' '}
-                        pending
-                    </Text>
+                    <Amount
+                        sats={pendingUnconfirmedBalance}
+                        sensitive
+                        jumboText
+                    />
                 ) : null}
-            </React.Fragment>
+            </>
         );
 
         let infoValue = 'ⓘ';
