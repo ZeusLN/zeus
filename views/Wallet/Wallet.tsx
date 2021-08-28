@@ -7,6 +7,7 @@ import Channels from './Channels';
 import MainPane from './MainPane';
 import { inject, observer } from 'mobx-react';
 import PrivacyUtils from './../../utils/PrivacyUtils';
+import RESTUtils from './../../utils/RESTUtils';
 import { restartTor } from './../../utils/TorUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -325,12 +326,16 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                         </View>
                                     );
                                 }
-                                return <ChannelsIcon fill={color} />;
+                                if (RESTUtils.supportsChannelManagement()) {
+                                    return <ChannelsIcon fill={color} />;
+                                }
                             }
                         })}
                         tabBarOptions={{
                             activeTintColor: themeColor('highlight'),
-                            inactiveTintColor: 'gray'
+                            inactiveTintColor: RESTUtils.supportsChannelManagement()
+                                ? 'gray'
+                                : themeColor('highlight')
                         }}
                     >
                         <Tab.Screen name="Wallet" component={WalletScreen} />
@@ -338,11 +343,16 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                             name={scanAndSend}
                             component={WalletScreen}
                         />
-                        {/* TODO: the icon isn't taking on the color like the wallet one does */}
-                        <Tab.Screen
-                            name={localeString('views.Wallet.Wallet.channels')}
-                            component={ChannelsScreen}
-                        />
+                        {RESTUtils.supportsChannelManagement() ? (
+                            <Tab.Screen
+                                name={localeString(
+                                    'views.Wallet.Wallet.channels'
+                                )}
+                                component={ChannelsScreen}
+                            />
+                        ) : (
+                            <Tab.Screen name={' '} component={WalletScreen} />
+                        )}
                     </Tab.Navigator>
                 </NavigationContainer>
             </View>
