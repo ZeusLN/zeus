@@ -1,7 +1,6 @@
 import * as React from 'react';
 import {
     ActivityIndicator,
-    Image,
     ScrollView,
     StyleSheet,
     Text,
@@ -9,11 +8,12 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { Button, CheckBox, Header, Icon } from 'react-native-elements';
+import { Button, CheckBox, Divider, Header, Icon } from 'react-native-elements';
 import Channel from './../../models/Channel';
 import BalanceSlider from './../../components/BalanceSlider';
 import SetFeesForm from './../../components/SetFeesForm';
-import Identicon from 'identicon.js';
+import KeyValue from './../../components/KeyValue';
+import { Amount } from './../../components/Amount';
 import { inject, observer } from 'mobx-react';
 const hash = require('object-hash');
 import PrivacyUtils from './../../utils/PrivacyUtils';
@@ -22,6 +22,7 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import ChannelsStore from './../../stores/ChannelsStore';
 import FeeStore from './../../stores/FeeStore';
+import NodeInfoStore from './../../stores/NodeInfoStore';
 import UnitsStore from './../../stores/UnitsStore';
 import SettingsStore from './../../stores/SettingsStore';
 
@@ -29,6 +30,7 @@ interface ChannelProps {
     navigation: any;
     ChannelsStore: ChannelsStore;
     FeeStore: FeeStore;
+    NodeInfoStore: NodeInfoStore;
     UnitsStore: UnitsStore;
     SettingsStore: SettingsStore;
 }
@@ -40,7 +42,13 @@ interface ChannelState {
     channel: Channel;
 }
 
-@inject('ChannelsStore', 'UnitsStore', 'FeeStore', 'SettingsStore')
+@inject(
+    'ChannelsStore',
+    'FeeStore',
+    'NodeInfoStore',
+    'UnitsStore',
+    'SettingsStore'
+)
 @observer
 export default class ChannelView extends React.Component<
     ChannelProps,
@@ -103,8 +111,9 @@ export default class ChannelView extends React.Component<
         const {
             navigation,
             ChannelsStore,
-            UnitsStore,
             FeeStore,
+            NodeInfoStore,
+            UnitsStore,
             SettingsStore
         } = this.props;
         const {
@@ -116,6 +125,8 @@ export default class ChannelView extends React.Component<
         const { changeUnits, getAmount, units } = UnitsStore;
         const { channelFees } = FeeStore;
         const { loading, nodes, chanInfo } = ChannelsStore;
+        const { nodeInfo } = NodeInfoStore;
+        const { nodeId } = nodeInfo;
         const { settings, implementation } = SettingsStore;
         const { lurkerMode } = settings;
 
@@ -138,17 +149,12 @@ export default class ChannelView extends React.Component<
         } = channel;
         const privateChannel = channel.private;
 
-        const channelName =
+        const peerName =
             (nodes[remote_pubkey] && nodes[remote_pubkey].alias) ||
             alias ||
             channelId;
 
-        const channelDisplay = PrivacyUtils.sensitiveValue(channelName, 8);
-
-        const data = new Identicon(
-            hash.sha1(alias || remote_pubkey || channelId),
-            255
-        ).toString();
+        const peerDisplay = PrivacyUtils.sensitiveValue(peerName, 8);
 
         const channelFee = channelFees[channel_point];
 
@@ -207,17 +213,12 @@ export default class ChannelView extends React.Component<
                 />
                 <View style={styles.content}>
                     <View style={styles.center}>
-                        <Text style={styles.alias}>{channelDisplay}</Text>
+                        <Text style={styles.alias}>{peerDisplay}</Text>
                         {remote_pubkey && (
                             <Text style={styles.pubkey}>
                                 {PrivacyUtils.sensitiveValue(remote_pubkey)}
                             </Text>
                         )}
-
-                        <Image
-                            source={{ uri: `data:image/png;base64,${data}` }}
-                            style={{ width: 200, height: 200 }}
-                        />
                     </View>
 
                     <BalanceSlider
@@ -241,201 +242,237 @@ export default class ChannelView extends React.Component<
                         </TouchableOpacity>
                     </View>
 
-                    <Text style={styles.label}>
-                        {localeString('views.Channel.status')}:
-                    </Text>
-                    <Text
-                        style={{
-                            ...styles.value,
-                            color: isActive ? 'green' : 'red'
-                        }}
-                    >
-                        {isActive
-                            ? localeString('views.Channel.active')
-                            : localeString('views.Channel.inactive')}
-                    </Text>
+                    <KeyValue
+                        keyValue={localeString('views.Channel.status')}
+                        value={
+                            isActive
+                                ? localeString('views.Channel.active')
+                                : localeString('views.Channel.inactive')
+                        }
+                        color={isActive ? 'green' : 'red'}
+                    />
 
-                    <Text style={styles.label}>
-                        {localeString('views.Channel.private')}:
-                    </Text>
-                    <Text
-                        style={{
-                            ...styles.value,
-                            color: privateChannel ? 'green' : '#808000'
-                        }}
-                    >
-                        {privateChannel ? 'True' : 'False'}
-                    </Text>
+                    <KeyValue
+                        keyValue={localeString('views.Channel.private')}
+                        value={privateChannel ? 'True' : 'False'}
+                        color={privateChannel ? 'green' : '#808000'}
+                    />
 
                     {total_satoshis_received && (
-                        <View>
-                            <Text style={styles.label}>
-                                {localeString('views.Channel.totalReceived')}:
-                            </Text>
-                            <TouchableOpacity onPress={() => changeUnits()}>
-                                <Text style={styles.value}>
-                                    {units && totalSatoshisReceived}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Channel.totalReceived'
+                            )}
+                            value={
+                                <Amount
+                                    sats={total_satoshis_received}
+                                    sensitive
+                                    toggleable
+                                />
+                            }
+                        />
                     )}
 
                     {total_satoshis_sent && (
-                        <View>
-                            <Text style={styles.label}>
-                                {localeString('views.Channel.totalSent')}:
-                            </Text>
-                            <TouchableOpacity onPress={() => changeUnits()}>
-                                <Text style={styles.value}>
-                                    {units && totalSatoshisSent}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
+                        <KeyValue
+                            keyValue={localeString('views.Channel.totalSent')}
+                            value={
+                                <Amount
+                                    sats={total_satoshis_sent}
+                                    sensitive
+                                    toggleable
+                                />
+                            }
+                        />
                     )}
 
                     {capacity && (
-                        <View>
-                            <Text style={styles.label}>
-                                {localeString('views.Channel.capacity')}:
-                            </Text>
-                            <TouchableOpacity onPress={() => changeUnits()}>
-                                <Text style={styles.value}>
-                                    {units && capacityDisplay}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {channelFee && channelFee.base_fee_msat && (
-                        <View>
-                            <Text style={styles.label}>
-                                {localeString('views.Channel.baseFee')}:
-                            </Text>
-                            <Text style={styles.value}>
-                                {PrivacyUtils.sensitiveValue(
-                                    channelFee.base_fee_msat,
-                                    5,
-                                    true
-                                )}
-                            </Text>
-                        </View>
-                    )}
-
-                    {channelFee && channelFee.fee_rate && (
-                        <View>
-                            <Text style={styles.label}>
-                                {localeString('views.Channel.feeRate')}:
-                            </Text>
-                            <Text style={styles.value}>
-                                {PrivacyUtils.sensitiveValue(
-                                    channelFee.fee_rate * 1000000,
-                                    2,
-                                    true
-                                )}
-                            </Text>
-                        </View>
+                        <KeyValue
+                            keyValue={localeString('views.Channel.capacity')}
+                            value={
+                                <Amount sats={capacity} sensitive toggleable />
+                            }
+                        />
                     )}
 
                     {commit_weight && (
-                        <View>
-                            <Text style={styles.label}>
-                                {localeString('views.Channel.commitWeight')}:
-                            </Text>
-                            <Text style={styles.value}>{commit_weight}</Text>
-                        </View>
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Channel.commitWeight'
+                            )}
+                            value={commit_weight}
+                        />
                     )}
 
                     {commit_fee && (
-                        <View>
-                            <Text style={styles.label}>
-                                {localeString('views.Channel.commitFee')}:
-                            </Text>
-                            <Text style={styles.value}>
-                                {PrivacyUtils.sensitiveValue(
-                                    commit_fee,
-                                    4,
-                                    true
-                                )}
-                            </Text>
-                        </View>
+                        <KeyValue
+                            keyValue={localeString('views.Channel.commitFee')}
+                            value={commit_fee}
+                            sensitive
+                        />
                     )}
 
                     {csv_delay && (
-                        <View>
-                            <Text style={styles.label}>
-                                {localeString('views.Channel.csvDelay')}:
-                            </Text>
-                            <Text style={styles.value}>{csv_delay}</Text>
-                        </View>
+                        <KeyValue
+                            keyValue={localeString('views.Channel.csvDelay')}
+                            value={csv_delay.toString()}
+                        />
                     )}
 
                     {fee_per_kw && (
-                        <View>
-                            <Text style={styles.label}>
-                                {localeString('views.Channel.feePerKw')}:
-                            </Text>
-                            <Text style={styles.value}>
-                                {PrivacyUtils.sensitiveValue(
-                                    fee_per_kw,
-                                    6,
-                                    true
-                                )}
-                            </Text>
-                        </View>
+                        <KeyValue
+                            keyValue={localeString('views.Channel.feePerKw')}
+                            value={fee_per_kw}
+                            sensitive
+                        />
                     )}
+
+                    <Divider orientation="horizontal" style={{ margin: 20 }} />
 
                     {implementation === 'lnd' && (
                         <React.Fragment>
                             {loading && (
                                 <ActivityIndicator
                                     size="large"
-                                    color="#0000ff"
+                                    color={themeColor('highlight')}
                                 />
                             )}
                             {chanInfo[channelId].node1_policy && (
                                 <React.Fragment>
-                                    <View>
-                                        <Text style={styles.label}>
-                                            {JSON.stringify(
-                                                chanInfo[channelId].yourPolicy
-                                            )}
-                                            :
-                                        </Text>
-                                        <Text style={styles.value}>
-                                            {PrivacyUtils.sensitiveValue(
-                                                chanInfo[channelId].node1_policy
-                                                    .fee_base_msat,
-                                                6,
-                                                true
-                                            )}
-                                        </Text>
-                                    </View>
-                                    <View>
-                                        <Text style={styles.label}>
-                                            {'Node 1: fee_rate_milli_msat'}:
-                                        </Text>
-                                        <Text style={styles.value}>
-                                            {PrivacyUtils.sensitiveValue(
-                                                chanInfo[channelId].node1_policy
-                                                    .fee_rate_milli_msat,
-                                                6,
-                                                true
-                                            )}
-                                        </Text>
-                                    </View>
-                                    <View>
-                                        <Text style={styles.label}>
-                                            {'Node 1: max_htlc_msat'}:
-                                        </Text>
-                                        <Text style={styles.value}>
-                                            {PrivacyUtils.sensitiveValue(
-                                                chanInfo[channelId].node1_policy
-                                                    .max_htlc_msat,
-                                                6,
-                                                true
-                                            )}
-                                        </Text>
-                                    </View>
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            alignSelf: 'center'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Channel.initiatingParty'
+                                        )}
+                                    </Text>
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            alignSelf: 'center'
+                                        }}
+                                    >
+                                        {chanInfo[channelId].node1_pub ===
+                                        nodeId
+                                            ? localeString(
+                                                  'views.Channel.yourNode'
+                                              )
+                                            : peerDisplay}
+                                    </Text>
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Channel.baseFee'
+                                        )}
+                                        value={
+                                            <Amount
+                                                sats={
+                                                    chanInfo[channelId]
+                                                        .node1_policy
+                                                        .fee_base_msat / 1000
+                                                }
+                                                toggleable
+                                                sensitive
+                                            />
+                                        }
+                                    />
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Channel.feeRate'
+                                        )}
+                                        value={`${Number(
+                                            chanInfo[channelId].node1_policy
+                                                .fee_rate_milli_msat
+                                        ) / 1000}%`}
+                                        sensitive
+                                    />
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Channel.maxHTLC'
+                                        )}
+                                        value={
+                                            <Amount
+                                                sats={
+                                                    chanInfo[channelId]
+                                                        .node1_policy
+                                                        .max_htlc_msat / 1000
+                                                }
+                                                toggleable
+                                                sensitive
+                                            />
+                                        }
+                                    />
+                                </React.Fragment>
+                            )}
+                            {chanInfo[channelId].node2_policy && (
+                                <React.Fragment>
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            alignSelf: 'center'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Channel.counterparty'
+                                        )}
+                                    </Text>
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            alignSelf: 'center'
+                                        }}
+                                    >
+                                        {chanInfo[channelId].node2_pub ===
+                                        nodeId
+                                            ? localeString(
+                                                  'views.Channel.yourNode'
+                                              )
+                                            : peerDisplay}
+                                    </Text>
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Channel.baseFee'
+                                        )}
+                                        value={
+                                            <Amount
+                                                sats={
+                                                    chanInfo[channelId]
+                                                        .node2_policy
+                                                        .fee_base_msat / 1000
+                                                }
+                                                toggleable
+                                                sensitive
+                                            />
+                                        }
+                                    />
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Channel.feeRate'
+                                        )}
+                                        value={`${Number(
+                                            chanInfo[channelId].node2_policy
+                                                .fee_rate_milli_msat
+                                        ) / 1000}%`}
+                                        sensitive
+                                    />
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Channel.maxHTLC'
+                                        )}
+                                        value={
+                                            <Amount
+                                                sats={
+                                                    chanInfo[channelId]
+                                                        .node2_policy
+                                                        .max_htlc_msat / 1000
+                                                }
+                                                toggleable
+                                                sensitive
+                                            />
+                                        }
+                                    />
                                 </React.Fragment>
                             )}
                         </React.Fragment>
