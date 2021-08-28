@@ -4,7 +4,7 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import { Body } from '../../components/text/Body';
 import { Row } from '../../components/layout/Row';
-import { Sats } from '../../components/Sats';
+import { Amount } from '../../components/Amount';
 
 export function RoutingListItem({
     title,
@@ -30,20 +30,12 @@ export function RoutingListItem({
             <Row justify="space-between">
                 <View style={{ flex: 1, paddingRight: 10 }}>
                     <Body>{title}</Body>
-                    {/* TODO replace with different component and style properly */}
-                    <Text
-                        style={{
-                            color: 'lightgreen',
-                            alignSelf: 'flex-end',
-                            bottom: 20,
-                            marginBottom: -40
-                        }}
-                    >{`${fee} sat`}</Text>
                 </View>
+                <Amount sats={fee} credit sensitive />
             </Row>
             <Row justify="space-between">
                 <Text style={{ color: themeColor('text') }}>{date}</Text>
-                <Sats sats={amountOut} />
+                <Amount sats={amountOut} sensitive />
             </Row>
         </View>
     );
