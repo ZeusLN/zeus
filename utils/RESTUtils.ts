@@ -44,6 +44,7 @@ class RESTUtils {
 
     getTransactions = (...args: any[]) => this.call('getTransactions', args);
     getChannels = (...args: any[]) => this.call('getChannels', args);
+    getChannelInfo = (...args: any[]) => this.call('getChannelInfo', args);
     getBlockchainBalance = (...args: any[]) =>
         this.call('getBlockchainBalance', args);
     getLightningBalance = (...args: any[]) =>

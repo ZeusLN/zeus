@@ -23,7 +23,7 @@ export default class FiatStore {
     // TODO: do more of these symbol pairs. I'm referring to
     // https://fastspring.com/blog/how-to-format-30-currencies-from-countries-all-over-the-world/
     private symbolLookup = (symbol: string): CurrencyDisplayRules => {
-        const symbolPairs = {
+        const symbolPairs: any = {
             USD: { symbol: '$', space: false, rtl: false },
             EUR: { symbol: '€', space: true, rtl: false },
             GBP: { symbol: '£', space: false, rtl: false },

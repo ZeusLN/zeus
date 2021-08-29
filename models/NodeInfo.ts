@@ -8,6 +8,7 @@ export default class NodeInfo extends BaseModel {
     num_active_channels?: number;
     num_inactive_channels?: number;
     version?: string;
+    pubkey?: string;
     identity_pubkey?: string;
     num_peers?: number;
     synced_to_chain?: boolean;
@@ -22,6 +23,10 @@ export default class NodeInfo extends BaseModel {
     @observable blockheight?: number;
     address?: Array<any>;
     api_version?: string;
+
+    @computed public get nodeId(): string {
+        return this.id || this.pubkey || this.identity_pubkey || 'N/A';
+    }
 
     @computed public get isTestNet(): boolean {
         return (
