@@ -36,7 +36,6 @@ export default class OnchainSwipeableRow extends Component<
             outputRange: [x, 0]
         });
         const pressHandler = () => {
-            console.log(progress);
             this.close();
 
             if (text === localeString('general.receive')) {
@@ -91,9 +90,6 @@ export default class OnchainSwipeableRow extends Component<
     };
     private close = () => {
         this.swipeableRow.close();
-    };
-    private open = () => {
-        this.swipeableRow.open();
     };
     render() {
         const { children } = this.props;
