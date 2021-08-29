@@ -111,9 +111,11 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     selectUTXOs = (utxos: Array<string>, utxoBalance: number) => {
-        const { settingsStore } = this.props;
-        const { implementation } = settingsStore;
-        let newState = { utxos, utxoBalance };
+        const { SettingsStore } = this.props;
+        const { implementation } = SettingsStore;
+        let newState: any = {};
+        newState.utxos = utxos;
+        newState.utxoBalance = utxoBalance;
         if (implementation === 'c-lightning-REST') {
             newState.amount = 'all';
         }

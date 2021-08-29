@@ -1,6 +1,5 @@
 import { observable, computed } from 'mobx';
 import BaseModel from './BaseModel';
-import { localeString } from './../utils/LocaleUtils';
 
 interface Outpoint {
     output_index: number;
@@ -13,7 +12,11 @@ export default class Utxo extends BaseModel {
     account: string;
     confirmations: string;
     outpoint: Outpoint;
+    txid: string;
+    output: string | number;
     pk_script: string;
+    amount_sat: number | string;
+    value: number | string;
 
     @computed public get isUnconfirmed(): boolean {
         return this.getConfs <= 0;
@@ -30,6 +33,6 @@ export default class Utxo extends BaseModel {
     @computed public get getOutpoint(): string {
         return this.outpoint.txid_str
             ? `${this.outpoint.txid_str}:${this.outpoint.output_index}`
-            : `${item.txid}:${item.output}`;
+            : `${this.txid}:${this.output}`;
     }
 }

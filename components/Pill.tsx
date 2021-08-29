@@ -9,23 +9,8 @@ interface PillProps {
     backgroundColor?: string;
 }
 
-interface PillState {
-    selected: boolean;
-}
-
-export default class Pill extends React.Component<PillProps, PillState> {
-    state = {
-        selected: false
-    };
-
-    select = () => {
-        this.setState({
-            selected: true
-        });
-    };
-
+export default class Pill extends React.Component<PillProps, {}> {
     render() {
-        const { selected } = this.state;
         const { title, textColor, borderColor, backgroundColor } = this.props;
 
         return (
