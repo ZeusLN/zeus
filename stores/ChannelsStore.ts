@@ -255,7 +255,7 @@ export default class ChannelsStore {
     @action
     public getChannelInfo = (chanId: string) => {
         this.loading = true;
-        this.chanInfo[chanId] = {};
+        if (this.chanInfo[chanId]) delete this.chanInfo[chanId];
         RESTUtils.getChannelInfo(chanId)
             .then((data: any) => {
                 this.chanInfo[chanId] = new ChannelInfo(data);
@@ -264,7 +264,7 @@ export default class ChannelsStore {
             .catch((error: any) => {
                 // handle error
                 this.errorMsgPeer = error.toString();
-                this.chanInfo[chanId] = {};
+                if (this.chanInfo[chanId]) delete this.chanInfo[chanId];
                 this.loading = false;
             });
     };
