@@ -17,6 +17,6 @@ export default class ChannelInfo extends BaseModel {
     node1_pub?: string;
     node2_pub?: string;
     capacity?: string;
-    node1_policy?: RoutingPolicy;
-    node2_policy?: RoutingPolicy;
+    node1_policy: RoutingPolicy;
+    node2_policy: RoutingPolicy;
 }

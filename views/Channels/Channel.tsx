@@ -14,15 +14,16 @@ import BalanceSlider from './../../components/BalanceSlider';
 import SetFeesForm from './../../components/SetFeesForm';
 import KeyValue from './../../components/KeyValue';
 import { Amount } from './../../components/Amount';
+import FeeBreakdown from './../../components/FeeBreakdown';
 import { inject, observer } from 'mobx-react';
-const hash = require('object-hash');
+
+import DateTimeUtils from './../../utils/DateTimeUtils';
 import PrivacyUtils from './../../utils/PrivacyUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import ChannelsStore from './../../stores/ChannelsStore';
 import FeeStore from './../../stores/FeeStore';
-import NodeInfoStore from './../../stores/NodeInfoStore';
 import UnitsStore from './../../stores/UnitsStore';
 import SettingsStore from './../../stores/SettingsStore';
 
@@ -30,7 +31,6 @@ interface ChannelProps {
     navigation: any;
     ChannelsStore: ChannelsStore;
     FeeStore: FeeStore;
-    NodeInfoStore: NodeInfoStore;
     UnitsStore: UnitsStore;
     SettingsStore: SettingsStore;
 }
@@ -112,7 +112,6 @@ export default class ChannelView extends React.Component<
             navigation,
             ChannelsStore,
             FeeStore,
-            NodeInfoStore,
             UnitsStore,
             SettingsStore
         } = this.props;
@@ -124,9 +123,7 @@ export default class ChannelView extends React.Component<
         } = this.state;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { channelFees } = FeeStore;
-        const { loading, nodes, chanInfo } = ChannelsStore;
-        const { nodeInfo } = NodeInfoStore;
-        const { nodeId } = nodeInfo;
+        const { loading, nodes } = ChannelsStore;
         const { settings, implementation } = SettingsStore;
         const { lurkerMode } = settings;
 
@@ -330,152 +327,10 @@ export default class ChannelView extends React.Component<
                     <Divider orientation="horizontal" style={{ margin: 20 }} />
 
                     {implementation === 'lnd' && (
-                        <React.Fragment>
-                            {loading && (
-                                <ActivityIndicator
-                                    size="large"
-                                    color={themeColor('highlight')}
-                                />
-                            )}
-                            {chanInfo[channelId].node1_policy && (
-                                <React.Fragment>
-                                    <Text
-                                        style={{
-                                            color: themeColor('text'),
-                                            alignSelf: 'center'
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Channel.initiatingParty'
-                                        )}
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            color: themeColor('secondaryText'),
-                                            alignSelf: 'center'
-                                        }}
-                                    >
-                                        {chanInfo[channelId].node1_pub ===
-                                        nodeId
-                                            ? localeString(
-                                                  'views.Channel.yourNode'
-                                              )
-                                            : peerDisplay}
-                                    </Text>
-                                    <KeyValue
-                                        keyValue={localeString(
-                                            'views.Channel.baseFee'
-                                        )}
-                                        value={
-                                            <Amount
-                                                sats={
-                                                    chanInfo[channelId]
-                                                        .node1_policy
-                                                        .fee_base_msat / 1000
-                                                }
-                                                toggleable
-                                                sensitive
-                                            />
-                                        }
-                                    />
-                                    <KeyValue
-                                        keyValue={localeString(
-                                            'views.Channel.feeRate'
-                                        )}
-                                        value={`${Number(
-                                            chanInfo[channelId].node1_policy
-                                                .fee_rate_milli_msat
-                                        ) / 1000}%`}
-                                        sensitive
-                                    />
-                                    <KeyValue
-                                        keyValue={localeString(
-                                            'views.Channel.maxHTLC'
-                                        )}
-                                        value={
-                                            <Amount
-                                                sats={
-                                                    chanInfo[channelId]
-                                                        .node1_policy
-                                                        .max_htlc_msat / 1000
-                                                }
-                                                toggleable
-                                                sensitive
-                                            />
-                                        }
-                                    />
-                                </React.Fragment>
-                            )}
-                            {chanInfo[channelId].node2_policy && (
-                                <React.Fragment>
-                                    <Text
-                                        style={{
-                                            color: themeColor('text'),
-                                            alignSelf: 'center'
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Channel.counterparty'
-                                        )}
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            color: themeColor('secondaryText'),
-                                            alignSelf: 'center'
-                                        }}
-                                    >
-                                        {chanInfo[channelId].node2_pub ===
-                                        nodeId
-                                            ? localeString(
-                                                  'views.Channel.yourNode'
-                                              )
-                                            : peerDisplay}
-                                    </Text>
-                                    <KeyValue
-                                        keyValue={localeString(
-                                            'views.Channel.baseFee'
-                                        )}
-                                        value={
-                                            <Amount
-                                                sats={
-                                                    chanInfo[channelId]
-                                                        .node2_policy
-                                                        .fee_base_msat / 1000
-                                                }
-                                                toggleable
-                                                sensitive
-                                            />
-                                        }
-                                    />
-                                    <KeyValue
-                                        keyValue={localeString(
-                                            'views.Channel.feeRate'
-                                        )}
-                                        value={`${Number(
-                                            chanInfo[channelId].node2_policy
-                                                .fee_rate_milli_msat
-                                        ) / 1000}%`}
-                                        sensitive
-                                    />
-                                    <KeyValue
-                                        keyValue={localeString(
-                                            'views.Channel.maxHTLC'
-                                        )}
-                                        value={
-                                            <Amount
-                                                sats={
-                                                    chanInfo[channelId]
-                                                        .node2_policy
-                                                        .max_htlc_msat / 1000
-                                                }
-                                                toggleable
-                                                sensitive
-                                            />
-                                        }
-                                    />
-                                </React.Fragment>
-                            )}
-                        </React.Fragment>
+                        <FeeBreakdown
+                            channelId={channelId}
+                            peerDisplay={peerDisplay}
+                        />
                     )}
 
                     {implementation === 'lnd' && (
@@ -651,18 +506,6 @@ const styles = StyleSheet.create({
     balances: {
         paddingBottom: 10,
         alignItems: 'center'
-    },
-    value: {
-        paddingBottom: 5,
-        color: themeColor('text')
-    },
-    label: {
-        paddingTop: 5,
-        color: themeColor('text')
-    },
-    valueWithLink: {
-        paddingBottom: 5,
-        color: 'rgba(92, 99,216, 1)'
     },
     button: {
         paddingTop: 15,
