@@ -14,6 +14,7 @@ import ForwardEvent from './../../models/ForwardEvent';
 import SetFeesForm from './../../components/SetFeesForm';
 import KeyValue from './../../components/KeyValue';
 import { Amount } from './../../components/Amount';
+import FeeBreakdown from './../../components/FeeBreakdown';
 import { inject, observer } from 'mobx-react';
 
 import PrivacyUtils from './../../utils/PrivacyUtils';
@@ -33,12 +34,34 @@ interface RoutingEventProps {
     SettingsStore: SettingsStore;
 }
 
+interface RoutingEventState {
+    routingEvent: any;
+}
+
 @inject('ChannelsStore', 'UnitsStore', 'FeeStore', 'SettingsStore')
 @observer
 export default class RoutingEvent extends React.Component<
     RoutingEventProps,
-    {}
+    RoutingEventState
 > {
+    constructor(props: any) {
+        super(props);
+        const { ChannelsStore, navigation } = props;
+
+        const routingEvent: ForwardEvent = navigation.getParam(
+            'routingEvent',
+            null
+        );
+
+        const { chan_id_in, chan_id_out } = routingEvent;
+
+        this.props.ChannelsStore.getChannelInfo(chan_id_in);
+        this.props.ChannelsStore.getChannelInfo(chan_id_out);
+
+        this.state = {
+            routingEvent
+        };
+    }
     render() {
         const {
             navigation,
@@ -47,16 +70,13 @@ export default class RoutingEvent extends React.Component<
             FeeStore,
             SettingsStore
         } = this.props;
+        const { routingEvent } = this.state;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { channelFees } = FeeStore;
         const { aliasesById, channels } = ChannelsStore;
         const { settings, implementation } = SettingsStore;
         const { lurkerMode } = settings;
 
-        const routingEvent: ForwardEvent = navigation.getParam(
-            'routingEvent',
-            null
-        );
         const {
             chan_id_in,
             chan_id_out,
@@ -196,6 +216,25 @@ export default class RoutingEvent extends React.Component<
                         />
                     )}
 
+                    <Text style={styles.breakdownHeader}>
+                        {localeString(
+                            'views.Routing.RoutingEvent.sourceChannel'
+                        )}
+                    </Text>
+                    <FeeBreakdown
+                        channelId={chan_id_in}
+                        peerDisplay={chanInLabel}
+                    />
+                    <Text style={styles.breakdownHeader}>
+                        {localeString(
+                            'views.Routing.RoutingEvent.destinationChannel'
+                        )}
+                    </Text>
+                    <FeeBreakdown
+                        channelId={chan_id_out}
+                        peerDisplay={chanOutLabel}
+                    />
+
                     {false && (
                         <SetFeesForm
                             baseFeeMsat={
@@ -232,5 +271,11 @@ const styles = StyleSheet.create({
     amount: {
         alignItems: 'center',
         padding: 10
+    },
+    breakdownHeader: {
+        alignSelf: 'center',
+        color: themeColor('text'),
+        padding: 20,
+        fontSize: 20
     }
 });
