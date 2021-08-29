@@ -4,72 +4,108 @@ import { Button } from 'react-native-elements';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
+import { inject, observer } from 'mobx-react';
+
+import ChannelsStore from './../stores/ChannelsStore';
 import FeeStore from './../stores/FeeStore';
+import SettingsStore from './../stores/SettingsStore';
 
 interface SetFeesFormProps {
     FeeStore: FeeStore;
-    baseFeeMsat?: string;
+    ChannelsStore: ChannelsStore;
+    SettingsStore: SettingsStore;
+    baseFee?: string;
     feeRate?: string;
+    timeLockDelta?: string;
     channelPoint?: string;
     channelId?: string;
+    expanded?: boolean;
 }
 
 interface SetFeesFormState {
     showNewFeesForm: boolean;
     feesSubmitted: boolean;
-    newBaseFeeMsat: string;
-    newFeeRatePPM: string;
+    newBaseFee: string;
+    newFeeRate: string;
+    newTimeLockDelta: string;
 }
 
+@inject('FeeStore', 'ChannelsStore', 'SettingsStore')
+@observer
 export default class SetFeesForm extends React.Component<
     SetFeesFormProps,
     SetFeesFormState
 > {
-    state = {
-        showNewFeesForm: false,
-        feesSubmitted: false,
-        newBaseFeeMsat: '1',
-        newFeeRatePPM: '1'
-    };
+    constructor(props: any) {
+        super(props);
+
+        this.state = {
+            showNewFeesForm: false,
+            feesSubmitted: false,
+            newBaseFee: props.baseFee || '1',
+            newFeeRate: props.feeRate || '0.001',
+            newTimeLockDelta: props.timeLockDelta || '144'
+        };
+    }
 
     render() {
         const {
             showNewFeesForm,
             feesSubmitted,
-            newBaseFeeMsat,
-            newFeeRatePPM
+            newBaseFee,
+            newFeeRate,
+            newTimeLockDelta
         } = this.state;
         const {
             FeeStore,
-            baseFeeMsat,
+            ChannelsStore,
+            SettingsStore,
+            baseFee,
             feeRate,
+            timeLockDelta,
             channelPoint,
-            channelId
+            channelId,
+            expanded
         } = this.props;
-        const { setFees, loading, setFeesError, setFeesSuccess } = FeeStore;
+        const {
+            setFees,
+            loading,
+            setFeesError,
+            setFeesErrorMsg,
+            setFeesSuccess
+        } = FeeStore;
+        const { implementation } = SettingsStore;
 
         return (
             <React.Fragment>
-                <View style={styles.button}>
-                    <Button
-                        title={
-                            showNewFeesForm
-                                ? localeString('components.SetFeesForm.hide')
-                                : localeString('components.SetFeesForm.setNew')
-                        }
-                        onPress={() =>
-                            this.setState({ showNewFeesForm: !showNewFeesForm })
-                        }
-                        buttonStyle={{
-                            backgroundColor: showNewFeesForm
-                                ? 'black'
-                                : 'green',
-                            borderRadius: 30
-                        }}
-                    />
-                </View>
+                {!expanded && (
+                    <View style={styles.button}>
+                        <Button
+                            title={
+                                showNewFeesForm
+                                    ? localeString(
+                                          'components.SetFeesForm.hide'
+                                      )
+                                    : localeString(
+                                          'components.SetFeesForm.setNew'
+                                      )
+                            }
+                            onPress={() =>
+                                this.setState({
+                                    showNewFeesForm: !showNewFeesForm
+                                })
+                            }
+                            buttonStyle={{
+                                backgroundColor: showNewFeesForm
+                                    ? 'black'
+                                    : 'green',
+                                borderRadius: 30
+                            }}
+                        />
+                    </View>
+                )}
 
-                {showNewFeesForm && (
+                {(expanded || showNewFeesForm) && (
                     <React.Fragment>
                         {loading && (
                             <Text style={styles.text}>
@@ -91,21 +127,27 @@ export default class SetFeesForm extends React.Component<
                                     color: 'red'
                                 }}
                             >
-                                {localeString('components.SetFeesForm.error')}
+                                {setFeesErrorMsg
+                                    ? setFeesErrorMsg
+                                    : localeString(
+                                          'components.SetFeesForm.error'
+                                      )}
                             </Text>
                         )}
 
                         <Text style={styles.text}>
-                            {localeString('components.SetFeesForm.baseFee')}
+                            {`${localeString(
+                                'components.SetFeesForm.baseFee'
+                            )} (${localeString('general.sats')})`}
                         </Text>
                         <TextInput
                             keyboardType="numeric"
-                            placeholder={baseFeeMsat || '1'}
+                            placeholder={baseFee || '1'}
                             placeholderTextColor="darkgray"
-                            value={newBaseFeeMsat}
+                            value={newBaseFee}
                             onChangeText={(text: string) =>
                                 this.setState({
-                                    newBaseFeeMsat: text
+                                    newBaseFee: text
                                 })
                             }
                             numberOfLines={1}
@@ -113,17 +155,41 @@ export default class SetFeesForm extends React.Component<
                             autoCorrect={false}
                             style={styles.textInput}
                         />
+
                         <Text style={styles.text}>
-                            {localeString('components.SetFeesForm.ppm')}
+                            {`${localeString(
+                                'components.SetFeesForm.feeRate'
+                            )} (${localeString('general.percentage')})`}
                         </Text>
                         <TextInput
                             keyboardType="numeric"
                             placeholder={feeRate || '1'}
                             placeholderTextColor="darkgray"
-                            value={newFeeRatePPM}
+                            value={newFeeRate}
                             onChangeText={(text: string) =>
                                 this.setState({
-                                    newFeeRatePPM: text
+                                    newFeeRate: text
+                                })
+                            }
+                            numberOfLines={1}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            style={styles.textInput}
+                        />
+
+                        <Text style={styles.text}>
+                            {localeString(
+                                'components.SetFeesForm.timeLockDelta'
+                            )}
+                        </Text>
+                        <TextInput
+                            keyboardType="numeric"
+                            placeholder={timeLockDelta || '144'}
+                            placeholderTextColor="darkgray"
+                            value={newTimeLockDelta}
+                            onChangeText={(text: string) =>
+                                this.setState({
+                                    newTimeLockDelta: text
                                 })
                             }
                             numberOfLines={1}
@@ -139,11 +205,22 @@ export default class SetFeesForm extends React.Component<
                                 )}
                                 onPress={() => {
                                     setFees(
-                                        newBaseFeeMsat,
-                                        newFeeRatePPM,
+                                        newBaseFee,
+                                        newFeeRate,
+                                        Number(newTimeLockDelta),
                                         channelPoint,
                                         channelId
-                                    );
+                                    ).then(() => {
+                                        if (
+                                            channelId &&
+                                            implementation === 'lnd' &&
+                                            !setFeesError
+                                        ) {
+                                            ChannelsStore.getChannelInfo(
+                                                channelId
+                                            );
+                                        }
+                                    });
                                     this.setState({ feesSubmitted: true });
                                 }}
                                 buttonStyle={{

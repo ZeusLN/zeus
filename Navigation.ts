@@ -22,7 +22,6 @@ import BTCPayConfigQRScanner from './views/BTCPayConfigQRScanner';
 import LNDConnectConfigQRScanner from './views/LNDConnectConfigQRScanner';
 import LNDHubQRScanner from './views/LNDHubQRScanner';
 import NodeInfo from './views/NodeInfo';
-import Routing from './views/Routing';
 import Lockscreen from './views/Lockscreen';
 
 // Settings views
@@ -31,6 +30,11 @@ import AddEditNode from './views/Settings/AddEditNode';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import About from './views/Settings/About';
 import SignMessage from './views/Settings/SignMessage';
+
+// Routing
+import Routing from './views/Routing/Routing';
+import RoutingEvent from './views/Routing/RoutingEvent';
+import SetFees from './views/Routing/SetFees';
 
 // new views
 import Activity from './views/Activity/Activity';
@@ -127,6 +131,12 @@ const AppScenes = {
     },
     Routing: {
         screen: Routing
+    },
+    RoutingEvent: {
+        screen: RoutingEvent
+    },
+    SetFees: {
+        screen: SetFees
     },
     Activity: {
         screen: Activity

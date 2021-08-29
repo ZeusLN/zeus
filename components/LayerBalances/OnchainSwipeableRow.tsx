@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 
 import { RectButton } from 'react-native-gesture-handler';
+import RESTUtils from './../../utils/RESTUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -35,6 +36,7 @@ export default class OnchainSwipeableRow extends Component<
             outputRange: [x, 0]
         });
         const pressHandler = () => {
+            console.log(progress);
             this.close();
 
             if (text === localeString('general.receive')) {
@@ -68,12 +70,17 @@ export default class OnchainSwipeableRow extends Component<
         <View
             style={{
                 marginLeft: 15,
-                width: 150,
+                width: RESTUtils.supportsRouting() ? 150 : 75,
                 flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row'
             }}
         >
-            {this.renderAction(localeString('general.receive'), 150, progress)}
-            {this.renderAction(localeString('general.coins'), 100, progress)}
+            {this.renderAction(
+                localeString('general.receive'),
+                RESTUtils.supportsRouting() ? 150 : 75,
+                progress
+            )}
+            {RESTUtils.supportsCoinControl() &&
+                this.renderAction(localeString('general.coins'), 100, progress)}
         </View>
     );
 
@@ -84,6 +91,9 @@ export default class OnchainSwipeableRow extends Component<
     };
     private close = () => {
         this.swipeableRow.close();
+    };
+    private open = () => {
+        this.swipeableRow.open();
     };
     render() {
         const { children } = this.props;
