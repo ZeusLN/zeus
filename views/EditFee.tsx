@@ -204,28 +204,32 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                                 {localeString('views.EditFee.custom')}
                             </Text>
                         </View>
-                        <TextInput
-                            style={{
-                                ...styles.feeBoxes,
-                                top: 30,
-                                borderColor:
-                                    selectedFee === 'custom'
-                                        ? '#FFD93F'
-                                        : '#A7A9AC',
-                                borderWidth: selectedFee === 'custom' ? 2 : 1,
-                                color: '#FFFFFF',
-                                fontSize: 18
-                            }}
-                            keyboardType="numeric"
-                            defaultValue={this.state.customFee}
-                            onChangeText={(text: string) =>
-                                this.setState({
-                                    customFee: text,
-                                    fee: text,
-                                    selectedFee: 'custom'
-                                })
-                            }
-                        ></TextInput>
+                        <TouchableWithoutFeedback>
+                            <TextInput
+                                style={{
+                                    ...styles.feeBoxes,
+                                    top: 25,
+                                    marginTop: 20,
+                                    borderColor:
+                                        selectedFee === 'custom'
+                                            ? 'rgba(255, 217, 63, .6)'
+                                            : '#A7A9AC',
+                                    borderWidth:
+                                        selectedFee === 'custom' ? 3 : 1,
+                                    color: '#FFFFFF',
+                                    fontSize: 18
+                                }}
+                                keyboardType="numeric"
+                                defaultValue={this.state.customFee}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        customFee: text,
+                                        fee: text,
+                                        selectedFee: 'custom'
+                                    })
+                                }
+                            ></TextInput>
+                        </TouchableWithoutFeedback>
 
                         <TouchableOpacity
                             style={styles.confirmButton}
@@ -299,8 +303,8 @@ const styles = StyleSheet.create({
     custom: {
         color: '#A7A9AC',
         fontSize: 20,
-        top: 55,
-        left: '-36%'
+        left: '-35%',
+        top: 55
     },
     confirmButton: {
         width: 350,
