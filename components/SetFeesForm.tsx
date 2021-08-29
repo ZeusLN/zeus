@@ -43,7 +43,7 @@ export default class SetFeesForm extends React.Component<
             showNewFeesForm: false,
             feesSubmitted: false,
             newBaseFee: props.baseFee || '1',
-            newFeeRate: props.feeRate || '1',
+            newFeeRate: props.feeRate || '0.001',
             newTimeLockDelta: props.timeLockDelta || '144'
         };
     }
