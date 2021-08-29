@@ -264,8 +264,7 @@ export default class LND {
     finalizePsbt = (data: any) =>
         this.postRequest('/v2/wallet/psbt/finalize', data);
     publishTransaction = (data: any) => this.postRequest('/v2/wallet/tx', data);
-    getUTXOs = (data: any) =>
-        this.getRequest('/v1/utxos?min_confs=0&max_confs=200000', data);
+    getUTXOs = () => this.getRequest('/v1/utxos?min_confs=0&max_confs=200000');
     bumpFee = (data: any) => this.postRequest('/v2/wallet/bumpfee', data);
     listAccounts = () => this.getRequest('/v2/wallet/accounts');
     importAccount = (data: any) =>
@@ -304,7 +303,6 @@ export default class LND {
     supportsChannelManagement = () => true;
     supportsMPP = () => this.supports('v0.11.0', 'v0.13.0');
     supportsAMP = () => this.supports('v0.13.0');
-    supportsCoinControl = () => false;
     supportsHopPicking = () => this.supports('v0.11.0');
     supportsRouting = () => true;
     supportsNodeInfo = () => true;

@@ -11,7 +11,7 @@ import {
     TouchableOpacity
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { Avatar, ListItem } from 'react-native-elements';
+import { ListItem } from 'react-native-elements';
 import remove from 'lodash/remove';
 import { inject, observer } from 'mobx-react';
 import { localeString } from './../utils/LocaleUtils';
@@ -45,8 +45,6 @@ const VALUES = [
 ];
 
 const DEFAULT_TITLE = 'UTXOs to use';
-
-const Icon = (balanceImage: any) => <Avatar source={balanceImage} />;
 
 @inject('UTXOsStore')
 @observer
@@ -119,10 +117,7 @@ export default class UTXOPicker extends React.Component<
             showUtxoModal,
             selectedBalance
         } = this.state;
-        const SettingsStore = stores.settingsStore;
         const { utxos, loading, getUTXOs } = UTXOsStore;
-        const { settings } = SettingsStore;
-        const { theme } = settings;
 
         let utxosPicked: string[] = [];
         utxosSelected.forEach((utxo: string) => utxosPicked.push(utxo));

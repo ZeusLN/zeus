@@ -97,12 +97,16 @@ export default class TransactionsStore {
         const inputs: any = [];
         let outputs: any = {};
 
-        utxos.forEach(input => {
-            const [txid_str, output_index] = input.split(':');
-            inputs.push({ txid_str, output_index: Number(output_index) });
-        });
+        if (utxos) {
+            utxos.forEach(input => {
+                const [txid_str, output_index] = input.split(':');
+                inputs.push({ txid_str, output_index: Number(output_index) });
+            });
+        }
 
-        outputs[addr] = Number(amount);
+        if (addr) {
+            outputs[addr] = Number(amount);
+        }
 
         const fundPsbtRequest = {
             raw: {
@@ -121,7 +125,7 @@ export default class TransactionsStore {
                         const raw_final_tx = data.raw_final_tx;
 
                         RESTUtils.publishTransaction({ tx_hex: raw_final_tx })
-                            .then((data: any) => {
+                            .then(() => {
                                 this.publishSuccess = true;
                                 this.loading = false;
                             })

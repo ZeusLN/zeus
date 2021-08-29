@@ -9,7 +9,7 @@ export default class UTXOsStore {
     @observable public loading: boolean = false;
     @observable public error: boolean = false;
     @observable public errorMsg: string;
-    @observable public utxos: Utxo = [];
+    @observable public utxos: Array<Utxo> = [];
     // accounts
     @observable public loadingAccounts: boolean = false;
     @observable public importingAccount: boolean = false;
@@ -28,10 +28,10 @@ export default class UTXOsStore {
     };
 
     @action
-    public getUTXOs = data => {
+    public getUTXOs = () => {
         this.errorMsg = '';
         this.loading = true;
-        RESTUtils.getUTXOs(data)
+        RESTUtils.getUTXOs()
             .then((data: any) => {
                 this.loading = false;
                 this.utxos = data.utxos.map((utxo: any) => new Utxo(utxo));
@@ -45,7 +45,7 @@ export default class UTXOsStore {
     };
 
     @action
-    public listAccounts = data => {
+    public listAccounts = (data: any) => {
         this.errorMsg = '';
         this.loadingAccounts = true;
         RESTUtils.listAccounts(data)
@@ -62,7 +62,7 @@ export default class UTXOsStore {
     };
 
     @action
-    public importAccount = data => {
+    public importAccount = (data: any) => {
         this.errorMsg = '';
         this.importingAccount = true;
         const mfk = Base64Utils.hexToBase64(data.master_key_fingerprint);
@@ -73,7 +73,7 @@ export default class UTXOsStore {
             dry_run: true
         };
         RESTUtils.importAccount(newData)
-            .then((data: any) => {
+            .then(() => {
                 this.importingAccount = false;
                 this.error = false;
             })
