@@ -213,7 +213,8 @@ export default class SetFeesForm extends React.Component<
                                     ).then(() => {
                                         if (
                                             channelId &&
-                                            implementation === 'lnd'
+                                            implementation === 'lnd' &&
+                                            !setFeesError
                                         ) {
                                             ChannelsStore.getChannelInfo(
                                                 channelId

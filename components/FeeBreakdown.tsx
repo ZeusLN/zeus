@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ActivityIndicator, Text } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import KeyValue from './KeyValue';
 import { Amount } from './Amount';
@@ -57,25 +57,29 @@ export default class FeeBreakdown extends React.Component<
                     chanInfo[channelId] &&
                     chanInfo[channelId].node1_policy && (
                         <React.Fragment>
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    alignSelf: 'center'
-                                }}
-                            >
-                                {localeString('views.Channel.initiatingParty')}
-                            </Text>
-                            <Text
-                                style={{
-                                    color: themeColor('secondaryText'),
-                                    alignSelf: 'center'
-                                }}
-                            >
-                                {chanInfo[channelId].node1_pub === nodeId
-                                    ? localeString('views.Channel.yourNode')
-                                    : peerDisplay ||
-                                      chanInfo[channelId].node1_pub}
-                            </Text>
+                            <View style={styles.title}>
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        alignSelf: 'center'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Channel.initiatingParty'
+                                    )}
+                                </Text>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        alignSelf: 'center'
+                                    }}
+                                >
+                                    {chanInfo[channelId].node1_pub === nodeId
+                                        ? localeString('views.Channel.yourNode')
+                                        : peerDisplay ||
+                                          chanInfo[channelId].node1_pub}
+                                </Text>
+                            </View>
                             <KeyValue
                                 keyValue={localeString('views.Channel.baseFee')}
                                 value={
@@ -170,25 +174,27 @@ export default class FeeBreakdown extends React.Component<
                     chanInfo[channelId] &&
                     chanInfo[channelId].node2_policy && (
                         <React.Fragment>
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    alignSelf: 'center'
-                                }}
-                            >
-                                {localeString('views.Channel.counterparty')}
-                            </Text>
-                            <Text
-                                style={{
-                                    color: themeColor('secondaryText'),
-                                    alignSelf: 'center'
-                                }}
-                            >
-                                {chanInfo[channelId].node2_pub === nodeId
-                                    ? localeString('views.Channel.yourNode')
-                                    : peerDisplay ||
-                                      chanInfo[channelId].node2_pub}
-                            </Text>
+                            <View style={styles.title}>
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        alignSelf: 'center'
+                                    }}
+                                >
+                                    {localeString('views.Channel.counterparty')}
+                                </Text>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        alignSelf: 'center'
+                                    }}
+                                >
+                                    {chanInfo[channelId].node2_pub === nodeId
+                                        ? localeString('views.Channel.yourNode')
+                                        : peerDisplay ||
+                                          chanInfo[channelId].node2_pub}
+                                </Text>
+                            </View>
                             <KeyValue
                                 keyValue={localeString('views.Channel.baseFee')}
                                 value={
@@ -283,3 +289,10 @@ export default class FeeBreakdown extends React.Component<
         );
     }
 }
+
+const styles = StyleSheet.create({
+    title: {
+        paddingTop: 15,
+        paddingBottom: 5
+    }
+});

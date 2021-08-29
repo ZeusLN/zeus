@@ -96,8 +96,8 @@ export default class RoutingEvent extends React.Component<
         const chanOut = chanOutFilter[0];
         const chanInLabel = aliasesById[chan_id_in] || chan_id_in;
         const chanOutLabel = aliasesById[chan_id_out] || chan_id_out;
-
-        // const channelFee = channelFees[channel_point];
+        const channelInPoint = chanIn.channel_point;
+        const channelOutPoint = chanOut.channel_point;
 
         const BackButton = () => (
             <Icon
@@ -224,34 +224,19 @@ export default class RoutingEvent extends React.Component<
                     <FeeBreakdown
                         channelId={chan_id_in}
                         peerDisplay={chanInLabel}
+                        channelPoint={channelInPoint}
                     />
                     <Text style={styles.breakdownHeader}>
                         {localeString(
                             'views.Routing.RoutingEvent.destinationChannel'
                         )}
                     </Text>
+
                     <FeeBreakdown
                         channelId={chan_id_out}
                         peerDisplay={chanOutLabel}
+                        channelPoint={channelOutPoint}
                     />
-
-                    {false && (
-                        <SetFeesForm
-                            baseFeeMsat={
-                                channelFee &&
-                                channelFee.base_fee_msat &&
-                                channelFee.base_fee_msat.toString()
-                            }
-                            feeRate={
-                                channelFee &&
-                                channelFee.fee_rate &&
-                                channelFee.fee_rate.toString()
-                            }
-                            channelPoint={channel_point}
-                            channelId={channelId}
-                            FeeStore={FeeStore}
-                        />
-                    )}
                 </View>
             </ScrollView>
         );
