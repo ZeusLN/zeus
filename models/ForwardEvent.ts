@@ -13,4 +13,8 @@ export default class ForwardEvent extends BaseModel {
     @computed public get getTime(): string {
         return DateTimeUtils.listFormattedDate(this.timestamp || 0);
     }
+
+    @computed public get getDateShort(): string | Date {
+        return DateTimeUtils.listFormattedDateShort(this.timestamp || 0);
+    }
 }

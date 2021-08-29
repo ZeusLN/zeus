@@ -160,13 +160,21 @@ export default class Receive extends React.Component<
 
         const lightningButton = () => (
             <React.Fragment>
-                <Text>{localeString('general.lightning')}</Text>
+                <Text
+                    style={{ color: selectedIndex === 1 ? 'white' : 'black' }}
+                >
+                    {localeString('general.lightning')}
+                </Text>
             </React.Fragment>
         );
 
         const onChainButton = () => (
             <React.Fragment>
-                <Text>{localeString('general.onchain')}</Text>
+                <Text
+                    style={{ color: selectedIndex === 0 ? 'white' : 'black' }}
+                >
+                    {localeString('general.onchain')}
+                </Text>
             </React.Fragment>
         );
 
@@ -200,10 +208,16 @@ export default class Receive extends React.Component<
                     selectedIndex={selectedIndex}
                     buttons={buttons}
                     selectedButtonStyle={{
-                        backgroundColor: 'white'
+                        backgroundColor: themeColor('highlight'),
+                        borderRadius: 12
                     }}
                     containerStyle={{
-                        backgroundColor: '#f2f2f2'
+                        backgroundColor: themeColor('secondary'),
+                        borderRadius: 12,
+                        borderColor: themeColor('secondary')
+                    }}
+                    innerBorderStyle={{
+                        color: themeColor('secondary')
                     }}
                 />
 
