@@ -6,12 +6,17 @@ import { themeColor } from './../utils/ThemeUtils';
 
 import { inject, observer } from 'mobx-react';
 
+import ChannelsStore from './../stores/ChannelsStore';
 import FeeStore from './../stores/FeeStore';
+import SettingsStore from './../stores/SettingsStore';
 
 interface SetFeesFormProps {
     FeeStore: FeeStore;
-    baseFeeMsat?: string;
+    ChannelsStore: ChannelsStore;
+    SettingsStore: SettingsStore;
+    baseFee?: string;
     feeRate?: string;
+    timeLockDelta?: string;
     channelPoint?: string;
     channelId?: string;
     expanded?: boolean;
@@ -20,37 +25,44 @@ interface SetFeesFormProps {
 interface SetFeesFormState {
     showNewFeesForm: boolean;
     feesSubmitted: boolean;
-    newBaseFeeMsat: string;
+    newBaseFee: string;
     newFeeRatePPM: string;
-    timeLockDelta: string;
+    newTimeLockDelta: string;
 }
 
-@inject('FeeStore')
+@inject('FeeStore', 'ChannelsStore', 'SettingsStore')
 @observer
 export default class SetFeesForm extends React.Component<
     SetFeesFormProps,
     SetFeesFormState
 > {
-    state = {
-        showNewFeesForm: false,
-        feesSubmitted: false,
-        newBaseFeeMsat: '1',
-        newFeeRatePPM: '1',
-        timeLockDelta: '144'
-    };
+    constructor(props: any) {
+        super(props);
+
+        this.state = {
+            showNewFeesForm: false,
+            feesSubmitted: false,
+            newBaseFee: props.baseFee || '1',
+            newFeeRatePPM: props.feeRate || '1',
+            newTimeLockDelta: props.timeLockDelta || '144'
+        };
+    }
 
     render() {
         const {
             showNewFeesForm,
             feesSubmitted,
-            newBaseFeeMsat,
+            newBaseFee,
             newFeeRatePPM,
-            timeLockDelta
+            newTimeLockDelta
         } = this.state;
         const {
             FeeStore,
-            baseFeeMsat,
+            ChannelsStore,
+            SettingsStore,
+            baseFee,
             feeRate,
+            timeLockDelta,
             channelPoint,
             channelId,
             expanded
@@ -62,6 +74,7 @@ export default class SetFeesForm extends React.Component<
             setFeesErrorMsg,
             setFeesSuccess
         } = FeeStore;
+        const { implementation } = SettingsStore;
 
         return (
             <React.Fragment>
@@ -127,12 +140,12 @@ export default class SetFeesForm extends React.Component<
                         </Text>
                         <TextInput
                             keyboardType="numeric"
-                            placeholder={baseFeeMsat || '1'}
+                            placeholder={baseFee || '1'}
                             placeholderTextColor="darkgray"
-                            value={newBaseFeeMsat}
+                            value={newBaseFee}
                             onChangeText={(text: string) =>
                                 this.setState({
-                                    newBaseFeeMsat: text
+                                    newBaseFee: text
                                 })
                             }
                             numberOfLines={1}
@@ -167,12 +180,12 @@ export default class SetFeesForm extends React.Component<
                         </Text>
                         <TextInput
                             keyboardType="numeric"
-                            placeholder={'144'}
+                            placeholder={timeLockDelta || '144'}
                             placeholderTextColor="darkgray"
-                            value={timeLockDelta}
+                            value={newTimeLockDelta}
                             onChangeText={(text: string) =>
                                 this.setState({
-                                    timeLockDelta: text
+                                    newTimeLockDelta: text
                                 })
                             }
                             numberOfLines={1}
@@ -188,12 +201,21 @@ export default class SetFeesForm extends React.Component<
                                 )}
                                 onPress={() => {
                                     setFees(
-                                        newBaseFeeMsat,
+                                        newBaseFee,
                                         newFeeRatePPM,
-                                        Number(timeLockDelta),
+                                        Number(newTimeLockDelta),
                                         channelPoint,
                                         channelId
-                                    );
+                                    ).then(() => {
+                                        if (
+                                            channelId &&
+                                            implementation === 'lnd'
+                                        ) {
+                                            ChannelsStore.getChannelInfo(
+                                                channelId
+                                            );
+                                        }
+                                    });
                                     this.setState({ feesSubmitted: true });
                                 }}
                                 buttonStyle={{
