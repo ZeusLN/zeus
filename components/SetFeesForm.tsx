@@ -26,7 +26,7 @@ interface SetFeesFormState {
     showNewFeesForm: boolean;
     feesSubmitted: boolean;
     newBaseFee: string;
-    newFeeRatePPM: string;
+    newFeeRate: string;
     newTimeLockDelta: string;
 }
 
@@ -43,7 +43,7 @@ export default class SetFeesForm extends React.Component<
             showNewFeesForm: false,
             feesSubmitted: false,
             newBaseFee: props.baseFee || '1',
-            newFeeRatePPM: props.feeRate || '1',
+            newFeeRate: props.feeRate || '1',
             newTimeLockDelta: props.timeLockDelta || '144'
         };
     }
@@ -53,7 +53,7 @@ export default class SetFeesForm extends React.Component<
             showNewFeesForm,
             feesSubmitted,
             newBaseFee,
-            newFeeRatePPM,
+            newFeeRate,
             newTimeLockDelta
         } = this.state;
         const {
@@ -136,7 +136,9 @@ export default class SetFeesForm extends React.Component<
                         )}
 
                         <Text style={styles.text}>
-                            {localeString('components.SetFeesForm.baseFee')}
+                            {`${localeString(
+                                'components.SetFeesForm.baseFee'
+                            )} (${localeString('general.sats')})`}
                         </Text>
                         <TextInput
                             keyboardType="numeric"
@@ -155,16 +157,18 @@ export default class SetFeesForm extends React.Component<
                         />
 
                         <Text style={styles.text}>
-                            {localeString('components.SetFeesForm.ppm')}
+                            {`${localeString(
+                                'components.SetFeesForm.feeRate'
+                            )} (${localeString('general.percentage')})`}
                         </Text>
                         <TextInput
                             keyboardType="numeric"
                             placeholder={feeRate || '1'}
                             placeholderTextColor="darkgray"
-                            value={newFeeRatePPM}
+                            value={newFeeRate}
                             onChangeText={(text: string) =>
                                 this.setState({
-                                    newFeeRatePPM: text
+                                    newFeeRate: text
                                 })
                             }
                             numberOfLines={1}
@@ -202,7 +206,7 @@ export default class SetFeesForm extends React.Component<
                                 onPress={() => {
                                     setFees(
                                         newBaseFee,
-                                        newFeeRatePPM,
+                                        newFeeRate,
                                         Number(newTimeLockDelta),
                                         channelPoint,
                                         channelId

@@ -86,7 +86,7 @@ export default class FeeStore {
     @action
     public setFees = (
         newBaseFee: string,
-        newFeeRatePPM: any,
+        newFeeRate: string,
         timeLockDelta: number = 4,
         channelPoint?: string,
         channelId?: string
@@ -97,8 +97,8 @@ export default class FeeStore {
         this.setFeesSuccess = false;
 
         const data: any = {
-            base_fee_msat: Number(newBaseFee) * 1000,
-            fee_rate: newFeeRatePPM,
+            base_fee_msat: `${Number(newBaseFee) * 1000}`,
+            fee_rate: `${Number(newFeeRate) / 1000}`,
             time_lock_delta: timeLockDelta
         };
 
