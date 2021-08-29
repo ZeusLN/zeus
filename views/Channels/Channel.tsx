@@ -11,7 +11,6 @@ import {
 import { Button, CheckBox, Divider, Header, Icon } from 'react-native-elements';
 import Channel from './../../models/Channel';
 import BalanceSlider from './../../components/BalanceSlider';
-import SetFeesForm from './../../components/SetFeesForm';
 import KeyValue from './../../components/KeyValue';
 import { Amount } from './../../components/Amount';
 import FeeBreakdown from './../../components/FeeBreakdown';
@@ -330,6 +329,7 @@ export default class ChannelView extends React.Component<
                         <FeeBreakdown
                             channelId={channelId}
                             peerDisplay={peerDisplay}
+                            channelPoint={channel_point}
                         />
                     )}
 
@@ -356,22 +356,6 @@ export default class ChannelView extends React.Component<
                             />
                         </View>
                     )}
-
-                    <SetFeesForm
-                        baseFeeMsat={
-                            channelFee &&
-                            channelFee.base_fee_msat &&
-                            channelFee.base_fee_msat.toString()
-                        }
-                        feeRate={
-                            channelFee &&
-                            channelFee.fee_rate &&
-                            channelFee.fee_rate.toString()
-                        }
-                        channelPoint={channel_point}
-                        channelId={channelId}
-                        FeeStore={FeeStore}
-                    />
 
                     <View style={styles.button}>
                         <Button

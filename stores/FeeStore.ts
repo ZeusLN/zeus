@@ -85,7 +85,7 @@ export default class FeeStore {
 
     @action
     public setFees = (
-        newBaseFeeMsat: string,
+        newBaseFee: string,
         newFeeRatePPM: any,
         timeLockDelta: number = 4,
         channelPoint?: string,
@@ -97,7 +97,7 @@ export default class FeeStore {
         this.setFeesSuccess = false;
 
         const data: any = {
-            base_fee_msat: newBaseFeeMsat,
+            base_fee_msat: Number(newBaseFee) * 1000,
             fee_rate: newFeeRatePPM,
             time_lock_delta: timeLockDelta
         };
@@ -105,7 +105,8 @@ export default class FeeStore {
         if (channelId) {
             // c-lightning, eclair
             data.channelId = channelId;
-        } else if (channelPoint) {
+        }
+        if (channelPoint) {
             // lnd
             const [funding_txid, output_index] = channelPoint.split(':');
             data.chan_point = {
@@ -113,11 +114,13 @@ export default class FeeStore {
                 funding_txid_str: funding_txid,
                 funding_txid_bytes: Base64Utils.btoa(funding_txid) // must encode in base64
             };
-        } else {
+        }
+
+        if (!channelId && !channelPoint) {
             data.global = true;
         }
 
-        RESTUtils.setFees(data)
+        return RESTUtils.setFees(data)
             .then(() => {
                 this.loading = false;
                 this.setFeesSuccess = true;
