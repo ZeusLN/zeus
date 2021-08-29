@@ -333,6 +333,25 @@ export default class ChannelView extends React.Component<
                         />
                     )}
 
+                    {implementation !== 'lnd' && (
+                        <SetFeesForm
+                            baseFee={
+                                channelFee &&
+                                channelFee.base_fee_msat &&
+                                `${Number(channelFee.base_fee_msat) / 1000}`
+                            }
+                            feeRate={
+                                channelFee &&
+                                channelFee.fee_rate &&
+                                `${Number(channelFee.fee_rate) / 1000}`
+                            }
+                            channelPoint={channel_point}
+                            channelId={channelId}
+                            peerDisplay={peerDisplay}
+                            FeeStore={FeeStore}
+                        />
+                    )}
+
                     {implementation === 'lnd' && (
                         <View style={styles.button}>
                             <Button
