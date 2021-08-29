@@ -150,10 +150,10 @@ export default class FeeBreakdown extends React.Component<
                                         chanInfo[channelId].node1_policy
                                             .fee_base_msat
                                     ) / 1000}`}
-                                    feeRate={
+                                    feeRate={`${Number(
                                         chanInfo[channelId].node1_policy
                                             .fee_rate_milli_msat
-                                    }
+                                    ) / 1000}`}
                                     timeLockDelta={chanInfo[
                                         channelId
                                     ].node1_policy.time_lock_delta.toString()}
@@ -263,10 +263,10 @@ export default class FeeBreakdown extends React.Component<
                                         chanInfo[channelId].node2_policy
                                             .fee_base_msat
                                     ) / 1000}`}
-                                    feeRate={
+                                    feeRate={`${Number(
                                         chanInfo[channelId].node2_policy
                                             .fee_rate_milli_msat
-                                    }
+                                    ) / 1000}`}
                                     timeLockDelta={chanInfo[
                                         channelId
                                     ].node2_policy.time_lock_delta.toString()}
