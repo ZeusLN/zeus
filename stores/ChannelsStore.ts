@@ -1,9 +1,14 @@
 import { action, observable, reaction } from 'mobx';
 import Channel from './../models/Channel';
+import ChannelInfo from './../models/ChannelInfo';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import CloseChannelRequest from './../models/CloseChannelRequest';
 import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
+
+interface ChannelInfoIndex {
+    [key: string]: ChannelInfo;
+}
 
 export default class ChannelsStore {
     @observable public loading: boolean = false;
@@ -28,6 +33,7 @@ export default class ChannelsStore {
     @observable public totalOutbound: number = 0;
     @observable public totalInbound: number = 0;
     @observable public totalOffline: number = 0;
+    @observable public chanInfo: ChannelInfoIndex = {};
 
     settingsStore: SettingsStore;
 
@@ -243,6 +249,23 @@ export default class ChannelsStore {
                 this.channelRequest = null;
                 this.peerSuccess = false;
                 this.channelSuccess = false;
+            });
+    };
+
+    @action
+    public getChannelInfo = (chanId: string) => {
+        this.loading = true;
+        if (this.chanInfo[chanId]) delete this.chanInfo[chanId];
+        RESTUtils.getChannelInfo(chanId)
+            .then((data: any) => {
+                this.chanInfo[chanId] = new ChannelInfo(data);
+                this.loading = false;
+            })
+            .catch((error: any) => {
+                // handle error
+                this.errorMsgPeer = error.toString();
+                if (this.chanInfo[chanId]) delete this.chanInfo[chanId];
+                this.loading = false;
             });
     };
 }
