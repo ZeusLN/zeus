@@ -9,7 +9,6 @@ import {
 import { Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import DateTimeUtils from './../../utils/DateTimeUtils';
-import PrivacyUtils from './../../utils/PrivacyUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -24,7 +23,7 @@ interface ActivityProps {
     ActivityStore: ActivityStore;
 }
 
-@inject('ActivityStore', 'UnitsStore')
+@inject('ActivityStore')
 @observer
 export default class Activity extends React.Component<ActivityProps, {}> {
     async UNSAFE_componentWillMount() {
