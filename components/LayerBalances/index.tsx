@@ -18,6 +18,8 @@ import Lightning from './../../images/SVG/Lightning Circle.svg';
 import { Amount } from '../Amount';
 import { Spacer } from '../layout/Spacer';
 
+import * as Animatable from 'react-native-animatable';
+
 interface LayerBalancesProps {
     BalanceStore: BalanceStore;
     UnitsStore: UnitsStore;
@@ -99,11 +101,16 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                 data={DATA}
                 ItemSeparatorComponent={() => <View style={styles.separator} />}
                 renderItem={({ item, index }) => (
-                    <SwipeableRow
-                        item={item}
-                        index={index}
-                        navigation={navigation}
-                    />
+                    <Animatable.View
+                        animation="slideInRight"
+                        useNativeDriver={true}
+                    >
+                        <SwipeableRow
+                            item={item}
+                            index={index}
+                            navigation={navigation}
+                        />
+                    </Animatable.View>
                 )}
                 keyExtractor={(_item, index) => `message ${index}`}
                 style={{ top: 20 }}
