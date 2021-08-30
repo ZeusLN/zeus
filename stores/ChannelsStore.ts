@@ -4,6 +4,9 @@ import ChannelInfo from './../models/ChannelInfo';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import CloseChannelRequest from './../models/CloseChannelRequest';
 import SettingsStore from './SettingsStore';
+import { randomBytes } from 'react-native-randombytes'
+
+import Base64Utils from './../utils/Base64Utils';
 import RESTUtils from './../utils/RESTUtils';
 
 interface ChannelInfoIndex {
@@ -223,12 +226,139 @@ export default class ChannelsStore {
             });
     };
 
+    openChannelLNDCoinControl = (request: OpenChannelRequest) => {
+        console.log('calling openChannelLNDCoinControl');
+        console.log(request);
+        const { utxos } = request;
+        const inputs: any = [];
+        let outputs: any = {};
+        const sat_per_byte = request.sat_per_byte;
+
+        if (utxos) {
+            utxos.forEach(input => {
+                const [txid_str, output_index] = input.split(':');
+                inputs.push({ txid_str, output_index: Number(output_index) });
+            });
+        }
+
+        delete request.utxos;
+
+        const node_pubkey = Base64Utils.hexToBase64(request.node_pubkey_string);
+
+        delete request.node_pubkey_string;
+        delete request.sat_per_byte;
+
+        const pending_chan_id = randomBytes(32).toString('base64');
+        console.log(pending_chan_id);
+
+        const openChanRequest = {
+            funding_shim: {
+                psbt_shim: {
+                    no_publish: true,
+                    pending_chan_id
+                }
+            },
+            node_pubkey,
+            ...request
+        };
+
+        console.log(openChanRequest);
+
+        RESTUtils.openChannelStream(openChanRequest)
+            .then((data: any) => {
+                console.log('stream');
+                console.log(data);
+                const psbt_fund = data.psbt_fund;
+                const { funding_address, funding_amount, psbt } = psbt_fund;
+
+                if (funding_address) {
+                    outputs[funding_address] = Number(funding_amount);
+                }
+
+                const fundPsbtRequest = {
+                    raw: {
+                        inputs,
+                        outputs
+                    },
+                    sat_per_vbyte: Number(sat_per_byte)
+                };
+
+                RESTUtils.fundPsbt(fundPsbtRequest)
+                    .then((data: any) => {
+                        console.log('fund');
+                        console.log(data);
+                        const funded_psbt = data.funded_psbt;
+
+                        const openChanRequest = {
+                            funding_shim: {
+                                psbt_shim: {
+                                    base_psbt: funded_psbt
+                                }
+                            },
+                            ...request
+                        };
+
+                        RESTUtils.openChannel(openChanRequest)
+                            .then((data: any) => {
+                                console.log('chan2 data');
+                                console.log(data);
+                            })
+                            .catch((error: any) => {
+                                console.log('chan2 err');
+                                console.log(error.toString());
+                                this.errorMsgChannel = error.toString();
+                                this.output_index = null;
+                                this.funding_txid_str = null;
+                                this.errorOpenChannel = true;
+                                this.openingChannel = false;
+                                this.channelRequest = null;
+                                this.peerSuccess = false;
+                                this.channelSuccess = false;
+                            });
+
+                      })
+                      .catch((error: any) => {
+                          console.log('fundPsbt err');
+                          console.log(error.toString());
+                          this.errorMsgChannel = error.toString();
+                          this.output_index = null;
+                          this.funding_txid_str = null;
+                          this.errorOpenChannel = true;
+                          this.openingChannel = false;
+                          this.channelRequest = null;
+                          this.peerSuccess = false;
+                          this.channelSuccess = false;
+                      });
+
+            })
+            .catch((error: any) => {
+                console.log('stream err');
+                console.log(error.toString());
+                this.errorMsgChannel = error.toString();
+                this.output_index = null;
+                this.funding_txid_str = null;
+                this.errorOpenChannel = true;
+                this.openingChannel = false;
+                this.channelRequest = null;
+                this.peerSuccess = false;
+                this.channelSuccess = false;
+            });
+    };
+
     openChannel = (request: OpenChannelRequest) => {
         delete request.host;
 
         this.peerSuccess = false;
         this.channelSuccess = false;
         this.openingChannel = true;
+
+        if (
+            this.settingsStore.implementation === 'lnd' &&
+            request.utxos &&
+            request.utxos.length > 0
+        ) {
+            return this.openChannelLNDCoinControl(request);
+        }
 
         RESTUtils.openChannel(request)
             .then((data: any) => {
