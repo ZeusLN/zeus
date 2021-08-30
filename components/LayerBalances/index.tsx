@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { StyleSheet, Text, View, I18nManager, Alert } from 'react-native';
+import { StyleSheet, Text, View, I18nManager } from 'react-native';
 
 import { FlatList, RectButton } from 'react-native-gesture-handler';
 
@@ -15,6 +15,8 @@ import { inject, observer } from 'mobx-react';
 
 import OnChain from './../../images/SVG/OnChain.svg';
 import Lightning from './../../images/SVG/Lightning Circle.svg';
+import { Amount } from '../Amount';
+import { Spacer } from '../layout/Spacer';
 
 interface LayerBalancesProps {
     BalanceStore: BalanceStore;
@@ -27,7 +29,7 @@ I18nManager.allowRTL(false);
 
 type DataRow = {
     layer: string;
-    balance: string;
+    balance: string | number;
 };
 
 const Row = ({ item }: { item: DataRow }) => (
@@ -37,22 +39,15 @@ const Row = ({ item }: { item: DataRow }) => (
             backgroundColor: themeColor('secondary')
         }}
     >
-        {item.layer === 'On-chain' ? (
-            <OnChain style={{ top: 5 }} />
-        ) : (
-            <Lightning style={{ top: 5 }} />
-        )}
-        <Text style={{ ...styles.layerText, color: themeColor('text') }}>
-            {item.layer}
-        </Text>
-        <Text
-            style={{
-                ...styles.balanceText,
-                color: themeColor('secondaryText')
-            }}
-        >
-            {item.balance}
-        </Text>
+        <View style={styles.left}>
+            {item.layer === 'On-chain' ? <OnChain /> : <Lightning />}
+            <Spacer width={5} />
+            <Text style={{ ...styles.layerText, color: themeColor('text') }}>
+                {item.layer}
+            </Text>
+        </View>
+
+        <Amount sats={item.balance} sensitive />
     </RectButton>
 );
 
@@ -80,29 +75,22 @@ const SwipeableRow = ({
     );
 };
 
-@inject('UnitsStore')
+@inject()
 @observer
 export default class LayerBalances extends Component<LayerBalancesProps, {}> {
     render() {
-        const { BalanceStore, UnitsStore, navigation } = this.props;
+        const { BalanceStore, navigation } = this.props;
 
-        const {
-            totalBlockchainBalance,
-            unconfirmedBlockchainBalance,
-            lightningBalance,
-            pendingOpenBalance
-        } = BalanceStore;
-
-        const { changeUnits, getAmount, units } = UnitsStore;
+        const { totalBlockchainBalance, lightningBalance } = BalanceStore;
 
         const DATA: DataRow[] = [
             {
                 layer: 'Lightning',
-                balance: getAmount(lightningBalance)
+                balance: lightningBalance
             },
             {
                 layer: 'On-chain',
-                balance: getAmount(totalBlockchainBalance)
+                balance: totalBlockchainBalance
             }
         ];
 
@@ -130,10 +118,16 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         paddingHorizontal: 20,
         justifyContent: 'space-between',
-        flexDirection: 'column',
+        alignItems: 'center',
+        flexDirection: 'row',
         marginLeft: 15,
         marginRight: 15,
         borderRadius: 15
+    },
+    left: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-start'
     },
     separator: {
         backgroundColor: 'transparent',
@@ -141,17 +135,7 @@ const styles = StyleSheet.create({
     },
     layerText: {
         backgroundColor: 'transparent',
-        position: 'absolute',
         fontWeight: 'bold',
-        fontSize: 15,
-        top: 30,
-        left: 75
-    },
-    balanceText: {
-        backgroundColor: 'transparent',
-        position: 'absolute',
-        right: 20,
-        top: 30,
-        fontWeight: 'bold'
+        fontSize: 15
     }
 });

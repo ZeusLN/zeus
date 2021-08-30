@@ -44,6 +44,7 @@ class RESTUtils {
 
     getTransactions = (...args: any[]) => this.call('getTransactions', args);
     getChannels = (...args: any[]) => this.call('getChannels', args);
+    getChannelInfo = (...args: any[]) => this.call('getChannelInfo', args);
     getBlockchainBalance = (...args: any[]) =>
         this.call('getBlockchainBalance', args);
     getLightningBalance = (...args: any[]) =>
@@ -55,6 +56,8 @@ class RESTUtils {
     getPayments = (...args: any[]) => this.call('getPayments', args);
     getNewAddress = (...args: any[]) => this.call('getNewAddress', args);
     openChannel = (...args: any[]) => this.call('openChannel', args);
+    openChannelStream = (...args: any[]) =>
+        this.call('openChannelStream', args);
     connectPeer = (...args: any[]) => this.call('connectPeer', args);
     listNode = (...args: any[]) => this.call('listNode', args);
     decodePaymentRequest = (...args: any[]) =>
@@ -73,7 +76,15 @@ class RESTUtils {
     getForwardingHistory = (...args: any[]) =>
         this.call('getForwardingHistory', args);
     getUTXOs = (...args: any[]) => this.call('getUTXOs', args);
+    listAccounts = (...args: any[]) => this.call('listAccounts', args);
+    importAccount = (...args: any[]) => this.call('importAccount', args);
     signMessage = (...args: any[]) => this.call('signMessage', args);
+
+    fundPsbt = (...args: any[]) => this.call('fundPsbt', args);
+    finalizePsbt = (...args: any[]) => this.call('finalizePsbt', args);
+    publishTransaction = (...args: any[]) =>
+        this.call('publishTransaction', args);
+    bumpFee = (...args: any[]) => this.call('bumpFee', args);
 
     // lndhub
     createAccount = (...args: any[]) => this.call('createAccount', args);
@@ -87,6 +98,7 @@ class RESTUtils {
     supportsAMP = () => this.call('supportsAMP');
     supportsCoinControl = () => this.call('supportsCoinControl');
     supportsHopPicking = () => this.call('supportsHopPicking');
+    supportsAccounts = () => this.call('supportsAccounts');
     supportsRouting = () => this.call('supportsRouting');
     supportsNodeInfo = () => this.call('supportsNodeInfo');
 }

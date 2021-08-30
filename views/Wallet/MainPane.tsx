@@ -2,12 +2,10 @@ import * as React from 'react';
 import { Image, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Badge, Button } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import PrivacyUtils from './../../utils/PrivacyUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import NodeInfoStore from './../../stores/NodeInfoStore';
-import UnitsStore from './../../stores/UnitsStore';
 import BalanceStore from './../../stores/BalanceStore';
 import SettingsStore from './../../stores/SettingsStore';
 
@@ -15,16 +13,16 @@ const TorIcon = require('./../../images/tor.png');
 
 import { version, playStore } from './../../package.json';
 import { WalletHeader } from '../../components/WalletHeader';
+import { Amount } from '../../components/Amount';
 
 interface MainPaneProps {
     navigation: any;
     NodeInfoStore: NodeInfoStore;
-    UnitsStore: UnitsStore;
     BalanceStore: BalanceStore;
     SettingsStore: SettingsStore;
 }
 
-@inject('UnitsStore', 'SettingsStore')
+@inject('SettingsStore')
 @observer
 export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
     render() {
@@ -35,7 +33,6 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
             SettingsStore,
             navigation
         } = this.props;
-        const { changeUnits, getAmount, units } = UnitsStore;
         const {
             totalBlockchainBalance,
             unconfirmedBlockchainBalance,
@@ -53,71 +50,39 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
 
         const LightningBalance = () => (
             <>
-                <Text
-                    style={{
-                        fontSize: 40,
-                        color: themeColor('text')
-                    }}
-                >
-                    {units &&
-                        PrivacyUtils.sensitiveValue(
-                            getAmount(lightningBalance),
-                            8,
-                            true
-                        )}{' '}
-                    ⚡
-                </Text>
+                <Amount
+                    sats={lightningBalance}
+                    sensitive
+                    jumboText
+                    toggleable
+                />
                 {pendingOpenBalance > 0 ? (
-                    <Text
-                        style={{
-                            fontSize: 20,
-                            color: themeColor('text')
-                        }}
-                    >
-                        {units &&
-                            PrivacyUtils.sensitiveValue(
-                                getAmount(pendingOpenBalance),
-                                8,
-                                true
-                            )}{' '}
-                        pending open
-                    </Text>
+                    <Amount
+                        sats={pendingOpenBalance}
+                        sensitive
+                        jumboText
+                        toggleable
+                    />
                 ) : null}
             </>
         );
-
         const BalanceViewCombined = () => (
-            <React.Fragment>
-                <Text
-                    style={{
-                        fontSize: 40,
-                        color: themeColor('text')
-                    }}
-                >
-                    {units &&
-                        PrivacyUtils.sensitiveValue(
-                            getAmount(combinedBalanceValue),
-                            null,
-                            true
-                        )}
-                </Text>
+            <>
+                <Amount
+                    sats={combinedBalanceValue}
+                    sensitive
+                    jumboText
+                    toggleable
+                />
                 {unconfirmedBlockchainBalance || pendingOpenBalance ? (
-                    <Text
-                        style={{
-                            fontSize: 20,
-                            color: themeColor('text')
-                        }}
-                    >
-                        {units &&
-                            PrivacyUtils.sensitiveValue(
-                                getAmount(pendingUnconfirmedBalance),
-                                null,
-                                true
-                            )}{' '}
-                        pending
-                    </Text>
+                    <Amount
+                        sats={pendingUnconfirmedBalance}
+                        sensitive
+                        jumboText
+                        toggleable
+                    />
                 ) : null}
-            </React.Fragment>
+            </>
         );
 
         let infoValue = 'ⓘ';
@@ -126,22 +91,6 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
         } else if (NodeInfoStore.nodeInfo.isRegTest) {
             infoValue = localeString('views.Wallet.MainPane.regnet');
         }
-
-        const DefaultBalance = () => (
-            <>
-                <TouchableOpacity onPress={() => changeUnits()}>
-                    <BalanceViewCombined />
-                </TouchableOpacity>
-            </>
-        );
-
-        const LndHubBalance = () => (
-            <>
-                <TouchableOpacity onPress={() => changeUnits()}>
-                    <LightningBalance />
-                </TouchableOpacity>
-            </>
-        );
 
         const NetworkBadge = () => (
             <View style={styles.nodeInfo}>
@@ -196,9 +145,9 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                 >
                     <WalletHeader navigation={navigation} />
                     {implementation === 'lndhub' ? (
-                        <LndHubBalance />
+                        <LightningBalance />
                     ) : (
-                        <DefaultBalance />
+                        <BalanceViewCombined />
                     )}
                     {infoValue !== 'ⓘ' && <NetworkBadge />}
                 </View>

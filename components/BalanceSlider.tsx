@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Slider } from 'react-native-elements';
+import { themeColor } from './../utils/ThemeUtils';
 
 interface BalanceSliderProps {
     localBalance: string | number;
@@ -24,8 +25,8 @@ export default class BalanceSlider extends React.Component<
             <View style={list ? styles.sliderList : styles.slider}>
                 <Slider
                     value={ratio}
-                    maximumTrackTintColor="orange"
-                    minimumTrackTintColor="#2b74b4"
+                    minimumTrackTintColor={themeColor('outbound')}
+                    maximumTrackTintColor={themeColor('inbound')}
                     trackStyle={styles.trackStyle}
                     thumbStyle={styles.thumbStyle}
                     disabled
