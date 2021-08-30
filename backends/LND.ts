@@ -217,6 +217,8 @@ export default class LND {
     getNewAddress = () => this.getRequest('/v1/newaddress');
     openChannel = (data: OpenChannelRequest) =>
         this.postRequest('/v1/channels', data);
+    openChannelStream = (data: OpenChannelRequest) =>
+        this.wsReq('/v1/channels/stream', 'POST', data);
     connectPeer = (data: any) => this.postRequest('/v1/peers', data);
     listNode = () => this.getRequest('/v1/network/listNode');
     decodePaymentRequest = (urlParams?: Array<string>) =>
