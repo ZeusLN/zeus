@@ -39,6 +39,11 @@ import SetFees from './views/Routing/SetFees';
 // new views
 import Activity from './views/Activity/Activity';
 import ActivityFilter from './views/Activity/ActivityFilter';
+import Channels from './views/Channels';
+import CoinControl from './views/UTXOs/CoinControl';
+import Utxo from './views/UTXOs/UTXO';
+import ImportAccount from './views/Accounts/ImportAccount';
+import ImportAccountQRScanner from './views/Accounts/ImportAccountQRScanner';
 
 import Onboarding from './views/Onboarding';
 
@@ -138,6 +143,18 @@ const AppScenes = {
     },
     ActivityFilter: {
         screen: ActivityFilter
+    },
+    CoinControl: {
+        screen: CoinControl
+    },
+    Utxo: {
+        screen: Utxo
+    },
+    ImportAccount: {
+        screen: ImportAccount
+    },
+    ImportAccountQRScanner: {
+        screen: ImportAccountQRScanner
     }
 };
 

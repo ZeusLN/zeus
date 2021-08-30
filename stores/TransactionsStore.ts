@@ -36,6 +36,8 @@ export default class TransactionsStore {
     @observable payment_error: any;
     @observable onchain_address: string;
     @observable txid: string | null;
+    // in lieu of receiving txid on LND's publishTransaction
+    @observable publishSuccess: boolean = false;
     // c-lightning
     @observable status: string | null;
 
@@ -66,6 +68,7 @@ export default class TransactionsStore {
         this.payment_error = null;
         this.onchain_address = '';
         this.txid = null;
+        this.publishSuccess = false;
         this.status = null;
     };
 
@@ -87,15 +90,86 @@ export default class TransactionsStore {
             });
     };
 
+    public sendCoinsLNDCoinControl = (
+        transactionRequest: TransactionRequest
+    ) => {
+        const { utxos, addr, amount, sat_per_byte } = transactionRequest;
+        const inputs: any = [];
+        let outputs: any = {};
+
+        if (utxos) {
+            utxos.forEach(input => {
+                const [txid_str, output_index] = input.split(':');
+                inputs.push({ txid_str, output_index: Number(output_index) });
+            });
+        }
+
+        if (addr) {
+            outputs[addr] = Number(amount);
+        }
+
+        const fundPsbtRequest = {
+            raw: {
+                outputs,
+                inputs
+            },
+            sat_per_vbyte: Number(sat_per_byte)
+        };
+
+        RESTUtils.fundPsbt(fundPsbtRequest)
+            .then((data: any) => {
+                const funded_psbt = data.funded_psbt;
+
+                RESTUtils.finalizePsbt({ funded_psbt })
+                    .then((data: any) => {
+                        const raw_final_tx = data.raw_final_tx;
+
+                        RESTUtils.publishTransaction({ tx_hex: raw_final_tx })
+                            .then(() => {
+                                this.publishSuccess = true;
+                                this.loading = false;
+                            })
+                            .catch((error: any) => {
+                                // handle error
+                                this.error_msg =
+                                    error.publish_error || error.message;
+                                this.error = true;
+                                this.loading = false;
+                            });
+                    })
+                    .catch((error: any) => {
+                        // handle error
+                        this.error_msg = error.message;
+                        this.error = true;
+                        this.loading = false;
+                    });
+            })
+            .catch((error: any) => {
+                // handle error
+                this.error_msg = error.message;
+                this.error = true;
+                this.loading = false;
+            });
+    };
+
     @action
     public sendCoins = (transactionRequest: TransactionRequest) => {
         this.error = false;
         this.error_msg = null;
         this.txid = null;
+        this.publishSuccess = false;
         this.loading = true;
+        if (
+            this.settingsStore.implementation === 'lnd' &&
+            transactionRequest.utxos &&
+            transactionRequest.utxos.length > 0
+        ) {
+            return this.sendCoinsLNDCoinControl(transactionRequest);
+        }
         RESTUtils.sendCoins(transactionRequest)
             .then((data: any) => {
                 this.txid = data.txid;
+                this.publishSuccess = true;
                 this.loading = false;
             })
             .catch((error: any) => {
