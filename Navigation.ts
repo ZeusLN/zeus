@@ -47,6 +47,8 @@ import ImportAccountQRScanner from './views/Accounts/ImportAccountQRScanner';
 
 import Onboarding from './views/Onboarding';
 
+import EditFee from './views/EditFee';
+
 const AppScenes = {
     Lockscreen: {
         screen: Lockscreen
@@ -62,6 +64,9 @@ const AppScenes = {
     },
     NodeQRCodeScanner: {
         screen: NodeQRScanner
+    },
+    EditFee: {
+        screen: EditFee
     },
     Settings: {
         screen: Settings
