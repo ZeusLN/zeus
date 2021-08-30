@@ -354,12 +354,13 @@ export default class OpenChannel extends React.Component<
                         editable={!openingChannel}
                     />
 
-                    {RESTUtils.supportsCoinControl() && (
-                        <UTXOPicker
-                            onValueChange={this.selectUTXOs}
-                            UTXOsStore={UTXOsStore}
-                        />
-                    )}
+                    {RESTUtils.supportsCoinControl() &&
+                        implementation !== 'lnd' && (
+                            <UTXOPicker
+                                onValueChange={this.selectUTXOs}
+                                UTXOsStore={UTXOsStore}
+                            />
+                        )}
 
                     <View style={{ padding: 10 }}>
                         <CheckBox
