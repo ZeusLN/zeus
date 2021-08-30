@@ -4,7 +4,7 @@ import ChannelInfo from './../models/ChannelInfo';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import CloseChannelRequest from './../models/CloseChannelRequest';
 import SettingsStore from './SettingsStore';
-import { randomBytes } from 'react-native-randombytes'
+import { randomBytes } from 'react-native-randombytes';
 
 import Base64Utils from './../utils/Base64Utils';
 import RESTUtils from './../utils/RESTUtils';
@@ -269,7 +269,7 @@ export default class ChannelsStore {
                 console.log('stream');
                 console.log(data);
                 const psbt_fund = data.psbt_fund;
-                const { funding_address, funding_amount, psbt } = psbt_fund;
+                const { funding_address, funding_amount } = psbt_fund;
 
                 if (funding_address) {
                     outputs[funding_address] = Number(funding_amount);
@@ -315,21 +315,19 @@ export default class ChannelsStore {
                                 this.peerSuccess = false;
                                 this.channelSuccess = false;
                             });
-
-                      })
-                      .catch((error: any) => {
-                          console.log('fundPsbt err');
-                          console.log(error.toString());
-                          this.errorMsgChannel = error.toString();
-                          this.output_index = null;
-                          this.funding_txid_str = null;
-                          this.errorOpenChannel = true;
-                          this.openingChannel = false;
-                          this.channelRequest = null;
-                          this.peerSuccess = false;
-                          this.channelSuccess = false;
-                      });
-
+                    })
+                    .catch((error: any) => {
+                        console.log('fundPsbt err');
+                        console.log(error.toString());
+                        this.errorMsgChannel = error.toString();
+                        this.output_index = null;
+                        this.funding_txid_str = null;
+                        this.errorOpenChannel = true;
+                        this.openingChannel = false;
+                        this.channelRequest = null;
+                        this.peerSuccess = false;
+                        this.channelSuccess = false;
+                    });
             })
             .catch((error: any) => {
                 console.log('stream err');
