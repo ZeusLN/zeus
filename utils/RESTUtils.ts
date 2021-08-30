@@ -56,7 +56,8 @@ class RESTUtils {
     getPayments = (...args: any[]) => this.call('getPayments', args);
     getNewAddress = (...args: any[]) => this.call('getNewAddress', args);
     openChannel = (...args: any[]) => this.call('openChannel', args);
-    openChannelStream = (...args: any[]) => this.call('openChannelStream', args);
+    openChannelStream = (...args: any[]) =>
+        this.call('openChannelStream', args);
     connectPeer = (...args: any[]) => this.call('connectPeer', args);
     listNode = (...args: any[]) => this.call('listNode', args);
     decodePaymentRequest = (...args: any[]) =>
