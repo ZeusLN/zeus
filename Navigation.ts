@@ -22,7 +22,6 @@ import BTCPayConfigQRScanner from './views/BTCPayConfigQRScanner';
 import LNDConnectConfigQRScanner from './views/LNDConnectConfigQRScanner';
 import LNDHubQRScanner from './views/LNDHubQRScanner';
 import NodeInfo from './views/NodeInfo';
-import Routing from './views/Routing';
 import Lockscreen from './views/Lockscreen';
 
 // Settings views
@@ -32,9 +31,19 @@ import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import About from './views/Settings/About';
 import SignMessage from './views/Settings/SignMessage';
 
+// Routing
+import Routing from './views/Routing/Routing';
+import RoutingEvent from './views/Routing/RoutingEvent';
+import SetFees from './views/Routing/SetFees';
+
 // new views
 import Activity from './views/Activity/Activity';
 import ActivityFilter from './views/Activity/ActivityFilter';
+import Channels from './views/Channels';
+import CoinControl from './views/UTXOs/CoinControl';
+import Utxo from './views/UTXOs/UTXO';
+import ImportAccount from './views/Accounts/ImportAccount';
+import ImportAccountQRScanner from './views/Accounts/ImportAccountQRScanner';
 
 import Onboarding from './views/Onboarding';
 
@@ -128,11 +137,29 @@ const AppScenes = {
     Routing: {
         screen: Routing
     },
+    RoutingEvent: {
+        screen: RoutingEvent
+    },
+    SetFees: {
+        screen: SetFees
+    },
     Activity: {
         screen: Activity
     },
     ActivityFilter: {
         screen: ActivityFilter
+    },
+    CoinControl: {
+        screen: CoinControl
+    },
+    Utxo: {
+        screen: Utxo
+    },
+    ImportAccount: {
+        screen: ImportAccount
+    },
+    ImportAccountQRScanner: {
+        screen: ImportAccountQRScanner
     }
 };
 

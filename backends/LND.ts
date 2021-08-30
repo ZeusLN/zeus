@@ -1,7 +1,6 @@
 import RNFetchBlob from 'rn-fetch-blob';
 import stores from '../stores/Stores';
 import OpenChannelRequest from './../models/OpenChannelRequest';
-import ErrorUtils from './../utils/ErrorUtils';
 import VersionUtils from './../utils/VersionUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
@@ -56,9 +55,6 @@ export default class LND {
                         const errorInfo = response.json();
                         throw new Error(
                             (errorInfo.error && errorInfo.error.message) ||
-                                ErrorUtils.errorToUserFriendly(
-                                    errorInfo.code
-                                ) ||
                                 errorInfo.message ||
                                 errorInfo.error
                         );
@@ -203,6 +199,8 @@ export default class LND {
             transactions: data.transactions.reverse()
         }));
     getChannels = () => this.getRequest('/v1/channels');
+    getChannelInfo = (chanId: string) =>
+        this.getRequest(`/v1/graph/edge/${chanId}`);
     getBlockchainBalance = () => this.getRequest('/v1/balance/blockchain');
     getLightningBalance = () => this.getRequest('/v1/balance/channels');
     sendCoins = (data: any) =>
@@ -219,6 +217,8 @@ export default class LND {
     getNewAddress = () => this.getRequest('/v1/newaddress');
     openChannel = (data: OpenChannelRequest) =>
         this.postRequest('/v1/channels', data);
+    openChannelStream = (data: OpenChannelRequest) =>
+        this.wsReq('/v1/channels/stream', 'POST', data);
     connectPeer = (data: any) => this.postRequest('/v1/peers', data);
     listNode = () => this.getRequest('/v1/network/listNode');
     decodePaymentRequest = (urlParams?: Array<string>) =>
@@ -251,13 +251,26 @@ export default class LND {
             `/v1/graph/routes/${urlParams && urlParams[0]}/${urlParams &&
                 urlParams[1]}`
         );
-    getForwardingHistory = (data: any) => {
+    getForwardingHistory = (hours: number = 24) => {
         const req = {
-            ...data,
-            num_max_events: 10000000
+            num_max_events: 10000000,
+            start_time: Math.round(
+                new Date(Date.now() - hours * 60 * 60 * 1000).getTime() / 1000
+            ).toString(),
+            end_time: Math.round(new Date().getTime() / 1000).toString()
         };
         return this.postRequest('/v1/switch', req);
     };
+    // Coin Control
+    fundPsbt = (data: any) => this.postRequest('/v2/wallet/psbt/fund', data);
+    finalizePsbt = (data: any) =>
+        this.postRequest('/v2/wallet/psbt/finalize', data);
+    publishTransaction = (data: any) => this.postRequest('/v2/wallet/tx', data);
+    getUTXOs = () => this.getRequest('/v1/utxos?min_confs=0&max_confs=200000');
+    bumpFee = (data: any) => this.postRequest('/v2/wallet/bumpfee', data);
+    listAccounts = () => this.getRequest('/v2/wallet/accounts');
+    importAccount = (data: any) =>
+        this.postRequest('/v2/wallet/accounts/import', data);
     signMessage = (message: string) =>
         this.postRequest('/v1/signmessage', {
             msg: message
@@ -292,8 +305,9 @@ export default class LND {
     supportsChannelManagement = () => true;
     supportsMPP = () => this.supports('v0.11.0', 'v0.13.0');
     supportsAMP = () => this.supports('v0.13.0');
-    supportsCoinControl = () => false;
     supportsHopPicking = () => this.supports('v0.11.0');
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
+    supportsCoinControl = () => this.supports('v0.12.0');
+    supportsAccounts = () => this.supports('v0.13.0');
 }

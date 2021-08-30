@@ -30,11 +30,11 @@ export default class SendingOnChain extends React.Component<
 > {
     getBackgroundColor() {
         const { TransactionsStore } = this.props;
-        const { txid, error } = TransactionsStore;
+        const { txid, publishSuccess, error } = TransactionsStore;
 
         if (error) {
             return 'darkred';
-        } else if (txid) {
+        } else if (txid || publishSuccess) {
             return 'green';
         }
 
@@ -43,7 +43,13 @@ export default class SendingOnChain extends React.Component<
 
     render() {
         const { NodeInfoStore, TransactionsStore, navigation } = this.props;
-        const { loading, error, error_msg, txid } = TransactionsStore;
+        const {
+            loading,
+            publishSuccess,
+            error,
+            error_msg,
+            txid
+        } = TransactionsStore;
         const { testnet } = NodeInfoStore;
 
         return (
@@ -79,7 +85,7 @@ export default class SendingOnChain extends React.Component<
                             {error_msg}
                         </Text>
                     )}
-                    {txid && (
+                    {publishSuccess && (
                         <Text
                             style={{
                                 color: 'white',
@@ -110,7 +116,7 @@ export default class SendingOnChain extends React.Component<
                             </Text>
                         </TouchableOpacity>
                     )}
-                    {txid && (
+                    {publishSuccess && (
                         <View style={styles.button}>
                             <Button
                                 title=""
@@ -154,7 +160,7 @@ export default class SendingOnChain extends React.Component<
                         </View>
                     )}
 
-                    {(txid || error) && (
+                    {(publishSuccess || error) && (
                         <View style={styles.button}>
                             <Button
                                 title={localeString(
@@ -163,14 +169,14 @@ export default class SendingOnChain extends React.Component<
                                 icon={{
                                     name: 'list',
                                     size: 25,
-                                    color: txid ? 'green' : 'darkred'
+                                    color: publishSuccess ? 'green' : 'darkred'
                                 }}
                                 buttonStyle={{
                                     backgroundColor: '#fff',
                                     borderRadius: 30
                                 }}
                                 titleStyle={{
-                                    color: txid ? 'green' : 'darkred'
+                                    color: publishSuccess ? 'green' : 'darkred'
                                 }}
                                 onPress={() => navigation.navigate('Wallet')}
                             />
