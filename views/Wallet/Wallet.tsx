@@ -1,5 +1,12 @@
 import * as React from 'react';
-import { Image, Linking, Text, View, TouchableOpacity } from 'react-native';
+import {
+    ActivityIndicator,
+    Image,
+    Linking,
+    Text,
+    View,
+    TouchableOpacity
+} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { Button, ButtonGroup } from 'react-native-elements';
 
@@ -7,6 +14,7 @@ import Channels from './Channels';
 import MainPane from './MainPane';
 import { inject, observer } from 'mobx-react';
 import PrivacyUtils from './../../utils/PrivacyUtils';
+import RESTUtils from './../../utils/RESTUtils';
 import { restartTor } from './../../utils/TorUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -159,7 +167,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             SettingsStore,
             navigation
         } = this.props;
-        const { error, loading } = NodeInfoStore;
+        const { error, loading, nodeInfo } = NodeInfoStore;
         const { implementation, enableTor } = SettingsStore;
 
         const WalletScreen = () => {
@@ -170,57 +178,54 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                         flex: 1
                     }}
                 >
-                    <LinearGradient
-                        colors={themeColor('gradient')}
-                        style={{ flex: 1 }}
-                    >
-                        <MainPane
-                            navigation={navigation}
-                            NodeInfoStore={NodeInfoStore}
-                            UnitsStore={UnitsStore}
-                            BalanceStore={BalanceStore}
-                            SettingsStore={SettingsStore}
-                        />
+                    <MainPane
+                        navigation={navigation}
+                        NodeInfoStore={NodeInfoStore}
+                        UnitsStore={UnitsStore}
+                        BalanceStore={BalanceStore}
+                        SettingsStore={SettingsStore}
+                    />
 
-                        {error && !loading && enableTor && (
-                            <View style={{ marginTop: 10 }}>
-                                <Button
-                                    title={localeString(
-                                        'views.Wallet.restartTor'
-                                    )}
-                                    icon={{
-                                        name: 'sync',
-                                        size: 25,
-                                        color: 'white'
-                                    }}
-                                    buttonStyle={{
-                                        backgroundColor: 'gray',
-                                        borderRadius: 30
-                                    }}
-                                    onPress={() => this.restartTorAndReload()}
-                                />
-                            </View>
-                        )}
+                    {error && enableTor && (
+                        <View style={{ marginTop: 10 }}>
+                            <Button
+                                title={localeString('views.Wallet.restartTor')}
+                                icon={{
+                                    name: 'sync',
+                                    size: 25,
+                                    color: 'white'
+                                }}
+                                buttonStyle={{
+                                    backgroundColor: 'gray',
+                                    borderRadius: 30
+                                }}
+                                onPress={() => this.restartTorAndReload()}
+                            />
+                        </View>
+                    )}
 
-                        <LayerBalances
-                            navigation={navigation}
-                            BalanceStore={BalanceStore}
-                            UnitsStore={UnitsStore}
-                        />
+                    {(implementation === 'lndhub' || nodeInfo.version) && (
+                        <>
+                            <LayerBalances
+                                navigation={navigation}
+                                BalanceStore={BalanceStore}
+                                UnitsStore={UnitsStore}
+                            />
 
-                        <TouchableOpacity
-                            onPress={() =>
-                                this.props.navigation.navigate('Activity')
-                            }
-                        >
-                            <CaretUp
+                            <TouchableOpacity
+                                onPress={() =>
+                                    this.props.navigation.navigate('Activity')
+                                }
                                 style={{
                                     alignSelf: 'center',
-                                    marginBottom: 100
+                                    bottom: 85,
+                                    padding: 25
                                 }}
-                            />
-                        </TouchableOpacity>
-                    </LinearGradient>
+                            >
+                                <CaretUp />
+                            </TouchableOpacity>
+                        </>
+                    )}
                 </View>
             );
         };
@@ -254,82 +259,137 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         // TODO: reorg? maybe just detect if on channels page and shrink middle button
         return (
             <View style={{ flex: 1 }}>
-                <NavigationContainer theme={Theme}>
-                    <Tab.Navigator
-                        screenOptions={({ route }) => ({
-                            tabBarIcon: ({ focused, color, size }) => {
-                                let iconName;
+                <LinearGradient
+                    colors={themeColor('gradient')}
+                    style={{ flex: 1 }}
+                >
+                    {!loading && (
+                        <NavigationContainer theme={Theme}>
+                            <Tab.Navigator
+                                screenOptions={({ route }) => ({
+                                    tabBarIcon: ({ focused, color, size }) => {
+                                        let iconName;
 
-                                if (route.name === 'Wallet') {
-                                    return <WalletIcon fill={color} />;
-                                }
-                                if (route.name === scanAndSend) {
-                                    return (
-                                        <TouchableOpacity
-                                            style={{
-                                                position: 'absolute',
-                                                height: 90,
-                                                width: 90,
-                                                borderRadius: 90,
-                                                bottom: 5,
-                                                backgroundColor: themeColor(
-                                                    'secondary'
-                                                ),
-                                                justifyContent: 'center',
-                                                alignItems: 'center',
-                                                shadowColor: 'black',
-                                                shadowRadius: 5,
-                                                shadowOpacity: 0.8,
-                                                elevation: 2
-                                            }}
-                                            onPress={() => {
-                                                const {
-                                                    navigation
-                                                } = this.props;
-                                                // if clipboard is loaded check for potential matches, otherwise do nothing
-                                                handleAnything(this.clipboard)
-                                                    .then(([route, props]) => {
-                                                        navigation.navigate(
-                                                            route,
-                                                            props
-                                                        );
-                                                    })
-                                                    .catch(() =>
-                                                        navigation.navigate(
-                                                            'AddressQRCodeScanner'
-                                                        )
-                                                    );
-                                            }}
-                                        >
-                                            <QRIcon
-                                                style={{
-                                                    padding: 25
-                                                }}
-                                                fill={themeColor('highlight')}
-                                            />
-                                        </TouchableOpacity>
-                                    );
-                                }
-                                return <ChannelsIcon fill={color} />;
-                            }
-                        })}
-                        tabBarOptions={{
-                            activeTintColor: themeColor('highlight'),
-                            inactiveTintColor: 'gray'
-                        }}
-                    >
-                        <Tab.Screen name="Wallet" component={WalletScreen} />
-                        <Tab.Screen
-                            name={scanAndSend}
-                            component={WalletScreen}
+                                        if (route.name === 'Wallet') {
+                                            return <WalletIcon fill={color} />;
+                                        }
+                                        if (route.name === scanAndSend) {
+                                            return (
+                                                <View
+                                                    style={{
+                                                        bottom: 75,
+                                                        alignItems: 'center'
+                                                    }}
+                                                >
+                                                    <TouchableOpacity
+                                                        style={{
+                                                            position:
+                                                                'absolute',
+                                                            height: 90,
+                                                            width: 90,
+                                                            borderRadius: 90,
+                                                            backgroundColor: themeColor(
+                                                                'secondary'
+                                                            ),
+                                                            justifyContent:
+                                                                'center',
+                                                            alignItems:
+                                                                'center',
+                                                            shadowColor:
+                                                                'black',
+                                                            shadowRadius: 5,
+                                                            shadowOpacity: 0.8,
+                                                            elevation: 2
+                                                        }}
+                                                        onPress={() => {
+                                                            const {
+                                                                navigation
+                                                            } = this.props;
+                                                            // if clipboard is loaded check for potential matches, otherwise do nothing
+                                                            handleAnything(
+                                                                this.clipboard
+                                                            )
+                                                                .then(
+                                                                    ([
+                                                                        route,
+                                                                        props
+                                                                    ]) => {
+                                                                        navigation.navigate(
+                                                                            route,
+                                                                            props
+                                                                        );
+                                                                    }
+                                                                )
+                                                                .catch(() =>
+                                                                    navigation.navigate(
+                                                                        'AddressQRCodeScanner'
+                                                                    )
+                                                                );
+                                                        }}
+                                                    >
+                                                        <QRIcon
+                                                            style={{
+                                                                padding: 25
+                                                            }}
+                                                            fill={themeColor(
+                                                                'highlight'
+                                                            )}
+                                                        />
+                                                    </TouchableOpacity>
+                                                </View>
+                                            );
+                                        }
+                                        if (
+                                            RESTUtils.supportsChannelManagement()
+                                        ) {
+                                            return (
+                                                <ChannelsIcon fill={color} />
+                                            );
+                                        }
+                                    }
+                                })}
+                                tabBarOptions={{
+                                    activeTintColor: themeColor('highlight'),
+                                    inactiveTintColor: RESTUtils.supportsChannelManagement()
+                                        ? 'gray'
+                                        : themeColor('highlight')
+                                }}
+                            >
+                                <Tab.Screen
+                                    name="Wallet"
+                                    component={WalletScreen}
+                                />
+                                <Tab.Screen
+                                    name={scanAndSend}
+                                    component={WalletScreen}
+                                />
+                                {RESTUtils.supportsChannelManagement() ? (
+                                    <Tab.Screen
+                                        name={localeString(
+                                            'views.Wallet.Wallet.channels'
+                                        )}
+                                        component={ChannelsScreen}
+                                    />
+                                ) : (
+                                    <Tab.Screen
+                                        name={' '}
+                                        component={WalletScreen}
+                                    />
+                                )}
+                            </Tab.Navigator>
+                        </NavigationContainer>
+                    )}
+                    {loading && (
+                        <ActivityIndicator
+                            color={themeColor('text')}
+                            style={{
+                                flex: 1,
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
                         />
-                        {/* TODO: the icon isn't taking on the color like the wallet one does */}
-                        <Tab.Screen
-                            name={localeString('views.Wallet.Wallet.channels')}
-                            component={ChannelsScreen}
-                        />
-                    </Tab.Navigator>
-                </NavigationContainer>
+                    )}
+                </LinearGradient>
             </View>
         );
     }

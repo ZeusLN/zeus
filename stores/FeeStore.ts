@@ -7,11 +7,13 @@ import SettingsStore from './SettingsStore';
 
 export default class FeeStore {
     @observable public fees: any = {};
+    @observable public earnedDuringTimeframe: number = 0;
     @observable public channelFees: any = {};
     @observable public dataFrame: any = {};
     @observable public loading: boolean = false;
     @observable public error: boolean = false;
     @observable public setFeesError: boolean = false;
+    @observable public setFeesErrorMsg: string;
     @observable public setFeesSuccess: boolean = false;
 
     @observable public dayEarned: string | number;
@@ -57,11 +59,6 @@ export default class FeeStore {
         this.loading = false;
     };
 
-    feesError = () => {
-        this.loading = false;
-        this.setFeesError = true;
-    };
-
     @action
     public getFees = () => {
         this.loading = true;
@@ -88,25 +85,28 @@ export default class FeeStore {
 
     @action
     public setFees = (
-        newBaseFeeMsat: string,
-        newFeeRatePPM: any,
+        newBaseFee: string,
+        newFeeRate: string,
+        timeLockDelta: number = 4,
         channelPoint?: string,
         channelId?: string
     ) => {
         this.loading = true;
         this.setFeesError = false;
+        this.setFeesErrorMsg = '';
         this.setFeesSuccess = false;
 
         const data: any = {
-            base_fee_msat: newBaseFeeMsat,
-            fee_rate: newFeeRatePPM,
-            time_lock_delta: 4
+            base_fee_msat: `${Number(newBaseFee) * 1000}`,
+            fee_rate: `${Number(newFeeRate) / 1000}`,
+            time_lock_delta: timeLockDelta
         };
 
         if (channelId) {
             // c-lightning, eclair
             data.channelId = channelId;
-        } else if (channelPoint) {
+        }
+        if (channelPoint) {
             // lnd
             const [funding_txid, output_index] = channelPoint.split(':');
             data.chan_point = {
@@ -114,33 +114,48 @@ export default class FeeStore {
                 funding_txid_str: funding_txid,
                 funding_txid_bytes: Base64Utils.btoa(funding_txid) // must encode in base64
             };
-        } else {
+        }
+
+        if (!channelId && !channelPoint) {
             data.global = true;
         }
 
-        RESTUtils.setFees(data)
+        return RESTUtils.setFees(data)
             .then(() => {
                 this.loading = false;
                 this.setFeesSuccess = true;
             })
-            .catch(() => {
-                this.feesError();
+            .catch((err: any) => {
+                this.setFeesErrorMsg = err.toString();
+                this.loading = false;
+                this.setFeesError = true;
             });
     };
 
     forwardingError = () => {
-        this.loading = false;
+        this.forwardingEvents = [];
         this.forwardingHistoryError = true;
+        this.loading = false;
     };
 
     @action
     public getForwardingHistory = (params?: any) => {
         this.loading = true;
+        this.forwardingEvents = [];
+        this.forwardingHistoryError = false;
+        this.earnedDuringTimeframe = 0;
         RESTUtils.getForwardingHistory(params)
             .then((data: any) => {
                 this.forwardingEvents = data.forwarding_events
                     .map((event: any) => new ForwardEvent(event))
                     .reverse();
+
+                // Add up fees earned for this timeframe
+                this.forwardingEvents.map(
+                    (event: ForwardEvent) =>
+                        (this.earnedDuringTimeframe += Number(event.fee))
+                );
+
                 this.lastOffsetIndex = data.last_offset_index;
                 this.loading = false;
             })
