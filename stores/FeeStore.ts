@@ -133,13 +133,16 @@ export default class FeeStore {
     };
 
     forwardingError = () => {
-        this.loading = false;
+        this.forwardingEvents = [];
         this.forwardingHistoryError = true;
+        this.loading = false;
     };
 
     @action
     public getForwardingHistory = (params?: any) => {
         this.loading = true;
+        this.forwardingEvents = [];
+        this.forwardingHistoryError = false;
         this.earnedDuringTimeframe = 0;
         RESTUtils.getForwardingHistory(params)
             .then((data: any) => {
