@@ -93,12 +93,17 @@ export default class OpenChannel extends React.Component<
         }
     }
 
-    selectUTXOs = (utxos: Array<string>, utxoBalance: number) =>
-        this.setState({
-            utxos,
-            local_funding_amount: 'all',
-            utxoBalance: utxoBalance
-        });
+    selectUTXOs = (utxos: Array<string>, utxoBalance: number) => {
+        const { SettingsStore } = this.props;
+        const { implementation } = SettingsStore;
+        let newState: any = {};
+        newState.utxos = utxos;
+        newState.utxoBalance = utxoBalance;
+        if (implementation === 'c-lightning-REST') {
+            newState.local_funding_amount = 'all';
+        }
+        this.setState(newState);
+    };
 
     importClipboard = () => {
         const { pubkey, host } = NodeUriUtils.processNodeUri(
@@ -349,12 +354,13 @@ export default class OpenChannel extends React.Component<
                         editable={!openingChannel}
                     />
 
-                    {RESTUtils.supportsCoinControl() && (
-                        <UTXOPicker
-                            onValueChange={this.selectUTXOs}
-                            UTXOsStore={UTXOsStore}
-                        />
-                    )}
+                    {RESTUtils.supportsCoinControl() &&
+                        implementation !== 'lnd' && (
+                            <UTXOPicker
+                                onValueChange={this.selectUTXOs}
+                                UTXOsStore={UTXOsStore}
+                            />
+                        )}
 
                     <View style={{ padding: 10 }}>
                         <CheckBox

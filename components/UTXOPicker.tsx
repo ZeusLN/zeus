@@ -11,7 +11,7 @@ import {
     TouchableOpacity
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { Avatar, ListItem } from 'react-native-elements';
+import { ListItem } from 'react-native-elements';
 import remove from 'lodash/remove';
 import { inject, observer } from 'mobx-react';
 import { localeString } from './../utils/LocaleUtils';
@@ -20,10 +20,7 @@ import { themeColor } from './../utils/ThemeUtils';
 import stores from './../stores/Stores';
 import UTXOsStore from './../stores/UTXOsStore';
 
-const SelectedLight = require('./../images/selected-light.png');
-const SelectedDark = require('./../images/selected-dark.png');
-const UnselectedLight = require('./../images/unselected-light.png');
-const UnselectedDark = require('./../images/unselected-dark.png');
+import Bitcoin from './../images/SVG/Bitcoin Circle.svg';
 
 interface UTXOPickerProps {
     title?: string;
@@ -48,8 +45,6 @@ const VALUES = [
 ];
 
 const DEFAULT_TITLE = 'UTXOs to use';
-
-const Icon = (balanceImage: any) => <Avatar source={balanceImage} />;
 
 @inject('UTXOsStore')
 @observer
@@ -99,17 +94,16 @@ export default class UTXOPicker extends React.Component<
         const { utxosSelected, selectedBalance } = this.state;
         let newArray: string[] = [];
         utxosSelected.forEach((utxo: string) => newArray.push(utxo));
-        const { txid, output } = item;
-        const itemId: string = `${txid}:${output}`;
+        const itemId: string = item.getOutpoint;
         let balance;
         if (!newArray.includes(itemId)) {
             newArray.push(itemId);
-            balance = selectedBalance + item.value;
+            balance = selectedBalance + Number(item.getAmount);
         } else {
             newArray = remove(newArray, function(n) {
                 return n !== itemId;
             });
-            balance = selectedBalance - item.value;
+            balance = selectedBalance - Number(item.getAmount);
         }
 
         this.setState({ utxosSelected: newArray, selectedBalance: balance });
@@ -123,10 +117,7 @@ export default class UTXOPicker extends React.Component<
             showUtxoModal,
             selectedBalance
         } = this.state;
-        const SettingsStore = stores.settingsStore;
         const { utxos, loading, getUTXOs } = UTXOsStore;
-        const { settings } = SettingsStore;
-        const { theme } = settings;
 
         let utxosPicked: string[] = [];
         utxosSelected.forEach((utxo: string) => utxosPicked.push(utxo));
@@ -195,8 +186,8 @@ export default class UTXOPicker extends React.Component<
                                         renderItem={({ item }: any) => (
                                             <ListItem
                                                 key={item.txid}
-                                                title={`${item.txid}:${item.output}`}
-                                                subtitle={`${item.value.toString()} ${localeString(
+                                                title={item.getOutpoint}
+                                                subtitle={`${item.getAmount.toString()} ${localeString(
                                                     'views.Send.satoshis'
                                                 )}`}
                                                 containerStyle={{
@@ -207,30 +198,24 @@ export default class UTXOPicker extends React.Component<
                                                 }}
                                                 leftElement={
                                                     utxosPicked.includes(
-                                                        `${item.txid}:${item.output}`
+                                                        item.getOutpoint
                                                     )
-                                                        ? theme === 'dark'
-                                                            ? Icon(SelectedDark)
-                                                            : Icon(
-                                                                  SelectedLight
-                                                              )
-                                                        : theme === 'dark'
-                                                        ? Icon(UnselectedDark)
-                                                        : Icon(UnselectedLight)
+                                                        ? Bitcoin
+                                                        : null
                                                 }
                                                 onPress={() =>
                                                     this.toggleItem(item)
                                                 }
                                                 titleStyle={{
                                                     color: utxosPicked.includes(
-                                                        `${item.txid}:${item.output}`
+                                                        item.getOutpoint
                                                     )
                                                         ? 'orange'
                                                         : themeColor('text')
                                                 }}
                                                 subtitleStyle={{
                                                     color: utxosPicked.includes(
-                                                        `${item.txid}:${item.output}`
+                                                        item.getOutpoint
                                                     )
                                                         ? 'orange'
                                                         : themeColor(
@@ -292,21 +277,25 @@ export default class UTXOPicker extends React.Component<
                         <Text
                             style={{
                                 color: themeColor('text'),
-                                paddingLeft: 10
+                                textDecorationLine: 'underline'
                             }}
                         >
                             {title || DEFAULT_TITLE}
                         </Text>
                         {utxosSet.length > 0 ? (
-                            <Text
-                                style={{
-                                    padding: 10,
-                                    fontSize: 16,
-                                    color: themeColor('text')
-                                }}
+                            <TouchableOpacity
+                                onPress={() => this.clearSelection()}
                             >
-                                {this.displayValues()}
-                            </Text>
+                                <Text
+                                    style={{
+                                        padding: 10,
+                                        fontSize: 16,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {this.displayValues()}
+                                </Text>
+                            </TouchableOpacity>
                         ) : (
                             <Picker
                                 selectedValue={`${selectedValue}`}

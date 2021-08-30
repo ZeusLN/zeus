@@ -36,13 +36,12 @@ export default class OnchainSwipeableRow extends Component<
             outputRange: [x, 0]
         });
         const pressHandler = () => {
-            console.log(progress);
             this.close();
 
             if (text === localeString('general.receive')) {
                 this.props.navigation.navigate('Receive', { selectedIndex: 1 });
             } else if (text === localeString('general.coins')) {
-                console.log('Insert nav to coin control');
+                this.props.navigation.navigate('CoinControl');
             }
         };
 
@@ -91,9 +90,6 @@ export default class OnchainSwipeableRow extends Component<
     };
     private close = () => {
         this.swipeableRow.close();
-    };
-    private open = () => {
-        this.swipeableRow.open();
     };
     render() {
         const { children } = this.props;
