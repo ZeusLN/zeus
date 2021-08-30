@@ -70,7 +70,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
             <Icon
                 name="arrow-back"
                 onPress={() => navigation.navigate('Wallet')}
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
@@ -92,7 +92,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Transaction.title'),
-                        style: { color: '#fff' }
+                        style: { color: themeColor('text') }
                     }}
                     backgroundColor="#1f2328"
                 />

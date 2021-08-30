@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 
 import { RectButton } from 'react-native-gesture-handler';
+import RESTUtils from './../../utils/RESTUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -40,7 +41,7 @@ export default class OnchainSwipeableRow extends Component<
             if (text === localeString('general.receive')) {
                 this.props.navigation.navigate('Receive', { selectedIndex: 1 });
             } else if (text === localeString('general.coins')) {
-                console.log('Insert nav to coin control');
+                this.props.navigation.navigate('CoinControl');
             }
         };
 
@@ -68,12 +69,17 @@ export default class OnchainSwipeableRow extends Component<
         <View
             style={{
                 marginLeft: 15,
-                width: 150,
+                width: RESTUtils.supportsRouting() ? 150 : 75,
                 flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row'
             }}
         >
-            {this.renderAction(localeString('general.receive'), 150, progress)}
-            {this.renderAction(localeString('general.coins'), 100, progress)}
+            {this.renderAction(
+                localeString('general.receive'),
+                RESTUtils.supportsRouting() ? 150 : 75,
+                progress
+            )}
+            {RESTUtils.supportsCoinControl() &&
+                this.renderAction(localeString('general.coins'), 100, progress)}
         </View>
     );
 
