@@ -5,7 +5,7 @@ export function themeColor(themeString: string): any {
     const { theme } = settings;
 
     const Light: { [key: string]: any } = {
-        background: 'white',
+        background: '#fff',
         secondary: '#f0f0f0',
         text: 'black',
         secondaryText: '#8a8999',

@@ -31,16 +31,16 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
         );
 
         return (
-            <View style={styles.view}>
+            <View>
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Routing.SetFees'),
                         style: { color: themeColor('text') }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor={themeColor('secondary')}
                 />
-                <View style={styles.form}>
+                <View style={styles.view}>
                     <SetFeesForm FeeStore={FeeStore} expanded />
                 </View>
             </View>
@@ -50,11 +50,8 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
 
 const styles = StyleSheet.create({
     view: {
-        flex: 1,
         backgroundColor: themeColor('background'),
-        color: themeColor('text')
-    },
-    form: {
+        color: themeColor('text'),
         top: 5,
         padding: 15
     }

@@ -117,18 +117,20 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
         );
 
         return (
-            <ScrollView style={styles.scrollView}>
-                <Header
-                    leftComponent={<BackButton />}
-                    centerComponent={{
-                        text: localeString('views.NodeInfo.title'),
-                        style: { color: '#fff' }
-                    }}
-                    backgroundColor="#1f2328"
-                />
+            <ScrollView>
+                <View style={styles.view}>
+                    <Header
+                        leftComponent={<BackButton />}
+                        centerComponent={{
+                            text: localeString('views.NodeInfo.title'),
+                            style: { color: '#fff' }
+                        }}
+                        backgroundColor="#1f2328"
+                    />
 
-                <View style={styles.content}>
-                    <NodeInfoView />
+                    <View style={styles.content}>
+                        <NodeInfoView />
+                    </View>
                 </View>
             </ScrollView>
         );
@@ -136,7 +138,7 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
 }
 
 const styles = StyleSheet.create({
-    scrollView: {
+    view: {
         flex: 1,
         backgroundColor: themeColor('background'),
         color: themeColor('text')
