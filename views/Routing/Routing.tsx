@@ -202,7 +202,7 @@ export default class Routing extends React.PureComponent<
                     fullSize={implementation !== 'lnd'}
                 />
                 {implementation === 'lnd' && (
-                    <View>
+                    <View style={styles.view}>
                         <ButtonGroup
                             onPress={(selectedIndex: number) => {
                                 getForwardingHistory(HOURS[selectedIndex]);
@@ -218,9 +218,6 @@ export default class Routing extends React.PureComponent<
                                 backgroundColor: themeColor('secondary'),
                                 borderRadius: 12,
                                 borderColor: themeColor('secondary')
-                            }}
-                            innerBorderStyle={{
-                                color: themeColor('secondary')
                             }}
                             innerBorderStyle={{
                                 color: themeColor('secondary')

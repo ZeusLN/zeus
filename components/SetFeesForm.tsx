@@ -77,7 +77,7 @@ export default class SetFeesForm extends React.Component<
         const { implementation } = SettingsStore;
 
         return (
-            <React.Fragment>
+            <View style={styles.view}>
                 {!expanded && (
                     <View style={styles.button}>
                         <Button
@@ -231,12 +231,16 @@ export default class SetFeesForm extends React.Component<
                         </View>
                     </React.Fragment>
                 )}
-            </React.Fragment>
+            </View>
         );
     }
 }
 
 const styles = StyleSheet.create({
+    view: {
+        color: themeColor('text'),
+        backgroundColor: themeColor('background')
+    },
     text: {
         color: themeColor('text')
     },
