@@ -3,7 +3,6 @@ import {
     ActivityIndicator,
     FlatList,
     View,
-    StyleSheet,
     Text,
     TouchableOpacity
 } from 'react-native';
@@ -184,7 +183,13 @@ export default class Routing extends React.PureComponent<
         ];
 
         return (
-            <View style={styles.view}>
+            <View
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background'),
+                    color: themeColor('text')
+                }}
+            >
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -202,7 +207,7 @@ export default class Routing extends React.PureComponent<
                     fullSize={implementation !== 'lnd'}
                 />
                 {implementation === 'lnd' && (
-                    <View style={styles.view}>
+                    <View>
                         <ButtonGroup
                             onPress={(selectedIndex: number) => {
                                 getForwardingHistory(HOURS[selectedIndex]);
@@ -218,6 +223,9 @@ export default class Routing extends React.PureComponent<
                                 backgroundColor: themeColor('secondary'),
                                 borderRadius: 12,
                                 borderColor: themeColor('secondary')
+                            }}
+                            innerBorderStyle={{
+                                color: themeColor('secondary')
                             }}
                             innerBorderStyle={{
                                 color: themeColor('secondary')
@@ -268,11 +276,3 @@ export default class Routing extends React.PureComponent<
         );
     }
 }
-
-const styles = StyleSheet.create({
-    view: {
-        flex: 1,
-        backgroundColor: themeColor('background'),
-        color: themeColor('text')
-    }
-});

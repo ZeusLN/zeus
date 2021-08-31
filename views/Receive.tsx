@@ -193,7 +193,12 @@ export default class Receive extends React.Component<
         );
 
         return (
-            <View style={styles.view}>
+            <View
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background')
+                }}
+            >
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -264,7 +269,7 @@ export default class Receive extends React.Component<
                                     )}
                                 />
                             )}
-                            <Text style={styles.text}>
+                            <Text style={{ color: themeColor('text') }}>
                                 {localeString('views.Receive.memo')}:
                             </Text>
                             <TextInput
@@ -277,12 +282,15 @@ export default class Receive extends React.Component<
                                 }
                                 numberOfLines={1}
                                 editable={true}
-                                style={styles.textInput}
+                                style={{
+                                    ...styles.textInput,
+                                    color: themeColor('text')
+                                }}
                                 placeholderTextColor="gray"
                             />
 
                             <TouchableOpacity onPress={() => changeUnits()}>
-                                <Text style={styles.text}>
+                                <Text style={{ color: themeColor('text') }}>
                                     {localeString('views.Receive.amount')} (
                                     {units === 'fiat' ? fiat : units})
                                     {lnurl &&
@@ -311,12 +319,15 @@ export default class Receive extends React.Component<
                                         ? false
                                         : true
                                 }
-                                style={styles.textInput}
+                                style={{
+                                    ...styles.textInput,
+                                    color: themeColor('text')
+                                }}
                                 placeholderTextColor="gray"
                             />
                             {units !== 'sats' && (
                                 <TouchableOpacity onPress={() => changeUnits()}>
-                                    <Text style={styles.text}>
+                                    <Text style={{ color: themeColor('text') }}>
                                         {UnitsStore.getAmount(
                                             satAmount,
                                             'sats'
@@ -326,7 +337,7 @@ export default class Receive extends React.Component<
                             )}
                             {units !== 'btc' && (
                                 <TouchableOpacity onPress={() => changeUnits()}>
-                                    <Text style={styles.text}>
+                                    <Text style={{ color: themeColor('text') }}>
                                         {UnitsStore.getAmount(satAmount, 'btc')}{' '}
                                     </Text>
                                 </TouchableOpacity>
@@ -334,7 +345,7 @@ export default class Receive extends React.Component<
 
                             {units === 'fiat' && (
                                 <TouchableOpacity onPress={() => changeUnits()}>
-                                    <Text style={styles.text}>
+                                    <Text style={{ color: themeColor('text') }}>
                                         {FiatStore.getRate()}{' '}
                                     </Text>
                                 </TouchableOpacity>
@@ -342,7 +353,7 @@ export default class Receive extends React.Component<
 
                             {implementation !== 'lndhub' && (
                                 <>
-                                    <Text style={styles.text}>
+                                    <Text style={{ color: themeColor('text') }}>
                                         {localeString(
                                             'views.Receive.expiration'
                                         )}
@@ -357,7 +368,10 @@ export default class Receive extends React.Component<
                                         }
                                         numberOfLines={1}
                                         editable={true}
-                                        style={styles.textInput}
+                                        style={{
+                                            ...styles.textInput,
+                                            color: themeColor('text')
+                                        }}
                                         placeholderTextColor="gray"
                                     />
                                 </>
@@ -365,7 +379,12 @@ export default class Receive extends React.Component<
 
                             {implementation === 'lnd' && (
                                 <>
-                                    <Text style={{ ...styles.text, top: 20 }}>
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('text')
+                                        }}
+                                    >
                                         {localeString(
                                             'views.Receive.routeHints'
                                         )}
@@ -391,7 +410,12 @@ export default class Receive extends React.Component<
 
                             {RESTUtils.supportsAMP() && (
                                 <>
-                                    <Text style={{ ...styles.text, top: 20 }}>
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('text')
+                                        }}
+                                    >
                                         {localeString(
                                             'views.Receive.ampInvoice'
                                         )}
@@ -453,7 +477,7 @@ export default class Receive extends React.Component<
                     {selectedIndex === 1 && (
                         <React.Fragment>
                             {!address && !loading && (
-                                <Text style={styles.text}>
+                                <Text style={{ color: themeColor('text') }}>
                                     {localeString('views.Receive.noOnChain')}
                                 </Text>
                             )}
@@ -505,11 +529,6 @@ export default class Receive extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    view: {
-        flex: 1,
-        backgroundColor: themeColor('background'),
-        color: themeColor('text')
-    },
     content: {
         paddingLeft: 20,
         paddingRight: 20
@@ -519,11 +538,10 @@ const styles = StyleSheet.create({
         paddingBottom: 15
     },
     text: {
-        color: themeColor('text')
+        top: 20
     },
     textInput: {
         fontSize: 20,
-        color: themeColor('text'),
         paddingTop: 10,
         paddingBottom: 10
     }
