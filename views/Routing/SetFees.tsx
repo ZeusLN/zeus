@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import SetFeesForm from './../../components/SetFeesForm';
 
@@ -40,19 +40,17 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
                     }}
                     backgroundColor={themeColor('secondary')}
                 />
-                <View style={styles.view}>
+                <View
+                    style={{
+                        backgroundColor: themeColor('background'),
+                        color: themeColor('text'),
+                        top: 5,
+                        padding: 15
+                    }}
+                >
                     <SetFeesForm FeeStore={FeeStore} expanded />
                 </View>
             </View>
         );
     }
 }
-
-const styles = StyleSheet.create({
-    view: {
-        backgroundColor: themeColor('background'),
-        color: themeColor('text'),
-        top: 5,
-        padding: 15
-    }
-});

@@ -93,7 +93,12 @@ export default class PaymentView extends React.Component<PaymentProps> {
         const lnurlpaytx = this.state.lnurlpaytx;
 
         return (
-            <ScrollView style={styles.scrollView}>
+            <ScrollView
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background')
+                }}
+            >
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -129,47 +134,88 @@ export default class PaymentView extends React.Component<PaymentProps> {
                 <View style={styles.content}>
                     {getFee && (
                         <View>
-                            <Text style={styles.label}>
+                            <Text
+                                style={{
+                                    ...styles.label,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 {localeString('views.Payment.fee')}:
                             </Text>
                             <TouchableOpacity onPress={() => changeUnits()}>
-                                <Text style={styles.value}>{units && fee}</Text>
+                                <Text
+                                    style={{
+                                        ...styles.value,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {units && fee}
+                                </Text>
                             </TouchableOpacity>
                         </View>
                     )}
 
                     {typeof payment_hash === 'string' && (
                         <>
-                            <Text style={styles.label}>
+                            <Text
+                                style={{
+                                    ...styles.label,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 {localeString('views.Payment.paymentHash')}:
                             </Text>
-                            <Text style={styles.value}>
+                            <Text
+                                style={{
+                                    ...styles.value,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 {PrivacyUtils.sensitiveValue(payment_hash)}
                             </Text>
                         </>
                     )}
 
-                    <Text style={styles.label}>
+                    <Text
+                        style={{ ...styles.label, color: themeColor('text') }}
+                    >
                         {localeString('views.Payment.paymentPreimage')}:
                     </Text>
-                    <Text style={styles.value}>
+                    <Text
+                        style={{ ...styles.value, color: themeColor('text') }}
+                    >
                         {PrivacyUtils.sensitiveValue(payment_preimage)}
                     </Text>
 
-                    <Text style={styles.label}>
+                    <Text
+                        style={{ ...styles.label, color: themeColor('text') }}
+                    >
                         {localeString('views.Payment.creationDate')}:
                     </Text>
-                    <Text style={styles.value}>
+                    <Text
+                        style={{ ...styles.value, color: themeColor('text') }}
+                    >
                         {PrivacyUtils.sensitiveValue(date, 14)}
                     </Text>
 
                     {enhancedPath.length > 0 && (
-                        <Text style={styles.label}>
+                        <Text
+                            style={{
+                                ...styles.label,
+                                color: themeColor('text')
+                            }}
+                        >
                             {localeString('views.Payment.path')}:
                         </Text>
                     )}
                     {enhancedPath.length > 0 && (
-                        <Text style={styles.value} selectable>
+                        <Text
+                            style={{
+                                ...styles.value,
+                                color: themeColor('text')
+                            }}
+                            selectable
+                        >
                             {lurkerMode ? (
                                 PrivacyUtils.sensitiveValue(
                                     enhancedPath.join(', ')
@@ -186,11 +232,6 @@ export default class PaymentView extends React.Component<PaymentProps> {
 }
 
 const styles = StyleSheet.create({
-    scrollView: {
-        flex: 1,
-        backgroundColor: themeColor('background'),
-        color: themeColor('text')
-    },
     content: {
         paddingLeft: 20,
         paddingRight: 20
@@ -201,12 +242,10 @@ const styles = StyleSheet.create({
         paddingBottom: 15
     },
     label: {
-        paddingTop: 5,
-        color: themeColor('text')
+        paddingTop: 5
     },
     value: {
-        paddingBottom: 5,
-        color: themeColor('text')
+        paddingBottom: 5
     },
     valueWithLink: {
         paddingBottom: 5,
