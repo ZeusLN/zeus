@@ -343,7 +343,7 @@ export default class ChannelView extends React.Component<
                             feeRate={
                                 channelFee &&
                                 channelFee.fee_rate &&
-                                `${Number(channelFee.fee_rate) / 1000}`
+                                `${Number(channelFee.fee_rate) / 10000}`
                             }
                             channelPoint={channel_point}
                             channelId={channelId}
