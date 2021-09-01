@@ -291,32 +291,32 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                 )}
                 {error && !loading && (
                     <View>
-                    <View
-                        style={{
-                            flex: 1,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            top:80
-                        }}
-                    >
-                        <View>
-                            <ErrorCircle />
+                        <View
+                            style={{
+                                flex: 1,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                top: 80
+                            }}
+                        >
+                            <View>
+                                <ErrorCircle />
+                            </View>
+                            <View style={{ top: 28 }}>
+                                <ErrorCross />
+                            </View>
                         </View>
-                        <View style={{top:28}}>
-                            <ErrorCross />
-                        </View>
+                        <Text
+                            style={{
+                                fontSize: 30,
+                                color: '#E14C4C',
+                                textAlign: 'center',
+                                top: 220
+                            }}
+                        >
+                            {localeString('views.EditFee.error')}
+                        </Text>
                     </View>
-                    <Text
-                        style={{
-                            fontSize: 30,
-                            color: '#E14C4C',
-                            textAlign: 'center',
-                            top: 220
-                        }}
-                    >
-                        {localeString('views.EditFee.error')}
-                    </Text>
-                </View>
                 )}
             </View>
         );
