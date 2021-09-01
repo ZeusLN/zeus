@@ -28,7 +28,13 @@ export default class CertInstallInstructions extends React.Component<
         );
 
         return (
-            <ScrollView style={styles.scrollView}>
+            <ScrollView
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background'),
+                    color: themeColor('text')
+                }}
+            >
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -41,7 +47,12 @@ export default class CertInstallInstructions extends React.Component<
                 />
                 <View style={{ padding: 8 }}>
                     {Platform.OS === 'android' && (
-                        <Text style={styles.text}>
+                        <Text
+                            style={{
+                                ...styles.text,
+                                color: themeColor('text')
+                            }}
+                        >
                             {localeString(
                                 'views.Settings.CertInstallInstructions.graph1'
                             )}
@@ -49,24 +60,39 @@ export default class CertInstallInstructions extends React.Component<
                     )}
                     {Platform.OS === 'ios' && (
                         <View>
-                            <Text style={styles.text}>
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 {localeString(
                                     'views.Settings.CertInstallInstructions.graph2'
                                 )}
                             </Text>
-                            <Text style={styles.text}>
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 {localeString(
                                     'views.Settings.CertInstallInstructions.graph3'
                                 )}
                             </Text>
-                            <Text style={styles.text}>
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 {localeString(
                                     'views.Settings.CertInstallInstructions.graph4'
                                 )}
                             </Text>
                         </View>
                     )}
-                    <Text style={styles.text}>
+                    <Text style={{ ...styles.text, color: themeColor('text') }}>
                         {localeString(
                             'views.Settings.CertInstallInstructions.graph5'
                         )}
@@ -78,14 +104,8 @@ export default class CertInstallInstructions extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    scrollView: {
-        flex: 1,
-        backgroundColor: themeColor('background'),
-        color: themeColor('text')
-    },
     text: {
         fontSize: 15,
-        color: themeColor('text'),
         paddingTop: 12
     }
 });

@@ -34,7 +34,14 @@ export default class Activity extends React.Component<ActivityProps, {}> {
         getActivityAndFilter();
     }
 
-    renderSeparator = () => <View style={styles.separator} />;
+    renderSeparator = () => (
+        <View
+            style={{
+                height: 0.4,
+                backgroundColor: themeColor('separator')
+            }}
+        />
+    );
 
     getRightTitleStyle = (item: any) => {
         if (item.getAmount == 0) return 'gray';
@@ -78,7 +85,13 @@ export default class Activity extends React.Component<ActivityProps, {}> {
         );
 
         return (
-            <View style={styles.view}>
+            <View
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background'),
+                    color: themeColor('text')
+                }}
+            >
                 <Header
                     leftComponent={<CloseButton />}
                     centerComponent={{
@@ -257,9 +270,11 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                             </ListItem.Title>
                                             <ListItem.Subtitle
                                                 right
-                                                style={
-                                                    styles.rightSubtitleStyle
-                                                }
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
                                             >
                                                 {DateTimeUtils.listFormattedDateShort(
                                                     item.getTimestamp
@@ -300,20 +315,8 @@ export default class Activity extends React.Component<ActivityProps, {}> {
 }
 
 const styles = StyleSheet.create({
-    view: {
-        flex: 1,
-        backgroundColor: themeColor('background'),
-        color: themeColor('text')
-    },
-    separator: {
-        height: 0.4,
-        backgroundColor: themeColor('separator')
-    },
     button: {
         paddingTop: 15,
         paddingBottom: 10
-    },
-    rightSubtitleStyle: {
-        color: themeColor('secondaryText')
     }
 });

@@ -183,7 +183,12 @@ export default class LnurlChannel extends React.Component<
         );
 
         return (
-            <View style={styles.view}>
+            <View
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background')
+                }}
+            >
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -205,11 +210,13 @@ export default class LnurlChannel extends React.Component<
                     </Text>
                 </View>
                 <View style={styles.content}>
-                    <Text style={styles.text}>
+                    <Text style={{ color: themeColor('text') }}>
                         {localeString('views.LnurlChannel.uri')}
                         {':'}
                     </Text>
-                    <Text style={styles.text}>{lnurl.uri}</Text>
+                    <Text style={{ color: themeColor('text') }}>
+                        {lnurl.uri}
+                    </Text>
 
                     <View style={{ padding: 10 }}>
                         <CheckBox
@@ -272,20 +279,6 @@ export default class LnurlChannel extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    view: {
-        flex: 1,
-        backgroundColor: themeColor('background'),
-        color: themeColor('text')
-    },
-    text: {
-        color: themeColor('text')
-    },
-    textInput: {
-        fontSize: 20,
-        color: themeColor('text'),
-        paddingTop: 10,
-        paddingBottom: 10
-    },
     content: {
         paddingLeft: 20,
         paddingRight: 20

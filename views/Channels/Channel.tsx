@@ -198,7 +198,13 @@ export default class ChannelView extends React.Component<
         );
 
         return (
-            <ScrollView style={styles.scrollView}>
+            <ScrollView
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background'),
+                    color: themeColor('text')
+                }}
+            >
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -209,9 +215,21 @@ export default class ChannelView extends React.Component<
                 />
                 <View style={styles.content}>
                     <View style={styles.center}>
-                        <Text style={styles.alias}>{peerDisplay}</Text>
+                        <Text
+                            style={{
+                                ...styles.alias,
+                                color: themeColor('text')
+                            }}
+                        >
+                            {peerDisplay}
+                        </Text>
                         {remote_pubkey && (
-                            <Text style={styles.pubkey}>
+                            <Text
+                                style={{
+                                    ...styles.pubkey,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 {PrivacyUtils.sensitiveValue(remote_pubkey)}
                             </Text>
                         )}
@@ -224,14 +242,29 @@ export default class ChannelView extends React.Component<
 
                     <View style={styles.balances}>
                         <TouchableOpacity onPress={() => changeUnits()}>
-                            <Text style={styles.balance}>{`${localeString(
+                            <Text
+                                style={{
+                                    ...styles.balance,
+                                    color: themeColor('text')
+                                }}
+                            >{`${localeString(
                                 'views.Channel.localBalance'
                             )}: ${units && channelBalanceLocal}`}</Text>
-                            <Text style={styles.balance}>{`${localeString(
+                            <Text
+                                style={{
+                                    ...styles.balance,
+                                    color: themeColor('text')
+                                }}
+                            >{`${localeString(
                                 'views.Channel.remoteBalance'
                             )}: ${units && channelBalanceRemote}`}</Text>
                             {unsettled_balance && (
-                                <Text style={styles.balance}>{`${localeString(
+                                <Text
+                                    style={{
+                                        ...styles.balance,
+                                        color: themeColor('text')
+                                    }}
+                                >{`${localeString(
                                     'views.Channel.unsettledBalance'
                                 )}: ${units && unsettledBalance}`}</Text>
                             )}
@@ -428,7 +461,10 @@ export default class ChannelView extends React.Component<
                                         numberOfLines={1}
                                         autoCapitalize="none"
                                         autoCorrect={false}
-                                        style={styles.textInput}
+                                        style={{
+                                            ...styles.textInput,
+                                            color: themeColor('text')
+                                        }}
                                     />
                                     {implementation === 'lnd' && (
                                         <CheckBox
@@ -478,11 +514,6 @@ export default class ChannelView extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    scrollView: {
-        flex: 1,
-        backgroundColor: themeColor('background'),
-        color: themeColor('text')
-    },
     content: {
         paddingLeft: 20,
         paddingRight: 20
@@ -493,18 +524,15 @@ const styles = StyleSheet.create({
     alias: {
         fontSize: 20,
         paddingTop: 10,
-        paddingBottom: 10,
-        color: themeColor('text')
+        paddingBottom: 10
     },
     pubkey: {
         paddingTop: 10,
-        paddingBottom: 30,
-        color: themeColor('text')
+        paddingBottom: 30
     },
     balance: {
         fontSize: 15,
-        fontWeight: 'bold',
-        color: themeColor('text')
+        fontWeight: 'bold'
     },
     balances: {
         paddingBottom: 10,
@@ -515,7 +543,6 @@ const styles = StyleSheet.create({
         paddingBottom: 15
     },
     textInput: {
-        fontSize: 20,
-        color: themeColor('text')
+        fontSize: 20
     }
 });

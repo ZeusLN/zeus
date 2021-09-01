@@ -421,7 +421,7 @@ export default class AddEditNode extends React.Component<
             <>
                 {Platform.OS !== 'ios' && (
                     <View>
-                        <Text style={styles.text}>
+                        <Text style={{ color: themeColor('text') }}>
                             {localeString(
                                 'views.Settings.AddEditNode.nodeInterface'
                             )}
@@ -443,7 +443,10 @@ export default class AddEditNode extends React.Component<
                                     });
                                 }
                             }}
-                            style={styles.picker}
+                            style={{
+                                ...styles.picker,
+                                color: themeColor('text')
+                            }}
                         >
                             <Picker.Item label="lnd" value="lnd" />
                             <Picker.Item
@@ -462,7 +465,7 @@ export default class AddEditNode extends React.Component<
 
                 {Platform.OS === 'ios' && (
                     <View>
-                        <Text style={styles.text}>
+                        <Text style={{ color: themeColor('text') }}>
                             {localeString(
                                 'views.Settings.AddEditNode.nodeInterface'
                             )}
@@ -518,7 +521,9 @@ export default class AddEditNode extends React.Component<
                                 )
                             }
                         >
-                            <Text style={styles.text}>{implementation}</Text>
+                            <Text style={{ color: themeColor('text') }}>
+                                {implementation}
+                            </Text>
                         </TouchableOpacity>
                     </View>
                 )}
@@ -526,7 +531,13 @@ export default class AddEditNode extends React.Component<
         );
 
         return (
-            <ScrollView style={styles.scrollView}>
+            <ScrollView
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background'),
+                    color: themeColor('text')
+                }}
+            >
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -747,7 +758,7 @@ export default class AddEditNode extends React.Component<
                     {(implementation === 'spark' ||
                         implementation == 'eclair') && (
                         <>
-                            <Text style={styles.text}>
+                            <Text style={{ color: themeColor('text') }}>
                                 {localeString(
                                     'views.Settings.AddEditNode.host'
                                 )}
@@ -762,14 +773,17 @@ export default class AddEditNode extends React.Component<
                                     })
                                 }
                                 numberOfLines={1}
-                                style={styles.textInput}
+                                style={{
+                                    ...styles.textInput,
+                                    color: themeColor('text')
+                                }}
                                 editable={!loading}
                                 placeholderTextColor="gray"
                             />
 
                             {implementation === 'spark' && (
                                 <>
-                                    <Text style={styles.text}>
+                                    <Text style={{ color: themeColor('text') }}>
                                         {localeString(
                                             'views.Settings.AddEditNode.accessKey'
                                         )}
@@ -784,7 +798,10 @@ export default class AddEditNode extends React.Component<
                                             });
                                         }}
                                         numberOfLines={1}
-                                        style={styles.textInput}
+                                        style={{
+                                            ...styles.textInput,
+                                            color: themeColor('text')
+                                        }}
                                         editable={!loading}
                                         placeholderTextColor="gray"
                                     />
@@ -792,7 +809,7 @@ export default class AddEditNode extends React.Component<
                             )}
                             {implementation === 'eclair' && (
                                 <>
-                                    <Text style={styles.text}>
+                                    <Text style={{ color: themeColor('text') }}>
                                         {localeString(
                                             'views.Settings.AddEditNode.password'
                                         )}
@@ -807,7 +824,10 @@ export default class AddEditNode extends React.Component<
                                             });
                                         }}
                                         numberOfLines={1}
-                                        style={styles.textInput}
+                                        style={{
+                                            ...styles.textInput,
+                                            color: themeColor('text')
+                                        }}
                                         editable={!loading}
                                         placeholderTextColor="gray"
                                     />
@@ -817,7 +837,7 @@ export default class AddEditNode extends React.Component<
                     )}
                     {implementation === 'lndhub' && (
                         <>
-                            <Text style={styles.text}>
+                            <Text style={{ color: themeColor('text') }}>
                                 {localeString(
                                     'views.Settings.AddEditNode.host'
                                 )}
@@ -832,7 +852,10 @@ export default class AddEditNode extends React.Component<
                                     })
                                 }
                                 numberOfLines={1}
-                                style={styles.textInput}
+                                style={{
+                                    ...styles.textInput,
+                                    color: themeColor('text')
+                                }}
                                 editable={!loading}
                                 placeholderTextColor="gray"
                             />
@@ -857,7 +880,7 @@ export default class AddEditNode extends React.Component<
 
                             {existingAccount && (
                                 <>
-                                    <Text style={styles.text}>
+                                    <Text style={{ color: themeColor('text') }}>
                                         {localeString(
                                             'views.Settings.AddEditNode.username'
                                         )}
@@ -872,12 +895,15 @@ export default class AddEditNode extends React.Component<
                                             })
                                         }
                                         numberOfLines={1}
-                                        style={styles.textInput}
+                                        style={{
+                                            ...styles.textInput,
+                                            color: themeColor('text')
+                                        }}
                                         editable={!loading}
                                         placeholderTextColor="gray"
                                     />
 
-                                    <Text style={styles.text}>
+                                    <Text style={{ color: themeColor('text') }}>
                                         {localeString(
                                             'views.Settings.AddEditNode.password'
                                         )}
@@ -892,7 +918,10 @@ export default class AddEditNode extends React.Component<
                                             })
                                         }
                                         numberOfLines={1}
-                                        style={styles.textInput}
+                                        style={{
+                                            ...styles.textInput,
+                                            color: themeColor('text')
+                                        }}
                                         editable={!loading}
                                         secureTextEntry={saved}
                                         placeholderTextColor="gray"
@@ -921,7 +950,7 @@ export default class AddEditNode extends React.Component<
                     {(implementation === 'lnd' ||
                         implementation === 'c-lightning-REST') && (
                         <>
-                            <Text style={styles.text}>
+                            <Text style={{ color: themeColor('text') }}>
                                 {localeString(
                                     'views.Settings.AddEditNode.host'
                                 )}
@@ -936,12 +965,15 @@ export default class AddEditNode extends React.Component<
                                     })
                                 }
                                 numberOfLines={1}
-                                style={styles.textInput}
+                                style={{
+                                    ...styles.textInput,
+                                    color: themeColor('text')
+                                }}
                                 editable={!loading}
                                 placeholderTextColor="gray"
                             />
 
-                            <Text style={styles.text}>
+                            <Text style={{ color: themeColor('text') }}>
                                 {localeString(
                                     'views.Settings.AddEditNode.restPort'
                                 )}
@@ -957,12 +989,15 @@ export default class AddEditNode extends React.Component<
                                     })
                                 }
                                 numberOfLines={1}
-                                style={styles.textInput}
+                                style={{
+                                    ...styles.textInput,
+                                    color: themeColor('text')
+                                }}
                                 editable={!loading}
                                 placeholderTextColor="gray"
                             />
 
-                            <Text style={styles.text}>
+                            <Text style={{ color: themeColor('text') }}>
                                 {localeString(
                                     'views.Settings.AddEditNode.macaroon'
                                 )}
@@ -977,7 +1012,10 @@ export default class AddEditNode extends React.Component<
                                     })
                                 }
                                 numberOfLines={1}
-                                style={styles.textInput}
+                                style={{
+                                    ...styles.textInput,
+                                    color: themeColor('text')
+                                }}
                                 editable={!loading}
                                 placeholderTextColor="gray"
                             />
@@ -1225,17 +1263,8 @@ export default class AddEditNode extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    scrollView: {
-        flex: 1,
-        backgroundColor: themeColor('background'),
-        color: themeColor('text')
-    },
-    text: {
-        color: themeColor('text')
-    },
     textInput: {
-        fontSize: 20,
-        color: themeColor('text')
+        fontSize: 20
     },
     error: {
         color: 'red'
@@ -1250,8 +1279,7 @@ const styles = StyleSheet.create({
         paddingRight: 5
     },
     picker: {
-        height: 50,
-        color: themeColor('text')
+        height: 50
     },
     button: {
         paddingTop: 10,

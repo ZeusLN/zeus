@@ -9,14 +9,13 @@ import {
 } from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { themeColor } from './../../utils/ThemeUtils';
 import { localeString } from './../../utils/LocaleUtils';
-import SettingsStore from './../../stores/SettingsStore';
 import MessageSignStore from './../../stores/MessageSignStore';
 import CopyButton from './../../components/CopyButton';
 
 interface SignMessageProps {
     navigation: any;
-    SettingsStore: SettingsStore;
     MessageSignStore: MessageSignStore;
 }
 
@@ -40,10 +39,8 @@ export default class SignMessage extends React.Component<
     }
 
     render() {
-        const { navigation, SettingsStore, MessageSignStore } = this.props;
+        const { navigation, MessageSignStore } = this.props;
         const { messageToSign } = this.state;
-        const { settings } = SettingsStore;
-        const { theme } = settings;
         const { loading, signMessage, error, signature } = MessageSignStore;
 
         const BackButton = () => (
@@ -59,21 +56,18 @@ export default class SignMessage extends React.Component<
 
         return (
             <ScrollView
-                style={
-                    theme === 'dark'
-                        ? styles.darkThemeStyle
-                        : styles.lightThemeStyle
-                }
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background')
+                }}
             >
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Settings.SignMessage.title'),
-                        style: { color: '#fff' }
+                        style: { color: themeColor('text') }
                     }}
-                    backgroundColor={
-                        theme === 'dark' ? '#261339' : 'rgba(92, 99,216, 1)'
-                    }
+                    backgroundColor={themeColor('secondary')}
                 />
 
                 {loading && <ActivityIndicator size="large" />}
@@ -93,7 +87,7 @@ export default class SignMessage extends React.Component<
                 <View style={styles.form}>
                     <Text
                         style={{
-                            color: theme === 'dark' ? 'white' : 'black'
+                            color: themeColor('text')
                         }}
                     >
                         {localeString('views.Settings.SignMessage.host')}
@@ -108,11 +102,10 @@ export default class SignMessage extends React.Component<
                                 messageToSign: text
                             })
                         }
-                        style={
-                            theme === 'dark'
-                                ? styles.textInputDark
-                                : styles.textInput
-                        }
+                        style={{
+                            fontSize: 20,
+                            color: themeColor('text')
+                        }}
                         editable={!loading}
                         placeholderTextColor="gray"
                         multiline
@@ -130,10 +123,7 @@ export default class SignMessage extends React.Component<
                         }}
                         onPress={() => signMessage(messageToSign)}
                         buttonStyle={{
-                            backgroundColor:
-                                theme === 'dark'
-                                    ? '#261339'
-                                    : 'rgba(92, 99,216, 1)',
+                            backgroundColor: '#261339',
                             borderRadius: 30
                         }}
                         titleStyle={{
@@ -150,10 +140,7 @@ export default class SignMessage extends React.Component<
                             )}
                             onPress={() => MessageSignStore.resetSignature()}
                             buttonStyle={{
-                                backgroundColor:
-                                    theme === 'dark'
-                                        ? '#261339'
-                                        : 'rgba(92, 99,216, 1)',
+                                backgroundColor: '#261339',
                                 borderRadius: 30
                             }}
                             titleStyle={{
@@ -168,23 +155,6 @@ export default class SignMessage extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
-        flex: 1,
-        backgroundColor: 'white'
-    },
-    darkThemeStyle: {
-        flex: 1,
-        backgroundColor: 'black',
-        color: 'white'
-    },
-    textInput: {
-        fontSize: 20,
-        color: 'black'
-    },
-    textInputDark: {
-        fontSize: 20,
-        color: 'white'
-    },
     error: {
         color: 'red'
     },
