@@ -14,6 +14,8 @@ import FeeStore from './../stores/FeeStore';
 import { inject, observer } from 'mobx-react';
 import { localeString } from '../utils/LocaleUtils';
 import Refresh from '../images/SVG/Refresh.svg';
+import ErrorCircle from '../images/SVG/Error Circle.svg';
+import ErrorCross from '../images/SVG/Error Cross.svg';
 
 interface NodeInfoProps {
     FeeStore: FeeStore;
@@ -288,16 +290,33 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                     </View>
                 )}
                 {error && !loading && (
+                    <View>
+                    <View
+                        style={{
+                            flex: 1,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            top:80
+                        }}
+                    >
+                        <View>
+                            <ErrorCircle />
+                        </View>
+                        <View style={{top:28}}>
+                            <ErrorCross />
+                        </View>
+                    </View>
                     <Text
                         style={{
                             fontSize: 30,
-                            color: 'red',
+                            color: '#E14C4C',
                             textAlign: 'center',
-                            top: '40%'
+                            top: 220
                         }}
                     >
                         {localeString('views.EditFee.error')}
                     </Text>
+                </View>
                 )}
             </View>
         );
