@@ -404,5 +404,6 @@
     "components.ChannelPicker.modal.title": "Select Channel to use",
     "components.ChannelPicker.modal.description": "Select the Channel to be used in this operation. You may want to only use specific channels to preserve your privacy.",
     "components.ChannelPicker.modal.set": "Set Channel",
-    "backends.LND.wsReq.warning": "You may have to enable Certificate Verification to make these kind of calls"
+    "backends.LND.wsReq.warning": "You may have to enable Certificate Verification to make these kind of calls",
+    "utils.handleAnything.lightningAddressError": "Error fetching Lightning Address data"
 }
