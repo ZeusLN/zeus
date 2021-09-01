@@ -1,7 +1,9 @@
 import stores from '../stores/Stores';
 import AddressUtils from './../utils/AddressUtils';
 import LndConnectUtils from './../utils/LndConnectUtils';
+import { localeString } from './../utils/LocaleUtils';
 import { getParams as getlnurlParams, findlnurl } from 'js-lnurl';
+import RNFetchBlob from 'rn-fetch-blob';
 
 const { nodeInfoStore, invoicesStore } = stores;
 
@@ -73,6 +75,32 @@ export default async function(data: string): Promise<any> {
                 newEntry: true
             }
         ];
+    } else if (AddressUtils.isValidLightningAddress(value)) {
+        const [username, domain] = value.split('@');
+        const url = `https://${domain}/.well-known/lnurlp/${username}`;
+        const error = localeString(
+            'utils.handleAnything.lightningAddressError'
+        );
+        return RNFetchBlob.fetch('get', url)
+            .then((response: any) => {
+                const status = response.info().status;
+                console.log(status);
+                if (status == 200) {
+                    const data = response.json();
+                    console.log(data);
+                    return [
+                        'LnurlPay',
+                        {
+                            lnurlParams: data
+                        }
+                    ];
+                } else {
+                    throw new Error(error);
+                }
+            })
+            .catch(() => {
+                throw new Error(error);
+            });
     } else if (findlnurl(value) !== null) {
         const raw: string = findlnurl(value) || '';
         return getlnurlParams(raw).then((params: any) => {
