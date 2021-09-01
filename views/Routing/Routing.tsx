@@ -3,7 +3,6 @@ import {
     ActivityIndicator,
     FlatList,
     View,
-    StyleSheet,
     Text,
     TouchableOpacity
 } from 'react-native';
@@ -184,7 +183,13 @@ export default class Routing extends React.PureComponent<
         ];
 
         return (
-            <View style={styles.view}>
+            <View
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background'),
+                    color: themeColor('text')
+                }}
+            >
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -271,11 +276,3 @@ export default class Routing extends React.PureComponent<
         );
     }
 }
-
-const styles = StyleSheet.create({
-    view: {
-        flex: 1,
-        backgroundColor: themeColor('background'),
-        color: themeColor('text')
-    }
-});

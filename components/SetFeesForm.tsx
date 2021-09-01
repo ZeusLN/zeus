@@ -108,7 +108,7 @@ export default class SetFeesForm extends React.Component<
                 {(expanded || showNewFeesForm) && (
                     <React.Fragment>
                         {loading && (
-                            <Text style={styles.text}>
+                            <Text style={{ color: themeColor('text') }}>
                                 {localeString('components.SetFeesForm.setting')}
                             </Text>
                         )}
@@ -135,7 +135,7 @@ export default class SetFeesForm extends React.Component<
                             </Text>
                         )}
 
-                        <Text style={styles.text}>
+                        <Text style={{ color: themeColor('text') }}>
                             {`${localeString(
                                 'components.SetFeesForm.baseFee'
                             )} (${localeString('general.sats')})`}
@@ -153,10 +153,10 @@ export default class SetFeesForm extends React.Component<
                             numberOfLines={1}
                             autoCapitalize="none"
                             autoCorrect={false}
-                            style={styles.textInput}
+                            style={{ fontSize: 20, color: themeColor('text') }}
                         />
 
-                        <Text style={styles.text}>
+                        <Text style={{ color: themeColor('text') }}>
                             {`${localeString(
                                 'components.SetFeesForm.feeRate'
                             )} (${localeString('general.percentage')})`}
@@ -174,10 +174,10 @@ export default class SetFeesForm extends React.Component<
                             numberOfLines={1}
                             autoCapitalize="none"
                             autoCorrect={false}
-                            style={styles.textInput}
+                            style={{ fontSize: 20, color: themeColor('text') }}
                         />
 
-                        <Text style={styles.text}>
+                        <Text style={{ color: themeColor('text') }}>
                             {localeString(
                                 'components.SetFeesForm.timeLockDelta'
                             )}
@@ -195,7 +195,7 @@ export default class SetFeesForm extends React.Component<
                             numberOfLines={1}
                             autoCapitalize="none"
                             autoCorrect={false}
-                            style={styles.textInput}
+                            style={{ fontSize: 20, color: themeColor('text') }}
                         />
 
                         <View style={styles.button}>
@@ -237,13 +237,6 @@ export default class SetFeesForm extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    text: {
-        color: themeColor('text')
-    },
-    textInput: {
-        fontSize: 20,
-        color: themeColor('text')
-    },
     button: {
         paddingTop: 15,
         paddingBottom: 10
