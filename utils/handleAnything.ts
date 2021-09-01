@@ -84,10 +84,8 @@ export default async function(data: string): Promise<any> {
         return RNFetchBlob.fetch('get', url)
             .then((response: any) => {
                 const status = response.info().status;
-                console.log(status);
                 if (status == 200) {
                     const data = response.json();
-                    console.log(data);
                     return [
                         'LnurlPay',
                         {
