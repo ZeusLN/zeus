@@ -143,7 +143,12 @@ export default class UTXOPicker extends React.Component<
                     visible={showUtxoModal}
                 >
                     <View style={styles.centeredView}>
-                        <View style={styles.modal}>
+                        <View
+                            style={{
+                                ...styles.modal,
+                                backgroundColor: themeColor('background')
+                            }}
+                        >
                             {showUtxoModal && (
                                 <>
                                     <Text
@@ -308,7 +313,10 @@ export default class UTXOPicker extends React.Component<
                                         this.openPicker();
                                     }
                                 }}
-                                style={styles.picker}
+                                style={{
+                                    height: 50,
+                                    color: themeColor('text')
+                                }}
                             >
                                 {pickerValuesAndroid}
                             </Picker>
@@ -361,18 +369,12 @@ export default class UTXOPicker extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    picker: {
-        height: 50,
-        color: themeColor('text')
-    },
     button: {
         paddingTop: 10,
         paddingBottom: 10
     },
     modal: {
         margin: 20,
-        color: themeColor('text'),
-        backgroundColor: themeColor('background'),
         borderRadius: 20,
         padding: 35,
         shadowColor: '#000',

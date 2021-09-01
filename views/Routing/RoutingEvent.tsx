@@ -103,20 +103,26 @@ export default class RoutingEvent extends React.Component<
             <Icon
                 name="arrow-back"
                 onPress={() => navigation.navigate('Routing')}
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
 
         return (
-            <ScrollView style={styles.scrollView}>
+            <ScrollView
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background'),
+                    color: themeColor('text')
+                }}
+            >
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Routing.RoutingEvent.title'),
                         style: { color: themeColor('text') }
                     }}
-                    backgroundColor={themeColor('background')}
+                    backgroundColor={themeColor('secondary')}
                 />
                 <View style={styles.content}>
                     <View style={styles.amount}>
@@ -216,7 +222,12 @@ export default class RoutingEvent extends React.Component<
                         />
                     )}
 
-                    <Text style={styles.breakdownHeader}>
+                    <Text
+                        style={{
+                            color: themeColor('text'),
+                            ...styles.breakdownHeader
+                        }}
+                    >
                         {localeString(
                             'views.Routing.RoutingEvent.sourceChannel'
                         )}
@@ -226,7 +237,12 @@ export default class RoutingEvent extends React.Component<
                         peerDisplay={chanInLabel}
                         channelPoint={channelInPoint}
                     />
-                    <Text style={styles.breakdownHeader}>
+                    <Text
+                        style={{
+                            color: themeColor('text'),
+                            ...styles.breakdownHeader
+                        }}
+                    >
                         {localeString(
                             'views.Routing.RoutingEvent.destinationChannel'
                         )}
@@ -244,11 +260,6 @@ export default class RoutingEvent extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    scrollView: {
-        flex: 1,
-        backgroundColor: themeColor('background'),
-        color: themeColor('text')
-    },
     content: {
         paddingLeft: 20,
         paddingRight: 20
@@ -259,7 +270,6 @@ const styles = StyleSheet.create({
     },
     breakdownHeader: {
         alignSelf: 'center',
-        color: themeColor('text'),
         padding: 20,
         fontSize: 20
     }

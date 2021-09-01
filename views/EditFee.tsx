@@ -66,7 +66,12 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
             </TouchableOpacity>
         );
         return (
-            <View style={styles.mainContainer}>
+            <View
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background')
+                }}
+            >
                 <Header
                     centerComponent={{
                         text: 'Edit network fee',
@@ -82,7 +87,14 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                     </View>
                 )}
                 {recommendedFees['fastestFee'] && !loading && (
-                    <View style={styles.container}>
+                    <View
+                        style={{
+                            flex: 1,
+                            backgroundColor: themeColor('background'),
+                            alignItems: 'center',
+                            justifyContent: 'space-around'
+                        }}
+                    >
                         <TouchableWithoutFeedback
                             onPress={() =>
                                 this.setState({
@@ -107,7 +119,12 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                                 <Text style={styles.feeTitle}>
                                     {localeString('views.EditFee.fastestFee')}
                                 </Text>
-                                <Text style={styles.feeText}>
+                                <Text
+                                    style={{
+                                        ...styles.feeText,
+                                        color: themeColor('text')
+                                    }}
+                                >
                                     {recommendedFees['fastestFee']}
                                 </Text>
                             </View>
@@ -136,7 +153,12 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                                 <Text style={styles.feeTitle}>
                                     {localeString('views.EditFee.halfHourFee')}
                                 </Text>
-                                <Text style={styles.feeText}>
+                                <Text
+                                    style={{
+                                        ...styles.feeText,
+                                        color: themeColor('text')
+                                    }}
+                                >
                                     {recommendedFees['halfHourFee']}
                                 </Text>
                             </View>
@@ -164,7 +186,12 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                                 <Text style={styles.feeTitle}>
                                     {localeString('views.EditFee.hourFee')}
                                 </Text>
-                                <Text style={styles.feeText}>
+                                <Text
+                                    style={{
+                                        ...styles.feeText,
+                                        color: themeColor('text')
+                                    }}
+                                >
                                     {recommendedFees['hourFee']}
                                 </Text>
                             </View>
@@ -193,7 +220,12 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                                 <Text style={styles.feeTitle}>
                                     {localeString('views.EditFee.minimumFee')}
                                 </Text>
-                                <Text style={styles.feeText}>
+                                <Text
+                                    style={{
+                                        ...styles.feeText,
+                                        color: themeColor('text')
+                                    }}
+                                >
                                     {recommendedFees['minimumFee']}
                                 </Text>
                             </View>
@@ -272,16 +304,6 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
     }
 }
 const styles = StyleSheet.create({
-    mainContainer: {
-        flex: 1,
-        backgroundColor: themeColor('background')
-    },
-    container: {
-        flex: 1,
-        backgroundColor: themeColor('background'),
-        alignItems: 'center',
-        justifyContent: 'space-around'
-    },
     feeBoxes: {
         height: 65,
         width: 350,
@@ -295,7 +317,6 @@ const styles = StyleSheet.create({
         top: 20
     },
     feeText: {
-        color: themeColor('text'),
         fontSize: 18,
         left: '90%',
         top: -4
