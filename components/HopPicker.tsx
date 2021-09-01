@@ -131,7 +131,12 @@ export default class ChannelPicker extends React.Component<
                     visible={showChannelModal}
                 >
                     <View style={styles.centeredView}>
-                        <View style={styles.modal}>
+                        <View
+                            style={{
+                                ...styles.modal,
+                                backgroundColor: themeColor('background')
+                            }}
+                        >
                             {showChannelModal && (
                                 <>
                                     <Text
@@ -373,7 +378,10 @@ export default class ChannelPicker extends React.Component<
                                         this.openPicker();
                                     }
                                 }}
-                                style={styles.picker}
+                                style={{
+                                    height: 50,
+                                    color: themeColor('text')
+                                }}
                             >
                                 {pickerValuesAndroid}
                             </Picker>
@@ -428,18 +436,12 @@ const styles = StyleSheet.create({
         paddingTop: 10,
         marginLeft: Platform.OS === 'ios' ? 0 : -8
     },
-    picker: {
-        height: 50,
-        color: themeColor('text')
-    },
     button: {
         paddingTop: 10,
         paddingBottom: 10
     },
     modal: {
         margin: 20,
-        color: themeColor('text'),
-        backgroundColor: themeColor('background'),
         borderRadius: 20,
         padding: 35,
         shadowColor: '#000',

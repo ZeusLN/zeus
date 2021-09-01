@@ -156,6 +156,7 @@ export default class OpenChannel extends React.Component<
             BalanceStore,
             FeeStore,
             UTXOsStore,
+            SettingsStore,
             navigation
         } = this.props;
         const {
@@ -167,6 +168,7 @@ export default class OpenChannel extends React.Component<
             suggestImport,
             utxoBalance
         } = this.state;
+        const { implementation } = SettingsStore;
         const privateChannel = this.state.private;
 
         const {
@@ -190,7 +192,12 @@ export default class OpenChannel extends React.Component<
         );
 
         return (
-            <ScrollView style={styles.scrollView}>
+            <ScrollView
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background')
+                }}
+            >
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -262,7 +269,12 @@ export default class OpenChannel extends React.Component<
                         </Text>
                     )}
 
-                    <Text style={styles.label}>
+                    <Text
+                        style={{
+                            textDecorationLine: 'underline',
+                            color: themeColor('text')
+                        }}
+                    >
                         {localeString('views.OpenChannel.nodePubkey')}
                     </Text>
                     <TextInput
@@ -272,12 +284,17 @@ export default class OpenChannel extends React.Component<
                             this.setState({ node_pubkey_string: text })
                         }
                         numberOfLines={1}
-                        style={styles.textInput}
+                        style={{ fontSize: 20, color: themeColor('text') }}
                         placeholderTextColor="gray"
                         editable={!openingChannel}
                     />
 
-                    <Text style={styles.label}>
+                    <Text
+                        style={{
+                            textDecorationLine: 'underline',
+                            color: themeColor('text')
+                        }}
+                    >
                         {localeString('views.OpenChannel.host')}
                     </Text>
                     <TextInput
@@ -287,12 +304,17 @@ export default class OpenChannel extends React.Component<
                             this.setState({ host: text })
                         }
                         numberOfLines={1}
-                        style={styles.textInput}
+                        style={{ fontSize: 20, color: themeColor('text') }}
                         placeholderTextColor="gray"
                         editable={!openingChannel}
                     />
 
-                    <Text style={styles.label}>
+                    <Text
+                        style={{
+                            textDecorationLine: 'underline',
+                            color: themeColor('text')
+                        }}
+                    >
                         {localeString('views.OpenChannel.localAmt')}
                     </Text>
                     <TextInput
@@ -305,7 +327,7 @@ export default class OpenChannel extends React.Component<
                             this.setState({ local_funding_amount: text })
                         }
                         numberOfLines={1}
-                        style={styles.textInput}
+                        style={{ fontSize: 20, color: themeColor('text') }}
                         placeholderTextColor="gray"
                         editable={!openingChannel}
                     />
@@ -323,7 +345,12 @@ export default class OpenChannel extends React.Component<
                         </Text>
                     )}
 
-                    <Text style={styles.label}>
+                    <Text
+                        style={{
+                            textDecorationLine: 'underline',
+                            color: themeColor('text')
+                        }}
+                    >
                         {localeString('views.OpenChannel.numConf')}
                     </Text>
                     <TextInput
@@ -336,12 +363,17 @@ export default class OpenChannel extends React.Component<
                             })
                         }
                         numberOfLines={1}
-                        style={styles.textInput}
+                        style={{ fontSize: 20, color: themeColor('text') }}
                         placeholderTextColor="gray"
                         editable={!openingChannel}
                     />
 
-                    <Text style={styles.label}>
+                    <Text
+                        style={{
+                            textDecorationLine: 'underline',
+                            color: themeColor('text')
+                        }}
+                    >
                         {localeString('views.OpenChannel.satsPerByte')}
                     </Text>
                     <TouchableWithoutFeedback
@@ -361,7 +393,7 @@ export default class OpenChannel extends React.Component<
                         >
                             <Text
                                 style={{
-                                    ...styles.textInput,
+                                    color: themeColor('text'),
                                     fontSize: 18
                                 }}
                             >
@@ -432,24 +464,11 @@ export default class OpenChannel extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    scrollView: {
-        flex: 1,
-        backgroundColor: themeColor('background'),
-        color: themeColor('text')
-    },
-    textInput: {
-        fontSize: 20,
-        color: themeColor('text')
-    },
     content: {
         paddingTop: 20,
         paddingBottom: 20,
         paddingLeft: 5,
         paddingRight: 5
-    },
-    label: {
-        textDecorationLine: 'underline',
-        color: themeColor('text')
     },
     button: {
         paddingTop: 10,
