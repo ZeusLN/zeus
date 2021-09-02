@@ -9,22 +9,21 @@ import {
 import { Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import DateTimeUtils from './../../utils/DateTimeUtils';
-import PrivacyUtils from './../../utils/PrivacyUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
+import { Amount } from '../../components/Amount';
+
 import ActivityStore from './../../stores/ActivityStore';
-import UnitsStore from './../../stores/UnitsStore';
 
 import Filter from './../../images/SVG/Filter On.svg';
 
 interface ActivityProps {
     navigation: any;
     ActivityStore: ActivityStore;
-    UnitsStore: UnitsStore;
 }
 
-@inject('ActivityStore', 'UnitsStore')
+@inject('ActivityStore')
 @observer
 export default class Activity extends React.Component<ActivityProps, {}> {
     async UNSAFE_componentWillMount() {
@@ -43,24 +42,35 @@ export default class Activity extends React.Component<ActivityProps, {}> {
         />
     );
 
-    getRightTitleStyle = (item: any) => {
-        if (item.getAmount == 0) return 'gray';
+    // TODO this feels like an odd place to do all this deciding
+    // TODO on-chain has "-" sign but lightning doesn't?
+    getRightTitleTheme = (item: any) => {
+        console.log(`${item.getAmount} : ${typeof item.getAmount}`);
+        if (item.getAmount == 0) return 'secondaryText';
 
         if (item.model === localeString('general.transaction')) {
-            if (item.getAmount.includes('-')) return 'red';
-            return 'green';
+            if (item.getAmount.includes('-')) return 'warning';
+            return 'success';
         }
 
-        if (item.model === localeString('views.Payment.title')) return 'red';
+        if (item.model === localeString('views.Payment.title'))
+            return 'warning';
 
-        if (item.isPaid) return 'green';
+        if (item.model === localeString('views.Invoice.title')) {
+            if (item.isExpired && !item.isPaid) {
+                return 'text';
+            } else if (!item.isPaid) {
+                return 'highlight';
+            }
+        }
 
-        return themeColor('secondaryText');
+        if (item.isPaid) return 'success';
+
+        return 'secondaryText';
     };
 
     render() {
-        const { navigation, ActivityStore, UnitsStore } = this.props;
-        const { getAmount } = UnitsStore;
+        const { navigation, ActivityStore } = this.props;
         const {
             loading,
             filteredActivity,
@@ -111,7 +121,6 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                         renderItem={({ item }: { item: any }) => {
                             let displayName = item.model;
                             let subTitle = item.model;
-                            let rightTitle: any = ' ';
                             if (
                                 item.model ===
                                 localeString('views.Invoice.title')
@@ -132,11 +141,6 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                                 )
                                               : item.expirationDate
                                       }`;
-                                rightTitle = PrivacyUtils.sensitiveValue(
-                                    getAmount(item.getAmount),
-                                    null,
-                                    true
-                                );
                             }
 
                             if (
@@ -147,11 +151,6 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                     'views.Activity.youSent'
                                 );
                                 subTitle = localeString('general.lightning');
-                                rightTitle = PrivacyUtils.sensitiveValue(
-                                    getAmount(item.getAmount),
-                                    null,
-                                    true
-                                );
                             }
 
                             if (
@@ -178,14 +177,6 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                               'general.unconfirmed'
                                           )}`
                                         : localeString('general.onchain');
-                                rightTitle =
-                                    item.getAmount == 0
-                                        ? '-'
-                                        : PrivacyUtils.sensitiveValue(
-                                              getAmount(item.getAmount),
-                                              null,
-                                              true
-                                          );
                             }
 
                             return (
@@ -257,17 +248,13 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                             </ListItem.Subtitle>
                                         </ListItem.Content>
                                         <ListItem.Content right>
-                                            <ListItem.Title
-                                                right
-                                                style={{
-                                                    fontWeight: '600',
-                                                    color: this.getRightTitleStyle(
-                                                        item
-                                                    )
-                                                }}
-                                            >
-                                                {rightTitle}
-                                            </ListItem.Title>
+                                            <Amount
+                                                sats={item.getAmount}
+                                                sensitive
+                                                color={this.getRightTitleTheme(
+                                                    item
+                                                )}
+                                            />
                                             <ListItem.Subtitle
                                                 right
                                                 style={{
