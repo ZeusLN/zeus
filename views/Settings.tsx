@@ -8,6 +8,16 @@ import RESTUtils from './../utils/RESTUtils';
 import DropdownSetting from './../components/DropdownSetting';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
+import ForwardIcon from '../images/SVG/Caret Right-3.svg';
+import NodeIcon from '../images/SVG/NodeIcon.svg';
+import WalletIcon from '../images/SVG/Wallet2.svg';
+import ContactIcon from '../images/SVG/PeersContact.svg';
+import PrivacyIcon from '../images/SVG/Eye On.svg';
+import SecurityIcon from '../images/SVG/Lock.svg';
+import SignIcon from '../images/SVG/Pen.svg';
+import BitcoinIcon from '../images/SVG/Bitcoin.svg';
+import LanguageIcon from '../images/SVG/Globe.svg';
+import HelpIcon from '../images/SVG/Help Icon.svg';
 
 import SettingsStore, {
     LOCALE_KEYS,
@@ -234,29 +244,50 @@ export default class Settings extends React.Component<
                     style={{
                         backgroundColor: '#31363F',
                         width: '90%',
-                        height: 75,
+                        height: 90,
                         borderRadius: 10,
                         alignSelf: 'center',
                         top: 40
                     }}
                 >
-                    <Text
+                    <View
                         style={{
-                            fontSize: 20,
-                            color: '#FFFFFF',
-                            left: '30%',
-                            top: 10
+                            flex: 1,
+                            flexDirection: 'row',
+                            margin: 12,
+                            marginLeft: 28
                         }}
                     >
-                        My LND Node
-                    </Text>
+                        <View>
+                            <NodeIcon />
+                        </View>
+                        <Text
+                            style={{
+                                fontSize: 20,
+                                color: '#FFFFFF',
+                                left: '30%',
+                                top: 10
+                            }}
+                        >
+                            My LND Node
+                        </Text>
+                        <View
+                            style={{
+                                flex: 1,
+                                alignItems: 'flex-end',
+                                marginTop: 25
+                            }}
+                        >
+                            <ForwardIcon />
+                        </View>
+                    </View>
                     <Text
                         style={{
                             fontSize: 16,
                             color: '#FFFFFF',
                             opacity: 0.6,
                             left: '30%',
-                            top: 10
+                            top: -20
                         }}
                     >
                         Mainnet over Tor
@@ -272,36 +303,26 @@ export default class Settings extends React.Component<
                         top: 60
                     }}
                 >
-                    <Text
-                        style={{
-                            fontSize: 16,
-                            color: '#FFFFFF',
-                            left: '30%',
-                            top: 10
-                        }}
-                    >
-                        Accounts
-                    </Text>
-                    <View
-                        style={{
-                            top: 22,
-                            left: '30%',
-                            width: 247,
-                            borderColor: '#A7A9AC',
-                            opacity: 0.4,
-                            borderWidth: 1
-                        }}
-                    />
-                    <Text
-                        style={{
-                            fontSize: 16,
-                            color: '#FFFFFF',
-                            left: '30%',
-                            top: 30
-                        }}
-                    >
-                        Contacts
-                    </Text>
+                    <View style={styles.columnField}>
+                        <View>
+                            <WalletIcon />
+                        </View>
+                        <Text style={styles.columnText}>Accounts</Text>
+                        <View style={styles.ForwardArrow}>
+                            <ForwardIcon />
+                        </View>
+                    </View>
+
+                    <View style={styles.separationLine} />
+                    <View style={styles.columnField}>
+                        <View>
+                            <ContactIcon />
+                        </View>
+                        <Text style={styles.columnText}>Contacts</Text>
+                        <View style={styles.ForwardArrow}>
+                            <ForwardIcon />
+                        </View>
+                    </View>
                 </View>
                 <View
                     style={{
@@ -313,56 +334,39 @@ export default class Settings extends React.Component<
                         top: 80
                     }}
                 >
-                    <Text
-                        style={{
-                            fontSize: 16,
-                            color: '#FFFFFF',
-                            left: '30%',
-                            top: 10
-                        }}
-                    >
-                        Privacy
-                    </Text>
-                    <View
-                        style={{
-                            top: 22,
-                            left: '30%',
-                            width: 247,
-                            borderColor: '#A7A9AC',
-                            opacity: 0.4,
-                            borderWidth: 1
-                        }}
-                    />
-                    <Text
-                        style={{
-                            fontSize: 16,
-                            color: '#FFFFFF',
-                            left: '30%',
-                            top: 32
-                        }}
-                    >
-                        Security
-                    </Text>
-                    <View
-                        style={{
-                            top: 44,
-                            left: '30%',
-                            width: 247,
-                            borderColor: '#A7A9AC',
-                            opacity: 0.4,
-                            borderWidth: 1
-                        }}
-                    />
-                    <Text
-                        style={{
-                            fontSize: 16,
-                            color: '#FFFFFF',
-                            left: '30%',
-                            top: 54
-                        }}
-                    >
-                        Sign or verify message
-                    </Text>
+                    <View style={styles.columnField}>
+                        <View>
+                            <PrivacyIcon />
+                        </View>
+                        <Text style={styles.columnText}>Privacy</Text>
+                        <View style={styles.ForwardArrow}>
+                            <ForwardIcon />
+                        </View>
+                    </View>
+
+                    <View style={styles.separationLine} />
+                    <View style={styles.columnField}>
+                        <View>
+                            <SecurityIcon />
+                        </View>
+                        <Text style={styles.columnText}>Security</Text>
+                        <View style={styles.ForwardArrow}>
+                            <ForwardIcon />
+                        </View>
+                    </View>
+
+                    <View style={styles.separationLine} />
+                    <View style={styles.columnField}>
+                        <View>
+                            <SignIcon />
+                        </View>
+                        <Text style={styles.columnText}>
+                            Sign or verify message
+                        </Text>
+                        <View style={styles.ForwardArrow}>
+                            <ForwardIcon />
+                        </View>
+                    </View>
                 </View>
                 <View
                     style={{
@@ -374,36 +378,26 @@ export default class Settings extends React.Component<
                         top: 100
                     }}
                 >
-                    <Text
-                        style={{
-                            fontSize: 16,
-                            color: '#FFFFFF',
-                            left: '30%',
-                            top: 10
-                        }}
-                    >
-                        Currency
-                    </Text>
-                    <View
-                        style={{
-                            top: 22,
-                            left: '30%',
-                            width: 247,
-                            borderColor: '#A7A9AC',
-                            opacity: 0.4,
-                            borderWidth: 1
-                        }}
-                    />
-                    <Text
-                        style={{
-                            fontSize: 16,
-                            color: '#FFFFFF',
-                            left: '30%',
-                            top: 30
-                        }}
-                    >
-                        Language
-                    </Text>
+                    <View style={styles.columnField}>
+                        <View>
+                            <BitcoinIcon />
+                        </View>
+                        <Text style={styles.columnText}>Currency</Text>
+                        <View style={styles.ForwardArrow}>
+                            <ForwardIcon />
+                        </View>
+                    </View>
+
+                    <View style={styles.separationLine} />
+                    <View style={styles.columnField}>
+                        <View>
+                            <LanguageIcon />
+                        </View>
+                        <Text style={styles.columnText}>Language</Text>
+                        <View style={styles.ForwardArrow}>
+                            <ForwardIcon />
+                        </View>
+                    </View>
                 </View>
                 <View
                     style={{
@@ -415,17 +409,27 @@ export default class Settings extends React.Component<
                         top: 120
                     }}
                 >
-                    <Text
-                        style={{
-                            fontSize: 16,
-                            color: '#FFFFFF',
-                            left: '30%',
-                            top: 10
-                        }}
-                    >
-                        Help
-                    </Text>
+                    <View style={{ ...styles.columnField, paddingLeft: 5 }}>
+                        <View>
+                            <HelpIcon />
+                        </View>
+                        <Text style={styles.columnText}>Help</Text>
+                        <View style={styles.ForwardArrow}>
+                            <ForwardIcon />
+                        </View>
+                    </View>
                 </View>
+                <Text
+                    style={{
+                        fontSize: 16,
+                        color: '#A7A9AC',
+                        alignSelf: 'center',
+                        bottom: 25,
+                        position: 'absolute'
+                    }}
+                >
+                    Zeus version 0.5.2
+                </Text>
 
                 {/* <DropdownSetting
                     title={localeString('views.Settings.locale')}
@@ -693,6 +697,28 @@ export default class Settings extends React.Component<
 const styles = StyleSheet.create({
     error: {
         color: 'red'
+    },
+    columnField: {
+        flex: 1,
+        flexDirection: 'row',
+        margin: 8
+    },
+    columnText: {
+        fontSize: 16,
+        color: '#FFFFFF',
+        left: '30%',
+        position: 'absolute'
+    },
+    separationLine: {
+        left: '30%',
+        width: 247,
+        borderColor: '#A7A9AC',
+        opacity: 0.2,
+        borderWidth: 0.5
+    },
+    ForwardArrow: {
+        flex: 1,
+        alignItems: 'flex-end'
     },
     form: {
         paddingTop: 20,
