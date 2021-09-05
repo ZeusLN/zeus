@@ -10,7 +10,7 @@ import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 import ForwardIcon from '../images/SVG/Caret Right-3.svg';
 import NodeIcon from '../images/SVG/NodeIcon.svg';
-import WalletIcon from '../images/SVG/Wallet2.svg';
+import AccountIcon from '../images/SVG/Wallet2.svg';
 import ContactIcon from '../images/SVG/PeersContact.svg';
 import PrivacyIcon from '../images/SVG/Eye On.svg';
 import SecurityIcon from '../images/SVG/Lock.svg';
@@ -305,9 +305,9 @@ export default class Settings extends React.Component<
                 >
                     <View style={styles.columnField}>
                         <View>
-                            <WalletIcon />
+                            <AccountIcon />
                         </View>
-                        <Text style={styles.columnText}>Accounts</Text>
+                        <Text style={{...styles.columnText, marginLeft:-55,marginTop:2}}>Accounts</Text>
                         <View style={styles.ForwardArrow}>
                             <ForwardIcon />
                         </View>
@@ -318,7 +318,7 @@ export default class Settings extends React.Component<
                         <View>
                             <ContactIcon />
                         </View>
-                        <Text style={styles.columnText}>Contacts</Text>
+                        <Text style={{...styles.columnText, marginLeft:-55,marginTop:2}}>Contacts</Text>
                         <View style={styles.ForwardArrow}>
                             <ForwardIcon />
                         </View>
@@ -338,7 +338,7 @@ export default class Settings extends React.Component<
                         <View>
                             <PrivacyIcon />
                         </View>
-                        <Text style={styles.columnText}>Privacy</Text>
+                        <Text style={{...styles.columnText, marginLeft:-55,marginTop:2}}>Privacy</Text>
                         <View style={styles.ForwardArrow}>
                             <ForwardIcon />
                         </View>
@@ -349,7 +349,7 @@ export default class Settings extends React.Component<
                         <View>
                             <SecurityIcon />
                         </View>
-                        <Text style={styles.columnText}>Security</Text>
+                        <Text style={{...styles.columnText, marginLeft:-55,marginTop:2}}>Security</Text>
                         <View style={styles.ForwardArrow}>
                             <ForwardIcon />
                         </View>
@@ -360,7 +360,7 @@ export default class Settings extends React.Component<
                         <View>
                             <SignIcon />
                         </View>
-                        <Text style={styles.columnText}>
+                        <Text style={{...styles.columnText, marginLeft:-55,marginTop:2}}>
                             Sign or verify message
                         </Text>
                         <View style={styles.ForwardArrow}>
@@ -382,7 +382,7 @@ export default class Settings extends React.Component<
                         <View>
                             <BitcoinIcon />
                         </View>
-                        <Text style={styles.columnText}>Currency</Text>
+                        <Text style={{...styles.columnText, marginLeft:-55,marginTop:2}}>Currency</Text>
                         <View style={styles.ForwardArrow}>
                             <ForwardIcon />
                         </View>
@@ -393,7 +393,7 @@ export default class Settings extends React.Component<
                         <View>
                             <LanguageIcon />
                         </View>
-                        <Text style={styles.columnText}>Language</Text>
+                        <Text style={{...styles.columnText, marginLeft:-55,marginTop:2}}>Language</Text>
                         <View style={styles.ForwardArrow}>
                             <ForwardIcon />
                         </View>
@@ -409,11 +409,11 @@ export default class Settings extends React.Component<
                         top: 120
                     }}
                 >
-                    <View style={{ ...styles.columnField, paddingLeft: 5 }}>
-                        <View>
+                    <View style={{ ...styles.columnField}}>
+                        <View style={{padding:5}}>
                             <HelpIcon />
                         </View>
-                        <Text style={styles.columnText}>Help</Text>
+                        <Text style={{...styles.columnText, marginLeft:-55,marginTop:2}}>Help</Text>
                         <View style={styles.ForwardArrow}>
                             <ForwardIcon />
                         </View>
@@ -701,7 +701,7 @@ const styles = StyleSheet.create({
     columnField: {
         flex: 1,
         flexDirection: 'row',
-        margin: 8
+        margin: 8,
     },
     columnText: {
         fontSize: 16,
@@ -711,10 +711,11 @@ const styles = StyleSheet.create({
     },
     separationLine: {
         left: '30%',
-        width: 247,
+        width: 298,
         borderColor: '#A7A9AC',
         opacity: 0.2,
-        borderWidth: 0.5
+        borderWidth: 0.5,
+        marginLeft:-50
     },
     ForwardArrow: {
         flex: 1,
