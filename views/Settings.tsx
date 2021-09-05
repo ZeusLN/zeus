@@ -307,7 +307,7 @@ export default class Settings extends React.Component<
                         <View>
                             <AccountIcon />
                         </View>
-                        <Text style={{...styles.columnText, marginLeft:-55,marginTop:2}}>Accounts</Text>
+                        <Text style={styles.columnText}>Accounts</Text>
                         <View style={styles.ForwardArrow}>
                             <ForwardIcon />
                         </View>
@@ -318,7 +318,7 @@ export default class Settings extends React.Component<
                         <View>
                             <ContactIcon />
                         </View>
-                        <Text style={{...styles.columnText, marginLeft:-55,marginTop:2}}>Contacts</Text>
+                        <Text style={styles.columnText}>Contacts</Text>
                         <View style={styles.ForwardArrow}>
                             <ForwardIcon />
                         </View>
@@ -338,7 +338,7 @@ export default class Settings extends React.Component<
                         <View>
                             <PrivacyIcon />
                         </View>
-                        <Text style={{...styles.columnText, marginLeft:-55,marginTop:2}}>Privacy</Text>
+                        <Text style={styles.columnText}>Privacy</Text>
                         <View style={styles.ForwardArrow}>
                             <ForwardIcon />
                         </View>
@@ -349,7 +349,7 @@ export default class Settings extends React.Component<
                         <View>
                             <SecurityIcon />
                         </View>
-                        <Text style={{...styles.columnText, marginLeft:-55,marginTop:2}}>Security</Text>
+                        <Text style={styles.columnText}>Security</Text>
                         <View style={styles.ForwardArrow}>
                             <ForwardIcon />
                         </View>
@@ -360,7 +360,7 @@ export default class Settings extends React.Component<
                         <View>
                             <SignIcon />
                         </View>
-                        <Text style={{...styles.columnText, marginLeft:-55,marginTop:2}}>
+                        <Text style={styles.columnText}>
                             Sign or verify message
                         </Text>
                         <View style={styles.ForwardArrow}>
@@ -382,7 +382,7 @@ export default class Settings extends React.Component<
                         <View>
                             <BitcoinIcon />
                         </View>
-                        <Text style={{...styles.columnText, marginLeft:-55,marginTop:2}}>Currency</Text>
+                        <Text style={styles.columnText}>Currency</Text>
                         <View style={styles.ForwardArrow}>
                             <ForwardIcon />
                         </View>
@@ -393,7 +393,7 @@ export default class Settings extends React.Component<
                         <View>
                             <LanguageIcon />
                         </View>
-                        <Text style={{...styles.columnText, marginLeft:-55,marginTop:2}}>Language</Text>
+                        <Text style={styles.columnText}>Language</Text>
                         <View style={styles.ForwardArrow}>
                             <ForwardIcon />
                         </View>
@@ -413,7 +413,7 @@ export default class Settings extends React.Component<
                         <View style={{padding:5}}>
                             <HelpIcon />
                         </View>
-                        <Text style={{...styles.columnText, marginLeft:-55,marginTop:2}}>Help</Text>
+                        <Text style={styles.columnText}>Help</Text>
                         <View style={styles.ForwardArrow}>
                             <ForwardIcon />
                         </View>
@@ -707,7 +707,9 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#FFFFFF',
         left: '30%',
-        position: 'absolute'
+        position: 'absolute',
+        marginLeft:-55,
+        marginTop:2
     },
     separationLine: {
         left: '30%',
