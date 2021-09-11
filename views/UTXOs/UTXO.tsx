@@ -83,15 +83,32 @@ export default class UTXO extends React.Component<UTXOProps> {
 
                 <View style={styles.content}>
                     <View>
-                        <Text style={{ ...styles.label, color: themeColor('text') }}>
+                        <Text
+                            style={{
+                                ...styles.label,
+                                color: themeColor('text')
+                            }}
+                        >
                             {localeString('general.outpoint')}:
                         </Text>
-                        <Text style={{ ...styles.value, color: themeColor('text') }}>{getOutpoint}</Text>
+                        <Text
+                            style={{
+                                ...styles.value,
+                                color: themeColor('text')
+                            }}
+                        >
+                            {getOutpoint}
+                        </Text>
                     </View>
 
                     {!!address && (
                         <View>
-                            <Text style={{ ...styles.label, color: themeColor('text') }}>
+                            <Text
+                                style={{
+                                    ...styles.label,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 {localeString('general.address')}:
                             </Text>
                             <TouchableOpacity
@@ -109,7 +126,9 @@ export default class UTXO extends React.Component<UTXOProps> {
                         </View>
                     )}
 
-                    <Text style={{ ...styles.label, color: themeColor('text') }}>
+                    <Text
+                        style={{ ...styles.label, color: themeColor('text') }}
+                    >
                         {localeString('views.Transaction.transactionHash')}:
                     </Text>
                     <TouchableOpacity
@@ -123,7 +142,12 @@ export default class UTXO extends React.Component<UTXOProps> {
                     </TouchableOpacity>
 
                     <View>
-                        <Text style={{ ...styles.label, color: themeColor('text') }}>
+                        <Text
+                            style={{
+                                ...styles.label,
+                                color: themeColor('text')
+                            }}
+                        >
                             {localeString('views.Transaction.numConf')}:
                         </Text>
                         <Text
