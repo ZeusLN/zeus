@@ -6,6 +6,8 @@ import { Spacer } from './layout/Spacer';
 import { inject, observer } from 'mobx-react';
 import UnitsStore from '../stores/UnitsStore';
 import PrivacyUtils from '../utils/PrivacyUtils';
+import ClockIcon from '../images/SVG/Clock.svg';
+import { themeColor } from '../utils/ThemeUtils';
 
 export const satoshisPerBTC = 100000000;
 
@@ -21,6 +23,7 @@ interface AmountDisplayProps {
     space?: boolean;
     jumboText?: boolean;
     color?: 'text' | 'success' | 'warning' | 'highlight' | 'secondaryText';
+    pending?: boolean;
 }
 
 function AmountDisplay({
@@ -32,7 +35,8 @@ function AmountDisplay({
     rtl = false,
     space = false,
     jumboText = false,
-    color = undefined
+    color = undefined,
+    pending = false
 }: AmountDisplayProps) {
     if (unit === 'fiat' && !symbol) {
         console.error('Must include a symbol when rendering fiat');
@@ -40,11 +44,39 @@ function AmountDisplay({
 
     const actualSymbol = unit === 'btc' ? '₿' : symbol;
 
+    const Pending = () => (
+        <View
+            style={{
+                paddingBottom: jumboText ? 8 : 2,
+                paddingHorizontal: jumboText ? 0 : 1
+            }}
+        >
+            <ClockIcon
+                color={themeColor('bitcoin')}
+                width={jumboText ? 30 : 15}
+                height={jumboText ? 30 : 15}
+            />
+        </View>
+    );
+
+    const FiatSymbol = () => (
+        <Body secondary jumbo={jumboText} color={color}>
+            {actualSymbol}
+        </Body>
+    );
+
+    const TextSpace = () => (
+        <Body jumbo={jumboText} color={color}>
+            {' '}
+        </Body>
+    );
+
     // TODO this could probably be made more readable by componentizing the repeat bits
     switch (unit) {
         case 'sats':
             return (
                 <Row align="flex-end">
+                    {pending ? <Pending /> : null}
                     <Body jumbo={jumboText} color={color}>
                         {amount}
                     </Body>
@@ -65,31 +97,17 @@ function AmountDisplay({
                             {negative ? '-' : ''}
                             {amount}
                         </Body>
-                        {space ? (
-                            <Body jumbo={jumboText} color={color}>
-                                {' '}
-                            </Body>
-                        ) : (
-                            <Spacer width={1} />
-                        )}
-                        <Body secondary jumbo={jumboText} color={color}>
-                            {actualSymbol}
-                        </Body>
+                        {space ? <TextSpace /> : <Spacer width={1} />}
+                        <FiatSymbol />
+                        {pending ? <Pending /> : null}
                     </Row>
                 );
             } else {
                 return (
                     <Row align="flex-end">
-                        <Body secondary jumbo={jumboText} color={color}>
-                            {actualSymbol}
-                        </Body>
-                        {space ? (
-                            <Body jumbo={jumboText} color={color}>
-                                {' '}
-                            </Body>
-                        ) : (
-                            <Spacer width={1} />
-                        )}
+                        {pending ? <Pending /> : null}
+                        <FiatSymbol />
+                        {space ? <TextSpace /> : <Spacer width={1} />}
                         <Body jumbo={jumboText} color={color}>
                             {negative ? '-' : ''}
                             {amount.toString()}
@@ -112,6 +130,7 @@ interface AmountProps {
     // If credit or debit doesn't cover the use case
     color?: 'text' | 'success' | 'warning' | 'highlight' | 'secondaryText';
     toggleable?: boolean;
+    pending?: boolean;
 }
 
 @inject('UnitsStore')
@@ -127,7 +146,8 @@ export class Amount extends React.Component<AmountProps, {}> {
             credit = false,
             debit = false,
             toggleable = false,
-            color = undefined
+            color = undefined,
+            pending = false
         } = this.props;
         const UnitsStore = this.props.UnitsStore!;
 
@@ -164,6 +184,7 @@ export class Amount extends React.Component<AmountProps, {}> {
                         negative={false}
                         jumboText={jumboText}
                         color={textColor}
+                        pending={pending}
                     />
                 </TouchableOpacity>
             );
@@ -177,6 +198,7 @@ export class Amount extends React.Component<AmountProps, {}> {
                 negative={false}
                 jumboText={jumboText}
                 color={textColor}
+                pending={pending}
             />
         );
     }
