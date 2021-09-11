@@ -21,6 +21,7 @@ import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 import CollapsedQR from './../../components/CollapsedQR';
 import SettingsStore from './../../stores/SettingsStore';
+import NodeIcon from './../../images/SVG/NodeIcon.svg';
 
 interface AddEditNodeProps {
     navigation: any;
@@ -531,7 +532,7 @@ export default class AddEditNode extends React.Component<
         );
 
         return (
-            <ScrollView
+            <View
                 style={{
                     flex: 1,
                     backgroundColor: themeColor('background'),
@@ -548,7 +549,8 @@ export default class AddEditNode extends React.Component<
                     }}
                     backgroundColor="#1f2328"
                 />
-                {!!suggestImport && (
+                {/* START */}
+                {/* {!!suggestImport && (
                     <View style={styles.clipboardImport}>
                         <Text style={{ color: 'white' }}>
                             {localeString(
@@ -594,15 +596,15 @@ export default class AddEditNode extends React.Component<
                             />
                         </View>
                     </View>
-                )}
+                )} */}
 
-                {loading && (
+                {/* {loading && (
                     <View style={{ padding: 10 }}>
                         <ActivityIndicator size="large" color="#0000ff" />
                     </View>
-                )}
+                )} */}
 
-                <Modal
+                {/* <Modal
                     animationType="slide"
                     transparent={true}
                     visible={showLndHubModal || showCertModal}
@@ -734,9 +736,9 @@ export default class AddEditNode extends React.Component<
                             )}
                         </View>
                     </View>
-                </Modal>
+                </Modal> */}
 
-                <View style={styles.form}>
+                {/* <View style={styles.form}>
                     {!!createAccountError &&
                         implementation === 'lndhub' &&
                         !loading && (
@@ -1058,9 +1060,9 @@ export default class AddEditNode extends React.Component<
                             />
                         </View>
                     )}
-                </View>
+                </View> */}
 
-                {!existingAccount && implementation === 'lndhub' && (
+                {/* {!existingAccount && implementation === 'lndhub' && (
                     <View style={styles.button}>
                         <Button
                             title={localeString(
@@ -1091,9 +1093,9 @@ export default class AddEditNode extends React.Component<
                             }}
                         />
                     </View>
-                )}
+                )} */}
 
-                <View style={styles.button}>
+                {/* <View style={styles.button}>
                     <Button
                         title={
                             saved
@@ -1256,8 +1258,112 @@ export default class AddEditNode extends React.Component<
                             }}
                         />
                     </View>
-                )}
-            </ScrollView>
+                )} */}
+                {/* END */}
+                {/* NEWVIEW START */}
+                <View style={{ alignItems: 'center', top: 40 }}>
+                    <NodeIcon />
+                </View>
+                <Text
+                    style={{
+                        alignSelf: 'center',
+                        top: 50,
+                        fontSize: 23,
+                        color: themeColor('text')
+                    }}
+                >
+                    My LND Node
+                </Text>
+                <View
+                    style={{
+                        flex: 1,
+                        flexDirection: 'row',
+                        justifyContent: 'center',
+                        top: 60
+                    }}
+                >
+                    <View
+                        style={{
+                            backgroundColor: '#FFB040',
+                            height: 26,
+                            width: 70,
+                            borderRadius: 8,
+                            right: 5
+                        }}
+                    >
+                        <Text
+                            style={{
+                                color: themeColor('text'),
+                                alignSelf: 'center',
+                                padding: 2
+                            }}
+                        >
+                            Mainnet
+                        </Text>
+                    </View>
+                    <View
+                        style={{
+                            backgroundColor: '#8A3ABD',
+                            height: 26,
+                            width: 70,
+                            borderRadius: 8,
+                            left: 5
+                        }}
+                    >
+                        <Text
+                            style={{
+                                color: themeColor('text'),
+                                alignSelf: 'center',
+                                padding: 2
+                            }}
+                        >
+                            Tor
+                        </Text>
+                    </View>
+                </View>
+                <ScrollView style={{ left: '5%', top: -40 }}>
+                    <View style={{ top: 20 }}>
+                        <Text style={{ color: '#A7A9AC' }}>Name</Text>
+                        <View
+                            style={{
+                                width: '90%',
+                                height: 60,
+                                top: 10,
+                                backgroundColor: '#31363F',
+                                borderRadius: 6,
+                                marginBottom: 20
+                            }}
+                        ></View>
+                    </View>
+                    <View style={{ top: 35 }}>
+                        <Text style={{ color: '#A7A9AC' }}>Credentials</Text>
+                        <View
+                            style={{
+                                width: '90%',
+                                top: 10,
+                                height: 60,
+                                backgroundColor: '#31363F',
+                                borderRadius: 6,
+                                marginBottom: 20
+                            }}
+                        ></View>
+                    </View>
+                    <View style={{ top: 50 }}>
+                        <Text style={{ color: '#A7A9AC' }}>Address</Text>
+                        <View
+                            style={{
+                                width: '90%',
+                                height: 60,
+                                backgroundColor: '#31363F',
+                                borderRadius: 6,
+                                marginBottom: 20,
+                                top: 10
+                            }}
+                        ></View>
+                    </View>
+                </ScrollView>
+                {/* NEWVIEW END */}
+            </View>
         );
     }
 }
