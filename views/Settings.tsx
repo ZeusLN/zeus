@@ -1,5 +1,12 @@
 import * as React from 'react';
-import { StyleSheet, Text, TextInput, View, ScrollView } from 'react-native';
+import {
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+    ScrollView,
+    TouchableWithoutFeedback
+} from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Nodes from './Settings/Nodes';
@@ -240,59 +247,64 @@ export default class Settings extends React.Component<
                         SettingsStore={SettingsStore}
                     />
                 </View> */}
-                <View
-                    style={{
-                        backgroundColor: '#31363F',
-                        width: '90%',
-                        height: 90,
-                        borderRadius: 10,
-                        alignSelf: 'center',
-                        top: 40
-                    }}
+                <TouchableWithoutFeedback
+                    onPress={() => navigation.navigate('AddEditNode')}
                 >
                     <View
                         style={{
-                            flex: 1,
-                            flexDirection: 'row',
-                            margin: 12,
-                            marginLeft: 28
+                            backgroundColor: '#31363F',
+                            width: '90%',
+                            height: 90,
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            top: 40
                         }}
                     >
-                        <View>
-                            <NodeIcon />
-                        </View>
-                        <Text
-                            style={{
-                                fontSize: 20,
-                                color: '#FFFFFF',
-                                left: '30%',
-                                top: 10
-                            }}
-                        >
-                            My LND Node
-                        </Text>
                         <View
                             style={{
                                 flex: 1,
-                                alignItems: 'flex-end',
-                                marginTop: 25
+                                flexDirection: 'row',
+                                margin: 12,
+                                marginLeft: 28
                             }}
                         >
-                            <ForwardIcon />
+                            <View>
+                                <NodeIcon />
+                            </View>
+                            <Text
+                                style={{
+                                    fontSize: 20,
+                                    color: '#FFFFFF',
+                                    left: '30%',
+                                    top: 10
+                                }}
+                            >
+                                My LND Node
+                            </Text>
+                            <View
+                                style={{
+                                    flex: 1,
+                                    alignItems: 'flex-end',
+                                    marginTop: 25
+                                }}
+                            >
+                                <ForwardIcon />
+                            </View>
                         </View>
+                        <Text
+                            style={{
+                                fontSize: 16,
+                                color: '#FFFFFF',
+                                opacity: 0.6,
+                                left: '30%',
+                                top: -20
+                            }}
+                        >
+                            Mainnet over Tor
+                        </Text>
                     </View>
-                    <Text
-                        style={{
-                            fontSize: 16,
-                            color: '#FFFFFF',
-                            opacity: 0.6,
-                            left: '30%',
-                            top: -20
-                        }}
-                    >
-                        Mainnet over Tor
-                    </Text>
-                </View>
+                </TouchableWithoutFeedback>
+
                 <View
                     style={{
                         backgroundColor: '#31363F',
@@ -409,8 +421,8 @@ export default class Settings extends React.Component<
                         top: 120
                     }}
                 >
-                    <View style={{ ...styles.columnField}}>
-                        <View style={{padding:5}}>
+                    <View style={{ ...styles.columnField }}>
+                        <View style={{ padding: 5 }}>
                             <HelpIcon />
                         </View>
                         <Text style={styles.columnText}>Help</Text>
@@ -701,15 +713,15 @@ const styles = StyleSheet.create({
     columnField: {
         flex: 1,
         flexDirection: 'row',
-        margin: 8,
+        margin: 8
     },
     columnText: {
         fontSize: 16,
         color: '#FFFFFF',
         left: '30%',
         position: 'absolute',
-        marginLeft:-55,
-        marginTop:2
+        marginLeft: -55,
+        marginTop: 2
     },
     separationLine: {
         left: '30%',
@@ -717,7 +729,7 @@ const styles = StyleSheet.create({
         borderColor: '#A7A9AC',
         opacity: 0.2,
         borderWidth: 0.5,
-        marginLeft:-50
+        marginLeft: -50
     },
     ForwardArrow: {
         flex: 1,
