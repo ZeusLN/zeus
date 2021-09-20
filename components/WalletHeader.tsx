@@ -40,7 +40,7 @@ const OpenChannelButton = ({ navigation }: { navigation: any }) => (
 
 const NodeInfoBadge = ({ navigation }: { navigation: any }) => (
     <TouchableOpacity onPress={() => navigation.navigate('NodeInfo')}>
-        <NodeOn stroke={themeColor('text')} />
+        <NodeOn color={themeColor('text')} />
     </TouchableOpacity>
 );
 
