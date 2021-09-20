@@ -1,5 +1,12 @@
 import * as React from 'react';
-import { StyleSheet, Text, TextInput, View, ScrollView } from 'react-native';
+import {
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+    ScrollView,
+    TouchableWithoutFeedback
+} from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Nodes from './Settings/Nodes';
@@ -8,6 +15,16 @@ import RESTUtils from './../utils/RESTUtils';
 import DropdownSetting from './../components/DropdownSetting';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
+import ForwardIcon from '../images/SVG/Caret Right-3.svg';
+import NodeIcon from '../images/SVG/NodeIcon.svg';
+import AccountIcon from '../images/SVG/Wallet2.svg';
+import ContactIcon from '../images/SVG/PeersContact.svg';
+import PrivacyIcon from '../images/SVG/Eye On.svg';
+import SecurityIcon from '../images/SVG/Lock.svg';
+import SignIcon from '../images/SVG/Pen.svg';
+import BitcoinIcon from '../images/SVG/Bitcoin.svg';
+import LanguageIcon from '../images/SVG/Globe.svg';
+import HelpIcon from '../images/SVG/Help Icon.svg';
 
 import SettingsStore, {
     LOCALE_KEYS,
@@ -196,7 +213,7 @@ export default class Settings extends React.Component<
         const lurkerLabel = `Lurking ${PrivacyUtils.getLover()} Mode: hides sensitive values`;
 
         return (
-            <ScrollView
+            <View
                 style={{
                     flex: 1,
                     backgroundColor: themeColor('background')
@@ -221,7 +238,7 @@ export default class Settings extends React.Component<
                         Passphrases do not match
                     </Text>
                 )}
-                <View style={styles.form}>
+                {/* <View style={styles.form}>
                     <Nodes
                         nodes={nodes}
                         navigation={navigation}
@@ -229,18 +246,213 @@ export default class Settings extends React.Component<
                         selectedNode={selectedNode}
                         SettingsStore={SettingsStore}
                     />
-                </View>
+                </View> */}
+                <TouchableWithoutFeedback
+                    onPress={() => navigation.navigate('AddEditNode')}
+                >
+                    <View
+                        style={{
+                            backgroundColor: '#31363F',
+                            width: '90%',
+                            height: 90,
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            top: 40
+                        }}
+                    >
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                margin: 12,
+                                marginLeft: 28
+                            }}
+                        >
+                            <View>
+                                <NodeIcon />
+                            </View>
+                            <Text
+                                style={{
+                                    fontSize: 20,
+                                    color: '#FFFFFF',
+                                    left: '30%',
+                                    top: 10
+                                }}
+                            >
+                                My LND Node
+                            </Text>
+                            <View
+                                style={{
+                                    flex: 1,
+                                    alignItems: 'flex-end',
+                                    marginTop: 25
+                                }}
+                            >
+                                <ForwardIcon />
+                            </View>
+                        </View>
+                        <Text
+                            style={{
+                                fontSize: 16,
+                                color: '#FFFFFF',
+                                opacity: 0.6,
+                                left: '30%',
+                                top: -20
+                            }}
+                        >
+                            Mainnet over Tor
+                        </Text>
+                    </View>
+                </TouchableWithoutFeedback>
 
-                <DropdownSetting
+                <View
+                    style={{
+                        backgroundColor: '#31363F',
+                        width: '90%',
+                        height: 90,
+                        borderRadius: 10,
+                        alignSelf: 'center',
+                        top: 60
+                    }}
+                >
+                    <View style={styles.columnField}>
+                        <View>
+                            <AccountIcon />
+                        </View>
+                        <Text style={styles.columnText}>Accounts</Text>
+                        <View style={styles.ForwardArrow}>
+                            <ForwardIcon />
+                        </View>
+                    </View>
+
+                    <View style={styles.separationLine} />
+                    <View style={styles.columnField}>
+                        <View>
+                            <ContactIcon />
+                        </View>
+                        <Text style={styles.columnText}>Contacts</Text>
+                        <View style={styles.ForwardArrow}>
+                            <ForwardIcon />
+                        </View>
+                    </View>
+                </View>
+                <View
+                    style={{
+                        backgroundColor: '#31363F',
+                        width: '90%',
+                        height: 138,
+                        borderRadius: 10,
+                        alignSelf: 'center',
+                        top: 80
+                    }}
+                >
+                    <View style={styles.columnField}>
+                        <View>
+                            <PrivacyIcon />
+                        </View>
+                        <Text style={styles.columnText}>Privacy</Text>
+                        <View style={styles.ForwardArrow}>
+                            <ForwardIcon />
+                        </View>
+                    </View>
+
+                    <View style={styles.separationLine} />
+                    <View style={styles.columnField}>
+                        <View>
+                            <SecurityIcon />
+                        </View>
+                        <Text style={styles.columnText}>Security</Text>
+                        <View style={styles.ForwardArrow}>
+                            <ForwardIcon />
+                        </View>
+                    </View>
+
+                    <View style={styles.separationLine} />
+                    <View style={styles.columnField}>
+                        <View>
+                            <SignIcon />
+                        </View>
+                        <Text style={styles.columnText}>
+                            Sign or verify message
+                        </Text>
+                        <View style={styles.ForwardArrow}>
+                            <ForwardIcon />
+                        </View>
+                    </View>
+                </View>
+                <View
+                    style={{
+                        backgroundColor: '#31363F',
+                        width: '90%',
+                        height: 90,
+                        borderRadius: 10,
+                        alignSelf: 'center',
+                        top: 100
+                    }}
+                >
+                    <View style={styles.columnField}>
+                        <View>
+                            <BitcoinIcon />
+                        </View>
+                        <Text style={styles.columnText}>Currency</Text>
+                        <View style={styles.ForwardArrow}>
+                            <ForwardIcon />
+                        </View>
+                    </View>
+
+                    <View style={styles.separationLine} />
+                    <View style={styles.columnField}>
+                        <View>
+                            <LanguageIcon />
+                        </View>
+                        <Text style={styles.columnText}>Language</Text>
+                        <View style={styles.ForwardArrow}>
+                            <ForwardIcon />
+                        </View>
+                    </View>
+                </View>
+                <View
+                    style={{
+                        backgroundColor: '#31363F',
+                        width: '90%',
+                        height: 45,
+                        borderRadius: 10,
+                        alignSelf: 'center',
+                        top: 120
+                    }}
+                >
+                    <View style={{ ...styles.columnField }}>
+                        <View style={{ padding: 5 }}>
+                            <HelpIcon />
+                        </View>
+                        <Text style={styles.columnText}>Help</Text>
+                        <View style={styles.ForwardArrow}>
+                            <ForwardIcon />
+                        </View>
+                    </View>
+                </View>
+                <Text
+                    style={{
+                        fontSize: 16,
+                        color: '#A7A9AC',
+                        alignSelf: 'center',
+                        bottom: 25,
+                        position: 'absolute'
+                    }}
+                >
+                    Zeus version 0.5.2
+                </Text>
+
+                {/* <DropdownSetting
                     title={localeString('views.Settings.locale')}
                     selectedValue={locale}
                     onValueChange={(value: string) =>
                         this.setState({ locale: value })
                     }
                     values={LOCALE_KEYS}
-                />
+                /> */}
 
-                <DropdownSetting
+                {/* <DropdownSetting
                     title={localeString('views.Settings.fiatRate')}
                     selectedValue={fiat}
                     onValueChange={(value: string) =>
@@ -270,9 +482,9 @@ export default class Settings extends React.Component<
                         { key: 'KRW', value: 'KRW' },
                         { key: 'TWD', value: 'TWD' }
                     ]}
-                />
+                /> */}
 
-                <DropdownSetting
+                {/* <DropdownSetting
                     title={localeString('views.Settings.theme')}
                     selectedValue={theme}
                     displayValue={themes[theme]}
@@ -284,9 +496,9 @@ export default class Settings extends React.Component<
                         { key: 'Light', value: 'light' },
                         { key: 'Junkie', value: 'junkie' }
                     ]}
-                />
+                /> */}
 
-                <DropdownSetting
+                {/* <DropdownSetting
                     title={lurkerLabel}
                     selectedValue={lurkerMode}
                     displayValue={
@@ -301,9 +513,9 @@ export default class Settings extends React.Component<
                         { key: 'Disabled', value: false },
                         { key: 'Enabled', value: true }
                     ]}
-                />
+                /> */}
 
-                {showPassphraseForm && (
+                {/* {showPassphraseForm && (
                     <Text
                         style={{
                             color: themeColor('text'),
@@ -313,8 +525,8 @@ export default class Settings extends React.Component<
                     >
                         {localeString('views.Settings.newPassphrase')}
                     </Text>
-                )}
-                {showPassphraseForm && (
+                )} */}
+                {/* {showPassphraseForm && (
                     <TextInput
                         placeholder={'********'}
                         placeholderTextColor="darkgray"
@@ -335,8 +547,8 @@ export default class Settings extends React.Component<
                             paddingLeft: 10
                         }}
                     />
-                )}
-                {showPassphraseForm && (
+                )} */}
+                {/* {showPassphraseForm && (
                     <Text
                         style={{
                             color: themeColor('text'),
@@ -345,8 +557,8 @@ export default class Settings extends React.Component<
                     >
                         {localeString('views.Settings.confirmPassphrase')}
                     </Text>
-                )}
-                {showPassphraseForm && (
+                )} */}
+                {/* {showPassphraseForm && (
                     <TextInput
                         placeholder={'********'}
                         placeholderTextColor="darkgray"
@@ -367,8 +579,8 @@ export default class Settings extends React.Component<
                             paddingLeft: 10
                         }}
                     />
-                )}
-                <View style={styles.button}>
+                )} */}
+                {/* <View style={styles.button}>
                     <Button
                         title={
                             saved
@@ -392,8 +604,8 @@ export default class Settings extends React.Component<
                         onPress={() => this.saveSettings()}
                         style={styles.button}
                     />
-                </View>
-                <View style={styles.button}>
+                </View> */}
+                {/* <View style={styles.button}>
                     <Button
                         title={
                             showPassphraseForm
@@ -425,9 +637,9 @@ export default class Settings extends React.Component<
                             color: 'white'
                         }}
                     />
-                </View>
-                <View style={styles.button}>
-                    <Button
+                </View> */}
+                {/* <View style={styles.button}> */}
+                {/* <Button
                         title={localeString('views.Settings.about')}
                         buttonStyle={{
                             backgroundColor: 'black',
@@ -438,9 +650,9 @@ export default class Settings extends React.Component<
                         onPress={() => navigation.navigate('About')}
                         style={styles.button}
                     />
-                </View>
+                </View> */}
 
-                {false && (
+                {/* {false && (
                     <View style={styles.button}>
                         <Button
                             title={localeString('views.ImportAccount.title')}
@@ -454,9 +666,9 @@ export default class Settings extends React.Component<
                             style={styles.button}
                         />
                     </View>
-                )}
+                )} */}
 
-                {RESTUtils.supportsMessageSigning() && (
+                {/* {RESTUtils.supportsMessageSigning() && (
                     <View style={styles.button}>
                         <Button
                             title={localeString(
@@ -472,9 +684,9 @@ export default class Settings extends React.Component<
                             style={styles.button}
                         />
                     </View>
-                )}
+                )} */}
 
-                <View style={styles.button}>
+                {/* <View style={styles.button}>
                     <Button
                         title={localeString('views.Settings.intro')}
                         buttonStyle={{
@@ -488,8 +700,8 @@ export default class Settings extends React.Component<
                         }
                         style={styles.button}
                     />
-                </View>
-            </ScrollView>
+                </View> */}
+            </View>
         );
     }
 }
@@ -497,6 +709,31 @@ export default class Settings extends React.Component<
 const styles = StyleSheet.create({
     error: {
         color: 'red'
+    },
+    columnField: {
+        flex: 1,
+        flexDirection: 'row',
+        margin: 8
+    },
+    columnText: {
+        fontSize: 16,
+        color: '#FFFFFF',
+        left: '30%',
+        position: 'absolute',
+        marginLeft: -55,
+        marginTop: 2
+    },
+    separationLine: {
+        left: '30%',
+        width: 298,
+        borderColor: '#A7A9AC',
+        opacity: 0.2,
+        borderWidth: 0.5,
+        marginLeft: -50
+    },
+    ForwardArrow: {
+        flex: 1,
+        alignItems: 'flex-end'
     },
     form: {
         paddingTop: 20,
