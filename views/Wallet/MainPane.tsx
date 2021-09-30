@@ -28,7 +28,6 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
     render() {
         const {
             NodeInfoStore,
-            UnitsStore,
             BalanceStore,
             SettingsStore,
             navigation
@@ -62,6 +61,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                         sensitive
                         jumboText
                         toggleable
+                        pending
                     />
                 ) : null}
             </>
@@ -80,6 +80,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                         sensitive
                         jumboText
                         toggleable
+                        pending
                     />
                 ) : null}
             </>

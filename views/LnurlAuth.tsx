@@ -1,11 +1,10 @@
 import * as React from 'react';
 import RNFetchBlob from 'rn-fetch-blob';
 import { Alert, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
-import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
 import querystring from 'querystring-es3';
 import url from 'url';
-import SettingsStore from './../stores/SettingsStore';
+import { themeColor } from './../utils/ThemeUtils';
 import { localeString } from './../utils/LocaleUtils';
 import RESTUtils from './../utils/RESTUtils';
 import Base64Utils from './../utils/Base64Utils';
@@ -19,7 +18,6 @@ const LNURLAUTH_CANONICAL_PHRASE =
 
 interface LnurlAuthProps {
     navigation: any;
-    SettingsStore: SettingsStore;
 }
 
 interface LnurlAuthState {
@@ -35,8 +33,6 @@ interface LnurlAuthState {
     errorMsgAuth: string;
 }
 
-@inject('SettingsStore')
-@observer
 export default class LnurlAuth extends React.Component<
     LnurlAuthProps,
     LnurlAuthState
@@ -198,7 +194,7 @@ export default class LnurlAuth extends React.Component<
     }
 
     render() {
-        const { SettingsStore, navigation } = this.props;
+        const { navigation } = this.props;
         const {
             domain,
             preparingSignature,
@@ -207,8 +203,6 @@ export default class LnurlAuth extends React.Component<
             lnurlAuthSuccess,
             errorMsgAuth
         } = this.state;
-        const { settings } = SettingsStore;
-        const { theme } = settings;
 
         const BackButton = () => (
             <Icon
@@ -221,11 +215,10 @@ export default class LnurlAuth extends React.Component<
 
         return (
             <View
-                style={
-                    theme === 'dark'
-                        ? styles.darkThemeStyle
-                        : styles.lightThemeStyle
-                }
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background')
+                }}
             >
                 <Header
                     leftComponent={<BackButton />}
@@ -241,7 +234,7 @@ export default class LnurlAuth extends React.Component<
                             padding: 20,
                             fontWeight: 'bold',
                             fontSize: 22,
-                            color: theme === 'dark' ? 'white' : 'black'
+                            color: themeColor('text')
                         }}
                     >
                         {domain}
@@ -294,27 +287,6 @@ export default class LnurlAuth extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    lightThemeStyle: {
-        flex: 1,
-        backgroundColor: 'white'
-    },
-    darkThemeStyle: {
-        flex: 1,
-        backgroundColor: 'black',
-        color: 'white'
-    },
-    textInput: {
-        fontSize: 20,
-        color: 'black',
-        paddingTop: 10,
-        paddingBottom: 10
-    },
-    textInputDark: {
-        fontSize: 20,
-        color: 'white',
-        paddingTop: 10,
-        paddingBottom: 10
-    },
     content: {
         paddingLeft: 20,
         paddingRight: 20

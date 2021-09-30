@@ -117,7 +117,12 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
         );
 
         return (
-            <ScrollView style={styles.scrollView}>
+            <ScrollView
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background')
+                }}
+            >
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -136,11 +141,6 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
 }
 
 const styles = StyleSheet.create({
-    scrollView: {
-        flex: 1,
-        backgroundColor: themeColor('background'),
-        color: themeColor('text')
-    },
     content: {
         paddingLeft: 20,
         paddingRight: 20

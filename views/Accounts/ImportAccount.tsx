@@ -92,7 +92,13 @@ export default class ImportAccount extends React.Component<
         );
 
         return (
-            <ScrollView style={styles.scrollView}>
+            <ScrollView
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background'),
+                    color: themeColor('text')
+                }}
+            >
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -102,7 +108,9 @@ export default class ImportAccount extends React.Component<
                     backgroundColor="grey"
                 />
                 <View style={styles.content}>
-                    <Text style={styles.label}>
+                    <Text
+                        style={{ ...styles.label, color: themeColor('text') }}
+                    >
                         {localeString('views.ImportAccount.name')}
                     </Text>
                     <TextInput
@@ -113,10 +121,15 @@ export default class ImportAccount extends React.Component<
                                 name: text
                             })
                         }
-                        style={styles.textInput}
+                        style={{
+                            ...styles.textInput,
+                            color: themeColor('text')
+                        }}
                         placeholderTextColor="gray"
                     />
-                    <Text style={styles.label}>
+                    <Text
+                        style={{ ...styles.label, color: themeColor('text') }}
+                    >
                         {localeString('views.ImportAccount.extendedPubKey')}
                     </Text>
                     <TextInput
@@ -129,12 +142,17 @@ export default class ImportAccount extends React.Component<
                                 extended_public_key: text
                             })
                         }
-                        style={styles.textInput}
+                        style={{
+                            ...styles.textInput,
+                            color: themeColor('text')
+                        }}
                         placeholderTextColor="gray"
                         numberOfLines={4}
                         multiline
                     />
-                    <Text style={styles.label}>
+                    <Text
+                        style={{ ...styles.label, color: themeColor('text') }}
+                    >
                         {localeString(
                             'views.ImportAccount.masterKeyFingerprint'
                         )}
@@ -147,10 +165,15 @@ export default class ImportAccount extends React.Component<
                                 master_key_fingerprint: text
                             })
                         }
-                        style={styles.textInput}
+                        style={{
+                            ...styles.textInput,
+                            color: themeColor('text')
+                        }}
                         placeholderTextColor="gray"
                     />
-                    <Text style={styles.label}>
+                    <Text
+                        style={{ ...styles.label, color: themeColor('text') }}
+                    >
                         {localeString('views.ImportAccount.addressType')}
                     </Text>
                     <TextInput
@@ -161,7 +184,10 @@ export default class ImportAccount extends React.Component<
                                 address_type: text
                             })
                         }
-                        style={styles.textInput}
+                        style={{
+                            ...styles.textInput,
+                            color: themeColor('text')
+                        }}
                         placeholderTextColor="gray"
                     />
                     <Button
@@ -186,14 +212,8 @@ export default class ImportAccount extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    scrollView: {
-        flex: 1,
-        backgroundColor: themeColor('background'),
-        color: themeColor('text')
-    },
     textInput: {
-        fontSize: 20,
-        color: themeColor('text')
+        fontSize: 20
     },
     content: {
         paddingTop: 20,
@@ -202,8 +222,7 @@ const styles = StyleSheet.create({
         paddingRight: 5
     },
     label: {
-        textDecorationLine: 'underline',
-        color: themeColor('text')
+        textDecorationLine: 'underline'
     },
     button: {
         paddingTop: 10,

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { FlatList, View } from 'react-native';
 import { Avatar, Button, ListItem } from 'react-native-elements';
 import SettingsStore from './../../stores/SettingsStore';
 import Identicon from 'identicon.js';
@@ -18,7 +18,16 @@ interface NodesProps {
 }
 
 export default class Nodes extends React.Component<NodesProps, {}> {
-    renderSeparator = () => <View style={styles.separator} />;
+    renderSeparator = () => (
+        <View
+            style={{
+                height: 1,
+                width: '86%',
+                backgroundColor: themeColor('separator'),
+                marginLeft: '14%'
+            }}
+        />
+    );
 
     render() {
         const {
@@ -209,16 +218,3 @@ export default class Nodes extends React.Component<NodesProps, {}> {
         );
     }
 }
-
-const styles = StyleSheet.create({
-    separator: {
-        height: 1,
-        width: '86%',
-        backgroundColor: themeColor('separator'),
-        marginLeft: '14%'
-    },
-    button: {
-        paddingTop: 15,
-        paddingBottom: 10
-    }
-});

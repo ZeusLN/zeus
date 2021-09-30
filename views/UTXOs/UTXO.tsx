@@ -52,14 +52,20 @@ export default class UTXO extends React.Component<UTXOProps> {
         );
 
         return (
-            <ScrollView style={styles.scrollView}>
+            <ScrollView
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background'),
+                    color: themeColor('text')
+                }}
+            >
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('general.utxo'),
                         style: { color: themeColor('text') }
                     }}
-                    backgroundColor="#1f2328"
+                    backgroundColor={themeColor('secondary')}
                 />
                 <View style={styles.center}>
                     <TouchableOpacity onPress={() => changeUnits()}>
@@ -77,15 +83,32 @@ export default class UTXO extends React.Component<UTXOProps> {
 
                 <View style={styles.content}>
                     <View>
-                        <Text style={styles.label}>
+                        <Text
+                            style={{
+                                ...styles.label,
+                                color: themeColor('text')
+                            }}
+                        >
                             {localeString('general.outpoint')}:
                         </Text>
-                        <Text style={styles.value}>{getOutpoint}</Text>
+                        <Text
+                            style={{
+                                ...styles.value,
+                                color: themeColor('text')
+                            }}
+                        >
+                            {getOutpoint}
+                        </Text>
                     </View>
 
                     {!!address && (
                         <View>
-                            <Text style={styles.label}>
+                            <Text
+                                style={{
+                                    ...styles.label,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 {localeString('general.address')}:
                             </Text>
                             <TouchableOpacity
@@ -103,7 +126,9 @@ export default class UTXO extends React.Component<UTXOProps> {
                         </View>
                     )}
 
-                    <Text style={styles.label}>
+                    <Text
+                        style={{ ...styles.label, color: themeColor('text') }}
+                    >
                         {localeString('views.Transaction.transactionHash')}:
                     </Text>
                     <TouchableOpacity
@@ -117,7 +142,12 @@ export default class UTXO extends React.Component<UTXOProps> {
                     </TouchableOpacity>
 
                     <View>
-                        <Text style={styles.label}>
+                        <Text
+                            style={{
+                                ...styles.label,
+                                color: themeColor('text')
+                            }}
+                        >
                             {localeString('views.Transaction.numConf')}:
                         </Text>
                         <Text
@@ -136,11 +166,6 @@ export default class UTXO extends React.Component<UTXOProps> {
 }
 
 const styles = StyleSheet.create({
-    scrollView: {
-        flex: 1,
-        backgroundColor: themeColor('background'),
-        color: themeColor('text')
-    },
     content: {
         paddingLeft: 20,
         paddingRight: 20
@@ -151,12 +176,10 @@ const styles = StyleSheet.create({
         paddingBottom: 15
     },
     label: {
-        paddingTop: 5,
-        color: themeColor('text')
+        paddingTop: 5
     },
     value: {
-        paddingBottom: 5,
-        color: themeColor('text')
+        paddingBottom: 5
     },
     valueWithLink: {
         paddingBottom: 5,

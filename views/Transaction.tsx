@@ -87,7 +87,12 @@ export default class TransactionView extends React.Component<TransactionProps> {
         );
 
         return (
-            <ScrollView style={styles.scrollView}>
+            <ScrollView
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background')
+                }}
+            >
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -112,18 +117,30 @@ export default class TransactionView extends React.Component<TransactionProps> {
                 <View style={styles.content}>
                     {total_fees ? (
                         <View>
-                            <Text style={styles.label}>
+                            <Text
+                                style={{
+                                    ...styles.label,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 {localeString('views.Transaction.totalFees')}:
                             </Text>
                             <TouchableOpacity onPress={() => changeUnits()}>
-                                <Text style={styles.value}>
+                                <Text
+                                    style={{
+                                        ...styles.value,
+                                        color: themeColor('text')
+                                    }}
+                                >
                                     {units && totalFees}
                                 </Text>
                             </TouchableOpacity>
                         </View>
                     ) : null}
 
-                    <Text style={styles.label}>
+                    <Text
+                        style={{ ...styles.label, color: themeColor('text') }}
+                    >
                         {localeString('views.Transaction.transactionHash')}:
                     </Text>
                     <TouchableOpacity
@@ -138,7 +155,12 @@ export default class TransactionView extends React.Component<TransactionProps> {
 
                     {!!block_hash && (
                         <View>
-                            <Text style={styles.label}>
+                            <Text
+                                style={{
+                                    ...styles.label,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 {localeString('views.Transaction.blockHash')}:
                             </Text>
                             <TouchableOpacity
@@ -157,7 +179,12 @@ export default class TransactionView extends React.Component<TransactionProps> {
                     )}
 
                     {!!block_height && (
-                        <Text style={styles.label}>
+                        <Text
+                            style={{
+                                ...styles.label,
+                                color: themeColor('text')
+                            }}
+                        >
                             {localeString('views.Transaction.blockHeight')}:
                         </Text>
                     )}
@@ -182,7 +209,12 @@ export default class TransactionView extends React.Component<TransactionProps> {
 
                     {!isNull(num_confirmations) && (
                         <View>
-                            <Text style={styles.label}>
+                            <Text
+                                style={{
+                                    ...styles.label,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 {localeString('views.Transaction.numConf')}:
                             </Text>
                             <Text
@@ -203,19 +235,41 @@ export default class TransactionView extends React.Component<TransactionProps> {
 
                     {!!status && (
                         <View>
-                            <Text style={styles.label}>
+                            <Text
+                                style={{
+                                    ...styles.label,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 {localeString('views.Transaction.status')}:
                             </Text>
-                            <Text style={styles.value}>{status}</Text>
+                            <Text
+                                style={{
+                                    ...styles.value,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {status}
+                            </Text>
                         </View>
                     )}
 
                     {!!date && (
                         <View>
-                            <Text style={styles.label}>
+                            <Text
+                                style={{
+                                    ...styles.label,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 {localeString('views.Transaction.timestamp')}:
                             </Text>
-                            <Text style={styles.value}>
+                            <Text
+                                style={{
+                                    ...styles.value,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 {PrivacyUtils.sensitiveValue(
                                     date.toString(),
                                     14
@@ -226,7 +280,12 @@ export default class TransactionView extends React.Component<TransactionProps> {
 
                     {destAddresses && (
                         <View>
-                            <Text style={styles.label}>
+                            <Text
+                                style={{
+                                    ...styles.label,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 {destAddresses.length > 1
                                     ? `${localeString(
                                           'views.Transaction.destAddresses'
@@ -245,11 +304,6 @@ export default class TransactionView extends React.Component<TransactionProps> {
 }
 
 const styles = StyleSheet.create({
-    scrollView: {
-        flex: 1,
-        backgroundColor: themeColor('background'),
-        color: themeColor('text')
-    },
     content: {
         paddingLeft: 20,
         paddingRight: 20
@@ -260,12 +314,10 @@ const styles = StyleSheet.create({
         paddingBottom: 15
     },
     label: {
-        paddingTop: 5,
-        color: themeColor('text')
+        paddingTop: 5
     },
     value: {
-        paddingBottom: 5,
-        color: themeColor('text')
+        paddingBottom: 5
     },
     valueWithLink: {
         paddingBottom: 5,

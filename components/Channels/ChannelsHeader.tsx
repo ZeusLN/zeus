@@ -119,7 +119,13 @@ function TotalRow({
 export function ChannelsHeader(props) {
     const { totalInbound, totalOutbound, totalOffline } = props;
     return (
-        <View style={styles.wrapper}>
+        <View
+            style={{
+                ...styles.wrapper,
+                backgroundColor: themeColor('background'),
+                color: themeColor('text')
+            }}
+        >
             <View style={styles.donut}>
                 <Donut
                     totalInbound={totalInbound}
@@ -166,10 +172,8 @@ const styles = StyleSheet.create({
         paddingBottom: 16,
         paddingLeft: 16,
         paddingRight: 16,
-        backgroundColor: themeColor('background'),
         borderBottomLeftRadius: 20,
         borderBottomRightRadius: 20,
-        color: themeColor('text'),
         // TODO: this shadow stuff probably needs tweaking on iOS
         shadowColor: '#000',
         shadowOffset: {

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, View } from 'react-native';
 import { Avatar, Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import DateTimeUtils from './../../utils/DateTimeUtils';
@@ -32,7 +32,14 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
         }
     }
 
-    renderSeparator = () => <View style={styles.separator} />;
+    renderSeparator = () => (
+        <View
+            style={{
+                height: 0.4,
+                backgroundColor: themeColor('separator')
+            }}
+        />
+    );
 
     render() {
         const {
@@ -68,7 +75,13 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
         );
 
         return (
-            <View style={styles.view}>
+            <View
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background'),
+                    color: themeColor('text')
+                }}
+            >
                 <Header
                     leftComponent={<CloseButton />}
                     centerComponent={{
@@ -167,22 +180,3 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
         );
     }
 }
-
-const styles = StyleSheet.create({
-    view: {
-        flex: 1,
-        backgroundColor: themeColor('background'),
-        color: themeColor('text')
-    },
-    separator: {
-        height: 0.4,
-        backgroundColor: themeColor('separator')
-    },
-    button: {
-        paddingTop: 15,
-        paddingBottom: 10
-    },
-    rightSubtitleStyle: {
-        color: themeColor('secondaryText')
-    }
-});

@@ -10,6 +10,7 @@ export default class FeeStore {
     @observable public earnedDuringTimeframe: number = 0;
     @observable public channelFees: any = {};
     @observable public dataFrame: any = {};
+    @observable public recommendedFees: any = {};
     @observable public loading: boolean = false;
     @observable public error: boolean = false;
     @observable public setFeesError: boolean = false;
@@ -50,6 +51,32 @@ export default class FeeStore {
             })
             .catch(() => {
                 this.dataFrame = {};
+                this.loading = false;
+            });
+    };
+
+    @action
+    public getOnchainFeesviaMempool = () => {
+        this.loading = true;
+        this.error = false;
+        this.recommendedFees = {};
+        RNFetchBlob.fetch(
+            'get',
+            'https://mempool.space/api/v1/fees/recommended'
+        )
+            .then((response: any) => {
+                const status = response.info().status;
+                if (status == 200) {
+                    this.loading = false;
+                    this.recommendedFees = response.json();
+                } else {
+                    this.recommendedFees = {};
+                    this.loading = false;
+                    this.error = true;
+                }
+            })
+            .catch(() => {
+                this.recommendedFees = {};
                 this.loading = false;
             });
     };
@@ -98,7 +125,7 @@ export default class FeeStore {
 
         const data: any = {
             base_fee_msat: `${Number(newBaseFee) * 1000}`,
-            fee_rate: `${Number(newFeeRate) / 1000}`,
+            fee_rate: newFeeRate,
             time_lock_delta: timeLockDelta
         };
 
