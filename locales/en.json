@@ -117,6 +117,7 @@
     "views.Settings.CertInstallInstructions.graph3": "Alternatively, you can provision a profile with the certificate for your phone in XCode.",
     "views.Settings.CertInstallInstructions.graph4": "You can access the certificate at any time in Settings > General > Profiles and remove it if required.",
     "views.Settings.CertInstallInstructions.graph5": "If you're connecting to your node via an external hostname or via Tor you must add the hostname to the certificate. lnd provides an option to do this with the TLSExtraDomain option in its config. You'll have to delete and regenerate the certificate after you make the change.",
+    "views.Settings.Nodes.title": "Nodes",
     "views.Settings.Nodes.noNodes": "No Nodes",
     "views.Settings.Nodes.add": "Add a new node",
     "views.ImportAccount.title": "Import account",
