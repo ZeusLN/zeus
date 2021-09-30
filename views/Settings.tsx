@@ -5,7 +5,7 @@ import {
     TextInput,
     View,
     ScrollView,
-    TouchableWithoutFeedback
+    TouchableOpacity
 } from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
@@ -247,9 +247,7 @@ export default class Settings extends React.Component<
                         SettingsStore={SettingsStore}
                     />
                 </View> */}
-                <TouchableWithoutFeedback
-                    onPress={() => navigation.navigate('AddEditNode')}
-                >
+                <TouchableOpacity onPress={() => navigation.navigate('Nodes')}>
                     <View
                         style={{
                             backgroundColor: '#31363F',
@@ -303,7 +301,7 @@ export default class Settings extends React.Component<
                             Mainnet over Tor
                         </Text>
                     </View>
-                </TouchableWithoutFeedback>
+                </TouchableOpacity>
 
                 <View
                     style={{
@@ -733,7 +731,8 @@ const styles = StyleSheet.create({
     },
     ForwardArrow: {
         flex: 1,
-        alignItems: 'flex-end'
+        alignItems: 'flex-end',
+        padding: 6
     },
     form: {
         paddingTop: 20,
