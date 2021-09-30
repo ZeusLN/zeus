@@ -6,12 +6,13 @@ import * as ES from './../locales/es.json';
 import * as PTBR from './../locales/pt_BR.json';
 import * as SK from './../locales/sk.json';
 import * as TR from './../locales/tr.json';
+import * as HU from './../locales/hu.json';
+import * as ZHCN from './../locales/zh_CN.json';
 // in progress
 import * as FA from './../locales/fa.json';
 import * as EL from './../locales/el.json';
 import * as FR from './../locales/fr.json';
 import * as NL from './../locales/nl.json';
-import * as HU from './../locales/hu.json';
 
 const English: any = EN;
 const Czech: any = CS;
@@ -25,6 +26,7 @@ const Greek: any = EL;
 const French: any = FR;
 const Dutch: any = NL;
 const Hungarian: any = HU;
+const SimplifiedChinese: any = ZHCN;
 
 export function localeString(localeString: string): any {
     const { settings } = stores.settingsStore;
@@ -51,8 +53,10 @@ export function localeString(localeString: string): any {
             return French[localeString] || English[localeString];
         case 'Nederlands':
             return Dutch[localeString] || English[localeString];
-        case 'Hungarian':
+        case 'magyar nyelv':
             return Hungarian[localeString] || English[localeString];
+        case '简化字':
+            return SimplifiedChinese[localeString] || English[localeString];
         default:
             return English[localeString];
     }
