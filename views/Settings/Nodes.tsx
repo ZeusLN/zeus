@@ -1,12 +1,13 @@
 import * as React from 'react';
 import { FlatList, View } from 'react-native';
-import { Avatar, Button, ListItem } from 'react-native-elements';
+import { Avatar, Button, Header, Icon, ListItem } from 'react-native-elements';
 import SettingsStore from './../../stores/SettingsStore';
 import Identicon from 'identicon.js';
 const hash = require('object-hash');
 import PrivacyUtils from './../../utils/PrivacyUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
+import { inject, observer } from 'mobx-react';
 
 interface NodesProps {
     nodes: any[];
@@ -17,6 +18,8 @@ interface NodesProps {
     SettingsStore: SettingsStore;
 }
 
+@inject('SettingsStore')
+@observer
 export default class Nodes extends React.Component<NodesProps, {}> {
     renderSeparator = () => (
         <View
@@ -47,8 +50,30 @@ export default class Nodes extends React.Component<NodesProps, {}> {
             />
         );
 
+        const BackButton = () => (
+            <Icon
+                name="arrow-back"
+                onPress={() => navigation.goBack()}
+                color={themeColor('text')}
+                underlayColor="transparent"
+            />
+        );
+
         return (
-            <View>
+            <View
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background')
+                }}
+            >
+                <Header
+                    leftComponent={<BackButton />}
+                    centerComponent={{
+                        text: localeString('views.Settings.Nodes.title'),
+                        style: { color: themeColor('text') }
+                    }}
+                    backgroundColor={themeColor('secondary')}
+                />
                 {!!nodes && nodes.length > 0 && (
                     <FlatList
                         data={nodes}
@@ -197,7 +222,8 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                             width: 200,
                             alignSelf: 'center',
                             marginBottom: 20,
-                            backgroundColor: 'crimson'
+                            backgroundColor: 'crimson',
+                            top: 20
                         }}
                         onPress={() =>
                             navigation.navigate('AddEditNode', {
