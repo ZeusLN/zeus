@@ -34,7 +34,14 @@ export default class ActivityFilter extends React.Component<
         workingEndDate: undefined
     };
 
-    renderSeparator = () => <View style={styles.separator} />;
+    renderSeparator = () => (
+        <View
+            style={{
+                height: 0.4,
+                backgroundColor: themeColor('separator')
+            }}
+        />
+    );
 
     render() {
         const { navigation, ActivityStore } = this.props;
@@ -126,12 +133,22 @@ export default class ActivityFilter extends React.Component<
             <>
                 <>
                     {startDate && (
-                        <Text style={styles.text}>{`${localeString(
+                        <Text
+                            style={{
+                                ...styles.text,
+                                color: themeColor('text')
+                            }}
+                        >{`${localeString(
                             'views.ActivityFilter.startDate'
                         )}: ${startDate.toString()}`}</Text>
                     )}
                     {endDate && (
-                        <Text style={styles.text}>{`${localeString(
+                        <Text
+                            style={{
+                                ...styles.text,
+                                color: themeColor('text')
+                            }}
+                        >{`${localeString(
                             'views.ActivityFilter.endDate'
                         )}: ${endDate.toString()}`}</Text>
                     )}
@@ -232,7 +249,13 @@ export default class ActivityFilter extends React.Component<
         ];
 
         return (
-            <View style={styles.view}>
+            <View
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background'),
+                    color: themeColor('text')
+                }}
+            >
                 <Header
                     leftComponent={<CloseButton />}
                     centerComponent={{
@@ -309,18 +332,8 @@ export default class ActivityFilter extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    view: {
-        flex: 1,
-        backgroundColor: themeColor('background'),
-        color: themeColor('text')
-    },
     text: {
-        color: themeColor('text'),
         paddingTop: 30
-    },
-    separator: {
-        height: 0.4,
-        backgroundColor: themeColor('separator')
     },
     button: {
         paddingTop: 15,

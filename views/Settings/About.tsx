@@ -26,7 +26,13 @@ export default class About extends React.Component<AboutProps, {}> {
         );
 
         return (
-            <ScrollView style={styles.scrollView}>
+            <ScrollView
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background'),
+                    color: themeColor('text')
+                }}
+            >
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -35,14 +41,16 @@ export default class About extends React.Component<AboutProps, {}> {
                     }}
                     backgroundColor="black"
                 />
-                <Text style={styles.textLarge}>
+                <Text
+                    style={{ ...styles.textLarge, color: themeColor('text') }}
+                >
                     {localeString('views.Settings.About.version')}:{' '}
                     {playStore ? `v${version}-play` : `v${version}`}
                 </Text>
-                <Text style={styles.text}>
+                <Text style={{ ...styles.text, color: themeColor('text') }}>
                     {localeString('views.Settings.About.gpl')}
                 </Text>
-                <Text style={styles.text}>
+                <Text style={{ ...styles.text, color: themeColor('text') }}>
                     {localeString('views.Settings.About.thanks')}: the Human
                     Rights Foundation, Matt Odell, Jameson Lopp, fiatjaf, Suheb,
                     shesek, k3tan, __B__T__C__, gabidi, Sifir Apps, Zap, Blue
@@ -50,7 +58,7 @@ export default class About extends React.Component<AboutProps, {}> {
                     {`${localeString('views.Settings.About.and')} `}
                     Lightning Labs.
                 </Text>
-                <Text style={styles.text}>
+                <Text style={{ ...styles.text, color: themeColor('text') }}>
                     {localeString('views.Settings.About.created')}
                 </Text>
                 <View style={styles.button}>
@@ -138,19 +146,12 @@ export default class About extends React.Component<AboutProps, {}> {
 }
 
 const styles = StyleSheet.create({
-    scrollView: {
-        flex: 1,
-        backgroundColor: themeColor('background'),
-        color: themeColor('text')
-    },
     text: {
         fontSize: 15,
-        color: themeColor('text'),
         padding: 12
     },
     textLarge: {
         fontSize: 20,
-        color: themeColor('text'),
         padding: 12
     },
     button: {

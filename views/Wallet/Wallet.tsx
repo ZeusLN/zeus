@@ -271,7 +271,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                         let iconName;
 
                                         if (route.name === 'Wallet') {
-                                            return <WalletIcon fill={color} />;
+                                            return <WalletIcon color={color} />;
                                         }
                                         if (route.name === scanAndSend) {
                                             return (

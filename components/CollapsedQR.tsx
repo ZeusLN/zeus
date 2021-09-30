@@ -46,7 +46,16 @@ export default class CollapsedQR extends React.Component<
 
         return (
             <React.Fragment>
-                {!hideText && <Text style={styles.value}>{value}</Text>}
+                {!hideText && (
+                    <Text
+                        style={{
+                            ...styles.value,
+                            color: themeColor('secondaryText')
+                        }}
+                    >
+                        {value}
+                    </Text>
+                )}
                 {!collapsed && (
                     <View style={styles.qrPadding}>
                         <QRCode value={value} size={350} logo={secondaryLogo} />
@@ -85,7 +94,6 @@ export default class CollapsedQR extends React.Component<
 const styles = StyleSheet.create({
     value: {
         marginBottom: 15,
-        color: themeColor('secondaryText'),
         paddingLeft: 20
     },
     qrPadding: {
