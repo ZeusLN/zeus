@@ -46,7 +46,7 @@ or
 - [x] LNURL-Withdraw
 - [x] LNURL-Auth
 - [x] LNURL-Channel
-- [x] Passphrase security 
+- [x] Passphrase security
 - [x] Hide sensitive data mode
 - [x] Fiat currency integrations
 - [x] [Various language support](https://www.transifex.com/ZeusLN/zeus/)
@@ -54,7 +54,7 @@ or
 - [ ] PIN security (redesign)
 - [ ] Sign and verify message (redesign)
 - [ ] External signer support (redesign)
-- [ ] Contact list for easier payments 
+- [ ] Contact list for easier payments
 
 ## Connecting Zeus to your node
 
@@ -126,7 +126,11 @@ Do not directly modify the files in `/locales` unless you are adding new copy to
 
 ## Release + Commit Verification
 
-All releases and all maintainer commits as of January 24, 2020 are signed by key `989CC718EBA8BB68` (zeusln@tutanota.com). The key can be found [in this repo](https://github.com/ZeusLN/zeus/blob/master/PGP.txt) and [on the ZeusLN.app website](https://zeusln.app/PGP.txt).
+All releases and all maintainer commits as of October 20, 2021 are signed by key `AAC48DE8AB8DEE84` (zeusln@tutanota.com). The key can be found [in this repo](https://github.com/ZeusLN/zeus/blob/master/PGP.txt) and [on the ZeusLN.app website](https://zeusln.app/PGP.txt).
+
+
+### Past Keys
+`989CC718EBA8BB68` (January 24, 2020 - October 19, 2021)
 
 ## Donations
 
