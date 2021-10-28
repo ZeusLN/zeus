@@ -245,7 +245,11 @@ export default class LND {
     getNodeInfo = (urlParams?: Array<string>) =>
         this.getRequest(`/v1/graph/node/${urlParams && urlParams[0]}`);
     getFees = () => this.getRequest('/v1/fees');
-    setFees = (data: any) => this.postRequest('/v1/chanpolicy', data);
+    setFees = (data: any) => {
+        const request = { ...data };
+        request.fee_rate = `${Number(data.fee_rate) / 100}`;
+        return this.postRequest('/v1/chanpolicy', data);
+    };
     getRoutes = (urlParams?: Array<string>) =>
         this.getRequest(
             `/v1/graph/routes/${urlParams && urlParams[0]}/${urlParams &&
