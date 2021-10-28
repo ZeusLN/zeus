@@ -426,7 +426,7 @@ export default class AddEditNode extends React.Component<
         );
 
         const NodeInterface = () => (
-            <>
+            <View style={styles.nodeInterface}>
                 {Platform.OS !== 'ios' && (
                     <View>
                         <Text style={{ color: themeColor('secondaryText') }}>
@@ -473,7 +473,7 @@ export default class AddEditNode extends React.Component<
 
                 {Platform.OS === 'ios' && (
                     <View>
-                        <Text style={{ color: themeColor('text') }}>
+                        <Text style={{ color: themeColor('secondaryText') }}>
                             {localeString(
                                 'views.Settings.AddEditNode.nodeInterface'
                             )}
@@ -535,7 +535,7 @@ export default class AddEditNode extends React.Component<
                         </TouchableOpacity>
                     </View>
                 )}
-            </>
+            </View>
         );
 
         return (
@@ -744,7 +744,7 @@ export default class AddEditNode extends React.Component<
                     </View>
                 </Modal>
 
-                <View style={{ height: 200 }}>
+                {false && <View style={{ height: 200 }}>
                     <View style={{ alignItems: 'center', top: 40 }}>
                         <NodeIcon />
                     </View>
@@ -805,7 +805,7 @@ export default class AddEditNode extends React.Component<
                             </Text>
                         </View>}
                     </View>
-                </View>
+                </View>}
 
                 <ScrollView style={{ flex: 1, padding: 15 }}>
                     <View style={styles.form}>
@@ -1387,12 +1387,13 @@ export default class AddEditNode extends React.Component<
 const styles = StyleSheet.create({
     textInput: {
         fontSize: 20,
-        width: '90%',
+        width: '100%',
         height: 60,
         top: 10,
         backgroundColor: '#31363F',
         borderRadius: 6,
-        marginBottom: 20
+        marginBottom: 20,
+        paddingLeft: 5
     },
     error: {
         color: 'red'
@@ -1400,7 +1401,8 @@ const styles = StyleSheet.create({
     form: {
         paddingTop: 20,
         paddingLeft: 5,
-        paddingRight: 5
+        paddingRight: 5,
+        width: '100%',
     },
     pickerWrapper: {
         paddingLeft: 5,
@@ -1440,5 +1442,9 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginTop: 22
+    },
+    nodeInterface: {
+        paddingTop: 10,
+        paddingBottom: 10
     }
 });
