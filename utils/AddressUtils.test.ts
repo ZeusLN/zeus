@@ -284,6 +284,42 @@ describe('AddressUtils', () => {
             });
         });
 
+        describe('isValidLightningAddress', () => {
+            it('validates LNURLPay Lightning Addresses properly', () => {
+                expect(
+                    AddressUtils.isValidLightningAddress('lnaddress@zbd.gg')
+                ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'notzeuslnaddress@payaddress.co'
+                    )
+                ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'evankaloudis@ln.twitter.com'
+                    )
+                ).toBeTruthy();
+            });
+
+            it("rejects LNURLPay Lightning Addresses with ports - let's not mix this up with nodes", () => {
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'lnaddress@zbd.gg:31337'
+                    )
+                ).toBeFalsy();
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'notzeuslnaddress@payaddress.co:8008'
+                    )
+                ).toBeFalsy();
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'dontacceptports@payaddress.co:9735'
+                    )
+                ).toBeFalsy();
+            });
+        });
+
         describe('processLNDHubAddress', () => {
             it('processes LNDHub account addreses properly', () => {
                 expect(

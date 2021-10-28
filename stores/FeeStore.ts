@@ -125,7 +125,7 @@ export default class FeeStore {
 
         const data: any = {
             base_fee_msat: `${Number(newBaseFee) * 1000}`,
-            fee_rate: `${Number(newFeeRate) / 1000}`,
+            fee_rate: newFeeRate,
             time_lock_delta: timeLockDelta
         };
 
