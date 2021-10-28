@@ -21,6 +21,7 @@ import InvoicesStore from './../stores/InvoicesStore';
 import SettingsStore from './../stores/SettingsStore';
 import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
 import FiatStore from './../stores/FiatStore';
+import NewAddressButton from '../components/NewAddressButton';
 
 interface ReceiveProps {
     exitSetup: any;
@@ -77,11 +78,6 @@ export default class Receive extends React.Component<
             });
         }
     }
-
-    getNewAddress = () => {
-        const { SettingsStore } = this.props;
-        SettingsStore.getNewAddress();
-    };
 
     updateIndex = (selectedIndex: number) => {
         const { InvoicesStore } = this.props;
@@ -497,27 +493,7 @@ export default class Receive extends React.Component<
                             )}
                             {!(implementation === 'lndhub' && address) && (
                                 <View style={styles.button}>
-                                    <Button
-                                        title={
-                                            implementation === 'lndhub'
-                                                ? localeString(
-                                                      'views.Receive.getAddress'
-                                                  )
-                                                : localeString(
-                                                      'views.Receive.getNewAddress'
-                                                  )
-                                        }
-                                        icon={{
-                                            name: 'fiber-new',
-                                            size: 25,
-                                            color: 'white'
-                                        }}
-                                        onPress={() => this.getNewAddress()}
-                                        buttonStyle={{
-                                            backgroundColor: 'orange',
-                                            borderRadius: 30
-                                        }}
-                                    />
+                                    <NewAddressButton />
                                 </View>
                             )}
                         </React.Fragment>
