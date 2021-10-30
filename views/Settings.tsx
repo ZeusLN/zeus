@@ -1,22 +1,11 @@
 import * as React from 'react';
-import {
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
-    ScrollView,
-    TouchableOpacity
-} from 'react-native';
-import { Button, Header, Icon } from 'react-native-elements';
+import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { Avatar, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import Nodes from './Settings/Nodes';
 import PrivacyUtils from './../utils/PrivacyUtils';
-import RESTUtils from './../utils/RESTUtils';
-import DropdownSetting from './../components/DropdownSetting';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 import ForwardIcon from '../images/SVG/Caret Right-3.svg';
-import NodeIcon from '../images/SVG/NodeIcon.svg';
 import AccountIcon from '../images/SVG/Wallet2.svg';
 import ContactIcon from '../images/SVG/PeersContact.svg';
 import PrivacyIcon from '../images/SVG/Eye On.svg';
@@ -25,9 +14,10 @@ import SignIcon from '../images/SVG/Pen.svg';
 import BitcoinIcon from '../images/SVG/Bitcoin.svg';
 import LanguageIcon from '../images/SVG/Globe.svg';
 import HelpIcon from '../images/SVG/Help Icon.svg';
+import Identicon from 'identicon.js';
+const hash = require('object-hash');
 
 import SettingsStore, {
-    LOCALE_KEYS,
     DEFAULT_THEME,
     DEFAULT_FIAT,
     DEFAULT_LOCALE
@@ -181,25 +171,12 @@ export default class Settings extends React.Component<
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const {
-            saved,
-            theme,
-            lurkerMode,
-            nodes,
-            passphrase,
-            passphraseConfirm,
-            passphraseError,
-            showPassphraseForm,
-            fiat,
-            locale
-        } = this.state;
-        const { loading, settings } = SettingsStore;
-        const selectedNode = settings.selectedNode;
-
-        const themes: any = {
-            dark: 'Dark Theme',
-            light: 'Light Theme'
-        };
+        const { settings } = SettingsStore;
+        const selectedNode: any =
+            (settings &&
+                settings.nodes &&
+                settings.nodes[settings.selectedNode || 0]) ||
+            null;
 
         const BackButton = () => (
             <Icon
@@ -210,7 +187,45 @@ export default class Settings extends React.Component<
             />
         );
 
-        const lurkerLabel = `Lurking ${PrivacyUtils.getLover()} Mode: hides sensitive values`;
+        // const lurkerLabel = `Lurking ${PrivacyUtils.getLover()} Mode: hides sensitive values`;
+
+        const displayName =
+            selectedNode.implementation === 'lndhub'
+                ? selectedNode.lndhubUrl
+                      .replace('https://', '')
+                      .replace('http://', '')
+                : selectedNode.url
+                ? selectedNode.url
+                      .replace('https://', '')
+                      .replace('http://', '')
+                : selectedNode.port
+                ? `${selectedNode.host}:${selectedNode.port}`
+                : selectedNode.host || 'Unknown';
+
+        const title = PrivacyUtils.sensitiveValue(displayName, 8);
+        // const implementation = PrivacyUtils.sensitiveValue(
+        //     selectedNode.implementation || 'lnd',
+        //     8
+        // );
+
+        const data = new Identicon(
+            hash.sha1(
+                selectedNode.implementation === 'lndhub'
+                    ? `${title}-${selectedNode.username}`
+                    : title
+            ),
+            255
+        ).toString();
+
+        const Node = (balanceImage: string) => (
+            <Avatar
+                source={{
+                    uri: balanceImage
+                }}
+                rounded
+                size="medium"
+            />
+        );
 
         return (
             <View
@@ -227,32 +242,24 @@ export default class Settings extends React.Component<
                     }}
                     backgroundColor={themeColor('secondary')}
                 />
-                {passphraseError && (
-                    <Text
-                        style={{
-                            color: 'red',
-                            textAlign: 'center',
-                            padding: 20
-                        }}
-                    >
-                        Passphrases do not match
-                    </Text>
-                )}
-                {/* <View style={styles.form}>
-                    <Nodes
-                        nodes={nodes}
-                        navigation={navigation}
-                        loading={loading}
-                        selectedNode={selectedNode}
-                        SettingsStore={SettingsStore}
-                    />
-                </View> */}
+                {
+                    // {passphraseError && (
+                    //     <Text
+                    //         style={{
+                    //             color: 'red',
+                    //             textAlign: 'center',
+                    //             padding: 20
+                    //         }}
+                    //     >
+                    //         Passphrases do not match
+                    //     </Text>
+                }
                 <TouchableOpacity onPress={() => navigation.navigate('Nodes')}>
                     <View
                         style={{
                             backgroundColor: '#31363F',
                             width: '90%',
-                            height: 90,
+                            height: 70,
                             borderRadius: 10,
                             alignSelf: 'center',
                             top: 40
@@ -266,18 +273,17 @@ export default class Settings extends React.Component<
                                 marginLeft: 28
                             }}
                         >
-                            <View>
-                                <NodeIcon />
+                            <View style={{ padding: 0 }}>
+                                {Node(`data:image/png;base64,${data}`)}
                             </View>
                             <Text
                                 style={{
                                     fontSize: 20,
                                     color: '#FFFFFF',
-                                    left: '30%',
-                                    top: 10
+                                    paddingLeft: 30
                                 }}
                             >
-                                My LND Node
+                                {displayName}
                             </Text>
                             <View
                                 style={{
@@ -294,8 +300,8 @@ export default class Settings extends React.Component<
                                 fontSize: 16,
                                 color: '#FFFFFF',
                                 opacity: 0.6,
-                                left: '30%',
-                                top: -20
+                                top: -10,
+                                paddingLeft: 109
                             }}
                         >
                             Mainnet over Tor
@@ -719,7 +725,8 @@ const styles = StyleSheet.create({
         left: '30%',
         position: 'absolute',
         marginLeft: -55,
-        marginTop: 2
+        padding: 6,
+        flex: 1
     },
     separationLine: {
         left: '30%',

@@ -21,7 +21,6 @@ import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 import CollapsedQR from './../../components/CollapsedQR';
 import SettingsStore from './../../stores/SettingsStore';
-import NodeIcon from './../../images/SVG/NodeIcon.svg';
 
 interface AddEditNodeProps {
     navigation: any;
@@ -744,68 +743,76 @@ export default class AddEditNode extends React.Component<
                     </View>
                 </Modal>
 
-                {false && <View style={{ height: 200 }}>
-                    <View style={{ alignItems: 'center', top: 40 }}>
-                        <NodeIcon />
-                    </View>
-                    <Text
-                        style={{
-                            alignSelf: 'center',
-                            top: 50,
-                            fontSize: 23,
-                            color: themeColor('text')
-                        }}
-                    >
-                        {nickname ? nickname : host ? `${host}:${port}` : ''}
-                    </Text>
-                    <View
-                        style={{
-                            flex: 1,
-                            flexDirection: 'row',
-                            justifyContent: 'center',
-                            top: 60
-                        }}
-                    >
-                        {false && <View
+                {false && (
+                    <View style={{ height: 200 }}>
+                        <View style={{ alignItems: 'center', top: 40 }}></View>
+                        <Text
                             style={{
-                                backgroundColor: '#FFB040',
-                                height: 26,
-                                width: 70,
-                                borderRadius: 8,
-                                right: 5
+                                alignSelf: 'center',
+                                top: 50,
+                                fontSize: 23,
+                                color: themeColor('text')
                             }}
                         >
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    alignSelf: 'center',
-                                    padding: 2
-                                }}
-                            >
-                                Mainnet
-                            </Text>
-                        </View>}
-                        {enableTor && <View
+                            {nickname
+                                ? nickname
+                                : host
+                                ? `${host}:${port}`
+                                : ''}
+                        </Text>
+                        <View
                             style={{
-                                backgroundColor: '#8A3ABD',
-                                height: 26,
-                                width: 70,
-                                borderRadius: 8,
-                                left: 5
+                                flex: 1,
+                                flexDirection: 'row',
+                                justifyContent: 'center',
+                                top: 60
                             }}
                         >
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    alignSelf: 'center',
-                                    padding: 2
-                                }}
-                            >
-                                Tor
-                            </Text>
-                        </View>}
+                            {false && (
+                                <View
+                                    style={{
+                                        backgroundColor: '#FFB040',
+                                        height: 26,
+                                        width: 70,
+                                        borderRadius: 8,
+                                        right: 5
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            alignSelf: 'center',
+                                            padding: 2
+                                        }}
+                                    >
+                                        Mainnet
+                                    </Text>
+                                </View>
+                            )}
+                            {enableTor && (
+                                <View
+                                    style={{
+                                        backgroundColor: '#8A3ABD',
+                                        height: 26,
+                                        width: 70,
+                                        borderRadius: 8,
+                                        left: 5
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            alignSelf: 'center',
+                                            padding: 2
+                                        }}
+                                    >
+                                        Tor
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
                     </View>
-                </View>}
+                )}
 
                 <ScrollView style={{ flex: 1, padding: 15 }}>
                     <View style={styles.form}>
@@ -828,7 +835,11 @@ export default class AddEditNode extends React.Component<
                             )}
 
                         <View>
-                            <Text style={{ color: themeColor('secondaryText') }}>Nickname</Text>
+                            <Text
+                                style={{ color: themeColor('secondaryText') }}
+                            >
+                                Nickname
+                            </Text>
                             <TextInput
                                 placeholder={'My lightning node'}
                                 value={nickname}
@@ -853,7 +864,11 @@ export default class AddEditNode extends React.Component<
                         {(implementation === 'spark' ||
                             implementation == 'eclair') && (
                             <>
-                                <Text style={{ color: themeColor('secondaryText') }}>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
                                     {localeString(
                                         'views.Settings.AddEditNode.host'
                                     )}
@@ -880,7 +895,9 @@ export default class AddEditNode extends React.Component<
                                     <>
                                         <Text
                                             style={{
-                                                color: themeColor('secondaryText')
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
                                             }}
                                         >
                                             {localeString(
@@ -910,7 +927,9 @@ export default class AddEditNode extends React.Component<
                                     <>
                                         <Text
                                             style={{
-                                                color: themeColor('secondaryText')
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
                                             }}
                                         >
                                             {localeString(
@@ -940,7 +959,11 @@ export default class AddEditNode extends React.Component<
                         )}
                         {implementation === 'lndhub' && (
                             <>
-                                <Text style={{ color: themeColor('secondaryText') }}>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
                                     {localeString(
                                         'views.Settings.AddEditNode.host'
                                     )}
@@ -985,7 +1008,9 @@ export default class AddEditNode extends React.Component<
                                     <>
                                         <Text
                                             style={{
-                                                color: themeColor('secondaryText')
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
                                             }}
                                         >
                                             {localeString(
@@ -1012,7 +1037,9 @@ export default class AddEditNode extends React.Component<
 
                                         <Text
                                             style={{
-                                                color: themeColor('secondaryText')
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
                                             }}
                                         >
                                             {localeString(
@@ -1062,7 +1089,11 @@ export default class AddEditNode extends React.Component<
                         {(implementation === 'lnd' ||
                             implementation === 'c-lightning-REST') && (
                             <>
-                                <Text style={{ color: themeColor('secondaryText') }}>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
                                     {localeString(
                                         'views.Settings.AddEditNode.host'
                                     )}
@@ -1085,7 +1116,11 @@ export default class AddEditNode extends React.Component<
                                     placeholderTextColor="gray"
                                 />
 
-                                <Text style={{ color: themeColor('secondaryText') }}>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
                                     {localeString(
                                         'views.Settings.AddEditNode.restPort'
                                     )}
@@ -1109,7 +1144,11 @@ export default class AddEditNode extends React.Component<
                                     placeholderTextColor="gray"
                                 />
 
-                                <Text style={{ color: themeColor('secondaryText') }}>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
                                     {localeString(
                                         'views.Settings.AddEditNode.macaroon'
                                     )}
@@ -1402,7 +1441,7 @@ const styles = StyleSheet.create({
         paddingTop: 20,
         paddingLeft: 5,
         paddingRight: 5,
-        width: '100%',
+        width: '100%'
     },
     pickerWrapper: {
         paddingLeft: 5,
