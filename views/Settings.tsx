@@ -17,11 +17,12 @@ import HelpIcon from '../images/SVG/Help Icon.svg';
 import Identicon from 'identicon.js';
 const hash = require('object-hash');
 
-import SettingsStore, {
-    DEFAULT_THEME,
-    DEFAULT_FIAT,
-    DEFAULT_LOCALE
-} from './../stores/SettingsStore';
+// import SettingsStore, {
+//     DEFAULT_THEME,
+//     DEFAULT_FIAT,
+//     DEFAULT_LOCALE
+// } from './../stores/SettingsStore';
+import SettingsStore from './../stores/SettingsStore';
 import UnitsStore from './../stores/UnitsStore';
 
 interface SettingsProps {
@@ -30,144 +31,20 @@ interface SettingsProps {
     UnitsStore: UnitsStore;
 }
 
-interface SettingsState {
-    nodes: any[];
-    theme: string;
-    lurkerMode: boolean;
-    saved: boolean;
-    loading: boolean;
-    passphrase: string;
-    passphraseConfirm: string;
-    passphraseError: boolean;
-    showPassphraseForm: boolean;
-    fiat: string;
-    locale: string;
-}
-
 @inject('SettingsStore', 'UnitsStore')
 @observer
-export default class Settings extends React.Component<
-    SettingsProps,
-    SettingsState
-> {
-    isComponentMounted: boolean = false;
-
-    state = {
-        nodes: [],
-        theme: DEFAULT_THEME,
-        lurkerMode: false,
-        saved: false,
-        loading: false,
-        passphrase: '',
-        passphraseConfirm: '',
-        passphraseError: false,
-        showPassphraseForm: false,
-        fiat: DEFAULT_FIAT,
-        locale: DEFAULT_LOCALE
-    };
-
+export default class Settings extends React.Component<SettingsProps, {}> {
     componentDidMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
         this.refreshSettings();
-
-        this.isComponentMounted = true;
-
-        if (settings) {
-            this.setState({
-                nodes: settings.nodes || [],
-                theme: settings.theme || DEFAULT_THEME,
-                lurkerMode: settings.lurkerMode || false,
-                passphrase: settings.passphrase || '',
-                passphraseConfirm: settings.passphrase || '',
-                fiat: settings.fiat || DEFAULT_FIAT,
-                locale: settings.locale || DEFAULT_LOCALE
-            });
-        }
     }
 
-    UNSAFE_componentWillReceiveProps = (newProps: any) => {
-        const { SettingsStore } = newProps;
-        const { settings } = SettingsStore;
+    UNSAFE_componentWillReceiveProps = () => {
         this.refreshSettings();
-
-        if (settings) {
-            this.setState({
-                nodes: settings.nodes || [],
-                theme: settings.theme || 'dark',
-                lurkerMode: settings.lurkerMode || false,
-                passphrase: settings.passphrase || '',
-                passphraseConfirm: settings.passphrase || '',
-                fiat: settings.fiat || DEFAULT_FIAT,
-                locale: settings.locale || DEFAULT_LOCALE
-            });
-        }
     };
-
-    componentWillUnmount() {
-        this.isComponentMounted = false;
-    }
 
     async refreshSettings() {
-        this.setState({
-            loading: true
-        });
-        await this.props.SettingsStore.getSettings().then(() => {
-            this.setState({
-                loading: false
-            });
-        });
+        await this.props.SettingsStore.getSettings();
     }
-
-    saveSettings = () => {
-        const { SettingsStore, UnitsStore } = this.props;
-        const {
-            nodes,
-            theme,
-            lurkerMode,
-            passphrase,
-            passphraseConfirm,
-            fiat,
-            locale
-        } = this.state;
-        const { setSettings, settings } = SettingsStore;
-
-        if (passphrase !== passphraseConfirm) {
-            this.setState({
-                passphraseError: true
-            });
-
-            return;
-        }
-
-        UnitsStore.resetUnits();
-
-        setSettings(
-            JSON.stringify({
-                nodes,
-                theme,
-                lurkerMode,
-                passphrase,
-                fiat,
-                locale,
-                onChainAddress: settings.onChainAddress
-            })
-        );
-
-        this.setState({
-            saved: true
-        });
-
-        this.refreshSettings();
-
-        setTimeout(() => {
-            if (this.isComponentMounted) {
-                this.setState({
-                    saved: false
-                });
-            }
-        }, 5000);
-    };
 
     render() {
         const { navigation, SettingsStore } = this.props;
@@ -405,7 +282,10 @@ export default class Settings extends React.Component<
                     </View>
 
                     <View style={styles.separationLine} />
-                    <View style={styles.columnField}>
+                    <TouchableOpacity
+                        style={styles.columnField}
+                        onPress={() => navigation.navigate('Language')}
+                    >
                         <View>
                             <LanguageIcon />
                         </View>
@@ -413,7 +293,7 @@ export default class Settings extends React.Component<
                         <View style={styles.ForwardArrow}>
                             <ForwardIcon />
                         </View>
-                    </View>
+                    </TouchableOpacity>
                 </View>
                 <View
                     style={{
@@ -446,15 +326,6 @@ export default class Settings extends React.Component<
                 >
                     Zeus version 0.5.2
                 </Text>
-
-                {/* <DropdownSetting
-                    title={localeString('views.Settings.locale')}
-                    selectedValue={locale}
-                    onValueChange={(value: string) =>
-                        this.setState({ locale: value })
-                    }
-                    values={LOCALE_KEYS}
-                /> */}
 
                 {/* <DropdownSetting
                     title={localeString('views.Settings.fiatRate')}
