@@ -71,6 +71,12 @@ export const CURRENCY_KEYS = [
     { key: 'TWD', value: 'TWD' }
 ];
 
+export const THEME_KEYS = [
+    { key: 'Dark', value: 'dark' },
+    { key: 'Light', value: 'light' },
+    { key: 'Junkie', value: 'junkie' }
+];
+
 export const DEFAULT_THEME = 'dark';
 export const DEFAULT_FIAT = 'Disabled';
 export const DEFAULT_LOCALE = 'English';

@@ -1,19 +1,25 @@
 import * as React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import {
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+    TouchableOpacity
+} from 'react-native';
 import { Avatar, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import PrivacyUtils from './../utils/PrivacyUtils';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
-import ForwardIcon from '../images/SVG/Caret Right-3.svg';
-import AccountIcon from '../images/SVG/Wallet2.svg';
-import ContactIcon from '../images/SVG/PeersContact.svg';
-import PrivacyIcon from '../images/SVG/Eye On.svg';
-import SecurityIcon from '../images/SVG/Lock.svg';
-import SignIcon from '../images/SVG/Pen.svg';
-import BitcoinIcon from '../images/SVG/Bitcoin.svg';
-import LanguageIcon from '../images/SVG/Globe.svg';
-import HelpIcon from '../images/SVG/Help Icon.svg';
+import PrivacyUtils from './../../utils/PrivacyUtils';
+import { localeString } from './../../utils/LocaleUtils';
+import { themeColor } from './../../utils/ThemeUtils';
+import ForwardIcon from '../../images/SVG/Caret Right-3.svg';
+import AccountIcon from '../../images/SVG/Wallet2.svg';
+import ContactIcon from '../../images/SVG/PeersContact.svg';
+import PrivacyIcon from '../../images/SVG/Eye On.svg';
+import SecurityIcon from '../../images/SVG/Lock.svg';
+import SignIcon from '../../images/SVG/Pen.svg';
+import BitcoinIcon from '../../images/SVG/Bitcoin.svg';
+import LanguageIcon from '../../images/SVG/Globe.svg';
+import HelpIcon from '../../images/SVG/Help Icon.svg';
 import Identicon from 'identicon.js';
 const hash = require('object-hash');
 
@@ -131,238 +137,221 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     //         Passphrases do not match
                     //     </Text>
                 }
-                <TouchableOpacity onPress={() => navigation.navigate('Nodes')}>
+                <ScrollView>
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('Nodes')}
+                    >
+                        <View
+                            style={{
+                                backgroundColor: '#31363F',
+                                width: '90%',
+                                height: 70,
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                top: 40
+                            }}
+                        >
+                            <View
+                                style={{
+                                    flex: 1,
+                                    flexDirection: 'row',
+                                    margin: 12,
+                                    marginLeft: 28
+                                }}
+                            >
+                                <View style={{ padding: 0 }}>
+                                    {Node(`data:image/png;base64,${data}`)}
+                                </View>
+                                <Text
+                                    style={{
+                                        fontSize: 20,
+                                        color: '#FFFFFF',
+                                        paddingLeft: 30
+                                    }}
+                                >
+                                    {displayName}
+                                </Text>
+                                <View
+                                    style={{
+                                        flex: 1,
+                                        alignItems: 'flex-end',
+                                        marginTop: 25
+                                    }}
+                                >
+                                    <ForwardIcon />
+                                </View>
+                            </View>
+                            <Text
+                                style={{
+                                    fontSize: 16,
+                                    color: '#FFFFFF',
+                                    opacity: 0.6,
+                                    top: -10,
+                                    paddingLeft: 109
+                                }}
+                            >
+                                Mainnet over Tor
+                            </Text>
+                        </View>
+                    </TouchableOpacity>
+
                     <View
                         style={{
                             backgroundColor: '#31363F',
                             width: '90%',
-                            height: 70,
+                            height: 90,
                             borderRadius: 10,
                             alignSelf: 'center',
-                            top: 40
+                            top: 60
                         }}
                     >
-                        <View
-                            style={{
-                                flex: 1,
-                                flexDirection: 'row',
-                                margin: 12,
-                                marginLeft: 28
-                            }}
-                        >
-                            <View style={{ padding: 0 }}>
-                                {Node(`data:image/png;base64,${data}`)}
+                        <View style={styles.columnField}>
+                            <View>
+                                <AccountIcon />
                             </View>
-                            <Text
-                                style={{
-                                    fontSize: 20,
-                                    color: '#FFFFFF',
-                                    paddingLeft: 30
-                                }}
-                            >
-                                {displayName}
-                            </Text>
-                            <View
-                                style={{
-                                    flex: 1,
-                                    alignItems: 'flex-end',
-                                    marginTop: 25
-                                }}
-                            >
+                            <Text style={styles.columnText}>Accounts</Text>
+                            <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
                             </View>
                         </View>
-                        <Text
-                            style={{
-                                fontSize: 16,
-                                color: '#FFFFFF',
-                                opacity: 0.6,
-                                top: -10,
-                                paddingLeft: 109
-                            }}
+
+                        <View style={styles.separationLine} />
+                        <View style={styles.columnField}>
+                            <View>
+                                <ContactIcon />
+                            </View>
+                            <Text style={styles.columnText}>Contacts</Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon />
+                            </View>
+                        </View>
+                    </View>
+                    <View
+                        style={{
+                            backgroundColor: '#31363F',
+                            width: '90%',
+                            height: 138,
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            top: 80
+                        }}
+                    >
+                        <View style={styles.columnField}>
+                            <View>
+                                <PrivacyIcon />
+                            </View>
+                            <Text style={styles.columnText}>Privacy</Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon />
+                            </View>
+                        </View>
+
+                        <View style={styles.separationLine} />
+                        <View style={styles.columnField}>
+                            <View>
+                                <SecurityIcon />
+                            </View>
+                            <Text style={styles.columnText}>Security</Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon />
+                            </View>
+                        </View>
+
+                        <View style={styles.separationLine} />
+                        <View style={styles.columnField}>
+                            <View>
+                                <SignIcon />
+                            </View>
+                            <Text style={styles.columnText}>
+                                Sign or verify message
+                            </Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon />
+                            </View>
+                        </View>
+                    </View>
+                    <View
+                        style={{
+                            backgroundColor: '#31363F',
+                            width: '90%',
+                            height: 90,
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            top: 100
+                        }}
+                    >
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() => navigation.navigate('Currency')}
                         >
-                            Mainnet over Tor
-                        </Text>
-                    </View>
-                </TouchableOpacity>
+                            <View>
+                                <BitcoinIcon />
+                            </View>
+                            <Text style={styles.columnText}>Currency</Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon />
+                            </View>
+                        </TouchableOpacity>
 
-                <View
-                    style={{
-                        backgroundColor: '#31363F',
-                        width: '90%',
-                        height: 90,
-                        borderRadius: 10,
-                        alignSelf: 'center',
-                        top: 60
-                    }}
-                >
-                    <View style={styles.columnField}>
-                        <View>
-                            <AccountIcon />
-                        </View>
-                        <Text style={styles.columnText}>Accounts</Text>
-                        <View style={styles.ForwardArrow}>
-                            <ForwardIcon />
-                        </View>
+                        <View style={styles.separationLine} />
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() => navigation.navigate('Language')}
+                        >
+                            <View>
+                                <LanguageIcon />
+                            </View>
+                            <Text style={styles.columnText}>Language</Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon />
+                            </View>
+                        </TouchableOpacity>
                     </View>
-
-                    <View style={styles.separationLine} />
-                    <View style={styles.columnField}>
-                        <View>
-                            <ContactIcon />
-                        </View>
-                        <Text style={styles.columnText}>Contacts</Text>
-                        <View style={styles.ForwardArrow}>
-                            <ForwardIcon />
-                        </View>
-                    </View>
-                </View>
-                <View
-                    style={{
-                        backgroundColor: '#31363F',
-                        width: '90%',
-                        height: 138,
-                        borderRadius: 10,
-                        alignSelf: 'center',
-                        top: 80
-                    }}
-                >
-                    <View style={styles.columnField}>
-                        <View>
-                            <PrivacyIcon />
-                        </View>
-                        <Text style={styles.columnText}>Privacy</Text>
-                        <View style={styles.ForwardArrow}>
-                            <ForwardIcon />
-                        </View>
-                    </View>
-
-                    <View style={styles.separationLine} />
-                    <View style={styles.columnField}>
-                        <View>
-                            <SecurityIcon />
-                        </View>
-                        <Text style={styles.columnText}>Security</Text>
-                        <View style={styles.ForwardArrow}>
-                            <ForwardIcon />
-                        </View>
-                    </View>
-
-                    <View style={styles.separationLine} />
-                    <View style={styles.columnField}>
-                        <View>
-                            <SignIcon />
-                        </View>
-                        <Text style={styles.columnText}>
-                            Sign or verify message
-                        </Text>
-                        <View style={styles.ForwardArrow}>
-                            <ForwardIcon />
-                        </View>
-                    </View>
-                </View>
-                <View
-                    style={{
-                        backgroundColor: '#31363F',
-                        width: '90%',
-                        height: 90,
-                        borderRadius: 10,
-                        alignSelf: 'center',
-                        top: 100
-                    }}
-                >
-                    <TouchableOpacity
-                        style={styles.columnField}
-                        onPress={() => navigation.navigate('Currency')}
+                    <View
+                        style={{
+                            backgroundColor: '#31363F',
+                            width: '90%',
+                            height: 45,
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            top: 120
+                        }}
                     >
-                        <View>
-                            <BitcoinIcon />
-                        </View>
-                        <Text style={styles.columnText}>Currency</Text>
-                        <View style={styles.ForwardArrow}>
-                            <ForwardIcon />
-                        </View>
-                    </TouchableOpacity>
-
-                    <View style={styles.separationLine} />
-                    <TouchableOpacity
-                        style={styles.columnField}
-                        onPress={() => navigation.navigate('Language')}
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() => navigation.navigate('Theme')}
+                        >
+                            <View style={{ padding: 5 }}>
+                                <HelpIcon />
+                            </View>
+                            <Text style={styles.columnText}>Theme</Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+                    <View
+                        style={{
+                            backgroundColor: '#31363F',
+                            width: '90%',
+                            height: 45,
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            top: 140
+                        }}
                     >
-                        <View>
-                            <LanguageIcon />
-                        </View>
-                        <Text style={styles.columnText}>Language</Text>
-                        <View style={styles.ForwardArrow}>
-                            <ForwardIcon />
-                        </View>
-                    </TouchableOpacity>
-                </View>
-                <View
-                    style={{
-                        backgroundColor: '#31363F',
-                        width: '90%',
-                        height: 45,
-                        borderRadius: 10,
-                        alignSelf: 'center',
-                        top: 120
-                    }}
-                >
-                    <View style={{ ...styles.columnField }}>
-                        <View style={{ padding: 5 }}>
-                            <HelpIcon />
-                        </View>
-                        <Text style={styles.columnText}>Help</Text>
-                        <View style={styles.ForwardArrow}>
-                            <ForwardIcon />
+                        <View style={styles.columnField}>
+                            <View style={{ padding: 5 }}>
+                                <HelpIcon />
+                            </View>
+                            <Text style={styles.columnText}>Help</Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon />
+                            </View>
                         </View>
                     </View>
-                </View>
-                <Text
-                    style={{
-                        fontSize: 16,
-                        color: '#A7A9AC',
-                        alignSelf: 'center',
-                        bottom: 25,
-                        position: 'absolute'
-                    }}
-                >
-                    Zeus version 0.5.2
-                </Text>
 
-                {/* <DropdownSetting
-                    title={localeString('views.Settings.fiatRate')}
-                    selectedValue={fiat}
-                    onValueChange={(value: string) =>
-                        this.setState({ fiat: value })
-                    }
-                    values={[
-                        { key: 'Disabled', value: 'Disabled' },
-                        { key: 'USD', value: 'USD' },
-                        { key: 'JPY', value: 'JPY' },
-                        { key: 'CNY', value: 'CNY' },
-                        { key: 'SGD', value: 'SGD' },
-                        { key: 'HKD', value: 'HKD' },
-                        { key: 'CAD', value: 'CAD' },
-                        { key: 'NZD', value: 'NZD' },
-                        { key: 'AUD', value: 'AUD' },
-                        { key: 'CLP', value: 'CLP' },
-                        { key: 'GBP', value: 'GBP' },
-                        { key: 'DKK', value: 'DKK' },
-                        { key: 'SEK', value: 'SEK' },
-                        { key: 'ISK', value: 'ISK' },
-                        { key: 'CHF', value: 'CHF' },
-                        { key: 'BRL', value: 'BRL' },
-                        { key: 'EUR', value: 'EUR' },
-                        { key: 'RUB', value: 'RUB' },
-                        { key: 'PLN', value: 'PLN' },
-                        { key: 'THB', value: 'THB' },
-                        { key: 'KRW', value: 'KRW' },
-                        { key: 'TWD', value: 'TWD' }
-                    ]}
-                /> */}
-
-                {/* <DropdownSetting
+                    {/* <DropdownSetting
                     title={localeString('views.Settings.theme')}
                     selectedValue={theme}
                     displayValue={themes[theme]}
@@ -376,7 +365,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     ]}
                 /> */}
 
-                {/* <DropdownSetting
+                    {/* <DropdownSetting
                     title={lurkerLabel}
                     selectedValue={lurkerMode}
                     displayValue={
@@ -393,7 +382,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     ]}
                 /> */}
 
-                {/* {showPassphraseForm && (
+                    {/* {showPassphraseForm && (
                     <Text
                         style={{
                             color: themeColor('text'),
@@ -404,7 +393,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         {localeString('views.Settings.newPassphrase')}
                     </Text>
                 )} */}
-                {/* {showPassphraseForm && (
+                    {/* {showPassphraseForm && (
                     <TextInput
                         placeholder={'********'}
                         placeholderTextColor="darkgray"
@@ -426,7 +415,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         }}
                     />
                 )} */}
-                {/* {showPassphraseForm && (
+                    {/* {showPassphraseForm && (
                     <Text
                         style={{
                             color: themeColor('text'),
@@ -436,7 +425,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         {localeString('views.Settings.confirmPassphrase')}
                     </Text>
                 )} */}
-                {/* {showPassphraseForm && (
+                    {/* {showPassphraseForm && (
                     <TextInput
                         placeholder={'********'}
                         placeholderTextColor="darkgray"
@@ -458,7 +447,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         }}
                     />
                 )} */}
-                {/* <View style={styles.button}>
+                    {/* <View style={styles.button}>
                     <Button
                         title={
                             saved
@@ -483,7 +472,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         style={styles.button}
                     />
                 </View> */}
-                {/* <View style={styles.button}>
+                    {/* <View style={styles.button}>
                     <Button
                         title={
                             showPassphraseForm
@@ -516,8 +505,8 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         }}
                     />
                 </View> */}
-                {/* <View style={styles.button}> */}
-                {/* <Button
+                    {/* <View style={styles.button}> */}
+                    {/* <Button
                         title={localeString('views.Settings.about')}
                         buttonStyle={{
                             backgroundColor: 'black',
@@ -530,7 +519,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     />
                 </View> */}
 
-                {/* {false && (
+                    {/* {false && (
                     <View style={styles.button}>
                         <Button
                             title={localeString('views.ImportAccount.title')}
@@ -546,7 +535,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     </View>
                 )} */}
 
-                {/* {RESTUtils.supportsMessageSigning() && (
+                    {/* {RESTUtils.supportsMessageSigning() && (
                     <View style={styles.button}>
                         <Button
                             title={localeString(
@@ -564,7 +553,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     </View>
                 )} */}
 
-                {/* <View style={styles.button}>
+                    {/* <View style={styles.button}>
                     <Button
                         title={localeString('views.Settings.intro')}
                         buttonStyle={{
@@ -579,6 +568,18 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         style={styles.button}
                     />
                 </View> */}
+                </ScrollView>
+                <Text
+                    style={{
+                        fontSize: 16,
+                        color: '#A7A9AC',
+                        alignSelf: 'center',
+                        bottom: 25,
+                        position: 'absolute'
+                    }}
+                >
+                    Zeus version 0.5.2
+                </Text>
             </View>
         );
     }
