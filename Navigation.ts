@@ -28,6 +28,7 @@ import Lockscreen from './views/Lockscreen';
 import Settings from './views/Settings';
 import AddEditNode from './views/Settings/AddEditNode';
 import Nodes from './views/Settings/Nodes';
+import Language from './views/Settings/Language';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import About from './views/Settings/About';
 import SignMessage from './views/Settings/SignMessage';
@@ -77,6 +78,9 @@ const AppScenes = {
     },
     Nodes: {
         screen: Nodes
+    },
+    Language: {
+        screen: Language
     },
     CertInstallInstructions: {
         screen: CertInstallInstructions
