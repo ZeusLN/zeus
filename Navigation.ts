@@ -29,6 +29,7 @@ import Settings from './views/Settings';
 import AddEditNode from './views/Settings/AddEditNode';
 import Nodes from './views/Settings/Nodes';
 import Language from './views/Settings/Language';
+import Currency from './views/Settings/Currency';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import About from './views/Settings/About';
 import SignMessage from './views/Settings/SignMessage';
@@ -81,6 +82,9 @@ const AppScenes = {
     },
     Language: {
         screen: Language
+    },
+    Currency: {
+        screen: Currency
     },
     CertInstallInstructions: {
         screen: CertInstallInstructions

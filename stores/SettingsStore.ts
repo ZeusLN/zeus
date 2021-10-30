@@ -46,6 +46,31 @@ export const LOCALE_KEYS = [
     { key: 'Nederlands', value: 'Nederlands' }
 ];
 
+export const CURRENCY_KEYS = [
+    { key: 'Disabled', value: 'Disabled' },
+    { key: 'USD', value: 'USD' },
+    { key: 'JPY', value: 'JPY' },
+    { key: 'CNY', value: 'CNY' },
+    { key: 'SGD', value: 'SGD' },
+    { key: 'HKD', value: 'HKD' },
+    { key: 'CAD', value: 'CAD' },
+    { key: 'NZD', value: 'NZD' },
+    { key: 'AUD', value: 'AUD' },
+    { key: 'CLP', value: 'CLP' },
+    { key: 'GBP', value: 'GBP' },
+    { key: 'DKK', value: 'DKK' },
+    { key: 'SEK', value: 'SEK' },
+    { key: 'ISK', value: 'ISK' },
+    { key: 'CHF', value: 'CHF' },
+    { key: 'BRL', value: 'BRL' },
+    { key: 'EUR', value: 'EUR' },
+    { key: 'RUB', value: 'RUB' },
+    { key: 'PLN', value: 'PLN' },
+    { key: 'THB', value: 'THB' },
+    { key: 'KRW', value: 'KRW' },
+    { key: 'TWD', value: 'TWD' }
+];
+
 export const DEFAULT_THEME = 'dark';
 export const DEFAULT_FIAT = 'Disabled';
 export const DEFAULT_LOCALE = 'English';
