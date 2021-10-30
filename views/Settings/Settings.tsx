@@ -143,7 +143,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     >
                         <View
                             style={{
-                                backgroundColor: '#31363F',
+                                backgroundColor: themeColor('secondary'),
                                 width: '90%',
                                 height: 70,
                                 borderRadius: 10,
@@ -165,7 +165,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                 <Text
                                     style={{
                                         fontSize: 20,
-                                        color: '#FFFFFF',
+                                        color: themeColor('text'),
                                         paddingLeft: 30
                                     }}
                                 >
@@ -184,7 +184,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             <Text
                                 style={{
                                     fontSize: 16,
-                                    color: '#FFFFFF',
+                                    color: themeColor('text'),
                                     opacity: 0.6,
                                     top: -10,
                                     paddingLeft: 109
@@ -197,7 +197,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
 
                     <View
                         style={{
-                            backgroundColor: '#31363F',
+                            backgroundColor: themeColor('secondary'),
                             width: '90%',
                             height: 90,
                             borderRadius: 10,
@@ -207,9 +207,16 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     >
                         <View style={styles.columnField}>
                             <View>
-                                <AccountIcon />
+                                <AccountIcon stroke={themeColor('text')} />
                             </View>
-                            <Text style={styles.columnText}>Accounts</Text>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                Accounts
+                            </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
                             </View>
@@ -218,9 +225,16 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         <View style={styles.separationLine} />
                         <View style={styles.columnField}>
                             <View>
-                                <ContactIcon />
+                                <ContactIcon stroke={themeColor('text')} />
                             </View>
-                            <Text style={styles.columnText}>Contacts</Text>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                Contacts
+                            </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
                             </View>
@@ -228,7 +242,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     </View>
                     <View
                         style={{
-                            backgroundColor: '#31363F',
+                            backgroundColor: themeColor('secondary'),
                             width: '90%',
                             height: 138,
                             borderRadius: 10,
@@ -238,9 +252,16 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     >
                         <View style={styles.columnField}>
                             <View>
-                                <PrivacyIcon />
+                                <PrivacyIcon stroke={themeColor('text')} />
                             </View>
-                            <Text style={styles.columnText}>Privacy</Text>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                Privacy
+                            </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
                             </View>
@@ -249,9 +270,16 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         <View style={styles.separationLine} />
                         <View style={styles.columnField}>
                             <View>
-                                <SecurityIcon />
+                                <SecurityIcon stroke={themeColor('text')} />
                             </View>
-                            <Text style={styles.columnText}>Security</Text>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                Security
+                            </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
                             </View>
@@ -260,9 +288,14 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         <View style={styles.separationLine} />
                         <View style={styles.columnField}>
                             <View>
-                                <SignIcon />
+                                <SignIcon stroke={themeColor('text')} />
                             </View>
-                            <Text style={styles.columnText}>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 Sign or verify message
                             </Text>
                             <View style={styles.ForwardArrow}>
@@ -272,7 +305,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     </View>
                     <View
                         style={{
-                            backgroundColor: '#31363F',
+                            backgroundColor: themeColor('secondary'),
                             width: '90%',
                             height: 90,
                             borderRadius: 10,
@@ -285,9 +318,16 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             onPress={() => navigation.navigate('Currency')}
                         >
                             <View>
-                                <BitcoinIcon />
+                                <BitcoinIcon stroke={themeColor('text')} />
                             </View>
-                            <Text style={styles.columnText}>Currency</Text>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                Currency
+                            </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
                             </View>
@@ -299,9 +339,16 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             onPress={() => navigation.navigate('Language')}
                         >
                             <View>
-                                <LanguageIcon />
+                                <LanguageIcon stroke={themeColor('text')} />
                             </View>
-                            <Text style={styles.columnText}>Language</Text>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                Language
+                            </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
                             </View>
@@ -309,7 +356,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     </View>
                     <View
                         style={{
-                            backgroundColor: '#31363F',
+                            backgroundColor: themeColor('secondary'),
                             width: '90%',
                             height: 45,
                             borderRadius: 10,
@@ -324,7 +371,14 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             <View style={{ padding: 5 }}>
                                 <HelpIcon />
                             </View>
-                            <Text style={styles.columnText}>Theme</Text>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                Theme
+                            </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
                             </View>
@@ -332,7 +386,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     </View>
                     <View
                         style={{
-                            backgroundColor: '#31363F',
+                            backgroundColor: themeColor('secondary'),
                             width: '90%',
                             height: 45,
                             borderRadius: 10,
@@ -344,7 +398,14 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             <View style={{ padding: 5 }}>
                                 <HelpIcon />
                             </View>
-                            <Text style={styles.columnText}>Help</Text>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                Help
+                            </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
                             </View>
@@ -596,7 +657,6 @@ const styles = StyleSheet.create({
     },
     columnText: {
         fontSize: 16,
-        color: '#FFFFFF',
         left: '30%',
         position: 'absolute',
         marginLeft: -55,
