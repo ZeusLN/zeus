@@ -1,30 +1,30 @@
 import * as React from 'react';
-import { FlatList, View } from 'react-native';
+import { FlatList, ScrollView, View } from 'react-native';
 import { Header, Icon, ListItem } from 'react-native-elements';
 import SettingsStore from './../../stores/SettingsStore';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 import { inject, observer } from 'mobx-react';
 
-import { LOCALE_KEYS } from './../../stores/SettingsStore';
+import { CURRENCY_KEYS } from './../../stores/SettingsStore';
 
-interface LanguageProps {
+interface CurrencyProps {
     navigation: any;
     SettingsStore: SettingsStore;
 }
 
-interface LanguageStore {
-    selectedLocale: string;
+interface CurrencyStore {
+    selectLocale: string;
 }
 
 @inject('SettingsStore')
 @observer
-export default class Language extends React.Component<
-    LanguageProps,
-    LanguageStore
+export default class Currency extends React.Component<
+    CurrencyProps,
+    CurrencyStore
 > {
     state = {
-        selectedLocale: ''
+        selectedCurrency: ''
     };
 
     async componentWillMount() {
@@ -33,7 +33,7 @@ export default class Language extends React.Component<
         const settings = await getSettings();
 
         this.setState({
-            selectedLocale: settings.locale
+            selectedCurrency: settings.fiat
         });
     }
 
@@ -48,7 +48,7 @@ export default class Language extends React.Component<
 
     render() {
         const { navigation, selectedNode, SettingsStore } = this.props;
-        const { selectedLocale } = this.state;
+        const { selectedCurrency } = this.state;
         const { setSettings, getSettings }: any = SettingsStore;
 
         const BackButton = () => (
@@ -67,17 +67,17 @@ export default class Language extends React.Component<
                     backgroundColor: themeColor('background')
                 }}
             >
-                <View>
-                    <Header
-                        leftComponent={<BackButton />}
-                        centerComponent={{
-                            text: 'Language', // TODO
-                            style: { color: themeColor('text') }
-                        }}
-                        backgroundColor={themeColor('secondary')}
-                    />
+                <Header
+                    leftComponent={<BackButton />}
+                    centerComponent={{
+                        text: 'Currency', // TODO
+                        style: { color: themeColor('text') }
+                    }}
+                    backgroundColor={themeColor('secondary')}
+                />
+                <ScrollView>
                     <FlatList
-                        data={LOCALE_KEYS}
+                        data={CURRENCY_KEYS}
                         renderItem={({ item, index }) => (
                             <ListItem
                                 title={item.value}
@@ -93,10 +93,10 @@ export default class Language extends React.Component<
                                             selectedNode: settings.selectedNode,
                                             onChainAddress:
                                                 settings.onChainAddress,
-                                            fiat: settings.fiat,
+                                            fiat: item.value,
                                             lurkerMode: settings.lurkerMode,
                                             passphrase: settings.passphrase,
-                                            locale: item.value
+                                            locale: settings.locale
                                         })
                                     ).then(() => {
                                         getSettings();
@@ -107,7 +107,9 @@ export default class Language extends React.Component<
                                 }}
                                 titleStyle={{
                                     color:
-                                        selectedLocale === item.value
+                                        selectedCurrency === item.value ||
+                                        (!selectedCurrency &&
+                                            item.value === 'Disabled')
                                             ? themeColor('highlight')
                                             : themeColor('text')
                                 }}
@@ -121,7 +123,7 @@ export default class Language extends React.Component<
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}
                     />
-                </View>
+                </ScrollView>
             </View>
         );
     }
