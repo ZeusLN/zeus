@@ -195,51 +195,54 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         </View>
                     </TouchableOpacity>
 
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            height: 90,
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            top: 60
-                        }}
-                    >
-                        <View style={styles.columnField}>
-                            <View>
-                                <AccountIcon stroke={themeColor('text')} />
+                    {/* Coming Soon */}
+                    {false && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                height: 90,
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                top: 60
+                            }}
+                        >
+                            <View style={styles.columnField}>
+                                <View>
+                                    <AccountIcon stroke={themeColor('text')} />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    Accounts
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon />
+                                </View>
                             </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                Accounts
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon />
-                            </View>
-                        </View>
 
-                        <View style={styles.separationLine} />
-                        <View style={styles.columnField}>
-                            <View>
-                                <ContactIcon stroke={themeColor('text')} />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                Contacts
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon />
+                            <View style={styles.separationLine} />
+                            <View style={styles.columnField}>
+                                <View>
+                                    <ContactIcon stroke={themeColor('text')} />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    Contacts
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon />
+                                </View>
                             </View>
                         </View>
-                    </View>
+                    )}
                     <View
                         style={{
                             backgroundColor: themeColor('secondary'),
@@ -247,7 +250,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             height: 138,
                             borderRadius: 10,
                             alignSelf: 'center',
-                            top: 80
+                            top: 60
                         }}
                     >
                         <View style={styles.columnField}>
@@ -286,7 +289,10 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         </View>
 
                         <View style={styles.separationLine} />
-                        <View style={styles.columnField}>
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() => navigation.navigate('SignMessage')}
+                        >
                             <View>
                                 <SignIcon stroke={themeColor('text')} />
                             </View>
@@ -301,7 +307,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
                             </View>
-                        </View>
+                        </TouchableOpacity>
                     </View>
                     <View
                         style={{
@@ -310,7 +316,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             height: 90,
                             borderRadius: 10,
                             alignSelf: 'center',
-                            top: 100
+                            top: 80
                         }}
                     >
                         <TouchableOpacity
@@ -361,7 +367,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             height: 45,
                             borderRadius: 10,
                             alignSelf: 'center',
-                            top: 120
+                            top: 100
                         }}
                     >
                         <TouchableOpacity
@@ -391,7 +397,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             height: 45,
                             borderRadius: 10,
                             alignSelf: 'center',
-                            top: 140
+                            top: 120
                         }}
                     >
                         <View style={styles.columnField}>
