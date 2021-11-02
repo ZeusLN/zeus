@@ -68,7 +68,7 @@ export default class Theme extends React.Component<ThemeProps, ThemeStore> {
                     <Header
                         leftComponent={<BackButton />}
                         centerComponent={{
-                            text: 'Theme', // TODO
+                            text: localeString('views.Settings.Theme.title'),
                             style: { color: themeColor('text') }
                         }}
                         backgroundColor={themeColor('secondary')}

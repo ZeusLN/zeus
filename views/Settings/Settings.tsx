@@ -22,6 +22,7 @@ import LanguageIcon from '../../images/SVG/Globe.svg';
 import HelpIcon from '../../images/SVG/Help Icon.svg';
 import Identicon from 'identicon.js';
 const hash = require('object-hash');
+import { version } from './../../package.json';
 
 // import SettingsStore, {
 //     DEFAULT_THEME,
@@ -383,7 +384,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     color: themeColor('text')
                                 }}
                             >
-                                Theme
+                                {localeString('views.Settings.Theme.title')}
                             </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
@@ -645,7 +646,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         position: 'absolute'
                     }}
                 >
-                    Zeus version 0.5.2
+                    {`Zeus v${version}`}
                 </Text>
             </View>
         );
