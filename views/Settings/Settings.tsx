@@ -332,7 +332,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     color: themeColor('text')
                                 }}
                             >
-                                Currency
+                                {localeString('views.Settings.Currency.title')}
                             </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
@@ -353,7 +353,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     color: themeColor('text')
                                 }}
                             >
-                                Language
+                                {localeString('views.Settings.Language.title')}
                             </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
