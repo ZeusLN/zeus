@@ -375,6 +375,7 @@
     "views.Settings.intro": "Intro Tour",
     "views.Settings.Language.title": "Language",
     "views.Settings.Currency.title": "Currency",
+    "views.Settings.Theme.title": "Theme",
     "views.Transaction.title": "Transaction",
     "views.Transaction.totalFees": "Total Fees",
     "views.Transaction.transactionHash": "Transaction Hash",
