@@ -25,9 +25,12 @@ import NodeInfo from './views/NodeInfo';
 import Lockscreen from './views/Lockscreen';
 
 // Settings views
-import Settings from './views/Settings';
+import Settings from './views/Settings/Settings';
 import AddEditNode from './views/Settings/AddEditNode';
 import Nodes from './views/Settings/Nodes';
+import Language from './views/Settings/Language';
+import Currency from './views/Settings/Currency';
+import Theme from './views/Settings/Theme';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import About from './views/Settings/About';
 import SignMessage from './views/Settings/SignMessage';
@@ -77,6 +80,15 @@ const AppScenes = {
     },
     Nodes: {
         screen: Nodes
+    },
+    Language: {
+        screen: Language
+    },
+    Currency: {
+        screen: Currency
+    },
+    Theme: {
+        screen: Theme
     },
     CertInstallInstructions: {
         screen: CertInstallInstructions
