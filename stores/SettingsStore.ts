@@ -33,6 +33,7 @@ export const LOCALE_KEYS = [
     { key: 'English', value: 'English' },
     { key: 'Español', value: 'Español' },
     { key: 'Português', value: 'Português' },
+    { key: 'Français', value: 'Français' },
     { key: 'Češka', value: 'Češka' },
     { key: 'Slovák', value: 'Slovák' },
     { key: 'Deutsch', value: 'Deutsch' },
@@ -42,33 +43,32 @@ export const LOCALE_KEYS = [
     // in progress
     { key: 'Ελληνικά', value: 'Ελληνικά' },
     { key: 'زبان فارسي', value: 'زبان فارسي' },
-    { key: 'Français', value: 'Français' },
     { key: 'Nederlands', value: 'Nederlands' }
 ];
 
 export const CURRENCY_KEYS = [
     { key: 'Disabled', value: 'Disabled' },
-    { key: 'USD', value: 'USD' },
-    { key: 'JPY', value: 'JPY' },
-    { key: 'CNY', value: 'CNY' },
-    { key: 'SGD', value: 'SGD' },
-    { key: 'HKD', value: 'HKD' },
-    { key: 'CAD', value: 'CAD' },
-    { key: 'NZD', value: 'NZD' },
-    { key: 'AUD', value: 'AUD' },
-    { key: 'CLP', value: 'CLP' },
-    { key: 'GBP', value: 'GBP' },
-    { key: 'DKK', value: 'DKK' },
-    { key: 'SEK', value: 'SEK' },
-    { key: 'ISK', value: 'ISK' },
-    { key: 'CHF', value: 'CHF' },
-    { key: 'BRL', value: 'BRL' },
-    { key: 'EUR', value: 'EUR' },
-    { key: 'RUB', value: 'RUB' },
-    { key: 'PLN', value: 'PLN' },
-    { key: 'THB', value: 'THB' },
-    { key: 'KRW', value: 'KRW' },
-    { key: 'TWD', value: 'TWD' }
+    { key: '🇺🇸 US Dollar (USD)', value: 'USD' },
+    { key: '🇯🇵 Japanese Yen (JPY)', value: 'JPY' },
+    { key: '🇨🇳 Chinese Yuan (CNY)', value: 'CNY' },
+    { key: '🇸🇬 Singapore Dollar (SGD)', value: 'SGD' },
+    { key: '🇭🇰 Hong Kong Dollar (HKD)', value: 'HKD' },
+    { key: '🇨🇦 Canadian Dollar (CAD)', value: 'CAD' },
+    { key: '🇳🇿 New Zealand Dollar (NZD)', value: 'NZD' },
+    { key: '🇦🇺 Austrlian Dollar (AUD)', value: 'AUD' },
+    { key: '🇨🇱 Chilean Peso (CLP)', value: 'CLP' },
+    { key: '🇬🇧 Great British Pound (GBP)', value: 'GBP' },
+    { key: '🇩🇰 Danish Krone (DKK)', value: 'DKK' },
+    { key: '🇸🇪 Swedish Krona (SEK)', value: 'SEK' },
+    { key: '🇮🇸 Icelandic Krona (ISK)', value: 'ISK' },
+    { key: '🇨🇭 Swiss Franc (CHF)', value: 'CHF' },
+    { key: '🇧🇷 Brazilian Real (BRL)', value: 'BRL' },
+    { key: '🇪🇺 Eurozone Euro (EUR)', value: 'EUR' },
+    { key: '🇷🇺 Russian Ruble (RUB)', value: 'RUB' },
+    { key: '🇵🇱 Polish Złoty (PLN)', value: 'PLN' },
+    { key: '🇹🇭 Thai Baht (THB)', value: 'THB' },
+    { key: '🇰🇷 South Korean Won (KRW)', value: 'KRW' },
+    { key: '🇹🇼 Taiwan New Dollar (TWD)', value: 'TWD' }
 ];
 
 export const THEME_KEYS = [

@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { FlatList, View } from 'react-native';
-import { Header, Icon, ListItem } from 'react-native-elements';
+import { FlatList, Text, View } from 'react-native';
+import { Header, Icon, ListItem, SearchBar } from 'react-native-elements';
 import SettingsStore from './../../stores/SettingsStore';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -15,6 +15,8 @@ interface LanguageProps {
 
 interface LanguageStore {
     selectedLocale: string;
+    search: string;
+    locales: any;
 }
 
 @inject('SettingsStore')
@@ -24,10 +26,12 @@ export default class Language extends React.Component<
     LanguageStore
 > {
     state = {
-        selectedLocale: ''
+        selectedLocale: '',
+        search: '',
+        locales: LOCALE_KEYS
     };
 
-    async componentWillMount() {
+    async UNSAFE_componentWillMount() {
         const { SettingsStore } = this.props;
         const { getSettings } = SettingsStore;
         const settings = await getSettings();
@@ -46,9 +50,19 @@ export default class Language extends React.Component<
         />
     );
 
+    updateSearch = (value: string) => {
+        const result = LOCALE_KEYS.filter((item: any) =>
+            item.key.includes(value)
+        );
+        this.setState({
+            search: value,
+            locales: result
+        });
+    };
+
     render() {
         const { navigation, selectedNode, SettingsStore } = this.props;
-        const { selectedLocale } = this.state;
+        const { locales, selectedLocale, search } = this.state;
         const { setSettings, getSettings }: any = SettingsStore;
 
         const BackButton = () => (
@@ -71,16 +85,31 @@ export default class Language extends React.Component<
                     <Header
                         leftComponent={<BackButton />}
                         centerComponent={{
-                            text: 'Language', // TODO
+                            text: localeString('views.Settings.Language.title'),
                             style: { color: themeColor('text') }
                         }}
                         backgroundColor={themeColor('secondary')}
                     />
+                    <SearchBar
+                        placeholder={localeString('general.search')}
+                        onChangeText={this.updateSearch}
+                        value={search}
+                        inputStyle={{
+                            color: themeColor('text')
+                        }}
+                        placeholderTextColor={themeColor('secondaryText')}
+                        containerStyle={{
+                            backgroundColor: themeColor('background')
+                        }}
+                        inputContainerStyle={{
+                            borderRadius: 15,
+                            backgroundColor: themeColor('secondary')
+                        }}
+                    />
                     <FlatList
-                        data={LOCALE_KEYS}
+                        data={locales}
                         renderItem={({ item, index }) => (
                             <ListItem
-                                title={item.value}
                                 containerStyle={{
                                     borderBottomWidth: 0,
                                     backgroundColor: themeColor('background')
@@ -105,16 +134,28 @@ export default class Language extends React.Component<
                                         });
                                     });
                                 }}
-                                titleStyle={{
-                                    color:
-                                        selectedLocale === item.value
-                                            ? themeColor('highlight')
-                                            : themeColor('text')
-                                }}
-                                subtitleStyle={{
-                                    color: themeColor('secondaryText')
-                                }}
-                            />
+                            >
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color:
+                                                selectedLocale === item.value
+                                                    ? themeColor('highlight')
+                                                    : themeColor('text')
+                                        }}
+                                    >
+                                        {item.value}
+                                    </ListItem.Title>
+                                </ListItem.Content>
+                                {selectedLocale === item.value && (
+                                    <Text style={{ textAlign: 'right' }}>
+                                        <Icon
+                                            name="check"
+                                            color={themeColor('highlight')}
+                                        />
+                                    </Text>
+                                )}
+                            </ListItem>
                         )}
                         refreshing={loading}
                         keyExtractor={(item, index) => `${item.host}-${index}`}
