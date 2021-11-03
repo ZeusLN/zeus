@@ -29,6 +29,14 @@ interface Settings {
     onChainAddress?: string;
 }
 
+export const INTERFACE_KEYS = [
+    { key: 'LND', value: 'lnd' },
+    { key: 'c-lightning-REST', value: 'c-lightning-REST' },
+    { key: 'Spark (c-lightning)', value: 'spark' },
+    { key: 'Eclair', value: 'eclair' },
+    { key: 'LNDHub', value: 'lndhub' }
+];
+
 export const LOCALE_KEYS = [
     { key: 'English', value: 'English' },
     { key: 'Español', value: 'Español' },
