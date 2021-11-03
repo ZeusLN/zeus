@@ -21,7 +21,7 @@ import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 import CollapsedQR from './../../components/CollapsedQR';
 import DropdownSetting from './../../components/DropdownSetting';
-import SettingsStore from './../../stores/SettingsStore';
+import SettingsStore, { INTERFACE_KEYS } from './../../stores/SettingsStore';
 
 interface AddEditNodeProps {
     navigation: any;
@@ -425,18 +425,14 @@ export default class AddEditNode extends React.Component<
             </View>
         );
 
-        const INTERFACE_KEYS = [
-            { key: 'lnd', value: 'lnd' },
-            { key: 'c-lightning-REST', value: 'c-lightning-REST' },
-            { key: 'Spark (c-lightning)', value: 'spark' },
-            { key: 'Eclair', value: 'eclair' },
-            { key: 'LNDHub', value: 'lndhub' }
-        ];
+        const displayValue = INTERFACE_KEYS.filter(
+            (value: any) => value.value === implementation
+        )[0].key;
 
         const NodeInterface = () => (
             <DropdownSetting
                 title={localeString('views.Settings.AddEditNode.nodeInterface')}
-                selectedValue={implementation}
+                selectedValue={displayValue}
                 onValueChange={(value: string) => {
                     this.setState({
                         implementation: value,
