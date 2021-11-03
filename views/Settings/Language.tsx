@@ -13,7 +13,7 @@ interface LanguageProps {
     SettingsStore: SettingsStore;
 }
 
-interface LanguageStore {
+interface LanguageState {
     selectedLocale: string;
     search: string;
     locales: any;
@@ -23,7 +23,7 @@ interface LanguageStore {
 @observer
 export default class Language extends React.Component<
     LanguageProps,
-    LanguageStore
+    LanguageState
 > {
     state = {
         selectedLocale: '',
@@ -157,10 +157,8 @@ export default class Language extends React.Component<
                                 )}
                             </ListItem>
                         )}
-                        refreshing={loading}
                         keyExtractor={(item, index) => `${item.host}-${index}`}
                         ItemSeparatorComponent={this.renderSeparator}
-                        onEndReachedThreshold={50}
                     />
                 </View>
             </View>

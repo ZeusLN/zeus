@@ -401,7 +401,10 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             top: 120
                         }}
                     >
-                        <View style={styles.columnField}>
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() => navigation.navigate('Help')}
+                        >
                             <View style={{ padding: 5 }}>
                                 <HelpIcon />
                             </View>
@@ -411,27 +414,13 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     color: themeColor('text')
                                 }}
                             >
-                                Help
+                                {localeString('general.help')}
                             </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
                             </View>
-                        </View>
+                        </TouchableOpacity>
                     </View>
-
-                    {/* <DropdownSetting
-                    title={localeString('views.Settings.theme')}
-                    selectedValue={theme}
-                    displayValue={themes[theme]}
-                    onValueChange={(value: string) =>
-                        this.setState({ theme: value })
-                    }
-                    values={[
-                        { key: 'Dark', value: 'dark' },
-                        { key: 'Light', value: 'light' },
-                        { key: 'Junkie', value: 'junkie' }
-                    ]}
-                /> */}
 
                     {/* <DropdownSetting
                     title={lurkerLabel}
