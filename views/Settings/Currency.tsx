@@ -13,7 +13,7 @@ interface CurrencyProps {
     SettingsStore: SettingsStore;
 }
 
-interface CurrencyStore {
+interface CurrencyState {
     selectCurreny: string;
     search: string;
     currencies: any;
@@ -23,7 +23,7 @@ interface CurrencyStore {
 @observer
 export default class Currency extends React.Component<
     CurrencyProps,
-    CurrencyStore
+    CurrencyState
 > {
     state = {
         selectedCurrency: '',
@@ -157,10 +157,8 @@ export default class Currency extends React.Component<
                             )}
                         </ListItem>
                     )}
-                    refreshing={loading}
                     keyExtractor={(item, index) => `${item.host}-${index}`}
                     ItemSeparatorComponent={this.renderSeparator}
-                    onEndReachedThreshold={50}
                 />
             </View>
         );

@@ -34,6 +34,7 @@ import Theme from './views/Settings/Theme';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import About from './views/Settings/About';
 import SignMessage from './views/Settings/SignMessage';
+import Help from './views/Settings/Help';
 
 // Routing
 import Routing from './views/Routing/Routing';
@@ -89,6 +90,9 @@ const AppScenes = {
     },
     Theme: {
         screen: Theme
+    },
+    Help: {
+        screen: Help
     },
     CertInstallInstructions: {
         screen: CertInstallInstructions

@@ -29,6 +29,7 @@
     "general.sats": "sats",
     "general.blocks": "blocks",
     "general.search": "Search",
+    "general.help": "Help",
     "general.percentage": "percentage",
     "components.CollapsedQr.show": "Show QR",
     "components.CollapsedQr.hide": "Hide QR",
