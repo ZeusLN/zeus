@@ -20,6 +20,7 @@ import LndConnectUtils from './../../utils/LndConnectUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 import CollapsedQR from './../../components/CollapsedQR';
+import DropdownSetting from './../../components/DropdownSetting';
 import SettingsStore from './../../stores/SettingsStore';
 
 interface AddEditNodeProps {
@@ -424,117 +425,27 @@ export default class AddEditNode extends React.Component<
             </View>
         );
 
-        const NodeInterface = () => (
-            <View style={styles.nodeInterface}>
-                {Platform.OS !== 'ios' && (
-                    <View>
-                        <Text style={{ color: themeColor('secondaryText') }}>
-                            {localeString(
-                                'views.Settings.AddEditNode.nodeInterface'
-                            )}
-                        </Text>
-                        <Picker
-                            selectedValue={implementation}
-                            onValueChange={(itemValue: string) => {
-                                if (itemValue === 'lndhub') {
-                                    this.setState({
-                                        implementation: itemValue,
-                                        saved: false,
-                                        certVerification: true
-                                    });
-                                } else {
-                                    this.setState({
-                                        implementation: itemValue,
-                                        saved: false,
-                                        certVerification: false
-                                    });
-                                }
-                            }}
-                            style={{
-                                ...styles.picker,
-                                color: themeColor('text')
-                            }}
-                        >
-                            <Picker.Item label="lnd" value="lnd" />
-                            <Picker.Item
-                                label="c-lightning-REST"
-                                value="c-lightning-REST"
-                            />
-                            <Picker.Item
-                                label="Spark (c-lightning)"
-                                value="spark"
-                            />
-                            <Picker.Item label="LNDHub" value="lndhub" />
-                            <Picker.Item label="Eclair" value="eclair" />
-                        </Picker>
-                    </View>
-                )}
+        const INTERFACE_KEYS = [
+            { key: 'lnd', value: 'lnd' },
+            { key: 'c-lightning-REST', value: 'c-lightning-REST' },
+            { key: 'Spark (c-lightning)', value: 'spark' },
+            { key: 'Eclair', value: 'eclair' },
+            { key: 'LNDHub', value: 'lndhub' }
+        ];
 
-                {Platform.OS === 'ios' && (
-                    <View>
-                        <Text style={{ color: themeColor('secondaryText') }}>
-                            {localeString(
-                                'views.Settings.AddEditNode.nodeInterface'
-                            )}
-                        </Text>
-                        <TouchableOpacity
-                            onPress={() =>
-                                ActionSheetIOS.showActionSheetWithOptions(
-                                    {
-                                        options: [
-                                            'Cancel',
-                                            'lnd',
-                                            'c-lightning-REST',
-                                            'Spark (c-lightning)',
-                                            'LNDHub',
-                                            'Eclair'
-                                        ],
-                                        cancelButtonIndex: 0
-                                    },
-                                    buttonIndex => {
-                                        if (buttonIndex === 1) {
-                                            this.setState({
-                                                implementation: 'lnd',
-                                                saved: false,
-                                                certVerification: false
-                                            });
-                                        } else if (buttonIndex === 2) {
-                                            this.setState({
-                                                implementation:
-                                                    'c-lightning-REST',
-                                                saved: false,
-                                                certVerification: false
-                                            });
-                                        } else if (buttonIndex === 3) {
-                                            this.setState({
-                                                implementation: 'spark',
-                                                saved: false,
-                                                certVerification: false
-                                            });
-                                        } else if (buttonIndex === 4) {
-                                            this.setState({
-                                                implementation: 'lndhub',
-                                                saved: false,
-                                                certVerification: true
-                                            });
-                                        } else if (buttonIndex === 5) {
-                                            this.setState({
-                                                implementation: 'eclair',
-                                                saved: false,
-                                                certVerification: false
-                                            });
-                                        }
-                                    }
-                                )
-                            }
-                        >
-                            <Text style={{ color: themeColor('text') }}>
-                                {implementation}
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
-            </View>
+        const NodeInterface = () => (
+            <DropdownSetting
+                title={localeString('views.Settings.AddEditNode.nodeInterface')}
+                selectedValue={implementation}
+                onValueChange={(value: string) => {
+                    this.setState({
+                        implementation: value,
+                        saved: false,
+                        certVerification: value === 'lndhub' ? true : false
+                    });
+                }}
+                values={INTERFACE_KEYS}
+            />
         );
 
         return (
