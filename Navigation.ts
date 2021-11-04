@@ -29,6 +29,8 @@ import Settings from './views/Settings/Settings';
 import AddEditNode from './views/Settings/AddEditNode';
 import Nodes from './views/Settings/Nodes';
 import Privacy from './views/Settings/Privacy';
+import Security from './views/Settings/Security';
+import SetPassword from './views/Settings/SetPassword';
 import Language from './views/Settings/Language';
 import Currency from './views/Settings/Currency';
 import Theme from './views/Settings/Theme';
@@ -85,6 +87,12 @@ const AppScenes = {
     },
     Privacy: {
         screen: Privacy
+    },
+    Security: {
+        screen: Security
+    },
+    SetPassword: {
+        screen: SetPassword
     },
     Language: {
         screen: Language
