@@ -83,16 +83,21 @@ export default class AddEditNode extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const clipboard = await Clipboard.getString();
+        const { SettingsStore } = this.props;
+        const { settings } = SettingsStore;
 
-        if (
-            clipboard.includes('lndconnect://') ||
-            clipboard.includes('lndhub://') ||
-            clipboard.includes('bluewallet:')
-        ) {
-            this.setState({
-                suggestImport: clipboard
-            });
+        if (settings.privacy && settings.privacy.clipboard) {
+            const clipboard = await Clipboard.getString();
+
+            if (
+                clipboard.includes('lndconnect://') ||
+                clipboard.includes('lndhub://') ||
+                clipboard.includes('bluewallet:')
+            ) {
+                this.setState({
+                    suggestImport: clipboard
+                });
+            }
         }
     }
 
@@ -283,7 +288,8 @@ export default class AddEditNode extends React.Component<
                 fiat,
                 locale,
                 lurkerMode,
-                passphrase
+                passphrase,
+                privacy: settings.privacy
             })
         ).then(() => {
             this.setState({
@@ -321,7 +327,8 @@ export default class AddEditNode extends React.Component<
                 fiat,
                 locale,
                 lurkerMode,
-                passphrase
+                passphrase,
+                privacy: settings.privacy
             })
         ).then(() => {
             navigation.navigate('Wallet', { refresh: true });
@@ -343,7 +350,8 @@ export default class AddEditNode extends React.Component<
                 fiat,
                 locale,
                 lurkerMode,
-                passphrase
+                passphrase,
+                privacy: settings.privacy
             })
         );
 

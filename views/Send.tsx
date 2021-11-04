@@ -99,9 +99,14 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     async UNSAFE_componentWillMount() {
-        const clipboard = await Clipboard.getString();
-        if (!this.state.destination) {
-            this.validateAddress(clipboard);
+        const { SettingsStore } = this.props;
+        const { settings } = SettingsStore;
+
+        if (settings.privacy && settings.privacy.clipboard) {
+            const clipboard = await Clipboard.getString();
+            if (!this.state.destination) {
+                this.validateAddress(clipboard);
+            }
         }
     }
 
