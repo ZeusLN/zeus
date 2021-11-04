@@ -28,6 +28,7 @@ import Lockscreen from './views/Lockscreen';
 import Settings from './views/Settings/Settings';
 import AddEditNode from './views/Settings/AddEditNode';
 import Nodes from './views/Settings/Nodes';
+import Privacy from './views/Settings/Privacy';
 import Language from './views/Settings/Language';
 import Currency from './views/Settings/Currency';
 import Theme from './views/Settings/Theme';
@@ -81,6 +82,9 @@ const AppScenes = {
     },
     Nodes: {
         screen: Nodes
+    },
+    Privacy: {
+        screen: Privacy
     },
     Language: {
         screen: Language

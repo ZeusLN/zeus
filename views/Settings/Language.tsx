@@ -115,6 +115,7 @@ export default class Language extends React.Component<
                                     backgroundColor: themeColor('background')
                                 }}
                                 onPress={async () => {
+                                    const settings = await getSettings();
                                     await setSettings(
                                         JSON.stringify({
                                             nodes: settings.nodes,
