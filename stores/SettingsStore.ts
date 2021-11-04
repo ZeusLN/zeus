@@ -22,18 +22,18 @@ interface PrivacySettings {
     defaultBlockExplorer?: string;
     customBlockExplorer?: string;
     clipboard?: boolean;
+    lurkerMode?: boolean;
 }
 
 interface Settings {
     nodes?: Array<Node>;
     theme?: string;
-    lurkerMode?: boolean;
     selectedNode?: number;
     passphrase?: string;
     fiat?: string;
     locale?: string;
     onChainAddress?: string;
-    privacy?: PrivacySettings;
+    privacy: PrivacySettings;
 }
 
 export const BLOCK_EXPLORER_KEYS = [
@@ -102,7 +102,14 @@ export const DEFAULT_THEME = 'dark';
 export const DEFAULT_FIAT = 'Disabled';
 export const DEFAULT_LOCALE = 'English';
 export default class SettingsStore {
-    @observable settings: Settings = {};
+    @observable settings: Settings = {
+        privacy: {
+            defaultBlockExplorer: 'mempool.space',
+            customBlockExplorer: '',
+            clipboard: false,
+            lurkerMode: false
+        }
+    };
     @observable public loading: boolean = false;
     @observable btcPayError: string | null;
     @observable host: string;

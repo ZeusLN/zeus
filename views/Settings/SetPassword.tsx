@@ -58,7 +58,6 @@ export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
                 selectedNode: settings.selectedNode,
                 onChainAddress: settings.onChainAddress,
                 fiat: settings.fiat,
-                lurkerMode: settings.lurkerMode,
                 locale: settings.locale,
                 privacy: settings.privacy,
                 passphrase

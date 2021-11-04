@@ -194,8 +194,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                     onChainAddress:
                                                         settings.onChainAddress,
                                                     fiat: settings.fiat,
-                                                    lurkerMode:
-                                                        settings.lurkerMode,
                                                     passphrase:
                                                         settings.passphrase,
                                                     privacy: settings.privacy

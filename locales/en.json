@@ -379,6 +379,7 @@
     "views.Settings.Privacy.title": "Privacy settings",
     "views.Settings.Privacy.blockExplorer": "Default Block explorer",
     "views.Settings.Privacy.customBlockExplorer": "Custom Block explorer",
+    "views.Settings.Privacy.lurkerMode": "Lurker mode",
     "views.Settings.Privacy.clipboard": "Read clipboard",
     "views.Settings.SetPassword.title": "Set / Change Password",
     "views.Settings.SetPassword.save": "Save",

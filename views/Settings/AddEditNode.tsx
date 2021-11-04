@@ -246,7 +246,8 @@ export default class AddEditNode extends React.Component<
             index
         } = this.state;
         const { setSettings, settings } = SettingsStore;
-        const { lurkerMode, passphrase, fiat, locale } = settings;
+        const { privacy, passphrase, fiat, locale } = settings;
+        const { lurkerMode } = privacy;
 
         if (
             implementation === 'lndhub' &&

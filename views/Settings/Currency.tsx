@@ -122,7 +122,6 @@ export default class Currency extends React.Component<
                                         selectedNode: settings.selectedNode,
                                         onChainAddress: settings.onChainAddress,
                                         fiat: item.value,
-                                        lurkerMode: settings.lurkerMode,
                                         passphrase: settings.passphrase,
                                         locale: settings.locale,
                                         privacy: settings.privacy

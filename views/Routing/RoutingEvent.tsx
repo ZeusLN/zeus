@@ -75,7 +75,8 @@ export default class RoutingEvent extends React.Component<
         const { channelFees } = FeeStore;
         const { aliasesById, channels } = ChannelsStore;
         const { settings, implementation } = SettingsStore;
-        const { lurkerMode } = settings;
+        const { privacy } = settings;
+        const { lurkerMode } = privacy;
 
         const {
             chan_id_in,
