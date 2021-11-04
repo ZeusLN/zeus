@@ -18,6 +18,12 @@ interface Node {
     enableTor?: boolean;
 }
 
+interface PrivacySettings {
+    defaultBlockExplorer?: string;
+    customBlockExplorer?: string;
+    clipboard?: boolean;
+}
+
 interface Settings {
     nodes?: Array<Node>;
     theme?: string;
@@ -27,7 +33,14 @@ interface Settings {
     fiat?: string;
     locale?: string;
     onChainAddress?: string;
+    privacy?: PrivacySettings;
 }
+
+export const BLOCK_EXPLORER_KEYS = [
+    { key: 'mempool.space', value: 'mempool.space' },
+    { key: 'blockstream.info', value: 'blockstream.info' },
+    { key: 'Custom', value: 'Custom' }
+];
 
 export const INTERFACE_KEYS = [
     { key: 'LND', value: 'lnd' },

@@ -14,7 +14,7 @@ interface CurrencyProps {
 }
 
 interface CurrencyState {
-    selectCurreny: string;
+    selectCurrency: string;
     search: string;
     currencies: any;
 }
@@ -114,6 +114,7 @@ export default class Currency extends React.Component<
                                 backgroundColor: themeColor('background')
                             }}
                             onPress={async () => {
+                                const settings = await getSettings();
                                 await setSettings(
                                     JSON.stringify({
                                         nodes: settings.nodes,

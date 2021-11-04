@@ -254,7 +254,10 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             top: 60
                         }}
                     >
-                        <View style={styles.columnField}>
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() => navigation.navigate('Privacy')}
+                        >
                             <View>
                                 <PrivacyIcon stroke={themeColor('text')} />
                             </View>
@@ -264,12 +267,12 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     color: themeColor('text')
                                 }}
                             >
-                                Privacy
+                                {localeString('views.Settings.Privacy.title')}
                             </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
                             </View>
-                        </View>
+                        </TouchableOpacity>
 
                         <View style={styles.separationLine} />
                         <View style={styles.columnField}>
