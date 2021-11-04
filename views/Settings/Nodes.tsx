@@ -197,7 +197,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                     lurkerMode:
                                                         settings.lurkerMode,
                                                     passphrase:
-                                                        settings.passphrase
+                                                        settings.passphrase,
+                                                    privacy: settings.privacy
                                                 })
                                             ).then(() => {
                                                 navigation.navigate('Wallet', {

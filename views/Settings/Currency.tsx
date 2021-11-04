@@ -124,7 +124,8 @@ export default class Currency extends React.Component<
                                         fiat: item.value,
                                         lurkerMode: settings.lurkerMode,
                                         passphrase: settings.passphrase,
-                                        locale: settings.locale
+                                        locale: settings.locale,
+                                        privacy: settings.privacy
                                     })
                                 ).then(() => {
                                     getSettings();

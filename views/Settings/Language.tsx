@@ -126,7 +126,8 @@ export default class Language extends React.Component<
                                             fiat: settings.fiat,
                                             lurkerMode: settings.lurkerMode,
                                             passphrase: settings.passphrase,
-                                            locale: item.value
+                                            locale: item.value,
+                                            privacy: settings.privacy
                                         })
                                     ).then(() => {
                                         getSettings();
