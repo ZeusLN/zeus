@@ -90,10 +90,10 @@ export default class Theme extends React.Component<ThemeProps, ThemeStore> {
                                             onChainAddress:
                                                 settings.onChainAddress,
                                             fiat: settings.fiat,
-                                            lurkerMode: settings.lurkerMode,
                                             passphrase: settings.passphrase,
                                             locale: settings.locale,
-                                            theme: item.value
+                                            theme: item.value,
+                                            privacy: settings.privacy
                                         })
                                     ).then(() => {
                                         getSettings();

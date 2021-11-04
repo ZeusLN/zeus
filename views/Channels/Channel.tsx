@@ -124,7 +124,8 @@ export default class ChannelView extends React.Component<
         const { channelFees } = FeeStore;
         const { loading, nodes } = ChannelsStore;
         const { settings, implementation } = SettingsStore;
-        const { lurkerMode } = settings;
+        const { privacy } = settings;
+        const { lurkerMode } = privacy;
 
         const {
             channel_point,

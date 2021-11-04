@@ -13,8 +13,8 @@ interface CurrencyProps {
     SettingsStore: SettingsStore;
 }
 
-interface CurrencyStore {
-    selectCurreny: string;
+interface CurrencyState {
+    selectCurrency: string;
     search: string;
     currencies: any;
 }
@@ -23,7 +23,7 @@ interface CurrencyStore {
 @observer
 export default class Currency extends React.Component<
     CurrencyProps,
-    CurrencyStore
+    CurrencyState
 > {
     state = {
         selectedCurrency: '',
@@ -114,6 +114,7 @@ export default class Currency extends React.Component<
                                 backgroundColor: themeColor('background')
                             }}
                             onPress={async () => {
+                                const settings = await getSettings();
                                 await setSettings(
                                     JSON.stringify({
                                         nodes: settings.nodes,
@@ -121,9 +122,9 @@ export default class Currency extends React.Component<
                                         selectedNode: settings.selectedNode,
                                         onChainAddress: settings.onChainAddress,
                                         fiat: item.value,
-                                        lurkerMode: settings.lurkerMode,
                                         passphrase: settings.passphrase,
-                                        locale: settings.locale
+                                        locale: settings.locale,
+                                        privacy: settings.privacy
                                     })
                                 ).then(() => {
                                     getSettings();
@@ -157,10 +158,8 @@ export default class Currency extends React.Component<
                             )}
                         </ListItem>
                     )}
-                    refreshing={loading}
                     keyExtractor={(item, index) => `${item.host}-${index}`}
                     ItemSeparatorComponent={this.renderSeparator}
-                    onEndReachedThreshold={50}
                 />
             </View>
         );

@@ -82,7 +82,13 @@ export default class Wallet extends React.Component<WalletProps, {}> {
     }
 
     async UNSAFE_componentWillMount() {
-        this.clipboard = await Clipboard.getString();
+        const { SettingsStore } = this.props;
+        const { settings } = SettingsStore;
+
+        if (settings.privacy && settings.privacy.clipboard) {
+            this.clipboard = await Clipboard.getString();
+        }
+
         this.getSettingsAndRefresh();
     }
 

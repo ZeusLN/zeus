@@ -28,12 +28,16 @@ import Lockscreen from './views/Lockscreen';
 import Settings from './views/Settings/Settings';
 import AddEditNode from './views/Settings/AddEditNode';
 import Nodes from './views/Settings/Nodes';
+import Privacy from './views/Settings/Privacy';
+import Security from './views/Settings/Security';
+import SetPassword from './views/Settings/SetPassword';
 import Language from './views/Settings/Language';
 import Currency from './views/Settings/Currency';
 import Theme from './views/Settings/Theme';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import About from './views/Settings/About';
 import SignMessage from './views/Settings/SignMessage';
+import Help from './views/Settings/Help';
 
 // Routing
 import Routing from './views/Routing/Routing';
@@ -81,6 +85,15 @@ const AppScenes = {
     Nodes: {
         screen: Nodes
     },
+    Privacy: {
+        screen: Privacy
+    },
+    Security: {
+        screen: Security
+    },
+    SetPassword: {
+        screen: SetPassword
+    },
     Language: {
         screen: Language
     },
@@ -89,6 +102,9 @@ const AppScenes = {
     },
     Theme: {
         screen: Theme
+    },
+    Help: {
+        screen: Help
     },
     CertInstallInstructions: {
         screen: CertInstallInstructions

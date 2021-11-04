@@ -108,7 +108,8 @@ export default class ChannelPicker extends React.Component<
         const { channels, nodes, loading, getChannels } = ChannelsStore;
         const { getAmount, units } = UnitsStore;
         const { settings } = SettingsStore;
-        const { theme, lurkerMode } = settings;
+        const { theme, privacy } = settings;
+        const { lurkerMode } = privacy;
 
         const pickerValuesAndroid: Array<any> = [];
         const pickerValuesIOS: Array<string> = ['Cancel'];
