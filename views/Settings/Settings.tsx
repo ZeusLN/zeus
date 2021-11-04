@@ -24,11 +24,6 @@ import Identicon from 'identicon.js';
 const hash = require('object-hash');
 import { version } from './../../package.json';
 
-// import SettingsStore, {
-//     DEFAULT_THEME,
-//     DEFAULT_FIAT,
-//     DEFAULT_LOCALE
-// } from './../stores/SettingsStore';
 import SettingsStore from './../stores/SettingsStore';
 import UnitsStore from './../stores/UnitsStore';
 
@@ -70,8 +65,6 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                 underlayColor="transparent"
             />
         );
-
-        // const lurkerLabel = `Lurking ${PrivacyUtils.getLover()} Mode: hides sensitive values`;
 
         const displayName =
             selectedNode.implementation === 'lndhub'
@@ -126,18 +119,6 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     }}
                     backgroundColor={themeColor('secondary')}
                 />
-                {
-                    // {passphraseError && (
-                    //     <Text
-                    //         style={{
-                    //             color: 'red',
-                    //             textAlign: 'center',
-                    //             padding: 20
-                    //         }}
-                    //     >
-                    //         Passphrases do not match
-                    //     </Text>
-                }
                 <ScrollView>
                     <TouchableOpacity
                         onPress={() => navigation.navigate('Nodes')}
@@ -254,7 +235,10 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             top: 60
                         }}
                     >
-                        <View style={styles.columnField}>
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() => navigation.navigate('Privacy')}
+                        >
                             <View>
                                 <PrivacyIcon stroke={themeColor('text')} />
                             </View>
@@ -264,15 +248,19 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     color: themeColor('text')
                                 }}
                             >
-                                Privacy
+                                {localeString('views.Settings.privacy')}
                             </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
                             </View>
-                        </View>
+                        </TouchableOpacity>
 
                         <View style={styles.separationLine} />
-                        <View style={styles.columnField}>
+
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() => navigation.navigate('Security')}
+                        >
                             <View>
                                 <SecurityIcon stroke={themeColor('text')} />
                             </View>
@@ -282,12 +270,12 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     color: themeColor('text')
                                 }}
                             >
-                                Security
+                                {localeString('views.Settings.security')}
                             </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
                             </View>
-                        </View>
+                        </TouchableOpacity>
 
                         <View style={styles.separationLine} />
                         <TouchableOpacity
@@ -401,7 +389,10 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             top: 120
                         }}
                     >
-                        <View style={styles.columnField}>
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() => navigation.navigate('Help')}
+                        >
                             <View style={{ padding: 5 }}>
                                 <HelpIcon />
                             </View>
@@ -411,168 +402,14 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     color: themeColor('text')
                                 }}
                             >
-                                Help
+                                {localeString('general.help')}
                             </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
                             </View>
-                        </View>
+                        </TouchableOpacity>
                     </View>
 
-                    {/* <DropdownSetting
-                    title={localeString('views.Settings.theme')}
-                    selectedValue={theme}
-                    displayValue={themes[theme]}
-                    onValueChange={(value: string) =>
-                        this.setState({ theme: value })
-                    }
-                    values={[
-                        { key: 'Dark', value: 'dark' },
-                        { key: 'Light', value: 'light' },
-                        { key: 'Junkie', value: 'junkie' }
-                    ]}
-                /> */}
-
-                    {/* <DropdownSetting
-                    title={lurkerLabel}
-                    selectedValue={lurkerMode}
-                    displayValue={
-                        lurkerMode
-                            ? localeString('views.Settings.enabled')
-                            : localeString('views.Settings.disabled')
-                    }
-                    onValueChange={(value: boolean) =>
-                        this.setState({ lurkerMode: value })
-                    }
-                    values={[
-                        { key: 'Disabled', value: false },
-                        { key: 'Enabled', value: true }
-                    ]}
-                /> */}
-
-                    {/* {showPassphraseForm && (
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            paddingLeft: 10,
-                            paddingTop: 10
-                        }}
-                    >
-                        {localeString('views.Settings.newPassphrase')}
-                    </Text>
-                )} */}
-                    {/* {showPassphraseForm && (
-                    <TextInput
-                        placeholder={'********'}
-                        placeholderTextColor="darkgray"
-                        value={passphrase}
-                        onChangeText={(text: string) =>
-                            this.setState({
-                                passphrase: text,
-                                passphraseError: false
-                            })
-                        }
-                        numberOfLines={1}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        secureTextEntry={true}
-                        style={{
-                            fontSize: 20,
-                            color: themeColor('text'),
-                            paddingLeft: 10
-                        }}
-                    />
-                )} */}
-                    {/* {showPassphraseForm && (
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            paddingLeft: 10
-                        }}
-                    >
-                        {localeString('views.Settings.confirmPassphrase')}
-                    </Text>
-                )} */}
-                    {/* {showPassphraseForm && (
-                    <TextInput
-                        placeholder={'********'}
-                        placeholderTextColor="darkgray"
-                        value={passphraseConfirm}
-                        onChangeText={(text: string) =>
-                            this.setState({
-                                passphraseConfirm: text,
-                                passphraseError: false
-                            })
-                        }
-                        numberOfLines={1}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        secureTextEntry={true}
-                        style={{
-                            fontSize: 20,
-                            color: themeColor('text'),
-                            paddingLeft: 10
-                        }}
-                    />
-                )} */}
-                    {/* <View style={styles.button}>
-                    <Button
-                        title={
-                            saved
-                                ? localeString('views.Settings.settingsSaved')
-                                : localeString('views.Settings.saveSettings')
-                        }
-                        icon={{
-                            name: 'save',
-                            size: 25,
-                            color: saved ? 'black' : 'white'
-                        }}
-                        buttonStyle={{
-                            backgroundColor: saved ? '#fff' : '#261339',
-                            borderRadius: 30,
-                            width: 350,
-                            alignSelf: 'center'
-                        }}
-                        titleStyle={{
-                            color: saved ? 'black' : 'white'
-                        }}
-                        onPress={() => this.saveSettings()}
-                        style={styles.button}
-                    />
-                </View> */}
-                    {/* <View style={styles.button}>
-                    <Button
-                        title={
-                            showPassphraseForm
-                                ? localeString(
-                                      'views.Settings.hidePassphraseForm'
-                                  )
-                                : localeString(
-                                      'views.Settings.showPassphraseForm'
-                                  )
-                        }
-                        icon={{
-                            name: 'perm-identity',
-                            size: 25,
-                            color: 'white'
-                        }}
-                        onPress={() =>
-                            this.setState({
-                                showPassphraseForm: !showPassphraseForm
-                            })
-                        }
-                        style={styles.button}
-                        buttonStyle={{
-                            backgroundColor: 'darkgray',
-                            borderRadius: 30,
-                            width: 350,
-                            alignSelf: 'center'
-                        }}
-                        titleStyle={{
-                            color: 'white'
-                        }}
-                    />
-                </View> */}
                     {/* <View style={styles.button}> */}
                     {/* <Button
                         title={localeString('views.Settings.about')}

@@ -6,27 +6,6 @@ const alphabetLibrary = 'ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ';
 const numbers = numbersLibrary.split('');
 const alphabet = alphabetLibrary.split('');
 
-const zeusAffairs = [
-    'Antiope',
-    'Callisto',
-    'Danae',
-    'Europa',
-    'Leda',
-    'Leto',
-    'Taygete',
-    'Niobe',
-    'Io',
-    'Semele',
-    'Themis',
-    'Mnemosyne',
-    'Demeter',
-    'Alcmene',
-    'Persephone',
-    'Ganymede',
-    'Nemesis',
-    'Thaleia'
-];
-
 class PrivacyUtils {
     sensitiveValue = (
         input: string | number | Date | undefined,
@@ -34,7 +13,8 @@ class PrivacyUtils {
         numberSet?: boolean
     ) => {
         const { settings } = stores.settingsStore;
-        const { lurkerMode } = settings;
+        const { privacy } = settings;
+        const { lurkerMode } = privacy;
         if (!lurkerMode) return input;
 
         let output: string = '';
@@ -47,15 +27,6 @@ class PrivacyUtils {
             output = output.concat(newLetter);
         }
         return output;
-    };
-
-    getLover = () => {
-        const zeusLovers = [
-            'Hera',
-            zeusAffairs[Math.floor(Math.random() * zeusAffairs.length)]
-        ];
-
-        return zeusLovers[Math.floor(Math.random() * zeusLovers.length)];
     };
 }
 

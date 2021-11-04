@@ -85,12 +85,17 @@ export default class OpenChannel extends React.Component<
     }
 
     async UNSAFE_componentWillMount() {
-        const clipboard = await Clipboard.getString();
+        const { SettingsStore } = this.props;
+        const { settings } = SettingsStore;
 
-        if (NodeUriUtils.isValidNodeUri(clipboard)) {
-            this.setState({
-                suggestImport: clipboard
-            });
+        if (settings.privacy && settings.privacy.clipboard) {
+            const clipboard = await Clipboard.getString();
+
+            if (NodeUriUtils.isValidNodeUri(clipboard)) {
+                this.setState({
+                    suggestImport: clipboard
+                });
+            }
         }
     }
 

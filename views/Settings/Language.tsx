@@ -13,7 +13,7 @@ interface LanguageProps {
     SettingsStore: SettingsStore;
 }
 
-interface LanguageStore {
+interface LanguageState {
     selectedLocale: string;
     search: string;
     locales: any;
@@ -23,7 +23,7 @@ interface LanguageStore {
 @observer
 export default class Language extends React.Component<
     LanguageProps,
-    LanguageStore
+    LanguageState
 > {
     state = {
         selectedLocale: '',
@@ -115,6 +115,7 @@ export default class Language extends React.Component<
                                     backgroundColor: themeColor('background')
                                 }}
                                 onPress={async () => {
+                                    const settings = await getSettings();
                                     await setSettings(
                                         JSON.stringify({
                                             nodes: settings.nodes,
@@ -123,9 +124,9 @@ export default class Language extends React.Component<
                                             onChainAddress:
                                                 settings.onChainAddress,
                                             fiat: settings.fiat,
-                                            lurkerMode: settings.lurkerMode,
                                             passphrase: settings.passphrase,
-                                            locale: item.value
+                                            locale: item.value,
+                                            privacy: settings.privacy
                                         })
                                     ).then(() => {
                                         getSettings();
@@ -157,10 +158,8 @@ export default class Language extends React.Component<
                                 )}
                             </ListItem>
                         )}
-                        refreshing={loading}
                         keyExtractor={(item, index) => `${item.host}-${index}`}
                         ItemSeparatorComponent={this.renderSeparator}
-                        onEndReachedThreshold={50}
                     />
                 </View>
             </View>

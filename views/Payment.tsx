@@ -62,7 +62,8 @@ export default class PaymentView extends React.Component<PaymentProps> {
         const { navigation, UnitsStore, SettingsStore } = this.props;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { settings } = SettingsStore;
-        const { lurkerMode } = settings;
+        const { privacy } = settings;
+        const { lurkerMode } = privacy;
 
         const payment: Payment = navigation.getParam('payment', null);
         const {

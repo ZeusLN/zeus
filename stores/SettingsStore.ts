@@ -18,16 +18,37 @@ interface Node {
     enableTor?: boolean;
 }
 
+interface PrivacySettings {
+    defaultBlockExplorer?: string;
+    customBlockExplorer?: string;
+    clipboard?: boolean;
+    lurkerMode?: boolean;
+}
+
 interface Settings {
     nodes?: Array<Node>;
     theme?: string;
-    lurkerMode?: boolean;
     selectedNode?: number;
     passphrase?: string;
     fiat?: string;
     locale?: string;
     onChainAddress?: string;
+    privacy: PrivacySettings;
 }
+
+export const BLOCK_EXPLORER_KEYS = [
+    { key: 'mempool.space', value: 'mempool.space' },
+    { key: 'blockstream.info', value: 'blockstream.info' },
+    { key: 'Custom', value: 'Custom' }
+];
+
+export const INTERFACE_KEYS = [
+    { key: 'LND', value: 'lnd' },
+    { key: 'c-lightning-REST', value: 'c-lightning-REST' },
+    { key: 'Spark (c-lightning)', value: 'spark' },
+    { key: 'Eclair', value: 'eclair' },
+    { key: 'LNDHub', value: 'lndhub' }
+];
 
 export const LOCALE_KEYS = [
     { key: 'English', value: 'English' },
@@ -81,7 +102,14 @@ export const DEFAULT_THEME = 'dark';
 export const DEFAULT_FIAT = 'Disabled';
 export const DEFAULT_LOCALE = 'English';
 export default class SettingsStore {
-    @observable settings: Settings = {};
+    @observable settings: Settings = {
+        privacy: {
+            defaultBlockExplorer: 'mempool.space',
+            customBlockExplorer: '',
+            clipboard: false,
+            lurkerMode: false
+        }
+    };
     @observable public loading: boolean = false;
     @observable btcPayError: string | null;
     @observable host: string;
