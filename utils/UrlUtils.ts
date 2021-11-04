@@ -11,7 +11,7 @@ const goToBlockExplorer = (
     const host =
         privacy && privacy.defaultBlockExplorer === 'Custom'
             ? privacy.customBlockExplorer
-            : (privacy && privacy.defaultBlockExplorer) || 'blockstream.info';
+            : (privacy && privacy.defaultBlockExplorer) || 'mempool.space';
 
     const url = `https://${host}/${testnet ? 'testnet/' : ''}${type}/${value}`;
     goToUrl(url);
