@@ -1,11 +1,11 @@
+import { Buffer } from 'buffer';
 import { action, reaction, observable } from 'mobx';
+import { randomBytes } from 'react-native-randombytes';
+import { sha256 } from 'js-sha256';
 import Transaction from './../models/Transaction';
 import TransactionRequest from './../models/TransactionRequest';
 import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
-import { randomBytes } from 'react-native-randombytes';
-import { sha256 } from 'js-sha256';
-import { Buffer } from 'buffer';
 import Base64Utils from './../utils/Base64Utils';
 
 const keySendPreimageType = '5482373484';
@@ -25,8 +25,8 @@ interface SendPaymentReq {
 }
 
 export default class TransactionsStore {
-    @observable loading: boolean = false;
-    @observable error: boolean = false;
+    @observable loading = false;
+    @observable error = false;
     @observable error_msg: string | null;
     @observable transactions: Array<Transaction> = [];
     @observable transaction: Transaction | null;
@@ -37,7 +37,7 @@ export default class TransactionsStore {
     @observable onchain_address: string;
     @observable txid: string | null;
     // in lieu of receiving txid on LND's publishTransaction
-    @observable publishSuccess: boolean = false;
+    @observable publishSuccess = false;
     // c-lightning
     @observable status: string | null;
 
@@ -95,10 +95,10 @@ export default class TransactionsStore {
     ) => {
         const { utxos, addr, amount, sat_per_byte } = transactionRequest;
         const inputs: any = [];
-        let outputs: any = {};
+        const outputs: any = {};
 
         if (utxos) {
-            utxos.forEach(input => {
+            utxos.forEach((input) => {
                 const [txid_str, output_index] = input.split(':');
                 inputs.push({ txid_str, output_index: Number(output_index) });
             });
@@ -202,7 +202,7 @@ export default class TransactionsStore {
         this.payment_error = null;
         this.status = null;
 
-        let data: any = {};
+        const data: any = {};
         if (payment_request) {
             data.payment_request = payment_request;
         }

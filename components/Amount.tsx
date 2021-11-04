@@ -1,13 +1,13 @@
 import * as React from 'react';
 import { TouchableOpacity, View } from 'react-native';
-import { Body } from './text/Body';
-import { Row } from './layout/Row';
-import { Spacer } from './layout/Spacer';
 import { inject, observer } from 'mobx-react';
 import UnitsStore from '../stores/UnitsStore';
 import PrivacyUtils from '../utils/PrivacyUtils';
 import ClockIcon from '../images/SVG/Clock.svg';
 import { themeColor } from '../utils/ThemeUtils';
+import { Spacer } from './layout/Spacer';
+import { Row } from './layout/Row';
+import { Body } from './text/Body';
 
 export const satoshisPerBTC = 100000000;
 
@@ -154,7 +154,7 @@ export class Amount extends React.Component<AmountProps, {}> {
         // TODO: This doesn't feel like the right place for this but it makes the component "reactive"
         const units = fixedUnits ? fixedUnits : UnitsStore.units;
 
-        let unformattedAmount = UnitsStore.getUnformattedAmount(value, units);
+        const unformattedAmount = UnitsStore.getUnformattedAmount(value, units);
 
         const textColor = debit
             ? 'warning'
@@ -165,7 +165,7 @@ export class Amount extends React.Component<AmountProps, {}> {
             : undefined;
 
         if (sensitive) {
-            let amount = unformattedAmount.amount;
+            const amount = unformattedAmount.amount;
 
             // This should be a string because sensitiveValue can only return a date if you pass it a date
             // TODO: can we do better than hardcoding these?

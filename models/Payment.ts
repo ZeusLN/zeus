@@ -1,6 +1,6 @@
+import { computed } from 'mobx';
 import BaseModel from './BaseModel';
 import DateTimeUtils from './../utils/DateTimeUtils';
-import { computed } from 'mobx';
 import { localeString } from './../utils/LocaleUtils';
 
 export default class Payment extends BaseModel {

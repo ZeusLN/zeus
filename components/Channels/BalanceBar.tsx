@@ -1,6 +1,6 @@
-import { Row } from '../layout/Row';
 import React from 'react';
 import { View } from 'react-native';
+import { Row } from '../layout/Row';
 import { themeColor } from '../../utils/ThemeUtils';
 
 export function BalanceBar({

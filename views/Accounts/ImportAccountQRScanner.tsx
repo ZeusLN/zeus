@@ -1,5 +1,7 @@
 import * as React from 'react';
 import { Alert } from 'react-native';
+import createHash = require('create-hash');
+
 import QRCodeScanner from './../../components/QRCodeScanner';
 import LndConnectUtils from './../../utils/LndConnectUtils';
 import { localeString } from './../../utils/LocaleUtils';
@@ -8,7 +10,6 @@ import {
     extractSingleWorkload,
     BlueURDecoder
 } from './../../zeus_modules/ur';
-const createHash = require('create-hash');
 
 interface ImportAccountQRScannerProps {
     navigation: any;
@@ -23,14 +24,11 @@ const ImportAccountQRScanner = (props: ImportAccountQRScannerProps) => {
     const [isLoading, setIsLoading] = React.useState(false);
     const navigation = props.navigation;
 
-    const HashIt = function(s) {
-        return createHash('sha256')
-            .update(s)
-            .digest()
-            .toString('hex');
+    const HashIt = function (s) {
+        return createHash('sha256').update(s).digest().toString('hex');
     };
 
-    const _onReadUniformResourceV2 = part => {
+    const _onReadUniformResourceV2 = (part) => {
         if (!decoder) decoder = new BlueURDecoder();
         try {
             decoder.receivePart(part);
@@ -61,7 +59,7 @@ const ImportAccountQRScanner = (props: ImportAccountQRScannerProps) => {
      *
      * @deprecated remove when we get rid of URv1 support
      */
-    const _onReadUniformResource = ur => {
+    const _onReadUniformResource = (ur) => {
         try {
             const [index, total] = extractSingleWorkload(ur);
             animatedQRCodeData[index + 'of' + total] = ur;
@@ -71,11 +69,7 @@ const ImportAccountQRScanner = (props: ImportAccountQRScannerProps) => {
                 const payload = decodeUR(Object.values(animatedQRCodeData));
                 // lets look inside that data
                 let data = false;
-                if (
-                    Buffer.from(payload, 'hex')
-                        .toString()
-                        .startsWith('psbt')
-                ) {
+                if (Buffer.from(payload, 'hex').toString().startsWith('psbt')) {
                     // its a psbt, and whoever requested it expects it encoded in base64
                     data = Buffer.from(payload, 'hex').toString('base64');
                 } else {
@@ -98,7 +92,7 @@ const ImportAccountQRScanner = (props: ImportAccountQRScannerProps) => {
         }
     };
 
-    const onBarCodeRead = ret => {
+    const onBarCodeRead = (ret) => {
         const h = HashIt(ret);
         if (scannedCache[h]) {
             // this QR was already scanned by this ScanQRCode, lets prevent firing duplicate callbacks
@@ -133,7 +127,9 @@ const ImportAccountQRScanner = (props: ImportAccountQRScannerProps) => {
                 qrResponse: Buffer.from(hex, 'hex').toString('base64')
             });
             return;
-        } catch (_) {}
+        } catch (err) {
+            console.warn(error);
+        }
 
         if (!isLoading) {
             setIsLoading(true);

@@ -2,6 +2,8 @@ import * as React from 'react';
 import { Image, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Badge, Button } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { WalletHeader } from '../../components/WalletHeader';
+import { Amount } from '../../components/Amount';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -9,11 +11,9 @@ import NodeInfoStore from './../../stores/NodeInfoStore';
 import BalanceStore from './../../stores/BalanceStore';
 import SettingsStore from './../../stores/SettingsStore';
 
-const TorIcon = require('./../../images/tor.png');
-
 import { version, playStore } from './../../package.json';
-import { WalletHeader } from '../../components/WalletHeader';
-import { Amount } from '../../components/Amount';
+
+import TorIcon = require('./../../images/tor.png');
 
 interface MainPaneProps {
     navigation: any;
@@ -26,12 +26,8 @@ interface MainPaneProps {
 @observer
 export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
     render() {
-        const {
-            NodeInfoStore,
-            BalanceStore,
-            SettingsStore,
-            navigation
-        } = this.props;
+        const { NodeInfoStore, BalanceStore, SettingsStore, navigation } =
+            this.props;
         const {
             totalBlockchainBalance,
             unconfirmedBlockchainBalance,

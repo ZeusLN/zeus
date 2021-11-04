@@ -5,8 +5,8 @@ import ChannelsStore from './ChannelsStore';
 import RESTUtils from './../utils/RESTUtils';
 
 export default class PaymentsStore {
-    @observable loading: boolean = false;
-    @observable error: boolean = false;
+    @observable loading = false;
+    @observable error = false;
     @observable error_msg: string;
     @observable payments: Array<Payment | any> = [];
     settingsStore: SettingsStore;

@@ -7,9 +7,9 @@ import {
     View
 } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
+import { inject, observer } from 'mobx-react';
 import UrlUtils from './../../utils/UrlUtils';
 import Utxo from './../../models/Utxo';
-import { inject, observer } from 'mobx-react';
 import PrivacyUtils from './../../utils/PrivacyUtils';
 
 import NodeInfoStore from './../../stores/NodeInfoStore';

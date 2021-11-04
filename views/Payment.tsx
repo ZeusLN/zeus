@@ -7,8 +7,8 @@ import {
     View
 } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
-import Payment from './../models/Payment';
 import { inject, observer } from 'mobx-react';
+import Payment from './../models/Payment';
 import PrivacyUtils from './../utils/PrivacyUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
@@ -30,7 +30,7 @@ const PaymentPath = ({ path }: any) => {
         return path[0];
     }
 
-    let multiPathDisplay: any = [];
+    const multiPathDisplay: any = [];
     for (let i = 0; i < path.length; i++) {
         multiPathDisplay.push(`Part ${i + 1}/${path.length}`);
         for (let j = 0; j < path[i].length; j++) {
@@ -52,7 +52,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
     async componentDidMount() {
         const { navigation, LnurlPayStore } = this.props;
         const payment: Payment = navigation.getParam('payment', null);
-        let lnurlpaytx = await LnurlPayStore.load(payment.payment_hash);
+        const lnurlpaytx = await LnurlPayStore.load(payment.payment_hash);
         if (lnurlpaytx) {
             this.setState({ lnurlpaytx });
         }

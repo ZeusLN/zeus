@@ -110,7 +110,7 @@ export default class SettingsStore {
             lurkerMode: false
         }
     };
-    @observable public loading: boolean = false;
+    @observable public loading = false;
     @observable btcPayError: string | null;
     @observable host: string;
     @observable port: string;
@@ -147,12 +147,8 @@ export default class SettingsStore {
                 if (status == 200) {
                     const data = response.json();
                     const configuration = data.configurations[0];
-                    const {
-                        adminMacaroon,
-                        macaroon,
-                        type,
-                        uri
-                    } = configuration;
+                    const { adminMacaroon, macaroon, type, uri } =
+                        configuration;
 
                     if (type !== 'lnd-rest' && type !== 'clightning-rest') {
                         this.btcPayError =

@@ -1,10 +1,10 @@
+import url from 'url';
 import * as React from 'react';
 import RNFetchBlob from 'rn-fetch-blob';
 import { Alert, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon, CheckBox } from 'react-native-elements';
 import querystring from 'querystring-es3';
-import url from 'url';
 
 import ChannelsStore from './../stores/ChannelsStore';
 import NodeInfoStore from './../stores/NodeInfoStore';

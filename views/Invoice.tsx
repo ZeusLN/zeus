@@ -7,8 +7,8 @@ import {
     View
 } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
-import Invoice from './../models/Invoice';
 import { inject, observer } from 'mobx-react';
+import Invoice from './../models/Invoice';
 import PrivacyUtils from './../utils/PrivacyUtils';
 import CollapsedQR from './../components/CollapsedQR';
 import { localeString } from './../utils/LocaleUtils';

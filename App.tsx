@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { View, StyleSheet } from 'react-native';
+import { Provider } from 'mobx-react';
 import Stores from './stores/Stores';
 import Navigation from './Navigation';
-import { Provider } from 'mobx-react';
 
 export default class App extends React.PureComponent {
     render() {

@@ -1,12 +1,10 @@
 import * as React from 'react';
 import { FlatList, View } from 'react-native';
 import { Header, Icon, ListItem } from 'react-native-elements';
-import SettingsStore from './../../stores/SettingsStore';
+import { inject, observer } from 'mobx-react';
+import SettingsStore, { THEME_KEYS } from './../../stores/SettingsStore';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
-import { inject, observer } from 'mobx-react';
-
-import { THEME_KEYS } from './../../stores/SettingsStore';
 
 interface ThemeProps {
     navigation: any;
@@ -24,7 +22,7 @@ export default class Theme extends React.Component<ThemeProps, ThemeStore> {
         selectedTheme: ''
     };
 
-    async componentWillMount() {
+    async UNSAFE_componentWillMount() {
         const { SettingsStore } = this.props;
         const { getSettings } = SettingsStore;
         const settings = await getSettings();

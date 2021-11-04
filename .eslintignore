@@ -1,0 +1,7 @@
+bc-ur
+node_modules
+.eslintrc.js
+babel.config.js
+index.js
+metro.config.js
+shim.js

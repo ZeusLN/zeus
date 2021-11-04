@@ -1,12 +1,11 @@
 import * as React from 'react';
 import { FlatList, Text, TextInput, View } from 'react-native';
-import { Header, Icon, ListItem } from 'react-native-elements';
+import { Header, Icon, ListItem, Button } from 'react-native-elements';
+import { inject, observer } from 'mobx-react';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
-import { Button } from 'react-native-elements';
 import UrlUtils from './../../utils/UrlUtils';
 import SettingsStore from './../../stores/SettingsStore';
-import { inject, observer } from 'mobx-react';
 
 interface SetPINProps {
     navigation: any;
