@@ -18,21 +18,43 @@ interface Node {
     enableTor?: boolean;
 }
 
+interface PrivacySettings {
+    defaultBlockExplorer?: string;
+    customBlockExplorer?: string;
+    clipboard?: boolean;
+    lurkerMode?: boolean;
+}
+
 interface Settings {
     nodes?: Array<Node>;
     theme?: string;
-    lurkerMode?: boolean;
     selectedNode?: number;
     passphrase?: string;
     fiat?: string;
     locale?: string;
     onChainAddress?: string;
+    privacy: PrivacySettings;
 }
+
+export const BLOCK_EXPLORER_KEYS = [
+    { key: 'mempool.space', value: 'mempool.space' },
+    { key: 'blockstream.info', value: 'blockstream.info' },
+    { key: 'Custom', value: 'Custom' }
+];
+
+export const INTERFACE_KEYS = [
+    { key: 'LND', value: 'lnd' },
+    { key: 'c-lightning-REST', value: 'c-lightning-REST' },
+    { key: 'Spark (c-lightning)', value: 'spark' },
+    { key: 'Eclair', value: 'eclair' },
+    { key: 'LNDHub', value: 'lndhub' }
+];
 
 export const LOCALE_KEYS = [
     { key: 'English', value: 'English' },
     { key: 'Español', value: 'Español' },
     { key: 'Português', value: 'Português' },
+    { key: 'Français', value: 'Français' },
     { key: 'Češka', value: 'Češka' },
     { key: 'Slovák', value: 'Slovák' },
     { key: 'Deutsch', value: 'Deutsch' },
@@ -42,15 +64,52 @@ export const LOCALE_KEYS = [
     // in progress
     { key: 'Ελληνικά', value: 'Ελληνικά' },
     { key: 'زبان فارسي', value: 'زبان فارسي' },
-    { key: 'Français', value: 'Français' },
     { key: 'Nederlands', value: 'Nederlands' }
+];
+
+export const CURRENCY_KEYS = [
+    { key: 'Disabled', value: 'Disabled' },
+    { key: '🇺🇸 US Dollar (USD)', value: 'USD' },
+    { key: '🇯🇵 Japanese Yen (JPY)', value: 'JPY' },
+    { key: '🇨🇳 Chinese Yuan (CNY)', value: 'CNY' },
+    { key: '🇸🇬 Singapore Dollar (SGD)', value: 'SGD' },
+    { key: '🇭🇰 Hong Kong Dollar (HKD)', value: 'HKD' },
+    { key: '🇨🇦 Canadian Dollar (CAD)', value: 'CAD' },
+    { key: '🇳🇿 New Zealand Dollar (NZD)', value: 'NZD' },
+    { key: '🇦🇺 Austrlian Dollar (AUD)', value: 'AUD' },
+    { key: '🇨🇱 Chilean Peso (CLP)', value: 'CLP' },
+    { key: '🇬🇧 Great British Pound (GBP)', value: 'GBP' },
+    { key: '🇩🇰 Danish Krone (DKK)', value: 'DKK' },
+    { key: '🇸🇪 Swedish Krona (SEK)', value: 'SEK' },
+    { key: '🇮🇸 Icelandic Krona (ISK)', value: 'ISK' },
+    { key: '🇨🇭 Swiss Franc (CHF)', value: 'CHF' },
+    { key: '🇧🇷 Brazilian Real (BRL)', value: 'BRL' },
+    { key: '🇪🇺 Eurozone Euro (EUR)', value: 'EUR' },
+    { key: '🇷🇺 Russian Ruble (RUB)', value: 'RUB' },
+    { key: '🇵🇱 Polish Złoty (PLN)', value: 'PLN' },
+    { key: '🇹🇭 Thai Baht (THB)', value: 'THB' },
+    { key: '🇰🇷 South Korean Won (KRW)', value: 'KRW' },
+    { key: '🇹🇼 Taiwan New Dollar (TWD)', value: 'TWD' }
+];
+
+export const THEME_KEYS = [
+    { key: 'Dark', value: 'dark' },
+    { key: 'Light', value: 'light' },
+    { key: 'Junkie', value: 'junkie' }
 ];
 
 export const DEFAULT_THEME = 'dark';
 export const DEFAULT_FIAT = 'Disabled';
 export const DEFAULT_LOCALE = 'English';
 export default class SettingsStore {
-    @observable settings: Settings = {};
+    @observable settings: Settings = {
+        privacy: {
+            defaultBlockExplorer: 'mempool.space',
+            customBlockExplorer: '',
+            clipboard: false,
+            lurkerMode: false
+        }
+    };
     @observable public loading: boolean = false;
     @observable btcPayError: string | null;
     @observable host: string;

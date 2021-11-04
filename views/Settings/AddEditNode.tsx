@@ -20,7 +20,8 @@ import LndConnectUtils from './../../utils/LndConnectUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 import CollapsedQR from './../../components/CollapsedQR';
-import SettingsStore from './../../stores/SettingsStore';
+import DropdownSetting from './../../components/DropdownSetting';
+import SettingsStore, { INTERFACE_KEYS } from './../../stores/SettingsStore';
 
 interface AddEditNodeProps {
     navigation: any;
@@ -28,6 +29,7 @@ interface AddEditNodeProps {
 }
 
 interface AddEditNodeState {
+    nickname: string; //
     host: string; // lnd
     port: string | number; // lnd
     macaroonHex: string; // lnd
@@ -58,6 +60,7 @@ export default class AddEditNode extends React.Component<
     isComponentMounted: boolean = false;
 
     state = {
+        nickname: '',
         host: '',
         port: '',
         macaroonHex: '',
@@ -80,16 +83,21 @@ export default class AddEditNode extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const clipboard = await Clipboard.getString();
+        const { SettingsStore } = this.props;
+        const { settings } = SettingsStore;
 
-        if (
-            clipboard.includes('lndconnect://') ||
-            clipboard.includes('lndhub://') ||
-            clipboard.includes('bluewallet:')
-        ) {
-            this.setState({
-                suggestImport: clipboard
-            });
+        if (settings.privacy && settings.privacy.clipboard) {
+            const clipboard = await Clipboard.getString();
+
+            if (
+                clipboard.includes('lndconnect://') ||
+                clipboard.includes('lndhub://') ||
+                clipboard.includes('bluewallet:')
+            ) {
+                this.setState({
+                    suggestImport: clipboard
+                });
+            }
         }
     }
 
@@ -176,6 +184,7 @@ export default class AddEditNode extends React.Component<
 
         if (node) {
             const {
+                nickname,
                 host,
                 port,
                 macaroonHex,
@@ -191,6 +200,7 @@ export default class AddEditNode extends React.Component<
             } = node;
 
             this.setState({
+                nickname,
                 host,
                 port,
                 macaroonHex,
@@ -220,6 +230,7 @@ export default class AddEditNode extends React.Component<
     saveNodeConfiguration = () => {
         const { SettingsStore, navigation } = this.props;
         const {
+            nickname,
             host,
             port,
             url,
@@ -235,7 +246,8 @@ export default class AddEditNode extends React.Component<
             index
         } = this.state;
         const { setSettings, settings } = SettingsStore;
-        const { lurkerMode, passphrase, fiat, locale } = settings;
+        const { privacy, passphrase, fiat, locale } = settings;
+        const { lurkerMode } = privacy;
 
         if (
             implementation === 'lndhub' &&
@@ -245,6 +257,7 @@ export default class AddEditNode extends React.Component<
         }
 
         const node = {
+            nickname,
             host,
             port,
             url,
@@ -276,7 +289,8 @@ export default class AddEditNode extends React.Component<
                 fiat,
                 locale,
                 lurkerMode,
-                passphrase
+                passphrase,
+                privacy: settings.privacy
             })
         ).then(() => {
             this.setState({
@@ -314,7 +328,8 @@ export default class AddEditNode extends React.Component<
                 fiat,
                 locale,
                 lurkerMode,
-                passphrase
+                passphrase,
+                privacy: settings.privacy
             })
         ).then(() => {
             navigation.navigate('Wallet', { refresh: true });
@@ -336,7 +351,8 @@ export default class AddEditNode extends React.Component<
                 fiat,
                 locale,
                 lurkerMode,
-                passphrase
+                passphrase,
+                privacy: settings.privacy
             })
         );
 
@@ -350,6 +366,7 @@ export default class AddEditNode extends React.Component<
     render() {
         const { navigation, SettingsStore } = this.props;
         const {
+            nickname,
             host,
             port,
             url,
@@ -417,121 +434,27 @@ export default class AddEditNode extends React.Component<
             </View>
         );
 
-        const NodeInterface = () => (
-            <>
-                {Platform.OS !== 'ios' && (
-                    <View>
-                        <Text style={{ color: themeColor('text') }}>
-                            {localeString(
-                                'views.Settings.AddEditNode.nodeInterface'
-                            )}
-                        </Text>
-                        <Picker
-                            selectedValue={implementation}
-                            onValueChange={(itemValue: string) => {
-                                if (itemValue === 'lndhub') {
-                                    this.setState({
-                                        implementation: itemValue,
-                                        saved: false,
-                                        certVerification: true
-                                    });
-                                } else {
-                                    this.setState({
-                                        implementation: itemValue,
-                                        saved: false,
-                                        certVerification: false
-                                    });
-                                }
-                            }}
-                            style={{
-                                ...styles.picker,
-                                color: themeColor('text')
-                            }}
-                        >
-                            <Picker.Item label="lnd" value="lnd" />
-                            <Picker.Item
-                                label="c-lightning-REST"
-                                value="c-lightning-REST"
-                            />
-                            <Picker.Item
-                                label="Spark (c-lightning)"
-                                value="spark"
-                            />
-                            <Picker.Item label="LNDHub" value="lndhub" />
-                            <Picker.Item label="Eclair" value="eclair" />
-                        </Picker>
-                    </View>
-                )}
+        const displayValue = INTERFACE_KEYS.filter(
+            (value: any) => value.value === implementation
+        )[0].key;
 
-                {Platform.OS === 'ios' && (
-                    <View>
-                        <Text style={{ color: themeColor('text') }}>
-                            {localeString(
-                                'views.Settings.AddEditNode.nodeInterface'
-                            )}
-                        </Text>
-                        <TouchableOpacity
-                            onPress={() =>
-                                ActionSheetIOS.showActionSheetWithOptions(
-                                    {
-                                        options: [
-                                            'Cancel',
-                                            'lnd',
-                                            'c-lightning-REST',
-                                            'Spark (c-lightning)',
-                                            'LNDHub',
-                                            'Eclair'
-                                        ],
-                                        cancelButtonIndex: 0
-                                    },
-                                    buttonIndex => {
-                                        if (buttonIndex === 1) {
-                                            this.setState({
-                                                implementation: 'lnd',
-                                                saved: false,
-                                                certVerification: false
-                                            });
-                                        } else if (buttonIndex === 2) {
-                                            this.setState({
-                                                implementation:
-                                                    'c-lightning-REST',
-                                                saved: false,
-                                                certVerification: false
-                                            });
-                                        } else if (buttonIndex === 3) {
-                                            this.setState({
-                                                implementation: 'spark',
-                                                saved: false,
-                                                certVerification: false
-                                            });
-                                        } else if (buttonIndex === 4) {
-                                            this.setState({
-                                                implementation: 'lndhub',
-                                                saved: false,
-                                                certVerification: true
-                                            });
-                                        } else if (buttonIndex === 5) {
-                                            this.setState({
-                                                implementation: 'eclair',
-                                                saved: false,
-                                                certVerification: false
-                                            });
-                                        }
-                                    }
-                                )
-                            }
-                        >
-                            <Text style={{ color: themeColor('text') }}>
-                                {implementation}
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
-            </>
+        const NodeInterface = () => (
+            <DropdownSetting
+                title={localeString('views.Settings.AddEditNode.nodeInterface')}
+                selectedValue={displayValue}
+                onValueChange={(value: string) => {
+                    this.setState({
+                        implementation: value,
+                        saved: false,
+                        certVerification: value === 'lndhub' ? true : false
+                    });
+                }}
+                values={INTERFACE_KEYS}
+            />
         );
 
         return (
-            <ScrollView
+            <View
                 style={{
                     flex: 1,
                     backgroundColor: themeColor('background'),
@@ -736,39 +659,109 @@ export default class AddEditNode extends React.Component<
                     </View>
                 </Modal>
 
-                <View style={styles.form}>
-                    {!!createAccountError &&
-                        implementation === 'lndhub' &&
-                        !loading && (
-                            <Text style={{ color: 'red', marginBottom: 5 }}>
-                                {createAccountError}
-                            </Text>
-                        )}
+                {false && (
+                    <View style={{ height: 200 }}>
+                        <View style={{ alignItems: 'center', top: 40 }}></View>
+                        <Text
+                            style={{
+                                alignSelf: 'center',
+                                top: 50,
+                                fontSize: 23,
+                                color: themeColor('text')
+                            }}
+                        >
+                            {nickname
+                                ? nickname
+                                : host
+                                ? `${host}:${port}`
+                                : ''}
+                        </Text>
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                justifyContent: 'center',
+                                top: 60
+                            }}
+                        >
+                            {false && (
+                                <View
+                                    style={{
+                                        backgroundColor: '#FFB040',
+                                        height: 26,
+                                        width: 70,
+                                        borderRadius: 8,
+                                        right: 5
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            alignSelf: 'center',
+                                            padding: 2
+                                        }}
+                                    >
+                                        Mainnet
+                                    </Text>
+                                </View>
+                            )}
+                            {enableTor && (
+                                <View
+                                    style={{
+                                        backgroundColor: '#8A3ABD',
+                                        height: 26,
+                                        width: 70,
+                                        borderRadius: 8,
+                                        left: 5
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            alignSelf: 'center',
+                                            padding: 2
+                                        }}
+                                    >
+                                        Tor
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+                    </View>
+                )}
 
-                    {!!createAccountSuccess &&
-                        implementation === 'lndhub' &&
-                        !loading && (
-                            <Text style={{ color: 'green', marginBottom: 5 }}>
-                                {createAccountSuccess}
-                            </Text>
-                        )}
+                <ScrollView style={{ flex: 1, padding: 15 }}>
+                    <View style={styles.form}>
+                        {!!createAccountError &&
+                            implementation === 'lndhub' &&
+                            !loading && (
+                                <Text style={{ color: 'red', marginBottom: 5 }}>
+                                    {createAccountError}
+                                </Text>
+                            )}
 
-                    <NodeInterface />
+                        {!!createAccountSuccess &&
+                            implementation === 'lndhub' &&
+                            !loading && (
+                                <Text
+                                    style={{ color: 'green', marginBottom: 5 }}
+                                >
+                                    {createAccountSuccess}
+                                </Text>
+                            )}
 
-                    {(implementation === 'spark' ||
-                        implementation == 'eclair') && (
-                        <>
-                            <Text style={{ color: themeColor('text') }}>
-                                {localeString(
-                                    'views.Settings.AddEditNode.host'
-                                )}
+                        <View>
+                            <Text
+                                style={{ color: themeColor('secondaryText') }}
+                            >
+                                Nickname
                             </Text>
                             <TextInput
-                                placeholder={'http://192.168.1.2:9737'}
-                                value={url}
+                                placeholder={'My lightning node'}
+                                value={nickname}
                                 onChangeText={(text: string) =>
                                     this.setState({
-                                        url: text.trim(),
+                                        nickname: text,
                                         saved: false
                                     })
                                 }
@@ -780,86 +773,339 @@ export default class AddEditNode extends React.Component<
                                 editable={!loading}
                                 placeholderTextColor="gray"
                             />
+                        </View>
 
-                            {implementation === 'spark' && (
-                                <>
-                                    <Text style={{ color: themeColor('text') }}>
-                                        {localeString(
-                                            'views.Settings.AddEditNode.accessKey'
-                                        )}
-                                    </Text>
-                                    <TextInput
-                                        placeholder={'...'}
-                                        value={accessKey}
-                                        onChangeText={(text: string) => {
-                                            this.setState({
-                                                accessKey: text.trim(),
-                                                saved: false
-                                            });
-                                        }}
-                                        numberOfLines={1}
-                                        style={{
-                                            ...styles.textInput,
-                                            color: themeColor('text')
-                                        }}
-                                        editable={!loading}
-                                        placeholderTextColor="gray"
-                                    />
-                                </>
-                            )}
-                            {implementation === 'eclair' && (
-                                <>
-                                    <Text style={{ color: themeColor('text') }}>
-                                        {localeString(
-                                            'views.Settings.AddEditNode.password'
-                                        )}
-                                    </Text>
-                                    <TextInput
-                                        placeholder={'...'}
-                                        value={password}
-                                        onChangeText={(text: string) => {
-                                            this.setState({
-                                                password: text.trim(),
-                                                saved: false
-                                            });
-                                        }}
-                                        numberOfLines={1}
-                                        style={{
-                                            ...styles.textInput,
-                                            color: themeColor('text')
-                                        }}
-                                        editable={!loading}
-                                        placeholderTextColor="gray"
-                                    />
-                                </>
-                            )}
-                        </>
-                    )}
-                    {implementation === 'lndhub' && (
-                        <>
-                            <Text style={{ color: themeColor('text') }}>
-                                {localeString(
-                                    'views.Settings.AddEditNode.host'
+                        <NodeInterface />
+
+                        {(implementation === 'spark' ||
+                            implementation == 'eclair') && (
+                            <>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.AddEditNode.host'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    placeholder={'http://192.168.1.2:9737'}
+                                    value={url}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            url: text.trim(),
+                                            saved: false
+                                        })
+                                    }
+                                    numberOfLines={1}
+                                    style={{
+                                        ...styles.textInput,
+                                        color: themeColor('text')
+                                    }}
+                                    editable={!loading}
+                                    placeholderTextColor="gray"
+                                />
+
+                                {implementation === 'spark' && (
+                                    <>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.AddEditNode.accessKey'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            placeholder={'...'}
+                                            value={accessKey}
+                                            onChangeText={(text: string) => {
+                                                this.setState({
+                                                    accessKey: text.trim(),
+                                                    saved: false
+                                                });
+                                            }}
+                                            numberOfLines={1}
+                                            style={{
+                                                ...styles.textInput,
+                                                color: themeColor('text')
+                                            }}
+                                            editable={!loading}
+                                            placeholderTextColor="gray"
+                                        />
+                                    </>
                                 )}
-                            </Text>
-                            <TextInput
-                                placeholder={DEFAULT_LNDHUB}
-                                value={lndhubUrl}
-                                onChangeText={(text: string) =>
+                                {implementation === 'eclair' && (
+                                    <>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.AddEditNode.password'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            placeholder={'...'}
+                                            value={password}
+                                            onChangeText={(text: string) => {
+                                                this.setState({
+                                                    password: text.trim(),
+                                                    saved: false
+                                                });
+                                            }}
+                                            numberOfLines={1}
+                                            style={{
+                                                ...styles.textInput,
+                                                color: themeColor('text')
+                                            }}
+                                            editable={!loading}
+                                            placeholderTextColor="gray"
+                                        />
+                                    </>
+                                )}
+                            </>
+                        )}
+                        {implementation === 'lndhub' && (
+                            <>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.AddEditNode.host'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    placeholder={DEFAULT_LNDHUB}
+                                    value={lndhubUrl}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            lndhubUrl: text.trim(),
+                                            saved: false
+                                        })
+                                    }
+                                    numberOfLines={1}
+                                    style={{
+                                        ...styles.textInput,
+                                        color: themeColor('text')
+                                    }}
+                                    editable={!loading}
+                                    placeholderTextColor="gray"
+                                />
+
+                                <View
+                                    style={{
+                                        marginTop: 5
+                                    }}
+                                >
+                                    <CheckBox
+                                        title={localeString(
+                                            'views.Settings.AddEditNode.existingAccount'
+                                        )}
+                                        checked={existingAccount}
+                                        onPress={() =>
+                                            this.setState({
+                                                existingAccount: !existingAccount
+                                            })
+                                        }
+                                    />
+                                </View>
+
+                                {existingAccount && (
+                                    <>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.AddEditNode.username'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            placeholder={'...'}
+                                            value={username}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    username: text.trim(),
+                                                    saved: false
+                                                })
+                                            }
+                                            numberOfLines={1}
+                                            style={{
+                                                ...styles.textInput,
+                                                color: themeColor('text')
+                                            }}
+                                            editable={!loading}
+                                            placeholderTextColor="gray"
+                                        />
+
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.AddEditNode.password'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            placeholder={'...'}
+                                            value={password}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    password: text.trim(),
+                                                    saved: false
+                                                })
+                                            }
+                                            numberOfLines={1}
+                                            style={{
+                                                ...styles.textInput,
+                                                color: themeColor('text')
+                                            }}
+                                            editable={!loading}
+                                            secureTextEntry={saved}
+                                            placeholderTextColor="gray"
+                                        />
+                                        {saved && (
+                                            <CollapsedQR
+                                                showText={localeString(
+                                                    'views.Settings.AddEditNode.showAccountQR'
+                                                )}
+                                                collapseText={localeString(
+                                                    'views.Settings.AddEditNode.hideAccountQR'
+                                                )}
+                                                value={
+                                                    `lndhub://${username}:${password}` +
+                                                    (lndhubUrl ===
+                                                    DEFAULT_LNDHUB
+                                                        ? ''
+                                                        : `@${lndhubUrl}`)
+                                                }
+                                                hideText
+                                            />
+                                        )}
+                                    </>
+                                )}
+                            </>
+                        )}
+                        {(implementation === 'lnd' ||
+                            implementation === 'c-lightning-REST') && (
+                            <>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.AddEditNode.host'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    placeholder={'localhost'}
+                                    value={host}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            host: text.trim(),
+                                            saved: false
+                                        })
+                                    }
+                                    numberOfLines={1}
+                                    style={{
+                                        ...styles.textInput,
+                                        color: themeColor('text')
+                                    }}
+                                    editable={!loading}
+                                    placeholderTextColor="gray"
+                                />
+
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.AddEditNode.restPort'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    placeholder={'443/8080'}
+                                    value={port}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            port: text.trim(),
+                                            saved: false
+                                        })
+                                    }
+                                    numberOfLines={1}
+                                    style={{
+                                        ...styles.textInput,
+                                        color: themeColor('text')
+                                    }}
+                                    editable={!loading}
+                                    placeholderTextColor="gray"
+                                />
+
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.AddEditNode.macaroon'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    placeholder={'0A...'}
+                                    value={macaroonHex}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            macaroonHex: text.trim(),
+                                            saved: false
+                                        })
+                                    }
+                                    numberOfLines={1}
+                                    style={{
+                                        ...styles.textInput,
+                                        color: themeColor('text')
+                                    }}
+                                    editable={!loading}
+                                    placeholderTextColor="gray"
+                                />
+                            </>
+                        )}
+
+                        <View
+                            style={{
+                                marginTop: 5
+                            }}
+                        >
+                            <CheckBox
+                                title={'Use Tor'}
+                                checked={enableTor}
+                                onPress={() =>
                                     this.setState({
-                                        lndhubUrl: text.trim(),
+                                        enableTor: !enableTor,
                                         saved: false
                                     })
                                 }
-                                numberOfLines={1}
-                                style={{
-                                    ...styles.textInput,
-                                    color: themeColor('text')
-                                }}
-                                editable={!loading}
-                                placeholderTextColor="gray"
                             />
-
+                        </View>
+                        {!enableTor && (
                             <View
                                 style={{
                                     marginTop: 5
@@ -867,404 +1113,242 @@ export default class AddEditNode extends React.Component<
                             >
                                 <CheckBox
                                     title={localeString(
-                                        'views.Settings.AddEditNode.existingAccount'
+                                        'views.Settings.AddEditNode.certificateVerification'
                                     )}
-                                    checked={existingAccount}
+                                    checked={certVerification}
                                     onPress={() =>
                                         this.setState({
-                                            existingAccount: !existingAccount
+                                            certVerification: !certVerification,
+                                            saved: false
                                         })
                                     }
                                 />
                             </View>
-
-                            {existingAccount && (
-                                <>
-                                    <Text style={{ color: themeColor('text') }}>
-                                        {localeString(
-                                            'views.Settings.AddEditNode.username'
-                                        )}
-                                    </Text>
-                                    <TextInput
-                                        placeholder={'...'}
-                                        value={username}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                username: text.trim(),
-                                                saved: false
-                                            })
-                                        }
-                                        numberOfLines={1}
-                                        style={{
-                                            ...styles.textInput,
-                                            color: themeColor('text')
-                                        }}
-                                        editable={!loading}
-                                        placeholderTextColor="gray"
-                                    />
-
-                                    <Text style={{ color: themeColor('text') }}>
-                                        {localeString(
-                                            'views.Settings.AddEditNode.password'
-                                        )}
-                                    </Text>
-                                    <TextInput
-                                        placeholder={'...'}
-                                        value={password}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                password: text.trim(),
-                                                saved: false
-                                            })
-                                        }
-                                        numberOfLines={1}
-                                        style={{
-                                            ...styles.textInput,
-                                            color: themeColor('text')
-                                        }}
-                                        editable={!loading}
-                                        secureTextEntry={saved}
-                                        placeholderTextColor="gray"
-                                    />
-                                    {saved && (
-                                        <CollapsedQR
-                                            showText={localeString(
-                                                'views.Settings.AddEditNode.showAccountQR'
-                                            )}
-                                            collapseText={localeString(
-                                                'views.Settings.AddEditNode.hideAccountQR'
-                                            )}
-                                            value={
-                                                `lndhub://${username}:${password}` +
-                                                (lndhubUrl === DEFAULT_LNDHUB
-                                                    ? ''
-                                                    : `@${lndhubUrl}`)
-                                            }
-                                            hideText
-                                        />
-                                    )}
-                                </>
-                            )}
-                        </>
-                    )}
-                    {(implementation === 'lnd' ||
-                        implementation === 'c-lightning-REST') && (
-                        <>
-                            <Text style={{ color: themeColor('text') }}>
-                                {localeString(
-                                    'views.Settings.AddEditNode.host'
-                                )}
-                            </Text>
-                            <TextInput
-                                placeholder={'localhost'}
-                                value={host}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        host: text.trim(),
-                                        saved: false
-                                    })
-                                }
-                                numberOfLines={1}
-                                style={{
-                                    ...styles.textInput,
-                                    color: themeColor('text')
-                                }}
-                                editable={!loading}
-                                placeholderTextColor="gray"
-                            />
-
-                            <Text style={{ color: themeColor('text') }}>
-                                {localeString(
-                                    'views.Settings.AddEditNode.restPort'
-                                )}
-                            </Text>
-                            <TextInput
-                                keyboardType="numeric"
-                                placeholder={'443/8080'}
-                                value={port}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        port: text.trim(),
-                                        saved: false
-                                    })
-                                }
-                                numberOfLines={1}
-                                style={{
-                                    ...styles.textInput,
-                                    color: themeColor('text')
-                                }}
-                                editable={!loading}
-                                placeholderTextColor="gray"
-                            />
-
-                            <Text style={{ color: themeColor('text') }}>
-                                {localeString(
-                                    'views.Settings.AddEditNode.macaroon'
-                                )}
-                            </Text>
-                            <TextInput
-                                placeholder={'0A...'}
-                                value={macaroonHex}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        macaroonHex: text.trim(),
-                                        saved: false
-                                    })
-                                }
-                                numberOfLines={1}
-                                style={{
-                                    ...styles.textInput,
-                                    color: themeColor('text')
-                                }}
-                                editable={!loading}
-                                placeholderTextColor="gray"
-                            />
-                        </>
-                    )}
-
-                    <View
-                        style={{
-                            marginTop: 5
-                        }}
-                    >
-                        <CheckBox
-                            title={'Use Tor'}
-                            checked={enableTor}
-                            onPress={() =>
-                                this.setState({
-                                    enableTor: !enableTor,
-                                    saved: false
-                                })
-                            }
-                        />
+                        )}
                     </View>
-                    {!enableTor && (
-                        <View
-                            style={{
-                                marginTop: 5
-                            }}
-                        >
-                            <CheckBox
+
+                    {!existingAccount && implementation === 'lndhub' && (
+                        <View style={styles.button}>
+                            <Button
                                 title={localeString(
-                                    'views.Settings.AddEditNode.certificateVerification'
+                                    'views.Settings.AddEditNode.createLndhub'
                                 )}
-                                checked={certVerification}
-                                onPress={() =>
-                                    this.setState({
-                                        certVerification: !certVerification,
-                                        saved: false
-                                    })
-                                }
+                                onPress={() => {
+                                    if (lndhubUrl === DEFAULT_LNDHUB) {
+                                        this.setState({
+                                            showLndHubModal: true
+                                        });
+                                    } else {
+                                        createAccount(
+                                            lndhubUrl,
+                                            certVerification,
+                                            enableTor
+                                        ).then((data: any) => {
+                                            if (data) {
+                                                this.setState({
+                                                    username: data.login,
+                                                    password: data.password,
+                                                    existingAccount: true
+                                                });
+                                            }
+                                        });
+                                    }
+                                }}
+                                buttonStyle={{
+                                    backgroundColor: 'lightblue',
+                                    borderRadius: 30
+                                }}
                             />
                         </View>
                     )}
-                </View>
 
-                {!existingAccount && implementation === 'lndhub' && (
-                    <View style={styles.button}>
-                        <Button
-                            title={localeString(
-                                'views.Settings.AddEditNode.createLndhub'
-                            )}
-                            onPress={() => {
-                                if (lndhubUrl === DEFAULT_LNDHUB) {
-                                    this.setState({ showLndHubModal: true });
-                                } else {
-                                    createAccount(
-                                        lndhubUrl,
-                                        certVerification,
-                                        enableTor
-                                    ).then((data: any) => {
-                                        if (data) {
-                                            this.setState({
-                                                username: data.login,
-                                                password: data.password,
-                                                existingAccount: true
-                                            });
-                                        }
-                                    });
-                                }
-                            }}
-                            buttonStyle={{
-                                backgroundColor: 'lightblue',
-                                borderRadius: 30
-                            }}
-                        />
-                    </View>
-                )}
-
-                <View style={styles.button}>
-                    <Button
-                        title={
-                            saved
-                                ? localeString(
-                                      'views.Settings.AddEditNode.nodeSaved'
-                                  )
-                                : localeString(
-                                      'views.Settings.AddEditNode.saveNode'
-                                  )
-                        }
-                        icon={{
-                            name: 'save',
-                            size: 25,
-                            color: saved ? 'black' : 'white'
-                        }}
-                        onPress={() => {
-                            if (!saved && !certVerification && !enableTor) {
-                                this.setState({ showCertModal: true });
-                            } else {
-                                this.saveNodeConfiguration();
-                            }
-                        }}
-                        buttonStyle={{
-                            backgroundColor: saved ? '#fff' : '#261339',
-                            borderRadius: 30
-                        }}
-                        titleStyle={{
-                            color: saved ? 'black' : 'white'
-                        }}
-                    />
-                </View>
-
-                {!saved && certVerification && !enableTor && (
-                    <CertInstallInstructions />
-                )}
-
-                {saved && !newEntry && (
                     <View style={styles.button}>
                         <Button
                             title={
-                                active
+                                saved
                                     ? localeString(
-                                          'views.Settings.AddEditNode.nodeActive'
+                                          'views.Settings.AddEditNode.nodeSaved'
                                       )
                                     : localeString(
-                                          'views.Settings.AddEditNode.setNodeActive'
+                                          'views.Settings.AddEditNode.saveNode'
                                       )
                             }
                             icon={{
-                                name: 'blur-circular',
+                                name: 'save',
                                 size: 25,
-                                color: active ? 'white' : 'purple'
+                                color: saved ? 'black' : 'white'
                             }}
-                            onPress={() => this.setNodeConfigurationAsActive()}
+                            onPress={() => {
+                                if (!saved && !certVerification && !enableTor) {
+                                    this.setState({ showCertModal: true });
+                                } else {
+                                    this.saveNodeConfiguration();
+                                }
+                            }}
                             buttonStyle={{
-                                backgroundColor: active ? 'purple' : 'white',
+                                backgroundColor: saved ? '#fff' : '#261339',
                                 borderRadius: 30
                             }}
                             titleStyle={{
-                                color: active ? 'white' : 'purple'
+                                color: saved ? 'black' : 'white'
                             }}
                         />
                     </View>
-                )}
 
-                {(implementation === 'lnd' ||
-                    implementation === 'c-lightning-REST') && (
-                    <View style={styles.button}>
-                        <Button
-                            title={localeString(
-                                'views.Settings.AddEditNode.scanLndconnect'
-                            )}
-                            icon={{
-                                name: 'crop-free',
-                                size: 25,
-                                color: themeColor('background')
-                            }}
-                            onPress={() =>
-                                navigation.navigate(
-                                    'LNDConnectConfigQRScanner',
-                                    {
+                    {!saved && certVerification && !enableTor && (
+                        <CertInstallInstructions />
+                    )}
+
+                    {saved && !newEntry && (
+                        <View style={styles.button}>
+                            <Button
+                                title={
+                                    active
+                                        ? localeString(
+                                              'views.Settings.AddEditNode.nodeActive'
+                                          )
+                                        : localeString(
+                                              'views.Settings.AddEditNode.setNodeActive'
+                                          )
+                                }
+                                icon={{
+                                    name: 'blur-circular',
+                                    size: 25,
+                                    color: active ? 'white' : 'purple'
+                                }}
+                                onPress={() =>
+                                    this.setNodeConfigurationAsActive()
+                                }
+                                buttonStyle={{
+                                    backgroundColor: active
+                                        ? 'purple'
+                                        : 'white',
+                                    borderRadius: 30
+                                }}
+                                titleStyle={{
+                                    color: active ? 'white' : 'purple'
+                                }}
+                            />
+                        </View>
+                    )}
+
+                    {(implementation === 'lnd' ||
+                        implementation === 'c-lightning-REST') && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString(
+                                    'views.Settings.AddEditNode.scanLndconnect'
+                                )}
+                                icon={{
+                                    name: 'crop-free',
+                                    size: 25,
+                                    color: themeColor('background')
+                                }}
+                                onPress={() =>
+                                    navigation.navigate(
+                                        'LNDConnectConfigQRScanner',
+                                        {
+                                            index
+                                        }
+                                    )
+                                }
+                                buttonStyle={{
+                                    backgroundColor: themeColor('text'),
+                                    borderRadius: 30
+                                }}
+                                titleStyle={{
+                                    color: themeColor('background')
+                                }}
+                            />
+                        </View>
+                    )}
+
+                    {(implementation === 'lnd' ||
+                        implementation === 'c-lightning-REST') && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString(
+                                    'views.Settings.AddEditNode.scanBtcpay'
+                                )}
+                                icon={{
+                                    name: 'crop-free',
+                                    size: 25,
+                                    color: 'white'
+                                }}
+                                onPress={() =>
+                                    navigation.navigate(
+                                        'BTCPayConfigQRScanner',
+                                        {
+                                            index
+                                        }
+                                    )
+                                }
+                                buttonStyle={{
+                                    backgroundColor: 'rgba(5, 146, 35, 1)',
+                                    borderRadius: 30
+                                }}
+                            />
+                        </View>
+                    )}
+
+                    {implementation === 'lndhub' && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString(
+                                    'views.Settings.AddEditNode.scanLndhub'
+                                )}
+                                icon={{
+                                    name: 'crop-free',
+                                    size: 25,
+                                    color: 'white'
+                                }}
+                                onPress={() =>
+                                    navigation.navigate('LNDHubQRScanner', {
                                         index
-                                    }
-                                )
-                            }
-                            buttonStyle={{
-                                backgroundColor: themeColor('text'),
-                                borderRadius: 30
-                            }}
-                            titleStyle={{
-                                color: themeColor('background')
-                            }}
-                        />
-                    </View>
-                )}
+                                    })
+                                }
+                                buttonStyle={{
+                                    borderRadius: 30
+                                }}
+                            />
+                        </View>
+                    )}
 
-                {(implementation === 'lnd' ||
-                    implementation === 'c-lightning-REST') && (
-                    <View style={styles.button}>
-                        <Button
-                            title={localeString(
-                                'views.Settings.AddEditNode.scanBtcpay'
-                            )}
-                            icon={{
-                                name: 'crop-free',
-                                size: 25,
-                                color: 'white'
-                            }}
-                            onPress={() =>
-                                navigation.navigate('BTCPayConfigQRScanner', {
-                                    index
-                                })
-                            }
-                            buttonStyle={{
-                                backgroundColor: 'rgba(5, 146, 35, 1)',
-                                borderRadius: 30
-                            }}
-                        />
-                    </View>
-                )}
-
-                {implementation === 'lndhub' && (
-                    <View style={styles.button}>
-                        <Button
-                            title={localeString(
-                                'views.Settings.AddEditNode.scanLndhub'
-                            )}
-                            icon={{
-                                name: 'crop-free',
-                                size: 25,
-                                color: 'white'
-                            }}
-                            onPress={() =>
-                                navigation.navigate('LNDHubQRScanner', {
-                                    index
-                                })
-                            }
-                            buttonStyle={{
-                                borderRadius: 30
-                            }}
-                        />
-                    </View>
-                )}
-
-                {saved && (
-                    <View style={styles.button}>
-                        <Button
-                            title={localeString(
-                                'views.Settings.AddEditNode.deleteNode'
-                            )}
-                            icon={{
-                                name: 'delete',
-                                size: 25,
-                                color: 'white'
-                            }}
-                            onPress={() => this.deleteNodeConfig()}
-                            buttonStyle={{
-                                backgroundColor: 'red',
-                                borderRadius: 30
-                            }}
-                        />
-                    </View>
-                )}
-            </ScrollView>
+                    {saved && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString(
+                                    'views.Settings.AddEditNode.deleteNode'
+                                )}
+                                icon={{
+                                    name: 'delete',
+                                    size: 25,
+                                    color: 'white'
+                                }}
+                                onPress={() => this.deleteNodeConfig()}
+                                buttonStyle={{
+                                    backgroundColor: 'red',
+                                    borderRadius: 30
+                                }}
+                            />
+                        </View>
+                    )}
+                </ScrollView>
+            </View>
         );
     }
 }
 
 const styles = StyleSheet.create({
     textInput: {
-        fontSize: 20
+        fontSize: 20,
+        width: '100%',
+        height: 60,
+        top: 10,
+        backgroundColor: '#31363F',
+        borderRadius: 6,
+        marginBottom: 20,
+        paddingLeft: 5
     },
     error: {
         color: 'red'
@@ -1272,7 +1356,8 @@ const styles = StyleSheet.create({
     form: {
         paddingTop: 20,
         paddingLeft: 5,
-        paddingRight: 5
+        paddingRight: 5,
+        width: '100%'
     },
     pickerWrapper: {
         paddingLeft: 5,
@@ -1312,5 +1397,9 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginTop: 22
+    },
+    nodeInterface: {
+        paddingTop: 10,
+        paddingBottom: 10
     }
 });
