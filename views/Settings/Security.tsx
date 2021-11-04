@@ -5,11 +5,11 @@ import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 import UrlUtils from './../../utils/UrlUtils';
 
-interface HelpProps {
+interface SecurityProps {
     navigation: any;
 }
 
-export default class Help extends React.Component<HelpProps, {}> {
+export default class Security extends React.Component<SecurityProps, {}> {
     renderSeparator = () => (
         <View
             style={{
@@ -30,13 +30,12 @@ export default class Help extends React.Component<HelpProps, {}> {
             />
         );
 
-        const HELP_ITEMS = [
-            { label: 'Telegram Group', url: 'https://t.me/ZeusLN' },
-            { label: 'Twitter (DMs open)', url: 'https://twitter.com/ZeusLN' },
+        const SECURITY_ITEMS = [
             {
-                label: 'GitHub Issues',
-                url: 'https://github.com/ZeusLN/zeus/issues'
+                label: localeString('views.Settings.SetPassword.title'),
+                screen: 'SetPassword'
             }
+            // { label: 'Verify TLS Certificate', url: 'https://twitter.com/ZeusLN' }
         ];
 
         return (
@@ -49,25 +48,25 @@ export default class Help extends React.Component<HelpProps, {}> {
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: localeString('general.help'),
+                        text: localeString('views.Settings.Security.title'),
                         style: { color: themeColor('text') }
                     }}
                     backgroundColor={themeColor('secondary')}
                 />
                 <FlatList
-                    data={HELP_ITEMS}
+                    data={SECURITY_ITEMS}
                     renderItem={({ item, index }) => (
                         <ListItem
                             containerStyle={{
                                 borderBottomWidth: 0,
                                 backgroundColor: themeColor('background')
                             }}
-                            onPress={() => UrlUtils.goToUrl(item.url)}
+                            onPress={() => navigation.navigate(item.screen)}
                         >
                             <ListItem.Content>
                                 <ListItem.Title
                                     style={{
-                                        color: themeColor('text')
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {item.label}
