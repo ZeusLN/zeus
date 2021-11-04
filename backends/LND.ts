@@ -1,9 +1,9 @@
 import RNFetchBlob from 'rn-fetch-blob';
 import stores from '../stores/Stores';
+import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import VersionUtils from './../utils/VersionUtils';
 import { localeString } from './../utils/LocaleUtils';
-import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 
 interface Headers {
     macaroon?: string;
@@ -83,20 +83,15 @@ export default class LND {
     };
 
     wsReq = (route: string, method: string, data?: any) => {
-        const {
-            host,
-            lndhubUrl,
-            port,
-            macaroonHex,
-            accessToken
-        } = stores.settingsStore;
+        const { host, lndhubUrl, port, macaroonHex, accessToken } =
+            stores.settingsStore;
 
         const auth = macaroonHex || accessToken;
         const headers: any = this.getHeaders(auth, true);
         const methodRoute = `${route}?method=${method}`;
         const url = this.getURL(host || lndhubUrl, port, methodRoute, true);
 
-        return new Promise(function(resolve, reject) {
+        return new Promise(function (resolve, reject) {
             const ws: any = new WebSocket(url, null, {
                 headers
             });
@@ -232,14 +227,17 @@ export default class LND {
     closeChannel = (urlParams?: Array<string>) => {
         if (urlParams && urlParams.length === 4) {
             return this.deleteRequest(
-                `/v1/channels/${urlParams && urlParams[0]}/${urlParams &&
-                    urlParams[1]}?force=${urlParams &&
-                    urlParams[2]}&sat_per_byte=${urlParams && urlParams[3]}`
+                `/v1/channels/${urlParams && urlParams[0]}/${
+                    urlParams && urlParams[1]
+                }?force=${urlParams && urlParams[2]}&sat_per_byte=${
+                    urlParams && urlParams[3]
+                }`
             );
         }
         return this.deleteRequest(
-            `/v1/channels/${urlParams && urlParams[0]}/${urlParams &&
-                urlParams[1]}?force=${urlParams && urlParams[2]}`
+            `/v1/channels/${urlParams && urlParams[0]}/${
+                urlParams && urlParams[1]
+            }?force=${urlParams && urlParams[2]}`
         );
     };
     getNodeInfo = (urlParams?: Array<string>) =>
@@ -252,10 +250,11 @@ export default class LND {
     };
     getRoutes = (urlParams?: Array<string>) =>
         this.getRequest(
-            `/v1/graph/routes/${urlParams && urlParams[0]}/${urlParams &&
-                urlParams[1]}`
+            `/v1/graph/routes/${urlParams && urlParams[0]}/${
+                urlParams && urlParams[1]
+            }`
         );
-    getForwardingHistory = (hours: number = 24) => {
+    getForwardingHistory = (hours = 24) => {
         const req = {
             num_max_events: 10000000,
             start_time: Math.round(
@@ -286,7 +285,7 @@ export default class LND {
         certVerification: boolean,
         useTor?: boolean
     ) => {
-        const url: string = `${host}/create`;
+        const url = `${host}/create`;
         return this.restReq(
             {
                 'Access-Control-Allow-Origin': '*',

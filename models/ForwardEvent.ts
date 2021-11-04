@@ -1,6 +1,6 @@
+import { computed } from 'mobx';
 import BaseModel from './BaseModel';
 import DateTimeUtils from './../utils/DateTimeUtils';
-import { computed } from 'mobx';
 
 export default class ForwardEvent extends BaseModel {
     amt_out: string;

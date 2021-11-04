@@ -9,11 +9,10 @@ import {
 } from 'react-native';
 
 import { RectButton } from 'react-native-gesture-handler';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
 import RESTUtils from './../../utils/RESTUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
-
-import Swipeable from 'react-native-gesture-handler/Swipeable';
 
 import Receive from './../../images/SVG/Receive.svg';
 import Routing from './../../images/SVG/Routing.svg';

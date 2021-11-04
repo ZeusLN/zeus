@@ -6,8 +6,8 @@ export default class BalanceStore {
     @observable public totalBlockchainBalance: number | string;
     @observable public confirmedBlockchainBalance: number | string;
     @observable public unconfirmedBlockchainBalance: number | string;
-    @observable public loading: boolean = false;
-    @observable public error: boolean = false;
+    @observable public loading = false;
+    @observable public error = false;
     @observable public pendingOpenBalance: number | string;
     @observable public lightningBalance: number | string;
     settingsStore: SettingsStore;

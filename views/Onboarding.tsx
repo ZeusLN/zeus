@@ -83,7 +83,7 @@ export default class Onboarding extends React.Component<
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        let ScreenHeight = Dimensions.get('window').height;
+        const ScreenHeight = Dimensions.get('window').height;
         const { settings, changeLocale } = SettingsStore;
         const { nodes, locale } = settings;
         const { index } = this.state;

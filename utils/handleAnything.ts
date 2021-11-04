@@ -1,13 +1,13 @@
+import { getParams as getlnurlParams, findlnurl } from 'js-lnurl';
+import RNFetchBlob from 'rn-fetch-blob';
 import stores from '../stores/Stores';
 import AddressUtils from './../utils/AddressUtils';
 import LndConnectUtils from './../utils/LndConnectUtils';
 import { localeString } from './../utils/LocaleUtils';
-import { getParams as getlnurlParams, findlnurl } from 'js-lnurl';
-import RNFetchBlob from 'rn-fetch-blob';
 
 const { nodeInfoStore, invoicesStore } = stores;
 
-export default async function(data: string): Promise<any> {
+export default async function (data: string): Promise<any> {
     const { nodeInfo } = nodeInfoStore;
     const { isTestNet, isRegTest } = nodeInfo;
     const { value, amount }: any = AddressUtils.processSendAddress(data);
@@ -42,11 +42,10 @@ export default async function(data: string): Promise<any> {
             }
         ];
     } else if (AddressUtils.isValidLNDHubAddress(value)) {
-        const { username, password, host } = AddressUtils.processLNDHubAddress(
-            value
-        );
+        const { username, password, host } =
+            AddressUtils.processLNDHubAddress(value);
 
-        const existingAccount: boolean = !!username;
+        const existingAccount = !!username;
 
         let node;
         if (host) {

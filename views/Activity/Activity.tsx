@@ -8,11 +8,10 @@ import {
 } from 'react-native';
 import { Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { Amount } from '../../components/Amount';
 import DateTimeUtils from './../../utils/DateTimeUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
-
-import { Amount } from '../../components/Amount';
 
 import ActivityStore from './../../stores/ActivityStore';
 
@@ -71,11 +70,8 @@ export default class Activity extends React.Component<ActivityProps, {}> {
 
     render() {
         const { navigation, ActivityStore } = this.props;
-        const {
-            loading,
-            filteredActivity,
-            getActivityAndFilter
-        } = ActivityStore;
+        const { loading, filteredActivity, getActivityAndFilter } =
+            ActivityStore;
 
         const CloseButton = () => (
             <Icon
@@ -184,9 +180,8 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                     <ListItem
                                         containerStyle={{
                                             borderBottomWidth: 0,
-                                            backgroundColor: themeColor(
-                                                'background'
-                                            )
+                                            backgroundColor:
+                                                themeColor('background')
                                         }}
                                         onPress={() => {
                                             if (

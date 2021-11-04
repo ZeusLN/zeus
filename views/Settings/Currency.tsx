@@ -1,12 +1,10 @@
 import * as React from 'react';
 import { FlatList, ScrollView, Text, View } from 'react-native';
 import { Header, Icon, ListItem, SearchBar } from 'react-native-elements';
-import SettingsStore from './../../stores/SettingsStore';
+import { inject, observer } from 'mobx-react';
+import SettingsStore, { CURRENCY_KEYS } from './../../stores/SettingsStore';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
-import { inject, observer } from 'mobx-react';
-
-import { CURRENCY_KEYS } from './../../stores/SettingsStore';
 
 interface CurrencyProps {
     navigation: any;

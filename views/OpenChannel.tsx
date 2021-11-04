@@ -102,7 +102,7 @@ export default class OpenChannel extends React.Component<
     selectUTXOs = (utxos: Array<string>, utxoBalance: number) => {
         const { SettingsStore } = this.props;
         const { implementation } = SettingsStore;
-        let newState: any = {};
+        const newState: any = {};
         newState.utxos = utxos;
         newState.utxoBalance = utxoBalance;
         if (implementation === 'c-lightning-REST') {

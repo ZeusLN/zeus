@@ -13,11 +13,10 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import { Avatar, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
 
 import Identicon from 'identicon.js';
-const hash = require('object-hash');
+import { themeColor } from './../utils/ThemeUtils';
+import { localeString } from './../utils/LocaleUtils';
 
 import stores from './../stores/Stores';
 import ChannelsStore from './../stores/ChannelsStore';
@@ -26,6 +25,7 @@ import UnitsStore from './../stores/UnitsStore';
 
 import BalanceSlider from './../components/BalanceSlider';
 import PrivacyUtils from './../utils/PrivacyUtils';
+const hash = require('object-hash');
 
 const SelectedLight = require('./../images/selected-light.png');
 const SelectedDark = require('./../images/selected-dark.png');
@@ -173,30 +173,33 @@ export default class ChannelPicker extends React.Component<
                                                 item.remote_pubkey ||
                                                 item.channelId;
 
-                                            const channelTitle = PrivacyUtils.sensitiveValue(
-                                                displayName,
-                                                8
-                                            );
+                                            const channelTitle =
+                                                PrivacyUtils.sensitiveValue(
+                                                    displayName,
+                                                    8
+                                                );
 
                                             const data = new Identicon(
                                                 hash.sha1(channelTitle),
                                                 255
                                             ).toString();
 
-                                            const localBalanceDisplay = PrivacyUtils.sensitiveValue(
-                                                getAmount(
-                                                    item.localBalance || 0
-                                                ),
-                                                7,
-                                                true
-                                            );
-                                            const remoteBalanceDisplay = PrivacyUtils.sensitiveValue(
-                                                getAmount(
-                                                    item.remoteBalance || 0
-                                                ),
-                                                7,
-                                                true
-                                            );
+                                            const localBalanceDisplay =
+                                                PrivacyUtils.sensitiveValue(
+                                                    getAmount(
+                                                        item.localBalance || 0
+                                                    ),
+                                                    7,
+                                                    true
+                                                );
+                                            const remoteBalanceDisplay =
+                                                PrivacyUtils.sensitiveValue(
+                                                    getAmount(
+                                                        item.remoteBalance || 0
+                                                    ),
+                                                    7,
+                                                    true
+                                                );
 
                                             return (
                                                 <>
@@ -216,16 +219,21 @@ export default class ChannelPicker extends React.Component<
                                                                 : ''
                                                         }${localeString(
                                                             'views.Wallet.Channels.local'
-                                                        )}: ${units &&
-                                                            localBalanceDisplay} | ${localeString(
+                                                        )}: ${
+                                                            units &&
+                                                            localBalanceDisplay
+                                                        } | ${localeString(
                                                             'views.Wallet.Channels.remote'
-                                                        )}: ${units &&
-                                                            remoteBalanceDisplay}`}
+                                                        )}: ${
+                                                            units &&
+                                                            remoteBalanceDisplay
+                                                        }`}
                                                         containerStyle={{
                                                             borderBottomWidth: 0,
-                                                            backgroundColor: themeColor(
-                                                                'background'
-                                                            )
+                                                            backgroundColor:
+                                                                themeColor(
+                                                                    'background'
+                                                                )
                                                         }}
                                                         leftElement={
                                                             channelSelected ===
@@ -296,9 +304,8 @@ export default class ChannelPicker extends React.Component<
                                                 'components.ChannelPicker.modal.set'
                                             )}
                                             onPress={() => {
-                                                const {
-                                                    channelSelected
-                                                }: any = this.state;
+                                                const { channelSelected }: any =
+                                                    this.state;
 
                                                 const displayName =
                                                     channelSelected.alias ||
@@ -407,7 +414,7 @@ export default class ChannelPicker extends React.Component<
                                         options: pickerValuesIOS,
                                         cancelButtonIndex: 0
                                     },
-                                    buttonIndex => {
+                                    (buttonIndex) => {
                                         if (buttonIndex == 1) {
                                             this.clearSelection();
                                         } else if (buttonIndex == 2) {

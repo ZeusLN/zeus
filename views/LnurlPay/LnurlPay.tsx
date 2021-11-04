@@ -1,10 +1,10 @@
+import url from 'url';
 import * as React from 'react';
 import RNFetchBlob from 'rn-fetch-blob';
 import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
 import querystring from 'querystring-es3';
-import url from 'url';
 import InvoicesStore from './../../stores/InvoicesStore';
 import LnurlPayStore from './../../stores/LnurlPayStore';
 import LnurlPayMetadata from './Metadata';
@@ -102,7 +102,7 @@ export default class LnurlPay extends React.Component<
                 };
 
                 InvoicesStore.getPayReq(pr, lnurl.metadata).then(() => {
-                    if (!!InvoicesStore.getPayReqError) {
+                    if (InvoicesStore.getPayReqError) {
                         Alert.alert(
                             localeString(
                                 'views.LnurlPay.LnurlPay.invalidInvoice'

@@ -8,9 +8,9 @@ import {
 } from 'react-native';
 import { Avatar, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import PrivacyUtils from './../../utils/PrivacyUtils';
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import Identicon from 'identicon.js';
+import hash = require('object-hash');
+
 import ForwardIcon from '../../images/SVG/Caret Right-3.svg';
 import AccountIcon from '../../images/SVG/Wallet2.svg';
 import ContactIcon from '../../images/SVG/PeersContact.svg';
@@ -20,10 +20,11 @@ import SignIcon from '../../images/SVG/Pen.svg';
 import BitcoinIcon from '../../images/SVG/Bitcoin.svg';
 import LanguageIcon from '../../images/SVG/Globe.svg';
 import HelpIcon from '../../images/SVG/Help Icon.svg';
-import Identicon from 'identicon.js';
-const hash = require('object-hash');
-import { version } from './../../package.json';
 
+import { themeColor } from './../../utils/ThemeUtils';
+import { localeString } from './../../utils/LocaleUtils';
+import PrivacyUtils from './../../utils/PrivacyUtils';
+import { version } from './../../package.json';
 import SettingsStore from './../stores/SettingsStore';
 import UnitsStore from './../stores/UnitsStore';
 
