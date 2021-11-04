@@ -1,5 +1,5 @@
-bc-ur
 node_modules
+zeus_modules
 .eslintrc.js
 babel.config.js
 index.js
