@@ -66,8 +66,6 @@ export default class Settings extends React.Component<SettingsProps, {}> {
             />
         );
 
-        // const lurkerLabel = `Lurking ${PrivacyUtils.getLover()} Mode: hides sensitive values`;
-
         const displayName =
             selectedNode.implementation === 'lndhub'
                 ? selectedNode.lndhubUrl
@@ -411,23 +409,6 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             </View>
                         </TouchableOpacity>
                     </View>
-
-                    {/* <DropdownSetting
-                    title={lurkerLabel}
-                    selectedValue={lurkerMode}
-                    displayValue={
-                        lurkerMode
-                            ? localeString('views.Settings.enabled')
-                            : localeString('views.Settings.disabled')
-                    }
-                    onValueChange={(value: boolean) =>
-                        this.setState({ lurkerMode: value })
-                    }
-                    values={[
-                        { key: 'Disabled', value: false },
-                        { key: 'Enabled', value: true }
-                    ]}
-                /> */}
 
                     {/* <View style={styles.button}> */}
                     {/* <Button

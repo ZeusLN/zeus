@@ -28,6 +28,7 @@ interface PrivacyState {
     defaultBlockExplorer: string;
     customBlockExplorer: string;
     clipboard: boolean;
+    lurkerMode: boolean;
 }
 
 @inject('SettingsStore')
@@ -41,7 +42,8 @@ export default class Privacy extends React.Component<
         search: '',
         defaultBlockExplorer: 'mempool.space',
         customBlockExplorer: '',
-        clipboard: false
+        clipboard: false,
+        lurkerMode: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -56,7 +58,8 @@ export default class Privacy extends React.Component<
             customBlockExplorer:
                 (settings.privacy && settings.privacy.customBlockExplorer) ||
                 '',
-            clipboard: settings.privacy && settings.privacy.clipboard
+            clipboard: settings.privacy && settings.privacy.clipboard,
+            lurkerMode: settings.privacy && settings.privacy.lurkerMode
         });
     }
 
@@ -74,7 +77,8 @@ export default class Privacy extends React.Component<
         const {
             defaultBlockExplorer,
             customBlockExplorer,
-            clipboard
+            clipboard,
+            lurkerMode
         } = this.state;
         const { setSettings, getSettings }: any = SettingsStore;
 
@@ -120,13 +124,13 @@ export default class Privacy extends React.Component<
                                     selectedNode: settings.selectedNode,
                                     onChainAddress: settings.onChainAddress,
                                     fiat: settings.fiat,
-                                    lurkerMode: settings.lurkerMode,
                                     passphrase: settings.passphrase,
                                     locale: settings.locale,
                                     privacy: {
                                         defaultBlockExplorer: value,
                                         customBlockExplorer,
-                                        clipboard
+                                        clipboard,
+                                        lurkerMode
                                     }
                                 })
                             );
@@ -159,13 +163,13 @@ export default class Privacy extends React.Component<
                                             onChainAddress:
                                                 settings.onChainAddress,
                                             fiat: settings.fiat,
-                                            lurkerMode: settings.lurkerMode,
                                             passphrase: settings.passphrase,
                                             locale: settings.locale,
                                             privacy: {
                                                 defaultBlockExplorer,
                                                 customBlockExplorer: text,
-                                                clipboard
+                                                clipboard,
+                                                lurkerMode
                                             }
                                         })
                                     );
@@ -215,13 +219,67 @@ export default class Privacy extends React.Component<
                                             onChainAddress:
                                                 settings.onChainAddress,
                                             fiat: settings.fiat,
-                                            lurkerMode: settings.lurkerMode,
                                             passphrase: settings.passphrase,
                                             locale: settings.locale,
                                             privacy: {
                                                 defaultBlockExplorer,
                                                 customBlockExplorer,
-                                                clipboard: !clipboard
+                                                clipboard: !clipboard,
+                                                lurkerMode
+                                            }
+                                        })
+                                    );
+                                }}
+                                trackColor={{
+                                    false: '#767577',
+                                    true: themeColor('highlight')
+                                }}
+                            />
+                        </View>
+                    </ListItem>
+                    <ListItem
+                        containerStyle={{
+                            borderBottomWidth: 0,
+                            backgroundColor: themeColor('background')
+                        }}
+                    >
+                        <ListItem.Title
+                            style={{
+                                color: themeColor('secondaryText'),
+                                left: -10
+                            }}
+                        >
+                            {localeString('views.Settings.Privacy.lurkerMode')}
+                        </ListItem.Title>
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                justifyContent: 'flex-end'
+                            }}
+                        >
+                            <Switch
+                                value={lurkerMode}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        lurkerMode: !lurkerMode
+                                    });
+                                    const settings = await getSettings();
+                                    await setSettings(
+                                        JSON.stringify({
+                                            nodes: settings.nodes,
+                                            theme: settings.theme,
+                                            selectedNode: settings.selectedNode,
+                                            onChainAddress:
+                                                settings.onChainAddress,
+                                            fiat: settings.fiat,
+                                            passphrase: settings.passphrase,
+                                            locale: settings.locale,
+                                            privacy: {
+                                                defaultBlockExplorer,
+                                                customBlockExplorer,
+                                                clipboard,
+                                                lurkerMode: !lurkerMode
                                             }
                                         })
                                     );

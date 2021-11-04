@@ -124,7 +124,6 @@ export default class Language extends React.Component<
                                             onChainAddress:
                                                 settings.onChainAddress,
                                             fiat: settings.fiat,
-                                            lurkerMode: settings.lurkerMode,
                                             passphrase: settings.passphrase,
                                             locale: item.value,
                                             privacy: settings.privacy
