@@ -1,13 +1,14 @@
 import * as React from 'react';
 import { FlatList, View } from 'react-native';
 import { Avatar, Button, Header, Icon, ListItem } from 'react-native-elements';
-import SettingsStore from './../../stores/SettingsStore';
 import Identicon from 'identicon.js';
-const hash = require('object-hash');
+import { inject, observer } from 'mobx-react';
+import hash = require('object-hash');
+
+import SettingsStore from './../../stores/SettingsStore';
 import PrivacyUtils from './../../utils/PrivacyUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
-import { inject, observer } from 'mobx-react';
 
 interface NodesProps {
     nodes: any[];
@@ -125,10 +126,11 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                     displayName,
                                     8
                                 );
-                                const implementation = PrivacyUtils.sensitiveValue(
-                                    item.implementation || 'lnd',
-                                    8
-                                );
+                                const implementation =
+                                    PrivacyUtils.sensitiveValue(
+                                        item.implementation || 'lnd',
+                                        8
+                                    );
 
                                 const data = new Identicon(
                                     hash.sha1(
@@ -181,9 +183,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                         }
                                         containerStyle={{
                                             borderBottomWidth: 0,
-                                            backgroundColor: themeColor(
-                                                'background'
-                                            )
+                                            backgroundColor:
+                                                themeColor('background')
                                         }}
                                         onPress={() => {
                                             setSettings(

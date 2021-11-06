@@ -1,10 +1,10 @@
 import * as React from 'react';
 import { StyleSheet, ScrollView, Text, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
+import { inject, observer } from 'mobx-react';
 import CollapsedQR from './../components/CollapsedQR';
 import KeyValue from './../components/KeyValue';
 
-import { inject, observer } from 'mobx-react';
 import { version } from './../package.json';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';

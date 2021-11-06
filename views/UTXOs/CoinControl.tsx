@@ -42,12 +42,8 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
     );
 
     render() {
-        const {
-            navigation,
-            UTXOsStore,
-            UnitsStore,
-            SettingsStore
-        } = this.props;
+        const { navigation, UTXOsStore, UnitsStore, SettingsStore } =
+            this.props;
         const { getAmount, units } = UnitsStore;
         const { loading, utxos, getUTXOs } = UTXOsStore;
         const { settings } = SettingsStore;
@@ -112,9 +108,8 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                                     <ListItem
                                         containerStyle={{
                                             borderBottomWidth: 0,
-                                            backgroundColor: themeColor(
-                                                'background'
-                                            )
+                                            backgroundColor:
+                                                themeColor('background')
                                         }}
                                         onPress={() => {
                                             navigation.navigate('Utxo', {

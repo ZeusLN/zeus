@@ -23,8 +23,8 @@ interface ActivityFilter {
 }
 
 export default class ActivityStore {
-    @observable public loading: boolean = false;
-    @observable public error: boolean = false;
+    @observable public loading = false;
+    @observable public error = false;
     @observable public activity: Array<Invoice | Payment | Transaction> = [];
     @observable public filteredActivity: Array<
         Invoice | Payment | Transaction
@@ -90,10 +90,7 @@ export default class ActivityStore {
         const invoices = this.invoicesStore.invoices;
 
         // push payments, txs, invoices to one array
-        activity.push.apply(
-            activity,
-            payments.concat(transactions).concat(invoices)
-        );
+        activity.push(...payments.concat(transactions).concat(invoices));
         // sort activity by timestamp
         const sortedActivity = activity.sort((a: any, b: any) =>
             a.getTimestamp < b.getTimestamp ? 1 : -1

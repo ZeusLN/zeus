@@ -1,9 +1,9 @@
 import * as React from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import Svg, { G, Circle } from 'react-native-svg';
 import { themeColor } from '../../utils/ThemeUtils';
 
-import Svg, { G, Circle } from 'react-native-svg';
 import { Body } from '../text/Body';
 import { Row } from '../layout/Row';
 import { Spacer } from '../layout/Spacer';
@@ -43,8 +43,9 @@ function Donut(props) {
                         stroke={outboundYellow}
                         strokeWidth={strokeWidth}
                         strokeDashoffset={0}
-                        strokeDasharray={`${outboundLength}, ${circumference -
-                            outboundLength}`}
+                        strokeDasharray={`${outboundLength}, ${
+                            circumference - outboundLength
+                        }`}
                     />
                     {/* Inbound */}
                     <Circle
@@ -55,8 +56,9 @@ function Donut(props) {
                         stroke={inboundYellow}
                         strokeWidth={strokeWidth}
                         strokeDashoffset={-outboundLength}
-                        strokeDasharray={`${inboundLength}, ${circumference -
-                            inboundLength}`}
+                        strokeDasharray={`${inboundLength}, ${
+                            circumference - inboundLength
+                        }`}
                     />
                     {/* Offline */}
                     <Circle
@@ -67,8 +69,9 @@ function Donut(props) {
                         stroke={offlineGray}
                         strokeWidth={strokeWidth}
                         strokeDashoffset={-(outboundLength + inboundLength)}
-                        strokeDasharray={`${offlineLength}, ${circumference -
-                            offlineLength}`}
+                        strokeDasharray={`${offlineLength}, ${
+                            circumference - offlineLength
+                        }`}
                     />
                     {/* Hidden circle behind in case we're bad at math */}
                     <Circle

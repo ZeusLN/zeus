@@ -119,7 +119,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     selectUTXOs = (utxos: Array<string>, utxoBalance: number) => {
         const { SettingsStore } = this.props;
         const { implementation } = SettingsStore;
-        let newState: any = {};
+        const newState: any = {};
         newState.utxos = utxos;
         newState.utxoBalance = utxoBalance;
         if (implementation === 'c-lightning-REST') {
@@ -152,7 +152,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             .then(([route, props]) => {
                 navigation.navigate(route, props);
             })
-            .catch(err => {
+            .catch((err) => {
                 this.setState({
                     transactionType: null,
                     isValid: false,
@@ -425,8 +425,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 <TouchableWithoutFeedback
                                     onPress={() =>
                                         navigation.navigate('EditFee', {
-                                            onNavigateBack: this
-                                                .handleOnNavigateBack
+                                            onNavigateBack:
+                                                this.handleOnNavigateBack
                                         })
                                     }
                                 >

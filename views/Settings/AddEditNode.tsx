@@ -57,7 +57,7 @@ export default class AddEditNode extends React.Component<
     AddEditNodeProps,
     AddEditNodeState
 > {
-    isComponentMounted: boolean = false;
+    isComponentMounted = false;
 
     state = {
         nickname: '',
@@ -105,11 +105,8 @@ export default class AddEditNode extends React.Component<
         const { suggestImport } = this.state;
 
         if (suggestImport.includes('lndconnect://')) {
-            const {
-                host,
-                port,
-                macaroonHex
-            } = LndConnectUtils.processLndConnectUrl(suggestImport);
+            const { host, port, macaroonHex } =
+                LndConnectUtils.processLndConnectUrl(suggestImport);
 
             this.setState({
                 host,
@@ -122,13 +119,10 @@ export default class AddEditNode extends React.Component<
             suggestImport.includes('lndhub://') ||
             suggestImport.includes('bluewallet:')
         ) {
-            const {
-                username,
-                password,
-                host
-            } = AddressUtils.processLNDHubAddress(suggestImport);
+            const { username, password, host } =
+                AddressUtils.processLNDHubAddress(suggestImport);
 
-            const existingAccount: boolean = !!username;
+            const existingAccount = !!username;
 
             if (host) {
                 this.setState({
@@ -311,7 +305,7 @@ export default class AddEditNode extends React.Component<
         const { index } = this.state;
         const { nodes, lurkerMode, passphrase, fiat, locale } = settings;
 
-        let newNodes: any = [];
+        const newNodes: any = [];
         for (let i = 0; nodes && i < nodes.length; i++) {
             if (index !== i) {
                 newNodes.push(nodes[i]);
@@ -568,7 +562,8 @@ export default class AddEditNode extends React.Component<
                                                                 data.login,
                                                             password:
                                                                 data.password,
-                                                            existingAccount: true
+                                                            existingAccount:
+                                                                true
                                                         });
                                                     }
 
@@ -914,7 +909,8 @@ export default class AddEditNode extends React.Component<
                                         checked={existingAccount}
                                         onPress={() =>
                                             this.setState({
-                                                existingAccount: !existingAccount
+                                                existingAccount:
+                                                    !existingAccount
                                             })
                                         }
                                     />

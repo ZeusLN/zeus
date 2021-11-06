@@ -1,20 +1,16 @@
 import RNFetchBlob from 'rn-fetch-blob';
 import stores from '../stores/Stores';
+import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import TransactionRequest from './../models/TransactionRequest';
 import OpenChannelRequest from './../models/OpenChannelRequest';
-import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 
 // keep track of all active calls so we can cancel when appropriate
 const calls: any = {};
 
 export default class Spark {
     rpc = (rpcmethod: string, param = {}, range: any = null) => {
-        let {
-            url,
-            accessKey,
-            certVerification,
-            enableTor
-        } = stores.settingsStore;
+        const { accessKey, certVerification, enableTor } = stores.settingsStore;
+        let { url } = stores.settingsStore;
 
         const id = rpcmethod + JSON.stringify(param) + JSON.stringify(range);
         if (calls[id]) {
@@ -42,7 +38,7 @@ export default class Spark {
                     if (status < 300) {
                         return response.json();
                     } else {
-                        var errorInfo;
+                        let errorInfo;
                         try {
                             errorInfo = response.json();
                         } catch (err) {
@@ -70,7 +66,7 @@ export default class Spark {
             channels: peers
                 .filter((peer: any) => peer.channels.length)
                 .map((peer: any) => {
-                    let channel =
+                    const channel =
                         peer.channels.find(
                             (c: any) =>
                                 c.state !== 'ONCHAIN' && c.state !== 'CLOSED'
@@ -103,8 +99,10 @@ export default class Spark {
                         ).toString(),
                         csv_delay: channel.our_to_self_delay,
                         private: channel.private,
-                        local_chan_reserve_sat: channel.our_channel_reserve_satoshis.toString(),
-                        remote_chan_reserve_sat: channel.their_channel_reserve_satoshis.toString(),
+                        local_chan_reserve_sat:
+                            channel.our_channel_reserve_satoshis.toString(),
+                        remote_chan_reserve_sat:
+                            channel.their_channel_reserve_satoshis.toString(),
                         close_address: channel.close_to_addr
                     };
                 })
@@ -180,7 +178,7 @@ export default class Spark {
         }).then(({ txid }: any) => ({ funding_txid_str: txid }));
     connectPeer = (data: any) =>
         this.rpc('connect', [data.addr.pubkey, data.addr.host]);
-    listNode = () => {};
+    listNode = () => 'N/A';
     decodePaymentRequest = (urlParams?: Array<string>) =>
         this.rpc('decodepay', [urlParams && urlParams[0]]);
     payLightningInvoice = (data: any) =>

@@ -1,22 +1,18 @@
 import RNFetchBlob from 'rn-fetch-blob';
 import querystring from 'querystring-es3';
 import stores from '../stores/Stores';
+import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import TransactionRequest from './../models/TransactionRequest';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
-import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 
 // keep track of all active calls so we can cancel when appropriate
 const calls: any = {};
 
 export default class Eclair {
     api = (method: string, params: any = {}) => {
-        let {
-            url,
-            password,
-            certVerification,
-            enableTor
-        } = stores.settingsStore;
+        const { password, certVerification, enableTor } = stores.settingsStore;
+        let { url } = stores.settingsStore;
 
         const id: string = method + JSON.stringify(params);
         if (calls[id]) {
@@ -116,8 +112,10 @@ export default class Eclair {
                     num_updates: null,
                     csv_delay: chan.data.commitments.localParams.toSelfDelay,
                     private: false,
-                    local_chan_reserve_sat: chan.data.commitments.localParams.channelReserve.toString(),
-                    remote_chan_reserve_sat: chan.data.commitments.remoteParams.channelReserve.toString(),
+                    local_chan_reserve_sat:
+                        chan.data.commitments.localParams.channelReserve.toString(),
+                    remote_chan_reserve_sat:
+                        chan.data.commitments.remoteParams.channelReserve.toString(),
                     close_address: null
                 };
             })
@@ -253,7 +251,7 @@ export default class Eclair {
         }).then(() => ({}));
     connectPeer = (data: any) =>
         this.api('connect', { uri: data.addr.pubkey + '@' + data.addr.host });
-    listNode = () => {};
+    listNode = () => 'N/A';
     decodePaymentRequest = (urlParams?: Array<string>) =>
         this.api('parseinvoice', { invoice: [urlParams && urlParams[0]] }).then(
             ({
@@ -347,6 +345,7 @@ export default class Eclair {
         const now = new Date().getTime() / 1000;
         const oneDayAgo = now - 60 * 60 * 24;
         const oneWeekAgo = now - 60 * 60 * 24 * 7;
+        const oneMonthAgo = now - 60 * 60 * 24 * 30;
         for (let i = relayed.length - 1; i >= 0; i--) {
             const relay = relayed[i];
             if (relay.timestamp > oneDayAgo) {
@@ -356,7 +355,7 @@ export default class Eclair {
             } else if (relay.timestamp > oneWeekAgo) {
                 lastWeek += relay.amountIn - relay.amountOut;
                 lastMonth += relay.amountIn - relay.amountOut;
-            } else if (relay.timestamp > oneWeekAgo) {
+            } else if (relay.timestamp > oneMonthAgo) {
                 lastMonth += relay.amountIn - relay.amountOut;
             } else {
                 break;
@@ -383,10 +382,11 @@ export default class Eclair {
     setFees = async (data: any) => {
         const params: any = {};
         if (data.global) {
-            params.channelIds = (await this.api('channels').then(
-                (channels: any) =>
+            params.channelIds = (
+                await this.api('channels').then((channels: any) =>
                     channels.map((channel: any) => channel.channelId)
-            )).join(',');
+                )
+            ).join(',');
         } else {
             params.channelId = data.channelId;
         }
@@ -416,12 +416,12 @@ export default class Eclair {
                 const route = [];
                 let nextHopChannels = nodesUpdates.pop();
                 while (nodesUpdates.length > 0) {
-                    let hopChannels = nodesUpdates.pop();
+                    const hopChannels = nodesUpdates.pop();
                     let found = false;
                     for (let i = 0; i < hopChannels.length; i++) {
-                        let chan = hopChannels[i];
+                        const chan = hopChannels[i];
                         for (let j = 0; j < nextHopChannels.length; j++) {
-                            let nextChan = nextHopChannels[j];
+                            const nextChan = nextHopChannels[j];
                             if (
                                 chan.shortChannelId === nextChan.shortChannelId
                             ) {
@@ -477,30 +477,32 @@ export default class Eclair {
     supportsNodeInfo = () => true;
 }
 
-const mapInvoice = (isPending: any) => ({
-    description,
-    serialized,
-    paymentHash,
-    expiry,
-    timestamp,
-    amount
-}: any) => {
-    if (!isPending) {
-        isPending = { [paymentHash]: true };
-    }
-    return {
-        memo: description,
-        r_hash: paymentHash,
-        value: amount / 1000,
-        value_msat: amount,
-        settled: !isPending[paymentHash],
-        creation_date: null,
-        settle_date: null,
-        payment_request: serialized,
-        timestamp,
+const mapInvoice =
+    (isPending: any) =>
+    ({
+        description,
+        serialized,
+        paymentHash,
         expiry,
-        amt_paid: isPending[paymentHash] ? 0 : amount / 1000,
-        amt_paid_sat: isPending[paymentHash] ? 0 : amount / 1000,
-        amt_paid_msat: isPending[paymentHash] ? 0 : amount
+        timestamp,
+        amount
+    }: any) => {
+        if (!isPending) {
+            isPending = { [paymentHash]: true };
+        }
+        return {
+            memo: description,
+            r_hash: paymentHash,
+            value: amount / 1000,
+            value_msat: amount,
+            settled: !isPending[paymentHash],
+            creation_date: null,
+            settle_date: null,
+            payment_request: serialized,
+            timestamp,
+            expiry,
+            amt_paid: isPending[paymentHash] ? 0 : amount / 1000,
+            amt_paid_sat: isPending[paymentHash] ? 0 : amount / 1000,
+            amt_paid_msat: isPending[paymentHash] ? 0 : amount
+        };
     };
-};

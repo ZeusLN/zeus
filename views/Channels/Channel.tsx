@@ -9,12 +9,13 @@ import {
     View
 } from 'react-native';
 import { Button, CheckBox, Divider, Header, Icon } from 'react-native-elements';
+import { inject, observer } from 'mobx-react';
 import Channel from './../../models/Channel';
 import BalanceSlider from './../../components/BalanceSlider';
 import KeyValue from './../../components/KeyValue';
 import { Amount } from './../../components/Amount';
 import FeeBreakdown from './../../components/FeeBreakdown';
-import { inject, observer } from 'mobx-react';
+import SetFeesForm from './../../components/SetFeesForm';
 
 import DateTimeUtils from './../../utils/DateTimeUtils';
 import PrivacyUtils from './../../utils/PrivacyUtils';
@@ -114,12 +115,8 @@ export default class ChannelView extends React.Component<
             UnitsStore,
             SettingsStore
         } = this.props;
-        const {
-            channel,
-            confirmCloseChannel,
-            satPerByte,
-            forceClose
-        } = this.state;
+        const { channel, confirmCloseChannel, satPerByte, forceClose } =
+            this.state;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { channelFees } = FeeStore;
         const { loading, nodes } = ChannelsStore;
@@ -248,9 +245,9 @@ export default class ChannelView extends React.Component<
                                     ...styles.balance,
                                     color: themeColor('text')
                                 }}
-                            >{`${localeString(
-                                'views.Channel.localBalance'
-                            )}: ${units && channelBalanceLocal}`}</Text>
+                            >{`${localeString('views.Channel.localBalance')}: ${
+                                units && channelBalanceLocal
+                            }`}</Text>
                             <Text
                                 style={{
                                     ...styles.balance,

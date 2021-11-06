@@ -9,9 +9,9 @@ import {
     View
 } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
+import { inject, observer } from 'mobx-react';
 import UrlUtils from './../utils/UrlUtils';
 import Transaction from './../models/Transaction';
-import { inject, observer } from 'mobx-react';
 import PrivacyUtils from './../utils/PrivacyUtils';
 
 import NodeInfoStore from './../stores/NodeInfoStore';
@@ -109,8 +109,9 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                 fontSize: 30,
                                 fontWeight: 'bold'
                             }}
-                        >{`${amount > 0 ? '+' : ''}${units &&
-                            amountDisplay}`}</Text>
+                        >{`${amount > 0 ? '+' : ''}${
+                            units && amountDisplay
+                        }`}</Text>
                     </TouchableOpacity>
                 </View>
 

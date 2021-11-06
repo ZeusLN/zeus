@@ -43,7 +43,7 @@ export default class LndHub extends LND {
                 (urlParams && urlParams[0]) || ''
             );
             for (let i = 0; i < decoded.tags.length; i++) {
-                let tag = decoded.tags[i];
+                const tag = decoded.tags[i];
                 switch (tag.tagName) {
                     case 'purpose_commit_hash':
                         decoded.description_hash = tag.data;

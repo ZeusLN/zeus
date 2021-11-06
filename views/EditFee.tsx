@@ -9,11 +9,11 @@ import {
     TouchableWithoutFeedback
 } from 'react-native';
 import { Icon, Header } from 'react-native-elements';
-import { themeColor } from '../utils/ThemeUtils';
-import FeeStore from './../stores/FeeStore';
 import { inject, observer } from 'mobx-react';
+import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import Refresh from '../images/SVG/Refresh.svg';
+import FeeStore from './../stores/FeeStore';
 
 interface NodeInfoProps {
     FeeStore: FeeStore;
@@ -46,12 +46,8 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
     render() {
         const { navigation, FeeStore } = this.props;
         const { selectedFee } = this.state;
-        const {
-            recommendedFees,
-            loading,
-            error,
-            getOnchainFeesviaMempool
-        } = FeeStore;
+        const { recommendedFees, loading, error, getOnchainFeesviaMempool } =
+            FeeStore;
         const BackButton = () => (
             <Icon
                 name="arrow-back"

@@ -127,7 +127,7 @@ export default class UnitsStore {
             // handle negative values
             const valueToProcess = (wholeSats && wholeSats.toString()) || '0';
             if (valueToProcess.includes('-')) {
-                let processedValue = valueToProcess.split('-')[1];
+                const processedValue = valueToProcess.split('-')[1];
                 return `-₿${FeeUtils.toFixed(
                     Number(processedValue) / satoshisPerBTC
                 )}`;
@@ -147,7 +147,7 @@ export default class UnitsStore {
 
             const valueToProcess = (wholeSats && wholeSats.toString()) || '0';
             if (valueToProcess.includes('-')) {
-                let processedValue = valueToProcess.split('-')[1];
+                const processedValue = valueToProcess.split('-')[1];
                 return `-${symbol}${(
                     FeeUtils.toFixed(Number(processedValue) / satoshisPerBTC) *
                     rate
