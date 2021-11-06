@@ -36,13 +36,8 @@ export default class CollapsedQR extends React.Component<
 
     render() {
         const { collapsed } = this.state;
-        const {
-            value,
-            showText,
-            copyText,
-            collapseText,
-            hideText
-        } = this.props;
+        const { value, showText, copyText, collapseText, hideText } =
+            this.props;
 
         return (
             <React.Fragment>

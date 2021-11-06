@@ -39,7 +39,7 @@ class RESTUtils {
 
     call = (funcName: string, args?: any) => {
         const cls: any = this.getClass();
-        return cls[funcName].apply(cls, args);
+        return cls[funcName](...args);
     };
 
     getTransactions = (...args: any[]) => this.call('getTransactions', args);

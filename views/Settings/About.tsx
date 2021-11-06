@@ -96,8 +96,7 @@ export default class About extends React.Component<AboutProps, {}> {
                                 navigation.navigate('OpenChannel', {
                                     node_pubkey_string:
                                         '03e1210c8d4b236a53191bb172701d76ec06dfa869a1afffcfd8f4e07d9129d898',
-                                    host:
-                                        'zg6ziy65wqhiczqfqupx26j5yjot5iuxftqtiyvika3xoydc5hx2mtyd.onion:9735'
+                                    host: 'zg6ziy65wqhiczqfqupx26j5yjot5iuxftqtiyvika3xoydc5hx2mtyd.onion:9735'
                                 })
                             }
                             buttonStyle={{

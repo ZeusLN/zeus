@@ -3,8 +3,8 @@ import RESTUtils from './../utils/RESTUtils';
 import Base64Utils from './../utils/Base64Utils';
 
 export default class MessageSignStore {
-    @observable public loading: boolean = false;
-    @observable public error: boolean = false;
+    @observable public loading = false;
+    @observable public error = false;
     @observable public signature: string | null;
 
     resetSignature() {

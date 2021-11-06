@@ -16,7 +16,7 @@ export default class CopyButton extends React.Component<
     CopyButtonProps,
     CopyButtonState
 > {
-    isComponentMounted: boolean = false;
+    isComponentMounted = false;
 
     state = {
         copied: false

@@ -7,12 +7,12 @@
 import * as React from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { Button } from 'react-native-elements';
-import FeeUtils from './../utils/FeeUtils';
-import { themeColor } from './../utils/ThemeUtils';
 
 import { DataTable } from 'react-native-paper';
 import isEmpty from 'lodash/isEmpty';
 import { inject, observer } from 'mobx-react';
+import { themeColor } from './../utils/ThemeUtils';
+import FeeUtils from './../utils/FeeUtils';
 
 import FeeStore from './../stores/FeeStore';
 

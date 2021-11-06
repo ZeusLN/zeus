@@ -11,8 +11,8 @@ import {
 } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import { Button, ButtonGroup, Header, Icon } from 'react-native-elements';
-import CollapsedQR from './../components/CollapsedQR';
 import { inject, observer } from 'mobx-react';
+import CollapsedQR from './../components/CollapsedQR';
 import RESTUtils from './../utils/RESTUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
@@ -57,9 +57,8 @@ export default class Receive extends React.Component<
 
     componentDidMount() {
         const { navigation } = this.props;
-        const lnurl: LNURLWithdrawParams | undefined = navigation.getParam(
-            'lnurlParams'
-        );
+        const lnurl: LNURLWithdrawParams | undefined =
+            navigation.getParam('lnurlParams');
 
         const selectedIndex: number = navigation.getParam('selectedIndex');
 
@@ -107,14 +106,8 @@ export default class Receive extends React.Component<
             FiatStore,
             navigation
         } = this.props;
-        const {
-            selectedIndex,
-            memo,
-            value,
-            expiry,
-            ampInvoice,
-            routeHints
-        } = this.state;
+        const { selectedIndex, memo, value, expiry, ampInvoice, routeHints } =
+            this.state;
         const { units, changeUnits } = UnitsStore;
         const { fiatRates }: any = FiatStore;
 
@@ -125,12 +118,8 @@ export default class Receive extends React.Component<
             creatingInvoiceError,
             error_msg
         } = InvoicesStore;
-        const {
-            settings,
-            loading,
-            chainAddress,
-            implementation
-        } = SettingsStore;
+        const { settings, loading, chainAddress, implementation } =
+            SettingsStore;
         const { fiat } = settings;
         const address = chainAddress;
 
@@ -154,9 +143,8 @@ export default class Receive extends React.Component<
                 break;
         }
 
-        const lnurl: LNURLWithdrawParams | undefined = navigation.getParam(
-            'lnurlParams'
-        );
+        const lnurl: LNURLWithdrawParams | undefined =
+            navigation.getParam('lnurlParams');
 
         const lightningButton = () => (
             <React.Fragment>
@@ -445,7 +433,7 @@ export default class Receive extends React.Component<
                                         localeString(
                                             'views.Receive.createInvoice'
                                         ) +
-                                        (!!lnurl
+                                        (lnurl
                                             ? ` ${localeString(
                                                   'views.Receive.andSubmitTo'
                                               )} ${lnurl.domain}`

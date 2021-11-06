@@ -23,13 +23,8 @@ export default class DropdownSetting extends React.Component<
     {}
 > {
     render() {
-        const {
-            title,
-            selectedValue,
-            displayValue,
-            onValueChange,
-            values
-        } = this.props;
+        const { title, selectedValue, displayValue, onValueChange, values } =
+            this.props;
 
         const pickerValuesAndroid: Array<any> = [];
         const pickerValuesIOS: Array<string> = ['Cancel'];
@@ -85,7 +80,7 @@ export default class DropdownSetting extends React.Component<
                                         options: pickerValuesIOS,
                                         cancelButtonIndex: 0
                                     },
-                                    buttonIndex => {
+                                    (buttonIndex) => {
                                         if (buttonIndex) {
                                             onValueChange(
                                                 values[buttonIndex - 1].value

@@ -11,9 +11,7 @@ interface LnurlPaySuccessProps {
     preimage: string;
 }
 
-export default class LnurlPaySuccess extends React.Component<
-    LnurlPaySuccessProps
-> {
+export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProps> {
     URLClicked = () => {
         const { successAction } = this.props;
         const { url } = successAction;
@@ -38,6 +36,7 @@ export default class LnurlPaySuccess extends React.Component<
         let body;
         if (successAction) {
             const { tag, description, url, message } = successAction;
+            let plaintext;
             switch (tag) {
                 case 'message':
                     body = (
@@ -66,7 +65,6 @@ export default class LnurlPaySuccess extends React.Component<
                     );
                     break;
                 case 'aes':
-                    let plaintext;
                     try {
                         plaintext = decipherAES(successAction, preimage);
                     } catch (err) {

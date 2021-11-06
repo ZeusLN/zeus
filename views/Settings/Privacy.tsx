@@ -9,12 +9,12 @@ import {
     View
 } from 'react-native';
 import { Header, Icon, ListItem, SearchBar } from 'react-native-elements';
+import { inject, observer } from 'mobx-react';
 import SettingsStore, {
     BLOCK_EXPLORER_KEYS
 } from './../../stores/SettingsStore';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
-import { inject, observer } from 'mobx-react';
 import DropdownSetting from './../../components/DropdownSetting';
 
 interface PrivacyProps {

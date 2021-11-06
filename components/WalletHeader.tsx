@@ -1,8 +1,8 @@
 import React from 'react';
-import RESTUtils from '../utils/RESTUtils';
-import { themeColor } from '../utils/ThemeUtils';
 import { Button, Header } from 'react-native-elements';
 import { TouchableOpacity } from 'react-native';
+import RESTUtils from '../utils/RESTUtils';
+import { themeColor } from '../utils/ThemeUtils';
 import NodeOn from '../images/SVG/Node On.svg';
 import { Body } from './text/Body';
 
@@ -58,9 +58,7 @@ export function WalletHeader({
     return (
         <Header
             leftComponent={
-                loading || !RESTUtils.supportsNodeInfo() ? (
-                    undefined
-                ) : (
+                loading || !RESTUtils.supportsNodeInfo() ? undefined : (
                     <NodeInfoBadge navigation={navigation} />
                 )
             }

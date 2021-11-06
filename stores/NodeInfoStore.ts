@@ -4,8 +4,8 @@ import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
 
 export default class NodeInfoStore {
-    @observable public loading: boolean = false;
-    @observable public error: boolean = false;
+    @observable public loading = false;
+    @observable public error = false;
     @observable public errorMsg: string;
     @observable public nodeInfo: NodeInfo | any = {};
     @observable public testnet: boolean;
