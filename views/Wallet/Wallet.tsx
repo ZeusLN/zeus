@@ -243,8 +243,8 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             ...DefaultTheme,
             colors: {
                 ...DefaultTheme.colors,
-                card: themeColor('secondary'),
-                border: themeColor('secondary')
+                card: error ? themeColor('error') : themeColor('secondary'),
+                border: error ? themeColor('error') : themeColor('secondary')
             }
         };
 
@@ -346,22 +346,28 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                     }
                                 })}
                                 tabBarOptions={{
-                                    activeTintColor: themeColor('highlight'),
-                                    inactiveTintColor:
-                                        RESTUtils.supportsChannelManagement()
-                                            ? 'gray'
-                                            : themeColor('highlight')
+                                    activeTintColor: error
+                                        ? themeColor('error')
+                                        : themeColor('highlight'),
+                                    inactiveTintColor: error
+                                        ? themeColor('error')
+                                        : RESTUtils.supportsChannelManagement()
+                                        ? 'gray'
+                                        : themeColor('highlight')
                                 }}
                             >
                                 <Tab.Screen
                                     name="Wallet"
                                     component={WalletScreen}
                                 />
-                                <Tab.Screen
-                                    name={scanAndSend}
-                                    component={WalletScreen}
-                                />
-                                {RESTUtils.supportsChannelManagement() ? (
+                                {!error && (
+                                    <Tab.Screen
+                                        name={scanAndSend}
+                                        component={WalletScreen}
+                                    />
+                                )}
+                                {RESTUtils.supportsChannelManagement() &&
+                                !error ? (
                                     <Tab.Screen
                                         name={localeString(
                                             'views.Wallet.Wallet.channels'
