@@ -59,6 +59,7 @@ module.exports = {
     'no-case-declarations': 'off',
     'no-control-regex': 'off',
     'no-unused-vars': 0,
+    'prefer-spread': 'off',
     'prettier/prettier': [
       'error',
       {
