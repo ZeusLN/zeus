@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { Alert } from 'react-native';
-import createHash = require('create-hash');
 
 import QRCodeScanner from './../../components/QRCodeScanner';
 import LndConnectUtils from './../../utils/LndConnectUtils';
@@ -10,6 +9,7 @@ import {
     extractSingleWorkload,
     BlueURDecoder
 } from './../../zeus_modules/ur';
+const createHash = require('create-hash');
 
 interface ImportAccountQRScannerProps {
     navigation: any;

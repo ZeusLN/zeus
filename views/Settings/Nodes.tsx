@@ -3,12 +3,12 @@ import { FlatList, View } from 'react-native';
 import { Avatar, Button, Header, Icon, ListItem } from 'react-native-elements';
 import Identicon from 'identicon.js';
 import { inject, observer } from 'mobx-react';
-import hash = require('object-hash');
 
 import SettingsStore from './../../stores/SettingsStore';
 import PrivacyUtils from './../../utils/PrivacyUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
+const hash = require('object-hash');
 
 interface NodesProps {
     nodes: any[];

@@ -379,7 +379,7 @@ DEPENDENCIES:
   - UMFontInterface (from `../node_modules/unimodules-font-interface/ios`)
   - UMImageLoaderInterface (from `../node_modules/unimodules-image-loader-interface/ios`)
   - UMPermissionsInterface (from `../node_modules/unimodules-permissions-interface/ios`)
-  - "UMReactNativeAdapter (from `../node_modules/@unimodules/react-native-adapter/ios`)"
+  - "UMReactNativeAdapter (from `../node_modules/react-native-unimodules/node_modules/@unimodules/react-native-adapter/ios`)"
   - UMSensorsInterface (from `../node_modules/unimodules-sensors-interface/ios`)
   - UMTaskManagerInterface (from `../node_modules/unimodules-task-manager-interface/ios`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
@@ -520,7 +520,7 @@ EXTERNAL SOURCES:
     path: "../node_modules/unimodules-permissions-interface/ios"
   UMReactNativeAdapter:
     :path: !ruby/object:Pathname
-    path: "../node_modules/@unimodules/react-native-adapter/ios"
+    path: "../node_modules/react-native-unimodules/node_modules/@unimodules/react-native-adapter/ios"
   UMSensorsInterface:
     :path: !ruby/object:Pathname
     path: "../node_modules/unimodules-sensors-interface/ios"

@@ -9,7 +9,6 @@ import {
 import { Avatar, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Identicon from 'identicon.js';
-import hash = require('object-hash');
 
 import ForwardIcon from '../../images/SVG/Caret Right-3.svg';
 import AccountIcon from '../../images/SVG/Wallet2.svg';
@@ -27,6 +26,7 @@ import PrivacyUtils from './../../utils/PrivacyUtils';
 import { version } from './../../package.json';
 import SettingsStore from './../stores/SettingsStore';
 import UnitsStore from './../stores/UnitsStore';
+const hash = require('object-hash');
 
 interface SettingsProps {
     navigation: any;
