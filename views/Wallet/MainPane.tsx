@@ -13,7 +13,7 @@ import SettingsStore from './../../stores/SettingsStore';
 
 import { version, playStore } from './../../package.json';
 
-import TorIcon = require('./../../images/tor.png');
+const TorIcon = require('./../../images/tor.png');
 
 interface MainPaneProps {
     navigation: any;
