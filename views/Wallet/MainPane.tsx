@@ -154,8 +154,9 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                 <View
                     style={{
                         backgroundColor: themeColor('error'),
+                        paddingTop: 20,
                         paddingLeft: 10,
-                        height: 160
+                        flex: 1
                     }}
                 >
                     <Text
