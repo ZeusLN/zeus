@@ -53,12 +53,32 @@ describe('AddressUtils', () => {
                 )
             ).toBeFalsy();
         });
-        it('validates BECH32 variations properly', () => {
-            // handle all caps BECH32 addresses
+        it('validates Bech32m - P2TR properly', () => {
             expect(
                 AddressUtils.isValidBitcoinAddress(
-                    'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU',
-                    false
+                    'bc1pmfr3p9j00pfxjh0zmgp99y8zftmd3s5pmedqhyptwy6lm87hf5sspknck9',
+                    true
+                )
+            ).toBeTruthy();
+
+            expect(
+                AddressUtils.isValidBitcoinAddress(
+                    'BC1PMFR3P9J00PFXJH0ZMGP99Y8ZFTMD3S5PMEDQHYPTWY6LM87HF5SSPKNCK9',
+                    true
+                )
+            ).toBeTruthy();
+
+            expect(
+                AddressUtils.isValidBitcoinAddress(
+                    'bc1pveaamy78cq5hvl74zmfw52fxyjun3lh7lgt44j03ygx02zyk8lesgk06f6',
+                    true
+                )
+            ).toBeTruthy();
+
+            expect(
+                AddressUtils.isValidBitcoinAddress(
+                    'BC1PVEAAMY78CQ5HVL74ZMFW52FXYJUN3LH7LGT44J03YGX02ZYK8LESGK06F6',
+                    true
                 )
             ).toBeTruthy();
         });
@@ -218,7 +238,7 @@ describe('AddressUtils', () => {
                     )
                 ).toBeTruthy();
             });
-            it('processes all BECH32 send address variations', () => {
+            it('processes all Bech32 send address variations', () => {
                 // with fee
                 expect(
                     AddressUtils.processSendAddress(
@@ -280,6 +300,17 @@ describe('AddressUtils', () => {
                     )
                 ).toEqual({
                     value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
+                });
+            });
+
+            it('processes all Bech32 send address variations', () => {
+                expect(
+                    AddressUtils.processSendAddress(
+                        'BITCOIN:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU?amount=0.00170003'
+                    )
+                ).toEqual({
+                    value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU',
+                    amount: '170003' // amount in sats
                 });
             });
         });
