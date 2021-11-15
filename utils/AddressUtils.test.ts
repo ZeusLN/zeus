@@ -53,6 +53,80 @@ describe('AddressUtils', () => {
                 )
             ).toBeFalsy();
         });
+
+        it('processes all Bech32 send address variations', () => {
+            // with fee
+            expect(
+                AddressUtils.processSendAddress(
+                    'BITCOIN:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU?amount=0.00170003'
+                )
+            ).toEqual({
+                value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU',
+                amount: '170003' // amount in sats
+            });
+            expect(
+                AddressUtils.processSendAddress(
+                    'BITCOIN:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual({
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                amount: '170003' // amount in sats
+            });
+            expect(
+                AddressUtils.processSendAddress(
+                    'bitcoin:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU?amount=0.00170003'
+                )
+            ).toEqual({
+                value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU',
+                amount: '170003' // amount in sats
+            });
+            expect(
+                AddressUtils.processSendAddress(
+                    'bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual({
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                amount: '170003' // amount in sats
+            });
+            // without fee
+            expect(
+                AddressUtils.processSendAddress(
+                    'BITCOIN:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU'
+                )
+            ).toEqual({
+                value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU'
+            });
+            expect(
+                AddressUtils.processSendAddress(
+                    'BITCOIN:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
+                )
+            ).toEqual({
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
+            });
+            expect(
+                AddressUtils.processSendAddress(
+                    'bitcoin:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU'
+                )
+            ).toEqual({
+                value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU'
+            });
+            expect(
+                AddressUtils.processSendAddress(
+                    'bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
+                )
+            ).toEqual({
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
+            });
+            expect(
+                AddressUtils.processSendAddress(
+                    'BITCOIN:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU?amount=0.00170003'
+                )
+            ).toEqual({
+                value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU',
+                amount: '170003' // amount in sats
+            });
+        });
+
         it('validates Bech32m - P2TR properly', () => {
             expect(
                 AddressUtils.isValidBitcoinAddress(
@@ -237,81 +311,6 @@ describe('AddressUtils', () => {
                         'bluewallet:setlndhuburl?url=http%3A%2F%2Fnaf3121nfadoxnwer1s5x2rkirdqbmvuws2ojvgood.onion'
                     )
                 ).toBeTruthy();
-            });
-            it('processes all Bech32 send address variations', () => {
-                // with fee
-                expect(
-                    AddressUtils.processSendAddress(
-                        'BITCOIN:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU?amount=0.00170003'
-                    )
-                ).toEqual({
-                    value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU',
-                    amount: '170003' // amount in sats
-                });
-                expect(
-                    AddressUtils.processSendAddress(
-                        'BITCOIN:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
-                    )
-                ).toEqual({
-                    value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
-                    amount: '170003' // amount in sats
-                });
-                expect(
-                    AddressUtils.processSendAddress(
-                        'bitcoin:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU?amount=0.00170003'
-                    )
-                ).toEqual({
-                    value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU',
-                    amount: '170003' // amount in sats
-                });
-                expect(
-                    AddressUtils.processSendAddress(
-                        'bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
-                    )
-                ).toEqual({
-                    value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
-                    amount: '170003' // amount in sats
-                });
-                // without fee
-                expect(
-                    AddressUtils.processSendAddress(
-                        'BITCOIN:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU'
-                    )
-                ).toEqual({
-                    value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU'
-                });
-                expect(
-                    AddressUtils.processSendAddress(
-                        'BITCOIN:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
-                    )
-                ).toEqual({
-                    value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
-                });
-                expect(
-                    AddressUtils.processSendAddress(
-                        'bitcoin:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU'
-                    )
-                ).toEqual({
-                    value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU'
-                });
-                expect(
-                    AddressUtils.processSendAddress(
-                        'bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
-                    )
-                ).toEqual({
-                    value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
-                });
-            });
-
-            it('processes all Bech32 send address variations', () => {
-                expect(
-                    AddressUtils.processSendAddress(
-                        'BITCOIN:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU?amount=0.00170003'
-                    )
-                ).toEqual({
-                    value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU',
-                    amount: '170003' // amount in sats
-                });
             });
         });
 
