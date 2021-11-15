@@ -1,9 +1,10 @@
 import * as React from 'react';
 import { FlatList, View } from 'react-native';
-import { Avatar, Button, Header, Icon, ListItem } from 'react-native-elements';
+import { Avatar, Header, Icon, ListItem } from 'react-native-elements';
 import Identicon from 'identicon.js';
 import { inject, observer } from 'mobx-react';
 
+import Button from './../../components/Button';
 import SettingsStore from './../../stores/SettingsStore';
 import PrivacyUtils from './../../utils/PrivacyUtils';
 import { localeString } from './../../utils/LocaleUtils';
@@ -173,6 +174,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                         }
                                                     )
                                                 }
+                                                iconOnly
+                                                adaptiveWidth
                                             />
                                         }
                                         subtitle={

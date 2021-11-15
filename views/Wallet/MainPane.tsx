@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { Image, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
-import { Badge, Button } from 'react-native-elements';
+import { Badge } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import Button from '../../components/Button';
 import { WalletHeader } from '../../components/WalletHeader';
 import { Amount } from '../../components/Amount';
 import { localeString } from './../../utils/LocaleUtils';
@@ -188,6 +189,8 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                             alignItems: 'center'
                         }}
                         onPress={() => navigation.navigate('Settings')}
+                        tertiary
+                        adaptiveWidth
                     />
                     <Text
                         style={{
