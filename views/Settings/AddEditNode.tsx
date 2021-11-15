@@ -13,12 +13,13 @@ import {
 } from 'react-native';
 import Clipboard from '@react-native-community/clipboard';
 import { Picker } from '@react-native-picker/picker';
-import { Button, CheckBox, Header, Icon } from 'react-native-elements';
+import { CheckBox, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import AddressUtils, { DEFAULT_LNDHUB } from './../../utils/AddressUtils';
 import LndConnectUtils from './../../utils/LndConnectUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
+import Button from './../../components/Button';
 import CollapsedQR from './../../components/CollapsedQR';
 import DropdownSetting from './../../components/DropdownSetting';
 import SettingsStore, { INTERFACE_KEYS } from './../../stores/SettingsStore';

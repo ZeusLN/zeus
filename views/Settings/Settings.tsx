@@ -68,17 +68,17 @@ export default class Settings extends React.Component<SettingsProps, {}> {
         );
 
         const displayName =
-            selectedNode.implementation === 'lndhub'
+            selectedNode && selectedNode.implementation === 'lndhub'
                 ? selectedNode.lndhubUrl
                       .replace('https://', '')
                       .replace('http://', '')
-                : selectedNode.url
+                : selectedNode && selectedNode.url
                 ? selectedNode.url
                       .replace('https://', '')
                       .replace('http://', '')
-                : selectedNode.port
+                : selectedNode && selectedNode.port
                 ? `${selectedNode.host}:${selectedNode.port}`
-                : selectedNode.host || 'Unknown';
+                : selectedNode && selectedNode.host || 'Unknown';
 
         const title = PrivacyUtils.sensitiveValue(displayName, 8);
         // const implementation = PrivacyUtils.sensitiveValue(
@@ -88,7 +88,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
 
         const data = new Identicon(
             hash.sha1(
-                selectedNode.implementation === 'lndhub'
+                selectedNode && selectedNode.implementation === 'lndhub'
                     ? `${title}-${selectedNode.username}`
                     : title
             ),
@@ -142,9 +142,9 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     marginLeft: 28
                                 }}
                             >
-                                <View style={{ padding: 0 }}>
+                                {selectedNode && <View style={{ padding: 0 }}>
                                     {Node(`data:image/png;base64,${data}`)}
-                                </View>
+                                </View>}
                                 <Text
                                     style={{
                                         fontSize: 20,
@@ -152,7 +152,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                         paddingLeft: 30
                                     }}
                                 >
-                                    {displayName}
+                                    {selectedNode ? displayName : 'Connect a node'}
                                 </Text>
                                 <View
                                     style={{
@@ -164,7 +164,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     <ForwardIcon />
                                 </View>
                             </View>
-                            <Text
+                            {selectedNode && <Text
                                 style={{
                                     fontSize: 16,
                                     color: themeColor('text'),
@@ -174,7 +174,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                 }}
                             >
                                 Mainnet over Tor
-                            </Text>
+                            </Text>}
                         </View>
                     </TouchableOpacity>
 
