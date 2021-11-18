@@ -10,6 +10,7 @@ interface ButtonProps {
     tertiary?: boolean;
     iconOnly?: boolean;
     adaptiveWidth?: boolean;
+    containerStyle?: any;
 }
 
 export default class Button extends React.Component<ButtonProps, {}> {
@@ -21,8 +22,25 @@ export default class Button extends React.Component<ButtonProps, {}> {
             secondary,
             tertiary,
             iconOnly,
-            adaptiveWidth
+            adaptiveWidth,
+            containerStyle
         } = this.props;
+
+        const newContainerStyle: any = adaptiveWidth
+            ? {
+                  ...containerStyle,
+                  borderWidth: secondary ? 2 : 0,
+                  borderColor: themeColor('highlight'),
+                  alignSelf: 'center'
+              }
+            : {
+                  ...containerStyle,
+                  borderWidth: secondary ? 2 : 0,
+                  borderColor: themeColor('highlight'),
+                  alignSelf: 'center',
+                  width: '100%'
+              };
+
         return (
             <ElementsButton
                 icon={{
@@ -51,12 +69,7 @@ export default class Button extends React.Component<ButtonProps, {}> {
                     fontWeight: 'bold'
                 }}
                 onPress={onPress}
-                containerStyle={{
-                    borderWidth: secondary ? 2 : 0,
-                    borderColor: themeColor('highlight'),
-                    alignSelf: 'center',
-                    width: adaptiveWidth ? '0%' : '100%'
-                }}
+                containerStyle={newContainerStyle}
             />
         );
     }

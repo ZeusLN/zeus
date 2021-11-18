@@ -129,6 +129,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                             backgroundColor: 'transparent'
                         }}
                         onPress={() => void 0}
+                        iconOnly
                     />
                 </View>
             );
