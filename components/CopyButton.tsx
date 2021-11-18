@@ -66,6 +66,7 @@ export default class CopyButton extends React.Component<
                     marginBottom: 20
                 }}
                 onPress={() => this.copyToClipboard()}
+                secondary
             />
         );
     }

@@ -71,10 +71,11 @@ export default class CollapsedQR extends React.Component<
                         color: '#fff'
                     }}
                     containerStyle={{
-                        paddingTop: collapsed ? 10 : 0,
-                        paddingBottom: 10
+                        marginTop: collapsed ? 10 : 0,
+                        marginBottom: 10
                     }}
                     onPress={() => this.toggleCollapse()}
+                    secondary
                 />
                 <CopyButton copyValue={value} title={copyText} />
             </React.Fragment>
