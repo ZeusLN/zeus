@@ -98,6 +98,7 @@
     "views.Settings.AddEditNode.password": "Password",
     "views.Settings.AddEditNode.showAccountQR": "Show account QR",
     "views.Settings.AddEditNode.hideAccountQR": "Hide account QR",
+    "views.Settings.AddEditNode.nickname": "Nickname (optional)",
     "views.Settings.AddEditNode.host": "Host",
     "views.Settings.AddEditNode.accessKey": "Access Key",
     "views.Settings.AddEditNode.restPort": "REST Port",

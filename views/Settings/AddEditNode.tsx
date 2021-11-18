@@ -733,7 +733,9 @@ export default class AddEditNode extends React.Component<
                             <Text
                                 style={{ color: themeColor('secondaryText') }}
                             >
-                                Nickname
+                                {localeString(
+                                    'views.Settings.AddEditNode.nickname'
+                                )}
                             </Text>
                             <TextInput
                                 placeholder={'My lightning node'}
