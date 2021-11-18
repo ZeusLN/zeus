@@ -110,18 +110,19 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                         <FlatList
                             data={nodes}
                             renderItem={({ item, index }) => {
-                                const displayName =
-                                    item.implementation === 'lndhub'
-                                        ? item.lndhubUrl
-                                              .replace('https://', '')
-                                              .replace('http://', '')
-                                        : item.url
-                                        ? item.url
-                                              .replace('https://', '')
-                                              .replace('http://', '')
-                                        : item.port
-                                        ? `${item.host}:${item.port}`
-                                        : item.host || 'Unknown';
+                                const displayName = item.nickname
+                                    ? item.nickname
+                                    : item.implementation === 'lndhub'
+                                    ? item.lndhubUrl
+                                          .replace('https://', '')
+                                          .replace('http://', '')
+                                    : item.url
+                                    ? item.url
+                                          .replace('https://', '')
+                                          .replace('http://', '')
+                                    : item.port
+                                    ? `${item.host}:${item.port}`
+                                    : item.host || 'Unknown';
 
                                 const title = PrivacyUtils.sensitiveValue(
                                     displayName,
@@ -250,14 +251,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                 size: 25,
                                 color: 'white'
                             }}
-                            buttonStyle={{
-                                borderRadius: 30,
-                                width: 200,
-                                alignSelf: 'center',
-                                marginBottom: 20,
-                                backgroundColor: 'crimson',
-                                top: 20
-                            }}
                             onPress={() =>
                                 navigation.navigate('AddEditNode', {
                                     newEntry: true,
@@ -271,6 +264,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                             titleStyle={{
                                 color: 'white'
                             }}
+                            adaptiveWidth
                         />
                     )}
                 </View>

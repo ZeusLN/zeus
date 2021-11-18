@@ -16,6 +16,7 @@ interface Node {
     certVerification?: boolean;
     onChainAddress?: string;
     enableTor?: boolean;
+    nickname?: string;
 }
 
 interface PrivacySettings {
