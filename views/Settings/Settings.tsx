@@ -23,6 +23,7 @@ import HelpIcon from '../../images/SVG/Help Icon.svg';
 import { themeColor } from './../../utils/ThemeUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import PrivacyUtils from './../../utils/PrivacyUtils';
+import RESTUtils from './../../utils/RESTUtils';
 import { version } from './../../package.json';
 import SettingsStore from './../stores/SettingsStore';
 import UnitsStore from './../stores/UnitsStore';
@@ -68,7 +69,9 @@ export default class Settings extends React.Component<SettingsProps, {}> {
         );
 
         const displayName =
-            selectedNode && selectedNode.implementation === 'lndhub'
+            selectedNode && selectedNode.nickname
+                ? selectedNode.nickname
+                : selectedNode && selectedNode.implementation === 'lndhub'
                 ? selectedNode.lndhubUrl
                       .replace('https://', '')
                       .replace('http://', '')
@@ -78,13 +81,13 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                       .replace('http://', '')
                 : selectedNode && selectedNode.port
                 ? `${selectedNode.host}:${selectedNode.port}`
-                : selectedNode && selectedNode.host || 'Unknown';
+                : (selectedNode && selectedNode.host) || 'Unknown';
 
         const title = PrivacyUtils.sensitiveValue(displayName, 8);
-        // const implementation = PrivacyUtils.sensitiveValue(
-        //     selectedNode.implementation || 'lnd',
-        //     8
-        // );
+        const implementation = PrivacyUtils.sensitiveValue(
+            selectedNode.implementation || 'lnd',
+            8
+        );
 
         const data = new Identicon(
             hash.sha1(
@@ -142,9 +145,11 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     marginLeft: 28
                                 }}
                             >
-                                {selectedNode && <View style={{ padding: 0 }}>
-                                    {Node(`data:image/png;base64,${data}`)}
-                                </View>}
+                                {selectedNode && (
+                                    <View style={{ padding: 0 }}>
+                                        {Node(`data:image/png;base64,${data}`)}
+                                    </View>
+                                )}
                                 <Text
                                     style={{
                                         fontSize: 20,
@@ -152,7 +157,9 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                         paddingLeft: 30
                                     }}
                                 >
-                                    {selectedNode ? displayName : 'Connect a node'}
+                                    {selectedNode
+                                        ? displayName
+                                        : 'Connect a node'}
                                 </Text>
                                 <View
                                     style={{
@@ -164,17 +171,23 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     <ForwardIcon />
                                 </View>
                             </View>
-                            {selectedNode && <Text
-                                style={{
-                                    fontSize: 16,
-                                    color: themeColor('text'),
-                                    opacity: 0.6,
-                                    top: -10,
-                                    paddingLeft: 109
-                                }}
-                            >
-                                Mainnet over Tor
-                            </Text>}
+                            {selectedNode && (
+                                <Text
+                                    style={{
+                                        fontSize: 16,
+                                        color: themeColor('text'),
+                                        opacity: 0.6,
+                                        top: -10,
+                                        paddingLeft: 109
+                                    }}
+                                >
+                                    {`${implementation}, ${
+                                        selectedNode.enableTor
+                                            ? 'Tor'
+                                            : 'clearnet'
+                                    }`}
+                                </Text>
+                            )}
                         </View>
                     </TouchableOpacity>
 
@@ -226,79 +239,136 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             </View>
                         </View>
                     )}
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            height: 138,
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            top: 60
-                        }}
-                    >
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() => navigation.navigate('Privacy')}
+                    {RESTUtils.supportsMessageSigning() ? (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                height: 138,
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                top: 60
+                            }}
                         >
-                            <View>
-                                <PrivacyIcon stroke={themeColor('text')} />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() => navigation.navigate('Privacy')}
                             >
-                                {localeString('views.Settings.privacy')}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon />
-                            </View>
-                        </TouchableOpacity>
+                                <View>
+                                    <PrivacyIcon stroke={themeColor('text')} />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString('views.Settings.privacy')}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon />
+                                </View>
+                            </TouchableOpacity>
 
-                        <View style={styles.separationLine} />
+                            <View style={styles.separationLine} />
 
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() => navigation.navigate('Security')}
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() => navigation.navigate('Security')}
+                            >
+                                <View>
+                                    <SecurityIcon stroke={themeColor('text')} />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString('views.Settings.security')}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon />
+                                </View>
+                            </TouchableOpacity>
+
+                            <View style={styles.separationLine} />
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() =>
+                                    navigation.navigate('SignMessage')
+                                }
+                            >
+                                <View>
+                                    <SignIcon stroke={themeColor('text')} />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    Sign or verify message
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                height: 90,
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                top: 60
+                            }}
                         >
-                            <View>
-                                <SecurityIcon stroke={themeColor('text')} />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() => navigation.navigate('Privacy')}
                             >
-                                {localeString('views.Settings.security')}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon />
-                            </View>
-                        </TouchableOpacity>
+                                <View>
+                                    <PrivacyIcon stroke={themeColor('text')} />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString('views.Settings.privacy')}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon />
+                                </View>
+                            </TouchableOpacity>
 
-                        <View style={styles.separationLine} />
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() => navigation.navigate('SignMessage')}
-                        >
-                            <View>
-                                <SignIcon stroke={themeColor('text')} />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
+                            <View style={styles.separationLine} />
+
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() => navigation.navigate('Security')}
                             >
-                                Sign or verify message
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
+                                <View>
+                                    <SecurityIcon stroke={themeColor('text')} />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString('views.Settings.security')}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
                     <View
                         style={{
                             backgroundColor: themeColor('secondary'),

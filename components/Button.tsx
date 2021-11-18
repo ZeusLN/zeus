@@ -14,8 +14,15 @@ interface ButtonProps {
 
 export default class Button extends React.Component<ButtonProps, {}> {
     render() {
-        const { title, icon, onPress, secondary, tertiary, iconOnly, adaptiveWidth } =
-            this.props;
+        const {
+            title,
+            icon,
+            onPress,
+            secondary,
+            tertiary,
+            iconOnly,
+            adaptiveWidth
+        } = this.props;
         return (
             <ElementsButton
                 icon={{
@@ -43,15 +50,12 @@ export default class Button extends React.Component<ButtonProps, {}> {
                     textTransform: 'uppercase',
                     fontWeight: 'bold'
                 }}
-                containerStyle={{
-                    alignItems: 'center'
-                }}
                 onPress={onPress}
                 containerStyle={{
                     borderWidth: secondary ? 2 : 0,
                     borderColor: themeColor('highlight'),
                     alignSelf: 'center',
-                    width: adaptiveWidth ? null : '100%'
+                    width: adaptiveWidth ? '0%' : '100%'
                 }}
             />
         );
