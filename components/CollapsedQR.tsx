@@ -75,7 +75,6 @@ export default class CollapsedQR extends React.Component<
                         marginBottom: 10
                     }}
                     onPress={() => this.toggleCollapse()}
-                    secondary
                 />
                 <CopyButton copyValue={value} title={copyText} />
             </React.Fragment>
