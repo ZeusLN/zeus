@@ -61,7 +61,9 @@ function Button(props: ButtonProps) {
                     : themeColor('highlight')
             }}
             titleStyle={{
-                color: secondary
+                color: iconOnly
+                    ? themeColor('text')
+                    : secondary
                     ? themeColor('highlight')
                     : themeColor('background'),
                 textTransform: 'uppercase',
