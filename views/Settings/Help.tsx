@@ -73,12 +73,10 @@ function Help(props: HelpProps) {
                                 {item.label}
                             </ListItem.Title>
                         </ListItem.Content>
-                        <Text style={{ textAlign: 'right' }}>
-                            <Icon
-                                name="keyboard-arrow-right"
-                                color={themeColor('secondaryText')}
-                            />
-                        </Text>
+                        <Icon
+                            name="keyboard-arrow-right"
+                            color={themeColor('secondaryText')}
+                        />
                     </ListItem>
                 )}
                 keyExtractor={(item, index) => `${item.label}-${index}`}
