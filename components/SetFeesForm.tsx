@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
-import { Button } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import Button from './../components/Button';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
@@ -94,12 +94,6 @@ export default class SetFeesForm extends React.Component<
                                     showNewFeesForm: !showNewFeesForm
                                 })
                             }
-                            buttonStyle={{
-                                backgroundColor: showNewFeesForm
-                                    ? 'black'
-                                    : 'green',
-                                borderRadius: 30
-                            }}
                         />
                     </View>
                 )}
@@ -222,10 +216,7 @@ export default class SetFeesForm extends React.Component<
                                     });
                                     this.setState({ feesSubmitted: true });
                                 }}
-                                buttonStyle={{
-                                    backgroundColor: '#261339',
-                                    borderRadius: 30
-                                }}
+                                tertiary
                             />
                         </View>
                     </React.Fragment>
