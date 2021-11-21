@@ -85,7 +85,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
 
         const title = PrivacyUtils.sensitiveValue(displayName, 8);
         const implementation = PrivacyUtils.sensitiveValue(
-            selectedNode.implementation || 'lnd',
+            (selectedNode && selectedNode.implementation) || 'lnd',
             8
         );
 
