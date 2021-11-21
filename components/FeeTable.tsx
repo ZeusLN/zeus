@@ -6,11 +6,11 @@
  */
 import * as React from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
-import { Button } from 'react-native-elements';
 
 import { DataTable } from 'react-native-paper';
 import isEmpty from 'lodash/isEmpty';
 import { inject, observer } from 'mobx-react';
+import Button from './../components/Button';
 import { themeColor } from './../utils/ThemeUtils';
 import FeeUtils from './../utils/FeeUtils';
 
@@ -41,8 +41,9 @@ export default class FeeTable extends React.Component<
                 backgroundColor: 'white',
                 alignItems: 'center',
                 height: 27,
-                width: 6,
-                marginTop: 18
+                width: 0,
+                marginTop: 18,
+                marginLeft: 10
             };
         }
 
@@ -91,13 +92,14 @@ export default class FeeTable extends React.Component<
                 df.columns.map((columnName: number, index: number) => (
                     <DataTable.Cell
                         style={{
-                            backgroundColor: 'white',
-                            minWidth: 53,
+                            maxWidth: '15%',
                             height: 53
                         }}
                         key={`item-${index}`}
                     >
-                        {this.reprColumn(columnName)}
+                        <Text style={{ color: themeColor('text') }}>
+                            {this.reprColumn(columnName)}
+                        </Text>
                     </DataTable.Cell>
                 ));
 
@@ -148,30 +150,23 @@ export default class FeeTable extends React.Component<
                         size: 25,
                         color: themeColor('background')
                     }}
-                    containerStyle={{
-                        marginBottom: 20,
-                        width: 200,
-                        alignSelf: 'center'
-                    }}
-                    buttonStyle={{
-                        backgroundColor: themeColor('text'),
-                        borderRadius: 30
-                    }}
-                    titleStyle={{
-                        color: themeColor('background')
-                    }}
                     onPress={() =>
                         collapsed ? this.openTable() : this.closeTable()
                     }
+                    tertiary
                 />
                 {!collapsed && loading && (
-                    <ActivityIndicator size="large" color="#0000ff" />
+                    <View style={{ paddingTop: 20 }}>
+                        <ActivityIndicator
+                            size="large"
+                            color={themeColor('highlight')}
+                        />
+                    </View>
                 )}
                 {!collapsed && !loading && headers && (
-                    <View style={{ left: 25 }}>
+                    <View style={{ left: 55 }}>
                         <DataTable.Header
                             style={{
-                                backgroundColor: 'white',
                                 left: 15,
                                 alignItems: 'center'
                             }}

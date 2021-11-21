@@ -8,10 +8,11 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { Button, CheckBox, Divider, Header, Icon } from 'react-native-elements';
+import { CheckBox, Divider, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Channel from './../../models/Channel';
 import BalanceSlider from './../../components/BalanceSlider';
+import Button from './../../components/Button';
 import KeyValue from './../../components/KeyValue';
 import { Amount } from './../../components/Amount';
 import FeeBreakdown from './../../components/FeeBreakdown';
@@ -399,10 +400,6 @@ export default class ChannelView extends React.Component<
                                         isValid: true
                                     })
                                 }
-                                buttonStyle={{
-                                    backgroundColor: 'grey',
-                                    borderRadius: 30
-                                }}
                             />
                         </View>
                     )}
@@ -424,12 +421,7 @@ export default class ChannelView extends React.Component<
                                     confirmCloseChannel: !confirmCloseChannel
                                 })
                             }
-                            buttonStyle={{
-                                backgroundColor: confirmCloseChannel
-                                    ? 'black'
-                                    : 'red',
-                                borderRadius: 30
-                            }}
+                            secondary
                         />
                     </View>
 
@@ -497,10 +489,7 @@ export default class ChannelView extends React.Component<
                                             forceClose
                                         )
                                     }
-                                    buttonStyle={{
-                                        backgroundColor: 'red',
-                                        borderRadius: 30
-                                    }}
+                                    tertiary
                                 />
                             </View>
                         </React.Fragment>

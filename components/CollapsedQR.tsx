@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Button } from 'react-native-elements';
 import QRCode from 'react-native-qrcode-svg';
+import Button from './../components/Button';
 import CopyButton from './CopyButton';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
@@ -70,13 +70,9 @@ export default class CollapsedQR extends React.Component<
                         size: 25,
                         color: '#fff'
                     }}
-                    buttonStyle={{
-                        backgroundColor: 'grey',
-                        borderRadius: 30
-                    }}
                     containerStyle={{
-                        paddingTop: collapsed ? 10 : 0,
-                        paddingBottom: 10
+                        marginTop: collapsed ? 10 : 0,
+                        marginBottom: 10
                     }}
                     onPress={() => this.toggleCollapse()}
                 />

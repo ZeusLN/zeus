@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import Clipboard from '@react-native-community/clipboard';
 import { inject, observer } from 'mobx-react';
-import { Button, Header, Icon } from 'react-native-elements';
+import { Header, Icon } from 'react-native-elements';
 import handleAnything from './../utils/handleAnything';
 
 import InvoicesStore from './../stores/InvoicesStore';
@@ -23,6 +23,7 @@ import SettingsStore from './../stores/SettingsStore';
 import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
 import FiatStore from './../stores/FiatStore';
 
+import Button from './../components/Button';
 import UTXOPicker from './../components/UTXOPicker';
 import FeeTable from './../components/FeeTable';
 
@@ -339,6 +340,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         <Text
                             style={{
                                 paddingTop: 10,
+                                color: themeColor('text'),
                                 ...styles.text
                             }}
                         >{`${transactionType} Transaction`}</Text>
@@ -469,11 +471,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         onPress={() =>
                                             this.sendCoins(satAmount)
                                         }
-                                        style={styles.button}
-                                        buttonStyle={{
-                                            backgroundColor: 'orange',
-                                            borderRadius: 30
-                                        }}
                                     />
                                 </View>
                             </React.Fragment>
@@ -662,11 +659,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         onPress={() =>
                                             this.sendKeySendPayment()
                                         }
-                                        style={styles.button}
-                                        buttonStyle={{
-                                            backgroundColor: 'orange',
-                                            borderRadius: 30
-                                        }}
                                     />
                                 </View>
                             </React.Fragment>
@@ -700,11 +692,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 onPress={() =>
                                     navigation.navigate('PaymentRequest')
                                 }
-                                style={styles.button}
-                                buttonStyle={{
-                                    backgroundColor: 'orange',
-                                    borderRadius: 30
-                                }}
                             />
                         </View>
                     )}
@@ -719,10 +706,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             onPress={() =>
                                 navigation.navigate('AddressQRCodeScanner')
                             }
-                            buttonStyle={{
-                                backgroundColor: '#261339',
-                                borderRadius: 30
-                            }}
+                            secondary
                         />
                     </View>
 

@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { FlatList, Text, TextInput, View } from 'react-native';
-import { Header, Icon, ListItem, Button } from 'react-native-elements';
+import { Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import Button from './../../components/Button';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 import UrlUtils from './../../utils/UrlUtils';
@@ -164,21 +165,12 @@ export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
                         paddingLeft: 10
                     }}
                 />
-                <View style={{ paddingTop: 10 }}>
+                <View style={{ paddingTop: 10, margin: 10 }}>
                     <Button
                         title={localeString('views.Settings.SetPassword.save')}
                         icon={{
                             name: 'save',
                             size: 25,
-                            color: 'white'
-                        }}
-                        buttonStyle={{
-                            backgroundColor: '#261339',
-                            borderRadius: 30,
-                            width: 350,
-                            alignSelf: 'center'
-                        }}
-                        titleStyle={{
                             color: 'white'
                         }}
                         onPress={() => this.saveSettings()}

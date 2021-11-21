@@ -35,7 +35,6 @@ import Language from './views/Settings/Language';
 import Currency from './views/Settings/Currency';
 import Theme from './views/Settings/Theme';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
-import About from './views/Settings/About';
 import SignMessage from './views/Settings/SignMessage';
 import Help from './views/Settings/Help';
 
@@ -108,9 +107,6 @@ const AppScenes = {
     },
     CertInstallInstructions: {
         screen: CertInstallInstructions
-    },
-    About: {
-        screen: About
     },
     SignMessage: {
         screen: SignMessage

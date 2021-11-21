@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import Clipboard from '@react-native-community/clipboard';
 import { inject, observer } from 'mobx-react';
-import { Button, CheckBox, Header, Icon } from 'react-native-elements';
+import { CheckBox, Header, Icon } from 'react-native-elements';
+import Button from './../components/Button';
 import FeeTable from './../components/FeeTable';
 import UTXOPicker from './../components/UTXOPicker';
 
@@ -227,26 +228,12 @@ export default class OpenChannel extends React.Component<
                             <Button
                                 title={localeString('views.OpenChannel.import')}
                                 onPress={() => this.importClipboard()}
-                                titleStyle={{
-                                    color: 'rgba(92, 99,216, 1)'
-                                }}
-                                buttonStyle={{
-                                    backgroundColor: 'white',
-                                    borderRadius: 30
-                                }}
                             />
                         </View>
                         <View style={styles.button}>
                             <Button
                                 title="Cancel"
                                 onPress={() => this.clearImportSuggestion()}
-                                titleStyle={{
-                                    color: 'rgba(92, 99,216, 1)'
-                                }}
-                                buttonStyle={{
-                                    backgroundColor: 'white',
-                                    borderRadius: 30
-                                }}
                             />
                         </View>
                     </View>
@@ -436,10 +423,6 @@ export default class OpenChannel extends React.Component<
                                 color: 'white'
                             }}
                             onPress={() => connectPeer(this.state)}
-                            buttonStyle={{
-                                backgroundColor: '#261339',
-                                borderRadius: 30
-                            }}
                         />
                     </View>
                     <View style={styles.button}>
@@ -453,10 +436,7 @@ export default class OpenChannel extends React.Component<
                             onPress={() =>
                                 navigation.navigate('NodeQRCodeScanner')
                             }
-                            buttonStyle={{
-                                backgroundColor: '#261339',
-                                borderRadius: 30
-                            }}
+                            secondary
                         />
                     </View>
                     <View style={styles.button}>
@@ -477,9 +457,7 @@ const styles = StyleSheet.create({
     },
     button: {
         paddingTop: 10,
-        paddingBottom: 10,
-        width: 250,
-        alignSelf: 'center'
+        paddingBottom: 10
     },
     clipboardImport: {
         padding: 10,

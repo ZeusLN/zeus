@@ -1,9 +1,10 @@
 import * as React from 'react';
 import { FlatList, View } from 'react-native';
-import { Avatar, Button, Header, Icon, ListItem } from 'react-native-elements';
+import { Avatar, Header, Icon, ListItem } from 'react-native-elements';
 import Identicon from 'identicon.js';
 import { inject, observer } from 'mobx-react';
 
+import Button from './../../components/Button';
 import SettingsStore from './../../stores/SettingsStore';
 import PrivacyUtils from './../../utils/PrivacyUtils';
 import { localeString } from './../../utils/LocaleUtils';
@@ -109,18 +110,19 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                         <FlatList
                             data={nodes}
                             renderItem={({ item, index }) => {
-                                const displayName =
-                                    item.implementation === 'lndhub'
-                                        ? item.lndhubUrl
-                                              .replace('https://', '')
-                                              .replace('http://', '')
-                                        : item.url
-                                        ? item.url
-                                              .replace('https://', '')
-                                              .replace('http://', '')
-                                        : item.port
-                                        ? `${item.host}:${item.port}`
-                                        : item.host || 'Unknown';
+                                const displayName = item.nickname
+                                    ? item.nickname
+                                    : item.implementation === 'lndhub'
+                                    ? item.lndhubUrl
+                                          .replace('https://', '')
+                                          .replace('http://', '')
+                                    : item.url
+                                    ? item.url
+                                          .replace('https://', '')
+                                          .replace('http://', '')
+                                    : item.port
+                                    ? `${item.host}:${item.port}`
+                                    : item.host || 'Unknown';
 
                                 const title = PrivacyUtils.sensitiveValue(
                                     displayName,
@@ -173,6 +175,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                         }
                                                     )
                                                 }
+                                                iconOnly
+                                                adaptiveWidth
                                             />
                                         }
                                         subtitle={
@@ -230,13 +234,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                 size: 25,
                                 color: themeColor('text')
                             }}
-                            buttonStyle={{
-                                backgroundColor: 'transparent',
-                                borderRadius: 30
-                            }}
-                            titleStyle={{
-                                color: themeColor('text')
-                            }}
+                            iconOnly
                         />
                     )}
                     {!loading && (
@@ -246,14 +244,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                 name: 'add',
                                 size: 25,
                                 color: 'white'
-                            }}
-                            buttonStyle={{
-                                borderRadius: 30,
-                                width: 200,
-                                alignSelf: 'center',
-                                marginBottom: 20,
-                                backgroundColor: 'crimson',
-                                top: 20
                             }}
                             onPress={() =>
                                 navigation.navigate('AddEditNode', {
@@ -268,6 +258,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                             titleStyle={{
                                 color: 'white'
                             }}
+                            adaptiveWidth
                         />
                     )}
                 </View>
