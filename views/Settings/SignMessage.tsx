@@ -7,8 +7,9 @@ import {
     ScrollView,
     TextInput
 } from 'react-native';
-import { Button, Header, Icon } from 'react-native-elements';
+import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import Button from './../../components/Button';
 import { themeColor } from './../../utils/ThemeUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import MessageSignStore from './../../stores/MessageSignStore';
@@ -159,7 +160,7 @@ const styles = StyleSheet.create({
         color: 'red'
     },
     button: {
-        padding: 5
+        padding: 10
     },
     form: {
         paddingTop: 20,
