@@ -131,7 +131,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             style={{
                                 backgroundColor: themeColor('secondary'),
                                 width: '90%',
-                                height: 70,
+                                height: selectedNode ? 70 : 50,
                                 borderRadius: 10,
                                 alignSelf: 'center',
                                 top: 40
@@ -142,7 +142,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     flex: 1,
                                     flexDirection: 'row',
                                     margin: 12,
-                                    marginLeft: 28
+                                    marginLeft: selectedNode ? 28 : 0
                                 }}
                             >
                                 {selectedNode && (
@@ -159,13 +159,15 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                 >
                                     {selectedNode
                                         ? displayName
-                                        : 'Connect a node'}
+                                        : localeString(
+                                              'views.Settings.connectNode'
+                                          )}
                                 </Text>
                                 <View
                                     style={{
                                         flex: 1,
                                         alignItems: 'flex-end',
-                                        marginTop: 25
+                                        marginTop: selectedNode ? 15 : 5
                                     }}
                                 >
                                     <ForwardIcon />
