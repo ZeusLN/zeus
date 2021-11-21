@@ -9,8 +9,8 @@ import {
     Image,
     TouchableHighlight
 } from 'react-native';
-import { Button } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import Button from './../components/Button';
 import UrlUtils from './../utils/UrlUtils';
 import { DEFAULT_LNDHUB } from './../utils/AddressUtils';
 import DropdownSetting from './../components/DropdownSetting';
@@ -96,15 +96,6 @@ export default class Onboarding extends React.Component<
             <View style={styles.button}>
                 <Button
                     title={props.title || 'Continue'}
-                    buttonStyle={{
-                        backgroundColor: 'navy',
-                        borderRadius: 30,
-                        width: 350,
-                        alignSelf: 'center'
-                    }}
-                    titleStyle={{
-                        color: 'white'
-                    }}
                     onPress={() => this.continue()}
                 />
             </View>
@@ -112,19 +103,7 @@ export default class Onboarding extends React.Component<
 
         const BackButton = () => (
             <View style={styles.button}>
-                <Button
-                    title={'Go Back'}
-                    buttonStyle={{
-                        backgroundColor: 'grey',
-                        borderRadius: 30,
-                        width: 350,
-                        alignSelf: 'center'
-                    }}
-                    titleStyle={{
-                        color: 'white'
-                    }}
-                    onPress={() => this.goBack()}
-                />
+                <Button title={'Go Back'} onPress={() => this.goBack()} />
             </View>
         );
 
@@ -134,16 +113,8 @@ export default class Onboarding extends React.Component<
                     title={
                         props.title || localeString('views.Onboarding.skipTour')
                     }
-                    buttonStyle={{
-                        backgroundColor: 'green',
-                        borderRadius: 30,
-                        width: 350,
-                        alignSelf: 'center'
-                    }}
-                    titleStyle={{
-                        color: 'white'
-                    }}
                     onPress={() => this.skipOnboarding()}
+                    secondary
                 />
             </View>
         );
@@ -164,13 +135,7 @@ export default class Onboarding extends React.Component<
                             nodeIndex
                         })
                     }
-                    buttonStyle={{
-                        backgroundColor: 'black',
-                        borderRadius: 30
-                    }}
-                    titleStyle={{
-                        color: 'white'
-                    }}
+                    secondary
                 />
             </View>
         );
@@ -247,13 +212,6 @@ export default class Onboarding extends React.Component<
                                     0
                             })
                         }
-                        buttonStyle={{
-                            backgroundColor: 'purple',
-                            borderRadius: 30
-                        }}
-                        titleStyle={{
-                            color: 'white'
-                        }}
                     />
                 </View>
                 <View style={styles.button}>
@@ -272,12 +230,6 @@ export default class Onboarding extends React.Component<
                                     0
                             })
                         }
-                        buttonStyle={{
-                            borderRadius: 30
-                        }}
-                        titleStyle={{
-                            color: 'white'
-                        }}
                     />
                 </View>
                 <View style={styles.button}>
@@ -296,12 +248,6 @@ export default class Onboarding extends React.Component<
                                     0
                             })
                         }
-                        buttonStyle={{
-                            borderRadius: 30
-                        }}
-                        titleStyle={{
-                            color: 'white'
-                        }}
                     />
                 </View>
                 <View style={styles.button}>
@@ -320,12 +266,6 @@ export default class Onboarding extends React.Component<
                                     0
                             })
                         }
-                        buttonStyle={{
-                            borderRadius: 30
-                        }}
-                        titleStyle={{
-                            color: 'white'
-                        }}
                     />
                 </View>
                 <ScanQRButton />
@@ -377,13 +317,6 @@ export default class Onboarding extends React.Component<
                                     0
                             })
                         }
-                        buttonStyle={{
-                            borderRadius: 30,
-                            backgroundColor: 'lightblue'
-                        }}
-                        titleStyle={{
-                            color: 'white'
-                        }}
                     />
                 </View>
                 <ContinueButton

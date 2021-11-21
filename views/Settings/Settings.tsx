@@ -1,11 +1,5 @@
 import * as React from 'react';
-import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
-    TouchableOpacity
-} from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Avatar, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Identicon from 'identicon.js';
@@ -23,6 +17,7 @@ import HelpIcon from '../../images/SVG/Help Icon.svg';
 import { themeColor } from './../../utils/ThemeUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import PrivacyUtils from './../../utils/PrivacyUtils';
+import RESTUtils from './../../utils/RESTUtils';
 import { version } from './../../package.json';
 import SettingsStore from './../stores/SettingsStore';
 import UnitsStore from './../stores/UnitsStore';
@@ -68,27 +63,29 @@ export default class Settings extends React.Component<SettingsProps, {}> {
         );
 
         const displayName =
-            selectedNode.implementation === 'lndhub'
+            selectedNode && selectedNode.nickname
+                ? selectedNode.nickname
+                : selectedNode && selectedNode.implementation === 'lndhub'
                 ? selectedNode.lndhubUrl
                       .replace('https://', '')
                       .replace('http://', '')
-                : selectedNode.url
+                : selectedNode && selectedNode.url
                 ? selectedNode.url
                       .replace('https://', '')
                       .replace('http://', '')
-                : selectedNode.port
+                : selectedNode && selectedNode.port
                 ? `${selectedNode.host}:${selectedNode.port}`
-                : selectedNode.host || 'Unknown';
+                : (selectedNode && selectedNode.host) || 'Unknown';
 
         const title = PrivacyUtils.sensitiveValue(displayName, 8);
-        // const implementation = PrivacyUtils.sensitiveValue(
-        //     selectedNode.implementation || 'lnd',
-        //     8
-        // );
+        const implementation = PrivacyUtils.sensitiveValue(
+            (selectedNode && selectedNode.implementation) || 'lnd',
+            8
+        );
 
         const data = new Identicon(
             hash.sha1(
-                selectedNode.implementation === 'lndhub'
+                selectedNode && selectedNode.implementation === 'lndhub'
                     ? `${title}-${selectedNode.username}`
                     : title
             ),
@@ -120,50 +117,54 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     }}
                     backgroundColor={themeColor('secondary')}
                 />
-                <ScrollView>
-                    <TouchableOpacity
-                        onPress={() => navigation.navigate('Nodes')}
+                <TouchableOpacity onPress={() => navigation.navigate('Nodes')}>
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            width: '90%',
+                            height: selectedNode ? 70 : 50,
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            top: 40
+                        }}
                     >
                         <View
                             style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                height: 70,
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                top: 40
+                                flex: 1,
+                                flexDirection: 'row',
+                                margin: 12,
+                                marginLeft: selectedNode ? 28 : 0
                             }}
                         >
-                            <View
-                                style={{
-                                    flex: 1,
-                                    flexDirection: 'row',
-                                    margin: 12,
-                                    marginLeft: 28
-                                }}
-                            >
+                            {selectedNode && (
                                 <View style={{ padding: 0 }}>
                                     {Node(`data:image/png;base64,${data}`)}
                                 </View>
-                                <Text
-                                    style={{
-                                        fontSize: 20,
-                                        color: themeColor('text'),
-                                        paddingLeft: 30
-                                    }}
-                                >
-                                    {displayName}
-                                </Text>
-                                <View
-                                    style={{
-                                        flex: 1,
-                                        alignItems: 'flex-end',
-                                        marginTop: 25
-                                    }}
-                                >
-                                    <ForwardIcon />
-                                </View>
+                            )}
+                            <Text
+                                style={{
+                                    fontSize: 20,
+                                    color: themeColor('text'),
+                                    paddingLeft: 30
+                                }}
+                            >
+                                {selectedNode
+                                    ? displayName
+                                    : localeString(
+                                          'views.Settings.connectNode'
+                                      )}
+                            </Text>
+                            <View
+                                style={{
+                                    flex: 1,
+                                    alignItems: 'flex-end',
+                                    marginTop: selectedNode ? 15 : 5
+                                }}
+                            >
+                                <ForwardIcon />
                             </View>
+                        </View>
+                        {selectedNode && (
                             <Text
                                 style={{
                                     fontSize: 16,
@@ -173,59 +174,63 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     paddingLeft: 109
                                 }}
                             >
-                                Mainnet over Tor
+                                {`${implementation}, ${
+                                    selectedNode.enableTor ? 'Tor' : 'clearnet'
+                                }`}
                             </Text>
-                        </View>
-                    </TouchableOpacity>
+                        )}
+                    </View>
+                </TouchableOpacity>
 
-                    {/* Coming Soon */}
-                    {false && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                height: 90,
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                top: 60
-                            }}
-                        >
-                            <View style={styles.columnField}>
-                                <View>
-                                    <AccountIcon stroke={themeColor('text')} />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    Accounts
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon />
-                                </View>
+                {/* Coming Soon */}
+                {false && (
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            width: '90%',
+                            height: 90,
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            top: 60
+                        }}
+                    >
+                        <View style={styles.columnField}>
+                            <View>
+                                <AccountIcon stroke={themeColor('text')} />
                             </View>
-
-                            <View style={styles.separationLine} />
-                            <View style={styles.columnField}>
-                                <View>
-                                    <ContactIcon stroke={themeColor('text')} />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    Contacts
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon />
-                                </View>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                Accounts
+                            </Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon />
                             </View>
                         </View>
-                    )}
+
+                        <View style={styles.separationLine} />
+                        <View style={styles.columnField}>
+                            <View>
+                                <ContactIcon stroke={themeColor('text')} />
+                            </View>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                Contacts
+                            </Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon />
+                            </View>
+                        </View>
+                    </View>
+                )}
+                {RESTUtils.supportsMessageSigning() ? (
                     <View
                         style={{
                             backgroundColor: themeColor('secondary'),
@@ -299,6 +304,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             </View>
                         </TouchableOpacity>
                     </View>
+                ) : (
                     <View
                         style={{
                             backgroundColor: themeColor('secondary'),
@@ -306,15 +312,15 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             height: 90,
                             borderRadius: 10,
                             alignSelf: 'center',
-                            top: 80
+                            top: 60
                         }}
                     >
                         <TouchableOpacity
                             style={styles.columnField}
-                            onPress={() => navigation.navigate('Currency')}
+                            onPress={() => navigation.navigate('Privacy')}
                         >
                             <View>
-                                <BitcoinIcon stroke={themeColor('text')} />
+                                <PrivacyIcon stroke={themeColor('text')} />
                             </View>
                             <Text
                                 style={{
@@ -322,7 +328,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     color: themeColor('text')
                                 }}
                             >
-                                {localeString('views.Settings.Currency.title')}
+                                {localeString('views.Settings.privacy')}
                             </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
@@ -330,12 +336,13 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         </TouchableOpacity>
 
                         <View style={styles.separationLine} />
+
                         <TouchableOpacity
                             style={styles.columnField}
-                            onPress={() => navigation.navigate('Language')}
+                            onPress={() => navigation.navigate('Security')}
                         >
                             <View>
-                                <LanguageIcon stroke={themeColor('text')} />
+                                <SecurityIcon stroke={themeColor('text')} />
                             </View>
                             <Text
                                 style={{
@@ -343,138 +350,125 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     color: themeColor('text')
                                 }}
                             >
-                                {localeString('views.Settings.Language.title')}
+                                {localeString('views.Settings.security')}
                             </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
                             </View>
                         </TouchableOpacity>
                     </View>
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            height: 45,
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            top: 100
-                        }}
+                )}
+                <View
+                    style={{
+                        backgroundColor: themeColor('secondary'),
+                        width: '90%',
+                        height: 90,
+                        borderRadius: 10,
+                        alignSelf: 'center',
+                        top: 80
+                    }}
+                >
+                    <TouchableOpacity
+                        style={styles.columnField}
+                        onPress={() => navigation.navigate('Currency')}
                     >
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() => navigation.navigate('Theme')}
+                        <View>
+                            <BitcoinIcon stroke={themeColor('text')} />
+                        </View>
+                        <Text
+                            style={{
+                                ...styles.columnText,
+                                color: themeColor('text')
+                            }}
                         >
-                            <View style={{ padding: 5 }}>
-                                <HelpIcon />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Settings.Theme.title')}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            height: 45,
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            top: 120
-                        }}
+                            {localeString('views.Settings.Currency.title')}
+                        </Text>
+                        <View style={styles.ForwardArrow}>
+                            <ForwardIcon />
+                        </View>
+                    </TouchableOpacity>
+
+                    <View style={styles.separationLine} />
+                    <TouchableOpacity
+                        style={styles.columnField}
+                        onPress={() => navigation.navigate('Language')}
                     >
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() => navigation.navigate('Help')}
+                        <View>
+                            <LanguageIcon stroke={themeColor('text')} />
+                        </View>
+                        <Text
+                            style={{
+                                ...styles.columnText,
+                                color: themeColor('text')
+                            }}
                         >
-                            <View style={{ padding: 5 }}>
-                                <HelpIcon />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('general.help')}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* <View style={styles.button}> */}
-                    {/* <Button
-                        title={localeString('views.Settings.about')}
-                        buttonStyle={{
-                            backgroundColor: 'black',
-                            borderRadius: 30,
-                            width: 350,
-                            alignSelf: 'center'
-                        }}
-                        onPress={() => navigation.navigate('About')}
-                        style={styles.button}
-                    />
-                </View> */}
-
-                    {/* {false && (
-                    <View style={styles.button}>
-                        <Button
-                            title={localeString('views.ImportAccount.title')}
-                            buttonStyle={{
-                                backgroundColor: 'green',
-                                borderRadius: 30,
-                                width: 350,
-                                alignSelf: 'center'
+                            {localeString('views.Settings.Language.title')}
+                        </Text>
+                        <View style={styles.ForwardArrow}>
+                            <ForwardIcon />
+                        </View>
+                    </TouchableOpacity>
+                </View>
+                <View
+                    style={{
+                        backgroundColor: themeColor('secondary'),
+                        width: '90%',
+                        height: 45,
+                        borderRadius: 10,
+                        alignSelf: 'center',
+                        top: 100
+                    }}
+                >
+                    <TouchableOpacity
+                        style={styles.columnField}
+                        onPress={() => navigation.navigate('Theme')}
+                    >
+                        <View style={{ padding: 5 }}>
+                            <HelpIcon />
+                        </View>
+                        <Text
+                            style={{
+                                ...styles.columnText,
+                                color: themeColor('text')
                             }}
-                            onPress={() => navigation.navigate('ImportAccount')}
-                            style={styles.button}
-                        />
-                    </View>
-                )} */}
-
-                    {/* {RESTUtils.supportsMessageSigning() && (
-                    <View style={styles.button}>
-                        <Button
-                            title={localeString(
-                                'views.Settings.signMessage.button'
-                            )}
-                            buttonStyle={{
-                                backgroundColor: 'green',
-                                borderRadius: 30,
-                                width: 350,
-                                alignSelf: 'center'
+                        >
+                            {localeString('views.Settings.Theme.title')}
+                        </Text>
+                        <View style={styles.ForwardArrow}>
+                            <ForwardIcon />
+                        </View>
+                    </TouchableOpacity>
+                </View>
+                <View
+                    style={{
+                        backgroundColor: themeColor('secondary'),
+                        width: '90%',
+                        height: 45,
+                        borderRadius: 10,
+                        alignSelf: 'center',
+                        top: 120
+                    }}
+                >
+                    <TouchableOpacity
+                        style={styles.columnField}
+                        onPress={() => navigation.navigate('Help')}
+                    >
+                        <View style={{ padding: 5 }}>
+                            <HelpIcon />
+                        </View>
+                        <Text
+                            style={{
+                                ...styles.columnText,
+                                color: themeColor('text')
                             }}
-                            onPress={() => navigation.navigate('SignMessage')}
-                            style={styles.button}
-                        />
-                    </View>
-                )} */}
-
-                    {/* <View style={styles.button}>
-                    <Button
-                        title={localeString('views.Settings.intro')}
-                        buttonStyle={{
-                            backgroundColor: 'orange',
-                            borderRadius: 30,
-                            width: 350,
-                            alignSelf: 'center'
-                        }}
-                        onPress={() =>
-                            navigation.navigate('Onboarding', { reset: true })
-                        }
-                        style={styles.button}
-                    />
-                </View> */}
-                </ScrollView>
+                        >
+                            {localeString('general.help')}
+                        </Text>
+                        <View style={styles.ForwardArrow}>
+                            <ForwardIcon />
+                        </View>
+                    </TouchableOpacity>
+                </View>
                 <Text
                     style={{
                         fontSize: 16,

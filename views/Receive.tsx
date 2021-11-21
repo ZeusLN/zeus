@@ -10,8 +10,9 @@ import {
     View
 } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
-import { Button, ButtonGroup, Header, Icon } from 'react-native-elements';
+import { ButtonGroup, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import Button from './../components/Button';
 import CollapsedQR from './../components/CollapsedQR';
 import RESTUtils from './../utils/RESTUtils';
 import { localeString } from './../utils/LocaleUtils';
@@ -439,11 +440,6 @@ export default class Receive extends React.Component<
                                               )} ${lnurl.domain}`
                                             : '')
                                     }
-                                    icon={{
-                                        name: 'create',
-                                        size: 25,
-                                        color: 'white'
-                                    }}
                                     onPress={() =>
                                         createInvoice(
                                             memo,
@@ -454,10 +450,6 @@ export default class Receive extends React.Component<
                                             routeHints
                                         )
                                     }
-                                    buttonStyle={{
-                                        backgroundColor: 'orange',
-                                        borderRadius: 30
-                                    }}
                                 />
                             </View>
                         </View>
@@ -495,16 +487,7 @@ export default class Receive extends React.Component<
                                                       'views.Receive.getNewAddress'
                                                   )
                                         }
-                                        icon={{
-                                            name: 'fiber-new',
-                                            size: 25,
-                                            color: 'white'
-                                        }}
                                         onPress={() => this.getNewAddress()}
-                                        buttonStyle={{
-                                            backgroundColor: 'orange',
-                                            borderRadius: 30
-                                        }}
                                     />
                                 </View>
                             )}

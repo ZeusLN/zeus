@@ -1,6 +1,6 @@
 import * as React from 'react';
 import Clipboard from '@react-native-community/clipboard';
-import { Button } from 'react-native-elements';
+import Button from './../components/Button';
 import { localeString } from './../utils/LocaleUtils';
 
 interface CopyButtonProps {
@@ -60,20 +60,13 @@ export default class CopyButton extends React.Component<
                 title={buttonTitle}
                 icon={{
                     name: 'content-copy',
-                    size: 25,
-                    color: copied ? 'black' : 'white'
+                    size: 25
                 }}
                 containerStyle={{
                     marginBottom: 20
                 }}
-                buttonStyle={{
-                    backgroundColor: copied ? 'white' : 'black',
-                    borderRadius: 30
-                }}
-                titleStyle={{
-                    color: copied ? 'black' : 'white'
-                }}
                 onPress={() => this.copyToClipboard()}
+                secondary
             />
         );
     }

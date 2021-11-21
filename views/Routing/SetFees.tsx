@@ -29,7 +29,9 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
         );
 
         return (
-            <View>
+            <View
+                style={{ flex: 1, backgroundColor: themeColor('background') }}
+            >
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -40,7 +42,6 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
                 />
                 <View
                     style={{
-                        backgroundColor: themeColor('background'),
                         color: themeColor('text'),
                         top: 5,
                         padding: 15

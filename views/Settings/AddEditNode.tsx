@@ -13,12 +13,13 @@ import {
 } from 'react-native';
 import Clipboard from '@react-native-community/clipboard';
 import { Picker } from '@react-native-picker/picker';
-import { Button, CheckBox, Header, Icon } from 'react-native-elements';
+import { CheckBox, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import AddressUtils, { DEFAULT_LNDHUB } from './../../utils/AddressUtils';
 import LndConnectUtils from './../../utils/LndConnectUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
+import Button from './../../components/Button';
 import CollapsedQR from './../../components/CollapsedQR';
 import DropdownSetting from './../../components/DropdownSetting';
 import SettingsStore, { INTERFACE_KEYS } from './../../stores/SettingsStore';
@@ -406,24 +407,16 @@ export default class AddEditNode extends React.Component<
                     title={localeString(
                         'views.Settings.AddEditNode.certificateButton'
                     )}
-                    icon={{
-                        name: 'lock',
-                        size: 25,
-                        color: 'white'
-                    }}
                     onPress={() => {
                         this.setState({
                             showCertModal: false
                         });
                         navigation.navigate('CertInstallInstructions');
                     }}
-                    buttonStyle={{
-                        backgroundColor: 'purple',
-                        borderRadius: 30
-                    }}
                     titleStyle={{
                         color: 'white'
                     }}
+                    secondary
                 />
             </View>
         );
@@ -491,10 +484,7 @@ export default class AddEditNode extends React.Component<
                                 titleStyle={{
                                     color: 'rgba(92, 99,216, 1)'
                                 }}
-                                buttonStyle={{
-                                    backgroundColor: 'white',
-                                    borderRadius: 30
-                                }}
+                                tertiary
                             />
                         </View>
                         <View style={styles.button}>
@@ -504,10 +494,7 @@ export default class AddEditNode extends React.Component<
                                 titleStyle={{
                                     color: 'rgba(92, 99,216, 1)'
                                 }}
-                                buttonStyle={{
-                                    backgroundColor: 'white',
-                                    borderRadius: 30
-                                }}
+                                tertiary
                             />
                         </View>
                     </View>
@@ -572,9 +559,7 @@ export default class AddEditNode extends React.Component<
                                                     });
                                                 });
                                             }}
-                                            buttonStyle={{
-                                                borderRadius: 30
-                                            }}
+                                            secondary
                                         />
                                     </View>
                                     <View style={styles.button}>
@@ -587,10 +572,7 @@ export default class AddEditNode extends React.Component<
                                                     showLndHubModal: false
                                                 })
                                             }
-                                            buttonStyle={{
-                                                borderRadius: 30,
-                                                backgroundColor: 'grey'
-                                            }}
+                                            secondary
                                         />
                                     </View>
                                 </>
@@ -630,6 +612,7 @@ export default class AddEditNode extends React.Component<
                                             buttonStyle={{
                                                 borderRadius: 30
                                             }}
+                                            secondary
                                         />
                                     </View>
                                     <View style={styles.button}>
@@ -646,6 +629,7 @@ export default class AddEditNode extends React.Component<
                                                 borderRadius: 30,
                                                 backgroundColor: 'grey'
                                             }}
+                                            secondary
                                         />
                                     </View>
                                 </>
@@ -749,7 +733,9 @@ export default class AddEditNode extends React.Component<
                             <Text
                                 style={{ color: themeColor('secondaryText') }}
                             >
-                                Nickname
+                                {localeString(
+                                    'views.Settings.AddEditNode.nickname'
+                                )}
                             </Text>
                             <TextInput
                                 placeholder={'My lightning node'}
@@ -1150,10 +1136,6 @@ export default class AddEditNode extends React.Component<
                                         });
                                     }
                                 }}
-                                buttonStyle={{
-                                    backgroundColor: 'lightblue',
-                                    borderRadius: 30
-                                }}
                             />
                         </View>
                     )}
@@ -1169,11 +1151,6 @@ export default class AddEditNode extends React.Component<
                                           'views.Settings.AddEditNode.saveNode'
                                       )
                             }
-                            icon={{
-                                name: 'save',
-                                size: 25,
-                                color: saved ? 'black' : 'white'
-                            }}
                             onPress={() => {
                                 if (!saved && !certVerification && !enableTor) {
                                     this.setState({ showCertModal: true });
@@ -1207,20 +1184,9 @@ export default class AddEditNode extends React.Component<
                                               'views.Settings.AddEditNode.setNodeActive'
                                           )
                                 }
-                                icon={{
-                                    name: 'blur-circular',
-                                    size: 25,
-                                    color: active ? 'white' : 'purple'
-                                }}
                                 onPress={() =>
                                     this.setNodeConfigurationAsActive()
                                 }
-                                buttonStyle={{
-                                    backgroundColor: active
-                                        ? 'purple'
-                                        : 'white',
-                                    borderRadius: 30
-                                }}
                                 titleStyle={{
                                     color: active ? 'white' : 'purple'
                                 }}
@@ -1235,11 +1201,6 @@ export default class AddEditNode extends React.Component<
                                 title={localeString(
                                     'views.Settings.AddEditNode.scanLndconnect'
                                 )}
-                                icon={{
-                                    name: 'crop-free',
-                                    size: 25,
-                                    color: themeColor('background')
-                                }}
                                 onPress={() =>
                                     navigation.navigate(
                                         'LNDConnectConfigQRScanner',
@@ -1248,13 +1209,10 @@ export default class AddEditNode extends React.Component<
                                         }
                                     )
                                 }
-                                buttonStyle={{
-                                    backgroundColor: themeColor('text'),
-                                    borderRadius: 30
-                                }}
                                 titleStyle={{
                                     color: themeColor('background')
                                 }}
+                                secondary
                             />
                         </View>
                     )}
@@ -1266,11 +1224,6 @@ export default class AddEditNode extends React.Component<
                                 title={localeString(
                                     'views.Settings.AddEditNode.scanBtcpay'
                                 )}
-                                icon={{
-                                    name: 'crop-free',
-                                    size: 25,
-                                    color: 'white'
-                                }}
                                 onPress={() =>
                                     navigation.navigate(
                                         'BTCPayConfigQRScanner',
@@ -1279,10 +1232,7 @@ export default class AddEditNode extends React.Component<
                                         }
                                     )
                                 }
-                                buttonStyle={{
-                                    backgroundColor: 'rgba(5, 146, 35, 1)',
-                                    borderRadius: 30
-                                }}
+                                secondary
                             />
                         </View>
                     )}
@@ -1293,11 +1243,6 @@ export default class AddEditNode extends React.Component<
                                 title={localeString(
                                     'views.Settings.AddEditNode.scanLndhub'
                                 )}
-                                icon={{
-                                    name: 'crop-free',
-                                    size: 25,
-                                    color: 'white'
-                                }}
                                 onPress={() =>
                                     navigation.navigate('LNDHubQRScanner', {
                                         index
@@ -1306,6 +1251,7 @@ export default class AddEditNode extends React.Component<
                                 buttonStyle={{
                                     borderRadius: 30
                                 }}
+                                secondary
                             />
                         </View>
                     )}
@@ -1316,16 +1262,8 @@ export default class AddEditNode extends React.Component<
                                 title={localeString(
                                     'views.Settings.AddEditNode.deleteNode'
                                 )}
-                                icon={{
-                                    name: 'delete',
-                                    size: 25,
-                                    color: 'white'
-                                }}
                                 onPress={() => this.deleteNodeConfig()}
-                                buttonStyle={{
-                                    backgroundColor: 'red',
-                                    borderRadius: 30
-                                }}
+                                secondary
                             />
                         </View>
                     )}
