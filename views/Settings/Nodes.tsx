@@ -234,13 +234,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                 size: 25,
                                 color: themeColor('text')
                             }}
-                            buttonStyle={{
-                                backgroundColor: 'transparent',
-                                borderRadius: 30
-                            }}
-                            titleStyle={{
-                                color: themeColor('text')
-                            }}
+                            iconOnly
                         />
                     )}
                     {!loading && (
