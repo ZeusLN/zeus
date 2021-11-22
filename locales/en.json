@@ -174,6 +174,7 @@
     "views.Channel.closingRate": "(Optional) Sat per byte closing fee",
     "views.Channel.forceClose": "Force close",
     "views.Channel.confirmClose": "Confirm Channel Close",
+    "views.UTXOs.CoinControl.noUTXOs": "No UTXOs available",
     "views.EditFee.mainText": "Edit network fee",
     "views.EditFee.fastestFee": "Fastest fee",
     "views.EditFee.halfHourFee": "Half hour fee",
