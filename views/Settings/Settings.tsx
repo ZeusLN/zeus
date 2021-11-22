@@ -125,7 +125,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             height: selectedNode ? 70 : 50,
                             borderRadius: 10,
                             alignSelf: 'center',
-                            top: 40
+                            marginTop: 40
                         }}
                     >
                         <View
@@ -238,7 +238,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             height: 138,
                             borderRadius: 10,
                             alignSelf: 'center',
-                            top: 60
+                            top: 30
                         }}
                     >
                         <TouchableOpacity
@@ -312,7 +312,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             height: 90,
                             borderRadius: 10,
                             alignSelf: 'center',
-                            top: 60
+                            top: 30
                         }}
                     >
                         <TouchableOpacity
@@ -365,7 +365,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         height: 90,
                         borderRadius: 10,
                         alignSelf: 'center',
-                        top: 80
+                        top: 50
                     }}
                 >
                     <TouchableOpacity
@@ -416,7 +416,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         height: 45,
                         borderRadius: 10,
                         alignSelf: 'center',
-                        top: 100
+                        top: 70
                     }}
                 >
                     <TouchableOpacity
@@ -446,7 +446,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         height: 45,
                         borderRadius: 10,
                         alignSelf: 'center',
-                        top: 120
+                        top: 90
                     }}
                 >
                     <TouchableOpacity
