@@ -54,7 +54,7 @@ export default class Lockscreen extends React.Component<
             ) {
                 navigation.navigate('Wallet');
             } else {
-                navigation.navigate('Onboarding');
+                navigation.navigate('IntroSplash');
             }
         });
     }
