@@ -59,7 +59,7 @@ export default class Payment extends BaseModel {
     }
 
     @computed public get getAmount(): number | string {
-        return this.value || Number(this.msatoshi_sent) / 1000;
+        return this.value || Number(this.msatoshi_sent) / 1000 || 0;
     }
 
     @computed public get getFee(): string {

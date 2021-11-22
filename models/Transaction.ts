@@ -41,7 +41,7 @@ export default class Transaction extends BaseModel {
     }
 
     @computed public get getAmount(): number | string {
-        return this.value || this.amount;
+        return this.value || this.amount || 0;
     }
 
     @computed public get getBlockHeight(): string | boolean {
