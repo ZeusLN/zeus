@@ -1,6 +1,8 @@
+import stores from '../stores/Stores';
 import LND from './LND';
 import TransactionRequest from './../models/TransactionRequest';
 import OpenChannelRequest from './../models/OpenChannelRequest';
+import VersionUtils from './../utils/VersionUtils';
 
 export default class CLightningREST extends LND {
     getHeaders = (macaroonHex: string): any => {
@@ -8,6 +10,23 @@ export default class CLightningREST extends LND {
             macaroon: macaroonHex,
             encodingtype: 'hex'
         };
+    };
+
+    supports = (
+        minVersion: string,
+        eosVersion?: string,
+        minApiVersion?: string
+    ) => {
+        const { nodeInfo } = stores.nodeInfoStore;
+        const { version, api_version } = nodeInfo;
+        const { isSupportedVersion } = VersionUtils;
+        if (minApiVersion) {
+            return (
+                isSupportedVersion(version, minVersion, eosVersion) &&
+                isSupportedVersion(api_version, minApiVersion)
+            );
+        }
+        return isSupportedVersion(version, minVersion, eosVersion);
     };
 
     getTransactions = () =>

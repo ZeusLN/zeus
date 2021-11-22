@@ -6,7 +6,7 @@ import { Spacer } from '../components/layout/Spacer';
 
 // TODO: will replace this with a more generic "Value" component
 export function Sats({ sats }: { sats: number }) {
-    const numberWithCommas = (x: string | number) =>
+    const numberWithCommas = (x: string | number = 0) =>
         x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
     return (

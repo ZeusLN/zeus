@@ -65,20 +65,10 @@ export default class LND {
         return await calls[id];
     };
 
-    supports = (
-        minVersion: string,
-        eosVersion?: string,
-        minApiVersion?: string
-    ) => {
+    supports = (minVersion: string, eosVersion?: string) => {
         const { nodeInfo } = stores.nodeInfoStore;
-        const { version, api_version } = nodeInfo;
+        const { version } = nodeInfo;
         const { isSupportedVersion } = VersionUtils;
-        if (minApiVersion) {
-            return (
-                isSupportedVersion(version, minVersion, eosVersion) &&
-                isSupportedVersion(api_version, minApiVersion)
-            );
-        }
         return isSupportedVersion(version, minVersion, eosVersion);
     };
 

@@ -40,7 +40,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
         const {
             tx,
             block_hash,
-            block_height,
+            getBlockHeight,
             num_confirmations,
             time_stamp,
             destAddresses,
@@ -179,7 +179,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                         </View>
                     )}
 
-                    {!!block_height && (
+                    {!!getBlockHeight && (
                         <Text
                             style={{
                                 ...styles.label,
@@ -189,18 +189,18 @@ export default class TransactionView extends React.Component<TransactionProps> {
                             {localeString('views.Transaction.blockHeight')}:
                         </Text>
                     )}
-                    {!!block_height && (
+                    {!!getBlockHeight && (
                         <TouchableOpacity
                             onPress={() =>
                                 UrlUtils.goToBlockExplorerBlockHeight(
-                                    block_height,
+                                    getBlockHeight.toString(),
                                     testnet
                                 )
                             }
                         >
                             <Text style={styles.valueWithLink}>
                                 {PrivacyUtils.sensitiveValue(
-                                    block_height,
+                                    getBlockHeight.toString(),
                                     5,
                                     true
                                 )}
@@ -208,7 +208,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                         </TouchableOpacity>
                     )}
 
-                    {!isNull(num_confirmations) && (
+                    {!!num_confirmations && !isNull(num_confirmations) && (
                         <View>
                             <Text
                                 style={{

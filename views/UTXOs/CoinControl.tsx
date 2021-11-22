@@ -94,7 +94,10 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                 />
                 {loading ? (
                     <View style={{ padding: 50 }}>
-                        <ActivityIndicator size="large" color="#0000ff" />
+                        <ActivityIndicator
+                            size="large"
+                            color={themeColor('highlight')}
+                        />
                     </View>
                 ) : !!utxos && utxos.length > 0 ? (
                     <FlatList
@@ -156,7 +159,7 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                     />
                 ) : (
                     <Button
-                        title={localeString('views.Activity.noActivity')}
+                        title={localeString('views.UTXOs.CoinControl.noUTXOs')}
                         icon={{
                             name: 'error-outline',
                             size: 25,
