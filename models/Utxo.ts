@@ -17,6 +17,10 @@ export default class Utxo extends BaseModel {
     pk_script: string;
     amount_sat: number | string;
     value: number | string;
+    // CLR
+    status: string;
+    reserved: boolean;
+    blockheight: number;
 
     @computed public get isUnconfirmed(): boolean {
         return this.getConfs <= 0;
@@ -31,7 +35,7 @@ export default class Utxo extends BaseModel {
     }
 
     @computed public get getOutpoint(): string {
-        return this.outpoint.txid_str
+        return this.outpoint && this.outpoint.txid_str
             ? `${this.outpoint.txid_str}:${this.outpoint.output_index}`
             : `${this.txid}:${this.output}`;
     }
