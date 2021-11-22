@@ -197,6 +197,7 @@
     "views.Invoice.rHash": "R Hash",
     "views.Invoice.rPreimage": "R Pre-Image",
     "views.Invoice.descriptionHash": "Description Hash",
+    "views.Invoice.paymentHash": "Payment Hash",
     "views.Invoice.paymentRequest": "Payment Request",
     "views.Invoice.copyPaymentRequest": "Copy Payment Request",
     "views.LNDConnectConfigQRScanner.title": "lndconnect Config QR Scanner",

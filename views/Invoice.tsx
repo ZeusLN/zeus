@@ -37,10 +37,12 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
             receipt,
             creation_date,
             description_hash,
+            payment_hash,
             r_preimage,
             cltv_expiry,
             expirationDate,
-            payment_request
+            payment_request,
+            bolt11
         } = invoice;
         const privateInvoice = invoice.private;
 
@@ -330,6 +332,27 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                         </React.Fragment>
                     )}
 
+                    {!!payment_hash && (
+                        <React.Fragment>
+                            <Text
+                                style={{
+                                    ...styles.label,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString('views.Invoice.paymentHash')}:
+                            </Text>
+                            <Text
+                                style={{
+                                    ...styles.value,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {PrivacyUtils.sensitiveValue(payment_hash)}
+                            </Text>
+                        </React.Fragment>
+                    )}
+
                     {!!payment_request && (
                         <React.Fragment>
                             <Text
@@ -354,6 +377,37 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                     {!!payment_request && (
                         <CollapsedQR
                             value={payment_request}
+                            copyText={localeString(
+                                'views.Invoice.copyPaymentRequest'
+                            )}
+                            hideText
+                        />
+                    )}
+
+                    {!!bolt11 && (
+                        <React.Fragment>
+                            <Text
+                                style={{
+                                    ...styles.label,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString('views.Invoice.paymentRequest')}:
+                            </Text>
+                            <Text
+                                style={{
+                                    ...styles.value,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {PrivacyUtils.sensitiveValue(bolt11)}
+                            </Text>
+                        </React.Fragment>
+                    )}
+
+                    {!!bolt11 && (
+                        <CollapsedQR
+                            value={bolt11}
                             copyText={localeString(
                                 'views.Invoice.copyPaymentRequest'
                             )}
