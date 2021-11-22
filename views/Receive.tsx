@@ -247,7 +247,7 @@ export default class Receive extends React.Component<
                             {creatingInvoice && (
                                 <ActivityIndicator
                                     size="large"
-                                    color="#0000ff"
+                                    color={themeColor('highlight')}
                                 />
                             )}
                             {!!payment_request && (
@@ -464,10 +464,10 @@ export default class Receive extends React.Component<
                             {loading && (
                                 <ActivityIndicator
                                     size="large"
-                                    color="#0000ff"
+                                    color={themeColor('highlight')}
                                 />
                             )}
-                            {address && (
+                            {address && !loading && (
                                 <CollapsedQR
                                     value={address}
                                     copyText={localeString(
@@ -475,7 +475,10 @@ export default class Receive extends React.Component<
                                     )}
                                 />
                             )}
-                            {!(implementation === 'lndhub' && address) && (
+                            {!(
+                                (implementation === 'lndhub' && address) ||
+                                loading
+                            ) && (
                                 <View style={styles.button}>
                                     <Button
                                         title={

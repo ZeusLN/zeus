@@ -29,11 +29,11 @@ export default class Transaction extends BaseModel {
     }
 
     @computed public get getDisplayTime(): string {
-        return DateTimeUtils.listFormattedDate(this.time_stamp || 0);
+        return DateTimeUtils.listFormattedDate(this.time_stamp);
     }
 
     @computed public get getDate(): string | Date {
-        return DateTimeUtils.listDate(this.time_stamp || 0);
+        return DateTimeUtils.listDate(this.time_stamp);
     }
 
     @computed public get isConfirmed(): boolean {
@@ -41,7 +41,7 @@ export default class Transaction extends BaseModel {
     }
 
     @computed public get getAmount(): number | string {
-        return this.value || this.amount;
+        return this.value || this.amount || 0;
     }
 
     @computed public get getBlockHeight(): string | boolean {

@@ -68,9 +68,10 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
     }
 
     render() {
-        const { navigation, selectedNode, SettingsStore } = this.props;
+        const { navigation, SettingsStore } = this.props;
         const { loading, nodes } = this.state;
         const { setSettings, settings }: any = SettingsStore;
+        const { selectedNode } = settings;
 
         const Node = (balanceImage: string) => (
             <Avatar

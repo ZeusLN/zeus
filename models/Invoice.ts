@@ -98,7 +98,7 @@ export default class Invoice extends BaseModel {
         }
         return this.settled
             ? Number(this.amt_paid_sat)
-            : Number(this.value) || Number(this.amt);
+            : Number(this.value) || Number(this.amt) || 0;
     }
 
     // return amount in satoshis

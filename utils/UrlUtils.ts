@@ -13,7 +13,12 @@ const goToBlockExplorer = (
             ? privacy.customBlockExplorer
             : (privacy && privacy.defaultBlockExplorer) || 'mempool.space';
 
-    const url = `https://${host}/${testnet ? 'testnet/' : ''}${type}/${value}`;
+    let path: string = type;
+    if (type === 'block-height') {
+        path = host === 'mempool.space' ? 'block' : 'block-height';
+    }
+
+    const url = `https://${host}/${testnet ? 'testnet/' : ''}${path}/${value}`;
     goToUrl(url);
 };
 

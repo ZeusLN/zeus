@@ -34,7 +34,8 @@ export default class UTXOsStore {
         RESTUtils.getUTXOs()
             .then((data: any) => {
                 this.loading = false;
-                this.utxos = data.utxos.map((utxo: any) => new Utxo(utxo));
+                const utxos = data.utxos || data.outputs;
+                this.utxos = utxos.map((utxo: any) => new Utxo(utxo));
                 this.error = false;
             })
             .catch((error: any) => {
