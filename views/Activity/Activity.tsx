@@ -262,9 +262,11 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                                     )
                                                 }}
                                             >
-                                                {DateTimeUtils.listFormattedDateShort(
-                                                    item.getTimestamp
-                                                )}
+                                                {item.getTimestamp === 0
+                                                    ? item.getBlockHeight
+                                                    : DateTimeUtils.listFormattedDateShort(
+                                                          item.getTimestamp
+                                                      )}
                                             </ListItem.Subtitle>
                                         </ListItem.Content>
                                     </ListItem>
