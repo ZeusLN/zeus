@@ -246,6 +246,8 @@ export default class SettingsStore {
             this.setSettings(JSON.stringify(newSettings)).then(() => {
                 this.getSettings();
             });
+
+            return newAddress;
         });
     };
 

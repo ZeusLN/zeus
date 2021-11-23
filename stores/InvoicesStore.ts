@@ -162,6 +162,8 @@ export default class InvoicesStore {
                             }
                         });
                 }
+
+                return invoice.getPaymentRequest;
             })
             .catch((error: any) => {
                 // handle error

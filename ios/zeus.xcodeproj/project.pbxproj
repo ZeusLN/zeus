@@ -32,6 +32,7 @@
 		ED297163215061F000B7C4FE /* JavaScriptCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ED297162215061F000B7C4FE /* JavaScriptCore.framework */; };
 		ED2971652150620600B7C4FE /* JavaScriptCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ED2971642150620600B7C4FE /* JavaScriptCore.framework */; };
 		FE68A5FF7AF76A7CC17F753E /* libPods-zeus.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C2E5235CC64B00DD9CAF9F8 /* libPods-zeus.a */; };
+		D683F661E7DE4FAB879F4FB9 /* Fontisto.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 6EA51D451E9C4637BBA7ADDB /* Fontisto.ttf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -296,6 +297,7 @@
 		EE664AA94A3B608FC4E5B564 /* libPods-zeus-tvOS.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-zeus-tvOS.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		F218C4142385C930466AFEB7 /* Pods-zeus-tvOSTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zeus-tvOSTests.release.xcconfig"; path = "Target Support Files/Pods-zeus-tvOSTests/Pods-zeus-tvOSTests.release.xcconfig"; sourceTree = "<group>"; };
 		F7E8164B32C144C1970E0E8E /* AntDesign.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = AntDesign.ttf; path = "../node_modules/react-native-vector-icons/Fonts/AntDesign.ttf"; sourceTree = "<group>"; };
+		6EA51D451E9C4637BBA7ADDB /* Fontisto.ttf */ = {isa = PBXFileReference; name = "Fontisto.ttf"; path = "../node_modules/react-native-vector-icons/Fonts/Fontisto.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -614,6 +616,7 @@
 				7FE4DFA6CD064723B106677B /* Octicons.ttf */,
 				49BD28A15F4B4FECA6EE0CDE /* SimpleLineIcons.ttf */,
 				BB0EF52AEE1F4724A178B73A /* Zocial.ttf */,
+				6EA51D451E9C4637BBA7ADDB /* Fontisto.ttf */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -987,6 +990,7 @@
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				97D6EBB726C487DC002ADC8C /* ioslauncher.png in Resources */,
 				13B07FBD1A68108700A75B9A /* LaunchScreen.xib in Resources */,
+				D683F661E7DE4FAB879F4FB9 /* Fontisto.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
