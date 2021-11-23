@@ -33,6 +33,8 @@
     "general.percentage": "percentage",
     "components.CollapsedQr.show": "Show QR",
     "components.CollapsedQr.hide": "Hide QR",
+    "components.CollapsedQr.startNfc": "Start NFC broadcast",
+    "components.CollapsedQr.stopNfc": "Stop NFC broadcast",
     "components.CopyButton.copied": "Copied!",
     "components.CopyButton.copy": "Copy to Clipboard",
     "components.SetFeesForm.setNew": "Set New Fees",

@@ -1,12 +1,17 @@
 import * as React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+
+import HCESession, { NFCContentType, NFCTagType4 } from 'react-native-hce';
+
 import Button from './../components/Button';
 import CopyButton from './CopyButton';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
 const secondaryLogo = require('../images/secondary.png');
+
+let simulation: any;
 
 interface CollapsedQRProps {
     value: string;
@@ -18,6 +23,7 @@ interface CollapsedQRProps {
 
 interface CollapsedQRState {
     collapsed: boolean;
+    nfcBroadcast: boolean;
 }
 
 export default class CollapsedQR extends React.Component<
@@ -25,7 +31,20 @@ export default class CollapsedQR extends React.Component<
     CollapsedQRState
 > {
     state = {
-        collapsed: true
+        collapsed: true,
+        nfcBroadcast: false
+    };
+
+    componentWillUnmount() {
+        if (this.state.nfcBroadcast) {
+            this.stopSimulation();
+        }
+    }
+
+    UNSAFE_componentWillUpdate = () => {
+        if (this.state.nfcBroadcast) {
+            this.stopSimulation();
+        }
     };
 
     toggleCollapse = () => {
@@ -34,8 +53,29 @@ export default class CollapsedQR extends React.Component<
         });
     };
 
+    toggleNfc = () => {
+        if (this.state.nfcBroadcast) {
+            this.stopSimulation();
+        } else {
+            this.startSimulation();
+        }
+
+        this.setState({
+            nfcBroadcast: !this.state.nfcBroadcast
+        });
+    };
+
+    startSimulation = async () => {
+        const tag = new NFCTagType4(NFCContentType.Text, this.props.value);
+        simulation = await new HCESession(tag).start();
+    };
+
+    stopSimulation = async () => {
+        await simulation.terminate();
+    };
+
     render() {
-        const { collapsed } = this.state;
+        const { collapsed, nfcBroadcast } = this.state;
         const { value, showText, copyText, collapseText, hideText } =
             this.props;
 
@@ -77,6 +117,14 @@ export default class CollapsedQR extends React.Component<
                     onPress={() => this.toggleCollapse()}
                 />
                 <CopyButton copyValue={value} title={copyText} />
+                <Button
+                    title={
+                        nfcBroadcast
+                            ? localeString('components.CollapsedQr.stopNfc')
+                            : localeString('components.CollapsedQr.startNfc')
+                    }
+                    onPress={() => this.toggleNfc()}
+                />
             </React.Fragment>
         );
     }
