@@ -73,6 +73,8 @@
 	<string>Not Used</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Zeus would like permission to use load QR codes from your photo library</string>
+	<key>NFCReaderUsageDescription</key>
+	<string>Zeus would like permission to use NFC to supplement QR code scanning</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Not Used</string>
 	<key>UIAppFonts</key>
