@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 import HCESession, { NFCContentType, NFCTagType4 } from 'react-native-hce';
@@ -117,14 +117,18 @@ export default class CollapsedQR extends React.Component<
                     onPress={() => this.toggleCollapse()}
                 />
                 <CopyButton copyValue={value} title={copyText} />
-                <Button
-                    title={
-                        nfcBroadcast
-                            ? localeString('components.CollapsedQr.stopNfc')
-                            : localeString('components.CollapsedQr.startNfc')
-                    }
-                    onPress={() => this.toggleNfc()}
-                />
+                {Platform.OS !== 'ios' && (
+                    <Button
+                        title={
+                            nfcBroadcast
+                                ? localeString('components.CollapsedQr.stopNfc')
+                                : localeString(
+                                      'components.CollapsedQr.startNfc'
+                                  )
+                        }
+                        onPress={() => this.toggleNfc()}
+                    />
+                )}
             </React.Fragment>
         );
     }
