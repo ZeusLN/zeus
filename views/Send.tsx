@@ -162,8 +162,11 @@ export default class Send extends React.Component<SendProps, SendState> {
         };
 
         return new Promise((resolve: any) => {
+            let tagFound = null;
+
             NfcManager.setEventListener(NfcEvents.DiscoverTag, (tag: any) => {
-                const bytes = new Uint8Array(tag.ndefMessage[0].payload);
+                tagFound = tag;
+                const bytes = new Uint8Array(tagFound.ndefMessage[0].payload);
                 // TODO handle this more elegantly
                 const str = this.utf8ArrayToStr(bytes).slice(3);
                 resolve(this.validateAddress(str));
@@ -171,8 +174,9 @@ export default class Send extends React.Component<SendProps, SendState> {
             });
 
             NfcManager.setEventListener(NfcEvents.SessionClosed, () => {
-                // TODO resolve gracefully
-                cleanUp();
+                if (!tagFound) {
+                    resolve();
+                }
             });
 
             NfcManager.registerTagEvent();
