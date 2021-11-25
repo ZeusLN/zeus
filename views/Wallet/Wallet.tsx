@@ -67,13 +67,27 @@ export default class Wallet extends React.Component<WalletProps, {}> {
     clipboard: string;
 
     componentDidMount() {
-        Linking.getInitialURL()
-            .then((url) => {
-                if (url) {
-                    handleAnything(url).then(([route, props]) => {
-                        this.props.navigation.navigate(route, props);
-                    });
-                }
+        Linking.addEventListener('url', this._handleOpenURL);
+
+        Linking.getInitialURL().then(
+            (url) => url && this._handleDeepLink(url)
+        );
+    }
+
+    componentWillUnmount() {
+        Linking.removeEventListener('url', this._handleOpenURL);
+    }
+
+    _handleOpenURL(event) {
+        if (event.url) {
+            this._handleDeepLink(event.url);
+        }
+    }
+
+    _handleDeepLink(url) {
+        handleAnything(url)
+            .then(([route, props]) => {
+                this.props.navigation.navigate(route, props);
             })
             .catch((err) =>
                 console.error(localeString('views.Wallet.Wallet.error'), err)

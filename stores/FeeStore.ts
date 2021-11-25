@@ -92,9 +92,10 @@ export default class FeeStore {
         RESTUtils.getFees()
             .then((data: any) => {
                 const channelFees: any = {};
-                data.channel_fees.forEach((channelFee: any) => {
-                    channelFees[channelFee.chan_point] = channelFee;
-                });
+                data.channel_fees &&
+                    data.channel_fees.forEach((channelFee: any) => {
+                        channelFees[channelFee.chan_point] = channelFee;
+                    });
 
                 this.channelFees = channelFees;
                 this.dayEarned = data.day_fee_sum || 0;
