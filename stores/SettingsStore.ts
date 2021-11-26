@@ -14,7 +14,6 @@ interface Node {
     accessKey?: string;
     implementation?: string;
     certVerification?: boolean;
-    onChainAddress?: string;
     enableTor?: boolean;
     nickname?: string;
 }
@@ -33,7 +32,6 @@ interface Settings {
     passphrase?: string;
     fiat?: string;
     locale?: string;
-    onChainAddress?: string;
     privacy: PrivacySettings;
 }
 
@@ -120,7 +118,6 @@ export default class SettingsStore {
     @observable accessKey: string;
     @observable implementation: string;
     @observable certVerification: boolean | undefined;
-    @observable chainAddress: string | undefined;
     // LNDHub
     @observable username: string;
     @observable password: string;
@@ -204,7 +201,6 @@ export default class SettingsStore {
                     this.accessKey = node.accessKey;
                     this.implementation = node.implementation || 'lnd';
                     this.certVerification = node.certVerification || false;
-                    this.chainAddress = node.onChainAddress;
                     this.enableTor = node.enableTor;
                 }
                 return this.settings;
@@ -230,24 +226,6 @@ export default class SettingsStore {
             return settings;
         });
     }
-
-    @action
-    public getNewAddress = () => {
-        return RESTUtils.getNewAddress().then((data: any) => {
-            const newAddress = data.address || data[0].address;
-            if (this.settings.nodes) {
-                this.settings.nodes[
-                    this.settings.selectedNode || 0
-                ].onChainAddress = newAddress;
-            }
-
-            const newSettings = this.settings;
-
-            this.setSettings(JSON.stringify(newSettings)).then(() => {
-                this.getSettings();
-            });
-        });
-    };
 
     // LNDHub
     @action
