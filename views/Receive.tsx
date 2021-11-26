@@ -79,8 +79,8 @@ export default class Receive extends React.Component<
     }
 
     getNewAddress = () => {
-        const { SettingsStore } = this.props;
-        SettingsStore.getNewAddress();
+        const { InvoicesStore } = this.props;
+        InvoicesStore.getNewAddress();
     };
 
     updateIndex = (selectedIndex: number) => {
@@ -114,15 +114,15 @@ export default class Receive extends React.Component<
 
         const {
             createInvoice,
+            onChainAddress,
             payment_request,
             creatingInvoice,
             creatingInvoiceError,
             error_msg
         } = InvoicesStore;
-        const { settings, loading, chainAddress, implementation } =
-            SettingsStore;
+        const { settings, loading, implementation } = SettingsStore;
         const { fiat } = settings;
-        const address = chainAddress;
+        const address = onChainAddress;
 
         const rate =
             fiat && fiat !== 'Disabled' && fiatRates
