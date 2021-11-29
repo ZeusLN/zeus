@@ -52,7 +52,8 @@ import Utxo from './views/UTXOs/UTXO';
 import ImportAccount from './views/Accounts/ImportAccount';
 import ImportAccountQRScanner from './views/Accounts/ImportAccountQRScanner';
 
-import Onboarding from './views/Onboarding';
+import Intro from './views/Intro';
+import IntroSplash from './views/IntroSplash';
 
 import EditFee from './views/EditFee';
 
@@ -60,8 +61,11 @@ const AppScenes = {
     Lockscreen: {
         screen: Lockscreen
     },
-    Onboarding: {
-        screen: Onboarding
+    IntroSplash: {
+        screen: IntroSplash
+    },
+    Intro: {
+        screen: Intro
     },
     Wallet: {
         screen: Wallet

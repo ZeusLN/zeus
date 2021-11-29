@@ -17,6 +17,7 @@ export default class InvoicesStore {
     @observable getPayReqError: string | null = null;
     @observable invoices: Array<Invoice> = [];
     @observable invoice: Invoice | null;
+    @observable onChainAddress: string | null;
     @observable pay_req: Invoice | null;
     @observable payment_request: string | null;
     @observable creatingInvoice = false;
@@ -171,6 +172,13 @@ export default class InvoicesStore {
                 this.creatingInvoice = false;
                 this.error_msg = error.toString() || 'Error creating invoice';
             });
+    };
+
+    @action
+    public getNewAddress = () => {
+        return RESTUtils.getNewAddress().then((data: any) => {
+            this.onChainAddress = data.address || data[0].address;
+        });
     };
 
     @action

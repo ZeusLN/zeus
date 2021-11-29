@@ -5,7 +5,8 @@ import {
     Text,
     View,
     I18nManager,
-    Image
+    Image,
+    TouchableOpacity
 } from 'react-native';
 
 import { RectButton } from 'react-native-gesture-handler';
@@ -87,22 +88,30 @@ export default class OnchainSwipeableRow extends Component<
     private updateRef = (ref: Swipeable) => {
         this.swipeableRow = ref;
     };
+
     private close = () => {
         this.swipeableRow.close();
     };
+
+    private open = () => {
+        this.swipeableRow.openLeft();
+    };
+
     render() {
         const { children } = this.props;
         return (
-            <Swipeable
-                ref={this.updateRef}
-                friction={2}
-                enableTrackpadTwoFingerGesture
-                leftThreshold={30}
-                rightThreshold={40}
-                renderLeftActions={this.renderActions}
-            >
-                {children}
-            </Swipeable>
+            <TouchableOpacity onPress={() => this.open()}>
+                <Swipeable
+                    ref={this.updateRef}
+                    friction={2}
+                    enableTrackpadTwoFingerGesture
+                    leftThreshold={30}
+                    rightThreshold={40}
+                    renderLeftActions={this.renderActions}
+                >
+                    {children}
+                </Swipeable>
+            </TouchableOpacity>
         );
     }
 }
