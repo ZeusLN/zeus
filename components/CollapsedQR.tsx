@@ -112,7 +112,7 @@ export default class CollapsedQR extends React.Component<
                     }}
                     containerStyle={{
                         marginTop: 10,
-                        marginBottom: 10
+                        marginBottom: Platform.OS === 'android' ? 10 : 20
                     }}
                     onPress={() => this.toggleCollapse()}
                 />
