@@ -111,13 +111,13 @@ export default class CollapsedQR extends React.Component<
                         color: '#fff'
                     }}
                     containerStyle={{
-                        marginTop: collapsed ? 10 : 0,
+                        marginTop: 10,
                         marginBottom: 10
                     }}
                     onPress={() => this.toggleCollapse()}
                 />
                 <CopyButton copyValue={value} title={copyText} />
-                {Platform.OS !== 'ios' && (
+                {Platform.OS === 'android' && (
                     <Button
                         title={
                             nfcBroadcast
@@ -126,7 +126,11 @@ export default class CollapsedQR extends React.Component<
                                       'components.CollapsedQr.startNfc'
                                   )
                         }
+                        containerStyle={{
+                            marginBottom: 20
+                        }}
                         onPress={() => this.toggleNfc()}
+                        tertiary
                     />
                 )}
             </React.Fragment>
