@@ -122,7 +122,6 @@ export default class Privacy extends React.Component<
                                     nodes: settings.nodes,
                                     theme: settings.theme,
                                     selectedNode: settings.selectedNode,
-                                    onChainAddress: settings.onChainAddress,
                                     fiat: settings.fiat,
                                     passphrase: settings.passphrase,
                                     locale: settings.locale,
@@ -160,8 +159,6 @@ export default class Privacy extends React.Component<
                                             nodes: settings.nodes,
                                             theme: settings.theme,
                                             selectedNode: settings.selectedNode,
-                                            onChainAddress:
-                                                settings.onChainAddress,
                                             fiat: settings.fiat,
                                             passphrase: settings.passphrase,
                                             locale: settings.locale,
@@ -216,8 +213,6 @@ export default class Privacy extends React.Component<
                                             nodes: settings.nodes,
                                             theme: settings.theme,
                                             selectedNode: settings.selectedNode,
-                                            onChainAddress:
-                                                settings.onChainAddress,
                                             fiat: settings.fiat,
                                             passphrase: settings.passphrase,
                                             locale: settings.locale,
@@ -270,8 +265,6 @@ export default class Privacy extends React.Component<
                                             nodes: settings.nodes,
                                             theme: settings.theme,
                                             selectedNode: settings.selectedNode,
-                                            onChainAddress:
-                                                settings.onChainAddress,
                                             fiat: settings.fiat,
                                             passphrase: settings.passphrase,
                                             locale: settings.locale,

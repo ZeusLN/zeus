@@ -280,7 +280,6 @@ export default class AddEditNode extends React.Component<
                 nodes,
                 theme: settings.theme,
                 selectedNode: settings.selectedNode,
-                onChainAddress: settings.onChainAddress,
                 fiat,
                 locale,
                 lurkerMode,
@@ -319,7 +318,6 @@ export default class AddEditNode extends React.Component<
                 theme: settings.theme,
                 selectedNode:
                     index === settings.selectedNode ? 0 : settings.selectedNode,
-                onChainAddress: settings.onChainAddress,
                 fiat,
                 locale,
                 lurkerMode,
@@ -342,7 +340,6 @@ export default class AddEditNode extends React.Component<
                 nodes,
                 theme: settings.theme,
                 selectedNode: index,
-                onChainAddress: settings.onChainAddress,
                 fiat,
                 locale,
                 lurkerMode,
