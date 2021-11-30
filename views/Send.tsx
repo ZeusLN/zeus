@@ -188,11 +188,10 @@ export default class Send extends React.Component<SendProps, SendState> {
         navigation.navigate('SendingOnChain');
     };
 
-    sendKeySendPayment = () => {
+    sendKeySendPayment = (satAmount: string | number) => {
         const { TransactionsStore, navigation } = this.props;
         const {
             destination,
-            amount,
             maxParts,
             maxShardAmt,
             timeoutSeconds,
@@ -201,7 +200,7 @@ export default class Send extends React.Component<SendProps, SendState> {
 
         if (RESTUtils.supportsAMP()) {
             TransactionsStore.sendPayment({
-                amount,
+                amount: satAmount.toString(),
                 pubkey: destination,
                 max_parts: maxParts,
                 max_shard_amt: maxShardAmt,
@@ -210,7 +209,10 @@ export default class Send extends React.Component<SendProps, SendState> {
                 amp: true
             });
         } else {
-            TransactionsStore.sendPayment({ amount, pubkey: destination });
+            TransactionsStore.sendPayment({
+                amount: satAmount.toString(),
+                pubkey: destination
+            });
         }
 
         navigation.navigate('SendingLightning');
@@ -657,7 +659,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             color: 'white'
                                         }}
                                         onPress={() =>
-                                            this.sendKeySendPayment()
+                                            this.sendKeySendPayment(satAmount)
                                         }
                                     />
                                 </View>
