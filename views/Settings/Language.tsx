@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { FlatList, ScrollView, Text, View } from 'react-native';
 import { Header, Icon, ListItem, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import SettingsStore, { LOCALE_KEYS } from './../../stores/SettingsStore';
@@ -79,7 +79,7 @@ export default class Language extends React.Component<
                     backgroundColor: themeColor('background')
                 }}
             >
-                <View>
+                <ScrollView>
                     <Header
                         leftComponent={<BackButton />}
                         centerComponent={{
@@ -145,19 +145,19 @@ export default class Language extends React.Component<
                                     </ListItem.Title>
                                 </ListItem.Content>
                                 {selectedLocale === item.value && (
-                                    <Text style={{ textAlign: 'right' }}>
+                                    <View style={{ textAlign: 'right' }}>
                                         <Icon
                                             name="check"
                                             color={themeColor('highlight')}
                                         />
-                                    </Text>
+                                    </View>
                                 )}
                             </ListItem>
                         )}
                         keyExtractor={(item, index) => `${item.host}-${index}`}
                         ItemSeparatorComponent={this.renderSeparator}
                     />
-                </View>
+                </ScrollView>
             </View>
         );
     }

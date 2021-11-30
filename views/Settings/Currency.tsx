@@ -79,85 +79,88 @@ export default class Currency extends React.Component<
                     backgroundColor: themeColor('background')
                 }}
             >
-                <Header
-                    leftComponent={<BackButton />}
-                    centerComponent={{
-                        text: localeString('views.Settings.Currency.title'),
-                        style: { color: themeColor('text') }
-                    }}
-                    backgroundColor={themeColor('secondary')}
-                />
-                <SearchBar
-                    placeholder={localeString('general.search')}
-                    onChangeText={this.updateSearch}
-                    value={search}
-                    inputStyle={{
-                        color: themeColor('text')
-                    }}
-                    placeholderTextColor={themeColor('secondaryText')}
-                    containerStyle={{
-                        backgroundColor: themeColor('background')
-                    }}
-                    inputContainerStyle={{
-                        borderRadius: 15,
-                        backgroundColor: themeColor('secondary')
-                    }}
-                />
-                <FlatList
-                    data={currencies}
-                    renderItem={({ item, index }) => (
-                        <ListItem
-                            containerStyle={{
-                                borderBottomWidth: 0,
-                                backgroundColor: themeColor('background')
-                            }}
-                            onPress={async () => {
-                                const settings = await getSettings();
-                                await setSettings(
-                                    JSON.stringify({
-                                        nodes: settings.nodes,
-                                        theme: settings.theme,
-                                        selectedNode: settings.selectedNode,
-                                        fiat: item.value,
-                                        passphrase: settings.passphrase,
-                                        locale: settings.locale,
-                                        privacy: settings.privacy
-                                    })
-                                ).then(() => {
-                                    getSettings();
-                                    navigation.navigate('Settings', {
-                                        refresh: true
+                <ScrollView>
+                    <Header
+                        leftComponent={<BackButton />}
+                        centerComponent={{
+                            text: localeString('views.Settings.Currency.title'),
+                            style: { color: themeColor('text') }
+                        }}
+                        backgroundColor={themeColor('secondary')}
+                    />
+                    <SearchBar
+                        placeholder={localeString('general.search')}
+                        onChangeText={this.updateSearch}
+                        value={search}
+                        inputStyle={{
+                            color: themeColor('text')
+                        }}
+                        placeholderTextColor={themeColor('secondaryText')}
+                        containerStyle={{
+                            backgroundColor: themeColor('background')
+                        }}
+                        inputContainerStyle={{
+                            borderRadius: 15,
+                            backgroundColor: themeColor('secondary')
+                        }}
+                    />
+                    <FlatList
+                        data={currencies}
+                        renderItem={({ item, index }) => (
+                            <ListItem
+                                containerStyle={{
+                                    borderBottomWidth: 0,
+                                    backgroundColor: themeColor('background')
+                                }}
+                                onPress={async () => {
+                                    const settings = await getSettings();
+                                    await setSettings(
+                                        JSON.stringify({
+                                            nodes: settings.nodes,
+                                            theme: settings.theme,
+                                            selectedNode: settings.selectedNode,
+                                            fiat: item.value,
+                                            passphrase: settings.passphrase,
+                                            locale: settings.locale,
+                                            privacy: settings.privacy
+                                        })
+                                    ).then(() => {
+                                        getSettings();
+                                        navigation.navigate('Settings', {
+                                            refresh: true
+                                        });
                                     });
-                                });
-                            }}
-                        >
-                            <ListItem.Content>
-                                <ListItem.Title
-                                    style={{
-                                        color:
-                                            selectedCurrency === item.value ||
-                                            (!selectedCurrency &&
-                                                item.value === 'Disabled')
-                                                ? themeColor('highlight')
-                                                : themeColor('text')
-                                    }}
-                                >
-                                    {item.key}
-                                </ListItem.Title>
-                            </ListItem.Content>
-                            {selectedCurrency === item.value && (
-                                <Text style={{ textAlign: 'right' }}>
-                                    <Icon
-                                        name="check"
-                                        color={themeColor('highlight')}
-                                    />
-                                </Text>
-                            )}
-                        </ListItem>
-                    )}
-                    keyExtractor={(item, index) => `${item.host}-${index}`}
-                    ItemSeparatorComponent={this.renderSeparator}
-                />
+                                }}
+                            >
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color:
+                                                selectedCurrency ===
+                                                    item.value ||
+                                                (!selectedCurrency &&
+                                                    item.value === 'Disabled')
+                                                    ? themeColor('highlight')
+                                                    : themeColor('text')
+                                        }}
+                                    >
+                                        {item.key}
+                                    </ListItem.Title>
+                                </ListItem.Content>
+                                {selectedCurrency === item.value && (
+                                    <View style={{ textAlign: 'right' }}>
+                                        <Icon
+                                            name="check"
+                                            color={themeColor('highlight')}
+                                        />
+                                    </View>
+                                )}
+                            </ListItem>
+                        )}
+                        keyExtractor={(item, index) => `${item.host}-${index}`}
+                        ItemSeparatorComponent={this.renderSeparator}
+                    />
+                </ScrollView>
             </View>
         );
     }
