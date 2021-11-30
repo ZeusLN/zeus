@@ -234,12 +234,14 @@ export default class OpenChannel extends React.Component<
                             <Button
                                 title={localeString('views.OpenChannel.import')}
                                 onPress={() => this.importClipboard()}
+                                tertiary
                             />
                         </View>
                         <View style={styles.button}>
                             <Button
                                 title="Cancel"
                                 onPress={() => this.clearImportSuggestion()}
+                                tertiary
                             />
                         </View>
                     </View>
