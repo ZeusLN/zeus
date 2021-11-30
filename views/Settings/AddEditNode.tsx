@@ -58,8 +58,6 @@ export default class AddEditNode extends React.Component<
     AddEditNodeProps,
     AddEditNodeState
 > {
-    isComponentMounted = false;
-
     state = {
         nickname: '',
         host: '',
@@ -156,12 +154,7 @@ export default class AddEditNode extends React.Component<
     };
 
     async componentDidMount() {
-        this.isComponentMounted = true;
         this.initFromProps(this.props);
-    }
-
-    componentWillUnmount() {
-        this.isComponentMounted = false;
     }
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
