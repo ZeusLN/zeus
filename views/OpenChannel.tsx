@@ -100,6 +100,26 @@ export default class OpenChannel extends React.Component<
         }
     }
 
+    async componentDidMount() {
+        this.initFromProps(this.props);
+    }
+
+    UNSAFE_componentWillReceiveProps(nextProps: any) {
+        this.initFromProps(nextProps);
+    }
+
+    initFromProps(props: any) {
+        const { navigation } = props;
+
+        const pubkey = navigation.getParam('pubkey', null);
+        const host = navigation.getParam('host', null);
+
+        this.setState({
+            node_pubkey_string: pubkey,
+            host
+        });
+    }
+
     selectUTXOs = (utxos: Array<string>, utxoBalance: number) => {
         const { SettingsStore } = this.props;
         const { implementation } = SettingsStore;
@@ -131,20 +151,6 @@ export default class OpenChannel extends React.Component<
             suggestImport: ''
         });
     };
-
-    UNSAFE_componentWillReceiveProps(nextProps: any) {
-        const { navigation } = nextProps;
-        const node_pubkey_string = navigation.getParam(
-            'node_pubkey_string',
-            null
-        );
-        const host = navigation.getParam('host', null);
-
-        this.setState({
-            node_pubkey_string,
-            host
-        });
-    }
 
     setFee = (text: string) => {
         this.setState({ sat_per_byte: text });
