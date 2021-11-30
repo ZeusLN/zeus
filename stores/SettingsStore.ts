@@ -60,10 +60,21 @@ export const LOCALE_KEYS = [
     { key: 'Türkçe', value: 'Türkçe' },
     { key: 'magyar nyelv', value: 'magyar nyelv' },
     { key: '简化字', value: '简化字' },
+    { key: 'Nederlands', value: 'Nederlands' },
+    { key: 'Bokmål', value: 'Bokmål' },
+    { key: 'Svenska', value: 'Svenska' },
+    { key: 'ภาษาไทย', value: 'ภาษาไทย' },
+    { key: 'украї́нська мо́ва', value: 'украї́нська мо́ва' },
+    { key: 'Limba română', value: 'Limba română' },
     // in progress
     { key: 'Ελληνικά', value: 'Ελληνικά' },
     { key: 'زبان فارسي', value: 'زبان فارسي' },
-    { key: 'Nederlands', value: 'Nederlands' }
+    { key: 'Slovenski jezik', value: 'Slovenski jezik' },
+    { key: 'русский язык', value: 'русский язык' },
+    { key: 'Suomen kieli', value: 'Suomen kieli' },
+    { key: 'Italiano', value: 'Italiano' },
+    { key: 'Tiếng Việt', value: 'Tiếng Việt' },
+    { key: '日本語', value: '日本語' }
 ];
 
 export const CURRENCY_KEYS = [
