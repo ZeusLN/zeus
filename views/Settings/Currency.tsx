@@ -119,8 +119,6 @@ export default class Currency extends React.Component<
                                             nodes: settings.nodes,
                                             theme: settings.theme,
                                             selectedNode: settings.selectedNode,
-                                            onChainAddress:
-                                                settings.onChainAddress,
                                             fiat: item.value,
                                             passphrase: settings.passphrase,
                                             locale: settings.locale,

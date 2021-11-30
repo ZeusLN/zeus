@@ -70,7 +70,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
             getDisplayTime,
             getFee,
             payment_hash,
-            payment_preimage,
+            getPreimage,
             enhancedPath
         } = payment;
         const date = getDisplayTime;
@@ -127,7 +127,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                         <LnurlPayHistorical
                             navigation={navigation}
                             lnurlpaytx={lnurlpaytx}
-                            preimage={payment_preimage}
+                            preimage={getPreimage}
                         />
                     </View>
                 )}
@@ -185,7 +185,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                     <Text
                         style={{ ...styles.value, color: themeColor('text') }}
                     >
-                        {PrivacyUtils.sensitiveValue(payment_preimage)}
+                        {PrivacyUtils.sensitiveValue(getPreimage)}
                     </Text>
 
                     <Text

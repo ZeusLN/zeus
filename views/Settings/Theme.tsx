@@ -85,8 +85,6 @@ export default class Theme extends React.Component<ThemeProps, ThemeStore> {
                                         JSON.stringify({
                                             nodes: settings.nodes,
                                             selectedNode: settings.selectedNode,
-                                            onChainAddress:
-                                                settings.onChainAddress,
                                             fiat: settings.fiat,
                                             passphrase: settings.passphrase,
                                             locale: settings.locale,

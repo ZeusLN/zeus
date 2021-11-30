@@ -119,8 +119,6 @@ export default class Language extends React.Component<
                                             nodes: settings.nodes,
                                             theme: settings.theme,
                                             selectedNode: settings.selectedNode,
-                                            onChainAddress:
-                                                settings.onChainAddress,
                                             fiat: settings.fiat,
                                             passphrase: settings.passphrase,
                                             locale: item.value,
