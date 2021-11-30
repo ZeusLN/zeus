@@ -207,6 +207,8 @@ PODS:
     - React-Core
   - react-native-date-picker (3.3.2):
     - React-Core
+  - react-native-hce (0.1.2):
+    - React
   - react-native-nfc-manager (3.11.0):
     - React
   - react-native-randombytes (3.5.3):
@@ -345,6 +347,7 @@ DEPENDENCIES:
   - React-jsinspector (from `../node_modules/react-native/ReactCommon/jsinspector`)
   - react-native-camera (from `../node_modules/react-native-camera`)
   - react-native-date-picker (from `../node_modules/react-native-date-picker`)
+  - react-native-hce (from `../node_modules/react-native-hce`)
   - react-native-nfc-manager (from `../node_modules/react-native-nfc-manager`)
   - react-native-randombytes (from `../node_modules/react-native-randombytes`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
@@ -440,6 +443,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-camera"
   react-native-date-picker:
     :path: "../node_modules/react-native-date-picker"
+  react-native-hce:
+    :path: "../node_modules/react-native-hce"
   react-native-nfc-manager:
     :path: "../node_modules/react-native-nfc-manager"
   react-native-randombytes:
@@ -559,6 +564,7 @@ SPEC CHECKSUMS:
   React-jsinspector: 58aef7155bc9a9683f5b60b35eccea8722a4f53a
   react-native-camera: 11166fe7e3a673493c152f52966e8ab1c5cdcacc
   react-native-date-picker: 96a07ca27a6225da8a3935324d85046028456b0f
+  react-native-hce: 677aa1c41edf183523bb7b1014d106a08631ff88
   react-native-nfc-manager: e74f24f05274fbfdfe51e46e72d62d5ae460c724
   react-native-randombytes: 3638d24759d67c68f6ccba60c52a7a8a8faa6a23
   react-native-safe-area-context: 25260c5d0b9c53fd7aa88e569e2edae72af1f6a3
