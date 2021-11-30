@@ -197,8 +197,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                     nodes,
                                                     theme: settings.theme,
                                                     selectedNode: index,
-                                                    onChainAddress:
-                                                        settings.onChainAddress,
                                                     fiat: settings.fiat,
                                                     passphrase:
                                                         settings.passphrase,
