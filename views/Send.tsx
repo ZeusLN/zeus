@@ -11,6 +11,9 @@ import {
 import Clipboard from '@react-native-community/clipboard';
 import { inject, observer } from 'mobx-react';
 import { Header, Icon } from 'react-native-elements';
+
+import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
+
 import handleAnything from './../utils/handleAnything';
 
 import InvoicesStore from './../stores/InvoicesStore';
@@ -28,6 +31,7 @@ import UTXOPicker from './../components/UTXOPicker';
 import FeeTable from './../components/FeeTable';
 
 import RESTUtils from './../utils/RESTUtils';
+import NFCUtils from './../utils/NFCUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
@@ -111,11 +115,42 @@ export default class Send extends React.Component<SendProps, SendState> {
         }
     }
 
-    componentDidMount() {
+    async componentDidMount() {
         if (this.state.destination) {
             this.validateAddress(this.state.destination);
         }
+
+        await this.initNfc();
     }
+
+    initNfc = async () => {
+        await NfcManager.start();
+
+        const cleanUp = () => {
+            NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
+            NfcManager.setEventListener(NfcEvents.SessionClosed, null);
+        };
+
+        return new Promise((resolve: any) => {
+            let tagFound = null;
+
+            NfcManager.setEventListener(NfcEvents.DiscoverTag, (tag: any) => {
+                tagFound = tag;
+                const bytes = new Uint8Array(tagFound.ndefMessage[0].payload);
+                const str = NFCUtils.nfcUtf8ArrayToStr(bytes);
+                resolve(this.validateAddress(str));
+                NfcManager.unregisterTagEvent().catch(() => 0);
+            });
+
+            NfcManager.setEventListener(NfcEvents.SessionClosed, () => {
+                if (!tagFound) {
+                    resolve();
+                }
+            });
+
+            NfcManager.registerTagEvent();
+        });
+    };
 
     selectUTXOs = (utxos: Array<string>, utxoBalance: number) => {
         const { SettingsStore } = this.props;

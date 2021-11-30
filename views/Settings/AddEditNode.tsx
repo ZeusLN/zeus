@@ -15,6 +15,9 @@ import Clipboard from '@react-native-community/clipboard';
 import { Picker } from '@react-native-picker/picker';
 import { CheckBox, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+
+import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
+
 import AddressUtils, { DEFAULT_LNDHUB } from './../../utils/AddressUtils';
 import LndConnectUtils from './../../utils/LndConnectUtils';
 import { localeString } from './../../utils/LocaleUtils';
@@ -58,8 +61,6 @@ export default class AddEditNode extends React.Component<
     AddEditNodeProps,
     AddEditNodeState
 > {
-    isComponentMounted = false;
-
     state = {
         nickname: '',
         host: '',
@@ -156,13 +157,57 @@ export default class AddEditNode extends React.Component<
     };
 
     async componentDidMount() {
-        this.isComponentMounted = true;
         this.initFromProps(this.props);
+        await this.initNfc();
     }
 
-    componentWillUnmount() {
-        this.isComponentMounted = false;
-    }
+    initNfc = async () => {
+        await NfcManager.start();
+
+        const cleanUp = () => {
+            NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
+            NfcManager.setEventListener(NfcEvents.SessionClosed, null);
+        };
+
+        return new Promise((resolve: any) => {
+            let tagFound = null;
+
+            NfcManager.setEventListener(NfcEvents.DiscoverTag, (tag: any) => {
+                tagFound = tag;
+                const bytes = new Uint8Array(tagFound.ndefMessage[0].payload);
+                const str = NFCUtils.nfcUtf8ArrayToStr(bytes);
+                resolve(this.validateNodeUri(str));
+                NfcManager.unregisterTagEvent().catch(() => 0);
+            });
+
+            NfcManager.setEventListener(NfcEvents.SessionClosed, () => {
+                if (!tagFound) {
+                    resolve();
+                }
+            });
+
+            NfcManager.registerTagEvent();
+        });
+    };
+
+    validateNodeUri = (text: string) => {
+        const { navigation } = this.props;
+        handleAnything(text)
+            .then(([route, props]) => {
+                navigation.navigate(route, props);
+            })
+            .catch((err) => {
+                this.setState({
+                    nickname: '',
+                    host: '',
+                    port: '',
+                    macaroonHex: '',
+                    saved: false,
+                    active: false,
+                    newEntry: false
+                });
+            });
+    };
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
         this.initFromProps(nextProps);
