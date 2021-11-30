@@ -30,8 +30,8 @@ export default class ActivityFilter extends React.Component<
     state = {
         setStartDate: false,
         setEndDate: false,
-        workingStartDate: undefined,
-        workingEndDate: undefined
+        workingStartDate: new Date(),
+        workingEndDate: new Date()
     };
 
     renderSeparator = () => (
@@ -179,8 +179,8 @@ export default class ActivityFilter extends React.Component<
                                     this.setState({
                                         setStartDate: false,
                                         setEndDate: false,
-                                        workingStartDate: undefined,
-                                        workingEndDate: undefined
+                                        workingStartDate: new Date(),
+                                        workingEndDate: new Date()
                                     });
                                 }}
                                 buttonStyle={{ backgroundColor: 'orange' }}
