@@ -654,7 +654,6 @@ export default class AddEditNode extends React.Component<
                                             buttonStyle={{
                                                 borderRadius: 30
                                             }}
-                                            secondary
                                         />
                                     </View>
                                     <View style={styles.button}>
