@@ -104,18 +104,18 @@ export default class LightningSwipeableRow extends Component<
     render() {
         const { children } = this.props;
         return (
-            <TouchableOpacity onPress={() => this.open()} activeOpacity={1}>
-                <Swipeable
-                    ref={this.updateRef}
-                    friction={2}
-                    enableTrackpadTwoFingerGesture
-                    leftThreshold={30}
-                    rightThreshold={40}
-                    renderLeftActions={this.renderActions}
-                >
+            <Swipeable
+                ref={this.updateRef}
+                friction={2}
+                enableTrackpadTwoFingerGesture
+                leftThreshold={30}
+                rightThreshold={40}
+                renderLeftActions={this.renderActions}
+            >
+                <TouchableOpacity onPress={() => this.open()} activeOpacity={1}>
                     {children}
-                </Swipeable>
-            </TouchableOpacity>
+                </TouchableOpacity>
+            </Swipeable>
         );
     }
 }

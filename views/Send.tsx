@@ -481,7 +481,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         <Text
                                             style={{
                                                 ...styles.text,
-                                                fontSize: 18
+                                                fontSize: 18,
+                                                color: themeColor('text')
                                             }}
                                         >
                                             {fee}
