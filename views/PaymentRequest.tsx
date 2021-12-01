@@ -111,7 +111,7 @@ export default class PaymentRequest extends React.Component<
         const payment_hash = pay_req && pay_req.payment_hash;
         const timestamp = pay_req && pay_req.timestamp;
 
-        let lockAtomicMultiPathPayment: boolean = false;
+        let lockAtomicMultiPathPayment = false;
         if (
             pay_req &&
             pay_req.features &&
@@ -138,7 +138,7 @@ export default class PaymentRequest extends React.Component<
         const BackButton = () => (
             <Icon
                 name="arrow-back"
-                onPress={() => navigation.navigate('Send')}
+                onPress={() => navigation.goBack()}
                 color="#fff"
                 underlayColor="transparent"
             />
@@ -264,9 +264,8 @@ export default class PaymentRequest extends React.Component<
                                                 color: themeColor('background')
                                             }}
                                             buttonStyle={{
-                                                backgroundColor: themeColor(
-                                                    'text'
-                                                ),
+                                                backgroundColor:
+                                                    themeColor('text'),
                                                 borderRadius: 30
                                             }}
                                         />
@@ -515,7 +514,8 @@ export default class PaymentRequest extends React.Component<
                                         value={enableAmp}
                                         onValueChange={() =>
                                             this.setState({
-                                                enableAtomicMultiPathPayment: !enableAtomicMultiPathPayment
+                                                enableAtomicMultiPathPayment:
+                                                    !enableAtomicMultiPathPayment
                                             })
                                         }
                                         trackColor={{
@@ -543,7 +543,8 @@ export default class PaymentRequest extends React.Component<
                                             value={enableMultiPathPayment}
                                             onValueChange={() =>
                                                 this.setState({
-                                                    enableMultiPathPayment: !enableMultiPathPayment
+                                                    enableMultiPathPayment:
+                                                        !enableMultiPathPayment
                                                 })
                                             }
                                             trackColor={{
@@ -719,7 +720,8 @@ export default class PaymentRequest extends React.Component<
                                                 fee_limit_sat: ampOrMppEnabled
                                                     ? feeLimitSat
                                                     : null,
-                                                outgoing_chan_ids: outgoingChanIds,
+                                                outgoing_chan_ids:
+                                                    outgoingChanIds,
                                                 last_hop_pubkey: lastHopPubkey,
                                                 amp: enableAmp
                                             });

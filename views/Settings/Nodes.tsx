@@ -1,12 +1,15 @@
 import * as React from 'react';
 import { FlatList, View } from 'react-native';
-import { Avatar, Button, ListItem } from 'react-native-elements';
-import SettingsStore from './../../stores/SettingsStore';
+import { Avatar, Header, Icon, ListItem } from 'react-native-elements';
 import Identicon from 'identicon.js';
-const hash = require('object-hash');
+import { inject, observer } from 'mobx-react';
+
+import Button from './../../components/Button';
+import SettingsStore from './../../stores/SettingsStore';
 import PrivacyUtils from './../../utils/PrivacyUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
+const hash = require('object-hash');
 
 interface NodesProps {
     nodes: any[];
@@ -17,7 +20,19 @@ interface NodesProps {
     SettingsStore: SettingsStore;
 }
 
-export default class Nodes extends React.Component<NodesProps, {}> {
+interface NodesState {
+    nodes: any[];
+    loading: boolean;
+}
+
+@inject('SettingsStore')
+@observer
+export default class Nodes extends React.Component<NodesProps, NodesState> {
+    state = {
+        nodes: [],
+        loading: false
+    };
+
     renderSeparator = () => (
         <View
             style={{
@@ -29,32 +44,76 @@ export default class Nodes extends React.Component<NodesProps, {}> {
         />
     );
 
+    componentDidMount() {
+        const { SettingsStore } = this.props;
+        const { settings } = SettingsStore;
+        this.refreshSettings();
+
+        if (settings) {
+            this.setState({
+                nodes: settings.nodes || []
+            });
+        }
+    }
+
+    async refreshSettings() {
+        this.setState({
+            loading: true
+        });
+        await this.props.SettingsStore.getSettings().then(() => {
+            this.setState({
+                loading: false
+            });
+        });
+    }
+
     render() {
-        const {
-            navigation,
-            nodes,
-            loading,
-            selectedNode,
-            SettingsStore
-        } = this.props;
+        const { navigation, SettingsStore } = this.props;
+        const { loading, nodes } = this.state;
         const { setSettings, settings }: any = SettingsStore;
+        const { selectedNode } = settings;
 
         const Node = (balanceImage: string) => (
             <Avatar
                 source={{
                     uri: balanceImage
                 }}
+                rounded
+            />
+        );
+
+        const BackButton = () => (
+            <Icon
+                name="arrow-back"
+                onPress={() => navigation.goBack()}
+                color={themeColor('text')}
+                underlayColor="transparent"
             />
         );
 
         return (
-            <View>
-                {!!nodes && nodes.length > 0 && (
-                    <FlatList
-                        data={nodes}
-                        renderItem={({ item, index }) => {
-                            const displayName =
-                                item.implementation === 'lndhub'
+            <View
+                style={{
+                    flex: 1,
+                    backgroundColor: themeColor('background')
+                }}
+            >
+                <View>
+                    <Header
+                        leftComponent={<BackButton />}
+                        centerComponent={{
+                            text: localeString('views.Settings.Nodes.title'),
+                            style: { color: themeColor('text') }
+                        }}
+                        backgroundColor={themeColor('secondary')}
+                    />
+                    {!!nodes && nodes.length > 0 && (
+                        <FlatList
+                            data={nodes}
+                            renderItem={({ item, index }) => {
+                                const displayName = item.nickname
+                                    ? item.nickname
+                                    : item.implementation === 'lndhub'
                                     ? item.lndhubUrl
                                           .replace('https://', '')
                                           .replace('http://', '')
@@ -66,26 +125,26 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                     ? `${item.host}:${item.port}`
                                     : item.host || 'Unknown';
 
-                            const title = PrivacyUtils.sensitiveValue(
-                                displayName,
-                                8
-                            );
-                            const implementation = PrivacyUtils.sensitiveValue(
-                                item.implementation || 'lnd',
-                                8
-                            );
+                                const title = PrivacyUtils.sensitiveValue(
+                                    displayName,
+                                    8
+                                );
+                                const implementation =
+                                    PrivacyUtils.sensitiveValue(
+                                        item.implementation || 'lnd',
+                                        8
+                                    );
 
-                            const data = new Identicon(
-                                hash.sha1(
-                                    item.implementation === 'lndhub'
-                                        ? `${title}-${item.username}`
-                                        : title
-                                ),
-                                255
-                            ).toString();
+                                const data = new Identicon(
+                                    hash.sha1(
+                                        item.implementation === 'lndhub'
+                                            ? `${title}-${item.username}`
+                                            : title
+                                    ),
+                                    255
+                                ).toString();
 
-                            return (
-                                <React.Fragment>
+                                return (
                                     <ListItem
                                         title={`${title}`}
                                         leftElement={Node(
@@ -117,6 +176,8 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                                         }
                                                     )
                                                 }
+                                                iconOnly
+                                                adaptiveWidth
                                             />
                                         }
                                         subtitle={
@@ -127,9 +188,8 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                         }
                                         containerStyle={{
                                             borderBottomWidth: 0,
-                                            backgroundColor: themeColor(
-                                                'background'
-                                            )
+                                            backgroundColor:
+                                                themeColor('background')
                                         }}
                                         onPress={() => {
                                             setSettings(
@@ -137,13 +197,10 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                                     nodes,
                                                     theme: settings.theme,
                                                     selectedNode: index,
-                                                    onChainAddress:
-                                                        settings.onChainAddress,
                                                     fiat: settings.fiat,
-                                                    lurkerMode:
-                                                        settings.lurkerMode,
                                                     passphrase:
-                                                        settings.passphrase
+                                                        settings.passphrase,
+                                                    privacy: settings.privacy
                                                 })
                                             ).then(() => {
                                                 navigation.navigate('Wallet', {
@@ -158,62 +215,52 @@ export default class Nodes extends React.Component<NodesProps, {}> {
                                             color: themeColor('secondaryText')
                                         }}
                                     />
-                                </React.Fragment>
-                            );
-                        }}
-                        refreshing={loading}
-                        keyExtractor={(item, index) => `${item.host}-${index}`}
-                        ItemSeparatorComponent={this.renderSeparator}
-                        onEndReachedThreshold={50}
-                    />
-                )}
-                {nodes && nodes.length === 0 && !loading && (
-                    <Button
-                        title={localeString('views.Settings.Nodes.noNodes')}
-                        icon={{
-                            name: 'error-outline',
-                            size: 25,
-                            color: themeColor('text')
-                        }}
-                        buttonStyle={{
-                            backgroundColor: 'transparent',
-                            borderRadius: 30
-                        }}
-                        titleStyle={{
-                            color: themeColor('text')
-                        }}
-                    />
-                )}
-                {!loading && (
-                    <Button
-                        title={localeString('views.Settings.Nodes.add')}
-                        icon={{
-                            name: 'add',
-                            size: 25,
-                            color: 'white'
-                        }}
-                        buttonStyle={{
-                            borderRadius: 30,
-                            width: 200,
-                            alignSelf: 'center',
-                            marginBottom: 20,
-                            backgroundColor: 'crimson'
-                        }}
-                        onPress={() =>
-                            navigation.navigate('AddEditNode', {
-                                newEntry: true,
-                                index:
-                                    (nodes &&
-                                        nodes.length &&
-                                        Number(nodes.length)) ||
-                                    0
-                            })
-                        }
-                        titleStyle={{
-                            color: 'white'
-                        }}
-                    />
-                )}
+                                );
+                            }}
+                            refreshing={loading}
+                            keyExtractor={(item, index) =>
+                                `${item.host}-${index}`
+                            }
+                            ItemSeparatorComponent={this.renderSeparator}
+                            onEndReachedThreshold={50}
+                        />
+                    )}
+                    {nodes && nodes.length === 0 && !loading && (
+                        <Button
+                            title={localeString('views.Settings.Nodes.noNodes')}
+                            icon={{
+                                name: 'error-outline',
+                                size: 25,
+                                color: themeColor('text')
+                            }}
+                            iconOnly
+                        />
+                    )}
+                    {!loading && (
+                        <Button
+                            title={localeString('views.Settings.Nodes.add')}
+                            icon={{
+                                name: 'add',
+                                size: 25,
+                                color: 'white'
+                            }}
+                            onPress={() =>
+                                navigation.navigate('AddEditNode', {
+                                    newEntry: true,
+                                    index:
+                                        (nodes &&
+                                            nodes.length &&
+                                            Number(nodes.length)) ||
+                                        0
+                                })
+                            }
+                            titleStyle={{
+                                color: 'white'
+                            }}
+                            adaptiveWidth
+                        />
+                    )}
+                </View>
             </View>
         );
     }

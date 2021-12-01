@@ -1,7 +1,10 @@
 import * as React from 'react';
 import { Image, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
-import { Badge, Button } from 'react-native-elements';
+import { Badge } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import Button from '../../components/Button';
+import { WalletHeader } from '../../components/WalletHeader';
+import { Amount } from '../../components/Amount';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -9,11 +12,9 @@ import NodeInfoStore from './../../stores/NodeInfoStore';
 import BalanceStore from './../../stores/BalanceStore';
 import SettingsStore from './../../stores/SettingsStore';
 
-const TorIcon = require('./../../images/tor.png');
-
 import { version, playStore } from './../../package.json';
-import { WalletHeader } from '../../components/WalletHeader';
-import { Amount } from '../../components/Amount';
+
+const TorIcon = require('./../../images/tor.png');
 
 interface MainPaneProps {
     navigation: any;
@@ -26,12 +27,8 @@ interface MainPaneProps {
 @observer
 export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
     render() {
-        const {
-            NodeInfoStore,
-            BalanceStore,
-            SettingsStore,
-            navigation
-        } = this.props;
+        const { NodeInfoStore, BalanceStore, SettingsStore, navigation } =
+            this.props;
         const {
             totalBlockchainBalance,
             unconfirmedBlockchainBalance,
@@ -132,6 +129,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                             backgroundColor: 'transparent'
                         }}
                         onPress={() => void 0}
+                        iconOnly
                     />
                 </View>
             );
@@ -158,8 +156,9 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                 <View
                     style={{
                         backgroundColor: themeColor('error'),
+                        paddingTop: 20,
                         paddingLeft: 10,
-                        height: 160
+                        flex: 1
                     }}
                 >
                     <Text
@@ -191,6 +190,8 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                             alignItems: 'center'
                         }}
                         onPress={() => navigation.navigate('Settings')}
+                        tertiary
+                        adaptiveWidth
                     />
                     <Text
                         style={{

@@ -1,13 +1,13 @@
 import * as React from 'react';
 import { FlatList, View, TouchableHighlight } from 'react-native';
 
+import { inject, observer } from 'mobx-react';
 import { ChannelsHeader } from '../../components/Channels/ChannelsHeader';
 import { WalletHeader } from '../../components/WalletHeader';
 import { ChannelItem } from '../../components/Channels/ChannelItem';
 import { localeString } from '../../utils/LocaleUtils';
 import { Spacer } from '../../components/layout/Spacer';
 
-import { inject, observer } from 'mobx-react';
 import ChannelsStore from '../../stores/ChannelsStore';
 
 // TODO: does this belong in the model? Or can it be computed from the model?

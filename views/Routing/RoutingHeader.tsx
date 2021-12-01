@@ -39,13 +39,8 @@ function TotalRow({
 }
 
 export function RoutingHeader(props) {
-    const {
-        dayEarned,
-        weekEarned,
-        monthEarned,
-        timeframeEarned,
-        fullSize
-    } = props;
+    const { dayEarned, weekEarned, monthEarned, timeframeEarned, fullSize } =
+        props;
 
     const styles = StyleSheet.create({
         header: {

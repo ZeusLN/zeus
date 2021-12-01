@@ -5,7 +5,7 @@ const doTorRequest = async <T extends RequestMethod>(
     method: T,
     data?: string,
     headers?: any,
-    trustSSL: boolean = true
+    trustSSL = true
 ) => {
     await tor.startIfNotStarted();
     switch (method.toLowerCase()) {
@@ -14,6 +14,7 @@ const doTorRequest = async <T extends RequestMethod>(
             if (getResult.json) {
                 return getResult.json;
             }
+            break;
         case RequestMethod.POST:
             const postResult = await tor.post(
                 url,
@@ -24,6 +25,7 @@ const doTorRequest = async <T extends RequestMethod>(
             if (postResult.json) {
                 return postResult.json;
             }
+            break;
         case RequestMethod.DELETE:
             const deleteResult = await tor.delete(url, data, headers, trustSSL);
             if (deleteResult.json) {

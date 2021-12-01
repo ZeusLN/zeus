@@ -1,11 +1,9 @@
 # Zeus
-A mobile Bitcoin/Lightning app for lnd, c-lightning, and Eclair node operators ⚡️
+<p align="center"><img src="https://user-images.githubusercontent.com/55287964/141266539-cf35be24-5f89-4798-94bc-ded5cd761b70.png"></p>
 
-<p align="center"><img src="https://user-images.githubusercontent.com/47701173/129115625-3e4f94d0-935a-45aa-9916-60bd5c27af34.png"></p>
+Zeus is a mobile Bitcoin/Lightning node manager and wallet application for lnd, c-lightning, and Eclair. ⚡️
 
 Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
-
-*Disclaimer*: Zeus and Lightning in general are software projects in their early development stages. Please be wary when using Lightning and do not fund your node with more money than you are willing to lose.
 
 ### App Store links
 * [Google Play](https://play.google.com/store/apps/details?id=app.zeusln.zeus)
@@ -20,14 +18,43 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 * Keep up with us on
 [Twitter](https://twitter.com/ZeusLN)
 * Open a channel with
-[our main node](https://1ml.com/node/03e1210c8d4b236a53191bb172701d76ec06dfa869a1afffcfd8f4e07d9129d898)
-or
-[our Olympus node](https://1ml.com/node/02c2d8e5f8220c99d92f4fe808e7c5332d33d146db3e63a50f03663addfaa5a8df)
+[our node](https://amboss.space/node/031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581)
 
-## Connecting to your node
+## Features
 
-Currently, to use Zeus, you must have a Bitcoin Lightning node running
-[Lightning Network Daemon (lnd)](https://github.com/LightningNetwork/lnd), [eclair](https://github.com/ACINQ/eclair), or [c-lightning](https://github.com/ElementsProject/lightning) using the [c-lightning-REST](https://github.com/Ride-The-Lightning/c-lightning-REST/) or [Spark](https://github.com/shesek/spark-wallet#server-installation) API .
+- [x] Connect to lnd node
+- [x] Connect to c-lightning REST + Spark node
+- [x] Connect to Eclair node
+- [x] Connect via LNDHub
+- [x] Manage multiple nodes at once
+- [x] Receive and send On-chain transfers
+- [x] Receive and send Lighting payments
+- [x] Lighting channel management
+- [x] Detailed routing reports
+- [x] Set and manage routing fees
+- [x] Combined On-chain / Lightning activity menu
+- [x] Connect over Tor on Android (no Orbot) and iOS
+- [x] Lightning channel selection
+- [x] MPP/AMP support
+- [x] lnaddress send support
+- [x] Keysend support
+- [x] LNURL-Pay
+- [x] LNURL-Withdraw
+- [x] LNURL-Auth
+- [x] LNURL-Channel
+- [x] Passphrase security
+- [x] Hide sensitive data mode
+- [x] Fiat currency integrations
+- [x] [Various language support](https://www.transifex.com/ZeusLN/zeus/)
+- [ ] On-chain coin control (redesign)
+- [ ] PIN security (redesign)
+- [ ] Sign and verify message (redesign)
+- [ ] External signer support (redesign)
+- [ ] Contact list for easier payments
+
+## Connecting Zeus to your node
+
+Currently, to use Zeus, you must have a Bitcoin Lightning node running [Lightning Network Daemon (lnd)](https://github.com/LightningNetwork/lnd), [eclair](https://github.com/ACINQ/eclair), or [c-lightning](https://github.com/ElementsProject/lightning) using the [c-lightning-REST](https://github.com/Ride-The-Lightning/c-lightning-REST/) or [Spark](https://github.com/shesek/spark-wallet#server-installation) API.
 
 You must provide Zeus with your node's hostname, port number, and the macaroon you choose to use in **hex format**. If you need help converting your macaroon to hex format we wrote up a Node.js script that can use
 [here](https://github.com/ZeusLN/lnd-hex-macaroon-generator/). Alternatively, if you're running a Unix-based operating system (eg. macOS, Linux) you can run `xxd -ps -u -c 1000 /path/to/admin.macaroon` to generate your macaroon in hex format.
@@ -78,10 +105,6 @@ Zeus is proud to be integrated on the following platforms:
 3. `cd ios && pod install`
 4. open `ios/zeus.xcworkspace` in Xcode and hit Run
 
-## Google Play Releases
-
-Google Play releases aren't fully featured due to Google policies. To get the fully featured version of Zeus on Android you must download the APK from the [Zeus website](https://zeusln.app), GitHub, or F-Droid. Google Play releases are managed on the `play-releases` branch. Commits used for Google Play builds will be marked in the release notes.
-
 ## Contributing
 
 Please be sure to run `npm run tsc` to check for type errors, `npm run test` to run all tests, and `npm run prettier` to run the prettier
@@ -95,13 +118,15 @@ Do not directly modify the files in `/locales` unless you are adding new copy to
 
 ## Release + Commit Verification
 
-All releases and all maintainer commits as of January 24, 2020 are signed by key `989CC718EBA8BB68` (zeusln@tutanota.com). The key can be found [in this repo](https://github.com/ZeusLN/zeus/blob/master/PGP.txt) and [on the ZeusLN.app website](https://zeusln.app/PGP.txt).
+All releases and all maintainer commits as of October 20, 2021 are signed by key `AAC48DE8AB8DEE84` (zeusln@tutanota.com). The key can be found [in this repo](https://github.com/ZeusLN/zeus/blob/master/PGP.txt) and [on the ZeusLN.app website](https://zeusln.app/PGP.txt).
+
+
+### Past Keys
+`989CC718EBA8BB68` (January 24, 2020 - October 19, 2021)
 
 ## Donations
 
-If you'd like to help us with the cost of running Zeus project (iOS developer account, Google Play developer account, hosting) you can send a payment to us via PayNym
-[+holymorning7d1](http://my.paynym.is/+holymorning7d1), via [tippin.me](https://tippin.me/@ZeusLN), or via keysend. Our node can be found at ```03e1210c8d4b236a53191bb172701d76ec06dfa869a1afffcfd8f4e07d9129d898@zg6ziy65wqhiczqfqupx26j5yjot5iuxftqtiyvika3xoydc5hx2mtyd.onion:9735```.
-
+If you'd like to help us with the cost of running Zeus project (iOS developer account, Google Play developer account, hosting) you can send a payment to us via our [BTCPayServer portal](https://pay.zeusln.app/apps/4JiSAsU4SsHyoM9z5FjqAoA2eRZb/pos), via Lightning Address (tips@pay.zeusln.app), or via PayNym ([+holymorning7d1](http://my.paynym.is/+holymorning7d1)).
 Thank you.
 
 ## License
