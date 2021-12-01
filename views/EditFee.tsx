@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Icon, Header } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import Button from '../components/Button';
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import Refresh from '../images/SVG/Refresh.svg';
@@ -237,7 +238,7 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                                 style={{
                                     ...styles.feeBoxes,
                                     top: 25,
-                                    marginTop: 20,
+                                    marginTop: 25,
                                     borderColor:
                                         selectedFee === 'custom'
                                             ? 'rgba(255, 217, 63, .6)'
@@ -259,28 +260,17 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                             ></TextInput>
                         </TouchableWithoutFeedback>
 
-                        <TouchableOpacity
-                            style={styles.confirmButton}
-                            onPress={() => {
-                                this.props.navigation.state.params.onNavigateBack(
-                                    this.state.fee
-                                );
-                                this.props.navigation.goBack();
-                            }}
-                        >
-                            <Text
-                                style={{
-                                    fontSize: 18,
-                                    textAlign: 'center',
-                                    fontWeight: 'bold',
-                                    top: 8
+                        <View style={styles.confirmButton}>
+                            <Button
+                                title={localeString('views.EditFee.confirmFee')}
+                                onPress={() => {
+                                    this.props.navigation.state.params.onNavigateBack(
+                                        this.state.fee
+                                    );
+                                    this.props.navigation.goBack();
                                 }}
-                            >
-                                {localeString(
-                                    'views.EditFee.confirmFee'
-                                ).toUpperCase()}
-                            </Text>
-                        </TouchableOpacity>
+                            />
+                        </View>
                     </View>
                 )}
                 {error && !loading && (
@@ -303,7 +293,8 @@ const styles = StyleSheet.create({
     feeBoxes: {
         height: 65,
         width: 350,
-        top: 30,
+        top: 15,
+        bottom: 15,
         borderRadius: 4
     },
     feeTitle: {
@@ -324,10 +315,6 @@ const styles = StyleSheet.create({
         top: 55
     },
     confirmButton: {
-        width: 350,
-        height: 40,
-        backgroundColor: 'yellow',
-        bottom: -18,
-        borderRadius: 4
+        width: 350
     }
 });
