@@ -4,8 +4,8 @@ import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
 
 export default class NodeInfoStore {
-    @observable public loading: boolean = false;
-    @observable public error: boolean = false;
+    @observable public loading = false;
+    @observable public error = false;
     @observable public errorMsg: string;
     @observable public nodeInfo: NodeInfo | any = {};
     @observable public testnet: boolean;
@@ -54,6 +54,10 @@ export default class NodeInfoStore {
             .then((data: any) => {
                 const nodeInfo = new NodeInfo(data);
                 this.nodeInfo = nodeInfo;
+                this.testnet =
+                    nodeInfo.network === 'testnet' || nodeInfo.testnet || false;
+                this.regtest =
+                    nodeInfo.network === 'regtest' || nodeInfo.regtest || false;
                 this.loading = false;
                 this.error = false;
             })

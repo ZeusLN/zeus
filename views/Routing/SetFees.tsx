@@ -1,14 +1,12 @@
 import * as React from 'react';
 import { View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
+import { inject, observer } from 'mobx-react';
+import { localeString } from '../../utils/LocaleUtils';
+import FeeStore from '../../stores/FeeStore';
 import SetFeesForm from './../../components/SetFeesForm';
 
 import { themeColor } from './../../utils/ThemeUtils';
-import { localeString } from '../../utils/LocaleUtils';
-
-import { inject, observer } from 'mobx-react';
-
-import FeeStore from '../../stores/FeeStore';
 
 interface SetFeesProps {
     navigation: any;
@@ -31,7 +29,9 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
         );
 
         return (
-            <View>
+            <View
+                style={{ flex: 1, backgroundColor: themeColor('background') }}
+            >
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
@@ -42,7 +42,6 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
                 />
                 <View
                     style={{
-                        backgroundColor: themeColor('background'),
                         color: themeColor('text'),
                         top: 5,
                         padding: 15

@@ -23,8 +23,8 @@ interface ActivityFilter {
 }
 
 export default class ActivityStore {
-    @observable public loading: boolean = false;
-    @observable public error: boolean = false;
+    @observable public loading = false;
+    @observable public error = false;
     @observable public activity: Array<Invoice | Payment | Transaction> = [];
     @observable public filteredActivity: Array<
         Invoice | Payment | Transaction

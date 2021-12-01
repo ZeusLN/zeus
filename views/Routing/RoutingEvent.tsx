@@ -9,13 +9,13 @@ import {
     View
 } from 'react-native';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
+import { inject, observer } from 'mobx-react';
 import ForwardEvent from './../../models/ForwardEvent';
 
 import SetFeesForm from './../../components/SetFeesForm';
 import KeyValue from './../../components/KeyValue';
 import { Amount } from './../../components/Amount';
 import FeeBreakdown from './../../components/FeeBreakdown';
-import { inject, observer } from 'mobx-react';
 
 import PrivacyUtils from './../../utils/PrivacyUtils';
 import { localeString } from './../../utils/LocaleUtils';
@@ -75,23 +75,18 @@ export default class RoutingEvent extends React.Component<
         const { channelFees } = FeeStore;
         const { aliasesById, channels } = ChannelsStore;
         const { settings, implementation } = SettingsStore;
-        const { lurkerMode } = settings;
+        const { privacy } = settings;
+        const { lurkerMode } = privacy;
 
-        const {
-            chan_id_in,
-            chan_id_out,
-            amt_in,
-            amt_out,
-            fee,
-            getTime
-        } = routingEvent;
+        const { chan_id_in, chan_id_out, amt_in, amt_out, fee, getTime } =
+            routingEvent;
 
         const chanInFilter = channels.filter(
-            channel => channel.channelId === chan_id_in
+            (channel) => channel.channelId === chan_id_in
         );
         const chanIn = chanInFilter[0];
         const chanOutFilter = channels.filter(
-            channel => channel.channelId === chan_id_out
+            (channel) => channel.channelId === chan_id_out
         );
         const chanOut = chanOutFilter[0];
         const chanInLabel = aliasesById[chan_id_in] || chan_id_in;

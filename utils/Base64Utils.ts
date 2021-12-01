@@ -1,8 +1,8 @@
 const chars =
     'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
 class Base64Utils {
-    btoa = (input: string = '') => {
-        let str = input;
+    btoa = (input = '') => {
+        const str = input;
         let output = '';
 
         for (
@@ -24,8 +24,8 @@ class Base64Utils {
         return output;
     };
 
-    atob = (input: string = '') => {
-        let str = input.replace(/=+$/, '');
+    atob = (input = '') => {
+        const str = input.replace(/=+$/, '');
         let output = '';
 
         if (str.length % 4 == 1) {
@@ -46,7 +46,7 @@ class Base64Utils {
         return output;
     };
 
-    hexStringToByte = (str: string = '') => {
+    hexStringToByte = (str = '') => {
         if (!str) {
             return new Uint8Array();
         }
@@ -69,15 +69,14 @@ class Base64Utils {
         return this.btoa(binary);
     };
 
-    hexToBase64 = (str: string = '') =>
-        this.byteToBase64(this.hexStringToByte(str));
+    hexToBase64 = (str = '') => this.byteToBase64(this.hexStringToByte(str));
 
     stringToUint8Array = (str: string) =>
-        Uint8Array.from(str, x => x.charCodeAt(0));
+        Uint8Array.from(str, (x) => x.charCodeAt(0));
 
     hexToUint8Array = (hexString: string) =>
         new Uint8Array(
-            hexString.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16))
+            hexString.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
         );
 
     bytesToHexString = (bytes: any) =>

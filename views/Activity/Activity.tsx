@@ -8,11 +8,10 @@ import {
 } from 'react-native';
 import { Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { Amount } from '../../components/Amount';
 import DateTimeUtils from './../../utils/DateTimeUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
-
-import { Amount } from '../../components/Amount';
 
 import ActivityStore from './../../stores/ActivityStore';
 
@@ -45,11 +44,10 @@ export default class Activity extends React.Component<ActivityProps, {}> {
     // TODO this feels like an odd place to do all this deciding
     // TODO on-chain has "-" sign but lightning doesn't?
     getRightTitleTheme = (item: any) => {
-        console.log(`${item.getAmount} : ${typeof item.getAmount}`);
         if (item.getAmount == 0) return 'secondaryText';
 
         if (item.model === localeString('general.transaction')) {
-            if (item.getAmount.includes('-')) return 'warning';
+            if (item.getAmount.toString().includes('-')) return 'warning';
             return 'success';
         }
 
@@ -71,11 +69,8 @@ export default class Activity extends React.Component<ActivityProps, {}> {
 
     render() {
         const { navigation, ActivityStore } = this.props;
-        const {
-            loading,
-            filteredActivity,
-            getActivityAndFilter
-        } = ActivityStore;
+        const { loading, filteredActivity, getActivityAndFilter } =
+            ActivityStore;
 
         const CloseButton = () => (
             <Icon
@@ -113,7 +108,10 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                 />
                 {loading ? (
                     <View style={{ padding: 50 }}>
-                        <ActivityIndicator size="large" color="#0000ff" />
+                        <ActivityIndicator
+                            size="large"
+                            color={themeColor('highlight')}
+                        />
                     </View>
                 ) : !!filteredActivity && filteredActivity.length > 0 ? (
                     <FlatList
@@ -162,7 +160,9 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                         ? localeString(
                                               'views.Activity.channelOperation'
                                           )
-                                        : !item.getAmount.includes('-')
+                                        : !item.getAmount
+                                              .toString()
+                                              .includes('-')
                                         ? localeString(
                                               'views.Activity.youReceived'
                                           )
@@ -184,9 +184,8 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                     <ListItem
                                         containerStyle={{
                                             borderBottomWidth: 0,
-                                            backgroundColor: themeColor(
-                                                'background'
-                                            )
+                                            backgroundColor:
+                                                themeColor('background')
                                         }}
                                         onPress={() => {
                                             if (
@@ -263,9 +262,11 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                                     )
                                                 }}
                                             >
-                                                {DateTimeUtils.listFormattedDateShort(
-                                                    item.getTimestamp
-                                                )}
+                                                {item.getTimestamp === 0
+                                                    ? item.getBlockHeight
+                                                    : DateTimeUtils.listFormattedDateShort(
+                                                          item.getTimestamp
+                                                      )}
                                             </ListItem.Subtitle>
                                         </ListItem.Content>
                                     </ListItem>

@@ -1,28 +1,39 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
+'use strict';
+Object.defineProperty(exports, '__esModule', { value: true });
 exports.extractSingleWorkload = exports.decodeUR = void 0;
-var utils_1 = require("./utils");
-var miniCbor_1 = require("./miniCbor");
-var bc_bech32_1 = require("bc-bech32");
+var bc_bech32_1 = require('bc-bech32');
+var utils_1 = require('./utils');
+var miniCbor_1 = require('./miniCbor');
 var checkAndGetSequence = function (sequence) {
     var pieces = sequence.toUpperCase().split('OF');
-    if (pieces.length !== 2)
-        throw new Error("invalid sequence: " + sequence);
-    var index = pieces[0], total = pieces[1];
+    if (pieces.length !== 2) throw new Error('invalid sequence: ' + sequence);
+    var index = pieces[0],
+        total = pieces[1];
     return [+index, +total];
 };
 var checkDigest = function (digest, payload) {
-    if (bc_bech32_1.decodeBc32Data(digest) !== utils_1.sha256Hash(Buffer.from(bc_bech32_1.decodeBc32Data(payload), 'hex')).toString('hex')) {
-        throw new Error("invalid digest: \n digest:" + digest + " \n payload:" + payload);
+    if (
+        bc_bech32_1.decodeBc32Data(digest) !==
+        utils_1
+            .sha256Hash(Buffer.from(bc_bech32_1.decodeBc32Data(payload), 'hex'))
+            .toString('hex')
+    ) {
+        throw new Error(
+            'invalid digest: \n digest:' + digest + ' \n payload:' + payload
+        );
     }
 };
 var checkURHeader = function (UR, type) {
-    if (type === void 0) { type = 'bytes'; }
-    if (UR.toUpperCase() !== ("ur:" + type).toUpperCase())
-        throw new Error("invalid UR header: " + UR);
+    if (type === void 0) {
+        type = 'bytes';
+    }
+    if (UR.toUpperCase() !== ('ur:' + type).toUpperCase())
+        throw new Error('invalid UR header: ' + UR);
 };
 var dealWithSingleWorkload = function (workload, type) {
-    if (type === void 0) { type = 'bytes'; }
+    if (type === void 0) {
+        type = 'bytes';
+    }
     var pieces = workload.split('/');
     switch (pieces.length) {
         case 2: {
@@ -50,25 +61,52 @@ var dealWithSingleWorkload = function (workload, type) {
             return fragment;
         }
         default:
-            throw new Error("invalid workload pieces length: expect 2 / 3 / 4 bug got " + pieces.length);
+            throw new Error(
+                'invalid workload pieces length: expect 2 / 3 / 4 bug got ' +
+                    pieces.length
+            );
     }
 };
 var dealWithMultipleWorkloads = function (workloads, type) {
-    if (type === void 0) { type = 'bytes'; }
+    if (type === void 0) {
+        type = 'bytes';
+    }
     var length = workloads.length;
     var fragments = new Array(length).fill('');
     var digest = '';
     workloads.forEach(function (workload) {
         var pieces = workload.split('/');
         checkURHeader(pieces[0], type);
-        var _a = checkAndGetSequence(pieces[1]), index = _a[0], total = _a[1];
+        var _a = checkAndGetSequence(pieces[1]),
+            index = _a[0],
+            total = _a[1];
         if (total !== length)
-            throw new Error("invalid workload: " + workload + ", total " + total + " not equal workloads length " + length);
+            throw new Error(
+                'invalid workload: ' +
+                    workload +
+                    ', total ' +
+                    total +
+                    ' not equal workloads length ' +
+                    length
+            );
         if (digest && digest !== pieces[2])
-            throw new Error("invalid workload: " + workload + ", checksum changed " + digest + ", " + pieces[2]);
+            throw new Error(
+                'invalid workload: ' +
+                    workload +
+                    ', checksum changed ' +
+                    digest +
+                    ', ' +
+                    pieces[2]
+            );
         digest = pieces[2];
         if (fragments[index - 1])
-            throw new Error("invalid workload: " + workload + ", index " + index + " has already been set");
+            throw new Error(
+                'invalid workload: ' +
+                    workload +
+                    ', index ' +
+                    index +
+                    ' has already been set'
+            );
         fragments[index - 1] = pieces[3];
     });
     var payload = fragments.join('');
@@ -76,22 +114,24 @@ var dealWithMultipleWorkloads = function (workloads, type) {
     return payload;
 };
 var getBC32Payload = function (workloads, type) {
-    if (type === void 0) { type = 'bytes'; }
+    if (type === void 0) {
+        type = 'bytes';
+    }
     try {
         var length_1 = workloads.length;
         if (length_1 === 1) {
             return dealWithSingleWorkload(workloads[0], type);
-        }
-        else {
+        } else {
             return dealWithMultipleWorkloads(workloads, type);
         }
-    }
-    catch (e) {
-        throw new Error("invalid workloads: " + workloads + "\n " + e);
+    } catch (e) {
+        throw new Error('invalid workloads: ' + workloads + '\n ' + e);
     }
 };
 exports.decodeUR = function (workloads, type) {
-    if (type === void 0) { type = 'bytes'; }
+    if (type === void 0) {
+        type = 'bytes';
+    }
     var bc32Payload = getBC32Payload(workloads, type);
     var cborPayload = bc_bech32_1.decodeBc32Data(bc32Payload);
     return miniCbor_1.decodeSimpleCBOR(cborPayload);
@@ -109,7 +149,10 @@ exports.extractSingleWorkload = function (workload) {
             return checkAndGetSequence(pieces[1]);
         }
         default:
-            throw new Error("invalid workload pieces length: expect 2 / 3 / 4 bug got " + pieces.length);
+            throw new Error(
+                'invalid workload pieces length: expect 2 / 3 / 4 bug got ' +
+                    pieces.length
+            );
     }
 };
 //# sourceMappingURL=decodeUR.js.map

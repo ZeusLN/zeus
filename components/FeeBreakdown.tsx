@@ -1,11 +1,9 @@
 import * as React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
-import KeyValue from './KeyValue';
-import { Amount } from './Amount';
-import SetFeesForm from './SetFeesForm';
-
+import { inject, observer } from 'mobx-react';
 import ChannelsStore from '../stores/ChannelsStore';
+
 import NodeInfoStore from '../stores/NodeInfoStore';
 import FeeStore from '../stores/FeeStore';
 import SettingsStore from '../stores/SettingsStore';
@@ -13,7 +11,9 @@ import SettingsStore from '../stores/SettingsStore';
 import DateTimeUtils from '../utils/DateTimeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import { inject, observer } from 'mobx-react';
+import SetFeesForm from './SetFeesForm';
+import { Amount } from './Amount';
+import KeyValue from './KeyValue';
 
 interface FeeBreakdownProps {
     ChannelsStore: ChannelsStore;
@@ -97,10 +97,12 @@ export default class FeeBreakdown extends React.Component<
                             />
                             <KeyValue
                                 keyValue={localeString('views.Channel.feeRate')}
-                                value={`${Number(
-                                    chanInfo[channelId].node1_policy
-                                        .fee_rate_milli_msat
-                                ) / 10000}%`}
+                                value={`${
+                                    Number(
+                                        chanInfo[channelId].node1_policy
+                                            .fee_rate_milli_msat
+                                    ) / 10000
+                                }%`}
                                 sensitive
                             />
                             <KeyValue
@@ -150,14 +152,18 @@ export default class FeeBreakdown extends React.Component<
                             />
                             {chanInfo[channelId].node1_pub === nodeId && (
                                 <SetFeesForm
-                                    baseFee={`${Number(
-                                        chanInfo[channelId].node1_policy
-                                            .fee_base_msat
-                                    ) / 1000}`}
-                                    feeRate={`${Number(
-                                        chanInfo[channelId].node1_policy
-                                            .fee_rate_milli_msat
-                                    ) / 10000}`}
+                                    baseFee={`${
+                                        Number(
+                                            chanInfo[channelId].node1_policy
+                                                .fee_base_msat
+                                        ) / 1000
+                                    }`}
+                                    feeRate={`${
+                                        Number(
+                                            chanInfo[channelId].node1_policy
+                                                .fee_rate_milli_msat
+                                        ) / 10000
+                                    }`}
                                     timeLockDelta={chanInfo[
                                         channelId
                                     ].node1_policy.time_lock_delta.toString()}
@@ -212,10 +218,12 @@ export default class FeeBreakdown extends React.Component<
                             />
                             <KeyValue
                                 keyValue={localeString('views.Channel.feeRate')}
-                                value={`${Number(
-                                    chanInfo[channelId].node2_policy
-                                        .fee_rate_milli_msat
-                                ) / 10000}%`}
+                                value={`${
+                                    Number(
+                                        chanInfo[channelId].node2_policy
+                                            .fee_rate_milli_msat
+                                    ) / 10000
+                                }%`}
                                 sensitive
                             />
                             <KeyValue
@@ -265,14 +273,18 @@ export default class FeeBreakdown extends React.Component<
                             />
                             {chanInfo[channelId].node2_pub === nodeId && (
                                 <SetFeesForm
-                                    baseFee={`${Number(
-                                        chanInfo[channelId].node2_policy
-                                            .fee_base_msat
-                                    ) / 1000}`}
-                                    feeRate={`${Number(
-                                        chanInfo[channelId].node2_policy
-                                            .fee_rate_milli_msat
-                                    ) / 10000}`}
+                                    baseFee={`${
+                                        Number(
+                                            chanInfo[channelId].node2_policy
+                                                .fee_base_msat
+                                        ) / 1000
+                                    }`}
+                                    feeRate={`${
+                                        Number(
+                                            chanInfo[channelId].node2_policy
+                                                .fee_rate_milli_msat
+                                        ) / 10000
+                                    }`}
                                     timeLockDelta={chanInfo[
                                         channelId
                                     ].node2_policy.time_lock_delta.toString()}

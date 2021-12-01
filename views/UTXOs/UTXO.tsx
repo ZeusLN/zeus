@@ -7,9 +7,9 @@ import {
     View
 } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
+import { inject, observer } from 'mobx-react';
 import UrlUtils from './../../utils/UrlUtils';
 import Utxo from './../../models/Utxo';
-import { inject, observer } from 'mobx-react';
 import PrivacyUtils from './../../utils/PrivacyUtils';
 
 import NodeInfoStore from './../../stores/NodeInfoStore';
@@ -32,9 +32,16 @@ export default class UTXO extends React.Component<UTXOProps> {
         const utxo: Utxo = navigation.getParam('utxo', null);
         const { testnet } = NodeInfoStore;
 
-        const { getOutpoint, account, address, getConfs, isUnconfirmed } = utxo;
+        const {
+            getOutpoint,
+            account,
+            address,
+            getConfs,
+            isUnconfirmed,
+            blockheight
+        } = utxo;
         const amount = utxo.getAmount;
-        const tx = utxo.outpoint.txid_str;
+        const tx = utxo.txid || utxo.outpoint.txid_str;
 
         const BackButton = () => (
             <Icon
@@ -141,24 +148,51 @@ export default class UTXO extends React.Component<UTXOProps> {
                         </Text>
                     </TouchableOpacity>
 
-                    <View>
-                        <Text
-                            style={{
-                                ...styles.label,
-                                color: themeColor('text')
-                            }}
-                        >
-                            {localeString('views.Transaction.numConf')}:
-                        </Text>
-                        <Text
-                            style={{
-                                ...styles.value,
-                                color: isUnconfirmed ? 'red' : 'green'
-                            }}
-                        >
-                            {PrivacyUtils.sensitiveValue(getConfs, 3, true)}
-                        </Text>
-                    </View>
+                    {!!getConfs && (
+                        <View>
+                            <Text
+                                style={{
+                                    ...styles.label,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString('views.Transaction.numConf')}:
+                            </Text>
+                            <Text
+                                style={{
+                                    ...styles.value,
+                                    color: isUnconfirmed ? 'red' : 'green'
+                                }}
+                            >
+                                {PrivacyUtils.sensitiveValue(getConfs, 3, true)}
+                            </Text>
+                        </View>
+                    )}
+
+                    {blockheight && (
+                        <View>
+                            <Text
+                                style={{
+                                    ...styles.label,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString('views.Transaction.blockHeight')}:
+                            </Text>
+                            <Text
+                                style={{
+                                    ...styles.value,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {PrivacyUtils.sensitiveValue(
+                                    blockheight,
+                                    6,
+                                    true
+                                )}
+                            </Text>
+                        </View>
+                    )}
                 </View>
             </ScrollView>
         );

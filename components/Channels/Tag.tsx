@@ -7,7 +7,7 @@ import { Status } from '../../views/Channels/ChannelsPane';
 
 export function Tag({ status }: { status: Status }) {
     // Garish colors to let you know you fucked up
-    let colors = { background: 'pink', dot: 'blue' };
+    const colors = { background: 'pink', dot: 'blue' };
 
     // TODO: should all these colors be in the theme?
     switch (status) {

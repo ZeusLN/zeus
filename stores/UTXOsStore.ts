@@ -6,13 +6,13 @@ import Utxo from './../models/Utxo';
 
 export default class UTXOsStore {
     // utxos
-    @observable public loading: boolean = false;
-    @observable public error: boolean = false;
+    @observable public loading = false;
+    @observable public error = false;
     @observable public errorMsg: string;
     @observable public utxos: Array<Utxo> = [];
     // accounts
-    @observable public loadingAccounts: boolean = false;
-    @observable public importingAccount: boolean = false;
+    @observable public loadingAccounts = false;
+    @observable public importingAccount = false;
     @observable public accounts: any = [];
     //
     settingsStore: SettingsStore;
@@ -34,7 +34,8 @@ export default class UTXOsStore {
         RESTUtils.getUTXOs()
             .then((data: any) => {
                 this.loading = false;
-                this.utxos = data.utxos.map((utxo: any) => new Utxo(utxo));
+                const utxos = data.utxos || data.outputs;
+                this.utxos = utxos.map((utxo: any) => new Utxo(utxo));
                 this.error = false;
             })
             .catch((error: any) => {
