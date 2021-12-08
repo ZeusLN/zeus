@@ -466,7 +466,7 @@ export default class Eclair {
         });
     verifyMessage = (data: any) =>
         this.api('verifymessage', {
-            msg: data.message,
+            msg: data.msg,
             sig: data.signature
         });
 

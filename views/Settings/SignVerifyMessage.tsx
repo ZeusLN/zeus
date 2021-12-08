@@ -156,7 +156,6 @@ export default class SignVerifyMessage extends React.Component<
                 />
 
                 {loading && <ActivityIndicator size="large" />}
-                {error && <Text style={styles.error}>{error}</Text>}
 
                 {selectedIndex === 0 && (
                     <View>
@@ -302,13 +301,15 @@ export default class SignVerifyMessage extends React.Component<
                             </Text>
                         )}
 
-                        {valid === false && (
-                            <Text style={styles.errorField}>
-                                {localeString(
-                                    'views.Settings.SignMessage.error'
-                                )}
-                            </Text>
-                        )}
+                        {valid === false ||
+                            (error && (
+                                <Text style={styles.errorField}>
+                                    {error ||
+                                        localeString(
+                                            'views.Settings.SignMessage.error'
+                                        )}
+                                </Text>
+                            ))}
 
                         <View style={styles.button}>
                             <Button
@@ -367,9 +368,6 @@ export default class SignVerifyMessage extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    error: {
-        color: 'red'
-    },
     button: {
         padding: 10
     },

@@ -48,7 +48,7 @@ export default class MessageSignStore {
         this.loading = true;
         const msg = Base64Utils.btoa(data.msg);
 
-        RESTUtils.verifyMessage({ msg, signature: data.signature })
+        RESTUtils.verifyMessage({ msg: data.msg, signature: data.signature })
             .then((data: any) => {
                 this.valid = data.valid || data.verified;
                 this.pubkey = data.pubkey || data.publicKey;
@@ -56,7 +56,6 @@ export default class MessageSignStore {
             })
             .catch((error: any) => {
                 this.error = error.toString();
-                this.reset();
             })
             .finally(() => {
                 this.loading = false;
