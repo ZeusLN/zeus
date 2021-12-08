@@ -138,6 +138,11 @@ export default class CLightningREST extends LND {
         this.postRequest('/v1/utility/signMessage', {
             message: message
         });
+    verifyMessage = (data: any) =>
+        this.postRequest('/v1/utility/checkMessage', {
+            message: data.message,
+            zbase: data.signature
+        });
 
     supportsMessageSigning = () => true;
     supportsMPP = () => false;
