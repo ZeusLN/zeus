@@ -319,7 +319,9 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         <View style={styles.separationLine} />
                         <TouchableOpacity
                             style={styles.columnField}
-                            onPress={() => navigation.navigate('SignVerifyMessage')}
+                            onPress={() =>
+                                navigation.navigate('SignVerifyMessage')
+                            }
                         >
                             <View>
                                 <SignIcon stroke={themeColor('text')} />
@@ -330,7 +332,9 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     color: themeColor('text')
                                 }}
                             >
-                                Sign or verify message
+                                {localeString(
+                                    'views.Settings.SignMessage.title'
+                                )}
                             </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
