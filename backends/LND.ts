@@ -267,7 +267,7 @@ export default class LND {
         this.postRequest('/v2/wallet/accounts/import', data);
     signMessage = (message: string) =>
         this.postRequest('/v1/signmessage', {
-            msg: message
+            msg: Base64Utils.btoa(message)
         });
     verifyMessage = (data: any) =>
         this.postRequest('/v1/verifymessage', {
