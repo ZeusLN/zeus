@@ -79,6 +79,7 @@ class RESTUtils {
     listAccounts = (...args: any[]) => this.call('listAccounts', args);
     importAccount = (...args: any[]) => this.call('importAccount', args);
     signMessage = (...args: any[]) => this.call('signMessage', args);
+    verifyMessage = (...args: any[]) => this.call('verifyMessage', args);
 
     fundPsbt = (...args: any[]) => this.call('fundPsbt', args);
     finalizePsbt = (...args: any[]) => this.call('finalizePsbt', args);

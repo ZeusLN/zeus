@@ -23,6 +23,7 @@ interface SignVerifyMessageProps {
 interface SignVerifyMessageState {
     messageToSign: string;
     messageToVerify: string;
+    signatureToVerify: string;
     selectedIndex: number;
 }
 
@@ -35,6 +36,7 @@ export default class SignVerifyMessage extends React.Component<
     state = {
         messageToSign: '',
         messageToVerify: '',
+        signatureToVerify: '',
         selectedIndex: 0
     };
 
@@ -44,25 +46,47 @@ export default class SignVerifyMessage extends React.Component<
     }
 
     reset = () => {
+        const { MessageSignStore } = this.props;
+
         this.setState({
             messageToSign: '',
-            messageToVerify: ''
+            messageToVerify: '',
+            signatureToVerify: ''
         });
 
         MessageSignStore.reset();
     };
 
     updateIndex = (selectedIndex: number) => {
+        const { MessageSignStore } = this.props;
+
         this.setState({
-            selectedIndex
+            selectedIndex,
+            messageToSign: '',
+            messageToVerify: '',
+            signatureToVerify: ''
         });
+
+        MessageSignStore.reset();
     };
 
     render() {
         const { navigation, MessageSignStore } = this.props;
-        const { messageToSign, messageToVerify, selectedIndex } = this.state;
-        const { loading, signMessage, verifyMessage, error, signature } =
-            MessageSignStore;
+        const {
+            messageToSign,
+            messageToVerify,
+            signatureToVerify,
+            selectedIndex
+        } = this.state;
+        const {
+            loading,
+            signMessage,
+            verifyMessage,
+            pubkey,
+            valid,
+            error,
+            signature
+        } = MessageSignStore;
 
         const BackButton = () => (
             <Icon
@@ -118,7 +142,7 @@ export default class SignVerifyMessage extends React.Component<
                     selectedIndex={selectedIndex}
                     buttons={buttons}
                     selectedButtonStyle={{
-                        backgroundColor: themeColor('highlight'),
+                        backgroundColor: themeColor('text'),
                         borderRadius: 12
                     }}
                     containerStyle={{
@@ -159,13 +183,14 @@ export default class SignVerifyMessage extends React.Component<
                                 editable={!loading}
                                 placeholderTextColor="gray"
                                 multiline
+                                numberOfLines={3}
                             />
                         </View>
 
                         <View style={styles.button}>
                             <Button
                                 title={localeString(
-                                    'views.Settings.SignMessage.sign'
+                                    'views.Settings.signMessage.button'
                                 )}
                                 icon={{
                                     name: 'create',
@@ -218,7 +243,7 @@ export default class SignVerifyMessage extends React.Component<
                                 }}
                             >
                                 {localeString(
-                                    'views.Settings.SignMessage.host'
+                                    'views.Settings.SignMessage.messageToVerify'
                                 )}
                             </Text>
                             <TextInput
@@ -242,17 +267,60 @@ export default class SignVerifyMessage extends React.Component<
                             />
                         </View>
 
+                        <View style={styles.form}>
+                            <Text
+                                style={{
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.SignMessage.signatureToVerify'
+                                )}
+                            </Text>
+                            <TextInput
+                                value={signatureToVerify}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        signatureToVerify: text
+                                    })
+                                }
+                                style={{
+                                    ...styles.textInput,
+                                    color: themeColor('text')
+                                }}
+                                editable={!loading}
+                                multiline
+                                numberOfLines={3}
+                            />
+                        </View>
+
+                        {valid && (
+                            <Text style={styles.successField}>
+                                {`${localeString(
+                                    'views.Settings.SignMessage.success'
+                                )} ${pubkey}`}
+                            </Text>
+                        )}
+
+                        {valid === false && (
+                            <Text style={styles.errorField}>
+                                {localeString(
+                                    'views.Settings.SignMessage.error'
+                                )}
+                            </Text>
+                        )}
+
                         <View style={styles.button}>
                             <Button
                                 title={localeString(
-                                    'views.Settings.SignMessage.verify'
+                                    'views.Settings.signMessage.buttonVerify'
                                 )}
-                                icon={{
-                                    name: 'create',
-                                    size: 25,
-                                    color: 'white'
-                                }}
-                                onPress={() => verifyMessage(messageToVerify)}
+                                onPress={() =>
+                                    verifyMessage({
+                                        msg: messageToVerify,
+                                        signature: signatureToVerify
+                                    })
+                                }
                                 buttonStyle={{
                                     backgroundColor: '#261339',
                                     borderRadius: 30
@@ -265,13 +333,24 @@ export default class SignVerifyMessage extends React.Component<
                     </View>
                 )}
 
-                {signature && (
+                {pubkey && (
+                    <View style={styles.button}>
+                        <CopyButton
+                            title={localeString(
+                                'views.Settings.SignMessage.copyPubkey'
+                            )}
+                            copyValue={pubkey}
+                        />
+                    </View>
+                )}
+
+                {(signature || !!valid) && (
                     <View style={styles.button}>
                         <Button
                             title={localeString(
                                 'views.Settings.SignMessage.clear'
                             )}
-                            onPress={() => MessageSignStore.reset()}
+                            onPress={() => this.reset()}
                             buttonStyle={{
                                 backgroundColor: '#261339',
                                 borderRadius: 30
@@ -306,6 +385,26 @@ const styles = StyleSheet.create({
         backgroundColor: '#31363F',
         borderRadius: 6,
         marginBottom: 20,
-        paddingLeft: 5
+        padding: 10
+    },
+    successField: {
+        fontSize: 20,
+        width: '100%',
+        top: 10,
+        color: '#41CF3E',
+        backgroundColor: '#273832',
+        borderRadius: 6,
+        marginBottom: 20,
+        padding: 15
+    },
+    errorField: {
+        fontSize: 20,
+        width: '100%',
+        top: 10,
+        color: '#E14C4C',
+        backgroundColor: '#372C33',
+        borderRadius: 6,
+        marginBottom: 20,
+        padding: 15
     }
 });
