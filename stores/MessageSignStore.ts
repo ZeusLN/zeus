@@ -28,7 +28,7 @@ export default class MessageSignStore {
 
         RESTUtils.signMessage(text)
             .then((data: any) => {
-                this.signature = data.signature;
+                this.signature = data.zbase || data.signature;
                 this.error = false;
             })
             .catch((error: any) => {
