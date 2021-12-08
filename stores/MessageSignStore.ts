@@ -1,6 +1,5 @@
 import { action, observable } from 'mobx';
 import RESTUtils from './../utils/RESTUtils';
-import Base64Utils from './../utils/Base64Utils';
 
 interface VerificationRequest {
     msg: string;
@@ -26,11 +25,9 @@ export default class MessageSignStore {
     @action
     public signMessage = (text: string) => {
         this.loading = true;
-        const body = Base64Utils.btoa(text);
 
-        RESTUtils.signMessage(body)
+        RESTUtils.signMessage(text)
             .then((data: any) => {
-                // TODO: properly decode signature
                 this.signature = data.signature;
                 this.error = false;
             })
