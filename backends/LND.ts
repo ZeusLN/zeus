@@ -268,6 +268,11 @@ export default class LND {
         this.postRequest('/v1/signmessage', {
             msg: message
         });
+    verifyMessage = (data: any) =>
+        this.postRequest('/v1/verifymessage', {
+            msg: data.msg,
+            signature: data.signature
+        });
 
     // LndHub
     createAccount = (

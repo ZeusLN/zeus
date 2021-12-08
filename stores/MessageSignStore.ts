@@ -2,16 +2,24 @@ import { action, observable } from 'mobx';
 import RESTUtils from './../utils/RESTUtils';
 import Base64Utils from './../utils/Base64Utils';
 
+interface VerificationRequest {
+    msg: string;
+    signature: string;
+}
+
 export default class MessageSignStore {
     @observable public loading = false;
     @observable public error = false;
     @observable public signature: string | null;
     @observable public verification: string | null;
+    @observable public pubkey: string | null;
+    @observable public valid: boolean | null;
 
     @action
     public reset() {
         this.signature = null;
-        this.verification = null;
+        this.pubkey = null;
+        this.valid = null;
         this.error = false;
     }
 
@@ -28,7 +36,7 @@ export default class MessageSignStore {
             })
             .catch((error: any) => {
                 this.error = error.toString();
-                this.resetSignature();
+                this.reset();
             })
             .finally(() => {
                 this.loading = false;
@@ -36,18 +44,19 @@ export default class MessageSignStore {
     };
 
     @action
-    public verifyMessage = (text: string) => {
+    public verifyMessage = (data: VerificationRequest) => {
         this.loading = true;
-        const body = Base64Utils.btoa(text);
+        const msg = Base64Utils.btoa(data.msg);
 
-        RESTUtils.verifyMessage(body)
+        RESTUtils.verifyMessage({ msg, signature: data.signature })
             .then((data: any) => {
-                this.verification = data.signature;
+                this.valid = data.valid;
+                this.pubkey = data.pubkey;
                 this.error = false;
             })
             .catch((error: any) => {
                 this.error = error.toString();
-                this.resetVerification();
+                this.reset();
             })
             .finally(() => {
                 this.loading = false;
