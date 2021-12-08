@@ -464,6 +464,11 @@ export default class Eclair {
         this.api('signmessage', {
             msg: message
         });
+    verifyMessage = (data: any) =>
+        this.api('verifymessage', {
+            msg: data.message,
+            sig: data.signature
+        });
 
     supportsMessageSigning = () => true;
     supportsOnchainSends = () => true;
