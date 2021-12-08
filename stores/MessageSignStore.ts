@@ -46,7 +46,6 @@ export default class MessageSignStore {
     @action
     public verifyMessage = (data: VerificationRequest) => {
         this.loading = true;
-        const msg = Base64Utils.btoa(data.msg);
 
         RESTUtils.verifyMessage({ msg: data.msg, signature: data.signature })
             .then((data: any) => {
