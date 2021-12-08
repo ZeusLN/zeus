@@ -11,6 +11,7 @@ import PrivacyIcon from '../../images/SVG/Eye On.svg';
 import SecurityIcon from '../../images/SVG/Lock.svg';
 import SignIcon from '../../images/SVG/Pen.svg';
 import BitcoinIcon from '../../images/SVG/Bitcoin.svg';
+import BrushIcon from '../../images/SVG/Brush.svg';
 import LanguageIcon from '../../images/SVG/Globe.svg';
 import HelpIcon from '../../images/SVG/Help Icon.svg';
 
@@ -393,8 +394,8 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         style={styles.columnField}
                         onPress={() => navigation.navigate('Language')}
                     >
-                        <View>
-                            <LanguageIcon stroke={themeColor('text')} />
+                        <View style={{ padding: 4 }}>
+                            <LanguageIcon stroke={themeColor('text')} fill={themeColor('secondary')} />
                         </View>
                         <Text
                             style={{
@@ -424,7 +425,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         onPress={() => navigation.navigate('Theme')}
                     >
                         <View style={{ padding: 5 }}>
-                            <HelpIcon />
+                            <BrushIcon stroke={themeColor('text')} fill={themeColor('secondary')} />
                         </View>
                         <Text
                             style={{
