@@ -217,7 +217,10 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                     padding: 25
                                 }}
                             >
-                                <CaretUp stroke={themeColor('text')} fill={themeColor('text')} />
+                                <CaretUp
+                                    stroke={themeColor('text')}
+                                    fill={themeColor('text')}
+                                />
                             </TouchableOpacity>
                         </>
                     )}
