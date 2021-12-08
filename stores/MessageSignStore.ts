@@ -6,9 +6,12 @@ export default class MessageSignStore {
     @observable public loading = false;
     @observable public error = false;
     @observable public signature: string | null;
+    @observable public verification: string | null;
 
-    resetSignature() {
+    @action
+    public reset() {
         this.signature = null;
+        this.verification = null;
         this.error = false;
     }
 
@@ -25,7 +28,26 @@ export default class MessageSignStore {
             })
             .catch((error: any) => {
                 this.error = error.toString();
-                this.resetSignature;
+                this.resetSignature();
+            })
+            .finally(() => {
+                this.loading = false;
+            });
+    };
+
+    @action
+    public verifyMessage = (text: string) => {
+        this.loading = true;
+        const body = Base64Utils.btoa(text);
+
+        RESTUtils.verifyMessage(body)
+            .then((data: any) => {
+                this.verification = data.signature;
+                this.error = false;
+            })
+            .catch((error: any) => {
+                this.error = error.toString();
+                this.resetVerification();
             })
             .finally(() => {
                 this.loading = false;
