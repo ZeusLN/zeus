@@ -301,15 +301,15 @@ export default class SignVerifyMessage extends React.Component<
                             </Text>
                         )}
 
-                        {valid === false ||
-                            (error && (
-                                <Text style={styles.errorField}>
-                                    {error ||
-                                        localeString(
-                                            'views.Settings.SignMessage.error'
-                                        )}
-                                </Text>
-                            ))}
+                        {(error || valid === false) && (
+                            <Text style={styles.errorField}>
+                                {error
+                                    ? error
+                                    : localeString(
+                                          'views.Settings.SignMessage.error'
+                                      )}
+                            </Text>
+                        )}
 
                         <View style={styles.button}>
                             <Button
