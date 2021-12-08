@@ -2,6 +2,7 @@ import RNFetchBlob from 'rn-fetch-blob';
 import stores from '../stores/Stores';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import OpenChannelRequest from './../models/OpenChannelRequest';
+import Base64Utils from './../utils/Base64Utils';
 import VersionUtils from './../utils/VersionUtils';
 import { localeString } from './../utils/LocaleUtils';
 
@@ -270,7 +271,7 @@ export default class LND {
         });
     verifyMessage = (data: any) =>
         this.postRequest('/v1/verifymessage', {
-            msg: data.msg,
+            msg: Base64Utils.btoa(data.msg),
             signature: data.signature
         });
 
