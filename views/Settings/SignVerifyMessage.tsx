@@ -15,20 +15,20 @@ import { localeString } from './../../utils/LocaleUtils';
 import MessageSignStore from './../../stores/MessageSignStore';
 import CopyButton from './../../components/CopyButton';
 
-interface SignMessageProps {
+interface SignVerifyMessageProps {
     navigation: any;
     MessageSignStore: MessageSignStore;
 }
 
-interface SignMessageState {
+interface SignVerifyMessageState {
     messageToSign: string;
 }
 
 @inject('SettingsStore', 'MessageSignStore')
 @observer
-export default class SignMessage extends React.Component<
-    SignMessageProps,
-    SignMessageState
+export default class SignVerifyMessage extends React.Component<
+    SignVerifyMessageProps,
+    SignVerifyMessageState
 > {
     state = {
         messageToSign: ''

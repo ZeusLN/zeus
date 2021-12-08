@@ -319,7 +319,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         <View style={styles.separationLine} />
                         <TouchableOpacity
                             style={styles.columnField}
-                            onPress={() => navigation.navigate('SignMessage')}
+                            onPress={() => navigation.navigate('SignVerifyMessage')}
                         >
                             <View>
                                 <SignIcon stroke={themeColor('text')} />
