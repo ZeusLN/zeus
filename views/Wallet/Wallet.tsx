@@ -251,7 +251,6 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             'general.send'
         )}`;
 
-        // TODO: reorg? maybe just detect if on channels page and shrink middle button
         return (
             <View style={{ flex: 1 }}>
                 <LinearGradient
