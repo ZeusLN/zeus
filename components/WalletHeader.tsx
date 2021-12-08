@@ -39,7 +39,9 @@ const OpenChannelButton = ({ navigation }: { navigation: any }) => (
 );
 
 const QRBadge = ({ navigation }: { navigation: any }) => (
-    <TouchableOpacity onPress={() => navigation.navigate('AddressQRCodeScanner')}>
+    <TouchableOpacity
+        onPress={() => navigation.navigate('AddressQRCodeScanner')}
+    >
         <QRIcon fill={themeColor('text')} />
     </TouchableOpacity>
 );
@@ -58,9 +60,7 @@ export function WalletHeader({
     return (
         <Header
             leftComponent={
-                loading ? undefined : (
-                    <QRBadge navigation={navigation} />
-                )
+                loading ? undefined : <QRBadge navigation={navigation} />
             }
             centerComponent={title ? <Body bold>{title}</Body> : undefined}
             rightComponent={

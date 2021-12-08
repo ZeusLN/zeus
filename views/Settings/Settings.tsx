@@ -184,34 +184,36 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     </View>
                 </TouchableOpacity>
 
-                {selectedNode && RESTUtils.supportsNodeInfo() && <View
-                    style={{
-                        backgroundColor: themeColor('secondary'),
-                        width: '90%',
-                        height: 45,
-                        borderRadius: 10,
-                        alignSelf: 'center',
-                        top: 15
-                    }}
-                >
-                    <TouchableOpacity
-                        style={styles.columnField}
-                        onPress={() => navigation.navigate('NodeInfo')}
+                {selectedNode && RESTUtils.supportsNodeInfo() && (
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            width: '90%',
+                            height: 45,
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            top: 15
+                        }}
                     >
-                        <NodeOn color={themeColor('text')} />
-                        <Text
-                            style={{
-                                ...styles.columnText,
-                                color: themeColor('text')
-                            }}
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() => navigation.navigate('NodeInfo')}
                         >
-                            {localeString('views.NodeInfo.title')}
-                        </Text>
-                        <View style={styles.ForwardArrow}>
-                            <ForwardIcon />
-                        </View>
-                    </TouchableOpacity>
-                </View>}
+                            <NodeOn color={themeColor('text')} />
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString('views.NodeInfo.title')}
+                            </Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+                )}
 
                 {/* Coming Soon */}
                 {false && (
@@ -425,7 +427,10 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         onPress={() => navigation.navigate('Language')}
                     >
                         <View style={{ padding: 4 }}>
-                            <LanguageIcon stroke={themeColor('text')} fill={themeColor('secondary')} />
+                            <LanguageIcon
+                                stroke={themeColor('text')}
+                                fill={themeColor('secondary')}
+                            />
                         </View>
                         <Text
                             style={{
@@ -455,7 +460,10 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         onPress={() => navigation.navigate('Theme')}
                     >
                         <View style={{ padding: 5 }}>
-                            <BrushIcon stroke={themeColor('text')} fill={themeColor('secondary')} />
+                            <BrushIcon
+                                stroke={themeColor('text')}
+                                fill={themeColor('secondary')}
+                            />
                         </View>
                         <Text
                             style={{
