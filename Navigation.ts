@@ -35,7 +35,7 @@ import Language from './views/Settings/Language';
 import Currency from './views/Settings/Currency';
 import Theme from './views/Settings/Theme';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
-import SignMessage from './views/Settings/SignMessage';
+import SignVerifyMessage from './views/Settings/SignVerifyMessage';
 import Help from './views/Settings/Help';
 
 // Routing
@@ -112,8 +112,8 @@ const AppScenes = {
     CertInstallInstructions: {
         screen: CertInstallInstructions
     },
-    SignMessage: {
-        screen: SignMessage
+    SignVerifyMessage: {
+        screen: SignVerifyMessage
     },
     Transaction: {
         screen: Transaction
