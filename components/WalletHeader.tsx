@@ -3,7 +3,7 @@ import { Button, Header } from 'react-native-elements';
 import { TouchableOpacity } from 'react-native';
 import RESTUtils from '../utils/RESTUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import NodeOn from '../images/SVG/Node On.svg';
+import QRIcon from '../images/SVG/QR.svg';
 import { Body } from './text/Body';
 
 const SettingsButton = ({ navigation }: { navigation: any }) => (
@@ -38,9 +38,9 @@ const OpenChannelButton = ({ navigation }: { navigation: any }) => (
     />
 );
 
-const NodeInfoBadge = ({ navigation }: { navigation: any }) => (
-    <TouchableOpacity onPress={() => navigation.navigate('NodeInfo')}>
-        <NodeOn color={themeColor('text')} />
+const QRBadge = ({ navigation }: { navigation: any }) => (
+    <TouchableOpacity onPress={() => navigation.navigate('AddressQRCodeScanner')}>
+        <QRIcon fill={themeColor('text')} />
     </TouchableOpacity>
 );
 
@@ -58,8 +58,8 @@ export function WalletHeader({
     return (
         <Header
             leftComponent={
-                loading || !RESTUtils.supportsNodeInfo() ? undefined : (
-                    <NodeInfoBadge navigation={navigation} />
+                loading ? undefined : (
+                    <QRBadge navigation={navigation} />
                 )
             }
             centerComponent={title ? <Body bold>{title}</Body> : undefined}

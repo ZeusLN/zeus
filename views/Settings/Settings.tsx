@@ -14,6 +14,7 @@ import BitcoinIcon from '../../images/SVG/Bitcoin.svg';
 import BrushIcon from '../../images/SVG/Brush.svg';
 import LanguageIcon from '../../images/SVG/Globe.svg';
 import HelpIcon from '../../images/SVG/Help Icon.svg';
+import NodeOn from '../../images/SVG/Node On.svg';
 
 import { themeColor } from './../../utils/ThemeUtils';
 import { localeString } from './../../utils/LocaleUtils';
@@ -182,6 +183,35 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         )}
                     </View>
                 </TouchableOpacity>
+
+                {selectedNode && RESTUtils.supportsNodeInfo() && <View
+                    style={{
+                        backgroundColor: themeColor('secondary'),
+                        width: '90%',
+                        height: 45,
+                        borderRadius: 10,
+                        alignSelf: 'center',
+                        top: 15
+                    }}
+                >
+                    <TouchableOpacity
+                        style={styles.columnField}
+                        onPress={() => navigation.navigate('NodeInfo')}
+                    >
+                        <NodeOn color={themeColor('text')} />
+                        <Text
+                            style={{
+                                ...styles.columnText,
+                                color: themeColor('text')
+                            }}
+                        >
+                            {localeString('views.NodeInfo.title')}
+                        </Text>
+                        <View style={styles.ForwardArrow}>
+                            <ForwardIcon />
+                        </View>
+                    </TouchableOpacity>
+                </View>}
 
                 {/* Coming Soon */}
                 {false && (
