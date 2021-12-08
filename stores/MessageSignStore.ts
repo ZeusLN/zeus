@@ -50,7 +50,7 @@ export default class MessageSignStore {
 
         RESTUtils.verifyMessage({ msg, signature: data.signature })
             .then((data: any) => {
-                this.valid = data.valid;
+                this.valid = data.valid || data.verified;
                 this.pubkey = data.pubkey;
                 this.error = false;
             })
