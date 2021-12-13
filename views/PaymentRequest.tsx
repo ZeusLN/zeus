@@ -34,8 +34,6 @@ interface InvoiceProps {
 }
 
 interface InvoiceState {
-    setCustomAmount: boolean;
-    customAmount: string;
     enableMultiPathPayment: boolean;
     enableAtomicMultiPathPayment: boolean;
     maxParts: string;
@@ -59,8 +57,6 @@ export default class PaymentRequest extends React.Component<
     InvoiceState
 > {
     state = {
-        setCustomAmount: false,
-        customAmount: '',
         enableMultiPathPayment: false,
         enableAtomicMultiPathPayment: false,
         maxParts: '16',
@@ -81,8 +77,6 @@ export default class PaymentRequest extends React.Component<
             navigation
         } = this.props;
         const {
-            setCustomAmount,
-            customAmount,
             enableMultiPathPayment,
             enableAtomicMultiPathPayment,
             maxParts,
@@ -127,13 +121,7 @@ export default class PaymentRequest extends React.Component<
 
         const date = new Date(Number(timestamp) * 1000).toString();
 
-        const { implementation, enableTor } = SettingsStore;
-
-        const isLnd: boolean = implementation === 'lnd';
-
-        // c-lightning can only pay custom amounts if the amount is not specified
-        const canPayCustomAmount: boolean =
-            isLnd || !requestAmount || requestAmount === 0;
+        const { enableTor } = SettingsStore;
 
         const BackButton = () => (
             <Icon
@@ -182,95 +170,16 @@ export default class PaymentRequest extends React.Component<
                     {!!pay_req && (
                         <View style={styles.content}>
                             <View style={styles.center}>
-                                {!setCustomAmount && (
-                                    <TouchableOpacity
-                                        onPress={() => changeUnits()}
-                                    >
-                                        <Text
-                                            style={{
-                                                ...styles.amount,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {units &&
-                                                getAmount(requestAmount || 0)}
-                                        </Text>
-                                    </TouchableOpacity>
-                                )}
-                                {setCustomAmount && (
+                                <TouchableOpacity onPress={() => changeUnits()}>
                                     <Text
                                         style={{
+                                            ...styles.amount,
                                             color: themeColor('text')
                                         }}
                                     >
-                                        {localeString(
-                                            'views.PaymentRequest.customAmt'
-                                        )}
+                                        {units && getAmount(requestAmount || 0)}
                                     </Text>
-                                )}
-                                {setCustomAmount && (
-                                    <TextInput
-                                        keyboardType="numeric"
-                                        placeholder={
-                                            requestAmount
-                                                ? requestAmount.toString()
-                                                : '0'
-                                        }
-                                        value={customAmount}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                customAmount: text
-                                            })
-                                        }
-                                        numberOfLines={1}
-                                        style={{
-                                            ...styles.textInput,
-                                            color: themeColor('text')
-                                        }}
-                                        placeholderTextColor="gray"
-                                    />
-                                )}
-                                {canPayCustomAmount && (
-                                    <View style={styles.button}>
-                                        <Button
-                                            title={
-                                                setCustomAmount
-                                                    ? localeString(
-                                                          'views.PaymentRequest.payDefault'
-                                                      )
-                                                    : localeString(
-                                                          'views.PaymentRequest.payCustom'
-                                                      )
-                                            }
-                                            icon={{
-                                                name: 'edit',
-                                                size: 25,
-                                                color: themeColor('background')
-                                            }}
-                                            onPress={() => {
-                                                if (setCustomAmount) {
-                                                    this.setState({
-                                                        setCustomAmount: false,
-                                                        customAmount: ''
-                                                    });
-                                                } else {
-                                                    this.setState({
-                                                        setCustomAmount: true
-                                                    });
-                                                }
-                                            }}
-                                            style={styles.button}
-                                            titleStyle={{
-                                                color: themeColor('background')
-                                            }}
-                                            buttonStyle={{
-                                                backgroundColor:
-                                                    themeColor('text'),
-                                                borderRadius: 30
-                                            }}
-                                        />
-                                    </View>
-                                )}
+                                </TouchableOpacity>
                             </View>
 
                             {(!!feeEstimate || feeEstimate === 0) && (
@@ -707,7 +616,6 @@ export default class PaymentRequest extends React.Component<
                                         onPress={() => {
                                             TransactionsStore.sendPayment({
                                                 payment_request: paymentRequest,
-                                                amount: customAmount,
                                                 max_parts: ampOrMppEnabled
                                                     ? maxParts
                                                     : null,
