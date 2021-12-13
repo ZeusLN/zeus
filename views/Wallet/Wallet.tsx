@@ -6,8 +6,7 @@ import {
     Linking,
     PanResponder,
     Text,
-    View,
-    TouchableOpacity
+    View
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { Button, ButtonGroup } from 'react-native-elements';
