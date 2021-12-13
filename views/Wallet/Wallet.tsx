@@ -77,7 +77,10 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                 { dx: this.pan.x, dy: this.pan.y }
             ]),
             onPanResponderRelease: () => {
-                Animated.spring(this.pan, { toValue: { x: 0, y: 0 } }).start();
+                Animated.spring(this.pan, {
+                    toValue: { x: 0, y: 0 },
+                    useNativeDriver: true
+                }).start();
                 props.navigation.navigate('Activity');
             }
         });
