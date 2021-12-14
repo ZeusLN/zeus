@@ -212,7 +212,10 @@ export default class LND {
     payLightningInvoice = (data: any) =>
         this.postRequest('/v1/channels/transactions', data);
     payLightningInvoiceV2 = (data: any) =>
-        this.postRequest('/v2/router/send', data);
+        this.postRequest('/v2/router/send', {
+            ...data,
+            allow_self_payment: true
+        });
     payLightningInvoiceV2Streaming = (data: any) =>
         this.wsReq('/v2/router/send', 'POST', data);
     closeChannel = (urlParams?: Array<string>) => {
@@ -274,6 +277,8 @@ export default class LND {
             msg: Base64Utils.btoa(data.msg),
             signature: data.signature
         });
+    subscribeInvoice = (r_hash: string) =>
+        this.getRequest(`/v2/invoices/subscribe/${r_hash}`);
 
     // LndHub
     createAccount = (
