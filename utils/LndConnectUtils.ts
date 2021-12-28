@@ -2,13 +2,13 @@ import MacaroonUtils from './MacaroonUtils';
 
 class LndConnectUtils {
     processLndConnectUrl = (input: string) => {
-        let host, port, macaroonHex;
+        let host, port;
         const lndconnect = input.split('lndconnect://')[1];
         const params = input.split('?')[1];
 
-        let result: any = {};
+        const result: any = {};
         if (params) {
-            params.split('&').forEach(function(part) {
+            params.split('&').forEach(function (part) {
                 const item = part.split('=');
                 result[item[0]] = decodeURIComponent(item[1]);
             });
@@ -28,7 +28,7 @@ class LndConnectUtils {
                 lndconnect.split(':')[1] &&
                 lndconnect.split(':')[1].split('?')[0];
         }
-        macaroonHex =
+        const macaroonHex =
             result.macaroon && MacaroonUtils.base64UrlToHex(result.macaroon);
 
         // prepend https by default

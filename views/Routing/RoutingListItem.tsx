@@ -1,10 +1,10 @@
 import * as React from 'react';
 import { Text, View } from 'react-native';
-import { themeColor } from './../../utils/ThemeUtils';
 
 import { Body } from '../../components/text/Body';
 import { Row } from '../../components/layout/Row';
 import { Amount } from '../../components/Amount';
+import { themeColor } from './../../utils/ThemeUtils';
 
 export function RoutingListItem({
     title,

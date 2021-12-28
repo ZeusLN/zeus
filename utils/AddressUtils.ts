@@ -2,33 +2,41 @@ import { satoshisPerBTC } from './../stores/UnitsStore';
 const btcNonBech = /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
 const btcBech = /^(bc1|BC1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/;
 
-const lnInvoice = /^(lnbcrt|lntb|lnbc|LNBCRT|LNTB|LNBC)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
+const lnInvoice =
+    /^(lnbcrt|lntb|lnbc|LNBCRT|LNTB|LNBC)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
 const lnPubKey = /^[a-f0-9]{66}$/;
 
 /* testnet */
 const btcNonBechTestnet = /^[2][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
 const btcBechTestnet = /^(bc1|bcrt1|BC1|BCRT1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
-const btcBechPubkeyScriptHashTestnet = /^(tb1|TB1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
+const btcBechPubkeyScriptHashTestnet =
+    /^(tb1|TB1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
 
 /* lndhub */
-const lndHubAddress = /^(lndhub:\/\/)\w+(:)\w+(@https?:\/\/[\w\-_.]+(:\d{1,5})?([\/\w]+)?)?$/;
+const lndHubAddress =
+    /^(lndhub:\/\/)\w+(:)\w+(@https?:\/\/[\w\-_.]+(:\d{1,5})?([/\w]+)?)?$/;
+
+/* lnurl */
+const lightningAddress =
+    /^(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])$/;
+
 const blueWalletAddress = /^bluewallet:setlndhuburl\?url=(\S+)/;
 
 export const DEFAULT_LNDHUB = 'https://lndhub.herokuapp.com';
 
 const bitcoinQrParser = (input: string, prefix: string) => {
-    let amount, value;
+    let amount;
     const btcAddressAndParams = input.split(prefix)[1];
     const [btcAddress, params] = btcAddressAndParams.split('?');
 
-    let result: any = {};
+    const result: any = {};
     params &&
-        params.split('&').forEach(function(part) {
+        params.split('&').forEach(function (part) {
             const item = part.split('=');
             result[item[0]] = decodeURIComponent(item[1]);
         });
 
-    value = btcAddress;
+    const value = btcAddress;
     if (result.amount) {
         amount = Number(result.amount) * satoshisPerBTC;
         amount = amount.toString();
@@ -120,6 +128,8 @@ class AddressUtils {
 
     isValidLNDHubAddress = (input: string) =>
         lndHubAddress.test(input) || blueWalletAddress.test(input);
+
+    isValidLightningAddress = (input: string) => lightningAddress.test(input);
 }
 
 const addressUtils = new AddressUtils();

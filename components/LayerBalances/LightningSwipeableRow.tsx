@@ -5,15 +5,15 @@ import {
     Text,
     View,
     I18nManager,
-    Image
+    Image,
+    TouchableOpacity
 } from 'react-native';
 
 import { RectButton } from 'react-native-gesture-handler';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
 import RESTUtils from './../../utils/RESTUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
-
-import Swipeable from 'react-native-gesture-handler/Swipeable';
 
 import Receive from './../../images/SVG/Receive.svg';
 import Routing from './../../images/SVG/Routing.svg';
@@ -92,9 +92,15 @@ export default class LightningSwipeableRow extends Component<
     private updateRef = (ref: Swipeable) => {
         this.swipeableRow = ref;
     };
+
     private close = () => {
         this.swipeableRow.close();
     };
+
+    private open = () => {
+        this.swipeableRow.openLeft();
+    };
+
     render() {
         const { children } = this.props;
         return (
@@ -106,7 +112,9 @@ export default class LightningSwipeableRow extends Component<
                 rightThreshold={40}
                 renderLeftActions={this.renderActions}
             >
-                {children}
+                <TouchableOpacity onPress={() => this.open()} activeOpacity={1}>
+                    {children}
+                </TouchableOpacity>
             </Swipeable>
         );
     }

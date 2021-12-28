@@ -25,11 +25,18 @@ import NodeInfo from './views/NodeInfo';
 import Lockscreen from './views/Lockscreen';
 
 // Settings views
-import Settings from './views/Settings';
+import Settings from './views/Settings/Settings';
 import AddEditNode from './views/Settings/AddEditNode';
+import Nodes from './views/Settings/Nodes';
+import Privacy from './views/Settings/Privacy';
+import Security from './views/Settings/Security';
+import SetPassword from './views/Settings/SetPassword';
+import Language from './views/Settings/Language';
+import Currency from './views/Settings/Currency';
+import Theme from './views/Settings/Theme';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
-import About from './views/Settings/About';
-import SignMessage from './views/Settings/SignMessage';
+import SignVerifyMessage from './views/Settings/SignVerifyMessage';
+import Help from './views/Settings/Help';
 
 // Routing
 import Routing from './views/Routing/Routing';
@@ -45,7 +52,8 @@ import Utxo from './views/UTXOs/UTXO';
 import ImportAccount from './views/Accounts/ImportAccount';
 import ImportAccountQRScanner from './views/Accounts/ImportAccountQRScanner';
 
-import Onboarding from './views/Onboarding';
+import Intro from './views/Intro';
+import IntroSplash from './views/IntroSplash';
 
 import EditFee from './views/EditFee';
 
@@ -53,8 +61,11 @@ const AppScenes = {
     Lockscreen: {
         screen: Lockscreen
     },
-    Onboarding: {
-        screen: Onboarding
+    IntroSplash: {
+        screen: IntroSplash
+    },
+    Intro: {
+        screen: Intro
     },
     Wallet: {
         screen: Wallet
@@ -74,14 +85,35 @@ const AppScenes = {
     AddEditNode: {
         screen: AddEditNode
     },
+    Nodes: {
+        screen: Nodes
+    },
+    Privacy: {
+        screen: Privacy
+    },
+    Security: {
+        screen: Security
+    },
+    SetPassword: {
+        screen: SetPassword
+    },
+    Language: {
+        screen: Language
+    },
+    Currency: {
+        screen: Currency
+    },
+    Theme: {
+        screen: Theme
+    },
+    Help: {
+        screen: Help
+    },
     CertInstallInstructions: {
         screen: CertInstallInstructions
     },
-    About: {
-        screen: About
-    },
-    SignMessage: {
-        screen: SignMessage
+    SignVerifyMessage: {
+        screen: SignVerifyMessage
     },
     Transaction: {
         screen: Transaction

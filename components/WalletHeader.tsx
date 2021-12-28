@@ -1,26 +1,14 @@
 import React from 'react';
-import RESTUtils from '../utils/RESTUtils';
-import { themeColor } from '../utils/ThemeUtils';
 import { Button, Header } from 'react-native-elements';
-import { TouchableOpacity } from 'react-native';
-import NodeOn from '../images/SVG/Node On.svg';
+import { Image, TouchableOpacity, View } from 'react-native';
+import Identicon from 'identicon.js';
+import NodeIdenticon from '../components/NodeIdenticon';
+import RESTUtils from '../utils/RESTUtils';
+import PrivacyUtils from '../utils/PrivacyUtils';
+import { themeColor } from '../utils/ThemeUtils';
+import Keysign from '../images/SVG/Keysign.svg';
+import QRIcon from '../images/SVG/QR.svg';
 import { Body } from './text/Body';
-
-const SettingsButton = ({ navigation }: { navigation: any }) => (
-    <Button
-        title=""
-        icon={{
-            name: 'more-horiz',
-            size: 25,
-            color: themeColor('text')
-        }}
-        buttonStyle={{
-            backgroundColor: 'transparent',
-            marginRight: -10
-        }}
-        onPress={() => navigation.navigate('Settings')}
-    />
-);
 
 const OpenChannelButton = ({ navigation }: { navigation: any }) => (
     <Button
@@ -38,38 +26,52 @@ const OpenChannelButton = ({ navigation }: { navigation: any }) => (
     />
 );
 
-const NodeInfoBadge = ({ navigation }: { navigation: any }) => (
-    <TouchableOpacity onPress={() => navigation.navigate('NodeInfo')}>
-        <NodeOn stroke={themeColor('text')} />
+const QRBadge = ({ navigation }: { navigation: any }) => (
+    <TouchableOpacity
+        onPress={() => navigation.navigate('AddressQRCodeScanner')}
+    >
+        <QRIcon fill={themeColor('text')} />
     </TouchableOpacity>
 );
 
 export function WalletHeader({
     navigation,
+    SettingsStore,
     loading = false,
     title,
     channels = false
 }: {
     navigation: any;
+    SettingsStore: any;
     loading?: boolean;
     title?: string;
     channels?: boolean;
 }) {
+    const selectedNode: any =
+        (settings &&
+            settings.nodes &&
+            settings.nodes[settings.selectedNode || 0]) ||
+        null;
+
+    const SettingsButton = () => (
+        <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
+            {selectedNode ? (
+                <NodeIdenticon selectedNode={selectedNode} width={30} />
+            ) : (
+                <Image source={Head} style={{ width: 30, height: 30 }} />
+            )}
+        </TouchableOpacity>
+    );
+
     return (
         <Header
-            leftComponent={
-                loading || !RESTUtils.supportsNodeInfo() ? (
-                    undefined
-                ) : (
-                    <NodeInfoBadge navigation={navigation} />
-                )
-            }
+            leftComponent={loading ? undefined : <SettingsButton />}
             centerComponent={title ? <Body bold>{title}</Body> : undefined}
             rightComponent={
                 channels ? (
                     <OpenChannelButton navigation={navigation} />
                 ) : (
-                    <SettingsButton navigation={navigation} />
+                    <QRBadge navigation={navigation} />
                 )
             }
             backgroundColor="transparent"

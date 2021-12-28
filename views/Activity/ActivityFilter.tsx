@@ -3,9 +3,9 @@ import { FlatList, StyleSheet, Switch, Text, View } from 'react-native';
 import { Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
+import DatePicker from 'react-native-date-picker';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
-import DatePicker from 'react-native-date-picker';
 
 import ActivityStore from './../../stores/ActivityStore';
 
@@ -30,8 +30,8 @@ export default class ActivityFilter extends React.Component<
     state = {
         setStartDate: false,
         setEndDate: false,
-        workingStartDate: undefined,
-        workingEndDate: undefined
+        workingStartDate: new Date(),
+        workingEndDate: new Date()
     };
 
     renderSeparator = () => (
@@ -45,12 +45,8 @@ export default class ActivityFilter extends React.Component<
 
     render() {
         const { navigation, ActivityStore } = this.props;
-        const {
-            setStartDate,
-            setEndDate,
-            workingStartDate,
-            workingEndDate
-        } = this.state;
+        const { setStartDate, setEndDate, workingStartDate, workingEndDate } =
+            this.state;
         const {
             loading,
             setFilters,
@@ -160,7 +156,7 @@ export default class ActivityFilter extends React.Component<
                         }}
                     >
                         <DatePicker
-                            onDateChange={date =>
+                            onDateChange={(date) =>
                                 setStartDate
                                     ? this.setState({ workingStartDate: date })
                                     : this.setState({ workingEndDate: date })
@@ -183,8 +179,8 @@ export default class ActivityFilter extends React.Component<
                                     this.setState({
                                         setStartDate: false,
                                         setEndDate: false,
-                                        workingStartDate: undefined,
-                                        workingEndDate: undefined
+                                        workingStartDate: new Date(),
+                                        workingEndDate: new Date()
                                     });
                                 }}
                                 buttonStyle={{ backgroundColor: 'orange' }}
@@ -292,11 +288,10 @@ export default class ActivityFilter extends React.Component<
                                         <Switch
                                             value={item.value}
                                             onValueChange={() => {
-                                                let newFilters: any = filters;
+                                                const newFilters: any = filters;
                                                 const index = `${item.var}`;
-                                                newFilters[index] = !filters[
-                                                    index
-                                                ];
+                                                newFilters[index] =
+                                                    !filters[index];
                                                 setFilters(newFilters);
                                             }}
                                             trackColor={{

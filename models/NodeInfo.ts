@@ -61,7 +61,7 @@ export default class NodeInfo extends BaseModel {
         // c-lightning
         const uris: any[] = [];
         this.address &&
-            this.address.forEach(uri => {
+            this.address.forEach((uri) => {
                 uris.push(`${this.id}@${uri.address}:${uri.port}`);
             });
         return uris;
