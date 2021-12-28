@@ -1,13 +1,13 @@
 import * as React from 'react';
 import { FlatList, View, TouchableHighlight } from 'react-native';
 
+import { inject, observer } from 'mobx-react';
 import { ChannelsHeader } from '../../components/Channels/ChannelsHeader';
 import { WalletHeader } from '../../components/WalletHeader';
 import { ChannelItem } from '../../components/Channels/ChannelItem';
 import { localeString } from '../../utils/LocaleUtils';
 import { Spacer } from '../../components/layout/Spacer';
 
-import { inject, observer } from 'mobx-react';
 import ChannelsStore from '../../stores/ChannelsStore';
 
 // TODO: does this belong in the model? Or can it be computed from the model?
@@ -23,7 +23,7 @@ interface ChannelsProps {
     ChannelsStore: ChannelsStore;
 }
 
-@inject('ChannelsStore')
+@inject('ChannelsStore', 'SettingsStore')
 @observer
 export default class ChannelsPane extends React.PureComponent<
     ChannelsProps,
@@ -61,7 +61,7 @@ export default class ChannelsPane extends React.PureComponent<
     };
 
     render() {
-        const { ChannelsStore, navigation } = this.props;
+        const { ChannelsStore, SettingsStore, navigation } = this.props;
         const {
             loading,
             getChannels,
@@ -75,6 +75,7 @@ export default class ChannelsPane extends React.PureComponent<
                 <WalletHeader
                     navigation={navigation}
                     title={this.headerString}
+                    SettingsStore={SettingsStore}
                     channels
                 />
                 <ChannelsHeader

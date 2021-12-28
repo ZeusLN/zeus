@@ -9,28 +9,27 @@ interface PillProps {
     backgroundColor?: string;
 }
 
-export default class Pill extends React.Component<PillProps, {}> {
-    render() {
-        const { title, textColor, borderColor, backgroundColor } = this.props;
+function Pill(props: PillProps) {
+    const { title, textColor, borderColor, backgroundColor } = props;
 
-        return (
-            <TouchableOpacity
-                style={{
-                    borderWidth: 3,
-                    borderColor: borderColor || themeColor('highlight'),
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 90,
-                    height: 40,
-                    backgroundColor:
-                        backgroundColor || themeColor('background'),
-                    borderRadius: 50
-                }}
-            >
-                <Text style={{ color: textColor || themeColor('highlight') }}>
-                    {title}
-                </Text>
-            </TouchableOpacity>
-        );
-    }
+    return (
+        <TouchableOpacity
+            style={{
+                borderWidth: 3,
+                borderColor: borderColor || themeColor('highlight'),
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 90,
+                height: 40,
+                backgroundColor: backgroundColor || themeColor('background'),
+                borderRadius: 50
+            }}
+        >
+            <Text style={{ color: textColor || themeColor('highlight') }}>
+                {title}
+            </Text>
+        </TouchableOpacity>
+    );
 }
+
+export default Pill;

@@ -9,8 +9,8 @@ interface CurrencyDisplayRules {
 }
 export default class FiatStore {
     @observable public fiatRates: any = {};
-    @observable public loading: boolean = false;
-    @observable public error: boolean = false;
+    @observable public loading = false;
+    @observable public error = false;
 
     getFiatRatesToken: any;
 

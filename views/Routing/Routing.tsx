@@ -8,20 +8,17 @@ import {
 } from 'react-native';
 import { ButtonGroup, Header, Icon } from 'react-native-elements';
 
-import { RoutingHeader } from './RoutingHeader';
-import { WalletHeader } from '../../components/WalletHeader';
-import { RoutingListItem } from './RoutingListItem';
-import { Spacer } from '../../components/layout/Spacer';
-
-import { themeColor } from './../../utils/ThemeUtils';
-import { localeString } from '../../utils/LocaleUtils';
-
 import { inject, observer } from 'mobx-react';
+import { localeString } from '../../utils/LocaleUtils';
+import { Spacer } from '../../components/layout/Spacer';
 
 import FeeStore from '../../stores/FeeStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import Pie from '../../images/SVG/Pie.svg';
+import { themeColor } from './../../utils/ThemeUtils';
+import { RoutingListItem } from './RoutingListItem';
+import { RoutingHeader } from './RoutingHeader';
 
 interface RoutingProps {
     navigation: any;
@@ -223,9 +220,6 @@ export default class Routing extends React.PureComponent<
                                 backgroundColor: themeColor('secondary'),
                                 borderRadius: 12,
                                 borderColor: themeColor('secondary')
-                            }}
-                            innerBorderStyle={{
-                                color: themeColor('secondary')
                             }}
                             innerBorderStyle={{
                                 color: themeColor('secondary')

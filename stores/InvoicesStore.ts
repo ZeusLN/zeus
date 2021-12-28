@@ -1,9 +1,9 @@
+import url from 'url';
 import { action, observable, reaction } from 'mobx';
 import RNFetchBlob from 'rn-fetch-blob';
 import { Alert } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import querystring from 'querystring-es3';
-import url from 'url';
 import hashjs from 'hash.js';
 import Invoice from './../models/Invoice';
 import SettingsStore from './SettingsStore';
@@ -11,21 +11,22 @@ import RESTUtils from './../utils/RESTUtils';
 
 export default class InvoicesStore {
     @observable paymentRequest: string;
-    @observable loading: boolean = false;
-    @observable error: boolean = false;
+    @observable loading = false;
+    @observable error = false;
     @observable error_msg: string | null;
     @observable getPayReqError: string | null = null;
     @observable invoices: Array<Invoice> = [];
     @observable invoice: Invoice | null;
+    @observable onChainAddress: string | null;
     @observable pay_req: Invoice | null;
     @observable payment_request: string | null;
-    @observable creatingInvoice: boolean = false;
-    @observable creatingInvoiceError: boolean = false;
+    @observable creatingInvoice = false;
+    @observable creatingInvoiceError = false;
     @observable invoicesCount: number;
     settingsStore: SettingsStore;
 
     // lnd
-    @observable loadingFeeEstimate: boolean = false;
+    @observable loadingFeeEstimate = false;
     @observable feeEstimate: number | null;
     @observable successProbability: number | null;
 
@@ -86,7 +87,7 @@ export default class InvoicesStore {
             .then((data: any) => {
                 this.invoices = data.payments || data.invoices || data;
                 this.invoices = this.invoices.map(
-                    invoice => new Invoice(invoice)
+                    (invoice) => new Invoice(invoice)
                 );
                 this.invoices = this.invoices.slice().reverse();
                 this.invoicesCount =
@@ -102,7 +103,7 @@ export default class InvoicesStore {
     public createInvoice = (
         memo: string,
         value: string,
-        expiry: string = '3600',
+        expiry = '3600',
         lnurl?: LNURLWithdrawParams,
         ampInvoice?: boolean,
         routeHints?: boolean
@@ -112,7 +113,7 @@ export default class InvoicesStore {
         this.creatingInvoiceError = false;
         this.error_msg = null;
 
-        let req: any = {
+        const req: any = {
             memo,
             value,
             expiry
@@ -162,6 +163,8 @@ export default class InvoicesStore {
                             }
                         });
                 }
+
+                return invoice.getPaymentRequest;
             })
             .catch((error: any) => {
                 // handle error
@@ -169,6 +172,13 @@ export default class InvoicesStore {
                 this.creatingInvoice = false;
                 this.error_msg = error.toString() || 'Error creating invoice';
             });
+    };
+
+    @action
+    public getNewAddress = () => {
+        return RESTUtils.getNewAddress().then((data: any) => {
+            this.onChainAddress = data.address || data[0].address;
+        });
     };
 
     @action

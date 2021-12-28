@@ -1,6 +1,8 @@
+import stores from '../stores/Stores';
 import LND from './LND';
 import TransactionRequest from './../models/TransactionRequest';
 import OpenChannelRequest from './../models/OpenChannelRequest';
+import VersionUtils from './../utils/VersionUtils';
 
 export default class CLightningREST extends LND {
     getHeaders = (macaroonHex: string): any => {
@@ -8,6 +10,23 @@ export default class CLightningREST extends LND {
             macaroon: macaroonHex,
             encodingtype: 'hex'
         };
+    };
+
+    supports = (
+        minVersion: string,
+        eosVersion?: string,
+        minApiVersion?: string
+    ) => {
+        const { nodeInfo } = stores.nodeInfoStore;
+        const { version, api_version } = nodeInfo;
+        const { isSupportedVersion } = VersionUtils;
+        if (minApiVersion) {
+            return (
+                isSupportedVersion(version, minVersion, eosVersion) &&
+                isSupportedVersion(api_version, minApiVersion)
+            );
+        }
+        return isSupportedVersion(version, minVersion, eosVersion);
     };
 
     getTransactions = () =>
@@ -61,7 +80,7 @@ export default class CLightningREST extends LND {
             expiry: data.expiry,
             private: true
         });
-    getPayments = () => this.getRequest('/v1/pay/listPayments');
+    getPayments = () => this.getRequest('/v1/pay/listPays');
     getNewAddress = () => this.getRequest('/v1/newaddr');
     openChannel = (data: OpenChannelRequest) => {
         let request: any;
@@ -119,6 +138,10 @@ export default class CLightningREST extends LND {
         this.postRequest('/v1/utility/signMessage', {
             message: message
         });
+    verifyMessage = (data: any) =>
+        this.getRequest(
+            `/v1/utility/checkMessage/${data.msg}/${data.signature}`
+        );
 
     supportsMessageSigning = () => true;
     supportsMPP = () => false;

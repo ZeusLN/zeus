@@ -56,10 +56,10 @@ export default class LnurlPayStore {
         const allKeys = await AsyncStorage.getAllKeys();
         const toRemove = [];
         for (let i = 0; i < allKeys.length; i++) {
-            let key = allKeys[i];
+            const key = allKeys[i];
             if (key.slice(0, 9) === 'lnurlpay:') {
                 const itemString = await AsyncStorage.getItem(key);
-                let item = JSON.parse(itemString || '');
+                const item = JSON.parse(itemString || '');
                 if (
                     (item.last_stored && item.last_stored < daysago30) ||
                     (item.time && item.time < daysago30)
@@ -79,7 +79,7 @@ export default class LnurlPayStore {
         );
         if (lnurlpaytx) {
             lnurlpaytx = JSON.parse(lnurlpaytx);
-            let metadata: any = await AsyncStorage.getItem(
+            const metadata: any = await AsyncStorage.getItem(
                 'lnurlpay:' + lnurlpaytx.metadata_hash
             );
             if (metadata) {

@@ -1,11 +1,14 @@
+import { getParams as getlnurlParams, findlnurl } from 'js-lnurl';
+import RNFetchBlob from 'rn-fetch-blob';
 import stores from '../stores/Stores';
 import AddressUtils from './../utils/AddressUtils';
 import LndConnectUtils from './../utils/LndConnectUtils';
-import { getParams as getlnurlParams, findlnurl } from 'js-lnurl';
+import NodeUriUtils from './../utils/NodeUriUtils';
+import { localeString } from './../utils/LocaleUtils';
 
 const { nodeInfoStore, invoicesStore } = stores;
 
-export default async function(data: string): Promise<any> {
+export default async function (data: string): Promise<any> {
     const { nodeInfo } = nodeInfoStore;
     const { isTestNet, isRegTest } = nodeInfo;
     const { value, amount }: any = AddressUtils.processSendAddress(data);
@@ -40,11 +43,10 @@ export default async function(data: string): Promise<any> {
             }
         ];
     } else if (AddressUtils.isValidLNDHubAddress(value)) {
-        const { username, password, host } = AddressUtils.processLNDHubAddress(
-            value
-        );
+        const { username, password, host } =
+            AddressUtils.processLNDHubAddress(value);
 
-        const existingAccount: boolean = !!username;
+        const existingAccount = !!username;
 
         let node;
         if (host) {
@@ -71,6 +73,39 @@ export default async function(data: string): Promise<any> {
             {
                 node,
                 newEntry: true
+            }
+        ];
+    } else if (AddressUtils.isValidLightningAddress(value)) {
+        const [username, domain] = value.split('@');
+        const url = `https://${domain}/.well-known/lnurlp/${username}`;
+        const error = localeString(
+            'utils.handleAnything.lightningAddressError'
+        );
+        return RNFetchBlob.fetch('get', url)
+            .then((response: any) => {
+                const status = response.info().status;
+                if (status == 200) {
+                    const data = response.json();
+                    return [
+                        'LnurlPay',
+                        {
+                            lnurlParams: data
+                        }
+                    ];
+                } else {
+                    throw new Error(error);
+                }
+            })
+            .catch(() => {
+                throw new Error(error);
+            });
+    } else if (NodeUriUtils.isValidNodeUri(value)) {
+        const { pubkey, host } = NodeUriUtils.processNodeUri(value);
+        return [
+            'OpenChannel',
+            {
+                pubkey,
+                host
             }
         ];
     } else if (findlnurl(value) !== null) {

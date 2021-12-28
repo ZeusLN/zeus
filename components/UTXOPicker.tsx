@@ -100,7 +100,7 @@ export default class UTXOPicker extends React.Component<
             newArray.push(itemId);
             balance = selectedBalance + Number(item.getAmount);
         } else {
-            newArray = remove(newArray, function(n) {
+            newArray = remove(newArray, function (n) {
                 return n !== itemId;
             });
             balance = selectedBalance - Number(item.getAmount);
@@ -111,15 +111,11 @@ export default class UTXOPicker extends React.Component<
 
     render() {
         const { title, selectedValue, onValueChange, UTXOsStore } = this.props;
-        const {
-            utxosSelected,
-            utxosSet,
-            showUtxoModal,
-            selectedBalance
-        } = this.state;
+        const { utxosSelected, utxosSet, showUtxoModal, selectedBalance } =
+            this.state;
         const { utxos, loading, getUTXOs } = UTXOsStore;
 
-        let utxosPicked: string[] = [];
+        const utxosPicked: string[] = [];
         utxosSelected.forEach((utxo: string) => utxosPicked.push(utxo));
 
         const pickerValuesAndroid: Array<any> = [];
@@ -197,9 +193,8 @@ export default class UTXOPicker extends React.Component<
                                                 )}`}
                                                 containerStyle={{
                                                     borderBottomWidth: 0,
-                                                    backgroundColor: themeColor(
-                                                        'background'
-                                                    )
+                                                    backgroundColor:
+                                                        themeColor('background')
                                                 }}
                                                 leftElement={
                                                     utxosPicked.includes(
@@ -341,7 +336,7 @@ export default class UTXOPicker extends React.Component<
                                         options: pickerValuesIOS,
                                         cancelButtonIndex: 0
                                     },
-                                    buttonIndex => {
+                                    (buttonIndex) => {
                                         if (buttonIndex == 1) {
                                             this.clearSelection();
                                         } else if (buttonIndex == 2) {

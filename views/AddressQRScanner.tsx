@@ -28,7 +28,7 @@ export default class AddressQRScanner extends React.Component<
             .then(([route, props]) => {
                 navigation.navigate(route, props);
             })
-            .catch(err => {
+            .catch((err) => {
                 Alert.alert(
                     'Error',
                     err.message,
