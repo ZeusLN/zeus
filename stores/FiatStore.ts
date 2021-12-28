@@ -43,7 +43,8 @@ export default class FiatStore {
         const { settings } = this.settingsStore;
         const { fiat } = settings;
         if (fiat) {
-            return this.symbolLookup(this.fiatRates[fiat].symbol);
+            const fiatEntry = this.fiatRates.filter((entry: any) => entry.code === fiat);
+            return this.symbolLookup(fiatEntry.code);
         } else {
             console.log('no fiat?');
             // TODO: what do we do in this case?
@@ -56,8 +57,9 @@ export default class FiatStore {
         const { settings } = this.settingsStore;
         const { fiat } = settings;
         if (fiat) {
-            const rate = this.fiatRates[fiat]['15m'];
-            //const symbol = this.symbolLookup(this.fiatRates[fiat].symbol);
+            const fiatEntry = this.fiatRates.filter((entry: any) => entry.code === fiat);
+            const rate = fiatEntry.rate;
+            //const symbol = this.symbolLookup(fiatEntry.code);
             const symbol = '$';
             return `${symbol}${rate} BTC/${fiat}`;
         }
@@ -67,7 +69,7 @@ export default class FiatStore {
     @action
     public getFiatRates = () => {
         this.loading = true;
-        RNFetchBlob.fetch('get', 'https://blockchain.info/ticker')
+        RNFetchBlob.fetch('get', 'https://pay.zeusln.app/api/rates?storeId=Fjt7gLnGpg4UeBMFccLquy3GTTEz4cHU4PZMU63zqMBo')
             .then((response: any) => {
                 const status = response.info().status;
                 if (status == 200) {
