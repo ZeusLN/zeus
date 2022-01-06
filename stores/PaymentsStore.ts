@@ -5,8 +5,8 @@ import ChannelsStore from './ChannelsStore';
 import RESTUtils from './../utils/RESTUtils';
 
 export default class PaymentsStore {
-    @observable loading: boolean = false;
-    @observable error: boolean = false;
+    @observable loading = false;
+    @observable error = false;
     @observable error_msg: string;
     @observable payments: Array<Payment | any> = [];
     settingsStore: SettingsStore;
@@ -33,7 +33,8 @@ export default class PaymentsStore {
         this.loading = true;
         await RESTUtils.getPayments()
             .then((data: any) => {
-                const payments = data.transaction || data.payments || data;
+                const payments =
+                    data.transaction || data.payments || data.pays || data;
                 this.payments = payments
                     .slice()
                     .reverse()

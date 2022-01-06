@@ -7,13 +7,11 @@ interface LnurlPayMetadataProps {
     metadata: string;
 }
 
-export default class LnurlPayMetadata extends React.Component<
-    LnurlPayMetadataProps
-> {
+export default class LnurlPayMetadata extends React.Component<LnurlPayMetadataProps> {
     render() {
         const { metadata } = this.props;
 
-        var keypairs: Array<Array<string>>;
+        let keypairs: Array<Array<string>>;
         try {
             keypairs = JSON.parse(metadata);
         } catch (err) {

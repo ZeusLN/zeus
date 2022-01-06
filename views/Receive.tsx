@@ -10,9 +10,10 @@ import {
     View
 } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
-import { Button, ButtonGroup, Header, Icon } from 'react-native-elements';
-import CollapsedQR from './../components/CollapsedQR';
+import { ButtonGroup, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import Button from './../components/Button';
+import CollapsedQR from './../components/CollapsedQR';
 import RESTUtils from './../utils/RESTUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
@@ -57,9 +58,8 @@ export default class Receive extends React.Component<
 
     componentDidMount() {
         const { navigation } = this.props;
-        const lnurl: LNURLWithdrawParams | undefined = navigation.getParam(
-            'lnurlParams'
-        );
+        const lnurl: LNURLWithdrawParams | undefined =
+            navigation.getParam('lnurlParams');
 
         const selectedIndex: number = navigation.getParam('selectedIndex');
 
@@ -79,8 +79,8 @@ export default class Receive extends React.Component<
     }
 
     getNewAddress = () => {
-        const { SettingsStore } = this.props;
-        SettingsStore.getNewAddress();
+        const { InvoicesStore } = this.props;
+        InvoicesStore.getNewAddress();
     };
 
     updateIndex = (selectedIndex: number) => {
@@ -107,32 +107,22 @@ export default class Receive extends React.Component<
             FiatStore,
             navigation
         } = this.props;
-        const {
-            selectedIndex,
-            memo,
-            value,
-            expiry,
-            ampInvoice,
-            routeHints
-        } = this.state;
+        const { selectedIndex, memo, value, expiry, ampInvoice, routeHints } =
+            this.state;
         const { units, changeUnits } = UnitsStore;
         const { fiatRates }: any = FiatStore;
 
         const {
             createInvoice,
+            onChainAddress,
             payment_request,
             creatingInvoice,
             creatingInvoiceError,
             error_msg
         } = InvoicesStore;
-        const {
-            settings,
-            loading,
-            chainAddress,
-            implementation
-        } = SettingsStore;
+        const { settings, loading, implementation } = SettingsStore;
         const { fiat } = settings;
-        const address = chainAddress;
+        const address = onChainAddress;
 
         const rate =
             fiat && fiat !== 'Disabled' && fiatRates
@@ -154,9 +144,8 @@ export default class Receive extends React.Component<
                 break;
         }
 
-        const lnurl: LNURLWithdrawParams | undefined = navigation.getParam(
-            'lnurlParams'
-        );
+        const lnurl: LNURLWithdrawParams | undefined =
+            navigation.getParam('lnurlParams');
 
         const lightningButton = () => (
             <React.Fragment>
@@ -258,7 +247,7 @@ export default class Receive extends React.Component<
                             {creatingInvoice && (
                                 <ActivityIndicator
                                     size="large"
-                                    color="#0000ff"
+                                    color={themeColor('highlight')}
                                 />
                             )}
                             {!!payment_request && (
@@ -445,17 +434,12 @@ export default class Receive extends React.Component<
                                         localeString(
                                             'views.Receive.createInvoice'
                                         ) +
-                                        (!!lnurl
+                                        (lnurl
                                             ? ` ${localeString(
                                                   'views.Receive.andSubmitTo'
                                               )} ${lnurl.domain}`
                                             : '')
                                     }
-                                    icon={{
-                                        name: 'create',
-                                        size: 25,
-                                        color: 'white'
-                                    }}
                                     onPress={() =>
                                         createInvoice(
                                             memo,
@@ -466,10 +450,6 @@ export default class Receive extends React.Component<
                                             routeHints
                                         )
                                     }
-                                    buttonStyle={{
-                                        backgroundColor: 'orange',
-                                        borderRadius: 30
-                                    }}
                                 />
                             </View>
                         </View>
@@ -484,10 +464,10 @@ export default class Receive extends React.Component<
                             {loading && (
                                 <ActivityIndicator
                                     size="large"
-                                    color="#0000ff"
+                                    color={themeColor('highlight')}
                                 />
                             )}
-                            {address && (
+                            {address && !loading && (
                                 <CollapsedQR
                                     value={address}
                                     copyText={localeString(
@@ -495,7 +475,10 @@ export default class Receive extends React.Component<
                                     )}
                                 />
                             )}
-                            {!(implementation === 'lndhub' && address) && (
+                            {!(
+                                (implementation === 'lndhub' && address) ||
+                                loading
+                            ) && (
                                 <View style={styles.button}>
                                     <Button
                                         title={
@@ -507,16 +490,7 @@ export default class Receive extends React.Component<
                                                       'views.Receive.getNewAddress'
                                                   )
                                         }
-                                        icon={{
-                                            name: 'fiber-new',
-                                            size: 25,
-                                            color: 'white'
-                                        }}
                                         onPress={() => this.getNewAddress()}
-                                        buttonStyle={{
-                                            backgroundColor: 'orange',
-                                            borderRadius: 30
-                                        }}
                                     />
                                 </View>
                             )}

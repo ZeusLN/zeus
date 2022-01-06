@@ -42,16 +42,13 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
     );
 
     render() {
-        const {
-            navigation,
-            UTXOsStore,
-            UnitsStore,
-            SettingsStore
-        } = this.props;
+        const { navigation, UTXOsStore, UnitsStore, SettingsStore } =
+            this.props;
         const { getAmount, units } = UnitsStore;
         const { loading, utxos, getUTXOs } = UTXOsStore;
         const { settings } = SettingsStore;
-        const { lurkerMode } = settings;
+        const { privacy } = settings;
+        const { lurkerMode } = privacy;
 
         const AddPill = () => (
             <Pill title={localeString('general.add').toUpperCase()} />
@@ -97,7 +94,10 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                 />
                 {loading ? (
                     <View style={{ padding: 50 }}>
-                        <ActivityIndicator size="large" color="#0000ff" />
+                        <ActivityIndicator
+                            size="large"
+                            color={themeColor('highlight')}
+                        />
                     </View>
                 ) : !!utxos && utxos.length > 0 ? (
                     <FlatList
@@ -111,9 +111,8 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                                     <ListItem
                                         containerStyle={{
                                             borderBottomWidth: 0,
-                                            backgroundColor: themeColor(
-                                                'background'
-                                            )
+                                            backgroundColor:
+                                                themeColor('background')
                                         }}
                                         onPress={() => {
                                             navigation.navigate('Utxo', {
@@ -160,7 +159,7 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                     />
                 ) : (
                     <Button
-                        title={localeString('views.Activity.noActivity')}
+                        title={localeString('views.UTXOs.CoinControl.noUTXOs')}
                         icon={{
                             name: 'error-outline',
                             size: 25,

@@ -1,14 +1,15 @@
+import url from 'url';
 import * as React from 'react';
 import RNFetchBlob from 'rn-fetch-blob';
 import { Alert, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import querystring from 'querystring-es3';
-import url from 'url';
+import { Hash as sha256Hash, HMAC as sha256HMAC } from 'fast-sha256';
+
 import { themeColor } from './../utils/ThemeUtils';
 import { localeString } from './../utils/LocaleUtils';
 import RESTUtils from './../utils/RESTUtils';
 import Base64Utils from './../utils/Base64Utils';
-import { Hash as sha256Hash, HMAC as sha256HMAC } from 'fast-sha256';
 
 const EC = require('elliptic').ec;
 const ec = new EC('secp256k1');
@@ -118,9 +119,8 @@ export default class LnurlAuth extends React.Component<
 
                 this.setState({
                     linkingKeyPub: linkingKeyPub,
-                    signedMessageDER: Base64Utils.bytesToHexString(
-                        signedMessageDER
-                    ),
+                    signedMessageDER:
+                        Base64Utils.bytesToHexString(signedMessageDER),
                     preparingSignature: false,
                     signatureSuccess: true
                 });

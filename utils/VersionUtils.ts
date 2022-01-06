@@ -19,8 +19,12 @@ class VersionUtils {
         minVersion: string,
         eosVersion?: string
     ) => {
-        const user = this.parseVersion(userVersion);
-        const min = this.parseVersion(minVersion);
+        const user = userVersion
+            ? this.parseVersion(userVersion)
+            : { coreVersion: 0, mainVersion: 0, minorVersion: 0 };
+        const min = minVersion
+            ? this.parseVersion(minVersion)
+            : { coreVersion: 0, mainVersion: 0, minorVersion: 0 };
 
         if (user.coreVersion < min.coreVersion) {
             return false;

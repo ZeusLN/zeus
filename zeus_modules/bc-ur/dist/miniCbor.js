@@ -1,6 +1,9 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.decodeSimpleCBOR = exports.encodeSimpleCBOR = exports.composeHeader = void 0;
+'use strict';
+Object.defineProperty(exports, '__esModule', { value: true });
+exports.decodeSimpleCBOR =
+    exports.encodeSimpleCBOR =
+    exports.composeHeader =
+        void 0;
 /*
     this an simple cbor implementation which is just using
     on BCR-05

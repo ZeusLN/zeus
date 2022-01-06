@@ -1,13 +1,13 @@
 import * as React from 'react';
 import { View } from 'react-native';
-import { themeColor } from './../../utils/ThemeUtils';
 
 import { Body } from '../../components/text/Body';
 import { BalanceBar } from '../../components/Channels/BalanceBar';
 import { Row } from '../../components/layout/Row';
 import { Status } from '../../views/Channels/ChannelsPane';
-import { Tag } from './Tag';
 import { Amount } from '../Amount';
+import { Tag } from './Tag';
+import { themeColor } from './../../utils/ThemeUtils';
 
 export function ChannelItem({
     title,

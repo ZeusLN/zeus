@@ -10,7 +10,10 @@ import {
 } from 'react-native';
 import Clipboard from '@react-native-community/clipboard';
 import { inject, observer } from 'mobx-react';
-import { Button, Header, Icon } from 'react-native-elements';
+import { Header, Icon } from 'react-native-elements';
+
+import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
+
 import handleAnything from './../utils/handleAnything';
 
 import InvoicesStore from './../stores/InvoicesStore';
@@ -23,10 +26,12 @@ import SettingsStore from './../stores/SettingsStore';
 import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
 import FiatStore from './../stores/FiatStore';
 
+import Button from './../components/Button';
 import UTXOPicker from './../components/UTXOPicker';
 import FeeTable from './../components/FeeTable';
 
 import RESTUtils from './../utils/RESTUtils';
+import NFCUtils from './../utils/NFCUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
@@ -99,22 +104,58 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     async UNSAFE_componentWillMount() {
-        const clipboard = await Clipboard.getString();
-        if (!this.state.destination) {
-            this.validateAddress(clipboard);
+        const { SettingsStore } = this.props;
+        const { settings } = SettingsStore;
+
+        if (settings.privacy && settings.privacy.clipboard) {
+            const clipboard = await Clipboard.getString();
+            if (!this.state.destination) {
+                this.validateAddress(clipboard);
+            }
         }
     }
 
-    componentDidMount() {
+    async componentDidMount() {
         if (this.state.destination) {
             this.validateAddress(this.state.destination);
         }
+
+        await this.initNfc();
     }
+
+    initNfc = async () => {
+        await NfcManager.start();
+
+        const cleanUp = () => {
+            NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
+            NfcManager.setEventListener(NfcEvents.SessionClosed, null);
+        };
+
+        return new Promise((resolve: any) => {
+            let tagFound = null;
+
+            NfcManager.setEventListener(NfcEvents.DiscoverTag, (tag: any) => {
+                tagFound = tag;
+                const bytes = new Uint8Array(tagFound.ndefMessage[0].payload);
+                const str = NFCUtils.nfcUtf8ArrayToStr(bytes);
+                resolve(this.validateAddress(str));
+                NfcManager.unregisterTagEvent().catch(() => 0);
+            });
+
+            NfcManager.setEventListener(NfcEvents.SessionClosed, () => {
+                if (!tagFound) {
+                    resolve();
+                }
+            });
+
+            NfcManager.registerTagEvent();
+        });
+    };
 
     selectUTXOs = (utxos: Array<string>, utxoBalance: number) => {
         const { SettingsStore } = this.props;
         const { implementation } = SettingsStore;
-        let newState: any = {};
+        const newState: any = {};
         newState.utxos = utxos;
         newState.utxoBalance = utxoBalance;
         if (implementation === 'c-lightning-REST') {
@@ -147,7 +188,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             .then(([route, props]) => {
                 navigation.navigate(route, props);
             })
-            .catch(err => {
+            .catch((err) => {
                 this.setState({
                     transactionType: null,
                     isValid: false,
@@ -182,11 +223,10 @@ export default class Send extends React.Component<SendProps, SendState> {
         navigation.navigate('SendingOnChain');
     };
 
-    sendKeySendPayment = () => {
+    sendKeySendPayment = (satAmount: string | number) => {
         const { TransactionsStore, navigation } = this.props;
         const {
             destination,
-            amount,
             maxParts,
             maxShardAmt,
             timeoutSeconds,
@@ -195,7 +235,7 @@ export default class Send extends React.Component<SendProps, SendState> {
 
         if (RESTUtils.supportsAMP()) {
             TransactionsStore.sendPayment({
-                amount,
+                amount: satAmount.toString(),
                 pubkey: destination,
                 max_parts: maxParts,
                 max_shard_amt: maxShardAmt,
@@ -204,7 +244,10 @@ export default class Send extends React.Component<SendProps, SendState> {
                 amp: true
             });
         } else {
-            TransactionsStore.sendPayment({ amount, pubkey: destination });
+            TransactionsStore.sendPayment({
+                amount: satAmount.toString(),
+                pubkey: destination
+            });
         }
 
         navigation.navigate('SendingLightning');
@@ -264,7 +307,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                 satAmount = Number(amount) * satoshisPerBTC;
                 break;
             case 'fiat':
-                satAmount = Number(Number(amount) * rate).toFixed(0);
+                satAmount = Number(Number(amount) / rate).toFixed(0);
                 break;
         }
 
@@ -334,6 +377,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         <Text
                             style={{
                                 paddingTop: 10,
+                                color: themeColor('text'),
                                 ...styles.text
                             }}
                         >{`${transactionType} Transaction`}</Text>
@@ -420,8 +464,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 <TouchableWithoutFeedback
                                     onPress={() =>
                                         navigation.navigate('EditFee', {
-                                            onNavigateBack: this
-                                                .handleOnNavigateBack
+                                            onNavigateBack:
+                                                this.handleOnNavigateBack
                                         })
                                     }
                                 >
@@ -437,7 +481,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         <Text
                                             style={{
                                                 ...styles.text,
-                                                fontSize: 18
+                                                fontSize: 18,
+                                                color: themeColor('text')
                                             }}
                                         >
                                             {fee}
@@ -464,11 +509,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         onPress={() =>
                                             this.sendCoins(satAmount)
                                         }
-                                        style={styles.button}
-                                        buttonStyle={{
-                                            backgroundColor: 'orange',
-                                            borderRadius: 30
-                                        }}
                                     />
                                 </View>
                             </React.Fragment>
@@ -655,13 +695,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             color: 'white'
                                         }}
                                         onPress={() =>
-                                            this.sendKeySendPayment()
+                                            this.sendKeySendPayment(satAmount)
                                         }
-                                        style={styles.button}
-                                        buttonStyle={{
-                                            backgroundColor: 'orange',
-                                            borderRadius: 30
-                                        }}
                                     />
                                 </View>
                             </React.Fragment>
@@ -695,11 +730,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 onPress={() =>
                                     navigation.navigate('PaymentRequest')
                                 }
-                                style={styles.button}
-                                buttonStyle={{
-                                    backgroundColor: 'orange',
-                                    borderRadius: 30
-                                }}
                             />
                         </View>
                     )}
@@ -714,10 +744,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             onPress={() =>
                                 navigation.navigate('AddressQRCodeScanner')
                             }
-                            buttonStyle={{
-                                backgroundColor: '#261339',
-                                borderRadius: 30
-                            }}
+                            secondary
                         />
                     </View>
 

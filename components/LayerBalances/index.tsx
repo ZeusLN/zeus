@@ -3,6 +3,10 @@ import { StyleSheet, Text, View, I18nManager } from 'react-native';
 
 import { FlatList, RectButton } from 'react-native-gesture-handler';
 
+import { inject, observer } from 'mobx-react';
+import * as Animatable from 'react-native-animatable';
+import { Amount } from '../Amount';
+import { Spacer } from '../layout/Spacer';
 import OnchainSwipeableRow from './OnchainSwipeableRow';
 import LightningSwipeableRow from './LightningSwipeableRow';
 
@@ -11,14 +15,8 @@ import UnitsStore from './../../stores/UnitsStore';
 
 import { themeColor } from './../../utils/ThemeUtils';
 
-import { inject, observer } from 'mobx-react';
-
 import OnChain from './../../images/SVG/OnChain.svg';
-import Lightning from './../../images/SVG/Lightning Circle.svg';
-import { Amount } from '../Amount';
-import { Spacer } from '../layout/Spacer';
-
-import * as Animatable from 'react-native-animatable';
+import Lightning from './../../images/SVG/Lightning.svg';
 
 interface LayerBalancesProps {
     BalanceStore: BalanceStore;

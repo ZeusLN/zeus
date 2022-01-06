@@ -7,15 +7,15 @@ import SettingsStore from './SettingsStore';
 
 export default class FeeStore {
     @observable public fees: any = {};
-    @observable public earnedDuringTimeframe: number = 0;
+    @observable public earnedDuringTimeframe = 0;
     @observable public channelFees: any = {};
     @observable public dataFrame: any = {};
     @observable public recommendedFees: any = {};
-    @observable public loading: boolean = false;
-    @observable public error: boolean = false;
-    @observable public setFeesError: boolean = false;
+    @observable public loading = false;
+    @observable public error = false;
+    @observable public setFeesError = false;
     @observable public setFeesErrorMsg: string;
-    @observable public setFeesSuccess: boolean = false;
+    @observable public setFeesSuccess = false;
 
     @observable public dayEarned: string | number;
     @observable public weekEarned: string | number;
@@ -24,7 +24,7 @@ export default class FeeStore {
 
     @observable public forwardingEvents: Array<any> = [];
     @observable public lastOffsetIndex: number;
-    @observable public forwardingHistoryError: boolean = false;
+    @observable public forwardingHistoryError = false;
 
     getOnchainFeesToken: any;
 
@@ -114,7 +114,7 @@ export default class FeeStore {
     public setFees = (
         newBaseFee: string,
         newFeeRate: string,
-        timeLockDelta: number = 4,
+        timeLockDelta = 4,
         channelPoint?: string,
         channelId?: string
     ) => {
@@ -125,7 +125,7 @@ export default class FeeStore {
 
         const data: any = {
             base_fee_msat: `${Number(newBaseFee) * 1000}`,
-            fee_rate: `${Number(newFeeRate) / 1000}`,
+            fee_rate: newFeeRate,
             time_lock_delta: timeLockDelta
         };
 

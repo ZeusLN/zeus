@@ -1,10 +1,10 @@
 import { action, observable, reaction } from 'mobx';
+import { randomBytes } from 'react-native-randombytes';
 import Channel from './../models/Channel';
 import ChannelInfo from './../models/ChannelInfo';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import CloseChannelRequest from './../models/CloseChannelRequest';
 import SettingsStore from './SettingsStore';
-import { randomBytes } from 'react-native-randombytes';
 
 import Base64Utils from './../utils/Base64Utils';
 import RESTUtils from './../utils/RESTUtils';
@@ -14,9 +14,9 @@ interface ChannelInfoIndex {
 }
 
 export default class ChannelsStore {
-    @observable public loading: boolean = false;
-    @observable public error: boolean = false;
-    @observable public errorPeerConnect: boolean = false;
+    @observable public loading = false;
+    @observable public error = false;
+    @observable public errorPeerConnect = false;
     @observable public errorMsgChannel: string | null;
     @observable public errorMsgPeer: string | null;
     @observable public nodes: any = {};
@@ -24,18 +24,18 @@ export default class ChannelsStore {
     @observable public channels: Array<Channel> = [];
     @observable public output_index: number | null;
     @observable public funding_txid_str: string | null;
-    @observable public openingChannel: boolean = false;
-    @observable public connectingToPeer: boolean = false;
-    @observable public errorOpenChannel: boolean = false;
-    @observable public peerSuccess: boolean = false;
-    @observable public channelSuccess: boolean = false;
+    @observable public openingChannel = false;
+    @observable public connectingToPeer = false;
+    @observable public errorOpenChannel = false;
+    @observable public peerSuccess = false;
+    @observable public channelSuccess = false;
     @observable channelRequest: any;
     closeChannelSuccess: boolean;
     // redesign
-    @observable public largestChannelSats: number = 0;
-    @observable public totalOutbound: number = 0;
-    @observable public totalInbound: number = 0;
-    @observable public totalOffline: number = 0;
+    @observable public largestChannelSats = 0;
+    @observable public totalOutbound = 0;
+    @observable public totalInbound = 0;
+    @observable public totalOffline = 0;
     @observable public chanInfo: ChannelInfoIndex = {};
 
     settingsStore: SettingsStore;
@@ -231,11 +231,11 @@ export default class ChannelsStore {
         console.log(request);
         const { utxos } = request;
         const inputs: any = [];
-        let outputs: any = {};
+        const outputs: any = {};
         const sat_per_byte = request.sat_per_byte;
 
         if (utxos) {
-            utxos.forEach(input => {
+            utxos.forEach((input) => {
                 const [txid_str, output_index] = input.split(':');
                 inputs.push({ txid_str, output_index: Number(output_index) });
             });
