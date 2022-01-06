@@ -295,12 +295,10 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                                 flex: 1,
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                top: 80
+                                top: 150
                             }}
                         >
-                            <View>
-                                <ErrorIcon/>
-                            </View>
+                            <ErrorIcon/>
                         </View>
                         <Text
                             style={{
