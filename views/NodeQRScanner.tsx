@@ -8,10 +8,10 @@ interface NodeQRProps {
     navigation: any;
 }
 
-export default class NodeQRScanner extends React.Component<NodeQRProps, {}> {
-    handleNodeScanned = (data: string) => {
-        const { navigation } = this.props;
+function NodeQRScanner(props: NodeQRProps) {
+    const { navigation } = props;
 
+    const handleNodeScanned = (data: string) => {
         if (NodeUriUtils.isValidNodeUri(data)) {
             const { pubkey, host } = NodeUriUtils.processNodeUri(data);
             navigation.navigate('OpenChannel', {
@@ -29,16 +29,15 @@ export default class NodeQRScanner extends React.Component<NodeQRProps, {}> {
             navigation.navigate('OpenChannel');
         }
     };
-    render() {
-        const { navigation } = this.props;
 
-        return (
-            <QRCodeScanner
-                title={localeString('views.NodeQRScanner.title')}
-                text={localeString('views.NodeQRScanner.text')}
-                handleQRScanned={this.handleNodeScanned}
-                goBack={() => navigation.navigate('OpenChannel')}
-            />
-        );
-    }
+    return (
+        <QRCodeScanner
+            title={localeString('views.NodeQRScanner.title')}
+            text={localeString('views.NodeQRScanner.text')}
+            handleQRScanned={handleNodeScanned}
+            goBack={() => navigation.navigate('OpenChannel')}
+        />
+    );
 }
+
+export default NodeQRScanner;

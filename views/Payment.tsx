@@ -7,8 +7,8 @@ import {
     View
 } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
-import Payment from './../models/Payment';
 import { inject, observer } from 'mobx-react';
+import Payment from './../models/Payment';
 import PrivacyUtils from './../utils/PrivacyUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
@@ -30,7 +30,7 @@ const PaymentPath = ({ path }: any) => {
         return path[0];
     }
 
-    let multiPathDisplay: any = [];
+    const multiPathDisplay: any = [];
     for (let i = 0; i < path.length; i++) {
         multiPathDisplay.push(`Part ${i + 1}/${path.length}`);
         for (let j = 0; j < path[i].length; j++) {
@@ -52,7 +52,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
     async componentDidMount() {
         const { navigation, LnurlPayStore } = this.props;
         const payment: Payment = navigation.getParam('payment', null);
-        let lnurlpaytx = await LnurlPayStore.load(payment.payment_hash);
+        const lnurlpaytx = await LnurlPayStore.load(payment.payment_hash);
         if (lnurlpaytx) {
             this.setState({ lnurlpaytx });
         }
@@ -62,14 +62,15 @@ export default class PaymentView extends React.Component<PaymentProps> {
         const { navigation, UnitsStore, SettingsStore } = this.props;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { settings } = SettingsStore;
-        const { lurkerMode } = settings;
+        const { privacy } = settings;
+        const { lurkerMode } = privacy;
 
         const payment: Payment = navigation.getParam('payment', null);
         const {
             getDisplayTime,
             getFee,
             payment_hash,
-            payment_preimage,
+            getPreimage,
             enhancedPath
         } = payment;
         const date = getDisplayTime;
@@ -126,7 +127,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                         <LnurlPayHistorical
                             navigation={navigation}
                             lnurlpaytx={lnurlpaytx}
-                            preimage={payment_preimage}
+                            preimage={getPreimage}
                         />
                     </View>
                 )}
@@ -184,7 +185,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                     <Text
                         style={{ ...styles.value, color: themeColor('text') }}
                     >
-                        {PrivacyUtils.sensitiveValue(payment_preimage)}
+                        {PrivacyUtils.sensitiveValue(getPreimage)}
                     </Text>
 
                     <Text

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Alert } from 'react-native';
-import QRCodeScanner from './../components/QRCodeScanner';
 import { inject, observer } from 'mobx-react';
+import QRCodeScanner from './../components/QRCodeScanner';
 import { localeString } from './../utils/LocaleUtils';
 
 import SettingsStore from './../stores/SettingsStore';
@@ -25,7 +25,7 @@ export default class BTCPayConfigQRScanner extends React.Component<
 
         fetchBTCPayConfig(data)
             .then((config: any) => {
-                if (!!SettingsStore.btcPayError) {
+                if (SettingsStore.btcPayError) {
                     Alert.alert(
                         localeString('general.error'),
                         SettingsStore.btcPayError,

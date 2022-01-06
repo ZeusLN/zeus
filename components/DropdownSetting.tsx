@@ -3,6 +3,7 @@ import {
     ActionSheetIOS,
     Platform,
     View,
+    StyleSheet,
     Text,
     TouchableOpacity
 } from 'react-native';
@@ -15,7 +16,6 @@ interface DropdownSettingProps {
     displayValue?: string;
     onValueChange: (value: any) => void;
     values: Array<any>;
-    color?: string;
 }
 
 export default class DropdownSetting extends React.Component<
@@ -23,14 +23,8 @@ export default class DropdownSetting extends React.Component<
     {}
 > {
     render() {
-        const {
-            title,
-            selectedValue,
-            displayValue,
-            onValueChange,
-            values,
-            color
-        } = this.props;
+        const { title, selectedValue, displayValue, onValueChange, values } =
+            this.props;
 
         const pickerValuesAndroid: Array<any> = [];
         const pickerValuesIOS: Array<string> = ['Cancel'];
@@ -48,11 +42,10 @@ export default class DropdownSetting extends React.Component<
         return (
             <React.Fragment>
                 {Platform.OS !== 'ios' && (
-                    <View>
+                    <View style={{ height: 75 }}>
                         <Text
                             style={{
-                                color: color || themeColor('text'),
-                                paddingLeft: 10
+                                color: themeColor('secondaryText')
                             }}
                         >
                             {title}
@@ -63,8 +56,7 @@ export default class DropdownSetting extends React.Component<
                                 onValueChange(itemValue)
                             }
                             style={{
-                                height: 50,
-                                color: color || themeColor('text')
+                                color: themeColor('text')
                             }}
                         >
                             {pickerValuesAndroid}
@@ -76,10 +68,7 @@ export default class DropdownSetting extends React.Component<
                     <View>
                         <Text
                             style={{
-                                color: color || themeColor('text'),
-                                textDecorationLine: 'underline',
-                                paddingLeft: 10,
-                                paddingTop: 10
+                                color: themeColor('secondaryText')
                             }}
                         >
                             {title}
@@ -91,7 +80,7 @@ export default class DropdownSetting extends React.Component<
                                         options: pickerValuesIOS,
                                         cancelButtonIndex: 0
                                     },
-                                    buttonIndex => {
+                                    (buttonIndex) => {
                                         if (buttonIndex) {
                                             onValueChange(
                                                 values[buttonIndex - 1].value
@@ -103,8 +92,8 @@ export default class DropdownSetting extends React.Component<
                         >
                             <Text
                                 style={{
-                                    color: color || themeColor('text'),
-                                    paddingLeft: 10
+                                    color: themeColor('text'),
+                                    ...styles.field
                                 }}
                             >
                                 {displayValue ? displayValue : selectedValue}
@@ -116,3 +105,18 @@ export default class DropdownSetting extends React.Component<
         );
     }
 }
+
+const styles = StyleSheet.create({
+    field: {
+        fontSize: 20,
+        width: '100%',
+        height: 55,
+        top: 10,
+        paddingTop: 15,
+        backgroundColor: '#31363F',
+        borderRadius: 6,
+        borderBottomWidth: 20,
+        marginBottom: 20,
+        paddingLeft: 5
+    }
+});

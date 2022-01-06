@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import Clipboard from '@react-native-community/clipboard';
 import { inject, observer } from 'mobx-react';
-import { Button, CheckBox, Header, Icon } from 'react-native-elements';
+import { CheckBox, Header, Icon } from 'react-native-elements';
+import Button from './../components/Button';
 import FeeTable from './../components/FeeTable';
 import UTXOPicker from './../components/UTXOPicker';
 
@@ -85,19 +86,44 @@ export default class OpenChannel extends React.Component<
     }
 
     async UNSAFE_componentWillMount() {
-        const clipboard = await Clipboard.getString();
+        const { SettingsStore } = this.props;
+        const { settings } = SettingsStore;
 
-        if (NodeUriUtils.isValidNodeUri(clipboard)) {
-            this.setState({
-                suggestImport: clipboard
-            });
+        if (settings.privacy && settings.privacy.clipboard) {
+            const clipboard = await Clipboard.getString();
+
+            if (NodeUriUtils.isValidNodeUri(clipboard)) {
+                this.setState({
+                    suggestImport: clipboard
+                });
+            }
         }
+    }
+
+    async componentDidMount() {
+        this.initFromProps(this.props);
+    }
+
+    UNSAFE_componentWillReceiveProps(nextProps: any) {
+        this.initFromProps(nextProps);
+    }
+
+    initFromProps(props: any) {
+        const { navigation } = props;
+
+        const pubkey = navigation.getParam('pubkey', null);
+        const host = navigation.getParam('host', null);
+
+        this.setState({
+            node_pubkey_string: pubkey,
+            host
+        });
     }
 
     selectUTXOs = (utxos: Array<string>, utxoBalance: number) => {
         const { SettingsStore } = this.props;
         const { implementation } = SettingsStore;
-        let newState: any = {};
+        const newState: any = {};
         newState.utxos = utxos;
         newState.utxoBalance = utxoBalance;
         if (implementation === 'c-lightning-REST') {
@@ -125,20 +151,6 @@ export default class OpenChannel extends React.Component<
             suggestImport: ''
         });
     };
-
-    UNSAFE_componentWillReceiveProps(nextProps: any) {
-        const { navigation } = nextProps;
-        const node_pubkey_string = navigation.getParam(
-            'node_pubkey_string',
-            null
-        );
-        const host = navigation.getParam('host', null);
-
-        this.setState({
-            node_pubkey_string,
-            host
-        });
-    }
 
     setFee = (text: string) => {
         this.setState({ sat_per_byte: text });
@@ -222,26 +234,14 @@ export default class OpenChannel extends React.Component<
                             <Button
                                 title={localeString('views.OpenChannel.import')}
                                 onPress={() => this.importClipboard()}
-                                titleStyle={{
-                                    color: 'rgba(92, 99,216, 1)'
-                                }}
-                                buttonStyle={{
-                                    backgroundColor: 'white',
-                                    borderRadius: 30
-                                }}
+                                tertiary
                             />
                         </View>
                         <View style={styles.button}>
                             <Button
                                 title="Cancel"
                                 onPress={() => this.clearImportSuggestion()}
-                                titleStyle={{
-                                    color: 'rgba(92, 99,216, 1)'
-                                }}
-                                buttonStyle={{
-                                    backgroundColor: 'white',
-                                    borderRadius: 30
-                                }}
+                                tertiary
                             />
                         </View>
                     </View>
@@ -431,10 +431,6 @@ export default class OpenChannel extends React.Component<
                                 color: 'white'
                             }}
                             onPress={() => connectPeer(this.state)}
-                            buttonStyle={{
-                                backgroundColor: '#261339',
-                                borderRadius: 30
-                            }}
                         />
                     </View>
                     <View style={styles.button}>
@@ -448,10 +444,7 @@ export default class OpenChannel extends React.Component<
                             onPress={() =>
                                 navigation.navigate('NodeQRCodeScanner')
                             }
-                            buttonStyle={{
-                                backgroundColor: '#261339',
-                                borderRadius: 30
-                            }}
+                            secondary
                         />
                     </View>
                     <View style={styles.button}>
@@ -472,9 +465,7 @@ const styles = StyleSheet.create({
     },
     button: {
         paddingTop: 10,
-        paddingBottom: 10,
-        width: 250,
-        alignSelf: 'center'
+        paddingBottom: 10
     },
     clipboardImport: {
         padding: 10,

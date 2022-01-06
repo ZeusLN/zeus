@@ -14,8 +14,10 @@ This pull request is categorized as a:
 - [ ] Other
 
 ## Checklist
-- [ ] I’ve run `npm run tsc` and make sure my code didn’t produce errors 
-- [ ] I’ve run `npm run prettier` and formatted my code correctly
+- [ ] I’ve run `npm run tsc` and made sure my code compiles correctly
+- [ ] I’ve run `npm run lint` and made sure my code didn’t contain any problematic patterns
+- [ ] I’ve run `npm run prettier` and made sure my code is formatted correctly
+- [ ] I’ve run `npm run test` and made sure all of the tests pass
 
 ## Testing
 

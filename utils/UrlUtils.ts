@@ -1,13 +1,24 @@
 import { Linking } from 'react-native';
+import stores from '../stores/Stores';
 
 const goToBlockExplorer = (
     type: string,
     value: string | number,
     testnet: boolean
 ) => {
-    const url = `https://blockstream.info/${
-        testnet ? 'testnet/' : ''
-    }${type}/${value}`;
+    const { settings } = stores.settingsStore;
+    const { privacy } = settings;
+    const host =
+        privacy && privacy.defaultBlockExplorer === 'Custom'
+            ? privacy.customBlockExplorer
+            : (privacy && privacy.defaultBlockExplorer) || 'mempool.space';
+
+    let path: string = type;
+    if (type === 'block-height') {
+        path = host === 'mempool.space' ? 'block' : 'block-height';
+    }
+
+    const url = `https://${host}/${testnet ? 'testnet/' : ''}${path}/${value}`;
     goToUrl(url);
 };
 
