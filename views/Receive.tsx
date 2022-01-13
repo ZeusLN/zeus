@@ -240,7 +240,7 @@ export default class Receive extends React.Component<
                             <Text
                                 style={{
                                     fontSize: 20,
-                                    top: 15,
+                                    top: -50,
                                     color: themeColor('text'),
                                     alignSelf: 'center'
                                 }}
