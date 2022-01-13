@@ -236,7 +236,10 @@ export default class Receive extends React.Component<
                                 justifyContent: 'center'
                             }}
                         >
-                            <Image source={Success} style={{ width: 290, height: 290 }} />
+                            <Image
+                                source={Success}
+                                style={{ width: 290, height: 290 }}
+                            />
                             <Text
                                 style={{
                                     fontSize: 20,
