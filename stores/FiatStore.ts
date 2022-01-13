@@ -43,7 +43,9 @@ export default class FiatStore {
         const { settings } = this.settingsStore;
         const { fiat } = settings;
         if (fiat) {
-            const fiatEntry = this.fiatRates.filter((entry: any) => entry.code === fiat);
+            const fiatEntry = this.fiatRates.filter(
+                (entry: any) => entry.code === fiat
+            );
             return this.symbolLookup(fiatEntry.code);
         } else {
             console.log('no fiat?');
@@ -57,7 +59,9 @@ export default class FiatStore {
         const { settings } = this.settingsStore;
         const { fiat } = settings;
         if (fiat) {
-            const fiatEntry = this.fiatRates.filter((entry: any) => entry.code === fiat);
+            const fiatEntry = this.fiatRates.filter(
+                (entry: any) => entry.code === fiat
+            );
             const rate = fiatEntry.rate;
             //const symbol = this.symbolLookup(fiatEntry.code);
             const symbol = '$';
@@ -69,7 +73,10 @@ export default class FiatStore {
     @action
     public getFiatRates = () => {
         this.loading = true;
-        RNFetchBlob.fetch('get', 'https://pay.zeusln.app/api/rates?storeId=Fjt7gLnGpg4UeBMFccLquy3GTTEz4cHU4PZMU63zqMBo')
+        RNFetchBlob.fetch(
+            'get',
+            'https://pay.zeusln.app/api/rates?storeId=Fjt7gLnGpg4UeBMFccLquy3GTTEz4cHU4PZMU63zqMBo'
+        )
             .then((response: any) => {
                 const status = response.info().status;
                 if (status == 200) {
