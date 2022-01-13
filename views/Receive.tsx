@@ -1,7 +1,7 @@
 import * as React from 'react';
 import {
     ActivityIndicator,
-    Animated,
+    Image,
     ScrollView,
     StyleSheet,
     Switch,
@@ -14,7 +14,7 @@ import { LNURLWithdrawParams } from 'js-lnurl';
 import { ButtonGroup, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Checkmark from '../images/SVG/Checkmark.svg';
+import Success from '../images/GIF/Success.gif';
 
 import Button from './../components/Button';
 import CollapsedQR from './../components/CollapsedQR';
@@ -191,13 +191,6 @@ export default class Receive extends React.Component<
             />
         );
 
-        const fadeAnim = new Animated.Value(0);
-        Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true
-        }).start();
-
         return (
             <View
                 style={{
@@ -243,25 +236,19 @@ export default class Receive extends React.Component<
                                 justifyContent: 'center'
                             }}
                         >
-                            <Animated.View
+                            <Image source={Success} style={{ width: 290, height: 290 }} />
+                            <Text
                                 style={{
-                                    opacity: fadeAnim
+                                    fontSize: 20,
+                                    top: 15,
+                                    color: themeColor('text'),
+                                    alignSelf: 'center'
                                 }}
                             >
-                                <Checkmark stroke={'green'} width={200} />
-                                <Text
-                                    style={{
-                                        fontSize: 20,
-                                        top: 15,
-                                        color: themeColor('text'),
-                                        alignSelf: 'center'
-                                    }}
-                                >
-                                    {`${localeString(
-                                        'view.Receive.youReceived'
-                                    )} ${payment_request_amt} sats`}
-                                </Text>
-                            </Animated.View>
+                                {`${localeString(
+                                    'view.Receive.youReceived'
+                                )} ${payment_request_amt} sats`}
+                            </Text>
                         </View>
                     ) : (
                         selectedIndex === 0 && (
