@@ -274,6 +274,8 @@ export default class LND {
             msg: Base64Utils.btoa(data.msg),
             signature: data.signature
         });
+    subscribeInvoice = (r_hash: string) =>
+        this.getRequest(`/v2/invoices/subscribe/${r_hash}`);
 
     // LndHub
     createAccount = (
