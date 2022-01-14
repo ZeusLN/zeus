@@ -11,7 +11,6 @@ import { ButtonGroup, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { localeString } from '../../utils/LocaleUtils';
 import { Spacer } from '../../components/layout/Spacer';
-import { WalletHeader } from '../../components/WalletHeader';
 
 import FeeStore from '../../stores/FeeStore';
 import SettingsStore from '../../stores/SettingsStore';

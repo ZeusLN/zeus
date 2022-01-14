@@ -86,6 +86,7 @@ class RESTUtils {
     publishTransaction = (...args: any[]) =>
         this.call('publishTransaction', args);
     bumpFee = (...args: any[]) => this.call('bumpFee', args);
+    subscribeInvoice = (...args: any[]) => this.call('subscribeInvoice', args);
 
     // lndhub
     createAccount = (...args: any[]) => this.call('createAccount', args);
