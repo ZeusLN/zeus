@@ -97,9 +97,10 @@ export default class UnitsStore {
             }
 
             // TODO: what should we do when this is undefined?
-            const rate =
-                this.fiatStore.fiatRates[currency] &&
-                this.fiatStore.fiatRates[currency]['15m'];
+            const fiatEntry = this.fiatStore.fiatRates.filter(
+                (entry: any) => entry.code === fiat
+            )[0];
+            const rate = fiatEntry.rate;
             const { symbol, space, rtl } = this.fiatStore.getSymbol();
 
             return {

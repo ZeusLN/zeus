@@ -284,7 +284,7 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                                 top: 150
                             }}
                         >
-                            <ErrorIcon/>
+                            <ErrorIcon />
                         </View>
                         <Text
                             style={{
