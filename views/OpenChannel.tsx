@@ -12,12 +12,10 @@ import Clipboard from '@react-native-community/clipboard';
 import { inject, observer } from 'mobx-react';
 import { Header, Icon } from 'react-native-elements';
 import Button from './../components/Button';
-import DropdownSetting from './../components/DropdownSetting';
 import FeeTable from './../components/FeeTable';
 import TextInput from './../components/TextInput';
 import UTXOPicker from './../components/UTXOPicker';
 
-import { CLR_FEE_KEYS } from './../utils/FeeUtils';
 import NodeUriUtils from './../utils/NodeUriUtils';
 import RESTUtils from './../utils/RESTUtils';
 import { localeString } from './../utils/LocaleUtils';
@@ -65,21 +63,18 @@ export default class OpenChannel extends React.Component<
 > {
     constructor(props: any) {
         super(props);
-        const { navigation, SettingsStore } = props;
-        const { implementation } = SettingsStore;
+        const { navigation } = props;
         const node_pubkey_string = navigation.getParam(
             'node_pubkey_string',
             null
         );
         const host = navigation.getParam('host', null);
-        const sat_per_byte =
-            implementation === 'c-lightning-REST' ? 'normal' : '2';
 
         this.state = {
             node_pubkey_string: node_pubkey_string || '',
             local_funding_amount: '',
             min_confs: 1,
-            sat_per_byte,
+            sat_per_byte: '2',
             private: false,
             host: host || '',
             suggestImport: '',
@@ -355,58 +350,40 @@ export default class OpenChannel extends React.Component<
                         editable={!openingChannel}
                     />
 
-                    {implementation !== 'c-lightning-REST' && (
-                        <>
-                            <Text
+                    <>
+                        <Text
+                            style={{
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {localeString('views.OpenChannel.satsPerByte')}
+                        </Text>
+                        <TouchableWithoutFeedback
+                            onPress={() =>
+                                navigation.navigate('EditFee', {
+                                    onNavigateBack: this.handleOnNavigateBack
+                                })
+                            }
+                        >
+                            <View
                                 style={{
-                                    color: themeColor('secondaryText')
+                                    ...styles.editFeeBox,
+
+                                    borderColor: 'rgba(255, 217, 63, .6)',
+                                    borderWidth: 3
                                 }}
                             >
-                                {localeString('views.OpenChannel.satsPerByte')}
-                            </Text>
-                            <TouchableWithoutFeedback
-                                onPress={() =>
-                                    navigation.navigate('EditFee', {
-                                        onNavigateBack:
-                                            this.handleOnNavigateBack
-                                    })
-                                }
-                            >
-                                <View
+                                <Text
                                     style={{
-                                        ...styles.editFeeBox,
-
-                                        borderColor: 'rgba(255, 217, 63, .6)',
-                                        borderWidth: 3
+                                        color: themeColor('text'),
+                                        fontSize: 18
                                     }}
                                 >
-                                    <Text
-                                        style={{
-                                            color: themeColor('text'),
-                                            fontSize: 18
-                                        }}
-                                    >
-                                        {sat_per_byte}
-                                    </Text>
-                                </View>
-                            </TouchableWithoutFeedback>
-                        </>
-                    )}
-
-                    {implementation === 'c-lightning-REST' && (
-                        <DropdownSetting
-                            title={localeString(
-                                'components.SetFeesForm.feeRate'
-                            )}
-                            selectedValue={sat_per_byte}
-                            onValueChange={(value: string) => {
-                                this.setState({
-                                    sat_per_byte: value
-                                });
-                            }}
-                            values={CLR_FEE_KEYS}
-                        />
-                    )}
+                                    {sat_per_byte}
+                                </Text>
+                            </View>
+                        </TouchableWithoutFeedback>
+                    </>
 
                     {RESTUtils.supportsCoinControl() &&
                         implementation !== 'lnd' && (
