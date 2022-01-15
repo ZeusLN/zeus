@@ -26,12 +26,10 @@ import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
 import FiatStore from './../stores/FiatStore';
 
 import Button from './../components/Button';
-import DropdownSetting from './../components/DropdownSetting';
 import UTXOPicker from './../components/UTXOPicker';
 import FeeTable from './../components/FeeTable';
 import TextInput from './../components/TextInput';
 
-import { CLR_FEE_KEYS } from './../utils/FeeUtils';
 import RESTUtils from './../utils/RESTUtils';
 import NFCUtils from './../utils/NFCUtils';
 import { localeString } from './../utils/LocaleUtils';
@@ -82,21 +80,18 @@ interface SendState {
 export default class Send extends React.Component<SendProps, SendState> {
     constructor(props: any) {
         super(props);
-        const { navigation, SettingsStore } = props;
-        const { implementation } = SettingsStore;
+        const { navigation } = props;
         const destination = navigation.getParam('destination', null);
         const amount = navigation.getParam('amount', null);
         const transactionType = navigation.getParam('transactionType', null);
         const isValid = navigation.getParam('isValid', null);
-
-        const fee = implementation === 'c-lightning-REST' ? 'normal' : '2';
 
         this.state = {
             isValid: isValid || false,
             transactionType: transactionType,
             destination: destination || '',
             amount: amount || '',
-            fee,
+            fee: '2',
             utxos: [],
             utxoBalance: 0,
             confirmationTarget: '60',
@@ -448,65 +443,40 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     </Text>
                                 )}
 
-                                {implementation === 'c-lightning-REST' && (
-                                    <DropdownSetting
-                                        title={localeString(
-                                            'components.SetFeesForm.feeRate'
-                                        )}
-                                        selectedValue={fee}
-                                        onValueChange={(value: string) => {
-                                            this.setState({
-                                                fee: value
-                                            });
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString('views.Send.feeSats')}:
+                                </Text>
+                                <TouchableWithoutFeedback
+                                    onPress={() =>
+                                        navigation.navigate('EditFee', {
+                                            onNavigateBack:
+                                                this.handleOnNavigateBack
+                                        })
+                                    }
+                                >
+                                    <View
+                                        style={{
+                                            ...styles.editFeeBox,
+                                            borderColor:
+                                                'rgba(255, 217, 63, .6)',
+                                            borderWidth: 3
                                         }}
-                                        values={CLR_FEE_KEYS}
-                                    />
-                                )}
-
-                                {implementation !== 'c-lightning-REST' && (
-                                    <>
+                                    >
                                         <Text
                                             style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
+                                                ...styles.text,
+                                                fontSize: 18,
+                                                color: themeColor('text')
                                             }}
                                         >
-                                            {localeString('views.Send.feeSats')}
-                                            :
+                                            {fee}
                                         </Text>
-                                        <TouchableWithoutFeedback
-                                            onPress={() =>
-                                                navigation.navigate('EditFee', {
-                                                    onNavigateBack:
-                                                        this
-                                                            .handleOnNavigateBack
-                                                })
-                                            }
-                                        >
-                                            <View
-                                                style={{
-                                                    ...styles.editFeeBox,
-                                                    borderColor:
-                                                        'rgba(255, 217, 63, .6)',
-                                                    borderWidth: 3
-                                                }}
-                                            >
-                                                <Text
-                                                    style={{
-                                                        ...styles.text,
-                                                        fontSize: 18,
-                                                        color: themeColor(
-                                                            'text'
-                                                        )
-                                                    }}
-                                                >
-                                                    {fee}
-                                                </Text>
-                                            </View>
-                                        </TouchableWithoutFeedback>
-                                    </>
-                                )}
+                                    </View>
+                                </TouchableWithoutFeedback>
 
                                 {RESTUtils.supportsCoinControl() && (
                                     <UTXOPicker
