@@ -285,27 +285,35 @@ export default class ChannelPicker extends React.Component<
                                                 const { channelSelected }: any =
                                                     this.state;
 
-                                                const displayName =
-                                                    channelSelected.alias ||
-                                                    (nodes[
-                                                        channelSelected
-                                                            .remote_pubkey
-                                                    ] &&
-                                                        nodes[
+                                                if (channelSelected) {
+                                                    const displayName =
+                                                        channelSelected.alias ||
+                                                        (nodes[
                                                             channelSelected
                                                                 .remote_pubkey
-                                                        ].alias) ||
-                                                    (channelSelected &&
-                                                        channelSelected.remote_pubkey) ||
-                                                    (channelSelected &&
-                                                        channelSelected.channelId);
+                                                        ] &&
+                                                            nodes[
+                                                                channelSelected
+                                                                    .remote_pubkey
+                                                            ].alias) ||
+                                                        (channelSelected &&
+                                                            channelSelected.remote_pubkey) ||
+                                                        (channelSelected &&
+                                                            channelSelected.channelId);
 
-                                                this.setState({
-                                                    showChannelModal: false,
-                                                    valueSet: displayName
-                                                });
+                                                    this.setState({
+                                                        showChannelModal: false,
+                                                        valueSet: displayName
+                                                    });
 
-                                                onValueChange(channelSelected);
+                                                    onValueChange(
+                                                        channelSelected
+                                                    );
+                                                } else {
+                                                    this.setState({
+                                                        showChannelModal: false
+                                                    });
+                                                }
                                             }}
                                         />
                                     </View>
