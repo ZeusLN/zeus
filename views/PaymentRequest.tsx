@@ -40,7 +40,7 @@ interface InvoiceState {
     maxShardAmt: string;
     timeoutSeconds: string;
     feeLimitSat: string;
-    outgoingChanIds: Array<string> | null;
+    outgoingChanId: string | null;
     lastHopPubkey: string | null;
 }
 
@@ -63,7 +63,7 @@ export default class PaymentRequest extends React.Component<
         maxShardAmt: '',
         timeoutSeconds: '20',
         feeLimitSat: '',
-        outgoingChanIds: null,
+        outgoingChanId: null,
         lastHopPubkey: null
     };
 
@@ -83,7 +83,7 @@ export default class PaymentRequest extends React.Component<
             maxShardAmt,
             timeoutSeconds,
             feeLimitSat,
-            outgoingChanIds,
+            outgoingChanId,
             lastHopPubkey
         } = this.state;
         const {
@@ -384,8 +384,8 @@ export default class PaymentRequest extends React.Component<
                                         <HopPicker
                                             onValueChange={(item: any) =>
                                                 this.setState({
-                                                    outgoingChanIds: item
-                                                        ? [item.channelId]
+                                                    outgoingChanId: item
+                                                        ? item.channelId
                                                         : null
                                                 })
                                             }
@@ -613,8 +613,8 @@ export default class PaymentRequest extends React.Component<
                                                 fee_limit_sat: ampOrMppEnabled
                                                     ? feeLimitSat
                                                     : null,
-                                                outgoing_chan_ids:
-                                                    outgoingChanIds,
+                                                outgoing_chan_id:
+                                                    outgoingChanId,
                                                 last_hop_pubkey: lastHopPubkey,
                                                 amp: enableAmp
                                             });
