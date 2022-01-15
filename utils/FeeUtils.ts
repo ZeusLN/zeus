@@ -4,6 +4,12 @@
  *
  * Converted to TypeScript by Evan Kaloudis for Zeus
  */
+export const CLR_FEE_KEYS = [
+    { key: 'Urgent', value: 'urgent' },
+    { key: 'Normal', value: 'normal' },
+    { key: 'Slow', value: 'slow' }
+];
+
 class FeeUtils {
     roundFee = (text: string) => {
         const split = text.split('.');

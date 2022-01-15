@@ -3,18 +3,21 @@ import {
     ActivityIndicator,
     ScrollView,
     StyleSheet,
+    Switch,
     Text,
     View,
-    TextInput,
     TouchableWithoutFeedback
 } from 'react-native';
 import Clipboard from '@react-native-community/clipboard';
 import { inject, observer } from 'mobx-react';
-import { CheckBox, Header, Icon } from 'react-native-elements';
+import { Header, Icon } from 'react-native-elements';
 import Button from './../components/Button';
+import DropdownSetting from './../components/DropdownSetting';
 import FeeTable from './../components/FeeTable';
+import TextInput from './../components/TextInput';
 import UTXOPicker from './../components/UTXOPicker';
 
+import { CLR_FEE_KEYS } from './../utils/FeeUtils';
 import NodeUriUtils from './../utils/NodeUriUtils';
 import RESTUtils from './../utils/RESTUtils';
 import { localeString } from './../utils/LocaleUtils';
@@ -271,8 +274,7 @@ export default class OpenChannel extends React.Component<
 
                     <Text
                         style={{
-                            textDecorationLine: 'underline',
-                            color: themeColor('text')
+                            color: themeColor('secondaryText')
                         }}
                     >
                         {localeString('views.OpenChannel.nodePubkey')}
@@ -283,16 +285,12 @@ export default class OpenChannel extends React.Component<
                         onChangeText={(text: string) =>
                             this.setState({ node_pubkey_string: text })
                         }
-                        numberOfLines={1}
-                        style={{ fontSize: 20, color: themeColor('text') }}
-                        placeholderTextColor="gray"
                         editable={!openingChannel}
                     />
 
                     <Text
                         style={{
-                            textDecorationLine: 'underline',
-                            color: themeColor('text')
+                            color: themeColor('secondaryText')
                         }}
                     >
                         {localeString('views.OpenChannel.host')}
@@ -303,16 +301,12 @@ export default class OpenChannel extends React.Component<
                         onChangeText={(text: string) =>
                             this.setState({ host: text })
                         }
-                        numberOfLines={1}
-                        style={{ fontSize: 20, color: themeColor('text') }}
-                        placeholderTextColor="gray"
                         editable={!openingChannel}
                     />
 
                     <Text
                         style={{
-                            textDecorationLine: 'underline',
-                            color: themeColor('text')
+                            color: themeColor('secondaryText')
                         }}
                     >
                         {localeString('views.OpenChannel.localAmt')}
@@ -326,9 +320,6 @@ export default class OpenChannel extends React.Component<
                         onChangeText={(text: string) =>
                             this.setState({ local_funding_amount: text })
                         }
-                        numberOfLines={1}
-                        style={{ fontSize: 20, color: themeColor('text') }}
-                        placeholderTextColor="gray"
                         editable={!openingChannel}
                     />
                     {local_funding_amount === 'all' && (
@@ -347,8 +338,7 @@ export default class OpenChannel extends React.Component<
 
                     <Text
                         style={{
-                            textDecorationLine: 'underline',
-                            color: themeColor('text')
+                            color: themeColor('secondaryText')
                         }}
                     >
                         {localeString('views.OpenChannel.numConf')}
@@ -362,45 +352,61 @@ export default class OpenChannel extends React.Component<
                                 min_confs: Number(text) || min_confs
                             })
                         }
-                        numberOfLines={1}
-                        style={{ fontSize: 20, color: themeColor('text') }}
-                        placeholderTextColor="gray"
                         editable={!openingChannel}
                     />
 
-                    <Text
-                        style={{
-                            textDecorationLine: 'underline',
-                            color: themeColor('text')
-                        }}
-                    >
-                        {localeString('views.OpenChannel.satsPerByte')}
-                    </Text>
-                    <TouchableWithoutFeedback
-                        onPress={() =>
-                            navigation.navigate('EditFee', {
-                                onNavigateBack: this.handleOnNavigateBack
-                            })
-                        }
-                    >
-                        <View
-                            style={{
-                                ...styles.editFeeBox,
-
-                                borderColor: 'rgba(255, 217, 63, .6)',
-                                borderWidth: 3
-                            }}
-                        >
+                    {implementation !== 'c-lightning-REST' && (
+                        <>
                             <Text
                                 style={{
-                                    color: themeColor('text'),
-                                    fontSize: 18
+                                    color: themeColor('secondaryText')
                                 }}
                             >
-                                {sat_per_byte}
+                                {localeString('views.OpenChannel.satsPerByte')}
                             </Text>
-                        </View>
-                    </TouchableWithoutFeedback>
+                            <TouchableWithoutFeedback
+                                onPress={() =>
+                                    navigation.navigate('EditFee', {
+                                        onNavigateBack:
+                                            this.handleOnNavigateBack
+                                    })
+                                }
+                            >
+                                <View
+                                    style={{
+                                        ...styles.editFeeBox,
+
+                                        borderColor: 'rgba(255, 217, 63, .6)',
+                                        borderWidth: 3
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontSize: 18
+                                        }}
+                                    >
+                                        {sat_per_byte}
+                                    </Text>
+                                </View>
+                            </TouchableWithoutFeedback>
+                        </>
+                    )}
+
+                    {implementation === 'c-lightning-REST' && (
+                        <DropdownSetting
+                            title={localeString(
+                                'components.SetFeesForm.feeRate'
+                            )}
+                            selectedValue={sat_per_byte}
+                            onValueChange={(value: string) => {
+                                this.setState({
+                                    sat_per_byte: value
+                                });
+                            }}
+                            values={CLR_FEE_KEYS}
+                        />
+                    )}
 
                     {RESTUtils.supportsCoinControl() &&
                         implementation !== 'lnd' && (
@@ -410,17 +416,33 @@ export default class OpenChannel extends React.Component<
                             />
                         )}
 
-                    <View style={{ padding: 10 }}>
-                        <CheckBox
-                            title={localeString('views.OpenChannel.private')}
-                            checked={privateChannel}
-                            onPress={() =>
-                                this.setState({ private: !privateChannel })
+                    <>
+                        <Text
+                            style={{
+                                top: 20,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {localeString('views.OpenChannel.private')}
+                        </Text>
+                        <Switch
+                            value={privateChannel}
+                            onValueChange={() =>
+                                this.setState({
+                                    private: !privateChannel
+                                })
                             }
+                            trackColor={{
+                                false: '#767577',
+                                true: themeColor('highlight')
+                            }}
+                            style={{
+                                alignSelf: 'flex-end'
+                            }}
                         />
-                    </View>
+                    </>
 
-                    <View style={styles.button}>
+                    <View style={{ ...styles.button, paddingTop: 20 }}>
                         <Button
                             title={localeString(
                                 'views.OpenChannel.openChannel'

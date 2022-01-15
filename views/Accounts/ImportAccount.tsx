@@ -4,13 +4,13 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TextInput,
     View
 } from 'react-native';
 import Clipboard from '@react-native-community/clipboard';
 import { inject, observer } from 'mobx-react';
 import { Button, CheckBox, Header, Icon } from 'react-native-elements';
 import FeeTable from './../../components/FeeTable';
+import TextInput from './../../components/TextInput';
 import UTXOPicker from './../../components/UTXOPicker';
 
 import RESTUtils from './../../utils/RESTUtils';
@@ -121,11 +121,6 @@ export default class ImportAccount extends React.Component<
                                 name: text
                             })
                         }
-                        style={{
-                            ...styles.textInput,
-                            color: themeColor('text')
-                        }}
-                        placeholderTextColor="gray"
                     />
                     <Text
                         style={{ ...styles.label, color: themeColor('text') }}
@@ -142,11 +137,6 @@ export default class ImportAccount extends React.Component<
                                 extended_public_key: text
                             })
                         }
-                        style={{
-                            ...styles.textInput,
-                            color: themeColor('text')
-                        }}
-                        placeholderTextColor="gray"
                         numberOfLines={4}
                         multiline
                     />
@@ -165,11 +155,6 @@ export default class ImportAccount extends React.Component<
                                 master_key_fingerprint: text
                             })
                         }
-                        style={{
-                            ...styles.textInput,
-                            color: themeColor('text')
-                        }}
-                        placeholderTextColor="gray"
                     />
                     <Text
                         style={{ ...styles.label, color: themeColor('text') }}
@@ -184,11 +169,6 @@ export default class ImportAccount extends React.Component<
                                 address_type: text
                             })
                         }
-                        style={{
-                            ...styles.textInput,
-                            color: themeColor('text')
-                        }}
-                        placeholderTextColor="gray"
                     />
                     <Button
                         title="ImportAccount"
@@ -212,9 +192,6 @@ export default class ImportAccount extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    textInput: {
-        fontSize: 20
-    },
     content: {
         paddingTop: 20,
         paddingBottom: 20,

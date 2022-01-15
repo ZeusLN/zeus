@@ -1,13 +1,5 @@
 import * as React from 'react';
-import {
-    FlatList,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    View
-} from 'react-native';
+import { FlatList, ScrollView, Switch, Text, View } from 'react-native';
 import { Header, Icon, ListItem, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import SettingsStore, {
@@ -16,6 +8,7 @@ import SettingsStore, {
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 import DropdownSetting from './../../components/DropdownSetting';
+import TextInput from './../../components/TextInput';
 
 interface PrivacyProps {
     navigation: any;
@@ -171,11 +164,6 @@ export default class Privacy extends React.Component<
                                         })
                                     );
                                 }}
-                                numberOfLines={1}
-                                style={{
-                                    ...styles.textInput,
-                                    color: themeColor('text')
-                                }}
                             />
                         </>
                     )}
@@ -289,16 +277,3 @@ export default class Privacy extends React.Component<
         );
     }
 }
-
-const styles = StyleSheet.create({
-    textInput: {
-        fontSize: 20,
-        width: '100%',
-        height: 60,
-        top: 10,
-        backgroundColor: '#31363F',
-        borderRadius: 6,
-        marginBottom: 20,
-        paddingLeft: 5
-    }
-});

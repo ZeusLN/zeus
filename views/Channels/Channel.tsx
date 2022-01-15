@@ -4,7 +4,6 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
@@ -17,6 +16,7 @@ import KeyValue from './../../components/KeyValue';
 import { Amount } from './../../components/Amount';
 import FeeBreakdown from './../../components/FeeBreakdown';
 import SetFeesForm from './../../components/SetFeesForm';
+import TextInput from './../../components/TextInput';
 
 import DateTimeUtils from './../../utils/DateTimeUtils';
 import PrivacyUtils from './../../utils/PrivacyUtils';
@@ -441,20 +441,14 @@ export default class ChannelView extends React.Component<
                                     <TextInput
                                         keyboardType="numeric"
                                         placeholder={'2'}
-                                        placeholderTextColor="darkgray"
                                         value={satPerByte}
                                         onChangeText={(text: string) =>
                                             this.setState({
                                                 satPerByte: text
                                             })
                                         }
-                                        numberOfLines={1}
                                         autoCapitalize="none"
                                         autoCorrect={false}
-                                        style={{
-                                            ...styles.textInput,
-                                            color: themeColor('text')
-                                        }}
                                     />
                                     {implementation === 'lnd' && (
                                         <CheckBox
@@ -528,8 +522,5 @@ const styles = StyleSheet.create({
     button: {
         paddingTop: 15,
         paddingBottom: 15
-    },
-    textInput: {
-        fontSize: 20
     }
 });
