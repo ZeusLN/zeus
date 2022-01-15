@@ -137,11 +137,11 @@ export default class LND {
         route: string,
         ws?: boolean
     ) => {
-        const hostPath = host.includes('://') ? host : `http://${host}`;
+        const hostPath = host.includes('://') ? host : `https://${host}`;
         let baseUrl = `${hostPath}${port ? ':' + port : ''}`;
 
         if (ws) {
-            baseUrl = baseUrl.replace('http', 'wss').replace('http', 'ws');
+            baseUrl = baseUrl.replace('https', 'wss').replace('http', 'ws');
         }
 
         if (baseUrl[baseUrl.length - 1] === '/') {
