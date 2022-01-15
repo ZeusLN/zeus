@@ -477,6 +477,7 @@ const styles = StyleSheet.create({
         marginTop: 15,
         borderRadius: 4,
         borderColor: '#FFD93F',
-        borderWidth: 2
+        borderWidth: 2,
+        marginBottom: 20
     }
 });
