@@ -6,6 +6,7 @@ import {
     Linking,
     PanResponder,
     Text,
+    TouchableOpacity,
     View
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -231,16 +232,26 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                 style={{
                                     alignSelf: 'center',
                                     bottom: 10,
-                                    padding: 25,
-                                    height: 100,
-                                    transform: [{ translateY: this.pan.y }]
+                                    paddingTop: 40,
+                                    paddingBottom: 35,
+                                    width: '100%',
+                                    transform: [{ translateY: this.pan.y }],
+                                    alignItems: 'center'
                                 }}
                                 {...this.panResponder.panHandlers}
                             >
-                                <CaretUp
-                                    stroke={themeColor('text')}
-                                    fill={themeColor('text')}
-                                />
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        this.props.navigation.navigate(
+                                            'Activity'
+                                        )
+                                    }
+                                >
+                                    <CaretUp
+                                        stroke={themeColor('text')}
+                                        fill={themeColor('text')}
+                                    />
+                                </TouchableOpacity>
                             </Animated.View>
                         </>
                     )}
