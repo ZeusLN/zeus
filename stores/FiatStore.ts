@@ -110,7 +110,6 @@ export default class FiatStore {
         };
 
         if (symbol in symbolPairs) {
-            // TODO: how do I get typescript less mad here?
             return symbolPairs[symbol];
         } else {
             return { symbol, space: true, rtl: false, separatorSwap: false };
@@ -146,8 +145,8 @@ export default class FiatStore {
                 (entry: any) => entry.code === fiat
             )[0];
             const rate = fiatEntry.rate;
-            //const symbol = this.symbolLookup(fiatEntry.code);
-            const symbol = '$';
+            // TODO: fix rate display
+            const symbol = this.symbolLookup(fiatEntry.code);
             return `${symbol}${rate} BTC/${fiat}`;
         }
         return 'N/A';
