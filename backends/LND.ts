@@ -240,11 +240,16 @@ export default class LND {
     getNodeInfo = (urlParams?: Array<string>) =>
         this.getRequest(`/v1/graph/node/${urlParams && urlParams[0]}`);
     getFees = () => this.getRequest('/v1/fees');
-    setFees = (data: any) => {
-        const request = { ...data };
-        request.fee_rate = `${Number(data.fee_rate) / 100}`;
-        return this.postRequest('/v1/chanpolicy', data);
-    };
+    setFees = (data: any) =>
+        this.postRequest('/v1/chanpolicy', {
+            base_fee_msat: data.base_fee_msat,
+            fee_rate: `${Number(data.fee_rate) / 100}`,
+            chan_point: {
+                funding_txid_str: data.chan_point.funding_txid_str,
+                output_index: data.chan_point.output_index
+            },
+            time_lock_delta: data.time_lock_delta
+        });
     getRoutes = (urlParams?: Array<string>) =>
         this.getRequest(
             `/v1/graph/routes/${urlParams && urlParams[0]}/${
