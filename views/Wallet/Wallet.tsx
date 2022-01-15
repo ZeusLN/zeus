@@ -1,11 +1,13 @@
 import * as React from 'react';
 import {
     ActivityIndicator,
+    Animated,
     Image,
     Linking,
+    PanResponder,
     Text,
-    View,
-    TouchableOpacity
+    TouchableOpacity,
+    View
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { Button, ButtonGroup } from 'react-native-elements';
@@ -64,6 +66,25 @@ interface WalletProps {
 @observer
 export default class Wallet extends React.Component<WalletProps, {}> {
     clipboard: string;
+
+    constructor(props) {
+        super(props);
+        this.pan = new Animated.ValueXY();
+        this.panResponder = PanResponder.create({
+            onMoveShouldSetPanResponder: () => true,
+            onPanResponderMove: Animated.event([
+                null,
+                { dx: this.pan.x, dy: this.pan.y }
+            ]),
+            onPanResponderRelease: () => {
+                Animated.spring(this.pan, {
+                    toValue: { x: 0, y: 0 },
+                    useNativeDriver: true
+                }).start();
+                props.navigation.navigate('Activity');
+            }
+        });
+    }
 
     componentDidMount() {
         Linking.getInitialURL()
@@ -207,21 +228,31 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                 UnitsStore={UnitsStore}
                             />
 
-                            <TouchableOpacity
-                                onPress={() =>
-                                    this.props.navigation.navigate('Activity')
-                                }
+                            <Animated.View
                                 style={{
                                     alignSelf: 'center',
                                     bottom: 10,
-                                    padding: 25
+                                    paddingTop: 40,
+                                    paddingBottom: 35,
+                                    width: '100%',
+                                    transform: [{ translateY: this.pan.y }],
+                                    alignItems: 'center'
                                 }}
+                                {...this.panResponder.panHandlers}
                             >
-                                <CaretUp
-                                    stroke={themeColor('text')}
-                                    fill={themeColor('text')}
-                                />
-                            </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        this.props.navigation.navigate(
+                                            'Activity'
+                                        )
+                                    }
+                                >
+                                    <CaretUp
+                                        stroke={themeColor('text')}
+                                        fill={themeColor('text')}
+                                    />
+                                </TouchableOpacity>
+                            </Animated.View>
                         </>
                     )}
                 </View>
