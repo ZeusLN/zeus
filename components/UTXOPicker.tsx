@@ -276,8 +276,7 @@ export default class UTXOPicker extends React.Component<
                     <View>
                         <Text
                             style={{
-                                color: themeColor('text'),
-                                textDecorationLine: 'underline'
+                                color: themeColor('secondaryText')
                             }}
                         >
                             {title || DEFAULT_TITLE}
@@ -323,8 +322,7 @@ export default class UTXOPicker extends React.Component<
                     <View>
                         <Text
                             style={{
-                                color: themeColor('text'),
-                                textDecorationLine: 'underline'
+                                color: themeColor('secondaryText')
                             }}
                         >
                             {title || DEFAULT_TITLE}
