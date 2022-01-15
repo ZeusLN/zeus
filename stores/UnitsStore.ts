@@ -55,7 +55,7 @@ export default class UnitsStore {
     };
 
     numberWithCommas = (x: string | number) =>
-        x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        new Intl.NumberFormat('en-EN').format(x);
 
     numberWithDecimals = (x: string | number) =>
         new Intl.NumberFormat('de-DE').format(x);
