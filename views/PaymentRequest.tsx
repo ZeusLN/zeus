@@ -5,7 +5,6 @@ import {
     StyleSheet,
     Switch,
     Text,
-    TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
@@ -22,6 +21,7 @@ import SettingsStore from './../stores/SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
 
 import HopPicker from './../components/HopPicker';
+import TextInput from './../components/TextInput';
 
 interface InvoiceProps {
     exitSetup: any;
@@ -486,12 +486,6 @@ export default class PaymentRequest extends React.Component<
                                                 timeoutSeconds: text
                                             })
                                         }
-                                        numberOfLines={1}
-                                        style={{
-                                            ...styles.textInput,
-                                            color: themeColor('text')
-                                        }}
-                                        placeholderTextColor="gray"
                                     />
                                     <Text
                                         style={{
@@ -518,12 +512,6 @@ export default class PaymentRequest extends React.Component<
                                                 maxParts: text
                                             })
                                         }
-                                        numberOfLines={1}
-                                        style={{
-                                            ...styles.textInput,
-                                            color: themeColor('text')
-                                        }}
-                                        placeholderTextColor="gray"
                                     />
                                     <Text
                                         style={{
@@ -559,12 +547,6 @@ export default class PaymentRequest extends React.Component<
                                                 feeLimitSat: text
                                             })
                                         }
-                                        numberOfLines={1}
-                                        style={{
-                                            ...styles.textInput,
-                                            color: themeColor('text')
-                                        }}
-                                        placeholderTextColor="gray"
                                     />
                                 </React.Fragment>
                             )}
@@ -594,12 +576,6 @@ export default class PaymentRequest extends React.Component<
                                                 maxShardAmt: text
                                             })
                                         }
-                                        numberOfLines={1}
-                                        style={{
-                                            ...styles.textInput,
-                                            color: themeColor('text')
-                                        }}
-                                        placeholderTextColor="gray"
                                     />
                                 </React.Fragment>
                             )}
@@ -677,9 +653,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingTop: 15,
         paddingBottom: 15
-    },
-    textInput: {
-        fontSize: 20
     },
     mppForm: {
         paddingLeft: 20,

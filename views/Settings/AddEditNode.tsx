@@ -8,7 +8,6 @@ import {
     Text,
     View,
     ScrollView,
-    TextInput,
     TouchableOpacity
 } from 'react-native';
 import Clipboard from '@react-native-community/clipboard';
@@ -25,6 +24,7 @@ import { themeColor } from './../../utils/ThemeUtils';
 import Button from './../../components/Button';
 import CollapsedQR from './../../components/CollapsedQR';
 import DropdownSetting from './../../components/DropdownSetting';
+import TextInput from './../../components/TextInput';
 import SettingsStore, { INTERFACE_KEYS } from './../../stores/SettingsStore';
 
 interface AddEditNodeProps {
@@ -787,13 +787,7 @@ export default class AddEditNode extends React.Component<
                                         saved: false
                                     })
                                 }
-                                numberOfLines={1}
-                                style={{
-                                    ...styles.textInput,
-                                    color: themeColor('text')
-                                }}
                                 editable={!loading}
-                                placeholderTextColor="gray"
                             />
                         </View>
 
@@ -820,13 +814,7 @@ export default class AddEditNode extends React.Component<
                                             saved: false
                                         })
                                     }
-                                    numberOfLines={1}
-                                    style={{
-                                        ...styles.textInput,
-                                        color: themeColor('text')
-                                    }}
                                     editable={!loading}
-                                    placeholderTextColor="gray"
                                 />
 
                                 {implementation === 'spark' && (
@@ -851,13 +839,7 @@ export default class AddEditNode extends React.Component<
                                                     saved: false
                                                 });
                                             }}
-                                            numberOfLines={1}
-                                            style={{
-                                                ...styles.textInput,
-                                                color: themeColor('text')
-                                            }}
                                             editable={!loading}
-                                            placeholderTextColor="gray"
                                         />
                                     </>
                                 )}
@@ -883,13 +865,7 @@ export default class AddEditNode extends React.Component<
                                                     saved: false
                                                 });
                                             }}
-                                            numberOfLines={1}
-                                            style={{
-                                                ...styles.textInput,
-                                                color: themeColor('text')
-                                            }}
                                             editable={!loading}
-                                            placeholderTextColor="gray"
                                         />
                                     </>
                                 )}
@@ -915,13 +891,7 @@ export default class AddEditNode extends React.Component<
                                             saved: false
                                         })
                                     }
-                                    numberOfLines={1}
-                                    style={{
-                                        ...styles.textInput,
-                                        color: themeColor('text')
-                                    }}
                                     editable={!loading}
-                                    placeholderTextColor="gray"
                                 />
 
                                 <View
@@ -965,13 +935,7 @@ export default class AddEditNode extends React.Component<
                                                     saved: false
                                                 })
                                             }
-                                            numberOfLines={1}
-                                            style={{
-                                                ...styles.textInput,
-                                                color: themeColor('text')
-                                            }}
                                             editable={!loading}
-                                            placeholderTextColor="gray"
                                         />
 
                                         <Text
@@ -994,14 +958,8 @@ export default class AddEditNode extends React.Component<
                                                     saved: false
                                                 })
                                             }
-                                            numberOfLines={1}
-                                            style={{
-                                                ...styles.textInput,
-                                                color: themeColor('text')
-                                            }}
                                             editable={!loading}
                                             secureTextEntry={saved}
-                                            placeholderTextColor="gray"
                                         />
                                         {saved && (
                                             <CollapsedQR
@@ -1046,13 +1004,7 @@ export default class AddEditNode extends React.Component<
                                             saved: false
                                         })
                                     }
-                                    numberOfLines={1}
-                                    style={{
-                                        ...styles.textInput,
-                                        color: themeColor('text')
-                                    }}
                                     editable={!loading}
-                                    placeholderTextColor="gray"
                                 />
 
                                 <Text
@@ -1074,13 +1026,7 @@ export default class AddEditNode extends React.Component<
                                             saved: false
                                         })
                                     }
-                                    numberOfLines={1}
-                                    style={{
-                                        ...styles.textInput,
-                                        color: themeColor('text')
-                                    }}
                                     editable={!loading}
-                                    placeholderTextColor="gray"
                                 />
 
                                 <Text
@@ -1101,13 +1047,7 @@ export default class AddEditNode extends React.Component<
                                             saved: false
                                         })
                                     }
-                                    numberOfLines={1}
-                                    style={{
-                                        ...styles.textInput,
-                                        color: themeColor('text')
-                                    }}
                                     editable={!loading}
-                                    placeholderTextColor="gray"
                                 />
                             </>
                         )}
@@ -1315,16 +1255,6 @@ export default class AddEditNode extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    textInput: {
-        fontSize: 20,
-        width: '100%',
-        height: 60,
-        top: 10,
-        backgroundColor: '#31363F',
-        borderRadius: 6,
-        marginBottom: 20,
-        paddingLeft: 5
-    },
     error: {
         color: 'red'
     },
