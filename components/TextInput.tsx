@@ -31,6 +31,29 @@ function TextInput(props: TextInputProps) {
         multiline
     } = props;
 
+    const defaultStyle = numberOfLines
+        ? {
+              color: themeColor('text'),
+              fontSize: 20,
+              width: '100%',
+              top: 10,
+              backgroundColor: themeColor('secondary'),
+              borderRadius: 6,
+              marginBottom: 20,
+              paddingLeft: 5
+          }
+        : {
+              color: themeColor('text'),
+              fontSize: 20,
+              width: '100%',
+              height: 60,
+              top: 10,
+              backgroundColor: themeColor('secondary'),
+              borderRadius: 6,
+              marginBottom: 20,
+              paddingLeft: 5
+          };
+
     return (
         <TextInputRN
             placeholder={placeholder}
@@ -39,15 +62,7 @@ function TextInput(props: TextInputProps) {
             numberOfLines={numberOfLines || 1}
             style={{
                 ...style,
-                color: themeColor('text'),
-                fontSize: 20,
-                width: '100%',
-                height: 60,
-                top: 10,
-                backgroundColor: themeColor('secondary'),
-                borderRadius: 6,
-                marginBottom: 20,
-                paddingLeft: 5
+                ...defaultStyle
             }}
             placeholderTextColor={
                 placeholderTextColor || themeColor('secondaryText')
