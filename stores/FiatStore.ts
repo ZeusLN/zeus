@@ -20,15 +20,64 @@ export default class FiatStore {
         this.settingsStore = settingsStore;
     }
 
-    // TODO: do more of these symbol pairs. I'm referring to
-    // https://fastspring.com/blog/how-to-format-30-currencies-from-countries-all-over-the-world/
+    // TODO integrate separatorSwap display
     private symbolLookup = (symbol: string): CurrencyDisplayRules => {
         const symbolPairs: any = {
             USD: { symbol: '$', space: false, rtl: false },
-            EUR: { symbol: '€', space: true, rtl: false },
+            AUD: { symbol: '$', space: true, rtl: false },
+            BRL: { symbol: 'R$', space: true, rtl: false },
+            CAD: { symbol: '$', space: true, rtl: false },
+            CHF: { symbol: 'fr.', space: true, rtl: false },
+            CLP: { symbol: '$', space: true, rtl: false },
+            CNY: { symbol: '¥', space: true, rtl: false },
+            CZK: {
+                symbol: 'Kč',
+                space: true,
+                rtl: true,
+                separatorSwap: true
+            },
+            DKK: {
+                symbol: 'kr.',
+                space: true,
+                rtl: false,
+                separatorSwap: true
+            },
+            EUR: {
+                symbol: '€',
+                space: false,
+                rtl: false,
+                separatorSwap: true
+            },
             GBP: { symbol: '£', space: false, rtl: false },
+            HKD: { symbol: 'HK$', space: true, rtl: false },
+            HUF: {
+                symbol: 'Ft',
+                space: true,
+                rtl: true,
+                separatorSwap: true
+            },
+            INR: { symbol: '₹', space: true, rtl: false },
             JPY: { symbol: '¥', space: true, rtl: false },
-            THB: { symbol: '฿', space: true, rtl: true }
+            KRW: { symbol: '₩', space: true, rtl: false },
+            NZD: { symbol: '$', space: true, rtl: false },
+            PLN: { symbol: 'zł', space: true, rtl: true },
+            RUB: {
+                symbol: 'p.',
+                space: true,
+                rtl: true,
+                separatorSwap: true
+            },
+            SAR: { symbol: '﷼', space: true, rtl: true },
+            SEK: {
+                symbol: 'kr',
+                space: true,
+                rtl: true,
+                separatorSwap: true
+            },
+            SGD: { symbol: '$', space: false, rtl: false },
+            THB: { symbol: '฿', space: true, rtl: true },
+            TRY: { symbol: '₺', space: true, rtl: true },
+            TWD: { symbol: '元', space: true, rtl: false }
         };
 
         if (symbol in symbolPairs) {
