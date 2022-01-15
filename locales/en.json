@@ -45,6 +45,7 @@
     "components.SetFeesForm.baseFee": "Base Fee",
     "components.SetFeesForm.feeRate": "Fee Rate",
     "components.SetFeesForm.ppm": "PPM (Parts Per Million)",
+    "components.SetFeesForm.ppmMilliMsat": "PPM rate in milli msat",
     "components.SetFeesForm.timeLockDelta": "Timelock Delta (blocks)",
     "components.SetFeesForm.submit": "Submit New Fees",
     "components.QRCodeScanner.noCameraAccess": "No access to camera",
