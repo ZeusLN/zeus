@@ -106,8 +106,6 @@ export default class FeeStore {
                 // Deprecated in LND
                 // Used in c-lightning-REST
                 this.totalEarned = data.total_fee_sum || 0;
-                console.log('!!');
-                console.log(data);
                 this.loading = false;
             })
             .catch((err: any) => {
