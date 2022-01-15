@@ -103,6 +103,7 @@ class RESTUtils {
     supportsAccounts = () => this.call('supportsAccounts');
     supportsRouting = () => this.call('supportsRouting');
     supportsNodeInfo = () => this.call('supportsNodeInfo');
+    singleFeesEarnedTotal = () => this.call('singleFeesEarnedTotal');
 }
 
 const restUtils = new RESTUtils();

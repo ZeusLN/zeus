@@ -150,4 +150,5 @@ export default class CLightningREST extends LND {
     supportsHopPicking = () => false;
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
+    singleFeesEarnedTotal = () => true;
 }
