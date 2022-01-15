@@ -480,6 +480,7 @@ export default class Eclair {
     supportsHopPicking = () => false;
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
+    singleFeesEarnedTotal = () => false;
 }
 
 const mapInvoice =

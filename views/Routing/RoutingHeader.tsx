@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import RESTUtils from '../../utils/RESTUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -39,8 +40,14 @@ function TotalRow({
 }
 
 export function RoutingHeader(props) {
-    const { dayEarned, weekEarned, monthEarned, timeframeEarned, fullSize } =
-        props;
+    const {
+        dayEarned,
+        weekEarned,
+        monthEarned,
+        totalEarned,
+        timeframeEarned,
+        fullSize
+    } = props;
 
     const styles = StyleSheet.create({
         header: {
@@ -52,7 +59,11 @@ export function RoutingHeader(props) {
         wrapper: {
             display: 'flex',
             justifyContent: 'space-between',
-            height: fullSize ? 200 : 120,
+            height: RESTUtils.singleFeesEarnedTotal()
+                ? 55
+                : fullSize
+                ? 200
+                : 120,
             padding: 16,
             backgroundColor: themeColor('background'),
             borderBottomLeftRadius: 20,
@@ -83,7 +94,7 @@ export function RoutingHeader(props) {
                         </Text>
                     </View>
                 )}
-                {fullSize && (
+                {!RESTUtils.singleFeesEarnedTotal() && fullSize && (
                     <>
                         <TotalRow
                             kind={localeString(
@@ -102,6 +113,16 @@ export function RoutingHeader(props) {
                                 'views.Routing.RoutingHeader.monthEarned'
                             )}
                             amount={monthEarned}
+                        />
+                    </>
+                )}
+                {RESTUtils.singleFeesEarnedTotal() && fullSize && (
+                    <>
+                        <TotalRow
+                            kind={localeString(
+                                'views.Routing.RoutingHeader.totalEarned'
+                            )}
+                            amount={totalEarned}
                         />
                     </>
                 )}
