@@ -4,12 +4,12 @@ import {
     StyleSheet,
     Text,
     View,
-    ScrollView,
-    TextInput
+    ScrollView
 } from 'react-native';
 import { ButtonGroup, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Button from './../../components/Button';
+import TextInput from './../../components/TextInput';
 import { themeColor } from './../../utils/ThemeUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import MessageSignStore from './../../stores/MessageSignStore';
@@ -175,12 +175,7 @@ export default class SignVerifyMessage extends React.Component<
                                         messageToSign: text
                                     })
                                 }
-                                style={{
-                                    ...styles.textInput,
-                                    color: themeColor('text')
-                                }}
                                 editable={!loading}
-                                placeholderTextColor="gray"
                                 multiline
                                 numberOfLines={3}
                             />
@@ -255,12 +250,7 @@ export default class SignVerifyMessage extends React.Component<
                                         messageToVerify: text
                                     })
                                 }
-                                style={{
-                                    ...styles.textInput,
-                                    color: themeColor('text')
-                                }}
                                 editable={!loading}
-                                placeholderTextColor="gray"
                                 multiline
                                 numberOfLines={3}
                             />
@@ -283,10 +273,6 @@ export default class SignVerifyMessage extends React.Component<
                                         signatureToVerify: text
                                     })
                                 }
-                                style={{
-                                    ...styles.textInput,
-                                    color: themeColor('text')
-                                }}
                                 editable={!loading}
                                 multiline
                                 numberOfLines={3}

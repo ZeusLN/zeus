@@ -197,7 +197,6 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                             alignItems: 'center'
                         }}
                         onPress={() => navigation.navigate('Settings')}
-                        tertiary
                         adaptiveWidth
                     />
                     <Text

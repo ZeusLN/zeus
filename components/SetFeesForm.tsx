@@ -1,7 +1,8 @@
 import * as React from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Button from './../components/Button';
+import TextInput from './../components/TextInput';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
@@ -142,17 +143,14 @@ export default class SetFeesForm extends React.Component<
                         <TextInput
                             keyboardType="numeric"
                             placeholder={baseFee || '1'}
-                            placeholderTextColor="darkgray"
                             value={newBaseFee}
                             onChangeText={(text: string) =>
                                 this.setState({
                                     newBaseFee: text
                                 })
                             }
-                            numberOfLines={1}
                             autoCapitalize="none"
                             autoCorrect={false}
-                            style={{ fontSize: 20, color: themeColor('text') }}
                         />
 
                         <Text style={{ color: themeColor('text') }}>
@@ -169,17 +167,14 @@ export default class SetFeesForm extends React.Component<
                         <TextInput
                             keyboardType="numeric"
                             placeholder={feeRate || '1'}
-                            placeholderTextColor="darkgray"
                             value={newFeeRate}
                             onChangeText={(text: string) =>
                                 this.setState({
                                     newFeeRate: text
                                 })
                             }
-                            numberOfLines={1}
                             autoCapitalize="none"
                             autoCorrect={false}
-                            style={{ fontSize: 20, color: themeColor('text') }}
                         />
 
                         <Text style={{ color: themeColor('text') }}>
@@ -190,17 +185,14 @@ export default class SetFeesForm extends React.Component<
                         <TextInput
                             keyboardType="numeric"
                             placeholder={timeLockDelta || '144'}
-                            placeholderTextColor="darkgray"
                             value={newTimeLockDelta}
                             onChangeText={(text: string) =>
                                 this.setState({
                                     newTimeLockDelta: text
                                 })
                             }
-                            numberOfLines={1}
                             autoCapitalize="none"
                             autoCorrect={false}
-                            style={{ fontSize: 20, color: themeColor('text') }}
                         />
 
                         <View style={styles.button}>

@@ -6,7 +6,6 @@ import {
     StyleSheet,
     Switch,
     Text,
-    TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
@@ -18,6 +17,7 @@ import Success from '../images/GIF/Success.gif';
 
 import Button from './../components/Button';
 import CollapsedQR from './../components/CollapsedQR';
+import TextInput from './../components/TextInput';
 import RESTUtils from './../utils/RESTUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
@@ -311,13 +311,6 @@ export default class Receive extends React.Component<
                                     onChangeText={(text: string) =>
                                         this.setState({ memo: text })
                                     }
-                                    numberOfLines={1}
-                                    editable={true}
-                                    style={{
-                                        ...styles.textInput,
-                                        color: themeColor('text')
-                                    }}
-                                    placeholderTextColor="gray"
                                 />
 
                                 <TouchableOpacity onPress={() => changeUnits()}>
@@ -342,7 +335,6 @@ export default class Receive extends React.Component<
                                     onChangeText={(text: string) => {
                                         this.setState({ value: text });
                                     }}
-                                    numberOfLines={1}
                                     editable={
                                         lnurl &&
                                         lnurl.minWithdrawable ===
@@ -350,11 +342,6 @@ export default class Receive extends React.Component<
                                             ? false
                                             : true
                                     }
-                                    style={{
-                                        ...styles.textInput,
-                                        color: themeColor('text')
-                                    }}
-                                    placeholderTextColor="gray"
                                 />
                                 {units !== 'sats' && (
                                     <TouchableOpacity
@@ -422,13 +409,6 @@ export default class Receive extends React.Component<
                                             onChangeText={(text: string) =>
                                                 this.setState({ expiry: text })
                                             }
-                                            numberOfLines={1}
-                                            editable={true}
-                                            style={{
-                                                ...styles.textInput,
-                                                color: themeColor('text')
-                                            }}
-                                            placeholderTextColor="gray"
                                         />
                                     </>
                                 )}
@@ -581,10 +561,5 @@ const styles = StyleSheet.create({
     },
     text: {
         top: 20
-    },
-    textInput: {
-        fontSize: 20,
-        paddingTop: 10,
-        paddingBottom: 10
     }
 });
