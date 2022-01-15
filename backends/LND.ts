@@ -322,4 +322,5 @@ export default class LND {
     supportsNodeInfo = () => true;
     supportsCoinControl = () => this.supports('v0.12.0');
     supportsAccounts = () => this.supports('v0.13.0');
+    singleFeesEarnedTotal = () => false;
 }

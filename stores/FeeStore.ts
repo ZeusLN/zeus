@@ -91,17 +91,21 @@ export default class FeeStore {
         this.loading = true;
         RESTUtils.getFees()
             .then((data: any) => {
-                const channelFees: any = {};
-                data.channel_fees.forEach((channelFee: any) => {
-                    channelFees[channelFee.chan_point] = channelFee;
-                });
+                if (data.channel_fees) {
+                    const channelFees: any = {};
+                    data.channel_fees.forEach((channelFee: any) => {
+                        channelFees[channelFee.chan_point] = channelFee;
+                    });
 
-                this.channelFees = channelFees;
+                    this.channelFees = channelFees;
+                }
+
                 this.dayEarned = data.day_fee_sum || 0;
                 this.weekEarned = data.week_fee_sum || 0;
                 this.monthEarned = data.month_fee_sum || 0;
-                // this.totalEarned = data.total_fee_sum || 0; DEPRECATED
-
+                // Deprecated in LND
+                // Used in c-lightning-REST
+                this.totalEarned = data.total_fee_sum || 0;
                 this.loading = false;
             })
             .catch((err: any) => {

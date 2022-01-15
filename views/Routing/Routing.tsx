@@ -85,6 +85,7 @@ export default class Routing extends React.PureComponent<
             dayEarned,
             weekEarned,
             monthEarned,
+            totalEarned,
             earnedDuringTimeframe,
             forwardingEvents,
             forwardingHistoryError,
@@ -200,6 +201,7 @@ export default class Routing extends React.PureComponent<
                     dayEarned={dayEarned}
                     weekEarned={weekEarned}
                     monthEarned={monthEarned}
+                    totalEarned={totalEarned}
                     timeframeEarned={earnedDuringTimeframe}
                     fullSize={implementation !== 'lnd'}
                 />
