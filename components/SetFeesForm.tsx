@@ -38,11 +38,17 @@ export default class SetFeesForm extends React.Component<
     constructor(props: any) {
         super(props);
 
+        const { SettingsStore } = props;
+        const { implementation } = SettingsStore;
+
         this.state = {
             showNewFeesForm: false,
             feesSubmitted: false,
             newBaseFee: props.baseFee || '1',
-            newFeeRate: props.feeRate || '0.001',
+            newFeeRate:
+                props.feeRate || implementation === 'c-lightning-REST'
+                    ? '1'
+                    : '0.001',
             newTimeLockDelta: props.timeLockDelta || '144'
         };
     }
@@ -152,7 +158,13 @@ export default class SetFeesForm extends React.Component<
                         <Text style={{ color: themeColor('text') }}>
                             {`${localeString(
                                 'components.SetFeesForm.feeRate'
-                            )} (${localeString('general.percentage')})`}
+                            )} (${
+                                implementation === 'c-lightning-REST'
+                                    ? localeString(
+                                          'components.SetFeesForm.ppmMilliMsat'
+                                      )
+                                    : localeString('general.percentage')
+                            })`}
                         </Text>
                         <TextInput
                             keyboardType="numeric"
