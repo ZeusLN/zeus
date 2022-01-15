@@ -202,7 +202,13 @@ export default class LND {
     getPayments = () => this.getRequest('/v1/payments');
     getNewAddress = () => this.getRequest('/v1/newaddress');
     openChannel = (data: OpenChannelRequest) =>
-        this.postRequest('/v1/channels', data);
+        this.postRequest('/v1/channels', {
+            private: data.private,
+            local_funding_amount: data.local_funding_amount,
+            min_confs: data.min_confs,
+            node_pubkey_string: data.node_pubkey_string,
+            sat_per_byte: data.sat_per_byte
+        });
     openChannelStream = (data: OpenChannelRequest) =>
         this.wsReq('/v1/channels/stream', 'POST', data);
     connectPeer = (data: any) => this.postRequest('/v1/peers', data);
