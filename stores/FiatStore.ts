@@ -20,16 +20,30 @@ export default class FiatStore {
         this.settingsStore = settingsStore;
     }
 
-    // TODO integrate separatorSwap display
     private symbolLookup = (symbol: string): CurrencyDisplayRules => {
         const symbolPairs: any = {
-            USD: { symbol: '$', space: false, rtl: false },
-            AUD: { symbol: '$', space: true, rtl: false },
-            BRL: { symbol: 'R$', space: true, rtl: false },
-            CAD: { symbol: '$', space: true, rtl: false },
-            CHF: { symbol: 'fr.', space: true, rtl: false },
-            CLP: { symbol: '$', space: true, rtl: false },
-            CNY: { symbol: '¥', space: true, rtl: false },
+            USD: {
+                symbol: '$',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
+            AUD: { symbol: '$', space: true, rtl: false, separatorSwap: false },
+            BRL: {
+                symbol: 'R$',
+                space: true,
+                rtl: false,
+                separatorSwap: false
+            },
+            CAD: { symbol: '$', space: true, rtl: false, separatorSwap: false },
+            CHF: {
+                symbol: 'fr.',
+                space: true,
+                rtl: false,
+                separatorSwap: false
+            },
+            CLP: { symbol: '$', space: true, rtl: false, separatorSwap: false },
+            CNY: { symbol: '¥', space: true, rtl: false, separatorSwap: false },
             CZK: {
                 symbol: 'Kč',
                 space: true,
@@ -48,43 +62,58 @@ export default class FiatStore {
                 rtl: false,
                 separatorSwap: true
             },
-            GBP: { symbol: '£', space: false, rtl: false },
-            HKD: { symbol: 'HK$', space: true, rtl: false },
+            GBP: {
+                symbol: '£',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
+            HKD: {
+                symbol: 'HK$',
+                space: true,
+                rtl: false,
+                separatorSwap: false
+            },
             HUF: {
                 symbol: 'Ft',
                 space: true,
                 rtl: true,
                 separatorSwap: true
             },
-            INR: { symbol: '₹', space: true, rtl: false },
-            JPY: { symbol: '¥', space: true, rtl: false },
-            KRW: { symbol: '₩', space: true, rtl: false },
-            NZD: { symbol: '$', space: true, rtl: false },
-            PLN: { symbol: 'zł', space: true, rtl: true },
+            INR: { symbol: '₹', space: true, rtl: false, separatorSwap: false },
+            JPY: { symbol: '¥', space: true, rtl: false, separatorSwap: false },
+            KRW: { symbol: '₩', space: true, rtl: false, separatorSwap: false },
+            NZD: { symbol: '$', space: true, rtl: false, separatorSwap: false },
+            PLN: { symbol: 'zł', space: true, rtl: true, separatorSwap: false },
             RUB: {
                 symbol: 'p.',
                 space: true,
                 rtl: true,
                 separatorSwap: true
             },
-            SAR: { symbol: '﷼', space: true, rtl: true },
+            SAR: { symbol: '﷼', space: true, rtl: true, separatorSwap: false },
             SEK: {
                 symbol: 'kr',
                 space: true,
                 rtl: true,
                 separatorSwap: true
             },
-            SGD: { symbol: '$', space: false, rtl: false },
-            THB: { symbol: '฿', space: true, rtl: true },
-            TRY: { symbol: '₺', space: true, rtl: true },
-            TWD: { symbol: '元', space: true, rtl: false }
+            SGD: {
+                symbol: '$',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
+            THB: { symbol: '฿', space: true, rtl: true, separatorSwap: false },
+            TRY: { symbol: '₺', space: true, rtl: true, separatorSwap: false },
+            TWD: { symbol: '元', space: true, rtl: false, separatorSwap: false }
         };
 
         if (symbol in symbolPairs) {
             // TODO: how do I get typescript less mad here?
             return symbolPairs[symbol];
         } else {
-            return { symbol, space: true, rtl: false };
+            return { symbol, space: true, rtl: false, separatorSwap: false };
         }
     };
 
@@ -99,7 +128,12 @@ export default class FiatStore {
         } else {
             console.log('no fiat?');
             // TODO: what do we do in this case?
-            return { symbol: '???', space: true, rtl: true };
+            return {
+                symbol: '???',
+                space: true,
+                rtl: true,
+                separatorSwap: false
+            };
         }
     };
 

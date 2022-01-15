@@ -57,6 +57,9 @@ export default class UnitsStore {
     numberWithCommas = (x: string | number) =>
         x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
+    numberWithDecimals = (x: string | number) =>
+        new Intl.NumberFormat('de-DE').format(x);
+
     @action getUnformattedAmount = (
         value: string | number = 0,
         fixedUnits?: string
@@ -101,12 +104,17 @@ export default class UnitsStore {
                 (entry: any) => entry.code === fiat
             )[0];
             const rate = fiatEntry.rate;
-            const { symbol, space, rtl } = this.fiatStore.getSymbol();
+            const { symbol, space, rtl, separatorSwap } =
+                this.fiatStore.getSymbol();
+
+            const amount = (
+                FeeUtils.toFixed(absValueSats / satoshisPerBTC) * rate
+            ).toFixed(2);
 
             return {
-                amount: (
-                    FeeUtils.toFixed(absValueSats / satoshisPerBTC) * rate
-                ).toFixed(2),
+                amount: separatorSwap
+                    ? this.numberWithDecimals(amount)
+                    : this.numberWithCommas(amount),
                 unit: 'fiat',
                 symbol,
                 negative,
