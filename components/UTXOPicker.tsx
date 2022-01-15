@@ -1,26 +1,23 @@
 import * as React from 'react';
 import {
-    ActionSheetIOS,
-    Button,
     FlatList,
     Modal,
-    Platform,
     StyleSheet,
     View,
     Text,
     TouchableOpacity
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import { ListItem } from 'react-native-elements';
 import remove from 'lodash/remove';
 import { inject, observer } from 'mobx-react';
+
+import Button from './../components/Button';
+
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
 import stores from './../stores/Stores';
 import UTXOsStore from './../stores/UTXOsStore';
-
-import Bitcoin from './../images/SVG/Bitcoin Circle.svg';
 
 interface UTXOPickerProps {
     title?: string;
@@ -31,7 +28,6 @@ interface UTXOPickerProps {
 }
 
 interface UTXOPickerState {
-    status: string;
     utxosSelected: string[];
     utxosSet: string[];
     showUtxoModal: boolean;
@@ -39,12 +35,7 @@ interface UTXOPickerState {
     setBalance: number;
 }
 
-const VALUES = [
-    { key: 'No selection', value: 'No selection' },
-    { key: 'Select UTXOs to use', value: 'Select UTXOs to use' }
-];
-
-const DEFAULT_TITLE = 'UTXOs to use';
+const DEFAULT_TITLE = localeString('components.UTXOPicker.defaultTitle');
 
 @inject('UTXOsStore')
 @observer
@@ -53,7 +44,6 @@ export default class UTXOPicker extends React.Component<
     UTXOPickerState
 > {
     state = {
-        status: 'unselected',
         utxosSelected: [],
         utxosSet: [],
         showUtxoModal: false,
@@ -117,19 +107,6 @@ export default class UTXOPicker extends React.Component<
 
         const utxosPicked: string[] = [];
         utxosSelected.forEach((utxo: string) => utxosPicked.push(utxo));
-
-        const pickerValuesAndroid: Array<any> = [];
-        const pickerValuesIOS: Array<string> = ['Cancel'];
-        VALUES.forEach((value: { key: string; value: string }) => {
-            pickerValuesAndroid.push(
-                <Picker.Item
-                    key={value.key}
-                    label={value.key}
-                    value={value.value}
-                />
-            );
-            pickerValuesIOS.push(value.key);
-        });
 
         return (
             <React.Fragment>
@@ -196,13 +173,6 @@ export default class UTXOPicker extends React.Component<
                                                     backgroundColor:
                                                         themeColor('background')
                                                 }}
-                                                leftElement={
-                                                    utxosPicked.includes(
-                                                        item.getOutpoint
-                                                    )
-                                                        ? Bitcoin
-                                                        : null
-                                                }
                                                 onPress={() =>
                                                     this.toggleItem(item)
                                                 }
@@ -264,6 +234,7 @@ export default class UTXOPicker extends React.Component<
                                                     showUtxoModal: false
                                                 })
                                             }
+                                            secondary
                                         />
                                     </View>
                                 </>
@@ -272,90 +243,42 @@ export default class UTXOPicker extends React.Component<
                     </View>
                 </Modal>
 
-                {Platform.OS !== 'ios' && (
-                    <View>
-                        <Text
-                            style={{
-                                color: themeColor('secondaryText')
-                            }}
-                        >
-                            {title || DEFAULT_TITLE}
-                        </Text>
-                        {utxosSet.length > 0 ? (
-                            <TouchableOpacity
-                                onPress={() => this.clearSelection()}
-                            >
-                                <Text
-                                    style={{
-                                        padding: 10,
-                                        fontSize: 16,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {this.displayValues()}
-                                </Text>
-                            </TouchableOpacity>
-                        ) : (
-                            <Picker
-                                selectedValue={`${selectedValue}`}
-                                onValueChange={(itemValue: string) => {
-                                    if (itemValue === 'No selection') {
-                                        this.clearSelection();
-                                    } else if (
-                                        itemValue === 'Select UTXOs to use'
-                                    ) {
-                                        this.openPicker();
-                                    }
-                                }}
-                                style={{
-                                    height: 50,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {pickerValuesAndroid}
-                            </Picker>
-                        )}
-                    </View>
-                )}
-
-                {Platform.OS === 'ios' && (
-                    <View>
-                        <Text
-                            style={{
-                                color: themeColor('secondaryText')
-                            }}
-                        >
-                            {title || DEFAULT_TITLE}
-                        </Text>
-                        <TouchableOpacity
-                            onPress={() =>
-                                ActionSheetIOS.showActionSheetWithOptions(
-                                    {
-                                        options: pickerValuesIOS,
-                                        cancelButtonIndex: 0
-                                    },
-                                    (buttonIndex) => {
-                                        if (buttonIndex == 1) {
-                                            this.clearSelection();
-                                        } else if (buttonIndex == 2) {
-                                            this.openPicker();
-                                        }
-                                    }
-                                )
-                            }
-                        >
+                <View>
+                    <Text
+                        style={{
+                            color: themeColor('secondaryText')
+                        }}
+                    >
+                        {title || DEFAULT_TITLE}
+                    </Text>
+                    {utxosSet.length > 0 ? (
+                        <TouchableOpacity onPress={() => this.clearSelection()}>
                             <Text
                                 style={{
+                                    padding: 10,
+                                    fontSize: 16,
                                     color: themeColor('text')
                                 }}
                             >
-                                {utxosSet.length > 0
-                                    ? this.displayValues()
-                                    : 'No UTXOs selected'}
+                                {this.displayValues()}
                             </Text>
                         </TouchableOpacity>
-                    </View>
-                )}
+                    ) : (
+                        <TouchableOpacity onPress={() => this.openPicker()}>
+                            <Text
+                                style={{
+                                    padding: 10,
+                                    fontSize: 16,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString(
+                                    'components.UTXOPicker.selectUTXOs'
+                                )}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
             </React.Fragment>
         );
     }
