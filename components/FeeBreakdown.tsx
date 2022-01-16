@@ -11,11 +11,12 @@ import SettingsStore from '../stores/SettingsStore';
 import DateTimeUtils from '../utils/DateTimeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import SetFeesForm from './SetFeesForm';
-import { Amount } from './Amount';
-import KeyValue from './KeyValue';
 
 import LoadingIndicator from '../components/LoadingIndicator';
+
+import { Amount } from './Amount';
+import KeyValue from './KeyValue';
+import SetFeesForm from './SetFeesForm';
 
 interface FeeBreakdownProps {
     ChannelsStore: ChannelsStore;
