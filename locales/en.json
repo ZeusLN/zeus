@@ -325,6 +325,7 @@
     "views.SendingLightning.success": "Transaction successfully sent",
     "views.SendingLightning.paymentHash": "Payment Hash",
     "views.SendingLightning.goToWallet": "Go to Wallet",
+    "views.SendingLightning.copyPaymentHash": "Copy Hash to Clipboard",
     "views.SendingOnChain.broadcasting": "Broadcasting Transaction",
     "views.SendingOnChain.success": "Transaction successfully sent",
     "views.SendingOnChain.txid": "TXID",

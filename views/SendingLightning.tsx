@@ -4,6 +4,7 @@ import { inject, observer } from 'mobx-react';
 import { Button } from 'react-native-elements';
 import LnurlPaySuccess from './LnurlPay/Success';
 
+import CopyButton from './../components/CopyButton';
 import LoadingIndicator from './../components/LoadingIndicator';
 
 import TransactionsStore from './../stores/TransactionsStore';
@@ -143,7 +144,7 @@ export default class SendingLightning extends React.Component<
                             style={{
                                 color: 'white',
                                 padding: 20,
-                                fontSize: 40
+                                fontSize: 22
                             }}
                         >
                             {localeString('views.SendingLightning.success')}
@@ -169,6 +170,17 @@ export default class SendingLightning extends React.Component<
                         >{`${localeString(
                             'views.SendingLightning.paymentHash'
                         )}: ${payment_hash}`}</Text>
+                    )}
+
+                    {payment_hash && (
+                        <View style={styles.button}>
+                            <CopyButton
+                                title={localeString(
+                                    'views.SendingLightning.copyPaymentHash'
+                                )}
+                                copyValue={payment_hash}
+                            />
+                        </View>
                     )}
 
                     {(!!error || !!payment_error || !!success) && (
