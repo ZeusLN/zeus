@@ -142,6 +142,7 @@
     "views.Wallet.Wallet.invoices": "Invoices",
     "views.Wallet.Wallet.onchain": "On-chain",
     "views.Wallet.Wallet.channels": "Channels",
+    "views.Wallet.Wallet.connecting": "Zeus is connecting to your node.",
     "views.Wallet.restartTor": "Restart Tor and Try Again",
     "views.AddressQRScanner.title": "Address/Payment Request QR Scanner",
     "views.AddressQRScanner.text": "Scan a valid Bitcoin address or Lightning payment request",

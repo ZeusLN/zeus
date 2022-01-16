@@ -1,6 +1,5 @@
 import * as React from 'react';
 import {
-    ActivityIndicator,
     Animated,
     Image,
     Linking,
@@ -38,6 +37,9 @@ import LayerBalances from './../../components/LayerBalances';
 import Temple from './../../images/SVG/Temple.svg';
 import ChannelsIcon from './../../images/SVG/Channels.svg';
 import CaretUp from './../../images/SVG/Caret Up.svg';
+import WordLogo from './../../images/SVG/Word Logo.svg';
+
+import Loading from './../../images/GIF/Loading.gif';
 
 import handleAnything from './../../utils/handleAnything';
 
@@ -344,14 +346,31 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                         </NavigationContainer>
                     )}
                     {loading && (
-                        <ActivityIndicator
-                            color={themeColor('text')}
-                            style={{
-                                flex: 1,
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                            }}
-                        />
+                        <>
+                            <WordLogo
+                                stroke={themeColor('text')}
+                                fill={themeColor('text')}
+                                width={250}
+                                style={{ alignSelf: 'center', top: 100 }}
+                            />
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    alignSelf: 'center',
+                                    fontSize: 15
+                                }}
+                            >
+                                {localeString('views.Wallet.Wallet.connecting')}
+                            </Text>
+                            <Image
+                                source={Loading}
+                                style={{
+                                    alignSelf: 'center',
+                                    width: 120,
+                                    height: 120
+                                }}
+                            />
+                        </>
                     )}
                 </LinearGradient>
             </View>
