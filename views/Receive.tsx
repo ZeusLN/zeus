@@ -1,6 +1,5 @@
 import * as React from 'react';
 import {
-    ActivityIndicator,
     Image,
     ScrollView,
     StyleSheet,
@@ -17,15 +16,17 @@ import Success from '../images/GIF/Success.gif';
 
 import Button from './../components/Button';
 import CollapsedQR from './../components/CollapsedQR';
+import LoadingIndicator from './../components/LoadingIndicator';
 import TextInput from './../components/TextInput';
-import RESTUtils from './../utils/RESTUtils';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
 
+import FiatStore from './../stores/FiatStore';
 import InvoicesStore from './../stores/InvoicesStore';
 import SettingsStore from './../stores/SettingsStore';
 import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
-import FiatStore from './../stores/FiatStore';
+
+import { localeString } from './../utils/LocaleUtils';
+import RESTUtils from './../utils/RESTUtils';
+import { themeColor } from './../utils/ThemeUtils';
 
 interface ReceiveProps {
     exitSetup: any;
@@ -286,12 +287,7 @@ export default class Receive extends React.Component<
                                         {error_msg}
                                     </Text>
                                 )}
-                                {creatingInvoice && (
-                                    <ActivityIndicator
-                                        size="large"
-                                        color={themeColor('highlight')}
-                                    />
-                                )}
+                                {creatingInvoice && <LoadingIndicator />}
                                 {!!payment_request && (
                                     <CollapsedQR
                                         value={payment_request.toUpperCase()}
@@ -509,12 +505,7 @@ export default class Receive extends React.Component<
                                     {localeString('views.Receive.noOnChain')}
                                 </Text>
                             )}
-                            {loading && (
-                                <ActivityIndicator
-                                    size="large"
-                                    color={themeColor('highlight')}
-                                />
-                            )}
+                            {loading && <LoadingIndicator />}
                             {address && !loading && (
                                 <CollapsedQR
                                     value={address}

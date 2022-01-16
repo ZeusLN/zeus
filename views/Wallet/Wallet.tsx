@@ -1,7 +1,6 @@
 import * as React from 'react';
 import {
     Animated,
-    Image,
     Linking,
     PanResponder,
     Text,
@@ -18,6 +17,9 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import ChannelsPane from '../Channels/ChannelsPane';
 import Channels from './Channels';
 import MainPane from './MainPane';
+
+import LoadingIndicator from './../../components/LoadingIndicator';
+
 import PrivacyUtils from './../../utils/PrivacyUtils';
 import RESTUtils from './../../utils/RESTUtils';
 import { restartTor } from './../../utils/TorUtils';
@@ -38,8 +40,6 @@ import Temple from './../../images/SVG/Temple.svg';
 import ChannelsIcon from './../../images/SVG/Channels.svg';
 import CaretUp from './../../images/SVG/Caret Up.svg';
 import WordLogo from './../../images/SVG/Word Logo.svg';
-
-import Loading from './../../images/GIF/Loading.gif';
 
 import handleAnything from './../../utils/handleAnything';
 
@@ -360,14 +360,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                             >
                                 {localeString('views.Wallet.Wallet.connecting')}
                             </Text>
-                            <Image
-                                source={Loading}
-                                style={{
-                                    alignSelf: 'center',
-                                    width: 120,
-                                    height: 120
-                                }}
-                            />
+                            <LoadingIndicator size={120} />
                         </>
                     )}
                 </LinearGradient>

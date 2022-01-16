@@ -3,16 +3,19 @@ import {
     StyleSheet,
     Text,
     TextInput,
-    ActivityIndicator,
     View,
     TouchableOpacity,
     TouchableWithoutFeedback
 } from 'react-native';
 import { Icon, Header } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+
 import Button from '../components/Button';
+import LoadingIndicator from '../components/LoadingIndicator';
+
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
+
 import Refresh from '../images/SVG/Refresh.svg';
 import ErrorIcon from '../images/SVG/ErrorIcon.svg';
 import FeeStore from './../stores/FeeStore';
@@ -81,7 +84,7 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                 />
                 {loading && !error && (
                     <View style={{ flex: 1, justifyContent: 'center' }}>
-                        <ActivityIndicator size="large" color="#0000ff" />
+                        <LoadingIndicator />
                     </View>
                 )}
                 {recommendedFees['fastestFee'] && !loading && (
