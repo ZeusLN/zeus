@@ -323,16 +323,20 @@ export default class AddEditNode extends React.Component<
         }
 
         setSettings(
-            JSON.stringify({
-                nodes,
-                theme: settings.theme,
-                selectedNode: settings.selectedNode,
-                fiat,
-                locale,
-                lurkerMode,
-                passphrase,
-                privacy: settings.privacy
-            })
+            JSON.stringify(
+                settings
+                    ? {
+                          nodes,
+                          theme: settings.theme,
+                          selectedNode: settings.selectedNode,
+                          fiat,
+                          locale,
+                          lurkerMode,
+                          passphrase,
+                          privacy: settings.privacy
+                      }
+                    : { nodes }
+            )
         ).then(() => {
             this.setState({
                 saved: true

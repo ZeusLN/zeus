@@ -6,8 +6,9 @@ import NodeIdenticon from '../components/NodeIdenticon';
 import RESTUtils from '../utils/RESTUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import Contact from '../images/SVG/Contact.svg';
 import Keysign from '../images/SVG/Keysign.svg';
-import QRIcon from '../images/SVG/QR.svg';
+import Scan from '../images/SVG/Scan.svg';
 import { Body } from './text/Body';
 
 const OpenChannelButton = ({ navigation }: { navigation: any }) => (
@@ -26,11 +27,11 @@ const OpenChannelButton = ({ navigation }: { navigation: any }) => (
     />
 );
 
-const QRBadge = ({ navigation }: { navigation: any }) => (
+const ScanBadge = ({ navigation }: { navigation: any }) => (
     <TouchableOpacity
         onPress={() => navigation.navigate('AddressQRCodeScanner')}
     >
-        <QRIcon fill={themeColor('text')} />
+        <Scan fill={themeColor('text')} />
     </TouchableOpacity>
 );
 
@@ -47,6 +48,7 @@ export function WalletHeader({
     title?: string;
     channels?: boolean;
 }) {
+    const { settings } = SettingsStore;
     const selectedNode: any =
         (settings &&
             settings.nodes &&
@@ -58,7 +60,7 @@ export function WalletHeader({
             {selectedNode ? (
                 <NodeIdenticon selectedNode={selectedNode} width={30} />
             ) : (
-                <Image source={Head} style={{ width: 30, height: 30 }} />
+                <Contact fill={themeColor('text')} width={30} height={30} />
             )}
         </TouchableOpacity>
     );
@@ -71,7 +73,7 @@ export function WalletHeader({
                 channels ? (
                     <OpenChannelButton navigation={navigation} />
                 ) : (
-                    <QRBadge navigation={navigation} />
+                    <ScanBadge navigation={navigation} />
                 )
             }
             backgroundColor="transparent"

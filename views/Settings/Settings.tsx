@@ -140,7 +140,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     paddingLeft: 109
                                 }}
                             >
-                                {`${implementation}, ${
+                                {`${selectedNode.implementation}, ${
                                     selectedNode.enableTor ? 'Tor' : 'clearnet'
                                 }`}
                             </Text>
