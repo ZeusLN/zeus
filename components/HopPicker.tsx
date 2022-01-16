@@ -1,10 +1,7 @@
 import * as React from 'react';
 import {
-    ActionSheetIOS,
-    Button,
     FlatList,
     Modal,
-    Platform,
     StyleSheet,
     View,
     Text,
@@ -24,6 +21,7 @@ import Channel from './../models/Channel';
 import UnitsStore from './../stores/UnitsStore';
 
 import BalanceSlider from './../components/BalanceSlider';
+import Button from './../components/Button';
 import PrivacyUtils from './../utils/PrivacyUtils';
 const hash = require('object-hash');
 
@@ -40,7 +38,6 @@ interface ChannelPickerProps {
 }
 
 interface ChannelPickerState {
-    status: string;
     channelSelected: Channel | null;
     valueSet: string;
     showChannelModal: boolean;
@@ -54,12 +51,7 @@ const ChannelIcon = (balanceImage: string) => (
     />
 );
 
-const VALUES = [
-    { key: 'No selection', value: 'No selection' },
-    { key: 'Select Channel to use', value: 'Select Channel to use' }
-];
-
-const DEFAULT_TITLE = 'Channels to use';
+const DEFAULT_TITLE = localeString('components.HopPicker.defaultTitle');
 
 const Icon = (balanceImage: any) => <Avatar source={balanceImage} />;
 
@@ -70,7 +62,6 @@ export default class ChannelPicker extends React.Component<
     ChannelPickerState
 > {
     state = {
-        status: 'unselected',
         channelSelected: null,
         valueSet: '',
         showChannelModal: false
@@ -110,19 +101,6 @@ export default class ChannelPicker extends React.Component<
         const { settings } = SettingsStore;
         const { theme, privacy } = settings;
         const { lurkerMode } = privacy;
-
-        const pickerValuesAndroid: Array<any> = [];
-        const pickerValuesIOS: Array<string> = ['Cancel'];
-        VALUES.forEach((value: { key: string; value: string }) => {
-            pickerValuesAndroid.push(
-                <Picker.Item
-                    key={value.key}
-                    label={value.key}
-                    value={value.value}
-                />
-            );
-            pickerValuesIOS.push(value.key);
-        });
 
         return (
             <React.Fragment>
@@ -307,27 +285,35 @@ export default class ChannelPicker extends React.Component<
                                                 const { channelSelected }: any =
                                                     this.state;
 
-                                                const displayName =
-                                                    channelSelected.alias ||
-                                                    (nodes[
-                                                        channelSelected
-                                                            .remote_pubkey
-                                                    ] &&
-                                                        nodes[
+                                                if (channelSelected) {
+                                                    const displayName =
+                                                        channelSelected.alias ||
+                                                        (nodes[
                                                             channelSelected
                                                                 .remote_pubkey
-                                                        ].alias) ||
-                                                    (channelSelected &&
-                                                        channelSelected.remote_pubkey) ||
-                                                    (channelSelected &&
-                                                        channelSelected.channelId);
+                                                        ] &&
+                                                            nodes[
+                                                                channelSelected
+                                                                    .remote_pubkey
+                                                            ].alias) ||
+                                                        (channelSelected &&
+                                                            channelSelected.remote_pubkey) ||
+                                                        (channelSelected &&
+                                                            channelSelected.channelId);
 
-                                                this.setState({
-                                                    showChannelModal: false,
-                                                    valueSet: displayName
-                                                });
+                                                    this.setState({
+                                                        showChannelModal: false,
+                                                        valueSet: displayName
+                                                    });
 
-                                                onValueChange(channelSelected);
+                                                    onValueChange(
+                                                        channelSelected
+                                                    );
+                                                } else {
+                                                    this.setState({
+                                                        showChannelModal: false
+                                                    });
+                                                }
                                             }}
                                         />
                                     </View>
@@ -342,6 +328,7 @@ export default class ChannelPicker extends React.Component<
                                                     showChannelModal: false
                                                 })
                                             }
+                                            secondary
                                         />
                                     </View>
                                 </>
@@ -350,90 +337,43 @@ export default class ChannelPicker extends React.Component<
                     </View>
                 </Modal>
 
-                {Platform.OS !== 'ios' && (
-                    <View style={styles.field}>
-                        <Text
-                            style={{
-                                color: themeColor('text'),
-                                paddingLeft: 10
-                            }}
-                        >
-                            {title || DEFAULT_TITLE}
-                        </Text>
-                        {valueSet ? (
-                            <TouchableOpacity
-                                onPress={() => this.clearSelection()}
-                            >
-                                <Text
-                                    style={{
-                                        padding: 10,
-                                        fontSize: 16,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {valueSet}
-                                </Text>
-                            </TouchableOpacity>
-                        ) : (
-                            <Picker
-                                selectedValue={`${selectedValue}`}
-                                onValueChange={(itemValue: string) => {
-                                    if (itemValue === 'No selection') {
-                                        this.clearSelection();
-                                    } else if (
-                                        itemValue === 'Select Channel to use'
-                                    ) {
-                                        this.openPicker();
-                                    }
-                                }}
-                                style={{
-                                    height: 50,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {pickerValuesAndroid}
-                            </Picker>
-                        )}
-                    </View>
-                )}
-
-                {Platform.OS === 'ios' && (
-                    <View style={styles.field}>
-                        <Text
-                            style={{
-                                color: themeColor('text'),
-                                textDecorationLine: 'underline'
-                            }}
-                        >
-                            {title || DEFAULT_TITLE}
-                        </Text>
-                        <TouchableOpacity
-                            onPress={() =>
-                                ActionSheetIOS.showActionSheetWithOptions(
-                                    {
-                                        options: pickerValuesIOS,
-                                        cancelButtonIndex: 0
-                                    },
-                                    (buttonIndex) => {
-                                        if (buttonIndex == 1) {
-                                            this.clearSelection();
-                                        } else if (buttonIndex == 2) {
-                                            this.openPicker();
-                                        }
-                                    }
-                                )
-                            }
-                        >
+                <View style={styles.field}>
+                    <Text
+                        style={{
+                            color: themeColor('text'),
+                            paddingLeft: 10
+                        }}
+                    >
+                        {title || DEFAULT_TITLE}
+                    </Text>
+                    {valueSet ? (
+                        <TouchableOpacity onPress={() => this.clearSelection()}>
                             <Text
                                 style={{
+                                    padding: 10,
+                                    fontSize: 16,
                                     color: themeColor('text')
                                 }}
                             >
-                                {valueSet ? valueSet : 'No selection'}
+                                {valueSet}
                             </Text>
                         </TouchableOpacity>
-                    </View>
-                )}
+                    ) : (
+                        <TouchableOpacity onPress={() => this.openPicker()}>
+                            <Text
+                                style={{
+                                    padding: 10,
+                                    fontSize: 16,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString(
+                                    'components.HopPicker.selectChannel'
+                                )}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
             </React.Fragment>
         );
     }
