@@ -32,7 +32,8 @@ export default class BalanceStore {
         this.error = false;
     };
 
-    resetBlockchainBalance = () => {
+    @action
+    public resetBlockchainBalance = () => {
         this.unconfirmedBlockchainBalance = 0;
         this.confirmedBlockchainBalance = 0;
         this.totalBlockchainBalance = 0;
