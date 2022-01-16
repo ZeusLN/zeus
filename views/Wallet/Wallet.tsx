@@ -157,6 +157,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
 
         if (implementation === 'lndhub') {
             login({ login: username, password }).then(() => {
+                BalanceStore.resetBlockchainBalance();
                 BalanceStore.getLightningBalance();
             });
         } else {
@@ -361,6 +362,23 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                 {localeString('views.Wallet.Wallet.connecting')}
                             </Text>
                             <LoadingIndicator size={120} />
+                            <Button
+                                icon={{
+                                    name: 'settings',
+                                    size: 25,
+                                    color: '#fff'
+                                }}
+                                buttonStyle={{
+                                    backgroundColor: 'gray',
+                                    borderRadius: 30,
+                                    marginTop: 120
+                                }}
+                                containerStyle={{
+                                    alignItems: 'center'
+                                }}
+                                onPress={() => navigation.navigate('Settings')}
+                                adaptiveWidth
+                            />
                         </>
                     )}
                 </LinearGradient>

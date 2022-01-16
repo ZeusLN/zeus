@@ -41,7 +41,7 @@ interface InvoiceState {
     maxShardAmt: string;
     timeoutSeconds: string;
     feeLimitSat: string;
-    outgoingChanIds: Array<string> | null;
+    outgoingChanId: string | null;
     lastHopPubkey: string | null;
 }
 
@@ -64,7 +64,7 @@ export default class PaymentRequest extends React.Component<
         maxShardAmt: '',
         timeoutSeconds: '20',
         feeLimitSat: '',
-        outgoingChanIds: null,
+        outgoingChanId: null,
         lastHopPubkey: null
     };
 
@@ -84,7 +84,7 @@ export default class PaymentRequest extends React.Component<
             maxShardAmt,
             timeoutSeconds,
             feeLimitSat,
-            outgoingChanIds,
+            outgoingChanId,
             lastHopPubkey
         } = this.state;
         const {
@@ -383,12 +383,14 @@ export default class PaymentRequest extends React.Component<
                                         <HopPicker
                                             onValueChange={(item: any) =>
                                                 this.setState({
-                                                    outgoingChanIds: item
-                                                        ? [item.channelId]
+                                                    outgoingChanId: item
+                                                        ? item.channelId
                                                         : null
                                                 })
                                             }
-                                            title="First Hop"
+                                            title={localeString(
+                                                'views.PaymentRequest.firstHop'
+                                            )}
                                             ChannelsStore={ChannelsStore}
                                             UnitsStore={UnitsStore}
                                         />
@@ -402,7 +404,9 @@ export default class PaymentRequest extends React.Component<
                                                         : null
                                                 })
                                             }
-                                            title="Last Hop"
+                                            title={localeString(
+                                                'views.PaymentRequest.lastHop'
+                                            )}
                                             ChannelsStore={ChannelsStore}
                                             UnitsStore={UnitsStore}
                                         />
@@ -412,11 +416,16 @@ export default class PaymentRequest extends React.Component<
 
                             {!!pay_req && RESTUtils.supportsAMP() && (
                                 <React.Fragment>
-                                    <Text style={{ ...styles.label, top: 25 }}>
+                                    <Text
+                                        style={{
+                                            ...styles.label,
+                                            color: themeColor('text'),
+                                            top: 25
+                                        }}
+                                    >
                                         {localeString(
                                             'views.PaymentRequest.amp'
                                         )}
-                                        :
                                     </Text>
                                     <Switch
                                         value={enableAmp}
@@ -603,8 +612,8 @@ export default class PaymentRequest extends React.Component<
                                                 fee_limit_sat: ampOrMppEnabled
                                                     ? feeLimitSat
                                                     : null,
-                                                outgoing_chan_ids:
-                                                    outgoingChanIds,
+                                                outgoing_chan_id:
+                                                    outgoingChanId,
                                                 last_hop_pubkey: lastHopPubkey,
                                                 amp: enableAmp
                                             });
