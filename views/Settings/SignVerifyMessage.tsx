@@ -1,19 +1,17 @@
 import * as React from 'react';
-import {
-    ActivityIndicator,
-    StyleSheet,
-    Text,
-    View,
-    ScrollView
-} from 'react-native';
+import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { ButtonGroup, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+
 import Button from './../../components/Button';
+import CopyButton from './../../components/CopyButton';
+import LoadingIndicator from './../../components/LoadingIndicator';
 import TextInput from './../../components/TextInput';
+
 import { themeColor } from './../../utils/ThemeUtils';
 import { localeString } from './../../utils/LocaleUtils';
+
 import MessageSignStore from './../../stores/MessageSignStore';
-import CopyButton from './../../components/CopyButton';
 
 interface SignVerifyMessageProps {
     navigation: any;
@@ -155,7 +153,7 @@ export default class SignVerifyMessage extends React.Component<
                     }}
                 />
 
-                {loading && <ActivityIndicator size="large" />}
+                {loading && <LoadingIndicator />}
 
                 {selectedIndex === 0 && (
                     <View>

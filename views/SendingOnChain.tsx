@@ -1,6 +1,5 @@
 import * as React from 'react';
 import {
-    ActivityIndicator,
     StyleSheet,
     Text,
     ScrollView,
@@ -9,9 +8,12 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button } from 'react-native-elements';
-import UrlUtils from './../utils/UrlUtils';
+
 import CopyButton from './../components/CopyButton';
+import LoadingIndicator from './../components/LoadingIndicator';
+
 import { localeString } from './../utils/LocaleUtils';
+import UrlUtils from './../utils/UrlUtils';
 
 import NodeInfoStore from './../stores/NodeInfoStore';
 import TransactionsStore from './../stores/TransactionsStore';
@@ -60,9 +62,7 @@ export default class SendingOnChain extends React.Component<
                         height: '100%'
                     }}
                 >
-                    {loading && (
-                        <ActivityIndicator size="large" color="#0000ff" />
-                    )}
+                    {loading && <LoadingIndicator />}
                     {loading && (
                         <Text>
                             {localeString('views.SendingOnChain.broadcasting')}

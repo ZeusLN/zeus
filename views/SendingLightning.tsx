@@ -1,18 +1,15 @@
 import * as React from 'react';
-import {
-    ActivityIndicator,
-    StyleSheet,
-    Text,
-    View,
-    ScrollView
-} from 'react-native';
+import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button } from 'react-native-elements';
 import LnurlPaySuccess from './LnurlPay/Success';
-import { localeString } from './../utils/LocaleUtils';
+
+import LoadingIndicator from './../components/LoadingIndicator';
 
 import TransactionsStore from './../stores/TransactionsStore';
 import LnurlPayStore from './../stores/LnurlPayStore';
+
+import { localeString } from './../utils/LocaleUtils';
 
 interface SendingLightningProps {
     navigation: any;
@@ -75,9 +72,7 @@ export default class SendingLightning extends React.Component<
                         height: '100%'
                     }}
                 >
-                    {loading && (
-                        <ActivityIndicator size="large" color="#0000ff" />
-                    )}
+                    {loading && <LoadingIndicator />}
                     {loading && (
                         <Text>
                             {localeString('views.SendingLightning.sending')}
