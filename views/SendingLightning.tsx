@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import { Image, StyleSheet, Text, View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button } from 'react-native-elements';
 import LnurlPaySuccess from './LnurlPay/Success';
@@ -10,6 +10,10 @@ import TransactionsStore from './../stores/TransactionsStore';
 import LnurlPayStore from './../stores/LnurlPayStore';
 
 import { localeString } from './../utils/LocaleUtils';
+import { themeColor } from './../utils/ThemeUtils';
+
+import Success from './../images/GIF/Success.gif';
+import WordLogo from './../images/SVG/Word Logo.svg';
 
 interface SendingLightningProps {
     navigation: any;
@@ -35,12 +39,12 @@ export default class SendingLightning extends React.Component<
             status === 'complete' ||
             status === 'SUCCEEDED'
         ) {
-            return 'green';
+            return themeColor('background');
         } else if (payment_error && payment_error != '') {
             return 'lightcoral';
         }
 
-        return 'white';
+        return themeColor('background');
     }
 
     render() {
@@ -74,9 +78,49 @@ export default class SendingLightning extends React.Component<
                 >
                     {loading && <LoadingIndicator />}
                     {loading && (
-                        <Text>
+                        <Text
+                            style={{
+                                color: themeColor('text')
+                            }}
+                        >
                             {localeString('views.SendingLightning.sending')}
                         </Text>
+                    )}
+                    {!!success && !error && (
+                        <>
+                            <WordLogo
+                                width={250}
+                                style={{
+                                    alignSelf: 'center',
+                                    top: -100,
+                                    marginBottom: -250
+                                }}
+                            />
+                            <Image
+                                source={Success}
+                                style={{
+                                    width: 290,
+                                    height: 290,
+                                    marginTop: -50,
+                                    marginBottom: -50
+                                }}
+                            />
+                        </>
+                    )}
+                    {!!error && (
+                        <Button
+                            title=""
+                            icon={{
+                                name: 'error',
+                                size: 125,
+                                color: 'white'
+                            }}
+                            style={{ padding: 20 }}
+                            onPress={() => void 0}
+                            buttonStyle={{
+                                backgroundColor: 'transparent'
+                            }}
+                        />
                     )}
                     {(!!error || !!payment_error) && (
                         <Text
@@ -125,36 +169,6 @@ export default class SendingLightning extends React.Component<
                         >{`${localeString(
                             'views.SendingLightning.paymentHash'
                         )}: ${payment_hash}`}</Text>
-                    )}
-                    {!!success && !error && (
-                        <Button
-                            title=""
-                            icon={{
-                                name: 'check',
-                                size: 125,
-                                color: 'white'
-                            }}
-                            style={{ padding: 20 }}
-                            onPress={() => void 0}
-                            buttonStyle={{
-                                backgroundColor: 'transparent'
-                            }}
-                        />
-                    )}
-                    {!!error && (
-                        <Button
-                            title=""
-                            icon={{
-                                name: 'error',
-                                size: 125,
-                                color: 'white'
-                            }}
-                            style={{ padding: 20 }}
-                            onPress={() => void 0}
-                            buttonStyle={{
-                                backgroundColor: 'transparent'
-                            }}
-                        />
                     )}
 
                     {(!!error || !!payment_error || !!success) && (

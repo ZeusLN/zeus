@@ -76,7 +76,7 @@ export default class SendingOnChain extends React.Component<
                         </Text>
                     )}
                     {publishSuccess && (
-                        <View style={styles.success}>
+                        <>
                             <WordLogo
                                 width={250}
                                 style={{
@@ -94,7 +94,7 @@ export default class SendingOnChain extends React.Component<
                                     marginBottom: -50
                                 }}
                             />
-                        </View>
+                        </>
                     )}
                     {error && error_msg && (
                         <Text
@@ -211,8 +211,5 @@ const styles = StyleSheet.create({
     button: {
         paddingTop: 15,
         paddingBottom: 15
-    },
-    success: {
-        margin: 0
     }
 });
