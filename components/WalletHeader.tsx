@@ -48,6 +48,7 @@ export function WalletHeader({
     title?: string;
     channels?: boolean;
 }) {
+    const { settings } = SettingsStore;
     const selectedNode: any =
         (settings &&
             settings.nodes &&
