@@ -5,12 +5,15 @@
  * Converted to ReactNative + TypeScript by Evan Kaloudis for Zeus
  */
 import * as React from 'react';
-import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 import { DataTable } from 'react-native-paper';
 import isEmpty from 'lodash/isEmpty';
 import { inject, observer } from 'mobx-react';
+
 import Button from './../components/Button';
+import LoadingIndicator from './../components/LoadingIndicator';
+
 import { themeColor } from './../utils/ThemeUtils';
 import FeeUtils from './../utils/FeeUtils';
 
@@ -155,14 +158,7 @@ export default class FeeTable extends React.Component<
                     }
                     tertiary
                 />
-                {!collapsed && loading && (
-                    <View style={{ paddingTop: 20 }}>
-                        <ActivityIndicator
-                            size="large"
-                            color={themeColor('highlight')}
-                        />
-                    </View>
-                )}
+                {!collapsed && loading && <LoadingIndicator />}
                 {!collapsed && !loading && headers && (
                     <View style={{ left: 55 }}>
                         <DataTable.Header

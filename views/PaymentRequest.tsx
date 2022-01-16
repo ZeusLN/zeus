@@ -1,6 +1,5 @@
 import * as React from 'react';
 import {
-    ActivityIndicator,
     ScrollView,
     StyleSheet,
     Switch,
@@ -10,18 +9,20 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+
+import HopPicker from './../components/HopPicker';
+import LoadingIndicator from './../components/LoadingIndicator';
+import TextInput from './../components/TextInput';
 
 import InvoicesStore from './../stores/InvoicesStore';
 import TransactionsStore from './../stores/TransactionsStore';
 import UnitsStore from './../stores/UnitsStore';
 import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
-import RESTUtils from './../utils/RESTUtils';
 
-import HopPicker from './../components/HopPicker';
-import TextInput from './../components/TextInput';
+import { localeString } from './../utils/LocaleUtils';
+import RESTUtils from './../utils/RESTUtils';
+import { themeColor } from './../utils/ThemeUtils';
 
 interface InvoiceProps {
     exitSetup: any;
@@ -148,9 +149,7 @@ export default class PaymentRequest extends React.Component<
                     backgroundColor="#1f2328"
                 />
 
-                {(loading || loadingFeeEstimate) && (
-                    <ActivityIndicator size="large" color="#0000ff" />
-                )}
+                {(loading || loadingFeeEstimate) && <LoadingIndicator />}
 
                 <ScrollView>
                     {!!getPayReqError && (

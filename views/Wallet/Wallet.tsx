@@ -1,8 +1,6 @@
 import * as React from 'react';
 import {
-    ActivityIndicator,
     Animated,
-    Image,
     Linking,
     PanResponder,
     Text,
@@ -19,6 +17,9 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import ChannelsPane from '../Channels/ChannelsPane';
 import Channels from './Channels';
 import MainPane from './MainPane';
+
+import LoadingIndicator from './../../components/LoadingIndicator';
+
 import PrivacyUtils from './../../utils/PrivacyUtils';
 import RESTUtils from './../../utils/RESTUtils';
 import { restartTor } from './../../utils/TorUtils';
@@ -38,6 +39,7 @@ import LayerBalances from './../../components/LayerBalances';
 import Temple from './../../images/SVG/Temple.svg';
 import ChannelsIcon from './../../images/SVG/Channels.svg';
 import CaretUp from './../../images/SVG/Caret Up.svg';
+import WordLogo from './../../images/SVG/Word Logo.svg';
 
 import handleAnything from './../../utils/handleAnything';
 
@@ -346,14 +348,20 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                     )}
                     {loading && (
                         <>
-                            <ActivityIndicator
-                                color={themeColor('text')}
-                                style={{
-                                    flex: 1,
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                }}
+                            <WordLogo
+                                width={250}
+                                style={{ alignSelf: 'center', top: 100 }}
                             />
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    alignSelf: 'center',
+                                    fontSize: 15
+                                }}
+                            >
+                                {localeString('views.Wallet.Wallet.connecting')}
+                            </Text>
+                            <LoadingIndicator size={120} />
                             <Button
                                 icon={{
                                     name: 'settings',
@@ -363,7 +371,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                 buttonStyle={{
                                     backgroundColor: 'gray',
                                     borderRadius: 30,
-                                    marginBottom: 25
+                                    marginTop: 120
                                 }}
                                 containerStyle={{
                                     alignItems: 'center'

@@ -1,6 +1,5 @@
 import * as React from 'react';
 import {
-    ActivityIndicator,
     ActionSheetIOS,
     Modal,
     Platform,
@@ -21,10 +20,13 @@ import AddressUtils, { DEFAULT_LNDHUB } from './../../utils/AddressUtils';
 import LndConnectUtils from './../../utils/LndConnectUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
+
 import Button from './../../components/Button';
 import CollapsedQR from './../../components/CollapsedQR';
 import DropdownSetting from './../../components/DropdownSetting';
+import LoadingIndicator from './../../components/LoadingIndicator';
 import TextInput from './../../components/TextInput';
+
 import SettingsStore, { INTERFACE_KEYS } from './../../stores/SettingsStore';
 
 interface AddEditNodeProps {
@@ -546,11 +548,7 @@ export default class AddEditNode extends React.Component<
                     </View>
                 )}
 
-                {loading && (
-                    <View style={{ padding: 10 }}>
-                        <ActivityIndicator size="large" color="#0000ff" />
-                    </View>
-                )}
+                {loading && <LoadingIndicator />}
 
                 <Modal
                     animationType="slide"

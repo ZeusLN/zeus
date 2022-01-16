@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { inject, observer } from 'mobx-react';
 import ChannelsStore from '../stores/ChannelsStore';
@@ -11,9 +11,12 @@ import SettingsStore from '../stores/SettingsStore';
 import DateTimeUtils from '../utils/DateTimeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import SetFeesForm from './SetFeesForm';
+
+import LoadingIndicator from '../components/LoadingIndicator';
+
 import { Amount } from './Amount';
 import KeyValue from './KeyValue';
+import SetFeesForm from './SetFeesForm';
 
 interface FeeBreakdownProps {
     ChannelsStore: ChannelsStore;
@@ -47,12 +50,7 @@ export default class FeeBreakdown extends React.Component<
 
         return (
             <React.Fragment>
-                {loading && (
-                    <ActivityIndicator
-                        size="large"
-                        color={themeColor('highlight')}
-                    />
-                )}
+                {loading && <LoadingIndicator />}
                 {chanInfo &&
                     chanInfo[channelId] &&
                     chanInfo[channelId].node1_policy && (

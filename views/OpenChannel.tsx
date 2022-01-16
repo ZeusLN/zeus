@@ -1,6 +1,5 @@
 import * as React from 'react';
 import {
-    ActivityIndicator,
     ScrollView,
     StyleSheet,
     Switch,
@@ -13,6 +12,7 @@ import { inject, observer } from 'mobx-react';
 import { Header, Icon } from 'react-native-elements';
 import Button from './../components/Button';
 import FeeTable from './../components/FeeTable';
+import LoadingIndicator from './../components/LoadingIndicator';
 import TextInput from './../components/TextInput';
 import UTXOPicker from './../components/UTXOPicker';
 
@@ -247,7 +247,7 @@ export default class OpenChannel extends React.Component<
 
                 <View style={styles.content}>
                     {(connectingToPeer || openingChannel) && (
-                        <ActivityIndicator size="large" color="#0000ff" />
+                        <LoadingIndicator />
                     )}
                     {peerSuccess && (
                         <Text style={{ color: 'green' }}>
