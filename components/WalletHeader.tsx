@@ -8,7 +8,7 @@ import PrivacyUtils from '../utils/PrivacyUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import Contact from '../images/SVG/Contact.svg';
 import Keysign from '../images/SVG/Keysign.svg';
-import QRIcon from '../images/SVG/QR.svg';
+import Scan from '../images/SVG/Scan.svg';
 import { Body } from './text/Body';
 
 const OpenChannelButton = ({ navigation }: { navigation: any }) => (
@@ -27,11 +27,11 @@ const OpenChannelButton = ({ navigation }: { navigation: any }) => (
     />
 );
 
-const QRBadge = ({ navigation }: { navigation: any }) => (
+const ScanBadge = ({ navigation }: { navigation: any }) => (
     <TouchableOpacity
         onPress={() => navigation.navigate('AddressQRCodeScanner')}
     >
-        <QRIcon fill={themeColor('text')} />
+        <Scan fill={themeColor('text')} />
     </TouchableOpacity>
 );
 
@@ -73,7 +73,7 @@ export function WalletHeader({
                 channels ? (
                     <OpenChannelButton navigation={navigation} />
                 ) : (
-                    <QRBadge navigation={navigation} />
+                    <ScanBadge navigation={navigation} />
                 )
             }
             backgroundColor="transparent"
