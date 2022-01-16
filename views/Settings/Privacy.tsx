@@ -78,7 +78,11 @@ export default class Privacy extends React.Component<
         const BackButton = () => (
             <Icon
                 name="arrow-back"
-                onPress={() => navigation.goBack()}
+                onPress={() =>
+                    navigation.navigate('Settings', {
+                        refresh: true
+                    })
+                }
                 color={themeColor('text')}
                 underlayColor="transparent"
             />
