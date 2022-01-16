@@ -143,8 +143,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                     subtitle={
                                         selectedNode === index ||
                                         (!selectedNode && index === 0)
-                                            ? `Active | ${implementation}`
-                                            : `${implementation}`
+                                            ? `Active | ${item.implementation}`
+                                            : `${item.implementation}`
                                     }
                                     containerStyle={{
                                         borderBottomWidth: 0,
