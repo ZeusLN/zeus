@@ -344,14 +344,33 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                         </NavigationContainer>
                     )}
                     {loading && (
-                        <ActivityIndicator
-                            color={themeColor('text')}
-                            style={{
-                                flex: 1,
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                            }}
-                        />
+                        <>
+                            <ActivityIndicator
+                                color={themeColor('text')}
+                                style={{
+                                    flex: 1,
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            />
+                            <Button
+                                icon={{
+                                    name: 'settings',
+                                    size: 25,
+                                    color: '#fff'
+                                }}
+                                buttonStyle={{
+                                    backgroundColor: 'gray',
+                                    borderRadius: 30,
+                                    marginBottom: 25
+                                }}
+                                containerStyle={{
+                                    alignItems: 'center'
+                                }}
+                                onPress={() => navigation.navigate('Settings')}
+                                adaptiveWidth
+                            />
+                        </>
                     )}
                 </LinearGradient>
             </View>
