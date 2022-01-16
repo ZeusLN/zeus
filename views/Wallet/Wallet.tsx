@@ -155,6 +155,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
 
         if (implementation === 'lndhub') {
             login({ login: username, password }).then(() => {
+                BalanceStore.resetBlockchainBalance();
                 BalanceStore.getLightningBalance();
             });
         } else {
