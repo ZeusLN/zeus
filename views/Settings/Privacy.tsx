@@ -115,20 +115,32 @@ export default class Privacy extends React.Component<
                             });
                             const settings = await getSettings();
                             await setSettings(
-                                JSON.stringify({
-                                    nodes: settings.nodes,
-                                    theme: settings.theme,
-                                    selectedNode: settings.selectedNode,
-                                    fiat: settings.fiat,
-                                    passphrase: settings.passphrase,
-                                    locale: settings.locale,
-                                    privacy: {
-                                        defaultBlockExplorer: value,
-                                        customBlockExplorer,
-                                        clipboard,
-                                        lurkerMode
-                                    }
-                                })
+                                JSON.stringify(
+                                    settings
+                                        ? {
+                                              nodes: settings.nodes,
+                                              theme: settings.theme,
+                                              selectedNode:
+                                                  settings.selectedNode,
+                                              fiat: settings.fiat,
+                                              passphrase: settings.passphrase,
+                                              locale: settings.locale,
+                                              privacy: {
+                                                  defaultBlockExplorer: value,
+                                                  customBlockExplorer,
+                                                  clipboard,
+                                                  lurkerMode
+                                              }
+                                          }
+                                        : {
+                                              privacy: {
+                                                  defaultBlockExplorer: value,
+                                                  customBlockExplorer,
+                                                  clipboard,
+                                                  lurkerMode
+                                              }
+                                          }
+                                )
                             );
                         }}
                         values={BLOCK_EXPLORER_KEYS}
@@ -152,20 +164,35 @@ export default class Privacy extends React.Component<
 
                                     const settings = await getSettings();
                                     await setSettings(
-                                        JSON.stringify({
-                                            nodes: settings.nodes,
-                                            theme: settings.theme,
-                                            selectedNode: settings.selectedNode,
-                                            fiat: settings.fiat,
-                                            passphrase: settings.passphrase,
-                                            locale: settings.locale,
-                                            privacy: {
-                                                defaultBlockExplorer,
-                                                customBlockExplorer: text,
-                                                clipboard,
-                                                lurkerMode
-                                            }
-                                        })
+                                        JSON.stringify(
+                                            settings
+                                                ? {
+                                                      nodes: settings.nodes,
+                                                      theme: settings.theme,
+                                                      selectedNode:
+                                                          settings.selectedNode,
+                                                      fiat: settings.fiat,
+                                                      passphrase:
+                                                          settings.passphrase,
+                                                      locale: settings.locale,
+                                                      privacy: {
+                                                          defaultBlockExplorer,
+                                                          customBlockExplorer:
+                                                              text,
+                                                          clipboard,
+                                                          lurkerMode
+                                                      }
+                                                  }
+                                                : {
+                                                      privacy: {
+                                                          defaultBlockExplorer,
+                                                          customBlockExplorer:
+                                                              text,
+                                                          clipboard,
+                                                          lurkerMode
+                                                      }
+                                                  }
+                                        )
                                     );
                                 }}
                             />
@@ -201,20 +228,33 @@ export default class Privacy extends React.Component<
                                     });
                                     const settings = await getSettings();
                                     await setSettings(
-                                        JSON.stringify({
-                                            nodes: settings.nodes,
-                                            theme: settings.theme,
-                                            selectedNode: settings.selectedNode,
-                                            fiat: settings.fiat,
-                                            passphrase: settings.passphrase,
-                                            locale: settings.locale,
-                                            privacy: {
-                                                defaultBlockExplorer,
-                                                customBlockExplorer,
-                                                clipboard: !clipboard,
-                                                lurkerMode
-                                            }
-                                        })
+                                        JSON.stringify(
+                                            settings
+                                                ? {
+                                                      nodes: settings.nodes,
+                                                      theme: settings.theme,
+                                                      selectedNode:
+                                                          settings.selectedNode,
+                                                      fiat: settings.fiat,
+                                                      passphrase:
+                                                          settings.passphrase,
+                                                      locale: settings.locale,
+                                                      privacy: {
+                                                          defaultBlockExplorer,
+                                                          customBlockExplorer,
+                                                          clipboard: !clipboard,
+                                                          lurkerMode
+                                                      }
+                                                  }
+                                                : {
+                                                      privacy: {
+                                                          defaultBlockExplorer,
+                                                          customBlockExplorer,
+                                                          clipboard: !clipboard,
+                                                          lurkerMode
+                                                      }
+                                                  }
+                                        )
                                     );
                                 }}
                                 trackColor={{
@@ -253,20 +293,35 @@ export default class Privacy extends React.Component<
                                     });
                                     const settings = await getSettings();
                                     await setSettings(
-                                        JSON.stringify({
-                                            nodes: settings.nodes,
-                                            theme: settings.theme,
-                                            selectedNode: settings.selectedNode,
-                                            fiat: settings.fiat,
-                                            passphrase: settings.passphrase,
-                                            locale: settings.locale,
-                                            privacy: {
-                                                defaultBlockExplorer,
-                                                customBlockExplorer,
-                                                clipboard,
-                                                lurkerMode: !lurkerMode
-                                            }
-                                        })
+                                        JSON.stringify(
+                                            settings
+                                                ? {
+                                                      nodes: settings.nodes,
+                                                      theme: settings.theme,
+                                                      selectedNode:
+                                                          settings.selectedNode,
+                                                      fiat: settings.fiat,
+                                                      passphrase:
+                                                          settings.passphrase,
+                                                      locale: settings.locale,
+                                                      privacy: {
+                                                          defaultBlockExplorer,
+                                                          customBlockExplorer,
+                                                          clipboard,
+                                                          lurkerMode:
+                                                              !lurkerMode
+                                                      }
+                                                  }
+                                                : {
+                                                      privacy: {
+                                                          defaultBlockExplorer,
+                                                          customBlockExplorer,
+                                                          clipboard,
+                                                          lurkerMode:
+                                                              !lurkerMode
+                                                      }
+                                                  }
+                                        )
                                     );
                                 }}
                                 trackColor={{
