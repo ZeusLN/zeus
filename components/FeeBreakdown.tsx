@@ -51,130 +51,150 @@ export default class FeeBreakdown extends React.Component<
         return (
             <React.Fragment>
                 {loading && <LoadingIndicator />}
-                {chanInfo &&
-                    chanInfo[channelId] &&
-                    chanInfo[channelId].node1_policy && (
-                        <React.Fragment>
-                            <View style={styles.title}>
-                                <Text
-                                    style={{
-                                        color: themeColor('text'),
-                                        alignSelf: 'center'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Channel.initiatingParty'
-                                    )}
-                                </Text>
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText'),
-                                        alignSelf: 'center'
-                                    }}
-                                >
-                                    {chanInfo[channelId].node1_pub === nodeId
-                                        ? localeString('views.Channel.yourNode')
-                                        : peerDisplay ||
-                                          chanInfo[channelId].node1_pub}
-                                </Text>
-                            </View>
-                            <KeyValue
-                                keyValue={localeString('views.Channel.baseFee')}
-                                value={
-                                    <Amount
-                                        sats={
-                                            Number(
-                                                chanInfo[channelId].node1_policy
-                                                    .fee_base_msat
-                                            ) / 1000
-                                        }
-                                        toggleable
-                                        sensitive
-                                    />
-                                }
-                            />
-                            <KeyValue
-                                keyValue={localeString('views.Channel.feeRate')}
-                                value={`${
-                                    Number(
-                                        chanInfo[channelId].node1_policy
-                                            .fee_rate_milli_msat
-                                    ) / 10000
-                                }%`}
-                                sensitive
-                            />
-                            <KeyValue
-                                keyValue={localeString('views.Channel.minHTLC')}
-                                value={
-                                    <Amount
-                                        sats={
-                                            chanInfo[channelId].node1_policy
-                                                .min_htlc
-                                        }
-                                        toggleable
-                                        sensitive
-                                    />
-                                }
-                            />
-                            <KeyValue
-                                keyValue={localeString('views.Channel.maxHTLC')}
-                                value={
-                                    <Amount
-                                        sats={
-                                            Number(
-                                                chanInfo[channelId].node1_policy
-                                                    .max_htlc_msat
-                                            ) / 1000
-                                        }
-                                        toggleable
-                                        sensitive
-                                    />
-                                }
-                            />
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.Channel.timeLockDelta'
-                                )}
-                                value={`${
-                                    chanInfo[channelId].node1_policy
-                                        .time_lock_delta
-                                } ${localeString('general.blocks')}`}
-                            />
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.Channel.lastUpdate'
-                                )}
-                                value={DateTimeUtils.listFormattedDate(
-                                    chanInfo[channelId].node1_policy.last_update
-                                )}
-                            />
-                            {chanInfo[channelId].node1_pub === nodeId && (
-                                <SetFeesForm
-                                    baseFee={`${
+                {!loading &&
+                chanInfo &&
+                chanInfo[channelId] &&
+                chanInfo[channelId].node1_policy ? (
+                    <React.Fragment>
+                        <View style={styles.title}>
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    alignSelf: 'center'
+                                }}
+                            >
+                                {localeString('views.Channel.initiatingParty')}
+                            </Text>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    alignSelf: 'center'
+                                }}
+                            >
+                                {chanInfo[channelId].node1_pub === nodeId
+                                    ? localeString('views.Channel.yourNode')
+                                    : peerDisplay ||
+                                      chanInfo[channelId].node1_pub}
+                            </Text>
+                        </View>
+                        <KeyValue
+                            keyValue={localeString('views.Channel.baseFee')}
+                            value={
+                                <Amount
+                                    sats={
                                         Number(
                                             chanInfo[channelId].node1_policy
                                                 .fee_base_msat
                                         ) / 1000
-                                    }`}
-                                    feeRate={`${
+                                    }
+                                    toggleable
+                                    sensitive
+                                />
+                            }
+                        />
+                        <KeyValue
+                            keyValue={localeString('views.Channel.feeRate')}
+                            value={`${
+                                Number(
+                                    chanInfo[channelId].node1_policy
+                                        .fee_rate_milli_msat
+                                ) / 10000
+                            }%`}
+                            sensitive
+                        />
+                        <KeyValue
+                            keyValue={localeString('views.Channel.minHTLC')}
+                            value={
+                                <Amount
+                                    sats={
+                                        chanInfo[channelId].node1_policy
+                                            .min_htlc
+                                    }
+                                    toggleable
+                                    sensitive
+                                />
+                            }
+                        />
+                        <KeyValue
+                            keyValue={localeString('views.Channel.maxHTLC')}
+                            value={
+                                <Amount
+                                    sats={
                                         Number(
                                             chanInfo[channelId].node1_policy
-                                                .fee_rate_milli_msat
-                                        ) / 10000
-                                    }`}
-                                    timeLockDelta={chanInfo[
-                                        channelId
-                                    ].node1_policy.time_lock_delta.toString()}
-                                    channelPoint={channelPoint}
-                                    channelId={channelId}
-                                    FeeStore={FeeStore}
-                                    ChannelsStore={ChannelsStore}
-                                    SettingsStore={SettingsStore}
+                                                .max_htlc_msat
+                                        ) / 1000
+                                    }
+                                    toggleable
+                                    sensitive
                                 />
+                            }
+                        />
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Channel.timeLockDelta'
                             )}
-                        </React.Fragment>
-                    )}
-                {chanInfo &&
+                            value={`${
+                                chanInfo[channelId].node1_policy.time_lock_delta
+                            } ${localeString('general.blocks')}`}
+                        />
+                        <KeyValue
+                            keyValue={localeString('views.Channel.lastUpdate')}
+                            value={DateTimeUtils.listFormattedDate(
+                                chanInfo[channelId].node1_policy.last_update
+                            )}
+                        />
+                        {chanInfo[channelId].node1_pub === nodeId && (
+                            <SetFeesForm
+                                baseFee={`${
+                                    Number(
+                                        chanInfo[channelId].node1_policy
+                                            .fee_base_msat
+                                    ) / 1000
+                                }`}
+                                feeRate={`${
+                                    Number(
+                                        chanInfo[channelId].node1_policy
+                                            .fee_rate_milli_msat
+                                    ) / 10000
+                                }`}
+                                timeLockDelta={chanInfo[
+                                    channelId
+                                ].node1_policy.time_lock_delta.toString()}
+                                channelPoint={channelPoint}
+                                channelId={channelId}
+                                FeeStore={FeeStore}
+                                ChannelsStore={ChannelsStore}
+                                SettingsStore={SettingsStore}
+                            />
+                        )}
+                    </React.Fragment>
+                ) : (
+                    <React.Fragment>
+                        <View style={styles.title}>
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    alignSelf: 'center'
+                                }}
+                            >
+                                {localeString(
+                                    'components.FeeBreakdown.nowClosed'
+                                )}
+                            </Text>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    alignSelf: 'center'
+                                }}
+                            >
+                                {peerDisplay}
+                            </Text>
+                        </View>
+                    </React.Fragment>
+                )}
+                {!loading &&
+                    chanInfo &&
                     chanInfo[channelId] &&
                     chanInfo[channelId].node2_policy && (
                         <React.Fragment>
