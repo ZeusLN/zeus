@@ -102,7 +102,6 @@ export default class Intro extends React.Component<IntroProps, IntroState> {
                 <View
                     style={{
                         flex: 1,
-                        flexDirection: 'row',
                         justifyContent: 'center'
                     }}
                 >
