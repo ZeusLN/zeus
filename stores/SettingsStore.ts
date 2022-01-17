@@ -16,6 +16,8 @@ interface Node {
     certVerification?: boolean;
     enableTor?: boolean;
     nickname?: string;
+    // deprecated
+    onChainAddress?: string;
 }
 
 interface PrivacySettings {
@@ -32,7 +34,10 @@ interface Settings {
     passphrase?: string;
     fiat?: string;
     locale?: string;
-    privacy: PrivacySettings;
+    privacy?: PrivacySettings;
+    // deprecated
+    onChainAddress?: string;
+    lurkerMode?: boolean;
 }
 
 export const BLOCK_EXPLORER_KEYS = [
