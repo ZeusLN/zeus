@@ -63,20 +63,13 @@ export default class OpenChannel extends React.Component<
 > {
     constructor(props: any) {
         super(props);
-        const { navigation } = props;
-        const node_pubkey_string = navigation.getParam(
-            'node_pubkey_string',
-            null
-        );
-        const host = navigation.getParam('host', null);
-
         this.state = {
-            node_pubkey_string: node_pubkey_string || '',
+            node_pubkey_string: '',
             local_funding_amount: '',
             min_confs: 1,
             sat_per_byte: '2',
             private: false,
-            host: host || '',
+            host: '',
             suggestImport: '',
             utxos: [],
             utxoBalance: 0
@@ -109,11 +102,14 @@ export default class OpenChannel extends React.Component<
     initFromProps(props: any) {
         const { navigation } = props;
 
-        const pubkey = navigation.getParam('pubkey', null);
+        const node_pubkey_string = navigation.getParam(
+            'node_pubkey_string',
+            null
+        );
         const host = navigation.getParam('host', null);
 
         this.setState({
-            node_pubkey_string: pubkey,
+            node_pubkey_string,
             host
         });
     }
