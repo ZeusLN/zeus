@@ -90,8 +90,8 @@ export default class RoutingEvent extends React.Component<
         const chanOut = chanOutFilter[0];
         const chanInLabel = aliasesById[chan_id_in] || chan_id_in;
         const chanOutLabel = aliasesById[chan_id_out] || chan_id_out;
-        const channelInPoint = chanIn.channel_point;
-        const channelOutPoint = chanOut.channel_point;
+        const channelInPoint = chanIn && chanIn.channel_point;
+        const channelOutPoint = chanOut && chanOut.channel_point;
 
         const BackButton = () => (
             <Icon
