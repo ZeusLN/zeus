@@ -100,7 +100,7 @@ export default class ChannelPicker extends React.Component<
         const { getAmount, units } = UnitsStore;
         const { settings } = SettingsStore;
         const { theme, privacy } = settings;
-        const { lurkerMode } = privacy;
+        const lurkerMode = (privacy && privacy.lurkerMode) || false;
 
         return (
             <React.Fragment>

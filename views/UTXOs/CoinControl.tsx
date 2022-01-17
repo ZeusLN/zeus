@@ -51,7 +51,7 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
         const { loading, utxos, getUTXOs } = UTXOsStore;
         const { settings } = SettingsStore;
         const { privacy } = settings;
-        const { lurkerMode } = privacy;
+        const lurkerMode = (privacy && privacy.lurkerMode) || false;
 
         const AddPill = () => (
             <Pill title={localeString('general.add').toUpperCase()} />
