@@ -146,10 +146,10 @@ export default class UnitsStore {
                 Number(wholeSats || 0) / satoshisPerBTC
             )}`;
         } else if (units === 'sats') {
-            const sats = `${value || 0} ${
+            const sats = `${this.numberWithCommas(value) || 0} ${
                 Number(value) === 1 || Number(value) === -1 ? 'sat' : 'sats'
             }`;
-            return this.numberWithCommas(sats);
+            return sats;
         } else if (units === 'fiat' && fiat) {
             const rate = this.fiatStore.fiatRates[fiat]['15m'];
             const symbol = this.fiatStore.fiatRates[fiat].symbol;
