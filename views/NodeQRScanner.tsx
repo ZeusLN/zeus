@@ -14,6 +14,9 @@ function NodeQRScanner(props: NodeQRProps) {
     const handleNodeScanned = (data: string) => {
         if (NodeUriUtils.isValidNodeUri(data)) {
             const { pubkey, host } = NodeUriUtils.processNodeUri(data);
+            console.log('!');
+            console.log(pubkey);
+            console.log(host);
             navigation.navigate('OpenChannel', {
                 node_pubkey_string: pubkey,
                 host
