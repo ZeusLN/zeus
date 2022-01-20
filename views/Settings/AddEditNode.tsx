@@ -471,7 +471,7 @@ export default class AddEditNode extends React.Component<
 
         const displayValue = INTERFACE_KEYS.filter(
             (value: any) => value.value === implementation
-        )[0].key;
+        )[0].value;
 
         const NodeInterface = () => (
             <DropdownSetting
