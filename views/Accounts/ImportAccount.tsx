@@ -2,7 +2,7 @@ import * as React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Clipboard from '@react-native-community/clipboard';
 import { inject, observer } from 'mobx-react';
-import { Button, CheckBox, Header, Icon } from 'react-native-elements';
+import { Button, Header, Icon } from 'react-native-elements';
 
 import FeeTable from './../../components/FeeTable';
 import TextInput from './../../components/TextInput';

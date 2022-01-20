@@ -7,7 +7,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { Button, CheckBox, Header, Icon } from 'react-native-elements';
+import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import ForwardEvent from './../../models/ForwardEvent';
 
