@@ -182,30 +182,6 @@ export default class ChannelPicker extends React.Component<
                                             return (
                                                 <>
                                                     <ListItem
-                                                        title={`${channelTitle}`}
-                                                        subtitle={`${
-                                                            !item.isActive
-                                                                ? `${localeString(
-                                                                      'views.Wallet.Channels.inactive'
-                                                                  )} | `
-                                                                : ''
-                                                        }${
-                                                            item.private
-                                                                ? `${localeString(
-                                                                      'views.Wallet.Channels.private'
-                                                                  )} | `
-                                                                : ''
-                                                        }${localeString(
-                                                            'views.Wallet.Channels.local'
-                                                        )}: ${
-                                                            units &&
-                                                            localBalanceDisplay
-                                                        } | ${localeString(
-                                                            'views.Wallet.Channels.remote'
-                                                        )}: ${
-                                                            units &&
-                                                            remoteBalanceDisplay
-                                                        }`}
                                                         containerStyle={{
                                                             borderBottomWidth: 0,
                                                             backgroundColor:
@@ -213,45 +189,75 @@ export default class ChannelPicker extends React.Component<
                                                                     'background'
                                                                 )
                                                         }}
-                                                        leftElement={
-                                                            channelSelected ===
-                                                            item
-                                                                ? theme ===
-                                                                  'dark'
-                                                                    ? Icon(
-                                                                          SelectedDark
-                                                                      )
-                                                                    : Icon(
-                                                                          SelectedLight
-                                                                      )
-                                                                : ChannelIcon(
-                                                                      `data:image/png;base64,${data}`
-                                                                  )
-                                                        }
                                                         onPress={() =>
                                                             this.toggleItem(
                                                                 item
                                                             )
                                                         }
-                                                        titleStyle={{
-                                                            color:
-                                                                channelSelected ===
-                                                                item
-                                                                    ? 'orange'
-                                                                    : themeColor(
-                                                                          'text'
-                                                                      )
-                                                        }}
-                                                        subtitleStyle={{
-                                                            color:
-                                                                channelSelected ===
-                                                                item
-                                                                    ? 'orange'
-                                                                    : themeColor(
-                                                                          'secondaryText'
-                                                                      )
-                                                        }}
-                                                    />
+                                                    >
+                                                        {channelSelected ===
+                                                        item
+                                                            ? theme === 'dark'
+                                                                ? Icon(
+                                                                      SelectedDark
+                                                                  )
+                                                                : Icon(
+                                                                      SelectedLight
+                                                                  )
+                                                            : ChannelIcon(
+                                                                  `data:image/png;base64,${data}`
+                                                              )}
+                                                        <ListItem.Content>
+                                                            <ListItem.Title
+                                                                style={{
+                                                                    color:
+                                                                        channelSelected ===
+                                                                        item
+                                                                            ? 'orange'
+                                                                            : themeColor(
+                                                                                  'text'
+                                                                              )
+                                                                }}
+                                                            >
+                                                                {channelTitle}
+                                                            </ListItem.Title>
+                                                            <ListItem.Subtitle
+                                                                style={{
+                                                                    color:
+                                                                        channelSelected ===
+                                                                        item
+                                                                            ? 'orange'
+                                                                            : themeColor(
+                                                                                  'secondaryText'
+                                                                              )
+                                                                }}
+                                                            >
+                                                                {`${
+                                                                    !item.isActive
+                                                                        ? `${localeString(
+                                                                              'views.Wallet.Channels.inactive'
+                                                                          )} | `
+                                                                        : ''
+                                                                }${
+                                                                    item.private
+                                                                        ? `${localeString(
+                                                                              'views.Wallet.Channels.private'
+                                                                          )} | `
+                                                                        : ''
+                                                                }${localeString(
+                                                                    'views.Wallet.Channels.local'
+                                                                )}: ${
+                                                                    units &&
+                                                                    localBalanceDisplay
+                                                                } | ${localeString(
+                                                                    'views.Wallet.Channels.remote'
+                                                                )}: ${
+                                                                    units &&
+                                                                    remoteBalanceDisplay
+                                                                }`}
+                                                            </ListItem.Subtitle>
+                                                        </ListItem.Content>
+                                                    </ListItem>
                                                     <BalanceSlider
                                                         localBalance={
                                                             lurkerMode

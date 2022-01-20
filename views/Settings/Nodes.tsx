@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, View } from 'react-native';
+import { FlatList, Text, View } from 'react-native';
 import { Header, Icon, ListItem } from 'react-native-elements';
 import Identicon from 'identicon.js';
 import { inject, observer } from 'mobx-react';
@@ -104,48 +104,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                             data={nodes}
                             renderItem={({ item, index }) => (
                                 <ListItem
-                                    title={`${NodeTitle(item)}`}
-                                    leftElement={
-                                        <NodeIdenticon
-                                            selectedNode={item}
-                                            width={35}
-                                        />
-                                    }
-                                    rightElement={
-                                        <Button
-                                            title=""
-                                            icon={{
-                                                name: 'settings',
-                                                size: 25,
-                                                color: themeColor('text')
-                                            }}
-                                            buttonStyle={{
-                                                backgroundColor: 'transparent',
-                                                marginRight: -10
-                                            }}
-                                            onPress={() =>
-                                                navigation.navigate(
-                                                    'AddEditNode',
-                                                    {
-                                                        node: item,
-                                                        index: index,
-                                                        active:
-                                                            selectedNode ===
-                                                            index,
-                                                        saved: true
-                                                    }
-                                                )
-                                            }
-                                            iconOnly
-                                            adaptiveWidth
-                                        />
-                                    }
-                                    subtitle={
-                                        selectedNode === index ||
-                                        (!selectedNode && index === 0)
-                                            ? `Active | ${item.implementation}`
-                                            : `${item.implementation}`
-                                    }
                                     containerStyle={{
                                         borderBottomWidth: 0,
                                         backgroundColor:
@@ -167,13 +125,51 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                             });
                                         });
                                     }}
-                                    titleStyle={{
-                                        color: themeColor('text')
-                                    }}
-                                    subtitleStyle={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                />
+                                >
+                                    <NodeIdenticon
+                                        selectedNode={item}
+                                        width={35}
+                                    />
+                                    <ListItem.Content>
+                                        <ListItem.Title
+                                            style={{
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {NodeTitle(item)}
+                                        </ListItem.Title>
+                                        <ListItem.Subtitle
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {selectedNode === index ||
+                                            (!selectedNode && index === 0)
+                                                ? `Active | ${item.implementation}`
+                                                : `${item.implementation}`}
+                                        </ListItem.Subtitle>
+                                    </ListItem.Content>
+                                    <Button
+                                        title=""
+                                        icon={{
+                                            name: 'settings',
+                                            size: 25,
+                                            color: themeColor('text')
+                                        }}
+                                        onPress={() =>
+                                            navigation.navigate('AddEditNode', {
+                                                node: item,
+                                                index: index,
+                                                active: selectedNode === index,
+                                                saved: true
+                                            })
+                                        }
+                                        iconOnly
+                                        adaptiveWidth
+                                    />
+                                </ListItem>
                             )}
                             refreshing={loading}
                             keyExtractor={(item, index) =>
