@@ -4,6 +4,7 @@ import {
     Modal,
     Platform,
     StyleSheet,
+    Switch,
     Text,
     View,
     ScrollView,
@@ -11,7 +12,7 @@ import {
 } from 'react-native';
 import Clipboard from '@react-native-community/clipboard';
 import { Picker } from '@react-native-picker/picker';
-import { CheckBox, Header, Icon } from 'react-native-elements';
+import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
@@ -471,7 +472,7 @@ export default class AddEditNode extends React.Component<
 
         const displayValue = INTERFACE_KEYS.filter(
             (value: any) => value.value === implementation
-        )[0].key;
+        )[0].value;
 
         const NodeInterface = () => (
             <DropdownSetting
@@ -897,24 +898,34 @@ export default class AddEditNode extends React.Component<
                                     editable={!loading}
                                 />
 
-                                <View
-                                    style={{
-                                        marginTop: 5
-                                    }}
-                                >
-                                    <CheckBox
-                                        title={localeString(
+                                <>
+                                    <Text
+                                        style={{
+                                            top: 20,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
                                             'views.Settings.AddEditNode.existingAccount'
                                         )}
-                                        checked={existingAccount}
-                                        onPress={() =>
+                                    </Text>
+                                    <Switch
+                                        value={existingAccount}
+                                        onValueChange={() =>
                                             this.setState({
                                                 existingAccount:
                                                     !existingAccount
                                             })
                                         }
+                                        trackColor={{
+                                            false: '#767577',
+                                            true: themeColor('highlight')
+                                        }}
+                                        style={{
+                                            alignSelf: 'flex-end'
+                                        }}
                                     />
-                                </View>
+                                </>
 
                                 {existingAccount && (
                                     <>
@@ -1055,41 +1066,64 @@ export default class AddEditNode extends React.Component<
                             </>
                         )}
 
-                        <View
-                            style={{
-                                marginTop: 5
-                            }}
-                        >
-                            <CheckBox
-                                title={'Use Tor'}
-                                checked={enableTor}
-                                onPress={() =>
+                        <>
+                            <Text
+                                style={{
+                                    top: 20,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.AddEditNode.useTor'
+                                )}
+                            </Text>
+                            <Switch
+                                value={enableTor}
+                                onValueChange={() =>
                                     this.setState({
                                         enableTor: !enableTor,
                                         saved: false
                                     })
                                 }
-                            />
-                        </View>
-                        {!enableTor && (
-                            <View
-                                style={{
-                                    marginTop: 5
+                                trackColor={{
+                                    false: '#767577',
+                                    true: themeColor('highlight')
                                 }}
-                            >
-                                <CheckBox
-                                    title={localeString(
+                                style={{
+                                    alignSelf: 'flex-end'
+                                }}
+                            />
+                        </>
+
+                        {!enableTor && (
+                            <>
+                                <Text
+                                    style={{
+                                        top: 20,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
                                         'views.Settings.AddEditNode.certificateVerification'
                                     )}
-                                    checked={certVerification}
-                                    onPress={() =>
+                                </Text>
+                                <Switch
+                                    value={certVerification}
+                                    onValueChange={() =>
                                         this.setState({
                                             certVerification: !certVerification,
                                             saved: false
                                         })
                                     }
+                                    trackColor={{
+                                        false: '#767577',
+                                        true: themeColor('highlight')
+                                    }}
+                                    style={{
+                                        alignSelf: 'flex-end'
+                                    }}
                                 />
-                            </View>
+                            </>
                         )}
                     </View>
 
