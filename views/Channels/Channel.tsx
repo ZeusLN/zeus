@@ -2,11 +2,12 @@ import * as React from 'react';
 import {
     ScrollView,
     StyleSheet,
+    Switch,
     Text,
     TouchableOpacity,
     View
 } from 'react-native';
-import { CheckBox, Divider, Header, Icon } from 'react-native-elements';
+import { Divider, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Channel from './../../models/Channel';
 import BalanceSlider from './../../components/BalanceSlider';
@@ -450,17 +451,37 @@ export default class ChannelView extends React.Component<
                                         autoCorrect={false}
                                     />
                                     {implementation === 'lnd' && (
-                                        <CheckBox
-                                            title={localeString(
-                                                'views.Channel.forceClose'
-                                            )}
-                                            checked={forceClose}
-                                            onPress={() =>
-                                                this.setState({
-                                                    forceClose: !forceClose
-                                                })
-                                            }
-                                        />
+                                        <>
+                                            <Text
+                                                style={{
+                                                    top: 20,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Channel.forceClose'
+                                                )}
+                                            </Text>
+                                            <Switch
+                                                value={forceClose}
+                                                onValueChange={() =>
+                                                    this.setState({
+                                                        forceClose: !forceClose
+                                                    })
+                                                }
+                                                trackColor={{
+                                                    false: '#767577',
+                                                    true: themeColor(
+                                                        'highlight'
+                                                    )
+                                                }}
+                                                style={{
+                                                    alignSelf: 'flex-end'
+                                                }}
+                                            />
+                                        </>
                                     )}
                                 </React.Fragment>
                             )}
