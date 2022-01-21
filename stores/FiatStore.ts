@@ -146,7 +146,7 @@ export default class FiatStore {
             )[0];
             const rate = fiatEntry.rate;
             // TODO: fix rate display
-            const symbol = this.symbolLookup(fiatEntry.code);
+            const symbol = this.symbolLookup(fiatEntry.code).symbol;
             return `${symbol}${rate} BTC/${fiat}`;
         }
         return 'N/A';

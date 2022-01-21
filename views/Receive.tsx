@@ -132,9 +132,13 @@ export default class Receive extends React.Component<
         const { fiat } = settings;
         const address = onChainAddress;
 
+        const fiatEntry = fiat
+            ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+            : null;
+
         const rate =
-            fiat && fiat !== 'Disabled' && fiatRates
-                ? fiatRates[fiat]['15m']
+            fiat && fiat !== 'Disabled' && fiatRates && fiatEntry
+                ? fiatEntry.rate
                 : 0;
 
         let satAmount: string | number;

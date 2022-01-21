@@ -20,7 +20,7 @@ export const NodeTitle = (selectedNode: any) => {
             : (selectedNode && selectedNode.host) || 'Unknown';
 
     const title = PrivacyUtils.sensitiveValue(displayName, 8);
-    return title;
+    return title.length > 21 ? title.substring(0, 18) + '...' : title;
 };
 
 export default function NodeIdenticon({
