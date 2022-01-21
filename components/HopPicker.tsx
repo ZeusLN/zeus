@@ -1,7 +1,10 @@
 import * as React from 'react';
 import {
+    ActionSheetIOS,
+    Button,
     FlatList,
     Modal,
+    Platform,
     StyleSheet,
     View,
     Text,
@@ -21,7 +24,6 @@ import Channel from './../models/Channel';
 import UnitsStore from './../stores/UnitsStore';
 
 import BalanceSlider from './../components/BalanceSlider';
-import Button from './../components/Button';
 import PrivacyUtils from './../utils/PrivacyUtils';
 const hash = require('object-hash');
 
@@ -38,6 +40,7 @@ interface ChannelPickerProps {
 }
 
 interface ChannelPickerState {
+    status: string;
     channelSelected: Channel | null;
     valueSet: string;
     showChannelModal: boolean;
@@ -51,7 +54,12 @@ const ChannelIcon = (balanceImage: string) => (
     />
 );
 
-const DEFAULT_TITLE = localeString('components.HopPicker.defaultTitle');
+const VALUES = [
+    { key: 'No selection', value: 'No selection' },
+    { key: 'Select Channel to use', value: 'Select Channel to use' }
+];
+
+const DEFAULT_TITLE = 'Channels to use';
 
 const Icon = (balanceImage: any) => <Avatar source={balanceImage} />;
 
@@ -62,6 +70,7 @@ export default class ChannelPicker extends React.Component<
     ChannelPickerState
 > {
     state = {
+        status: 'unselected',
         channelSelected: null,
         valueSet: '',
         showChannelModal: false
@@ -100,7 +109,20 @@ export default class ChannelPicker extends React.Component<
         const { getAmount, units } = UnitsStore;
         const { settings } = SettingsStore;
         const { theme, privacy } = settings;
-        const lurkerMode = (privacy && privacy.lurkerMode) || false;
+        const { lurkerMode } = privacy;
+
+        const pickerValuesAndroid: Array<any> = [];
+        const pickerValuesIOS: Array<string> = ['Cancel'];
+        VALUES.forEach((value: { key: string; value: string }) => {
+            pickerValuesAndroid.push(
+                <Picker.Item
+                    key={value.key}
+                    label={value.key}
+                    value={value.value}
+                />
+            );
+            pickerValuesIOS.push(value.key);
+        });
 
         return (
             <React.Fragment>
@@ -182,6 +204,30 @@ export default class ChannelPicker extends React.Component<
                                             return (
                                                 <>
                                                     <ListItem
+                                                        title={`${channelTitle}`}
+                                                        subtitle={`${
+                                                            !item.isActive
+                                                                ? `${localeString(
+                                                                      'views.Wallet.Channels.inactive'
+                                                                  )} | `
+                                                                : ''
+                                                        }${
+                                                            item.private
+                                                                ? `${localeString(
+                                                                      'views.Wallet.Channels.private'
+                                                                  )} | `
+                                                                : ''
+                                                        }${localeString(
+                                                            'views.Wallet.Channels.local'
+                                                        )}: ${
+                                                            units &&
+                                                            localBalanceDisplay
+                                                        } | ${localeString(
+                                                            'views.Wallet.Channels.remote'
+                                                        )}: ${
+                                                            units &&
+                                                            remoteBalanceDisplay
+                                                        }`}
                                                         containerStyle={{
                                                             borderBottomWidth: 0,
                                                             backgroundColor:
@@ -189,75 +235,45 @@ export default class ChannelPicker extends React.Component<
                                                                     'background'
                                                                 )
                                                         }}
+                                                        leftElement={
+                                                            channelSelected ===
+                                                            item
+                                                                ? theme ===
+                                                                  'dark'
+                                                                    ? Icon(
+                                                                          SelectedDark
+                                                                      )
+                                                                    : Icon(
+                                                                          SelectedLight
+                                                                      )
+                                                                : ChannelIcon(
+                                                                      `data:image/png;base64,${data}`
+                                                                  )
+                                                        }
                                                         onPress={() =>
                                                             this.toggleItem(
                                                                 item
                                                             )
                                                         }
-                                                    >
-                                                        {channelSelected ===
-                                                        item
-                                                            ? theme === 'dark'
-                                                                ? Icon(
-                                                                      SelectedDark
-                                                                  )
-                                                                : Icon(
-                                                                      SelectedLight
-                                                                  )
-                                                            : ChannelIcon(
-                                                                  `data:image/png;base64,${data}`
-                                                              )}
-                                                        <ListItem.Content>
-                                                            <ListItem.Title
-                                                                style={{
-                                                                    color:
-                                                                        channelSelected ===
-                                                                        item
-                                                                            ? 'orange'
-                                                                            : themeColor(
-                                                                                  'text'
-                                                                              )
-                                                                }}
-                                                            >
-                                                                {channelTitle}
-                                                            </ListItem.Title>
-                                                            <ListItem.Subtitle
-                                                                style={{
-                                                                    color:
-                                                                        channelSelected ===
-                                                                        item
-                                                                            ? 'orange'
-                                                                            : themeColor(
-                                                                                  'secondaryText'
-                                                                              )
-                                                                }}
-                                                            >
-                                                                {`${
-                                                                    !item.isActive
-                                                                        ? `${localeString(
-                                                                              'views.Wallet.Channels.inactive'
-                                                                          )} | `
-                                                                        : ''
-                                                                }${
-                                                                    item.private
-                                                                        ? `${localeString(
-                                                                              'views.Wallet.Channels.private'
-                                                                          )} | `
-                                                                        : ''
-                                                                }${localeString(
-                                                                    'views.Wallet.Channels.local'
-                                                                )}: ${
-                                                                    units &&
-                                                                    localBalanceDisplay
-                                                                } | ${localeString(
-                                                                    'views.Wallet.Channels.remote'
-                                                                )}: ${
-                                                                    units &&
-                                                                    remoteBalanceDisplay
-                                                                }`}
-                                                            </ListItem.Subtitle>
-                                                        </ListItem.Content>
-                                                    </ListItem>
+                                                        titleStyle={{
+                                                            color:
+                                                                channelSelected ===
+                                                                item
+                                                                    ? 'orange'
+                                                                    : themeColor(
+                                                                          'text'
+                                                                      )
+                                                        }}
+                                                        subtitleStyle={{
+                                                            color:
+                                                                channelSelected ===
+                                                                item
+                                                                    ? 'orange'
+                                                                    : themeColor(
+                                                                          'secondaryText'
+                                                                      )
+                                                        }}
+                                                    />
                                                     <BalanceSlider
                                                         localBalance={
                                                             lurkerMode
@@ -291,35 +307,27 @@ export default class ChannelPicker extends React.Component<
                                                 const { channelSelected }: any =
                                                     this.state;
 
-                                                if (channelSelected) {
-                                                    const displayName =
-                                                        channelSelected.alias ||
-                                                        (nodes[
+                                                const displayName =
+                                                    channelSelected.alias ||
+                                                    (nodes[
+                                                        channelSelected
+                                                            .remote_pubkey
+                                                    ] &&
+                                                        nodes[
                                                             channelSelected
                                                                 .remote_pubkey
-                                                        ] &&
-                                                            nodes[
-                                                                channelSelected
-                                                                    .remote_pubkey
-                                                            ].alias) ||
-                                                        (channelSelected &&
-                                                            channelSelected.remote_pubkey) ||
-                                                        (channelSelected &&
-                                                            channelSelected.channelId);
+                                                        ].alias) ||
+                                                    (channelSelected &&
+                                                        channelSelected.remote_pubkey) ||
+                                                    (channelSelected &&
+                                                        channelSelected.channelId);
 
-                                                    this.setState({
-                                                        showChannelModal: false,
-                                                        valueSet: displayName
-                                                    });
+                                                this.setState({
+                                                    showChannelModal: false,
+                                                    valueSet: displayName
+                                                });
 
-                                                    onValueChange(
-                                                        channelSelected
-                                                    );
-                                                } else {
-                                                    this.setState({
-                                                        showChannelModal: false
-                                                    });
-                                                }
+                                                onValueChange(channelSelected);
                                             }}
                                         />
                                     </View>
@@ -334,7 +342,6 @@ export default class ChannelPicker extends React.Component<
                                                     showChannelModal: false
                                                 })
                                             }
-                                            secondary
                                         />
                                     </View>
                                 </>
@@ -343,43 +350,90 @@ export default class ChannelPicker extends React.Component<
                     </View>
                 </Modal>
 
-                <View style={styles.field}>
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            paddingLeft: 10
-                        }}
-                    >
-                        {title || DEFAULT_TITLE}
-                    </Text>
-                    {valueSet ? (
-                        <TouchableOpacity onPress={() => this.clearSelection()}>
-                            <Text
+                {Platform.OS !== 'ios' && (
+                    <View style={styles.field}>
+                        <Text
+                            style={{
+                                color: themeColor('text'),
+                                paddingLeft: 10
+                            }}
+                        >
+                            {title || DEFAULT_TITLE}
+                        </Text>
+                        {valueSet ? (
+                            <TouchableOpacity
+                                onPress={() => this.clearSelection()}
+                            >
+                                <Text
+                                    style={{
+                                        padding: 10,
+                                        fontSize: 16,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {valueSet}
+                                </Text>
+                            </TouchableOpacity>
+                        ) : (
+                            <Picker
+                                selectedValue={`${selectedValue}`}
+                                onValueChange={(itemValue: string) => {
+                                    if (itemValue === 'No selection') {
+                                        this.clearSelection();
+                                    } else if (
+                                        itemValue === 'Select Channel to use'
+                                    ) {
+                                        this.openPicker();
+                                    }
+                                }}
                                 style={{
-                                    padding: 10,
-                                    fontSize: 16,
+                                    height: 50,
                                     color: themeColor('text')
                                 }}
                             >
-                                {valueSet}
-                            </Text>
-                        </TouchableOpacity>
-                    ) : (
-                        <TouchableOpacity onPress={() => this.openPicker()}>
+                                {pickerValuesAndroid}
+                            </Picker>
+                        )}
+                    </View>
+                )}
+
+                {Platform.OS === 'ios' && (
+                    <View style={styles.field}>
+                        <Text
+                            style={{
+                                color: themeColor('text'),
+                                textDecorationLine: 'underline'
+                            }}
+                        >
+                            {title || DEFAULT_TITLE}
+                        </Text>
+                        <TouchableOpacity
+                            onPress={() =>
+                                ActionSheetIOS.showActionSheetWithOptions(
+                                    {
+                                        options: pickerValuesIOS,
+                                        cancelButtonIndex: 0
+                                    },
+                                    (buttonIndex) => {
+                                        if (buttonIndex == 1) {
+                                            this.clearSelection();
+                                        } else if (buttonIndex == 2) {
+                                            this.openPicker();
+                                        }
+                                    }
+                                )
+                            }
+                        >
                             <Text
                                 style={{
-                                    padding: 10,
-                                    fontSize: 16,
                                     color: themeColor('text')
                                 }}
                             >
-                                {localeString(
-                                    'components.HopPicker.selectChannel'
-                                )}
+                                {valueSet ? valueSet : 'No selection'}
                             </Text>
                         </TouchableOpacity>
-                    )}
-                </View>
+                    </View>
+                )}
             </React.Fragment>
         );
     }

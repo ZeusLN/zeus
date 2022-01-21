@@ -77,5 +77,4 @@ export default class LndHub extends LND {
     supportsHopPicking = () => false;
     supportsRouting = () => false;
     supportsNodeInfo = () => false;
-    singleFeesEarnedTotal = () => false;
 }

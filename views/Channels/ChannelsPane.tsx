@@ -23,7 +23,7 @@ interface ChannelsProps {
     ChannelsStore: ChannelsStore;
 }
 
-@inject('ChannelsStore', 'SettingsStore')
+@inject('ChannelsStore')
 @observer
 export default class ChannelsPane extends React.PureComponent<
     ChannelsProps,
@@ -61,7 +61,7 @@ export default class ChannelsPane extends React.PureComponent<
     };
 
     render() {
-        const { ChannelsStore, SettingsStore, navigation } = this.props;
+        const { ChannelsStore, navigation } = this.props;
         const {
             loading,
             getChannels,
@@ -75,7 +75,6 @@ export default class ChannelsPane extends React.PureComponent<
                 <WalletHeader
                     navigation={navigation}
                     title={this.headerString}
-                    SettingsStore={SettingsStore}
                     channels
                 />
                 <ChannelsHeader

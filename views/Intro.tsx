@@ -96,12 +96,14 @@ export default class Intro extends React.Component<IntroProps, IntroState> {
             <SafeAreaView
                 style={{
                     flex: 1,
-                    backgroundColor: themeColor('background')
+                    backgroundColor: themeColor('background'),
+                    paddingTop: 50
                 }}
             >
                 <View
                     style={{
                         flex: 1,
+                        flexDirection: 'row',
                         justifyContent: 'center'
                     }}
                 >

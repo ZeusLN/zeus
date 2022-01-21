@@ -82,21 +82,15 @@ export default class Theme extends React.Component<ThemeProps, ThemeStore> {
                                 }}
                                 onPress={async () => {
                                     await setSettings(
-                                        JSON.stringify(
-                                            settings
-                                                ? {
-                                                      nodes: settings.nodes,
-                                                      selectedNode:
-                                                          settings.selectedNode,
-                                                      fiat: settings.fiat,
-                                                      passphrase:
-                                                          settings.passphrase,
-                                                      locale: settings.locale,
-                                                      theme: item.value,
-                                                      privacy: settings.privacy
-                                                  }
-                                                : { theme: item.value }
-                                        )
+                                        JSON.stringify({
+                                            nodes: settings.nodes,
+                                            selectedNode: settings.selectedNode,
+                                            fiat: settings.fiat,
+                                            passphrase: settings.passphrase,
+                                            locale: settings.locale,
+                                            theme: item.value,
+                                            privacy: settings.privacy
+                                        })
                                     ).then(() => {
                                         getSettings();
                                         navigation.navigate('Settings', {
