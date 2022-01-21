@@ -20,22 +20,99 @@ export default class FiatStore {
         this.settingsStore = settingsStore;
     }
 
-    // TODO: do more of these symbol pairs. I'm referring to
-    // https://fastspring.com/blog/how-to-format-30-currencies-from-countries-all-over-the-world/
     private symbolLookup = (symbol: string): CurrencyDisplayRules => {
         const symbolPairs: any = {
-            USD: { symbol: '$', space: false, rtl: false },
-            EUR: { symbol: '€', space: true, rtl: false },
-            GBP: { symbol: '£', space: false, rtl: false },
-            JPY: { symbol: '¥', space: true, rtl: false },
-            THB: { symbol: '฿', space: true, rtl: true }
+            USD: {
+                symbol: '$',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
+            AUD: { symbol: '$', space: true, rtl: false, separatorSwap: false },
+            BRL: {
+                symbol: 'R$',
+                space: true,
+                rtl: false,
+                separatorSwap: false
+            },
+            CAD: { symbol: '$', space: true, rtl: false, separatorSwap: false },
+            CHF: {
+                symbol: 'fr.',
+                space: true,
+                rtl: false,
+                separatorSwap: false
+            },
+            CLP: { symbol: '$', space: true, rtl: false, separatorSwap: false },
+            CNY: { symbol: '¥', space: true, rtl: false, separatorSwap: false },
+            CZK: {
+                symbol: 'Kč',
+                space: true,
+                rtl: true,
+                separatorSwap: true
+            },
+            DKK: {
+                symbol: 'kr.',
+                space: true,
+                rtl: false,
+                separatorSwap: true
+            },
+            EUR: {
+                symbol: '€',
+                space: false,
+                rtl: false,
+                separatorSwap: true
+            },
+            GBP: {
+                symbol: '£',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
+            HKD: {
+                symbol: 'HK$',
+                space: true,
+                rtl: false,
+                separatorSwap: false
+            },
+            HUF: {
+                symbol: 'Ft',
+                space: true,
+                rtl: true,
+                separatorSwap: true
+            },
+            INR: { symbol: '₹', space: true, rtl: false, separatorSwap: false },
+            JPY: { symbol: '¥', space: true, rtl: false, separatorSwap: false },
+            KRW: { symbol: '₩', space: true, rtl: false, separatorSwap: false },
+            NZD: { symbol: '$', space: true, rtl: false, separatorSwap: false },
+            PLN: { symbol: 'zł', space: true, rtl: true, separatorSwap: false },
+            RUB: {
+                symbol: 'p.',
+                space: true,
+                rtl: true,
+                separatorSwap: true
+            },
+            SAR: { symbol: '﷼', space: true, rtl: true, separatorSwap: false },
+            SEK: {
+                symbol: 'kr',
+                space: true,
+                rtl: true,
+                separatorSwap: true
+            },
+            SGD: {
+                symbol: '$',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
+            THB: { symbol: '฿', space: true, rtl: true, separatorSwap: false },
+            TRY: { symbol: '₺', space: true, rtl: true, separatorSwap: false },
+            TWD: { symbol: '元', space: true, rtl: false, separatorSwap: false }
         };
 
         if (symbol in symbolPairs) {
-            // TODO: how do I get typescript less mad here?
             return symbolPairs[symbol];
         } else {
-            return { symbol, space: true, rtl: false };
+            return { symbol, space: true, rtl: false, separatorSwap: false };
         }
     };
 
@@ -43,11 +120,19 @@ export default class FiatStore {
         const { settings } = this.settingsStore;
         const { fiat } = settings;
         if (fiat) {
-            return this.symbolLookup(this.fiatRates[fiat].symbol);
+            const fiatEntry = this.fiatRates.filter(
+                (entry: any) => entry.code === fiat
+            )[0];
+            return this.symbolLookup(fiatEntry.code);
         } else {
             console.log('no fiat?');
             // TODO: what do we do in this case?
-            return { symbol: '???', space: true, rtl: true };
+            return {
+                symbol: '???',
+                space: true,
+                rtl: true,
+                separatorSwap: false
+            };
         }
     };
 
@@ -56,9 +141,12 @@ export default class FiatStore {
         const { settings } = this.settingsStore;
         const { fiat } = settings;
         if (fiat) {
-            const rate = this.fiatRates[fiat]['15m'];
-            //const symbol = this.symbolLookup(this.fiatRates[fiat].symbol);
-            const symbol = '$';
+            const fiatEntry = this.fiatRates.filter(
+                (entry: any) => entry.code === fiat
+            )[0];
+            const rate = fiatEntry.rate;
+            // TODO: fix rate display
+            const symbol = this.symbolLookup(fiatEntry.code).symbol;
             return `${symbol}${rate} BTC/${fiat}`;
         }
         return 'N/A';
@@ -67,7 +155,13 @@ export default class FiatStore {
     @action
     public getFiatRates = () => {
         this.loading = true;
-        RNFetchBlob.fetch('get', 'https://blockchain.info/ticker')
+        RNFetchBlob.config({
+            trusty: true
+        })
+            .fetch(
+                'GET',
+                'https://pay.zeusln.app/api/rates?storeId=Fjt7gLnGpg4UeBMFccLquy3GTTEz4cHU4PZMU63zqMBo'
+            )
             .then((response: any) => {
                 const status = response.info().status;
                 if (status == 200) {

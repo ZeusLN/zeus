@@ -1,14 +1,13 @@
 import * as React from 'react';
 import {
-    ActivityIndicator,
     ScrollView,
     StyleSheet,
+    Switch,
     Text,
-    TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
-import { CheckBox, Divider, Header, Icon } from 'react-native-elements';
+import { Divider, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Channel from './../../models/Channel';
 import BalanceSlider from './../../components/BalanceSlider';
@@ -17,6 +16,7 @@ import KeyValue from './../../components/KeyValue';
 import { Amount } from './../../components/Amount';
 import FeeBreakdown from './../../components/FeeBreakdown';
 import SetFeesForm from './../../components/SetFeesForm';
+import TextInput from './../../components/TextInput';
 
 import DateTimeUtils from './../../utils/DateTimeUtils';
 import PrivacyUtils from './../../utils/PrivacyUtils';
@@ -120,10 +120,10 @@ export default class ChannelView extends React.Component<
             this.state;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { channelFees } = FeeStore;
-        const { loading, nodes } = ChannelsStore;
+        const { nodes } = ChannelsStore;
         const { settings, implementation } = SettingsStore;
         const { privacy } = settings;
-        const { lurkerMode } = privacy;
+        const lurkerMode = (privacy && privacy.lurkerMode) || false;
 
         const {
             channel_point,
@@ -441,33 +441,47 @@ export default class ChannelView extends React.Component<
                                     <TextInput
                                         keyboardType="numeric"
                                         placeholder={'2'}
-                                        placeholderTextColor="darkgray"
                                         value={satPerByte}
                                         onChangeText={(text: string) =>
                                             this.setState({
                                                 satPerByte: text
                                             })
                                         }
-                                        numberOfLines={1}
                                         autoCapitalize="none"
                                         autoCorrect={false}
-                                        style={{
-                                            ...styles.textInput,
-                                            color: themeColor('text')
-                                        }}
                                     />
                                     {implementation === 'lnd' && (
-                                        <CheckBox
-                                            title={localeString(
-                                                'views.Channel.forceClose'
-                                            )}
-                                            checked={forceClose}
-                                            onPress={() =>
-                                                this.setState({
-                                                    forceClose: !forceClose
-                                                })
-                                            }
-                                        />
+                                        <>
+                                            <Text
+                                                style={{
+                                                    top: 20,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Channel.forceClose'
+                                                )}
+                                            </Text>
+                                            <Switch
+                                                value={forceClose}
+                                                onValueChange={() =>
+                                                    this.setState({
+                                                        forceClose: !forceClose
+                                                    })
+                                                }
+                                                trackColor={{
+                                                    false: '#767577',
+                                                    true: themeColor(
+                                                        'highlight'
+                                                    )
+                                                }}
+                                                style={{
+                                                    alignSelf: 'flex-end'
+                                                }}
+                                            />
+                                        </>
                                     )}
                                 </React.Fragment>
                             )}
@@ -528,8 +542,5 @@ const styles = StyleSheet.create({
     button: {
         paddingTop: 15,
         paddingBottom: 15
-    },
-    textInput: {
-        fontSize: 20
     }
 });

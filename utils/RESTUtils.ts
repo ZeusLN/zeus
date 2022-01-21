@@ -79,12 +79,14 @@ class RESTUtils {
     listAccounts = (...args: any[]) => this.call('listAccounts', args);
     importAccount = (...args: any[]) => this.call('importAccount', args);
     signMessage = (...args: any[]) => this.call('signMessage', args);
+    verifyMessage = (...args: any[]) => this.call('verifyMessage', args);
 
     fundPsbt = (...args: any[]) => this.call('fundPsbt', args);
     finalizePsbt = (...args: any[]) => this.call('finalizePsbt', args);
     publishTransaction = (...args: any[]) =>
         this.call('publishTransaction', args);
     bumpFee = (...args: any[]) => this.call('bumpFee', args);
+    subscribeInvoice = (...args: any[]) => this.call('subscribeInvoice', args);
 
     // lndhub
     createAccount = (...args: any[]) => this.call('createAccount', args);
@@ -101,6 +103,7 @@ class RESTUtils {
     supportsAccounts = () => this.call('supportsAccounts');
     supportsRouting = () => this.call('supportsRouting');
     supportsNodeInfo = () => this.call('supportsNodeInfo');
+    singleFeesEarnedTotal = () => this.call('singleFeesEarnedTotal');
 }
 
 const restUtils = new RESTUtils();

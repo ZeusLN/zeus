@@ -32,6 +32,7 @@ If applicable, add screenshots to help explain your problem.
  - Device: [e.g. iPhone6]
  - OS: [e.g. iOS8.1]
  - Zeus Version [e.g. v0.1.0]
+ - Clearnet or Tor
 
 **Additional context**
 Add any other context about the problem here.

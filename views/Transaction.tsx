@@ -322,6 +322,6 @@ const styles = StyleSheet.create({
     },
     valueWithLink: {
         paddingBottom: 5,
-        color: 'rgba(92, 99,216, 1)'
+        color: themeColor('highlight')
     }
 });
