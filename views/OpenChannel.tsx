@@ -10,6 +10,8 @@ import {
 import Clipboard from '@react-native-community/clipboard';
 import { inject, observer } from 'mobx-react';
 import { Header, Icon } from 'react-native-elements';
+import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
+
 import Button from './../components/Button';
 import FeeTable from './../components/FeeTable';
 import LoadingIndicator from './../components/LoadingIndicator';
