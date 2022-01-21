@@ -2,6 +2,7 @@ import RNFetchBlob from 'rn-fetch-blob';
 import stores from '../stores/Stores';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import OpenChannelRequest from './../models/OpenChannelRequest';
+import Base64Utils from './../utils/Base64Utils';
 import VersionUtils from './../utils/VersionUtils';
 import { localeString } from './../utils/LocaleUtils';
 
@@ -201,7 +202,13 @@ export default class LND {
     getPayments = () => this.getRequest('/v1/payments');
     getNewAddress = () => this.getRequest('/v1/newaddress');
     openChannel = (data: OpenChannelRequest) =>
-        this.postRequest('/v1/channels', data);
+        this.postRequest('/v1/channels', {
+            private: data.private,
+            local_funding_amount: data.local_funding_amount,
+            min_confs: data.min_confs,
+            node_pubkey_string: data.node_pubkey_string,
+            sat_per_byte: data.sat_per_byte
+        });
     openChannelStream = (data: OpenChannelRequest) =>
         this.wsReq('/v1/channels/stream', 'POST', data);
     connectPeer = (data: any) => this.postRequest('/v1/peers', data);
@@ -233,11 +240,16 @@ export default class LND {
     getNodeInfo = (urlParams?: Array<string>) =>
         this.getRequest(`/v1/graph/node/${urlParams && urlParams[0]}`);
     getFees = () => this.getRequest('/v1/fees');
-    setFees = (data: any) => {
-        const request = { ...data };
-        request.fee_rate = `${Number(data.fee_rate) / 100}`;
-        return this.postRequest('/v1/chanpolicy', data);
-    };
+    setFees = (data: any) =>
+        this.postRequest('/v1/chanpolicy', {
+            base_fee_msat: data.base_fee_msat,
+            fee_rate: `${Number(data.fee_rate) / 100}`,
+            chan_point: {
+                funding_txid_str: data.chan_point.funding_txid_str,
+                output_index: data.chan_point.output_index
+            },
+            time_lock_delta: data.time_lock_delta
+        });
     getRoutes = (urlParams?: Array<string>) =>
         this.getRequest(
             `/v1/graph/routes/${urlParams && urlParams[0]}/${
@@ -266,8 +278,15 @@ export default class LND {
         this.postRequest('/v2/wallet/accounts/import', data);
     signMessage = (message: string) =>
         this.postRequest('/v1/signmessage', {
-            msg: message
+            msg: Base64Utils.btoa(message)
         });
+    verifyMessage = (data: any) =>
+        this.postRequest('/v1/verifymessage', {
+            msg: Base64Utils.btoa(data.msg),
+            signature: data.signature
+        });
+    subscribeInvoice = (r_hash: string) =>
+        this.getRequest(`/v2/invoices/subscribe/${r_hash}`);
 
     // LndHub
     createAccount = (
@@ -303,4 +322,5 @@ export default class LND {
     supportsNodeInfo = () => true;
     supportsCoinControl = () => this.supports('v0.12.0');
     supportsAccounts = () => this.supports('v0.13.0');
+    singleFeesEarnedTotal = () => false;
 }

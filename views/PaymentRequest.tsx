@@ -1,27 +1,28 @@
 import * as React from 'react';
 import {
-    ActivityIndicator,
     ScrollView,
     StyleSheet,
     Switch,
     Text,
-    TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+
+import HopPicker from './../components/HopPicker';
+import LoadingIndicator from './../components/LoadingIndicator';
+import TextInput from './../components/TextInput';
 
 import InvoicesStore from './../stores/InvoicesStore';
 import TransactionsStore from './../stores/TransactionsStore';
 import UnitsStore from './../stores/UnitsStore';
 import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
-import RESTUtils from './../utils/RESTUtils';
 
-import HopPicker from './../components/HopPicker';
+import { localeString } from './../utils/LocaleUtils';
+import RESTUtils from './../utils/RESTUtils';
+import { themeColor } from './../utils/ThemeUtils';
 
 interface InvoiceProps {
     exitSetup: any;
@@ -34,15 +35,13 @@ interface InvoiceProps {
 }
 
 interface InvoiceState {
-    setCustomAmount: boolean;
-    customAmount: string;
     enableMultiPathPayment: boolean;
     enableAtomicMultiPathPayment: boolean;
     maxParts: string;
     maxShardAmt: string;
     timeoutSeconds: string;
     feeLimitSat: string;
-    outgoingChanIds: Array<string> | null;
+    outgoingChanId: string | null;
     lastHopPubkey: string | null;
 }
 
@@ -59,15 +58,13 @@ export default class PaymentRequest extends React.Component<
     InvoiceState
 > {
     state = {
-        setCustomAmount: false,
-        customAmount: '',
         enableMultiPathPayment: false,
         enableAtomicMultiPathPayment: false,
         maxParts: '16',
         maxShardAmt: '',
         timeoutSeconds: '20',
         feeLimitSat: '',
-        outgoingChanIds: null,
+        outgoingChanId: null,
         lastHopPubkey: null
     };
 
@@ -81,15 +78,13 @@ export default class PaymentRequest extends React.Component<
             navigation
         } = this.props;
         const {
-            setCustomAmount,
-            customAmount,
             enableMultiPathPayment,
             enableAtomicMultiPathPayment,
             maxParts,
             maxShardAmt,
             timeoutSeconds,
             feeLimitSat,
-            outgoingChanIds,
+            outgoingChanId,
             lastHopPubkey
         } = this.state;
         const {
@@ -127,13 +122,7 @@ export default class PaymentRequest extends React.Component<
 
         const date = new Date(Number(timestamp) * 1000).toString();
 
-        const { implementation, enableTor } = SettingsStore;
-
-        const isLnd: boolean = implementation === 'lnd';
-
-        // c-lightning can only pay custom amounts if the amount is not specified
-        const canPayCustomAmount: boolean =
-            isLnd || !requestAmount || requestAmount === 0;
+        const { enableTor } = SettingsStore;
 
         const BackButton = () => (
             <Icon
@@ -160,9 +149,7 @@ export default class PaymentRequest extends React.Component<
                     backgroundColor="#1f2328"
                 />
 
-                {(loading || loadingFeeEstimate) && (
-                    <ActivityIndicator size="large" color="#0000ff" />
-                )}
+                {(loading || loadingFeeEstimate) && <LoadingIndicator />}
 
                 <ScrollView>
                     {!!getPayReqError && (
@@ -182,95 +169,16 @@ export default class PaymentRequest extends React.Component<
                     {!!pay_req && (
                         <View style={styles.content}>
                             <View style={styles.center}>
-                                {!setCustomAmount && (
-                                    <TouchableOpacity
-                                        onPress={() => changeUnits()}
-                                    >
-                                        <Text
-                                            style={{
-                                                ...styles.amount,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {units &&
-                                                getAmount(requestAmount || 0)}
-                                        </Text>
-                                    </TouchableOpacity>
-                                )}
-                                {setCustomAmount && (
+                                <TouchableOpacity onPress={() => changeUnits()}>
                                     <Text
                                         style={{
+                                            ...styles.amount,
                                             color: themeColor('text')
                                         }}
                                     >
-                                        {localeString(
-                                            'views.PaymentRequest.customAmt'
-                                        )}
+                                        {units && getAmount(requestAmount || 0)}
                                     </Text>
-                                )}
-                                {setCustomAmount && (
-                                    <TextInput
-                                        keyboardType="numeric"
-                                        placeholder={
-                                            requestAmount
-                                                ? requestAmount.toString()
-                                                : '0'
-                                        }
-                                        value={customAmount}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                customAmount: text
-                                            })
-                                        }
-                                        numberOfLines={1}
-                                        style={{
-                                            ...styles.textInput,
-                                            color: themeColor('text')
-                                        }}
-                                        placeholderTextColor="gray"
-                                    />
-                                )}
-                                {canPayCustomAmount && (
-                                    <View style={styles.button}>
-                                        <Button
-                                            title={
-                                                setCustomAmount
-                                                    ? localeString(
-                                                          'views.PaymentRequest.payDefault'
-                                                      )
-                                                    : localeString(
-                                                          'views.PaymentRequest.payCustom'
-                                                      )
-                                            }
-                                            icon={{
-                                                name: 'edit',
-                                                size: 25,
-                                                color: themeColor('background')
-                                            }}
-                                            onPress={() => {
-                                                if (setCustomAmount) {
-                                                    this.setState({
-                                                        setCustomAmount: false,
-                                                        customAmount: ''
-                                                    });
-                                                } else {
-                                                    this.setState({
-                                                        setCustomAmount: true
-                                                    });
-                                                }
-                                            }}
-                                            style={styles.button}
-                                            titleStyle={{
-                                                color: themeColor('background')
-                                            }}
-                                            buttonStyle={{
-                                                backgroundColor:
-                                                    themeColor('text'),
-                                                borderRadius: 30
-                                            }}
-                                        />
-                                    </View>
-                                )}
+                                </TouchableOpacity>
                             </View>
 
                             {(!!feeEstimate || feeEstimate === 0) && (
@@ -475,12 +383,14 @@ export default class PaymentRequest extends React.Component<
                                         <HopPicker
                                             onValueChange={(item: any) =>
                                                 this.setState({
-                                                    outgoingChanIds: item
-                                                        ? [item.channelId]
+                                                    outgoingChanId: item
+                                                        ? item.channelId
                                                         : null
                                                 })
                                             }
-                                            title="First Hop"
+                                            title={localeString(
+                                                'views.PaymentRequest.firstHop'
+                                            )}
                                             ChannelsStore={ChannelsStore}
                                             UnitsStore={UnitsStore}
                                         />
@@ -494,7 +404,9 @@ export default class PaymentRequest extends React.Component<
                                                         : null
                                                 })
                                             }
-                                            title="Last Hop"
+                                            title={localeString(
+                                                'views.PaymentRequest.lastHop'
+                                            )}
                                             ChannelsStore={ChannelsStore}
                                             UnitsStore={UnitsStore}
                                         />
@@ -504,11 +416,16 @@ export default class PaymentRequest extends React.Component<
 
                             {!!pay_req && RESTUtils.supportsAMP() && (
                                 <React.Fragment>
-                                    <Text style={{ ...styles.label, top: 25 }}>
+                                    <Text
+                                        style={{
+                                            ...styles.label,
+                                            color: themeColor('text'),
+                                            top: 25
+                                        }}
+                                    >
                                         {localeString(
                                             'views.PaymentRequest.amp'
                                         )}
-                                        :
                                     </Text>
                                     <Switch
                                         value={enableAmp}
@@ -577,12 +494,6 @@ export default class PaymentRequest extends React.Component<
                                                 timeoutSeconds: text
                                             })
                                         }
-                                        numberOfLines={1}
-                                        style={{
-                                            ...styles.textInput,
-                                            color: themeColor('text')
-                                        }}
-                                        placeholderTextColor="gray"
                                     />
                                     <Text
                                         style={{
@@ -609,12 +520,6 @@ export default class PaymentRequest extends React.Component<
                                                 maxParts: text
                                             })
                                         }
-                                        numberOfLines={1}
-                                        style={{
-                                            ...styles.textInput,
-                                            color: themeColor('text')
-                                        }}
-                                        placeholderTextColor="gray"
                                     />
                                     <Text
                                         style={{
@@ -650,12 +555,6 @@ export default class PaymentRequest extends React.Component<
                                                 feeLimitSat: text
                                             })
                                         }
-                                        numberOfLines={1}
-                                        style={{
-                                            ...styles.textInput,
-                                            color: themeColor('text')
-                                        }}
-                                        placeholderTextColor="gray"
                                     />
                                 </React.Fragment>
                             )}
@@ -685,12 +584,6 @@ export default class PaymentRequest extends React.Component<
                                                 maxShardAmt: text
                                             })
                                         }
-                                        numberOfLines={1}
-                                        style={{
-                                            ...styles.textInput,
-                                            color: themeColor('text')
-                                        }}
-                                        placeholderTextColor="gray"
                                     />
                                 </React.Fragment>
                             )}
@@ -707,7 +600,6 @@ export default class PaymentRequest extends React.Component<
                                         onPress={() => {
                                             TransactionsStore.sendPayment({
                                                 payment_request: paymentRequest,
-                                                amount: customAmount,
                                                 max_parts: ampOrMppEnabled
                                                     ? maxParts
                                                     : null,
@@ -720,8 +612,8 @@ export default class PaymentRequest extends React.Component<
                                                 fee_limit_sat: ampOrMppEnabled
                                                     ? feeLimitSat
                                                     : null,
-                                                outgoing_chan_ids:
-                                                    outgoingChanIds,
+                                                outgoing_chan_id:
+                                                    outgoingChanId,
                                                 last_hop_pubkey: lastHopPubkey,
                                                 amp: enableAmp
                                             });
@@ -769,9 +661,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingTop: 15,
         paddingBottom: 15
-    },
-    textInput: {
-        fontSize: 20
     },
     mppForm: {
         paddingLeft: 20,

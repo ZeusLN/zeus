@@ -4,11 +4,10 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
-import { Button, CheckBox, Header, Icon } from 'react-native-elements';
+import { Button, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import ForwardEvent from './../../models/ForwardEvent';
 
@@ -76,7 +75,7 @@ export default class RoutingEvent extends React.Component<
         const { aliasesById, channels } = ChannelsStore;
         const { settings, implementation } = SettingsStore;
         const { privacy } = settings;
-        const { lurkerMode } = privacy;
+        const lurkerMode = (privacy && privacy.lurkerMode) || false;
 
         const { chan_id_in, chan_id_out, amt_in, amt_out, fee, getTime } =
             routingEvent;
@@ -91,8 +90,8 @@ export default class RoutingEvent extends React.Component<
         const chanOut = chanOutFilter[0];
         const chanInLabel = aliasesById[chan_id_in] || chan_id_in;
         const chanOutLabel = aliasesById[chan_id_out] || chan_id_out;
-        const channelInPoint = chanIn.channel_point;
-        const channelOutPoint = chanOut.channel_point;
+        const channelInPoint = chanIn && chanIn.channel_point;
+        const channelOutPoint = chanOut && chanOut.channel_point;
 
         const BackButton = () => (
             <Icon

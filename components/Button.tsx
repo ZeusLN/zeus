@@ -30,14 +30,16 @@ function Button(props: ButtonProps) {
               ...containerStyle,
               borderWidth: secondary ? 2 : 0,
               borderColor: themeColor('highlight'),
-              alignSelf: 'center'
+              alignSelf: 'center',
+              borderRadius: 30
           }
         : {
               ...containerStyle,
               borderWidth: secondary ? 2 : 0,
               borderColor: themeColor('highlight'),
               alignSelf: 'center',
-              width: '100%'
+              borderRadius: 30,
+              width: '90%'
           };
 
     return (
@@ -53,12 +55,12 @@ function Button(props: ButtonProps) {
             title={title}
             buttonStyle={{
                 backgroundColor: iconOnly
-                    ? themeColor('background')
+                    ? 'transparent'
                     : tertiary
-                    ? themeColor('text')
+                    ? themeColor('highlight')
                     : secondary
                     ? themeColor('secondary')
-                    : themeColor('highlight')
+                    : themeColor('text')
             }}
             titleStyle={{
                 color: iconOnly
