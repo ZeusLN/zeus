@@ -17,6 +17,7 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import Coins from './../../images/SVG/Coins.svg';
 import Receive from './../../images/SVG/Receive.svg';
+import Send from './../../images/SVG/Send.svg';
 
 interface OnchainSwipeableRowProps {
     navigation: any;
@@ -32,7 +33,7 @@ export default class OnchainSwipeableRow extends Component<
         progress: Animated.AnimatedInterpolation
     ) => {
         const trans = progress.interpolate({
-            inputRange: [0, 1],
+            inputRange: [0.25, 1],
             outputRange: [x, 0]
         });
         const pressHandler = () => {
@@ -42,6 +43,8 @@ export default class OnchainSwipeableRow extends Component<
                 this.props.navigation.navigate('Receive', { selectedIndex: 1 });
             } else if (text === localeString('general.coins')) {
                 this.props.navigation.navigate('CoinControl');
+            } else if (text === localeString('general.send')) {
+                this.props.navigation.navigate('Send');
             }
         };
 
@@ -51,10 +54,25 @@ export default class OnchainSwipeableRow extends Component<
             >
                 <RectButton style={[styles.action]} onPress={pressHandler}>
                     {text === localeString('general.coins') && (
-                        <Coins fill={themeColor('highlight')} />
+                        <Coins
+                            fill={themeColor('highlight')}
+                            width={30}
+                            height={30}
+                        />
                     )}
                     {text === localeString('general.receive') && (
-                        <Receive fill={themeColor('highlight')} />
+                        <Receive
+                            fill={themeColor('highlight')}
+                            width={30}
+                            height={30}
+                        />
+                    )}
+                    {text === localeString('general.send') && (
+                        <Send
+                            fill={themeColor('highlight')}
+                            width={30}
+                            height={30}
+                        />
                     )}
                     <Text style={styles.actionText}>{text}</Text>
                 </RectButton>
@@ -69,17 +87,22 @@ export default class OnchainSwipeableRow extends Component<
         <View
             style={{
                 marginLeft: 15,
-                width: RESTUtils.supportsRouting() ? 150 : 75,
+                width: RESTUtils.supportsRouting() ? 200 : 125,
                 flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row'
             }}
         >
             {this.renderAction(
                 localeString('general.receive'),
-                RESTUtils.supportsRouting() ? 150 : 75,
+                RESTUtils.supportsRouting() ? 200 : 125,
                 progress
             )}
             {RESTUtils.supportsCoinControl() &&
                 this.renderAction(localeString('general.coins'), 100, progress)}
+            {this.renderAction(
+                localeString('general.send'),
+                RESTUtils.supportsRouting() ? 200 : 125,
+                progress
+            )}
         </View>
     );
 

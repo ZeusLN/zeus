@@ -57,6 +57,7 @@ export const LOCALE_KEYS = [
     { key: 'Češka', value: 'Češka' },
     { key: 'Slovák', value: 'Slovák' },
     { key: 'Deutsch', value: 'Deutsch' },
+    { key: 'Polski', value: 'Polski' },
     { key: 'Türkçe', value: 'Türkçe' },
     { key: 'magyar nyelv', value: 'magyar nyelv' },
     { key: '简化字', value: '简化字' },
@@ -99,7 +100,11 @@ export const CURRENCY_KEYS = [
     { key: '🇵🇱 Polish Złoty (PLN)', value: 'PLN' },
     { key: '🇹🇭 Thai Baht (THB)', value: 'THB' },
     { key: '🇰🇷 South Korean Won (KRW)', value: 'KRW' },
-    { key: '🇹🇼 Taiwan New Dollar (TWD)', value: 'TWD' }
+    { key: '🇹🇼 New Taiwan Dollar (TWD)', value: 'TWD' },
+    { key: '🇨🇿 Czech Koruna (CZK)', value: 'CZK' },
+    { key: '🇭🇺 Hungarian Forint (HUF)', value: 'HUF' },
+    { key: '🇮🇳 Indian Rupee (INR)', value: 'INR' },
+    { key: '🇹🇷 Turkish Lira (TRY)', value: 'TRY' }
 ];
 
 export const THEME_KEYS = [

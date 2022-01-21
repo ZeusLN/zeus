@@ -7,6 +7,7 @@ import querystring from 'querystring-es3';
 import hashjs from 'hash.js';
 import Invoice from './../models/Invoice';
 import SettingsStore from './SettingsStore';
+import Base64Utils from './../utils/Base64Utils';
 import RESTUtils from './../utils/RESTUtils';
 
 export default class InvoicesStore {
@@ -20,9 +21,11 @@ export default class InvoicesStore {
     @observable onChainAddress: string | null;
     @observable pay_req: Invoice | null;
     @observable payment_request: string | null;
+    @observable payment_request_amt: string | null;
     @observable creatingInvoice = false;
     @observable creatingInvoiceError = false;
     @observable invoicesCount: number;
+    @observable watchedInvoicePaid = false;
     settingsStore: SettingsStore;
 
     // lnd
@@ -67,6 +70,7 @@ export default class InvoicesStore {
         this.loadingFeeEstimate = false;
         this.feeEstimate = null;
         this.successProbability = null;
+        this.watchedInvoicePaid = false;
     };
 
     @action
@@ -109,6 +113,7 @@ export default class InvoicesStore {
         routeHints?: boolean
     ) => {
         this.payment_request = null;
+        this.payment_request_amt = null;
         this.creatingInvoice = true;
         this.creatingInvoiceError = false;
         this.error_msg = null;
@@ -126,6 +131,7 @@ export default class InvoicesStore {
             .then((data: any) => {
                 const invoice = new Invoice(data);
                 this.payment_request = invoice.getPaymentRequest;
+                this.payment_request_amt = value;
                 this.creatingInvoice = false;
 
                 if (lnurl) {
@@ -164,7 +170,16 @@ export default class InvoicesStore {
                         });
                 }
 
-                return invoice.getPaymentRequest;
+                if (this.settingsStore.implementation === 'lnd') {
+                    const formattedRhash = invoice.r_hash
+                        .replace(/\+/g, '-')
+                        .replace(/\//g, '_');
+                    RESTUtils.subscribeInvoice(formattedRhash)
+                        // TODO: get this to catch the response properly
+                        .finally((data: any) => {
+                            this.watchedInvoicePaid = true;
+                        });
+                }
             })
             .catch((error: any) => {
                 // handle error

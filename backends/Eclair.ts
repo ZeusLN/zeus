@@ -462,7 +462,12 @@ export default class Eclair {
 
     signMessage = (message: string) =>
         this.api('signmessage', {
-            msg: message
+            msg: Base64Utils.btoa(message)
+        });
+    verifyMessage = (data: any) =>
+        this.api('verifymessage', {
+            msg: Base64Utils.btoa(data.msg),
+            sig: data.signature
         });
 
     supportsMessageSigning = () => true;
@@ -475,6 +480,7 @@ export default class Eclair {
     supportsHopPicking = () => false;
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
+    singleFeesEarnedTotal = () => false;
 }
 
 const mapInvoice =

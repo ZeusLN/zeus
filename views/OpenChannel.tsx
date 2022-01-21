@@ -1,18 +1,21 @@
 import * as React from 'react';
 import {
-    ActivityIndicator,
     ScrollView,
     StyleSheet,
+    Switch,
     Text,
     View,
-    TextInput,
     TouchableWithoutFeedback
 } from 'react-native';
 import Clipboard from '@react-native-community/clipboard';
 import { inject, observer } from 'mobx-react';
-import { CheckBox, Header, Icon } from 'react-native-elements';
+import { Header, Icon } from 'react-native-elements';
+import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
+
 import Button from './../components/Button';
 import FeeTable from './../components/FeeTable';
+import LoadingIndicator from './../components/LoadingIndicator';
+import TextInput from './../components/TextInput';
 import UTXOPicker from './../components/UTXOPicker';
 
 import NodeUriUtils from './../utils/NodeUriUtils';
@@ -62,23 +65,13 @@ export default class OpenChannel extends React.Component<
 > {
     constructor(props: any) {
         super(props);
-        const { navigation, SettingsStore } = props;
-        const { implementation } = SettingsStore;
-        const node_pubkey_string = navigation.getParam(
-            'node_pubkey_string',
-            null
-        );
-        const host = navigation.getParam('host', null);
-        const sat_per_byte =
-            implementation === 'c-lightning-REST' ? 'normal' : '2';
-
         this.state = {
-            node_pubkey_string: node_pubkey_string || '',
+            node_pubkey_string: '',
             local_funding_amount: '',
             min_confs: 1,
-            sat_per_byte,
+            sat_per_byte: '2',
             private: false,
-            host: host || '',
+            host: '',
             suggestImport: '',
             utxos: [],
             utxoBalance: 0
@@ -102,7 +95,37 @@ export default class OpenChannel extends React.Component<
 
     async componentDidMount() {
         this.initFromProps(this.props);
+        await this.initNfc();
     }
+
+    initNfc = async () => {
+        await NfcManager.start();
+
+        const cleanUp = () => {
+            NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
+            NfcManager.setEventListener(NfcEvents.SessionClosed, null);
+        };
+
+        return new Promise((resolve: any) => {
+            let tagFound = null;
+
+            NfcManager.setEventListener(NfcEvents.DiscoverTag, (tag: any) => {
+                tagFound = tag;
+                const bytes = new Uint8Array(tagFound.ndefMessage[0].payload);
+                const str = NFCUtils.nfcUtf8ArrayToStr(bytes);
+                resolve(this.validateNodeUri(str));
+                NfcManager.unregisterTagEvent().catch(() => 0);
+            });
+
+            NfcManager.setEventListener(NfcEvents.SessionClosed, () => {
+                if (!tagFound) {
+                    resolve();
+                }
+            });
+
+            NfcManager.registerTagEvent();
+        });
+    };
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
         this.initFromProps(nextProps);
@@ -111,14 +134,24 @@ export default class OpenChannel extends React.Component<
     initFromProps(props: any) {
         const { navigation } = props;
 
-        const pubkey = navigation.getParam('pubkey', null);
+        const node_pubkey_string = navigation.getParam(
+            'node_pubkey_string',
+            null
+        );
         const host = navigation.getParam('host', null);
 
         this.setState({
-            node_pubkey_string: pubkey,
+            node_pubkey_string,
             host
         });
     }
+
+    validateNodeUri = (text: string) => {
+        const { navigation } = this.props;
+        handleAnything(text).then(([route, props]) => {
+            navigation.navigate(route, props);
+        });
+    };
 
     selectUTXOs = (utxos: Array<string>, utxoBalance: number) => {
         const { SettingsStore } = this.props;
@@ -249,7 +282,7 @@ export default class OpenChannel extends React.Component<
 
                 <View style={styles.content}>
                     {(connectingToPeer || openingChannel) && (
-                        <ActivityIndicator size="large" color="#0000ff" />
+                        <LoadingIndicator />
                     )}
                     {peerSuccess && (
                         <Text style={{ color: 'green' }}>
@@ -271,8 +304,7 @@ export default class OpenChannel extends React.Component<
 
                     <Text
                         style={{
-                            textDecorationLine: 'underline',
-                            color: themeColor('text')
+                            color: themeColor('secondaryText')
                         }}
                     >
                         {localeString('views.OpenChannel.nodePubkey')}
@@ -283,16 +315,12 @@ export default class OpenChannel extends React.Component<
                         onChangeText={(text: string) =>
                             this.setState({ node_pubkey_string: text })
                         }
-                        numberOfLines={1}
-                        style={{ fontSize: 20, color: themeColor('text') }}
-                        placeholderTextColor="gray"
                         editable={!openingChannel}
                     />
 
                     <Text
                         style={{
-                            textDecorationLine: 'underline',
-                            color: themeColor('text')
+                            color: themeColor('secondaryText')
                         }}
                     >
                         {localeString('views.OpenChannel.host')}
@@ -303,16 +331,12 @@ export default class OpenChannel extends React.Component<
                         onChangeText={(text: string) =>
                             this.setState({ host: text })
                         }
-                        numberOfLines={1}
-                        style={{ fontSize: 20, color: themeColor('text') }}
-                        placeholderTextColor="gray"
                         editable={!openingChannel}
                     />
 
                     <Text
                         style={{
-                            textDecorationLine: 'underline',
-                            color: themeColor('text')
+                            color: themeColor('secondaryText')
                         }}
                     >
                         {localeString('views.OpenChannel.localAmt')}
@@ -326,9 +350,6 @@ export default class OpenChannel extends React.Component<
                         onChangeText={(text: string) =>
                             this.setState({ local_funding_amount: text })
                         }
-                        numberOfLines={1}
-                        style={{ fontSize: 20, color: themeColor('text') }}
-                        placeholderTextColor="gray"
                         editable={!openingChannel}
                     />
                     {local_funding_amount === 'all' && (
@@ -347,8 +368,7 @@ export default class OpenChannel extends React.Component<
 
                     <Text
                         style={{
-                            textDecorationLine: 'underline',
-                            color: themeColor('text')
+                            color: themeColor('secondaryText')
                         }}
                     >
                         {localeString('views.OpenChannel.numConf')}
@@ -362,45 +382,43 @@ export default class OpenChannel extends React.Component<
                                 min_confs: Number(text) || min_confs
                             })
                         }
-                        numberOfLines={1}
-                        style={{ fontSize: 20, color: themeColor('text') }}
-                        placeholderTextColor="gray"
                         editable={!openingChannel}
                     />
 
-                    <Text
-                        style={{
-                            textDecorationLine: 'underline',
-                            color: themeColor('text')
-                        }}
-                    >
-                        {localeString('views.OpenChannel.satsPerByte')}
-                    </Text>
-                    <TouchableWithoutFeedback
-                        onPress={() =>
-                            navigation.navigate('EditFee', {
-                                onNavigateBack: this.handleOnNavigateBack
-                            })
-                        }
-                    >
-                        <View
+                    <>
+                        <Text
                             style={{
-                                ...styles.editFeeBox,
-
-                                borderColor: 'rgba(255, 217, 63, .6)',
-                                borderWidth: 3
+                                color: themeColor('secondaryText')
                             }}
                         >
-                            <Text
+                            {localeString('views.OpenChannel.satsPerByte')}
+                        </Text>
+                        <TouchableWithoutFeedback
+                            onPress={() =>
+                                navigation.navigate('EditFee', {
+                                    onNavigateBack: this.handleOnNavigateBack
+                                })
+                            }
+                        >
+                            <View
                                 style={{
-                                    color: themeColor('text'),
-                                    fontSize: 18
+                                    ...styles.editFeeBox,
+
+                                    borderColor: 'rgba(255, 217, 63, .6)',
+                                    borderWidth: 3
                                 }}
                             >
-                                {sat_per_byte}
-                            </Text>
-                        </View>
-                    </TouchableWithoutFeedback>
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontSize: 18
+                                    }}
+                                >
+                                    {sat_per_byte}
+                                </Text>
+                            </View>
+                        </TouchableWithoutFeedback>
+                    </>
 
                     {RESTUtils.supportsCoinControl() &&
                         implementation !== 'lnd' && (
@@ -410,17 +428,33 @@ export default class OpenChannel extends React.Component<
                             />
                         )}
 
-                    <View style={{ padding: 10 }}>
-                        <CheckBox
-                            title={localeString('views.OpenChannel.private')}
-                            checked={privateChannel}
-                            onPress={() =>
-                                this.setState({ private: !privateChannel })
+                    <>
+                        <Text
+                            style={{
+                                top: 20,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {localeString('views.OpenChannel.private')}
+                        </Text>
+                        <Switch
+                            value={privateChannel}
+                            onValueChange={() =>
+                                this.setState({
+                                    private: !privateChannel
+                                })
                             }
+                            trackColor={{
+                                false: '#767577',
+                                true: themeColor('highlight')
+                            }}
+                            style={{
+                                alignSelf: 'flex-end'
+                            }}
                         />
-                    </View>
+                    </>
 
-                    <View style={styles.button}>
+                    <View style={{ ...styles.button, paddingTop: 20 }}>
                         <Button
                             title={localeString(
                                 'views.OpenChannel.openChannel'
@@ -478,6 +512,7 @@ const styles = StyleSheet.create({
         marginTop: 15,
         borderRadius: 4,
         borderColor: '#FFD93F',
-        borderWidth: 2
+        borderWidth: 2,
+        marginBottom: 20
     }
 });
