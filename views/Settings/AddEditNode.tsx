@@ -1,31 +1,30 @@
 import * as React from 'react';
 import {
+    ActivityIndicator,
     ActionSheetIOS,
     Modal,
     Platform,
     StyleSheet,
-    Switch,
     Text,
     View,
     ScrollView,
+    TextInput,
     TouchableOpacity
 } from 'react-native';
 import Clipboard from '@react-native-community/clipboard';
 import { Picker } from '@react-native-picker/picker';
-import { Header, Icon } from 'react-native-elements';
+import { CheckBox, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+
+import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
 
 import AddressUtils, { DEFAULT_LNDHUB } from './../../utils/AddressUtils';
 import LndConnectUtils from './../../utils/LndConnectUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
-
 import Button from './../../components/Button';
 import CollapsedQR from './../../components/CollapsedQR';
 import DropdownSetting from './../../components/DropdownSetting';
-import LoadingIndicator from './../../components/LoadingIndicator';
-import TextInput from './../../components/TextInput';
-
 import SettingsStore, { INTERFACE_KEYS } from './../../stores/SettingsStore';
 
 interface AddEditNodeProps {
@@ -159,7 +158,56 @@ export default class AddEditNode extends React.Component<
 
     async componentDidMount() {
         this.initFromProps(this.props);
+        await this.initNfc();
     }
+
+    initNfc = async () => {
+        await NfcManager.start();
+
+        const cleanUp = () => {
+            NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
+            NfcManager.setEventListener(NfcEvents.SessionClosed, null);
+        };
+
+        return new Promise((resolve: any) => {
+            let tagFound = null;
+
+            NfcManager.setEventListener(NfcEvents.DiscoverTag, (tag: any) => {
+                tagFound = tag;
+                const bytes = new Uint8Array(tagFound.ndefMessage[0].payload);
+                const str = NFCUtils.nfcUtf8ArrayToStr(bytes);
+                resolve(this.validateNodeUri(str));
+                NfcManager.unregisterTagEvent().catch(() => 0);
+            });
+
+            NfcManager.setEventListener(NfcEvents.SessionClosed, () => {
+                if (!tagFound) {
+                    resolve();
+                }
+            });
+
+            NfcManager.registerTagEvent();
+        });
+    };
+
+    validateNodeUri = (text: string) => {
+        const { navigation } = this.props;
+        handleAnything(text)
+            .then(([route, props]) => {
+                navigation.navigate(route, props);
+            })
+            .catch((err) => {
+                this.setState({
+                    nickname: '',
+                    host: '',
+                    port: '',
+                    macaroonHex: '',
+                    saved: false,
+                    active: false,
+                    newEntry: false
+                });
+            });
+    };
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
         this.initFromProps(nextProps);
@@ -239,7 +287,7 @@ export default class AddEditNode extends React.Component<
         } = this.state;
         const { setSettings, settings } = SettingsStore;
         const { privacy, passphrase, fiat, locale } = settings;
-        const lurkerMode = (privacy && privacy.lurkerMode) || false;
+        const { lurkerMode } = privacy;
 
         if (
             implementation === 'lndhub' &&
@@ -273,20 +321,16 @@ export default class AddEditNode extends React.Component<
         }
 
         setSettings(
-            JSON.stringify(
-                settings
-                    ? {
-                          nodes,
-                          theme: settings.theme,
-                          selectedNode: settings.selectedNode,
-                          fiat,
-                          locale,
-                          lurkerMode,
-                          passphrase,
-                          privacy: settings.privacy
-                      }
-                    : { nodes }
-            )
+            JSON.stringify({
+                nodes,
+                theme: settings.theme,
+                selectedNode: settings.selectedNode,
+                fiat,
+                locale,
+                lurkerMode,
+                passphrase,
+                privacy: settings.privacy
+            })
         ).then(() => {
             this.setState({
                 saved: true
@@ -421,7 +465,7 @@ export default class AddEditNode extends React.Component<
 
         const displayValue = INTERFACE_KEYS.filter(
             (value: any) => value.value === implementation
-        )[0].value;
+        )[0].key;
 
         const NodeInterface = () => (
             <DropdownSetting
@@ -498,7 +542,11 @@ export default class AddEditNode extends React.Component<
                     </View>
                 )}
 
-                {loading && <LoadingIndicator />}
+                {loading && (
+                    <View style={{ padding: 10 }}>
+                        <ActivityIndicator size="large" color="#0000ff" />
+                    </View>
+                )}
 
                 <Modal
                     animationType="slide"
@@ -606,7 +654,6 @@ export default class AddEditNode extends React.Component<
                                             buttonStyle={{
                                                 borderRadius: 30
                                             }}
-                                            tertiary
                                         />
                                     </View>
                                     <View style={styles.button}>
@@ -740,7 +787,13 @@ export default class AddEditNode extends React.Component<
                                         saved: false
                                     })
                                 }
+                                numberOfLines={1}
+                                style={{
+                                    ...styles.textInput,
+                                    color: themeColor('text')
+                                }}
                                 editable={!loading}
+                                placeholderTextColor="gray"
                             />
                         </View>
 
@@ -767,7 +820,13 @@ export default class AddEditNode extends React.Component<
                                             saved: false
                                         })
                                     }
+                                    numberOfLines={1}
+                                    style={{
+                                        ...styles.textInput,
+                                        color: themeColor('text')
+                                    }}
                                     editable={!loading}
+                                    placeholderTextColor="gray"
                                 />
 
                                 {implementation === 'spark' && (
@@ -792,7 +851,13 @@ export default class AddEditNode extends React.Component<
                                                     saved: false
                                                 });
                                             }}
+                                            numberOfLines={1}
+                                            style={{
+                                                ...styles.textInput,
+                                                color: themeColor('text')
+                                            }}
                                             editable={!loading}
+                                            placeholderTextColor="gray"
                                         />
                                     </>
                                 )}
@@ -818,7 +883,13 @@ export default class AddEditNode extends React.Component<
                                                     saved: false
                                                 });
                                             }}
+                                            numberOfLines={1}
+                                            style={{
+                                                ...styles.textInput,
+                                                color: themeColor('text')
+                                            }}
                                             editable={!loading}
+                                            placeholderTextColor="gray"
                                         />
                                     </>
                                 )}
@@ -844,37 +915,33 @@ export default class AddEditNode extends React.Component<
                                             saved: false
                                         })
                                     }
+                                    numberOfLines={1}
+                                    style={{
+                                        ...styles.textInput,
+                                        color: themeColor('text')
+                                    }}
                                     editable={!loading}
+                                    placeholderTextColor="gray"
                                 />
 
-                                <>
-                                    <Text
-                                        style={{
-                                            top: 20,
-                                            color: themeColor('secondaryText')
-                                        }}
-                                    >
-                                        {localeString(
+                                <View
+                                    style={{
+                                        marginTop: 5
+                                    }}
+                                >
+                                    <CheckBox
+                                        title={localeString(
                                             'views.Settings.AddEditNode.existingAccount'
                                         )}
-                                    </Text>
-                                    <Switch
-                                        value={existingAccount}
-                                        onValueChange={() =>
+                                        checked={existingAccount}
+                                        onPress={() =>
                                             this.setState({
                                                 existingAccount:
                                                     !existingAccount
                                             })
                                         }
-                                        trackColor={{
-                                            false: '#767577',
-                                            true: themeColor('highlight')
-                                        }}
-                                        style={{
-                                            alignSelf: 'flex-end'
-                                        }}
                                     />
-                                </>
+                                </View>
 
                                 {existingAccount && (
                                     <>
@@ -898,7 +965,13 @@ export default class AddEditNode extends React.Component<
                                                     saved: false
                                                 })
                                             }
+                                            numberOfLines={1}
+                                            style={{
+                                                ...styles.textInput,
+                                                color: themeColor('text')
+                                            }}
                                             editable={!loading}
+                                            placeholderTextColor="gray"
                                         />
 
                                         <Text
@@ -921,8 +994,14 @@ export default class AddEditNode extends React.Component<
                                                     saved: false
                                                 })
                                             }
+                                            numberOfLines={1}
+                                            style={{
+                                                ...styles.textInput,
+                                                color: themeColor('text')
+                                            }}
                                             editable={!loading}
                                             secureTextEntry={saved}
+                                            placeholderTextColor="gray"
                                         />
                                         {saved && (
                                             <CollapsedQR
@@ -967,7 +1046,13 @@ export default class AddEditNode extends React.Component<
                                             saved: false
                                         })
                                     }
+                                    numberOfLines={1}
+                                    style={{
+                                        ...styles.textInput,
+                                        color: themeColor('text')
+                                    }}
                                     editable={!loading}
+                                    placeholderTextColor="gray"
                                 />
 
                                 <Text
@@ -989,7 +1074,13 @@ export default class AddEditNode extends React.Component<
                                             saved: false
                                         })
                                     }
+                                    numberOfLines={1}
+                                    style={{
+                                        ...styles.textInput,
+                                        color: themeColor('text')
+                                    }}
                                     editable={!loading}
+                                    placeholderTextColor="gray"
                                 />
 
                                 <Text
@@ -1010,69 +1101,52 @@ export default class AddEditNode extends React.Component<
                                             saved: false
                                         })
                                     }
+                                    numberOfLines={1}
+                                    style={{
+                                        ...styles.textInput,
+                                        color: themeColor('text')
+                                    }}
                                     editable={!loading}
+                                    placeholderTextColor="gray"
                                 />
                             </>
                         )}
 
-                        <>
-                            <Text
-                                style={{
-                                    top: 20,
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.AddEditNode.useTor'
-                                )}
-                            </Text>
-                            <Switch
-                                value={enableTor}
-                                onValueChange={() =>
+                        <View
+                            style={{
+                                marginTop: 5
+                            }}
+                        >
+                            <CheckBox
+                                title={'Use Tor'}
+                                checked={enableTor}
+                                onPress={() =>
                                     this.setState({
                                         enableTor: !enableTor,
                                         saved: false
                                     })
                                 }
-                                trackColor={{
-                                    false: '#767577',
-                                    true: themeColor('highlight')
-                                }}
-                                style={{
-                                    alignSelf: 'flex-end'
-                                }}
                             />
-                        </>
-
+                        </View>
                         {!enableTor && (
-                            <>
-                                <Text
-                                    style={{
-                                        top: 20,
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
+                            <View
+                                style={{
+                                    marginTop: 5
+                                }}
+                            >
+                                <CheckBox
+                                    title={localeString(
                                         'views.Settings.AddEditNode.certificateVerification'
                                     )}
-                                </Text>
-                                <Switch
-                                    value={certVerification}
-                                    onValueChange={() =>
+                                    checked={certVerification}
+                                    onPress={() =>
                                         this.setState({
                                             certVerification: !certVerification,
                                             saved: false
                                         })
                                     }
-                                    trackColor={{
-                                        false: '#767577',
-                                        true: themeColor('highlight')
-                                    }}
-                                    style={{
-                                        alignSelf: 'flex-end'
-                                    }}
                                 />
-                            </>
+                            </View>
                         )}
                     </View>
 
@@ -1241,6 +1315,16 @@ export default class AddEditNode extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    textInput: {
+        fontSize: 20,
+        width: '100%',
+        height: 60,
+        top: 10,
+        backgroundColor: '#31363F',
+        borderRadius: 6,
+        marginBottom: 20,
+        paddingLeft: 5
+    },
     error: {
         color: 'red'
     },

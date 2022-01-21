@@ -316,5 +316,4 @@ export default class Spark {
     supportsCoinControl = () => false;
     supportsHopPicking = () => false;
     supportsRouting = () => true;
-    singleFeesEarnedTotal = () => false;
 }

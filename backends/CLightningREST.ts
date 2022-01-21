@@ -138,10 +138,6 @@ export default class CLightningREST extends LND {
         this.postRequest('/v1/utility/signMessage', {
             message: message
         });
-    verifyMessage = (data: any) =>
-        this.getRequest(
-            `/v1/utility/checkMessage/${data.msg}/${data.signature}`
-        );
 
     supportsMessageSigning = () => true;
     supportsMPP = () => false;
@@ -150,5 +146,4 @@ export default class CLightningREST extends LND {
     supportsHopPicking = () => false;
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
-    singleFeesEarnedTotal = () => true;
 }

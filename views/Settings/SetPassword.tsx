@@ -52,19 +52,15 @@ export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
 
         const settings = await getSettings();
         await setSettings(
-            JSON.stringify(
-                settings
-                    ? {
-                          nodes: settings.nodes,
-                          theme: settings.theme,
-                          selectedNode: settings.selectedNode,
-                          fiat: settings.fiat,
-                          locale: settings.locale,
-                          privacy: settings.privacy,
-                          passphrase
-                      }
-                    : { passphrase }
-            )
+            JSON.stringify({
+                nodes: settings.nodes,
+                theme: settings.theme,
+                selectedNode: settings.selectedNode,
+                fiat: settings.fiat,
+                locale: settings.locale,
+                privacy: settings.privacy,
+                passphrase
+            })
         ).then(() => {
             getSettings();
             navigation.navigate('Settings', {

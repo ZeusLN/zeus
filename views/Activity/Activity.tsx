@@ -1,11 +1,14 @@
 import * as React from 'react';
-import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
+import {
+    ActivityIndicator,
+    FlatList,
+    StyleSheet,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-
 import { Amount } from '../../components/Amount';
-import LoadingIndicator from '../../components/LoadingIndicator';
-
 import DateTimeUtils from './../../utils/DateTimeUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -105,7 +108,10 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                 />
                 {loading ? (
                     <View style={{ padding: 50 }}>
-                        <LoadingIndicator />
+                        <ActivityIndicator
+                            size="large"
+                            color={themeColor('highlight')}
+                        />
                     </View>
                 ) : !!filteredActivity && filteredActivity.length > 0 ? (
                     <FlatList

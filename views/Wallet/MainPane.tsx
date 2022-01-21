@@ -121,11 +121,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
         if (loading) {
             mainPane = (
                 <View style={styles.loadingContainer}>
-                    <WalletHeader
-                        navigation={navigation}
-                        SettingsStore={SettingsStore}
-                        loading={true}
-                    />
+                    <WalletHeader navigation={navigation} loading={true} />
                     <Button
                         title=""
                         loading
@@ -146,10 +142,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                         backgroundColor: themeColor('secondary')
                     }}
                 >
-                    <WalletHeader
-                        navigation={navigation}
-                        SettingsStore={SettingsStore}
-                    />
+                    <WalletHeader navigation={navigation} />
                     {implementation === 'lndhub' ? (
                         <LightningBalance />
                     ) : (
@@ -197,6 +190,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                             alignItems: 'center'
                         }}
                         onPress={() => navigation.navigate('Settings')}
+                        tertiary
                         adaptiveWidth
                     />
                     <Text

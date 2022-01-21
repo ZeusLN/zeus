@@ -197,13 +197,13 @@ PODS:
     - React-cxxreact (= 0.63.4)
     - React-jsi (= 0.63.4)
   - React-jsinspector (0.63.4)
-  - react-native-camera (4.2.1):
+  - react-native-camera (4.0.1):
     - React-Core
-    - react-native-camera/RCT (= 4.2.1)
-    - react-native-camera/RN (= 4.2.1)
-  - react-native-camera/RCT (4.2.1):
+    - react-native-camera/RCT (= 4.0.1)
+    - react-native-camera/RN (= 4.0.1)
+  - react-native-camera/RCT (4.0.1):
     - React-Core
-  - react-native-camera/RN (4.2.1):
+  - react-native-camera/RN (4.0.1):
     - React-Core
   - react-native-date-picker (3.3.2):
     - React-Core
@@ -562,7 +562,7 @@ SPEC CHECKSUMS:
   React-jsi: a0418934cf48f25b485631deb27c64dc40fb4c31
   React-jsiexecutor: 93bd528844ad21dc07aab1c67cb10abae6df6949
   React-jsinspector: 58aef7155bc9a9683f5b60b35eccea8722a4f53a
-  react-native-camera: 3eae183c1d111103963f3dd913b65d01aef8110f
+  react-native-camera: 11166fe7e3a673493c152f52966e8ab1c5cdcacc
   react-native-date-picker: 96a07ca27a6225da8a3935324d85046028456b0f
   react-native-hce: 677aa1c41edf183523bb7b1014d106a08631ff88
   react-native-nfc-manager: e74f24f05274fbfdfe51e46e72d62d5ae460c724

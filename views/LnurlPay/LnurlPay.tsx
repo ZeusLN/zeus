@@ -1,11 +1,10 @@
 import url from 'url';
 import * as React from 'react';
 import RNFetchBlob from 'rn-fetch-blob';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
 import querystring from 'querystring-es3';
-import TextInput from './../../components/TextInput';
 import InvoicesStore from './../../stores/InvoicesStore';
 import LnurlPayStore from './../../stores/LnurlPayStore';
 import LnurlPayMetadata from './Metadata';
@@ -194,12 +193,16 @@ export default class LnurlPay extends React.Component<
                         onChangeText={(text: string) => {
                             this.setState({ amount: text });
                         }}
+                        numberOfLines={1}
                         editable={
                             lnurl && lnurl.minSendable === lnurl.maxSendable
                                 ? false
                                 : true
                         }
-                        style={styles.textInput}
+                        style={{
+                            ...styles.textInput,
+                            color: themeColor('text')
+                        }}
                     />
                     {lnurl.commentAllowed > 0 ? (
                         <>
@@ -214,7 +217,11 @@ export default class LnurlPay extends React.Component<
                                 onChangeText={(text: string) => {
                                     this.setState({ comment: text });
                                 }}
-                                style={styles.textInput}
+                                numberOfLines={1}
+                                style={{
+                                    ...styles.textInput,
+                                    color: themeColor('text')
+                                }}
                             />
                         </>
                     ) : null}
@@ -247,6 +254,7 @@ export default class LnurlPay extends React.Component<
 
 const styles = StyleSheet.create({
     textInput: {
+        fontSize: 20,
         paddingTop: 10,
         paddingBottom: 10
     },

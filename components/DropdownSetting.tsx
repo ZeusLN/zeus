@@ -42,7 +42,7 @@ export default class DropdownSetting extends React.Component<
         return (
             <React.Fragment>
                 {Platform.OS !== 'ios' && (
-                    <View style={{ height: 75 }}>
+                    <View>
                         <Text
                             style={{
                                 color: themeColor('secondaryText')

@@ -1,57 +1,31 @@
 import { action, observable } from 'mobx';
 import RESTUtils from './../utils/RESTUtils';
-
-interface VerificationRequest {
-    msg: string;
-    signature: string;
-}
+import Base64Utils from './../utils/Base64Utils';
 
 export default class MessageSignStore {
     @observable public loading = false;
     @observable public error = false;
     @observable public signature: string | null;
-    @observable public verification: string | null;
-    @observable public pubkey: string | null;
-    @observable public valid: boolean | null;
 
-    @action
-    public reset() {
+    resetSignature() {
         this.signature = null;
-        this.pubkey = null;
-        this.valid = null;
         this.error = false;
     }
 
     @action
     public signMessage = (text: string) => {
         this.loading = true;
+        const body = Base64Utils.btoa(text);
 
-        RESTUtils.signMessage(text)
+        RESTUtils.signMessage(body)
             .then((data: any) => {
-                this.signature = data.zbase || data.signature;
+                // TODO: properly decode signature
+                this.signature = data.signature;
                 this.error = false;
             })
             .catch((error: any) => {
                 this.error = error.toString();
-                this.reset();
-            })
-            .finally(() => {
-                this.loading = false;
-            });
-    };
-
-    @action
-    public verifyMessage = (data: VerificationRequest) => {
-        this.loading = true;
-
-        RESTUtils.verifyMessage({ msg: data.msg, signature: data.signature })
-            .then((data: any) => {
-                this.valid = data.valid || data.verified || false;
-                this.pubkey = data.pubkey || data.publicKey;
-                this.error = false;
-            })
-            .catch((error: any) => {
-                this.error = error.toString();
+                this.resetSignature;
             })
             .finally(() => {
                 this.loading = false;
