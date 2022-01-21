@@ -59,10 +59,9 @@ export default class SendingOnChain extends React.Component<
                     backgroundColor: this.getBackgroundColor()
                 }}
             >
-                <ScrollView
-                    contentContainerStyle={{
-                        ...styles.content,
-                        height: '100%'
+                <View
+                    style={{
+                        ...styles.content
                     }}
                 >
                     {loading && <LoadingIndicator />}
@@ -78,11 +77,9 @@ export default class SendingOnChain extends React.Component<
                     {publishSuccess && (
                         <>
                             <WordLogo
-                                width={250}
+                                height={150}
                                 style={{
-                                    alignSelf: 'center',
-                                    top: -100,
-                                    marginBottom: -250
+                                    alignSelf: 'center'
                                 }}
                             />
                             <Image
@@ -140,35 +137,34 @@ export default class SendingOnChain extends React.Component<
                         </TouchableOpacity>
                     )}
                     {error && (
-                        <View style={styles.button}>
-                            <Button
-                                title=""
-                                icon={{
-                                    name: 'error',
-                                    size: 125,
-                                    color: 'white'
-                                }}
-                                buttonStyle={{
-                                    backgroundColor: 'transparent',
-                                    borderRadius: 30
-                                }}
-                                onPress={() => void 0}
-                            />
-                        </View>
-                    )}
-                    {txid && (
-                        <View style={styles.button}>
-                            <CopyButton
-                                title={localeString(
-                                    'views.SendingOnChain.copyTxid'
-                                )}
-                                copyValue={txid}
-                            />
-                        </View>
+                        <Button
+                            title=""
+                            icon={{
+                                name: 'error',
+                                size: 125,
+                                color: 'white'
+                            }}
+                            buttonStyle={{
+                                backgroundColor: 'transparent',
+                                borderRadius: 30
+                            }}
+                            onPress={() => void 0}
+                        />
                     )}
 
-                    {(publishSuccess || error) && (
-                        <View style={styles.button}>
+                    <View style={styles.buttons}>
+                        {txid && (
+                            <View style={{ marginBottom: 10, width: '100%' }}>
+                                <CopyButton
+                                    title={localeString(
+                                        'views.SendingOnChain.copyTxid'
+                                    )}
+                                    copyValue={txid}
+                                />
+                            </View>
+                        )}
+
+                        {(publishSuccess || error) && (
                             <Button
                                 title={localeString(
                                     'views.SendingOnChain.goToWallet'
@@ -191,9 +187,9 @@ export default class SendingOnChain extends React.Component<
                                 }}
                                 onPress={() => navigation.navigate('Wallet')}
                             />
-                        </View>
-                    )}
-                </ScrollView>
+                        )}
+                    </View>
+                </View>
             </View>
         );
     }
@@ -204,12 +200,14 @@ const styles = StyleSheet.create({
         flex: 1
     },
     content: {
+        flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingTop: 40
+        paddingTop: 125
     },
-    button: {
-        paddingTop: 15,
-        paddingBottom: 15
+    buttons: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        marginBottom: 35
     }
 });

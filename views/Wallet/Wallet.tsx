@@ -74,14 +74,14 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         this.pan = new Animated.ValueXY();
         this.panResponder = PanResponder.create({
             onMoveShouldSetPanResponder: () => true,
-            onPanResponderMove: Animated.event([
-                null,
-                { dx: this.pan.x, dy: this.pan.y }
-            ]),
+            onPanResponderMove: Animated.event(
+                [null, { dx: this.pan.x, dy: this.pan.y }],
+                { useNativeDriver: false }
+            ),
             onPanResponderRelease: () => {
                 Animated.spring(this.pan, {
                     toValue: { x: 0, y: 0 },
-                    useNativeDriver: true
+                    useNativeDriver: false
                 }).start();
                 props.navigation.navigate('Activity');
             }
@@ -349,8 +349,8 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                     {loading && (
                         <>
                             <WordLogo
-                                width={250}
-                                style={{ alignSelf: 'center', top: 100 }}
+                                height={150}
+                                style={{ alignSelf: 'center', marginTop: 250 }}
                             />
                             <Text
                                 style={{
