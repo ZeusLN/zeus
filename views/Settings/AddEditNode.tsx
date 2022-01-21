@@ -15,8 +15,6 @@ import { Picker } from '@react-native-picker/picker';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
-
 import AddressUtils, { DEFAULT_LNDHUB } from './../../utils/AddressUtils';
 import LndConnectUtils from './../../utils/LndConnectUtils';
 import { localeString } from './../../utils/LocaleUtils';
