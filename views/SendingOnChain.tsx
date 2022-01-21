@@ -1,6 +1,6 @@
 import * as React from 'react';
 import {
-    Image,
+    ActivityIndicator,
     StyleSheet,
     Text,
     ScrollView,
@@ -9,19 +9,12 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button } from 'react-native-elements';
-
-import CopyButton from './../components/CopyButton';
-import LoadingIndicator from './../components/LoadingIndicator';
-
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
 import UrlUtils from './../utils/UrlUtils';
+import CopyButton from './../components/CopyButton';
+import { localeString } from './../utils/LocaleUtils';
 
 import NodeInfoStore from './../stores/NodeInfoStore';
 import TransactionsStore from './../stores/TransactionsStore';
-
-import Success from './../images/GIF/Success.gif';
-import WordLogo from './../images/SVG/Word Logo.svg';
 
 interface SendingOnChainProps {
     navigation: any;
@@ -41,9 +34,11 @@ export default class SendingOnChain extends React.Component<
 
         if (error) {
             return 'darkred';
+        } else if (txid || publishSuccess) {
+            return 'green';
         }
 
-        return themeColor('background');
+        return 'white';
     }
 
     render() {
@@ -59,44 +54,24 @@ export default class SendingOnChain extends React.Component<
                     backgroundColor: this.getBackgroundColor()
                 }}
             >
-                <View
-                    style={{
-                        ...styles.content
+                <ScrollView
+                    contentContainerStyle={{
+                        ...styles.content,
+                        height: '100%'
                     }}
                 >
-                    {loading && <LoadingIndicator />}
                     {loading && (
-                        <Text
-                            style={{
-                                color: themeColor('text')
-                            }}
-                        >
+                        <ActivityIndicator size="large" color="#0000ff" />
+                    )}
+                    {loading && (
+                        <Text>
                             {localeString('views.SendingOnChain.broadcasting')}
                         </Text>
-                    )}
-                    {publishSuccess && (
-                        <>
-                            <WordLogo
-                                height={150}
-                                style={{
-                                    alignSelf: 'center'
-                                }}
-                            />
-                            <Image
-                                source={Success}
-                                style={{
-                                    width: 290,
-                                    height: 290,
-                                    marginTop: -50,
-                                    marginBottom: -50
-                                }}
-                            />
-                        </>
                     )}
                     {error && error_msg && (
                         <Text
                             style={{
-                                color: themeColor('text'),
+                                color: 'white',
                                 padding: 20,
                                 fontSize: 30,
                                 alignSelf: 'center'
@@ -110,7 +85,7 @@ export default class SendingOnChain extends React.Component<
                             style={{
                                 color: 'white',
                                 padding: 20,
-                                fontSize: 22,
+                                fontSize: 30,
                                 alignSelf: 'center'
                             }}
                         >
@@ -136,35 +111,52 @@ export default class SendingOnChain extends React.Component<
                             </Text>
                         </TouchableOpacity>
                     )}
+                    {publishSuccess && (
+                        <View style={styles.button}>
+                            <Button
+                                title=""
+                                icon={{
+                                    name: 'check',
+                                    size: 125,
+                                    color: 'white'
+                                }}
+                                onPress={() => void 0}
+                                buttonStyle={{
+                                    backgroundColor: 'transparent'
+                                }}
+                            />
+                        </View>
+                    )}
                     {error && (
-                        <Button
-                            title=""
-                            icon={{
-                                name: 'error',
-                                size: 125,
-                                color: 'white'
-                            }}
-                            buttonStyle={{
-                                backgroundColor: 'transparent',
-                                borderRadius: 30
-                            }}
-                            onPress={() => void 0}
-                        />
+                        <View style={styles.button}>
+                            <Button
+                                title=""
+                                icon={{
+                                    name: 'error',
+                                    size: 125,
+                                    color: 'white'
+                                }}
+                                buttonStyle={{
+                                    backgroundColor: 'transparent',
+                                    borderRadius: 30
+                                }}
+                                onPress={() => void 0}
+                            />
+                        </View>
+                    )}
+                    {txid && (
+                        <View style={styles.button}>
+                            <CopyButton
+                                title={localeString(
+                                    'views.SendingOnChain.copyTxid'
+                                )}
+                                copyValue={txid}
+                            />
+                        </View>
                     )}
 
-                    <View style={styles.buttons}>
-                        {txid && (
-                            <View style={{ marginBottom: 10, width: '100%' }}>
-                                <CopyButton
-                                    title={localeString(
-                                        'views.SendingOnChain.copyTxid'
-                                    )}
-                                    copyValue={txid}
-                                />
-                            </View>
-                        )}
-
-                        {(publishSuccess || error) && (
+                    {(publishSuccess || error) && (
+                        <View style={styles.button}>
                             <Button
                                 title={localeString(
                                     'views.SendingOnChain.goToWallet'
@@ -172,24 +164,20 @@ export default class SendingOnChain extends React.Component<
                                 icon={{
                                     name: 'list',
                                     size: 25,
-                                    color: publishSuccess
-                                        ? themeColor('background')
-                                        : 'darkred'
+                                    color: publishSuccess ? 'green' : 'darkred'
                                 }}
                                 buttonStyle={{
                                     backgroundColor: '#fff',
                                     borderRadius: 30
                                 }}
                                 titleStyle={{
-                                    color: publishSuccess
-                                        ? themeColor('background')
-                                        : 'darkred'
+                                    color: publishSuccess ? 'green' : 'darkred'
                                 }}
                                 onPress={() => navigation.navigate('Wallet')}
                             />
-                        )}
-                    </View>
-                </View>
+                        </View>
+                    )}
+                </ScrollView>
             </View>
         );
     }
@@ -200,14 +188,12 @@ const styles = StyleSheet.create({
         flex: 1
     },
     content: {
-        flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingTop: 125
+        paddingTop: 40
     },
-    buttons: {
-        flex: 1,
-        justifyContent: 'flex-end',
-        marginBottom: 35
+    button: {
+        paddingTop: 15,
+        paddingBottom: 15
     }
 });

@@ -115,21 +115,15 @@ export default class Language extends React.Component<
                                 onPress={async () => {
                                     const settings = await getSettings();
                                     await setSettings(
-                                        JSON.stringify(
-                                            settings
-                                                ? {
-                                                      nodes: settings.nodes,
-                                                      theme: settings.theme,
-                                                      selectedNode:
-                                                          settings.selectedNode,
-                                                      fiat: settings.fiat,
-                                                      passphrase:
-                                                          settings.passphrase,
-                                                      locale: item.value,
-                                                      privacy: settings.privacy
-                                                  }
-                                                : { locale: item.value }
-                                        )
+                                        JSON.stringify({
+                                            nodes: settings.nodes,
+                                            theme: settings.theme,
+                                            selectedNode: settings.selectedNode,
+                                            fiat: settings.fiat,
+                                            passphrase: settings.passphrase,
+                                            locale: item.value,
+                                            privacy: settings.privacy
+                                        })
                                     ).then(() => {
                                         getSettings();
                                         navigation.navigate('Settings', {

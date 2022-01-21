@@ -63,7 +63,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
         const { changeUnits, getAmount, units } = UnitsStore;
         const { settings } = SettingsStore;
         const { privacy } = settings;
-        const lurkerMode = (privacy && privacy.lurkerMode) || false;
+        const { lurkerMode } = privacy;
 
         const payment: Payment = navigation.getParam('payment', null);
         const {
@@ -250,6 +250,6 @@ const styles = StyleSheet.create({
     },
     valueWithLink: {
         paddingBottom: 5,
-        color: themeColor('highlight')
+        color: 'rgba(92, 99,216, 1)'
     }
 });

@@ -52,9 +52,7 @@ export function Tag({ status }: { status: Status }) {
                 />
                 <Spacer width={6} />
                 {/* TODO: localize */}
-                <Body colorOverride="white" small>
-                    {status}
-                </Body>
+                <Body small>{status}</Body>
             </Row>
         </View>
     );

@@ -17,7 +17,6 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import Receive from './../../images/SVG/Receive.svg';
 import Routing from './../../images/SVG/Routing.svg';
-import Send from './../../images/SVG/Send.svg';
 
 interface LightningSwipeableRowProps {
     navigation: any;
@@ -33,7 +32,7 @@ export default class LightningSwipeableRow extends Component<
         progress: Animated.AnimatedInterpolation
     ) => {
         const trans = progress.interpolate({
-            inputRange: [0.25, 1],
+            inputRange: [0, 1],
             outputRange: [x, 0]
         });
         const pressHandler = () => {
@@ -43,8 +42,6 @@ export default class LightningSwipeableRow extends Component<
                 this.props.navigation.navigate('Receive');
             } else if (text === localeString('general.routing')) {
                 this.props.navigation.navigate('Routing');
-            } else if (text === localeString('general.send')) {
-                this.props.navigation.navigate('Send');
             }
         };
 
@@ -54,25 +51,10 @@ export default class LightningSwipeableRow extends Component<
             >
                 <RectButton style={[styles.action]} onPress={pressHandler}>
                     {text === localeString('general.routing') && (
-                        <Routing
-                            fill={themeColor('highlight')}
-                            width={30}
-                            height={30}
-                        />
+                        <Routing fill={themeColor('highlight')} />
                     )}
                     {text === localeString('general.receive') && (
-                        <Receive
-                            fill={themeColor('highlight')}
-                            width={30}
-                            height={30}
-                        />
-                    )}
-                    {text === localeString('general.send') && (
-                        <Send
-                            fill={themeColor('highlight')}
-                            width={30}
-                            height={30}
-                        />
+                        <Receive fill={themeColor('highlight')} />
                     )}
                     <Text style={styles.actionText}>{text}</Text>
                 </RectButton>
@@ -87,13 +69,13 @@ export default class LightningSwipeableRow extends Component<
         <View
             style={{
                 marginLeft: 15,
-                width: RESTUtils.supportsRouting() ? 200 : 125,
+                width: RESTUtils.supportsRouting() ? 150 : 75,
                 flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row'
             }}
         >
             {this.renderAction(
                 localeString('general.receive'),
-                RESTUtils.supportsRouting() ? 200 : 125,
+                RESTUtils.supportsRouting() ? 150 : 75,
                 progress
             )}
             {RESTUtils.supportsRouting() &&
@@ -102,11 +84,6 @@ export default class LightningSwipeableRow extends Component<
                     100,
                     progress
                 )}
-            {this.renderAction(
-                localeString('general.send'),
-                RESTUtils.supportsRouting() ? 200 : 125,
-                progress
-            )}
         </View>
     );
 

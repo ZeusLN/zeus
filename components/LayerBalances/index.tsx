@@ -16,7 +16,7 @@ import UnitsStore from './../../stores/UnitsStore';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import OnChain from './../../images/SVG/OnChain.svg';
-import Lightning from './../../images/SVG/Lightning.svg';
+import Lightning from './../../images/SVG/Lightning Circle.svg';
 
 interface LayerBalancesProps {
     BalanceStore: BalanceStore;

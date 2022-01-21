@@ -1,12 +1,10 @@
 import url from 'url';
 import * as React from 'react';
 import RNFetchBlob from 'rn-fetch-blob';
-import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Button, Header, Icon } from 'react-native-elements';
+import { Button, Header, Icon, CheckBox } from 'react-native-elements';
 import querystring from 'querystring-es3';
-
-import LoadingIndicator from './../components/LoadingIndicator';
 
 import ChannelsStore from './../stores/ChannelsStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
@@ -221,31 +219,15 @@ export default class LnurlChannel extends React.Component<
                     </Text>
 
                     <View style={{ padding: 10 }}>
-                        <>
-                            <Text
-                                style={{
-                                    top: 10,
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {localeString('views.OpenChannel.private')}
-                            </Text>
-                            <Switch
-                                value={privateChannel}
-                                onValueChange={() =>
-                                    this.setState({
-                                        privateChannel: !privateChannel
-                                    })
-                                }
-                                trackColor={{
-                                    false: '#767577',
-                                    true: themeColor('highlight')
-                                }}
-                                style={{
-                                    alignSelf: 'flex-end'
-                                }}
-                            />
-                        </>
+                        <CheckBox
+                            title={localeString('views.OpenChannel.private')}
+                            checked={privateChannel}
+                            onPress={() =>
+                                this.setState({
+                                    privateChannel: !privateChannel
+                                })
+                            }
+                        />
                     </View>
                     <View style={styles.button}>
                         <Button
@@ -268,7 +250,9 @@ export default class LnurlChannel extends React.Component<
                     </View>
 
                     <View style={styles.content}>
-                        {this.state.connectingToPeer && <LoadingIndicator />}
+                        {this.state.connectingToPeer && (
+                            <ActivityIndicator size="large" color="#0000ff" />
+                        )}
                         {this.state.peerSuccess && (
                             <Text style={{ color: 'green' }}>
                                 {localeString('views.OpenChannel.peerSuccess')}

@@ -16,7 +16,6 @@ import * as SV from './../locales/sv.json';
 import * as TH from './../locales/th.json';
 import * as UK from './../locales/uk.json';
 import * as RO from './../locales/ro.json';
-import * as PL from './../locales/pl.json';
 
 // in progress
 import * as FA from './../locales/fa.json';
@@ -47,7 +46,6 @@ const Swedish: any = SV;
 const Thai: any = TH;
 const Ukranian: any = UK;
 const Romanian: any = RO;
-const Polish: any = PL;
 const Slovenian: any = SL;
 const Russian: any = RU;
 const Finnish: any = FI;
@@ -84,8 +82,6 @@ export function localeString(localeString: string): any {
             return Ukranian[localeString] || English[localeString];
         case 'Limba română':
             return Romanian[localeString] || English[localeString];
-        case 'Polski':
-            return Polish[localeString] || English[localeString];
         case 'زبان فارسي':
             return Persian[localeString] || English[localeString];
         case 'Français':

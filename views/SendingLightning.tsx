@@ -1,20 +1,18 @@
 import * as React from 'react';
-import { Image, StyleSheet, Text, View, ScrollView } from 'react-native';
+import {
+    ActivityIndicator,
+    StyleSheet,
+    Text,
+    View,
+    ScrollView
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { Button } from 'react-native-elements';
 import LnurlPaySuccess from './LnurlPay/Success';
-
-import Button from './../components/Button';
-import CopyButton from './../components/CopyButton';
-import LoadingIndicator from './../components/LoadingIndicator';
+import { localeString } from './../utils/LocaleUtils';
 
 import TransactionsStore from './../stores/TransactionsStore';
 import LnurlPayStore from './../stores/LnurlPayStore';
-
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
-
-import Success from './../images/GIF/Success.gif';
-import WordLogo from './../images/SVG/Word Logo.svg';
 
 interface SendingLightningProps {
     navigation: any;
@@ -40,12 +38,12 @@ export default class SendingLightning extends React.Component<
             status === 'complete' ||
             status === 'SUCCEEDED'
         ) {
-            return themeColor('background');
+            return 'green';
         } else if (payment_error && payment_error != '') {
             return 'lightcoral';
         }
 
-        return themeColor('background');
+        return 'white';
     }
 
     render() {
@@ -71,75 +69,42 @@ export default class SendingLightning extends React.Component<
                     backgroundColor
                 }}
             >
-                <View
-                    style={{
-                        ...styles.content
+                <ScrollView
+                    contentContainerStyle={{
+                        ...styles.content,
+                        height: '100%'
                     }}
                 >
-                    {loading && <LoadingIndicator />}
                     {loading && (
-                        <Text
-                            style={{
-                                color: themeColor('text')
-                            }}
-                        >
+                        <ActivityIndicator size="large" color="#0000ff" />
+                    )}
+                    {loading && (
+                        <Text>
                             {localeString('views.SendingLightning.sending')}
                         </Text>
-                    )}
-                    {!!success && !error && (
-                        <>
-                            <WordLogo
-                                height={150}
-                                style={{
-                                    alignSelf: 'center'
-                                }}
-                            />
-                            <Image
-                                source={Success}
-                                style={{
-                                    width: 290,
-                                    height: 290,
-                                    marginTop: -50,
-                                    marginBottom: -50
-                                }}
-                            />
-                        </>
                     )}
                     {(!!error || !!payment_error) && (
                         <Text
                             style={{
                                 color: 'white',
-                                marginTop: 70,
                                 padding: 20,
                                 fontSize:
                                     (payment_error || error_msg || '').length >
                                     100
                                         ? 20
-                                        : 28
+                                        : 40
                             }}
                         >
                             {localeString('general.error')}:{' '}
                             {payment_error || error_msg}
                         </Text>
                     )}
-                    {!!error && (
-                        <Button
-                            title=""
-                            icon={{
-                                name: 'error',
-                                size: 125,
-                                color: 'white'
-                            }}
-                            onPress={() => void 0}
-                            iconOnly
-                        />
-                    )}
                     {!!success && !error && (
                         <Text
                             style={{
                                 color: 'white',
                                 padding: 20,
-                                fontSize: 22
+                                fontSize: 40
                             }}
                         >
                             {localeString('views.SendingLightning.success')}
@@ -159,51 +124,68 @@ export default class SendingLightning extends React.Component<
                         <Text
                             style={{
                                 color: 'white',
-                                paddingTop: 20,
-                                paddingLeft: 50,
-                                paddingRight: 50,
+                                padding: 20,
                                 fontSize: 15
                             }}
                         >{`${localeString(
                             'views.SendingLightning.paymentHash'
                         )}: ${payment_hash}`}</Text>
                     )}
+                    {!!success && !error && (
+                        <Button
+                            title=""
+                            icon={{
+                                name: 'check',
+                                size: 125,
+                                color: 'white'
+                            }}
+                            style={{ padding: 20 }}
+                            onPress={() => void 0}
+                            buttonStyle={{
+                                backgroundColor: 'transparent'
+                            }}
+                        />
+                    )}
+                    {!!error && (
+                        <Button
+                            title=""
+                            icon={{
+                                name: 'error',
+                                size: 125,
+                                color: 'white'
+                            }}
+                            style={{ padding: 20 }}
+                            onPress={() => void 0}
+                            buttonStyle={{
+                                backgroundColor: 'transparent'
+                            }}
+                        />
+                    )}
 
-                    <View style={styles.buttons}>
-                        {payment_hash && (
-                            <View style={{ marginBottom: 10, width: '100%' }}>
-                                <CopyButton
-                                    title={localeString(
-                                        'views.SendingLightning.copyPaymentHash'
-                                    )}
-                                    copyValue={payment_hash}
-                                />
-                            </View>
-                        )}
-
-                        {(!!error || !!payment_error || !!success) && (
-                            <Button
-                                title={localeString(
-                                    'views.SendingLightning.goToWallet'
-                                )}
-                                icon={{
-                                    name: 'list',
-                                    size: 25,
-                                    color: backgroundColor
-                                }}
-                                onPress={() =>
-                                    navigation.navigate('Wallet', {
-                                        refresh: true
-                                    })
-                                }
-                                titleStyle={{
-                                    color: backgroundColor
-                                }}
-                                containerStyle={{ width: '100%' }}
-                            />
-                        )}
-                    </View>
-                </View>
+                    {(!!error || !!payment_error || !!success) && (
+                        <Button
+                            title={localeString(
+                                'views.SendingLightning.goToWallet'
+                            )}
+                            icon={{
+                                name: 'list',
+                                size: 25,
+                                color: backgroundColor
+                            }}
+                            onPress={() =>
+                                navigation.navigate('Wallet', { refresh: true })
+                            }
+                            style={styles.button}
+                            buttonStyle={{
+                                backgroundColor: '#fff',
+                                borderRadius: 30
+                            }}
+                            titleStyle={{
+                                color: backgroundColor
+                            }}
+                        />
+                    )}
+                </ScrollView>
             </View>
         );
     }
@@ -214,14 +196,12 @@ const styles = StyleSheet.create({
         flex: 1
     },
     content: {
-        flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingTop: 125
+        paddingTop: 40
     },
-    buttons: {
-        flex: 1,
-        justifyContent: 'flex-end',
-        marginBottom: 35
+    button: {
+        paddingTop: 10,
+        paddingBottom: 10
     }
 });
