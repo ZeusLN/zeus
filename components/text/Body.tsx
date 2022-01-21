@@ -10,6 +10,7 @@ export function Body({
     big = false,
     jumbo = false,
     color = undefined,
+    colorOverride = undefined,
     children
 }: {
     secondary?: boolean;
@@ -19,14 +20,18 @@ export function Body({
     jumbo?: boolean;
     // These should only be keys available on the theme
     // TODO: enforce this with some global ThemeKey enum?
+    colorOverride?: string;
     color?: 'text' | 'success' | 'warning' | 'highlight' | 'secondaryText';
     children: React.ReactNode;
 }) {
     return (
         <Text
             style={{
-                // If there's a color prop, use that directly, otherwise check if secondary text
-                color: color
+                // First check for colorOverride prop, if not check if there's a
+                // color prop to use, otherwise check if secondary text
+                color: colorOverride
+                    ? colorOverride
+                    : color
                     ? themeColor(color)
                     : secondary
                     ? themeColor('secondaryText')

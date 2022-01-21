@@ -93,7 +93,37 @@ export default class OpenChannel extends React.Component<
 
     async componentDidMount() {
         this.initFromProps(this.props);
+        await this.initNfc();
     }
+
+    initNfc = async () => {
+        await NfcManager.start();
+
+        const cleanUp = () => {
+            NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
+            NfcManager.setEventListener(NfcEvents.SessionClosed, null);
+        };
+
+        return new Promise((resolve: any) => {
+            let tagFound = null;
+
+            NfcManager.setEventListener(NfcEvents.DiscoverTag, (tag: any) => {
+                tagFound = tag;
+                const bytes = new Uint8Array(tagFound.ndefMessage[0].payload);
+                const str = NFCUtils.nfcUtf8ArrayToStr(bytes);
+                resolve(this.validateNodeUri(str));
+                NfcManager.unregisterTagEvent().catch(() => 0);
+            });
+
+            NfcManager.setEventListener(NfcEvents.SessionClosed, () => {
+                if (!tagFound) {
+                    resolve();
+                }
+            });
+
+            NfcManager.registerTagEvent();
+        });
+    };
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
         this.initFromProps(nextProps);
@@ -113,6 +143,13 @@ export default class OpenChannel extends React.Component<
             host
         });
     }
+
+    validateNodeUri = (text: string) => {
+        const { navigation } = this.props;
+        handleAnything(text).then(([route, props]) => {
+            navigation.navigate(route, props);
+        });
+    };
 
     selectUTXOs = (utxos: Array<string>, utxoBalance: number) => {
         const { SettingsStore } = this.props;
