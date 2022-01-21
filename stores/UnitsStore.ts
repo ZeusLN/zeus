@@ -151,8 +151,11 @@ export default class UnitsStore {
             }`;
             return sats;
         } else if (units === 'fiat' && fiat) {
-            const rate = this.fiatStore.fiatRates[fiat]['15m'];
-            const symbol = this.fiatStore.fiatRates[fiat].symbol;
+            const fiatEntry = this.fiatStore.fiatRates.filter(
+                (entry: any) => entry.code === fiat
+            )[0];
+            const rate = fiatEntry.rate;
+            const symbol = this.fiatStore.symbolLookup(fiatEntry.code);
 
             const valueToProcess = (wholeSats && wholeSats.toString()) || '0';
             if (valueToProcess.includes('-')) {
