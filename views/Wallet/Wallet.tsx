@@ -349,8 +349,8 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                     {loading && (
                         <>
                             <WordLogo
-                                width={250}
-                                style={{ alignSelf: 'center', top: 100 }}
+                                height={150}
+                                style={{ alignSelf: 'center', marginTop: 250 }}
                             />
                             <Text
                                 style={{
