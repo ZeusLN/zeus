@@ -1,23 +1,19 @@
 import * as React from 'react';
-import {
-    ActivityIndicator,
-    FlatList,
-    View,
-    Text,
-    TouchableOpacity
-} from 'react-native';
+import { FlatList, View, Text, TouchableOpacity } from 'react-native';
 import { ButtonGroup, Header, Icon } from 'react-native-elements';
-
 import { inject, observer } from 'mobx-react';
-import { localeString } from '../../utils/LocaleUtils';
+
 import { Spacer } from '../../components/layout/Spacer';
-import { WalletHeader } from '../../components/WalletHeader';
+import LoadingIndicator from '../../components/LoadingIndicator';
+
+import Pie from '../../images/SVG/Pie.svg';
 
 import FeeStore from '../../stores/FeeStore';
 import SettingsStore from '../../stores/SettingsStore';
 
-import Pie from '../../images/SVG/Pie.svg';
+import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
+
 import { RoutingListItem } from './RoutingListItem';
 import { RoutingHeader } from './RoutingHeader';
 
@@ -86,6 +82,7 @@ export default class Routing extends React.PureComponent<
             dayEarned,
             weekEarned,
             monthEarned,
+            totalEarned,
             earnedDuringTimeframe,
             forwardingEvents,
             forwardingHistoryError,
@@ -201,6 +198,7 @@ export default class Routing extends React.PureComponent<
                     dayEarned={dayEarned}
                     weekEarned={weekEarned}
                     monthEarned={monthEarned}
+                    totalEarned={totalEarned}
                     timeframeEarned={earnedDuringTimeframe}
                     fullSize={implementation !== 'lnd'}
                 />
@@ -226,13 +224,7 @@ export default class Routing extends React.PureComponent<
                                 color: themeColor('secondary')
                             }}
                         />
-                        {loading && (
-                            <ActivityIndicator
-                                size="large"
-                                color={themeColor('highlight')}
-                                style={{ top: 100 }}
-                            />
-                        )}
+                        {loading && <LoadingIndicator />}
                         {forwardingEvents.length > 0 && !loading && (
                             <FlatList
                                 data={forwardingEvents}

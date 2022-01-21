@@ -1,17 +1,20 @@
 import * as React from 'react';
-import { ActivityIndicator, FlatList, View } from 'react-native';
+import { FlatList, View } from 'react-native';
 import { Avatar, Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+
+import Pill from './../../components/Pill';
+import LoadingIndicator from './../../components/LoadingIndicator';
+
 import DateTimeUtils from './../../utils/DateTimeUtils';
+import { localeString } from './../../utils/LocaleUtils';
 import PrivacyUtils from './../../utils/PrivacyUtils';
 import RESTUtils from './../../utils/RESTUtils';
-import Pill from './../../components/Pill';
-import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
+import SettingsStore from './../../stores/SettingsStore';
 import UTXOsStore from './../../stores/UTXOsStore';
 import UnitsStore from './../../stores/UnitsStore';
-import SettingsStore from './../../stores/SettingsStore';
 
 interface CoinControlProps {
     navigation: any;
@@ -48,7 +51,7 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
         const { loading, utxos, getUTXOs } = UTXOsStore;
         const { settings } = SettingsStore;
         const { privacy } = settings;
-        const { lurkerMode } = privacy;
+        const lurkerMode = (privacy && privacy.lurkerMode) || false;
 
         const AddPill = () => (
             <Pill title={localeString('general.add').toUpperCase()} />
@@ -94,10 +97,7 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                 />
                 {loading ? (
                     <View style={{ padding: 50 }}>
-                        <ActivityIndicator
-                            size="large"
-                            color={themeColor('highlight')}
-                        />
+                        <LoadingIndicator />
                     </View>
                 ) : !!utxos && utxos.length > 0 ? (
                     <FlatList

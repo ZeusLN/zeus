@@ -2,7 +2,6 @@ import * as React from 'react';
 import {
     StyleSheet,
     Text,
-    TextInput,
     View,
     ScrollView,
     TouchableOpacity,
@@ -29,6 +28,7 @@ import FiatStore from './../stores/FiatStore';
 import Button from './../components/Button';
 import UTXOPicker from './../components/UTXOPicker';
 import FeeTable from './../components/FeeTable';
+import TextInput from './../components/TextInput';
 
 import RESTUtils from './../utils/RESTUtils';
 import NFCUtils from './../utils/NFCUtils';
@@ -345,9 +345,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     backgroundColor="grey"
                 />
                 <View style={styles.content}>
-                    <Text
-                        style={{ ...styles.label, color: themeColor('text') }}
-                    >
+                    <Text style={{ color: themeColor('secondaryText') }}>
                         {paymentOptions.join(', ')}
                     </Text>
                     <TextInput
@@ -356,11 +354,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         onChangeText={(text: string) => {
                             this.validateAddress(text);
                         }}
-                        style={{
-                            ...styles.textInput,
-                            color: themeColor('text')
-                        }}
-                        placeholderTextColor="gray"
+                        style={styles.textInput}
                     />
                     {!isValid && !!destination && (
                         <Text
@@ -386,8 +380,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         !RESTUtils.supportsOnchainSends() && (
                             <Text
                                 style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
+                                    color: themeColor('secondaryText')
                                 }}
                             >
                                 {localeString('views.Send.onChainNotSupported')}{' '}
@@ -400,8 +393,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 <TouchableOpacity onPress={() => changeUnits()}>
                                     <Text
                                         style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
+                                            color: themeColor('secondaryText')
                                         }}
                                     >
                                         {localeString('views.Send.amount')} (
@@ -414,11 +406,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     onChangeText={(text: string) =>
                                         this.setState({ amount: text })
                                     }
-                                    style={{
-                                        ...styles.textInput,
-                                        color: themeColor('text')
-                                    }}
-                                    placeholderTextColor="gray"
+                                    style={styles.textInput}
                                 />
                                 {units !== 'sats' && amount !== 'all' && (
                                     <TouchableOpacity
@@ -426,8 +414,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     >
                                         <Text
                                             style={{
-                                                ...styles.label,
-                                                color: themeColor('text')
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
                                             }}
                                         >
                                             {satAmount}{' '}
@@ -453,10 +442,10 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         )}`}
                                     </Text>
                                 )}
+
                                 <Text
                                     style={{
-                                        ...styles.label,
-                                        color: themeColor('text')
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString('views.Send.feeSats')}:
@@ -472,7 +461,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     <View
                                         style={{
                                             ...styles.editFeeBox,
-
                                             borderColor:
                                                 'rgba(255, 217, 63, .6)',
                                             borderWidth: 3
@@ -519,8 +507,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 <TouchableOpacity onPress={() => changeUnits()}>
                                     <Text
                                         style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
+                                            color: themeColor('secondaryText')
                                         }}
                                     >
                                         {localeString('views.Send.amount')} (
@@ -533,11 +520,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     onChangeText={(text: string) =>
                                         this.setState({ amount: text })
                                     }
-                                    style={{
-                                        ...styles.textInput,
-                                        color: themeColor('text')
-                                    }}
-                                    placeholderTextColor="gray"
+                                    style={styles.textInput}
                                 />
                                 {units !== 'sats' && (
                                     <TouchableOpacity
@@ -545,8 +528,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     >
                                         <Text
                                             style={{
-                                                ...styles.label,
-                                                color: themeColor('text')
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
                                             }}
                                         >
                                             {satAmount}{' '}
@@ -560,8 +544,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     <React.Fragment>
                                         <Text
                                             style={{
-                                                ...styles.label,
-                                                color: themeColor('text')
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
                                             }}
                                         >
                                             {localeString(
@@ -578,17 +563,13 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                     timeoutSeconds: text
                                                 })
                                             }
-                                            numberOfLines={1}
-                                            style={{
-                                                ...styles.textInput,
-                                                color: themeColor('text')
-                                            }}
-                                            placeholderTextColor="gray"
+                                            style={styles.textInput}
                                         />
                                         <Text
                                             style={{
-                                                ...styles.label,
-                                                color: themeColor('text')
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
                                             }}
                                         >
                                             {`${localeString(
@@ -606,12 +587,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                     maxParts: text
                                                 })
                                             }
-                                            numberOfLines={1}
-                                            style={{
-                                                ...styles.textInput,
-                                                color: themeColor('text')
-                                            }}
-                                            placeholderTextColor="gray"
+                                            style={styles.textInput}
                                         />
                                         <Text
                                             style={{
@@ -625,8 +601,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         </Text>
                                         <Text
                                             style={{
-                                                ...styles.label,
-                                                color: themeColor('text')
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
                                             }}
                                         >
                                             {`${localeString(
@@ -647,17 +624,13 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                     feeLimitSat: text
                                                 })
                                             }
-                                            numberOfLines={1}
-                                            style={{
-                                                ...styles.textInput,
-                                                color: themeColor('text')
-                                            }}
-                                            placeholderTextColor="gray"
+                                            style={styles.textInput}
                                         />
                                         <Text
                                             style={{
-                                                ...styles.label,
-                                                color: themeColor('text')
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
                                             }}
                                         >
                                             {`${localeString(
@@ -677,12 +650,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                     maxShardAmt: text
                                                 })
                                             }
-                                            numberOfLines={1}
-                                            style={{
-                                                ...styles.textInput,
-                                                color: themeColor('text')
-                                            }}
-                                            placeholderTextColor="gray"
+                                            style={styles.textInput}
                                         />
                                     </React.Fragment>
                                 )}
@@ -706,8 +674,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <React.Fragment>
                                 <Text
                                     style={{
-                                        ...styles.label,
-                                        color: themeColor('text')
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString('views.Send.sorry')},{' '}
@@ -759,11 +726,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             confirmationTarget: text
                                         })
                                     }
-                                    style={{
-                                        ...styles.textInput,
-                                        color: themeColor('text')
-                                    }}
-                                    placeholderTextColor="gray"
+                                    style={styles.textInput}
                                 />
                             </View>
                         ) : (
@@ -800,16 +763,13 @@ const styles = StyleSheet.create({
         marginTop: 15,
         borderRadius: 4,
         borderColor: '#FFD93F',
-        borderWidth: 2
-    },
-    label: {
-        textDecorationLine: 'underline'
+        borderWidth: 2,
+        marginBottom: 20
     },
     text: {
         paddingBottom: 5
     },
     textInput: {
-        fontSize: 20,
         paddingTop: 10,
         paddingBottom: 10
     },

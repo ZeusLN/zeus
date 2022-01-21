@@ -1,27 +1,32 @@
 import * as React from 'react';
 import {
-    ActivityIndicator,
+    Image,
     ScrollView,
     StyleSheet,
     Switch,
     Text,
-    TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import { ButtonGroup, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+
+import Success from '../images/GIF/Success.gif';
+
 import Button from './../components/Button';
 import CollapsedQR from './../components/CollapsedQR';
-import RESTUtils from './../utils/RESTUtils';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import LoadingIndicator from './../components/LoadingIndicator';
+import TextInput from './../components/TextInput';
 
+import FiatStore from './../stores/FiatStore';
 import InvoicesStore from './../stores/InvoicesStore';
 import SettingsStore from './../stores/SettingsStore';
 import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
-import FiatStore from './../stores/FiatStore';
+
+import { localeString } from './../utils/LocaleUtils';
+import RESTUtils from './../utils/RESTUtils';
+import { themeColor } from './../utils/ThemeUtils';
 
 interface ReceiveProps {
     exitSetup: any;
@@ -116,9 +121,12 @@ export default class Receive extends React.Component<
             createInvoice,
             onChainAddress,
             payment_request,
+            payment_request_amt,
             creatingInvoice,
             creatingInvoiceError,
-            error_msg
+            error_msg,
+            watchedInvoicePaid,
+            reset
         } = InvoicesStore;
         const { settings, loading, implementation } = SettingsStore;
         const { fiat } = settings;
@@ -175,7 +183,10 @@ export default class Receive extends React.Component<
         const BackButton = () => (
             <Icon
                 name="arrow-back"
-                onPress={() => navigation.navigate('Wallet')}
+                onPress={() => {
+                    reset();
+                    navigation.navigate('Wallet');
+                }}
                 color="#fff"
                 underlayColor="transparent"
             />
@@ -197,262 +208,295 @@ export default class Receive extends React.Component<
                     backgroundColor="grey"
                 />
 
-                <ButtonGroup
-                    onPress={this.updateIndex}
-                    selectedIndex={selectedIndex}
-                    buttons={buttons}
-                    selectedButtonStyle={{
-                        backgroundColor: themeColor('highlight'),
-                        borderRadius: 12
-                    }}
-                    containerStyle={{
-                        backgroundColor: themeColor('secondary'),
-                        borderRadius: 12,
-                        borderColor: themeColor('secondary')
-                    }}
-                    innerBorderStyle={{
-                        color: themeColor('secondary')
-                    }}
-                />
+                {!watchedInvoicePaid && (
+                    <ButtonGroup
+                        onPress={this.updateIndex}
+                        selectedIndex={selectedIndex}
+                        buttons={buttons}
+                        selectedButtonStyle={{
+                            backgroundColor: themeColor('highlight'),
+                            borderRadius: 12
+                        }}
+                        containerStyle={{
+                            backgroundColor: themeColor('secondary'),
+                            borderRadius: 12,
+                            borderColor: themeColor('secondary')
+                        }}
+                        innerBorderStyle={{
+                            color: themeColor('secondary')
+                        }}
+                    />
+                )}
 
                 <ScrollView style={styles.content}>
-                    {selectedIndex === 0 && (
-                        <View>
-                            {!!payment_request && (
-                                <Text style={{ color: 'green', padding: 20 }}>
-                                    {localeString(
-                                        'views.Receive.successCreate'
-                                    )}
-                                    {!!lnurl &&
-                                        ` ${localeString(
-                                            'views.Receive.andSentTo'
-                                        )} ${lnurl.domain}`}
-                                </Text>
-                            )}
-                            {creatingInvoiceError && (
-                                <Text style={{ color: 'red', padding: 20 }}>
-                                    {localeString('views.Receive.errorCreate')}
-                                </Text>
-                            )}
-                            {error_msg && (
-                                <Text
-                                    style={{
-                                        ...styles.text,
-                                        padding: 20
-                                    }}
-                                >
-                                    {error_msg}
-                                </Text>
-                            )}
-                            {creatingInvoice && (
-                                <ActivityIndicator
-                                    size="large"
-                                    color={themeColor('highlight')}
-                                />
-                            )}
-                            {!!payment_request && (
-                                <CollapsedQR
-                                    value={payment_request.toUpperCase()}
-                                    copyText={localeString(
-                                        'views.Receive.copyInvoice'
-                                    )}
-                                />
-                            )}
-                            <Text style={{ color: themeColor('text') }}>
-                                {localeString('views.Receive.memo')}:
+                    {watchedInvoicePaid ? (
+                        <View
+                            style={{
+                                alignItems: 'center',
+                                height: 400,
+                                justifyContent: 'center'
+                            }}
+                        >
+                            <Image
+                                source={Success}
+                                style={{ width: 290, height: 290 }}
+                            />
+                            <Text
+                                style={{
+                                    fontSize: 20,
+                                    top: -50,
+                                    color: themeColor('text'),
+                                    alignSelf: 'center'
+                                }}
+                            >
+                                {`${localeString(
+                                    'view.Receive.youReceived'
+                                )} ${payment_request_amt} sats`}
                             </Text>
-                            <TextInput
-                                placeholder={localeString(
-                                    'views.Receive.memoPlaceholder'
+                        </View>
+                    ) : (
+                        selectedIndex === 0 && (
+                            <View>
+                                {!!payment_request && (
+                                    <Text
+                                        style={{ color: 'green', padding: 20 }}
+                                    >
+                                        {localeString(
+                                            'views.Receive.successCreate'
+                                        )}
+                                        {!!lnurl &&
+                                            ` ${localeString(
+                                                'views.Receive.andSentTo'
+                                            )} ${lnurl.domain}`}
+                                    </Text>
                                 )}
-                                value={memo}
-                                onChangeText={(text: string) =>
-                                    this.setState({ memo: text })
-                                }
-                                numberOfLines={1}
-                                editable={true}
-                                style={{
-                                    ...styles.textInput,
-                                    color: themeColor('text')
-                                }}
-                                placeholderTextColor="gray"
-                            />
-
-                            <TouchableOpacity onPress={() => changeUnits()}>
+                                {creatingInvoiceError && (
+                                    <Text style={{ color: 'red', padding: 20 }}>
+                                        {localeString(
+                                            'views.Receive.errorCreate'
+                                        )}
+                                    </Text>
+                                )}
+                                {error_msg && (
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            padding: 20
+                                        }}
+                                    >
+                                        {error_msg}
+                                    </Text>
+                                )}
+                                {creatingInvoice && <LoadingIndicator />}
+                                {!!payment_request && (
+                                    <CollapsedQR
+                                        value={payment_request.toUpperCase()}
+                                        copyText={localeString(
+                                            'views.Receive.copyInvoice'
+                                        )}
+                                    />
+                                )}
                                 <Text style={{ color: themeColor('text') }}>
-                                    {localeString('views.Receive.amount')} (
-                                    {units === 'fiat' ? fiat : units})
-                                    {lnurl &&
-                                    lnurl.minWithdrawable !==
-                                        lnurl.maxWithdrawable
-                                        ? ` (${Math.ceil(
-                                              lnurl.minWithdrawable / 1000
-                                          )}--${Math.floor(
-                                              lnurl.maxWithdrawable / 1000
-                                          )})`
-                                        : ''}
+                                    {localeString('views.Receive.memo')}:
                                 </Text>
-                            </TouchableOpacity>
-                            <TextInput
-                                keyboardType="numeric"
-                                placeholder={'100'}
-                                value={value}
-                                onChangeText={(text: string) => {
-                                    this.setState({ value: text });
-                                }}
-                                numberOfLines={1}
-                                editable={
-                                    lnurl &&
-                                    lnurl.minWithdrawable ===
-                                        lnurl.maxWithdrawable
-                                        ? false
-                                        : true
-                                }
-                                style={{
-                                    ...styles.textInput,
-                                    color: themeColor('text')
-                                }}
-                                placeholderTextColor="gray"
-                            />
-                            {units !== 'sats' && (
-                                <TouchableOpacity onPress={() => changeUnits()}>
-                                    <Text style={{ color: themeColor('text') }}>
-                                        {UnitsStore.getAmount(
-                                            satAmount,
-                                            'sats'
-                                        )}{' '}
-                                    </Text>
-                                </TouchableOpacity>
-                            )}
-                            {units !== 'btc' && (
-                                <TouchableOpacity onPress={() => changeUnits()}>
-                                    <Text style={{ color: themeColor('text') }}>
-                                        {UnitsStore.getAmount(satAmount, 'btc')}{' '}
-                                    </Text>
-                                </TouchableOpacity>
-                            )}
-
-                            {units === 'fiat' && (
-                                <TouchableOpacity onPress={() => changeUnits()}>
-                                    <Text style={{ color: themeColor('text') }}>
-                                        {FiatStore.getRate()}{' '}
-                                    </Text>
-                                </TouchableOpacity>
-                            )}
-
-                            {implementation !== 'lndhub' && (
-                                <>
-                                    <Text style={{ color: themeColor('text') }}>
-                                        {localeString(
-                                            'views.Receive.expiration'
-                                        )}
-                                        :
-                                    </Text>
-                                    <TextInput
-                                        keyboardType="numeric"
-                                        placeholder={'3600 (one hour)'}
-                                        value={expiry}
-                                        onChangeText={(text: string) =>
-                                            this.setState({ expiry: text })
-                                        }
-                                        numberOfLines={1}
-                                        editable={true}
-                                        style={{
-                                            ...styles.textInput,
-                                            color: themeColor('text')
-                                        }}
-                                        placeholderTextColor="gray"
-                                    />
-                                </>
-                            )}
-
-                            {implementation === 'lnd' && (
-                                <>
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Receive.routeHints'
-                                        )}
-                                        :
-                                    </Text>
-                                    <Switch
-                                        value={routeHints}
-                                        onValueChange={() =>
-                                            this.setState({
-                                                routeHints: !routeHints
-                                            })
-                                        }
-                                        trackColor={{
-                                            false: '#767577',
-                                            true: themeColor('highlight')
-                                        }}
-                                        style={{
-                                            alignSelf: 'flex-end'
-                                        }}
-                                    />
-                                </>
-                            )}
-
-                            {RESTUtils.supportsAMP() && (
-                                <>
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Receive.ampInvoice'
-                                        )}
-                                        :
-                                    </Text>
-                                    <Switch
-                                        value={ampInvoice}
-                                        onValueChange={() =>
-                                            this.setState({
-                                                ampInvoice: !ampInvoice
-                                            })
-                                        }
-                                        trackColor={{
-                                            false: '#767577',
-                                            true: themeColor('highlight')
-                                        }}
-                                        style={{
-                                            alignSelf: 'flex-end'
-                                        }}
-                                    />
-                                </>
-                            )}
-
-                            <View style={styles.button}>
-                                <Button
-                                    title={
-                                        localeString(
-                                            'views.Receive.createInvoice'
-                                        ) +
-                                        (lnurl
-                                            ? ` ${localeString(
-                                                  'views.Receive.andSubmitTo'
-                                              )} ${lnurl.domain}`
-                                            : '')
-                                    }
-                                    onPress={() =>
-                                        createInvoice(
-                                            memo,
-                                            satAmount.toString(),
-                                            expiry,
-                                            lnurl,
-                                            ampInvoice,
-                                            routeHints
-                                        )
+                                <TextInput
+                                    placeholder={localeString(
+                                        'views.Receive.memoPlaceholder'
+                                    )}
+                                    value={memo}
+                                    onChangeText={(text: string) =>
+                                        this.setState({ memo: text })
                                     }
                                 />
+
+                                <TouchableOpacity onPress={() => changeUnits()}>
+                                    <Text style={{ color: themeColor('text') }}>
+                                        {localeString('views.Receive.amount')} (
+                                        {units === 'fiat' ? fiat : units})
+                                        {lnurl &&
+                                        lnurl.minWithdrawable !==
+                                            lnurl.maxWithdrawable
+                                            ? ` (${Math.ceil(
+                                                  lnurl.minWithdrawable / 1000
+                                              )}--${Math.floor(
+                                                  lnurl.maxWithdrawable / 1000
+                                              )})`
+                                            : ''}
+                                    </Text>
+                                </TouchableOpacity>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    placeholder={'100'}
+                                    value={value}
+                                    onChangeText={(text: string) => {
+                                        this.setState({ value: text });
+                                    }}
+                                    editable={
+                                        lnurl &&
+                                        lnurl.minWithdrawable ===
+                                            lnurl.maxWithdrawable
+                                            ? false
+                                            : true
+                                    }
+                                />
+                                {units !== 'sats' && (
+                                    <TouchableOpacity
+                                        onPress={() => changeUnits()}
+                                    >
+                                        <Text
+                                            style={{
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {UnitsStore.getAmount(
+                                                satAmount,
+                                                'sats'
+                                            )}{' '}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                                {units !== 'btc' && (
+                                    <TouchableOpacity
+                                        onPress={() => changeUnits()}
+                                    >
+                                        <Text
+                                            style={{
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {UnitsStore.getAmount(
+                                                satAmount,
+                                                'btc'
+                                            )}{' '}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+
+                                {units === 'fiat' && (
+                                    <TouchableOpacity
+                                        onPress={() => changeUnits()}
+                                    >
+                                        <Text
+                                            style={{
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {FiatStore.getRate()}{' '}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+
+                                {implementation !== 'lndhub' && (
+                                    <>
+                                        <Text
+                                            style={{
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Receive.expiration'
+                                            )}
+                                            :
+                                        </Text>
+                                        <TextInput
+                                            keyboardType="numeric"
+                                            placeholder={'3600 (one hour)'}
+                                            value={expiry}
+                                            onChangeText={(text: string) =>
+                                                this.setState({ expiry: text })
+                                            }
+                                        />
+                                    </>
+                                )}
+
+                                {implementation === 'lnd' && (
+                                    <>
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Receive.routeHints'
+                                            )}
+                                            :
+                                        </Text>
+                                        <Switch
+                                            value={routeHints}
+                                            onValueChange={() =>
+                                                this.setState({
+                                                    routeHints: !routeHints
+                                                })
+                                            }
+                                            trackColor={{
+                                                false: '#767577',
+                                                true: themeColor('highlight')
+                                            }}
+                                            style={{
+                                                alignSelf: 'flex-end'
+                                            }}
+                                        />
+                                    </>
+                                )}
+
+                                {RESTUtils.supportsAMP() && (
+                                    <>
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Receive.ampInvoice'
+                                            )}
+                                            :
+                                        </Text>
+                                        <Switch
+                                            value={ampInvoice}
+                                            onValueChange={() =>
+                                                this.setState({
+                                                    ampInvoice: !ampInvoice
+                                                })
+                                            }
+                                            trackColor={{
+                                                false: '#767577',
+                                                true: themeColor('highlight')
+                                            }}
+                                            style={{
+                                                alignSelf: 'flex-end'
+                                            }}
+                                        />
+                                    </>
+                                )}
+
+                                <View style={styles.button}>
+                                    <Button
+                                        title={
+                                            localeString(
+                                                'views.Receive.createInvoice'
+                                            ) +
+                                            (lnurl
+                                                ? ` ${localeString(
+                                                      'views.Receive.andSubmitTo'
+                                                  )} ${lnurl.domain}`
+                                                : '')
+                                        }
+                                        onPress={() =>
+                                            createInvoice(
+                                                memo,
+                                                satAmount.toString(),
+                                                expiry,
+                                                lnurl,
+                                                ampInvoice,
+                                                routeHints
+                                            )
+                                        }
+                                    />
+                                </View>
                             </View>
-                        </View>
+                        )
                     )}
                     {selectedIndex === 1 && (
                         <React.Fragment>
@@ -461,12 +505,7 @@ export default class Receive extends React.Component<
                                     {localeString('views.Receive.noOnChain')}
                                 </Text>
                             )}
-                            {loading && (
-                                <ActivityIndicator
-                                    size="large"
-                                    color={themeColor('highlight')}
-                                />
-                            )}
+                            {loading && <LoadingIndicator />}
                             {address && !loading && (
                                 <CollapsedQR
                                     value={address}
@@ -513,10 +552,5 @@ const styles = StyleSheet.create({
     },
     text: {
         top: 20
-    },
-    textInput: {
-        fontSize: 20,
-        paddingTop: 10,
-        paddingBottom: 10
     }
 });

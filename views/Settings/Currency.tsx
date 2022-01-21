@@ -115,15 +115,21 @@ export default class Currency extends React.Component<
                                 onPress={async () => {
                                     const settings = await getSettings();
                                     await setSettings(
-                                        JSON.stringify({
-                                            nodes: settings.nodes,
-                                            theme: settings.theme,
-                                            selectedNode: settings.selectedNode,
-                                            fiat: item.value,
-                                            passphrase: settings.passphrase,
-                                            locale: settings.locale,
-                                            privacy: settings.privacy
-                                        })
+                                        JSON.stringify(
+                                            settings
+                                                ? {
+                                                      nodes: settings.nodes,
+                                                      theme: settings.theme,
+                                                      selectedNode:
+                                                          settings.selectedNode,
+                                                      fiat: item.value,
+                                                      passphrase:
+                                                          settings.passphrase,
+                                                      locale: settings.locale,
+                                                      privacy: settings.privacy
+                                                  }
+                                                : { fiat: item.value }
+                                        )
                                     ).then(() => {
                                         getSettings();
                                         navigation.navigate('Settings', {

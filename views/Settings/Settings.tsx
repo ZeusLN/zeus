@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
-import { Avatar, Header, Icon } from 'react-native-elements';
+import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Identicon from 'identicon.js';
 
@@ -11,9 +11,12 @@ import PrivacyIcon from '../../images/SVG/Eye On.svg';
 import SecurityIcon from '../../images/SVG/Lock.svg';
 import SignIcon from '../../images/SVG/Pen.svg';
 import BitcoinIcon from '../../images/SVG/Bitcoin.svg';
+import BrushIcon from '../../images/SVG/Brush.svg';
 import LanguageIcon from '../../images/SVG/Globe.svg';
 import HelpIcon from '../../images/SVG/Help Icon.svg';
+import NodeOn from '../../images/SVG/Node On.svg';
 
+import NodeIdenticon, { NodeTitle } from './../../components/NodeIdenticon';
 import { themeColor } from './../../utils/ThemeUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import PrivacyUtils from './../../utils/PrivacyUtils';
@@ -62,46 +65,6 @@ export default class Settings extends React.Component<SettingsProps, {}> {
             />
         );
 
-        const displayName =
-            selectedNode && selectedNode.nickname
-                ? selectedNode.nickname
-                : selectedNode && selectedNode.implementation === 'lndhub'
-                ? selectedNode.lndhubUrl
-                      .replace('https://', '')
-                      .replace('http://', '')
-                : selectedNode && selectedNode.url
-                ? selectedNode.url
-                      .replace('https://', '')
-                      .replace('http://', '')
-                : selectedNode && selectedNode.port
-                ? `${selectedNode.host}:${selectedNode.port}`
-                : (selectedNode && selectedNode.host) || 'Unknown';
-
-        const title = PrivacyUtils.sensitiveValue(displayName, 8);
-        const implementation = PrivacyUtils.sensitiveValue(
-            (selectedNode && selectedNode.implementation) || 'lnd',
-            8
-        );
-
-        const data = new Identicon(
-            hash.sha1(
-                selectedNode && selectedNode.implementation === 'lndhub'
-                    ? `${title}-${selectedNode.username}`
-                    : title
-            ),
-            255
-        ).toString();
-
-        const Node = (balanceImage: string) => (
-            <Avatar
-                source={{
-                    uri: balanceImage
-                }}
-                rounded
-                size="medium"
-            />
-        );
-
         return (
             <View
                 style={{
@@ -138,7 +101,10 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         >
                             {selectedNode && (
                                 <View style={{ padding: 0 }}>
-                                    {Node(`data:image/png;base64,${data}`)}
+                                    <NodeIdenticon
+                                        selectedNode={selectedNode}
+                                        width={50}
+                                    />
                                 </View>
                             )}
                             <Text
@@ -149,7 +115,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                 }}
                             >
                                 {selectedNode
-                                    ? displayName
+                                    ? NodeTitle(selectedNode)
                                     : localeString(
                                           'views.Settings.connectNode'
                                       )}
@@ -174,13 +140,44 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     paddingLeft: 109
                                 }}
                             >
-                                {`${implementation}, ${
+                                {`${selectedNode.implementation}, ${
                                     selectedNode.enableTor ? 'Tor' : 'clearnet'
                                 }`}
                             </Text>
                         )}
                     </View>
                 </TouchableOpacity>
+
+                {selectedNode && RESTUtils.supportsNodeInfo() && (
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            width: '90%',
+                            height: 45,
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            top: 15
+                        }}
+                    >
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() => navigation.navigate('NodeInfo')}
+                        >
+                            <NodeOn color={themeColor('text')} />
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString('views.NodeInfo.title')}
+                            </Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+                )}
 
                 {/* Coming Soon */}
                 {false && (
@@ -286,7 +283,9 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         <View style={styles.separationLine} />
                         <TouchableOpacity
                             style={styles.columnField}
-                            onPress={() => navigation.navigate('SignMessage')}
+                            onPress={() =>
+                                navigation.navigate('SignVerifyMessage')
+                            }
                         >
                             <View>
                                 <SignIcon stroke={themeColor('text')} />
@@ -297,7 +296,9 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     color: themeColor('text')
                                 }}
                             >
-                                Sign or verify message
+                                {localeString(
+                                    'views.Settings.SignMessage.title'
+                                )}
                             </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />
@@ -393,8 +394,11 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         style={styles.columnField}
                         onPress={() => navigation.navigate('Language')}
                     >
-                        <View>
-                            <LanguageIcon stroke={themeColor('text')} />
+                        <View style={{ padding: 4 }}>
+                            <LanguageIcon
+                                stroke={themeColor('text')}
+                                fill={themeColor('secondary')}
+                            />
                         </View>
                         <Text
                             style={{
@@ -424,7 +428,10 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         onPress={() => navigation.navigate('Theme')}
                     >
                         <View style={{ padding: 5 }}>
-                            <HelpIcon />
+                            <BrushIcon
+                                stroke={themeColor('text')}
+                                fill={themeColor('secondary')}
+                            />
                         </View>
                         <Text
                             style={{

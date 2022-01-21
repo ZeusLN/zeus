@@ -19,7 +19,7 @@ interface SendPaymentReq {
     max_shard_amt?: string | null;
     timeout_seconds?: string | null;
     fee_limit_sat?: string | null;
-    outgoing_chan_ids?: any;
+    outgoing_chan_id?: string | null;
     last_hop_pubkey?: string | null;
     amp?: boolean;
 }
@@ -189,7 +189,7 @@ export default class TransactionsStore {
         max_shard_amt,
         timeout_seconds,
         fee_limit_sat,
-        outgoing_chan_ids,
+        outgoing_chan_id,
         last_hop_pubkey,
         amp
     }: SendPaymentReq) => {
@@ -247,8 +247,8 @@ export default class TransactionsStore {
         }
 
         // first hop
-        if (outgoing_chan_ids) {
-            data.outgoing_chan_ids = outgoing_chan_ids;
+        if (outgoing_chan_id) {
+            data.outgoing_chan_id = outgoing_chan_id;
         }
         // last hop
         if (last_hop_pubkey) {
@@ -261,11 +261,6 @@ export default class TransactionsStore {
             : max_parts
             ? RESTUtils.payLightningInvoiceV2Streaming
             : RESTUtils.payLightningInvoice;
-
-        // backwards compatibility with v1
-        if (!max_parts && outgoing_chan_ids) {
-            data.outgoing_chan_id = outgoing_chan_ids[0];
-        }
 
         payFunc(data)
             .then((response: any) => {

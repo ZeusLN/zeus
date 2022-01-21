@@ -55,7 +55,10 @@ export default class UnitsStore {
     };
 
     numberWithCommas = (x: string | number) =>
-        x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        new Intl.NumberFormat('en-EN').format(x);
+
+    numberWithDecimals = (x: string | number) =>
+        new Intl.NumberFormat('de-DE').format(x);
 
     @action getUnformattedAmount = (
         value: string | number = 0,
@@ -97,15 +100,21 @@ export default class UnitsStore {
             }
 
             // TODO: what should we do when this is undefined?
-            const rate =
-                this.fiatStore.fiatRates[currency] &&
-                this.fiatStore.fiatRates[currency]['15m'];
-            const { symbol, space, rtl } = this.fiatStore.getSymbol();
+            const fiatEntry = this.fiatStore.fiatRates.filter(
+                (entry: any) => entry.code === fiat
+            )[0];
+            const rate = fiatEntry.rate;
+            const { symbol, space, rtl, separatorSwap } =
+                this.fiatStore.getSymbol();
+
+            const amount = (
+                FeeUtils.toFixed(absValueSats / satoshisPerBTC) * rate
+            ).toFixed(2);
 
             return {
-                amount: (
-                    FeeUtils.toFixed(absValueSats / satoshisPerBTC) * rate
-                ).toFixed(2),
+                amount: separatorSwap
+                    ? this.numberWithDecimals(amount)
+                    : this.numberWithCommas(amount),
                 unit: 'fiat',
                 symbol,
                 negative,
@@ -137,10 +146,10 @@ export default class UnitsStore {
                 Number(wholeSats || 0) / satoshisPerBTC
             )}`;
         } else if (units === 'sats') {
-            const sats = `${value || 0} ${
+            const sats = `${this.numberWithCommas(value) || 0} ${
                 Number(value) === 1 || Number(value) === -1 ? 'sat' : 'sats'
             }`;
-            return this.numberWithCommas(sats);
+            return sats;
         } else if (units === 'fiat' && fiat) {
             const rate = this.fiatStore.fiatRates[fiat]['15m'];
             const symbol = this.fiatStore.fiatRates[fiat].symbol;
