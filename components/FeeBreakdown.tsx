@@ -106,10 +106,10 @@ export default class FeeBreakdown extends React.Component<
                             keyValue={localeString('views.Channel.minHTLC')}
                             value={
                                 <Amount
-                                    sats={
+                                    sats={Number(
                                         chanInfo[channelId].node1_policy
-                                            .min_htlc
-                                    }
+                                            .min_htlc / 1000
+                                    )}
                                     toggleable
                                     sensitive
                                 />
