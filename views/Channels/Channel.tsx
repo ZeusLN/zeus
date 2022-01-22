@@ -18,7 +18,6 @@ import FeeBreakdown from './../../components/FeeBreakdown';
 import SetFeesForm from './../../components/SetFeesForm';
 import TextInput from './../../components/TextInput';
 
-import DateTimeUtils from './../../utils/DateTimeUtils';
 import PrivacyUtils from './../../utils/PrivacyUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -167,23 +166,6 @@ export default class ChannelView extends React.Component<
         const unsettledBalance = PrivacyUtils.sensitiveValue(
             getAmount(unsettled_balance),
             8,
-            true
-        );
-
-        const totalSatoshisReceived = PrivacyUtils.sensitiveValue(
-            getAmount(total_satoshis_received || 0),
-            8,
-            true
-        );
-        const totalSatoshisSent = PrivacyUtils.sensitiveValue(
-            getAmount(total_satoshis_sent || 0),
-            8,
-            true
-        );
-
-        const capacityDisplay = PrivacyUtils.sensitiveValue(
-            getAmount(capacity),
-            5,
             true
         );
 

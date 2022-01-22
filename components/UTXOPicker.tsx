@@ -21,7 +21,6 @@ import UTXOsStore from './../stores/UTXOsStore';
 
 interface UTXOPickerProps {
     title?: string;
-    selectedValue?: string | boolean;
     displayValue?: string;
     onValueChange: (value: any, balance: number) => void;
     UTXOsStore: UTXOsStore;
@@ -100,7 +99,7 @@ export default class UTXOPicker extends React.Component<
     }
 
     render() {
-        const { title, selectedValue, onValueChange, UTXOsStore } = this.props;
+        const { title, onValueChange, UTXOsStore } = this.props;
         const { utxosSelected, utxosSet, showUtxoModal, selectedBalance } =
             this.state;
         const { utxos, loading, getUTXOs } = UTXOsStore;

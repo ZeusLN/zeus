@@ -1,13 +1,9 @@
 import React from 'react';
 import { Button, Header } from 'react-native-elements';
-import { Image, TouchableOpacity, View } from 'react-native';
-import Identicon from 'identicon.js';
+import { TouchableOpacity } from 'react-native';
 import NodeIdenticon from '../components/NodeIdenticon';
-import RESTUtils from '../utils/RESTUtils';
-import PrivacyUtils from '../utils/PrivacyUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import Contact from '../images/SVG/Contact.svg';
-import Keysign from '../images/SVG/Keysign.svg';
 import Scan from '../images/SVG/Scan.svg';
 import { Body } from './text/Body';
 

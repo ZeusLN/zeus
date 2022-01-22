@@ -126,11 +126,6 @@ export default class Send extends React.Component<SendProps, SendState> {
     initNfc = async () => {
         await NfcManager.start();
 
-        const cleanUp = () => {
-            NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
-            NfcManager.setEventListener(NfcEvents.SessionClosed, null);
-        };
-
         return new Promise((resolve: any) => {
             let tagFound = null;
 

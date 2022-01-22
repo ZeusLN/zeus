@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, ScrollView, Text, View } from 'react-native';
+import { FlatList, ScrollView, View } from 'react-native';
 import { Header, Icon, ListItem, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import SettingsStore, { CURRENCY_KEYS } from './../../stores/SettingsStore';
@@ -59,7 +59,7 @@ export default class Currency extends React.Component<
     };
 
     render() {
-        const { navigation, selectedNode, SettingsStore } = this.props;
+        const { navigation, SettingsStore } = this.props;
         const { selectedCurrency, search, currencies } = this.state;
         const { setSettings, getSettings }: any = SettingsStore;
 
@@ -106,7 +106,7 @@ export default class Currency extends React.Component<
                     />
                     <FlatList
                         data={currencies}
-                        renderItem={({ item, index }) => (
+                        renderItem={({ item }) => (
                             <ListItem
                                 containerStyle={{
                                     borderBottomWidth: 0,

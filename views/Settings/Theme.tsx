@@ -42,7 +42,7 @@ export default class Theme extends React.Component<ThemeProps, ThemeStore> {
     );
 
     render() {
-        const { navigation, selectedNode, SettingsStore } = this.props;
+        const { navigation, SettingsStore } = this.props;
         const { selectedTheme } = this.state;
         const { setSettings, getSettings }: any = SettingsStore;
 
@@ -73,7 +73,7 @@ export default class Theme extends React.Component<ThemeProps, ThemeStore> {
                     />
                     <FlatList
                         data={THEME_KEYS}
-                        renderItem={({ item, index }) => (
+                        renderItem={({ item }) => (
                             <ListItem
                                 title={item.key}
                                 containerStyle={{
