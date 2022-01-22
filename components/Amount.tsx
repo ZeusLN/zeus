@@ -156,7 +156,7 @@ export class Amount extends React.Component<AmountProps, {}> {
 
         const unformattedAmount = UnitsStore.getUnformattedAmount(value, units);
 
-        // display failed fiat fetches as N/A
+        // display fiat amounts when rate fetch fails as $N/A
         if (unformattedAmount.error) {
             const amount = 'N/A';
             const unit = 'fiat';
