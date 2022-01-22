@@ -20,6 +20,12 @@ export default class FiatStore {
         this.settingsStore = settingsStore;
     }
 
+    numberWithCommas = (x: string | number) =>
+        new Intl.NumberFormat('en-EN').format(x);
+
+    numberWithDecimals = (x: string | number) =>
+        new Intl.NumberFormat('de-DE').format(x);
+
     private symbolLookup = (symbol: string): CurrencyDisplayRules => {
         const symbolPairs: any = {
             USD: {
@@ -145,8 +151,13 @@ export default class FiatStore {
                 (entry: any) => entry.code === fiat
             )[0];
             const rate = fiatEntry.rate;
-            // TODO: handle rtl etc
-            const symbol = this.symbolLookup(fiatEntry.code).symbol;
+            const { symbol, space, rtl, separatorSwap } = this.symbolLookup(
+                fiatEntry.code
+            );
+
+            const formattedRate = separatorSwap
+                ? this.numberWithDecimals(rate)
+                : this.numberWithCommas(rate);
             return `${symbol}${rate} BTC/${fiat}`;
         }
         return '$N/A';
