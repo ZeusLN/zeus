@@ -31,10 +31,6 @@ export default function NodeIdenticon({
     width?: number;
 }) {
     const title = NodeTitle(selectedNode);
-    const implementation = PrivacyUtils.sensitiveValue(
-        (selectedNode && selectedNode.implementation) || 'lnd',
-        8
-    );
 
     const data = new Identicon(
         hash.sha1(

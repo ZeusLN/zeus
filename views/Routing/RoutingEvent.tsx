@@ -1,43 +1,32 @@
 import * as React from 'react';
 import {
-    Image,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
     View
 } from 'react-native';
-import { Button, Header, Icon } from 'react-native-elements';
+import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import ForwardEvent from './../../models/ForwardEvent';
 
-import SetFeesForm from './../../components/SetFeesForm';
 import KeyValue from './../../components/KeyValue';
 import { Amount } from './../../components/Amount';
 import FeeBreakdown from './../../components/FeeBreakdown';
 
-import PrivacyUtils from './../../utils/PrivacyUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
-
-import ChannelsStore from './../../stores/ChannelsStore';
-import FeeStore from './../../stores/FeeStore';
-import UnitsStore from './../../stores/UnitsStore';
-import SettingsStore from './../../stores/SettingsStore';
 
 interface RoutingEventProps {
     navigation: any;
     ChannelsStore: ChannelsStore;
-    FeeStore: FeeStore;
-    UnitsStore: UnitsStore;
-    SettingsStore: SettingsStore;
 }
 
 interface RoutingEventState {
     routingEvent: any;
 }
 
-@inject('ChannelsStore', 'UnitsStore', 'FeeStore', 'SettingsStore')
+@inject('ChannelsStore')
 @observer
 export default class RoutingEvent extends React.Component<
     RoutingEventProps,
@@ -45,7 +34,7 @@ export default class RoutingEvent extends React.Component<
 > {
     constructor(props: any) {
         super(props);
-        const { ChannelsStore, navigation } = props;
+        const { navigation } = props;
 
         const routingEvent: ForwardEvent = navigation.getParam(
             'routingEvent',
@@ -62,20 +51,9 @@ export default class RoutingEvent extends React.Component<
         };
     }
     render() {
-        const {
-            navigation,
-            ChannelsStore,
-            UnitsStore,
-            FeeStore,
-            SettingsStore
-        } = this.props;
+        const { navigation, ChannelsStore } = this.props;
         const { routingEvent } = this.state;
-        const { changeUnits, getAmount, units } = UnitsStore;
-        const { channelFees } = FeeStore;
         const { aliasesById, channels } = ChannelsStore;
-        const { settings, implementation } = SettingsStore;
-        const { privacy } = settings;
-        const lurkerMode = (privacy && privacy.lurkerMode) || false;
 
         const { chan_id_in, chan_id_out, amt_in, amt_out, fee, getTime } =
             routingEvent;

@@ -18,11 +18,11 @@ export default class LnurlPayMetadata extends React.Component<LnurlPayMetadataPr
             keypairs = [];
         }
         const text: string = keypairs
-            .filter(([typ, _]: any) => typ === 'text/plain')
-            .map(([_, content]: any) => content)[0];
+            .filter(([typ]: any) => typ === 'text/plain')
+            .map(([, content]: any) => content)[0];
 
         const image: string = keypairs
-            .filter(([typ, _]: any) => typ.slice(0, 6) === 'image/')
+            .filter(([typ]: any) => typ.slice(0, 6) === 'image/')
             .map(([typ, content]: any) => `data:${typ},${content}`)[0];
 
         return (
@@ -55,6 +55,7 @@ export default class LnurlPayMetadata extends React.Component<LnurlPayMetadataPr
                 >
                     {text}
                 </Text>
+                <Evan />
             </ScrollView>
         );
     }
