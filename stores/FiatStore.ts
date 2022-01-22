@@ -132,7 +132,7 @@ export default class FiatStore {
             return this.symbolLookup(fiatEntry.code);
         } else {
             return {
-                symbol: '⸮',
+                symbol: fiat,
                 space: true,
                 rtl: true,
                 separatorSwap: false
