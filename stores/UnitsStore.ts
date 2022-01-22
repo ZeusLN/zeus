@@ -100,28 +100,32 @@ export default class UnitsStore {
             }
 
             // TODO: what should we do when this is undefined?
-            const fiatEntry = this.fiatStore.fiatRates.filter(
-                (entry: any) => entry.code === fiat
-            )[0];
-            const rate = fiatEntry.rate;
-            const { symbol, space, rtl, separatorSwap } =
-                this.fiatStore.getSymbol();
+            if (this.fiatStore.fiatRates && this.fiatStore.fiatRates.filter) {
+                const fiatEntry = this.fiatStore.fiatRates.filter(
+                    (entry: any) => entry.code === fiat
+                )[0];
+                const rate = fiatEntry.rate;
+                const { symbol, space, rtl, separatorSwap } =
+                    this.fiatStore.getSymbol();
 
-            const amount = (
-                FeeUtils.toFixed(absValueSats / satoshisPerBTC) * rate
-            ).toFixed(2);
+                const amount = (
+                    FeeUtils.toFixed(absValueSats / satoshisPerBTC) * rate
+                ).toFixed(2);
 
-            return {
-                amount: separatorSwap
-                    ? this.numberWithDecimals(amount)
-                    : this.numberWithCommas(amount),
-                unit: 'fiat',
-                symbol,
-                negative,
-                plural: false,
-                rtl,
-                space
-            };
+                return {
+                    amount: separatorSwap
+                        ? this.numberWithDecimals(amount)
+                        : this.numberWithCommas(amount),
+                    unit: 'fiat',
+                    symbol,
+                    negative,
+                    plural: false,
+                    rtl,
+                    space
+                };
+            } else {
+                return { error: 'Error fetching fiat rates' };
+            }
         }
     };
 
@@ -151,24 +155,32 @@ export default class UnitsStore {
             }`;
             return sats;
         } else if (units === 'fiat' && fiat) {
-            const fiatEntry = this.fiatStore.fiatRates.filter(
-                (entry: any) => entry.code === fiat
-            )[0];
-            const rate = fiatEntry.rate;
-            const symbol = this.fiatStore.symbolLookup(fiatEntry.code);
+            if (this.fiatStore.fiatRates && this.fiatStore.fiatRates.filter) {
+                const fiatEntry = this.fiatStore.fiatRates.filter(
+                    (entry: any) => entry.code === fiat
+                )[0];
+                const rate = fiatEntry.rate;
+                const symbol = this.fiatStore.symbolLookup(fiatEntry.code);
 
-            const valueToProcess = (wholeSats && wholeSats.toString()) || '0';
-            if (valueToProcess.includes('-')) {
-                const processedValue = valueToProcess.split('-')[1];
-                return `-${symbol}${(
-                    FeeUtils.toFixed(Number(processedValue) / satoshisPerBTC) *
+                const valueToProcess =
+                    (wholeSats && wholeSats.toString()) || '0';
+                if (valueToProcess.includes('-')) {
+                    const processedValue = valueToProcess.split('-')[1];
+                    return `-${symbol}${(
+                        FeeUtils.toFixed(
+                            Number(processedValue) / satoshisPerBTC
+                        ) * rate
+                    ).toFixed(2)}`;
+                }
+
+                // TODO: handle rtl etc
+                return `${symbol}${(
+                    FeeUtils.toFixed(Number(wholeSats || 0) / satoshisPerBTC) *
                     rate
                 ).toFixed(2)}`;
+            } else {
+                return '$N/A';
             }
-
-            return `${symbol}${(
-                FeeUtils.toFixed(Number(wholeSats || 0) / satoshisPerBTC) * rate
-            ).toFixed(2)}`;
         }
     };
 }

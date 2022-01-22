@@ -119,7 +119,7 @@ export default class FiatStore {
     @action getSymbol = () => {
         const { settings } = this.settingsStore;
         const { fiat } = settings;
-        if (fiat) {
+        if (fiat && this.fiatRates.filter) {
             const fiatEntry = this.fiatRates.filter(
                 (entry: any) => entry.code === fiat
             )[0];
@@ -140,16 +140,16 @@ export default class FiatStore {
     public getRate = () => {
         const { settings } = this.settingsStore;
         const { fiat } = settings;
-        if (fiat) {
+        if (fiat && this.fiatRates.filter) {
             const fiatEntry = this.fiatRates.filter(
                 (entry: any) => entry.code === fiat
             )[0];
             const rate = fiatEntry.rate;
-            // TODO: fix rate display
+            // TODO: handle rtl etc
             const symbol = this.symbolLookup(fiatEntry.code).symbol;
             return `${symbol}${rate} BTC/${fiat}`;
         }
-        return 'N/A';
+        return '$N/A';
     };
 
     @action
@@ -160,6 +160,7 @@ export default class FiatStore {
         })
             .fetch(
                 'GET',
+                // TODO replace host or edit firewall
                 'https://pay.zeusln.app/api/rates?storeId=Fjt7gLnGpg4UeBMFccLquy3GTTEz4cHU4PZMU63zqMBo'
             )
             .then((response: any) => {
