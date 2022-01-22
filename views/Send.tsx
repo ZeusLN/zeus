@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Platform,
     StyleSheet,
     Text,
     View,
@@ -120,10 +121,18 @@ export default class Send extends React.Component<SendProps, SendState> {
             this.validateAddress(this.state.destination);
         }
 
-        await this.initNfc();
+        if (Platform.OS === 'android') {
+            await this.enableNfc();
+        }
     }
 
-    initNfc = async () => {
+    disableNfc = () => {
+        NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
+        NfcManager.setEventListener(NfcEvents.SessionClosed, null);
+    };
+
+    enableNfc = async () => {
+        this.disableNfc();
         await NfcManager.start();
 
         return new Promise((resolve: any) => {
@@ -710,9 +719,23 @@ export default class Send extends React.Component<SendProps, SendState> {
                             onPress={() =>
                                 navigation.navigate('AddressQRCodeScanner')
                             }
-                            secondary
                         />
                     </View>
+
+                    {Platform.OS === 'ios' && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString('general.enableNfc')}
+                                icon={{
+                                    name: 'nfc',
+                                    size: 25,
+                                    color: 'white'
+                                }}
+                                onPress={() => this.enableNfc()}
+                                secondary
+                            />
+                        </View>
+                    )}
 
                     {transactionType === 'On-chain' &&
                         (implementation === 'eclair' ? (
