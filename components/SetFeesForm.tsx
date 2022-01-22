@@ -55,8 +55,8 @@ export default class SetFeesForm extends React.Component<
                     ? '1'
                     : '0.001',
             newTimeLockDelta: props.timeLockDelta || '144',
-            newMinHtlc: props.minHtlc || '1',
-            newMaxHtlc: props.maxHtlc || '250000'
+            newMinHtlc: props.minHtlc,
+            newMaxHtlc: props.maxHtlc
         };
     }
 
@@ -214,7 +214,7 @@ export default class SetFeesForm extends React.Component<
                                 </Text>
                                 <TextInput
                                     keyboardType="numeric"
-                                    placeholder={minHTLC}
+                                    placeholder={minHTLC || '1'}
                                     value={newMinHtlc}
                                     onChangeText={(text: string) =>
                                         this.setState({
@@ -232,7 +232,7 @@ export default class SetFeesForm extends React.Component<
                                 </Text>
                                 <TextInput
                                     keyboardType="numeric"
-                                    placeholder={maxHTLC}
+                                    placeholder={maxHTLC || '250000'}
                                     value={newMaxHtlc}
                                     onChangeText={(text: string) =>
                                         this.setState({
