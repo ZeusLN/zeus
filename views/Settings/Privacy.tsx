@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { FlatList, ScrollView, Switch, Text, View } from 'react-native';
-import { Header, Icon, ListItem, SearchBar } from 'react-native-elements';
+import { ScrollView, Switch, Text, View } from 'react-native';
+import { Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import SettingsStore, {
     BLOCK_EXPLORER_KEYS
@@ -66,7 +66,7 @@ export default class Privacy extends React.Component<
     );
 
     render() {
-        const { navigation, selectedNode, SettingsStore } = this.props;
+        const { navigation, SettingsStore } = this.props;
         const {
             defaultBlockExplorer,
             customBlockExplorer,

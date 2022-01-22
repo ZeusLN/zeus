@@ -8,19 +8,17 @@ import {
     View
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import { Button, ButtonGroup } from 'react-native-elements';
+import { Button } from 'react-native-elements';
 
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-community/clipboard';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import ChannelsPane from '../Channels/ChannelsPane';
-import Channels from './Channels';
 import MainPane from './MainPane';
 
 import LoadingIndicator from './../../components/LoadingIndicator';
 
-import PrivacyUtils from './../../utils/PrivacyUtils';
 import RESTUtils from './../../utils/RESTUtils';
 import { restartTor } from './../../utils/TorUtils';
 import { localeString } from './../../utils/LocaleUtils';
@@ -284,10 +282,6 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             }
         };
 
-        const scanAndSend = `${localeString('general.scan')} / ${localeString(
-            'general.send'
-        )}`;
-
         return (
             <View style={{ flex: 1 }}>
                 <LinearGradient
@@ -298,9 +292,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                         <NavigationContainer theme={Theme}>
                             <Tab.Navigator
                                 screenOptions={({ route }) => ({
-                                    tabBarIcon: ({ focused, color, size }) => {
-                                        let iconName;
-
+                                    tabBarIcon: ({ color }) => {
                                         if (route.name === 'Wallet') {
                                             return <Temple fill={color} />;
                                         }

@@ -1,17 +1,13 @@
 import * as React from 'react';
 import {
-    ActionSheetIOS,
     Modal,
-    Platform,
     StyleSheet,
     Switch,
     Text,
     View,
-    ScrollView,
-    TouchableOpacity
+    ScrollView
 } from 'react-native';
 import Clipboard from '@react-native-community/clipboard';
-import { Picker } from '@react-native-picker/picker';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -384,7 +380,6 @@ export default class AddEditNode extends React.Component<
             loading,
             createAccountError,
             createAccountSuccess,
-            settings,
             createAccount
         } = SettingsStore;
 

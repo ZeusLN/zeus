@@ -7,7 +7,6 @@ import {
     Text,
     TouchableOpacity
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import { Avatar, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -30,7 +29,6 @@ const SelectedDark = require('./../images/selected-dark.png');
 
 interface ChannelPickerProps {
     title?: string;
-    selectedValue?: string | boolean;
     displayValue?: string;
     onValueChange: (value: any) => void;
     ChannelsStore: ChannelsStore;
@@ -87,13 +85,7 @@ export default class ChannelPicker extends React.Component<
     }
 
     render() {
-        const {
-            title,
-            selectedValue,
-            onValueChange,
-            ChannelsStore,
-            UnitsStore
-        } = this.props;
+        const { title, onValueChange, ChannelsStore, UnitsStore } = this.props;
         const { channelSelected, showChannelModal, valueSet } = this.state;
         const SettingsStore = stores.settingsStore;
         const { channels, nodes, loading, getChannels } = ChannelsStore;

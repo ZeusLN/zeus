@@ -1,18 +1,14 @@
 import * as React from 'react';
 import { FlatList, View } from 'react-native';
-import { Avatar, Button, Header, Icon, ListItem } from 'react-native-elements';
+import { Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Pill from './../../components/Pill';
 import LoadingIndicator from './../../components/LoadingIndicator';
 
-import DateTimeUtils from './../../utils/DateTimeUtils';
 import { localeString } from './../../utils/LocaleUtils';
-import PrivacyUtils from './../../utils/PrivacyUtils';
 import RESTUtils from './../../utils/RESTUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
-import SettingsStore from './../../stores/SettingsStore';
 import UTXOsStore from './../../stores/UTXOsStore';
 import UnitsStore from './../../stores/UnitsStore';
 
@@ -20,10 +16,9 @@ interface CoinControlProps {
     navigation: any;
     UTXOsStore: UTXOsStore;
     UnitsStore: UnitsStore;
-    SettingsStore: SettingsStore;
 }
 
-@inject('UTXOsStore', 'UnitsStore', 'SettingsStore')
+@inject('UTXOsStore', 'UnitsStore')
 @observer
 export default class CoinControl extends React.Component<CoinControlProps, {}> {
     async UNSAFE_componentWillMount() {
@@ -45,25 +40,9 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
     );
 
     render() {
-        const { navigation, UTXOsStore, UnitsStore, SettingsStore } =
-            this.props;
-        const { getAmount, units } = UnitsStore;
+        const { navigation, UTXOsStore, UnitsStore } = this.props;
+        const { getAmount } = UnitsStore;
         const { loading, utxos, getUTXOs } = UTXOsStore;
-        const { settings } = SettingsStore;
-        const { privacy } = settings;
-        const lurkerMode = (privacy && privacy.lurkerMode) || false;
-
-        const AddPill = () => (
-            <Pill title={localeString('general.add').toUpperCase()} />
-        );
-        const FrozenPill = () => (
-            <Pill
-                title={localeString('general.frozen')}
-                textColor="white"
-                borderColor="darkred"
-                backgroundColor="darkred"
-            />
-        );
 
         const CloseButton = () => (
             <Icon

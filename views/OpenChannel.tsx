@@ -101,11 +101,6 @@ export default class OpenChannel extends React.Component<
     initNfc = async () => {
         await NfcManager.start();
 
-        const cleanUp = () => {
-            NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
-            NfcManager.setEventListener(NfcEvents.SessionClosed, null);
-        };
-
         return new Promise((resolve: any) => {
             let tagFound = null;
 

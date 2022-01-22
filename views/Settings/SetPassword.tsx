@@ -1,11 +1,10 @@
 import * as React from 'react';
-import { FlatList, Text, TextInput, View } from 'react-native';
-import { Header, Icon, ListItem } from 'react-native-elements';
+import { Text, TextInput, View } from 'react-native';
+import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Button from './../../components/Button';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
-import UrlUtils from './../../utils/UrlUtils';
 import SettingsStore from './../../stores/SettingsStore';
 
 interface SetPINProps {

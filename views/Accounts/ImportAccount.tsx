@@ -1,25 +1,14 @@
 import * as React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import Clipboard from '@react-native-community/clipboard';
-import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
 
-import FeeTable from './../../components/FeeTable';
 import TextInput from './../../components/TextInput';
-import UTXOPicker from './../../components/UTXOPicker';
-
-import RESTUtils from './../../utils/RESTUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
-
-import SettingsStore from './../../stores/SettingsStore';
-import UTXOsStore from './../../stores/UTXOsStore';
 
 interface ImportAccountProps {
     exitSetup: any;
     navigation: any;
-    SettingsStore: SettingsStore;
-    UTXOsStore: UTXOsStore;
 }
 
 interface ImportAccountState {
@@ -29,8 +18,6 @@ interface ImportAccountState {
     address_type: string;
 }
 
-@inject('SettingsStore', 'UTXOsStore')
-@observer
 export default class ImportAccount extends React.Component<
     ImportAccountProps,
     ImportAccountState
@@ -69,7 +56,7 @@ export default class ImportAccount extends React.Component<
     };
 
     render() {
-        const { SettingsStore, UTXOsStore, navigation } = this.props;
+        const { navigation } = this.props;
         const {
             name,
             extended_public_key,

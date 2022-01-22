@@ -2,7 +2,6 @@ import * as React from 'react';
 import { Alert } from 'react-native';
 
 import QRCodeScanner from './../../components/QRCodeScanner';
-import LndConnectUtils from './../../utils/LndConnectUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import {
     decodeUR,
@@ -18,8 +17,8 @@ interface ImportAccountQRScannerProps {
 
 const ImportAccountQRScanner = (props: ImportAccountQRScannerProps) => {
     const scannedCache = {};
-    const [urTotal, setUrTotal] = React.useState(0);
-    const [urHave, setUrHave] = React.useState(0);
+    // const [urTotal, setUrTotal] = React.useState(0);
+    // const [urHave, setUrHave] = React.useState(0);
     const [animatedQRCodeData, setAnimatedQRCodeData] = React.useState({});
     const [isLoading, setIsLoading] = React.useState(false);
     const navigation = props.navigation;
@@ -40,8 +39,8 @@ const ImportAccountQRScanner = (props: ImportAccountQRScannerProps) => {
                 }
                 navigation.navigate('ImportAccount', { qrResponse: data });
             } else {
-                setUrTotal(100);
-                setUrHave(Math.floor(decoder.estimatedPercentComplete() * 100));
+                // setUrTotal(100);
+                // setUrHave(Math.floor(decoder.estimatedPercentComplete() * 100));
             }
         } catch (error) {
             console.warn(error);
@@ -63,8 +62,8 @@ const ImportAccountQRScanner = (props: ImportAccountQRScannerProps) => {
         try {
             const [index, total] = extractSingleWorkload(ur);
             animatedQRCodeData[index + 'of' + total] = ur;
-            setUrTotal(total);
-            setUrHave(Object.values(animatedQRCodeData).length);
+            // setUrTotal(total);
+            // setUrHave(Object.values(animatedQRCodeData).length);
             if (Object.values(animatedQRCodeData).length === total) {
                 const payload = decodeUR(Object.values(animatedQRCodeData));
                 // lets look inside that data

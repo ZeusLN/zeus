@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { FlatList, TouchableOpacity, View } from 'react-native';
 import { Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -295,10 +295,3 @@ export default class Activity extends React.Component<ActivityProps, {}> {
         );
     }
 }
-
-const styles = StyleSheet.create({
-    button: {
-        paddingTop: 15,
-        paddingBottom: 10
-    }
-});
