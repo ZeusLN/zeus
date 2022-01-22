@@ -131,10 +131,8 @@ export default class FiatStore {
             )[0];
             return this.symbolLookup(fiatEntry.code);
         } else {
-            console.log('no fiat?');
-            // TODO: what do we do in this case?
             return {
-                symbol: '???',
+                symbol: '⸮',
                 space: true,
                 rtl: true,
                 separatorSwap: false
