@@ -34,6 +34,7 @@ export default class FiatStore {
                 rtl: false,
                 separatorSwap: false
             },
+            ARS: { symbol: '$', space: true, rtl: false, separatorSwap: true },
             AUD: { symbol: '$', space: true, rtl: false, separatorSwap: false },
             BRL: {
                 symbol: 'R$',
@@ -86,9 +87,16 @@ export default class FiatStore {
                 rtl: true,
                 separatorSwap: true
             },
+            ILS: { symbol: '₪', space: true, rtl: false, separatorSwap: true },
             INR: { symbol: '₹', space: true, rtl: false, separatorSwap: false },
             JPY: { symbol: '¥', space: true, rtl: false, separatorSwap: false },
             KRW: { symbol: '₩', space: true, rtl: false, separatorSwap: false },
+            NGN: {
+                symbol: '₦',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
             NZD: { symbol: '$', space: true, rtl: false, separatorSwap: false },
             PLN: { symbol: 'zł', space: true, rtl: true, separatorSwap: false },
             RUB: {

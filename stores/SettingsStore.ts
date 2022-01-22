@@ -104,7 +104,10 @@ export const CURRENCY_KEYS = [
     { key: '🇨🇿 Czech Koruna (CZK)', value: 'CZK' },
     { key: '🇭🇺 Hungarian Forint (HUF)', value: 'HUF' },
     { key: '🇮🇳 Indian Rupee (INR)', value: 'INR' },
-    { key: '🇹🇷 Turkish Lira (TRY)', value: 'TRY' }
+    { key: '🇹🇷 Turkish Lira (TRY)', value: 'TRY' },
+    { key: '🇳🇬 Nigerian Naira (NGN)', value: 'NGN' },
+    { key: '🇦🇷 Argentine Peso (ARS)', value: 'ARS' },
+    { key: '🇮🇱 Israeli New Shekel (ILS)', value: 'ILS' }
 ];
 
 export const THEME_KEYS = [
