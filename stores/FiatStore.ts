@@ -158,7 +158,16 @@ export default class FiatStore {
             const formattedRate = separatorSwap
                 ? this.numberWithDecimals(rate)
                 : this.numberWithCommas(rate);
-            return `${symbol}${rate} BTC/${fiat}`;
+
+            if (rtl) {
+                return `${formattedRate}${
+                    space ? ' ' : ''
+                }${symbol} BTC/${fiat}`;
+            } else {
+                return `${symbol}${
+                    space ? ' ' : ''
+                }${formattedRate} BTC/${fiat}`;
+            }
         }
         return '$N/A';
     };
