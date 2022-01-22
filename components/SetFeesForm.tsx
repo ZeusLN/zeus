@@ -20,6 +20,8 @@ interface SetFeesFormProps {
     channelPoint?: string;
     channelId?: string;
     expanded?: boolean;
+    minHtlc?: string;
+    maxHtlc?: string;
 }
 
 interface SetFeesFormState {
@@ -28,6 +30,8 @@ interface SetFeesFormState {
     newBaseFee: string;
     newFeeRate: string;
     newTimeLockDelta: string;
+    newMinHtlc: string;
+    newMaxHtlc: string;
 }
 
 @inject('FeeStore', 'ChannelsStore', 'SettingsStore')
@@ -50,7 +54,9 @@ export default class SetFeesForm extends React.Component<
                 props.feeRate || implementation === 'c-lightning-REST'
                     ? '1'
                     : '0.001',
-            newTimeLockDelta: props.timeLockDelta || '144'
+            newTimeLockDelta: props.timeLockDelta || '144',
+            newMinHtlc: props.minHtlc || '1',
+            newMaxHtlc: props.maxHtlc || '250000'
         };
     }
 
@@ -60,7 +66,9 @@ export default class SetFeesForm extends React.Component<
             feesSubmitted,
             newBaseFee,
             newFeeRate,
-            newTimeLockDelta
+            newTimeLockDelta,
+            newMinHtlc,
+            newMaxHtlc
         } = this.state;
         const {
             FeeStore,
@@ -71,7 +79,9 @@ export default class SetFeesForm extends React.Component<
             timeLockDelta,
             channelPoint,
             channelId,
-            expanded
+            expanded,
+            minHTLC,
+            maxHTLC
         } = this.props;
         const {
             setFees,
@@ -195,6 +205,46 @@ export default class SetFeesForm extends React.Component<
                             autoCorrect={false}
                         />
 
+                        {implementation === 'lnd' && (
+                            <>
+                                <Text style={{ color: themeColor('text') }}>
+                                    {localeString(
+                                        'components.SetFeesForm.minHtlc'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    placeholder={minHTLC}
+                                    value={newMinHtlc}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            newMinHtlc: text
+                                        })
+                                    }
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                />
+
+                                <Text style={{ color: themeColor('text') }}>
+                                    {localeString(
+                                        'components.SetFeesForm.maxHtlc'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    placeholder={maxHTLC}
+                                    value={newMaxHtlc}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            newMaxHtlc: text
+                                        })
+                                    }
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                />
+                            </>
+                        )}
+
                         <View style={styles.button}>
                             <Button
                                 title={localeString(
@@ -206,7 +256,9 @@ export default class SetFeesForm extends React.Component<
                                         newFeeRate,
                                         Number(newTimeLockDelta),
                                         channelPoint,
-                                        channelId
+                                        channelId,
+                                        newMinHtlc,
+                                        newMaxHtlc
                                     ).then(() => {
                                         if (
                                             channelId &&

@@ -50,6 +50,8 @@
     "components.SetFeesForm.ppm": "PPM (Parts Per Million)",
     "components.SetFeesForm.ppmMilliMsat": "PPM rate in milli msat",
     "components.SetFeesForm.timeLockDelta": "Timelock Delta (blocks)",
+    "components.SetFeesForm.minHtlc": "Min HTLC (sats)",
+    "components.SetFeesForm.maxHtlc": "Max HTLC (sats)",
     "components.SetFeesForm.submit": "Submit New Fees",
     "components.UTXOPicker.defaultTitle": "UTXOs to use",
     "components.UTXOPicker.selectUTXOs": "Select UTXOs to use",
