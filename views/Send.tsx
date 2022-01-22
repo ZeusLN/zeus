@@ -719,6 +719,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             onPress={() =>
                                 navigation.navigate('AddressQRCodeScanner')
                             }
+                            secondary
                         />
                     </View>
 
