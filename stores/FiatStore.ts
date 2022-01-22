@@ -178,7 +178,6 @@ export default class FiatStore {
         })
             .fetch(
                 'GET',
-                // TODO replace host or edit firewall
                 'https://pay.zeusln.app/api/rates?storeId=Fjt7gLnGpg4UeBMFccLquy3GTTEz4cHU4PZMU63zqMBo'
             )
             .then((response: any) => {
