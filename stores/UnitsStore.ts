@@ -155,7 +155,7 @@ export default class UnitsStore {
                 (entry: any) => entry.code === fiat
             )[0];
             const rate = fiatEntry.rate;
-            const symbol = this.fiatStore.symbolLookup(fiatEntry.code);
+            const symbol = this.fiatStore.symbolLookup(fiatEntry.code).symbol;
 
             const valueToProcess = (wholeSats && wholeSats.toString()) || '0';
             if (valueToProcess.includes('-')) {
