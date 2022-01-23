@@ -742,6 +742,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <Text
                                 style={{
                                     ...styles.text,
+                                    marginTop: 10,
                                     color: themeColor('text')
                                 }}
                             >

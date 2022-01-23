@@ -55,7 +55,6 @@ export default class LnurlPayMetadata extends React.Component<LnurlPayMetadataPr
                 >
                     {text}
                 </Text>
-                <Evan />
             </ScrollView>
         );
     }
