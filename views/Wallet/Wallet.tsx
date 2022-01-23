@@ -354,23 +354,32 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                 {localeString('views.Wallet.Wallet.connecting')}
                             </Text>
                             <LoadingIndicator size={120} />
-                            <Button
-                                icon={{
-                                    name: 'settings',
-                                    size: 25,
-                                    color: '#fff'
+                            <View
+                                style={{
+                                    flex: 1,
+                                    justifyContent: 'flex-end',
+                                    bottom: 20
                                 }}
-                                buttonStyle={{
-                                    backgroundColor: 'gray',
-                                    borderRadius: 30,
-                                    marginTop: 120
-                                }}
-                                containerStyle={{
-                                    alignItems: 'center'
-                                }}
-                                onPress={() => navigation.navigate('Settings')}
-                                adaptiveWidth
-                            />
+                            >
+                                <Button
+                                    icon={{
+                                        name: 'settings',
+                                        size: 25,
+                                        color: '#fff'
+                                    }}
+                                    buttonStyle={{
+                                        backgroundColor: 'gray',
+                                        borderRadius: 30
+                                    }}
+                                    containerStyle={{
+                                        alignItems: 'center'
+                                    }}
+                                    onPress={() =>
+                                        navigation.navigate('Settings')
+                                    }
+                                    adaptiveWidth
+                                />
+                            </View>
                         </>
                     )}
                 </LinearGradient>
