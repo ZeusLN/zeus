@@ -45,7 +45,8 @@ export default class IntroSplash extends React.Component<IntroSplashProps, {}> {
                 </View>
                 <View
                     style={{
-                        padding: 10
+                        padding: 10,
+                        marginBottom: 40
                     }}
                 >
                     <Button
