@@ -121,16 +121,31 @@ export default class Wallet extends React.Component<WalletProps, {}> {
     };
 
     async getSettingsAndRefresh() {
-        const { SettingsStore, NodeInfoStore, BalanceStore, ChannelsStore } =
-            this.props;
+        const {
+            SettingsStore,
+            NodeInfoStore,
+            BalanceStore,
+            ChannelsStore,
+            navigation
+        } = this.props;
 
         NodeInfoStore.reset();
         BalanceStore.reset();
         ChannelsStore.reset();
 
         // This awaits on settings, so should await on Tor being bootstrapped before making requests
-        await SettingsStore.getSettings().then(() => {
-            this.refresh();
+        await SettingsStore.getSettings().then((settings: any) => {
+            if (settings && settings.passphrase) {
+                navigation.navigate('Lockscreen');
+            } else if (
+                settings &&
+                settings.nodes &&
+                settings.nodes.length > 0
+            ) {
+                this.refresh();
+            } else {
+                navigation.navigate('IntroSplash');
+            }
         });
     }
 
