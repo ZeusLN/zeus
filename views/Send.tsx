@@ -18,7 +18,6 @@ import handleAnything from './../utils/handleAnything';
 import InvoicesStore from './../stores/InvoicesStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
 import TransactionsStore from './../stores/TransactionsStore';
-import FeeStore from './../stores/FeeStore';
 import BalanceStore from './../stores/BalanceStore';
 import UTXOsStore from './../stores/UTXOsStore';
 import SettingsStore from './../stores/SettingsStore';
@@ -27,7 +26,6 @@ import FiatStore from './../stores/FiatStore';
 
 import Button from './../components/Button';
 import UTXOPicker from './../components/UTXOPicker';
-import FeeTable from './../components/FeeTable';
 import TextInput from './../components/TextInput';
 
 import RESTUtils from './../utils/RESTUtils';
@@ -44,7 +42,6 @@ interface SendProps {
     TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;
     FiatStore: FiatStore;
-    FeeStore: FeeStore;
     UnitsStore: UnitsStore;
     UTXOsStore: UTXOsStore;
 }
@@ -72,7 +69,6 @@ interface SendState {
     'BalanceStore',
     'SettingsStore',
     'UnitsStore',
-    'FeeStore',
     'FiatStore',
     'UTXOsStore'
 )
@@ -262,7 +258,6 @@ export default class Send extends React.Component<SendProps, SendState> {
         const {
             SettingsStore,
             UnitsStore,
-            FeeStore,
             FiatStore,
             BalanceStore,
             UTXOsStore,
@@ -715,7 +710,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     </View>
 
                     {transactionType === 'On-chain' &&
-                        (implementation === 'eclair' ? (
+                        implementation === 'eclair' && (
                             <View style={styles.feeTableButton}>
                                 <TextInput
                                     keyboardType="numeric"
@@ -728,14 +723,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     style={styles.textInput}
                                 />
                             </View>
-                        ) : (
-                            <View style={styles.feeTableButton}>
-                                <FeeTable
-                                    setFee={this.setFee}
-                                    FeeStore={FeeStore}
-                                />
-                            </View>
-                        ))}
+                        )}
 
                     {!!error_msg && (
                         <React.Fragment>

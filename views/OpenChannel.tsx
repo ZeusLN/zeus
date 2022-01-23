@@ -13,7 +13,6 @@ import { Header, Icon } from 'react-native-elements';
 import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
 
 import Button from './../components/Button';
-import FeeTable from './../components/FeeTable';
 import LoadingIndicator from './../components/LoadingIndicator';
 import TextInput from './../components/TextInput';
 import UTXOPicker from './../components/UTXOPicker';
@@ -25,7 +24,6 @@ import { themeColor } from './../utils/ThemeUtils';
 
 import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
-import FeeStore from './../stores/FeeStore';
 import BalanceStore from './../stores/BalanceStore';
 import UTXOsStore from './../stores/UTXOsStore';
 
@@ -35,7 +33,6 @@ interface OpenChannelProps {
     ChannelsStore: ChannelsStore;
     BalanceStore: BalanceStore;
     SettingsStore: SettingsStore;
-    FeeStore: FeeStore;
     UTXOsStore: UTXOsStore;
 }
 
@@ -51,13 +48,7 @@ interface OpenChannelState {
     utxoBalance: number;
 }
 
-@inject(
-    'ChannelsStore',
-    'SettingsStore',
-    'FeeStore',
-    'BalanceStore',
-    'UTXOsStore'
-)
+@inject('ChannelsStore', 'SettingsStore', 'BalanceStore', 'UTXOsStore')
 @observer
 export default class OpenChannel extends React.Component<
     OpenChannelProps,
@@ -194,7 +185,6 @@ export default class OpenChannel extends React.Component<
         const {
             ChannelsStore,
             BalanceStore,
-            FeeStore,
             UTXOsStore,
             SettingsStore,
             navigation
@@ -475,9 +465,6 @@ export default class OpenChannel extends React.Component<
                             }
                             secondary
                         />
-                    </View>
-                    <View style={styles.button}>
-                        <FeeTable setFee={this.setFee} FeeStore={FeeStore} />
                     </View>
                 </View>
             </ScrollView>
