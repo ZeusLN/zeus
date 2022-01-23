@@ -1102,7 +1102,7 @@ export default class AddEditNode extends React.Component<
                         </View>
                     )}
 
-                    <View style={styles.button}>
+                    <View style={{ ...styles.button, marginTop: 20 }}>
                         <Button
                             title={
                                 saved
@@ -1181,7 +1181,7 @@ export default class AddEditNode extends React.Component<
 
                     {(implementation === 'lnd' ||
                         implementation === 'c-lightning-REST') && (
-                        <View style={styles.button}>
+                        <View style={{ ...styles.button, marginBottom: 40 }}>
                             <Button
                                 title={localeString(
                                     'views.Settings.AddEditNode.scanBtcpay'
