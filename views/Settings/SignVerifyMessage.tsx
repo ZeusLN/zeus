@@ -139,179 +139,214 @@ export default class SignVerifyMessage extends React.Component<
                     backgroundColor={themeColor('secondary')}
                 />
 
-                <ButtonGroup
-                    onPress={this.updateIndex}
-                    selectedIndex={selectedIndex}
-                    buttons={buttons}
-                    selectedButtonStyle={{
-                        backgroundColor: themeColor('text'),
-                        borderRadius: 12
-                    }}
-                    containerStyle={{
-                        backgroundColor: themeColor('secondary'),
-                        borderRadius: 12,
-                        borderColor: themeColor('secondary')
-                    }}
-                    innerBorderStyle={{
-                        color: themeColor('secondary')
-                    }}
-                />
+                <View style={styles.content}>
+                    <ButtonGroup
+                        onPress={this.updateIndex}
+                        selectedIndex={selectedIndex}
+                        buttons={buttons}
+                        selectedButtonStyle={{
+                            backgroundColor: themeColor('text'),
+                            borderRadius: 12
+                        }}
+                        containerStyle={{
+                            backgroundColor: themeColor('secondary'),
+                            borderRadius: 12,
+                            borderColor: themeColor('secondary')
+                        }}
+                        innerBorderStyle={{
+                            color: themeColor('secondary')
+                        }}
+                    />
 
-                {loading && <LoadingIndicator />}
+                    {loading && <LoadingIndicator />}
 
-                {selectedIndex === 0 && (
-                    <View>
-                        <View style={styles.form}>
-                            <Text style={{ color: themeColor('text') }}>
-                                {localeString(
-                                    'views.Settings.SignMessage.messageToSign'
-                                )}
-                            </Text>
-                            <TextInput
-                                placeholder={localeString(
-                                    'views.Settings.SignMessage.placeHolder'
-                                )}
-                                value={messageToSign}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        messageToSign: text
-                                    })
-                                }
-                                editable={!loading}
-                                multiline
-                                numberOfLines={3}
-                            />
-                        </View>
-
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString(
-                                    'views.Settings.signMessage.button'
-                                )}
-                                icon={{
-                                    name: 'create',
-                                    size: 25,
-                                    color: 'white'
-                                }}
-                                onPress={() => signMessage(messageToSign)}
-                                buttonStyle={{
-                                    backgroundColor: '#261339',
-                                    borderRadius: 30
-                                }}
-                                titleStyle={{
-                                    color: 'white'
-                                }}
-                            />
-                        </View>
-
-                        {signature && (
-                            <View>
-                                <View style={styles.form}>
-                                    <Text style={{ color: themeColor('text') }}>
-                                        {localeString(
-                                            'views.Settings.SignMessage.generatedSignature'
-                                        )}
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            ...styles.textInput,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {signature}
-                                    </Text>
-                                </View>
-
-                                <View style={styles.button}>
-                                    <CopyButton copyValue={signature} />
-                                </View>
+                    {selectedIndex === 0 && (
+                        <View>
+                            <View style={styles.form}>
+                                <Text style={{ color: themeColor('text') }}>
+                                    {localeString(
+                                        'views.Settings.SignMessage.messageToSign'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    placeholder={localeString(
+                                        'views.Settings.SignMessage.placeHolder'
+                                    )}
+                                    value={messageToSign}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            messageToSign: text
+                                        })
+                                    }
+                                    editable={!loading}
+                                    multiline
+                                    numberOfLines={3}
+                                />
                             </View>
-                        )}
-                    </View>
-                )}
 
-                {selectedIndex === 1 && (
-                    <View>
-                        <View style={styles.form}>
-                            <Text
-                                style={{
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.SignMessage.messageToVerify'
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString(
+                                        'views.Settings.signMessage.button'
+                                    )}
+                                    icon={{
+                                        name: 'create',
+                                        size: 25,
+                                        color: 'white'
+                                    }}
+                                    onPress={() => signMessage(messageToSign)}
+                                    buttonStyle={{
+                                        backgroundColor: '#261339',
+                                        borderRadius: 30
+                                    }}
+                                    titleStyle={{
+                                        color: 'white'
+                                    }}
+                                />
+                            </View>
+
+                            {signature && (
+                                <View>
+                                    <View style={styles.form}>
+                                        <Text
+                                            style={{
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.SignMessage.generatedSignature'
+                                            )}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                ...styles.textInput,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {signature}
+                                        </Text>
+                                    </View>
+
+                                    <View style={styles.button}>
+                                        <CopyButton copyValue={signature} />
+                                    </View>
+                                </View>
+                            )}
+                        </View>
+                    )}
+
+                    {selectedIndex === 1 && (
+                        <View>
+                            <View style={styles.form}>
+                                <Text
+                                    style={{
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.SignMessage.messageToVerify'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    placeholder={localeString(
+                                        'views.Settings.SignMessage.placeHolder'
+                                    )}
+                                    value={messageToVerify}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            messageToVerify: text
+                                        })
+                                    }
+                                    editable={!loading}
+                                    multiline
+                                    numberOfLines={3}
+                                />
+                            </View>
+
+                            <View style={styles.form}>
+                                <Text
+                                    style={{
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.SignMessage.signatureToVerify'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    value={signatureToVerify}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            signatureToVerify: text
+                                        })
+                                    }
+                                    editable={!loading}
+                                    multiline
+                                    numberOfLines={3}
+                                />
+                            </View>
+
+                            {valid && (
+                                <SuccessMessage
+                                    message={`${localeString(
+                                        'views.Settings.SignMessage.success'
+                                    )} ${pubkey}`}
+                                />
+                            )}
+
+                            {(error || valid === false) && (
+                                <ErrorMessage
+                                    message={
+                                        error
+                                            ? error
+                                            : localeString(
+                                                  'views.Settings.SignMessage.error'
+                                              )
+                                    }
+                                />
+                            )}
+
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString(
+                                        'views.Settings.signMessage.buttonVerify'
+                                    )}
+                                    onPress={() =>
+                                        verifyMessage({
+                                            msg: messageToVerify,
+                                            signature: signatureToVerify
+                                        })
+                                    }
+                                    buttonStyle={{
+                                        backgroundColor: '#261339',
+                                        borderRadius: 30
+                                    }}
+                                    titleStyle={{
+                                        color: 'white'
+                                    }}
+                                />
+                            </View>
+                        </View>
+                    )}
+
+                    {pubkey && (
+                        <View style={styles.button}>
+                            <CopyButton
+                                title={localeString(
+                                    'views.Settings.SignMessage.copyPubkey'
                                 )}
-                            </Text>
-                            <TextInput
-                                placeholder={localeString(
-                                    'views.Settings.SignMessage.placeHolder'
-                                )}
-                                value={messageToVerify}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        messageToVerify: text
-                                    })
-                                }
-                                editable={!loading}
-                                multiline
-                                numberOfLines={3}
+                                copyValue={pubkey}
                             />
                         </View>
+                    )}
 
-                        <View style={styles.form}>
-                            <Text
-                                style={{
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.SignMessage.signatureToVerify'
-                                )}
-                            </Text>
-                            <TextInput
-                                value={signatureToVerify}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        signatureToVerify: text
-                                    })
-                                }
-                                editable={!loading}
-                                multiline
-                                numberOfLines={3}
-                            />
-                        </View>
-
-                        {valid && (
-                            <SuccessMessage
-                                message={`${localeString(
-                                    'views.Settings.SignMessage.success'
-                                )} ${pubkey}`}
-                            />
-                        )}
-
-                        {(error || valid === false) && (
-                            <ErrorMessage
-                                message={
-                                    error
-                                        ? error
-                                        : localeString(
-                                              'views.Settings.SignMessage.error'
-                                          )
-                                }
-                            />
-                        )}
-
+                    {(signature || !!valid) && (
                         <View style={styles.button}>
                             <Button
                                 title={localeString(
-                                    'views.Settings.signMessage.buttonVerify'
+                                    'views.Settings.SignMessage.clear'
                                 )}
-                                onPress={() =>
-                                    verifyMessage({
-                                        msg: messageToVerify,
-                                        signature: signatureToVerify
-                                    })
-                                }
+                                onPress={() => this.reset()}
                                 buttonStyle={{
                                     backgroundColor: '#261339',
                                     borderRadius: 30
@@ -321,43 +356,17 @@ export default class SignVerifyMessage extends React.Component<
                                 }}
                             />
                         </View>
-                    </View>
-                )}
-
-                {pubkey && (
-                    <View style={styles.button}>
-                        <CopyButton
-                            title={localeString(
-                                'views.Settings.SignMessage.copyPubkey'
-                            )}
-                            copyValue={pubkey}
-                        />
-                    </View>
-                )}
-
-                {(signature || !!valid) && (
-                    <View style={styles.button}>
-                        <Button
-                            title={localeString(
-                                'views.Settings.SignMessage.clear'
-                            )}
-                            onPress={() => this.reset()}
-                            buttonStyle={{
-                                backgroundColor: '#261339',
-                                borderRadius: 30
-                            }}
-                            titleStyle={{
-                                color: 'white'
-                            }}
-                        />
-                    </View>
-                )}
+                    )}
+                </View>
             </ScrollView>
         );
     }
 }
 
 const styles = StyleSheet.create({
+    content: {
+        padding: 10
+    },
     button: {
         padding: 10
     },

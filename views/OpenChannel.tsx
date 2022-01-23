@@ -499,8 +499,8 @@ const styles = StyleSheet.create({
     content: {
         paddingTop: 20,
         paddingBottom: 20,
-        paddingLeft: 5,
-        paddingRight: 5
+        paddingLeft: 10,
+        paddingRight: 10
     },
     button: {
         paddingTop: 10,
