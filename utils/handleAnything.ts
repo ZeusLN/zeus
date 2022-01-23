@@ -154,8 +154,6 @@ export default async function (data: string): Promise<any> {
             }
         });
     } else {
-        throw new Error(
-            'Scanned QR code was not a valid Bitcoin address or Lightning Invoice'
-        );
+        throw new Error(localeString('utils.handleAnything.notValid'));
     }
 }
