@@ -94,7 +94,11 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                             alignSelf: 'center',
                             margin: 20,
                             height: 35,
-                            width: 140
+                            width: 140,
+                            backgroundColor:
+                                themeColor('generalStyle') === 'light'
+                                    ? '#1d1f31'
+                                    : themeColor('background')
                         }}
                     />
                     {loading && !error && (
@@ -297,23 +301,25 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                         </View>
                     )}
                     {error && !loading && (
-                      <View style={{
-                          flex: 1,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          height: 500
-                      }}>
-                          <ErrorIcon />
-                          <Text
-                              style={{
-                                  top: 20,
-                                  fontSize: 30,
-                                  color: '#E14C4C'
-                              }}
-                          >
-                              {localeString('views.EditFee.error')}
-                          </Text>
-                      </View>
+                        <View
+                            style={{
+                                flex: 1,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                height: 500
+                            }}
+                        >
+                            <ErrorIcon />
+                            <Text
+                                style={{
+                                    top: 20,
+                                    fontSize: 30,
+                                    color: '#E14C4C'
+                                }}
+                            >
+                                {localeString('views.EditFee.error')}
+                            </Text>
+                        </View>
                     )}
                 </ScrollView>
             </View>
