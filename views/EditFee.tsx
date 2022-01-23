@@ -297,28 +297,23 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                         </View>
                     )}
                     {error && !loading && (
-                        <View>
-                            <View
-                                style={{
-                                    flex: 1,
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    top: 150
-                                }}
-                            >
-                                <ErrorIcon />
-                            </View>
-                            <Text
-                                style={{
-                                    fontSize: 30,
-                                    color: '#E14C4C',
-                                    textAlign: 'center',
-                                    top: 220
-                                }}
-                            >
-                                {localeString('views.EditFee.error')}
-                            </Text>
-                        </View>
+                      <View style={{
+                          flex: 1,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          height: 500
+                      }}>
+                          <ErrorIcon />
+                          <Text
+                              style={{
+                                  top: 20,
+                                  fontSize: 30,
+                                  color: '#E14C4C'
+                              }}
+                          >
+                              {localeString('views.EditFee.error')}
+                          </Text>
+                      </View>
                     )}
                 </ScrollView>
             </View>
