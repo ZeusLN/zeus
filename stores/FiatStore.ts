@@ -181,13 +181,10 @@ export default class FiatStore {
     @action
     public getFiatRates = () => {
         this.loading = true;
-        RNFetchBlob.config({
-            trusty: true
-        })
-            .fetch(
-                'GET',
-                'https://pay.zeusln.app/api/rates?storeId=Fjt7gLnGpg4UeBMFccLquy3GTTEz4cHU4PZMU63zqMBo'
-            )
+        RNFetchBlob.fetch(
+            'GET',
+            'https://pay.zeusln.app/api/rates?storeId=Fjt7gLnGpg4UeBMFccLquy3GTTEz4cHU4PZMU63zqMBo'
+        )
             .then((response: any) => {
                 const status = response.info().status;
                 if (status == 200) {
