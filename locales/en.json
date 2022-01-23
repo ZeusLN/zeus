@@ -379,6 +379,7 @@
     "views.Settings.Privacy.customBlockExplorer": "Custom Block explorer",
     "views.Settings.Privacy.lurkerMode": "Lurker mode",
     "views.Settings.Privacy.clipboard": "Read clipboard",
+    "views.Settings.Privacy.enableMempoolRates": "Enable Mempool.space fee suggestions",
     "views.Settings.SetPassword.title": "Set / Change Password",
     "views.Settings.SetPassword.save": "Save",
     "views.Settings.connectNode": "Connect a node",

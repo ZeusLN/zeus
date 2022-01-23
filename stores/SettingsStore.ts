@@ -23,6 +23,7 @@ interface PrivacySettings {
     customBlockExplorer?: string;
     clipboard?: boolean;
     lurkerMode?: boolean;
+    enableMempoolRates?: boolean;
 }
 
 interface Settings {
@@ -122,7 +123,8 @@ export default class SettingsStore {
             defaultBlockExplorer: 'mempool.space',
             customBlockExplorer: '',
             clipboard: false,
-            lurkerMode: false
+            lurkerMode: false,
+            enableMempoolRates: false
         }
     };
     @observable public loading = false;

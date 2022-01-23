@@ -208,8 +208,10 @@ export default class OpenChannel extends React.Component<
             suggestImport,
             utxoBalance
         } = this.state;
-        const { implementation } = SettingsStore;
+        const { implementation, settings } = SettingsStore;
+        const { privacy } = settings;
         const privateChannel = this.state.private;
+        const enableMempoolRates = privacy && privacy.enableMempoolRates;
 
         const {
             connectingToPeer,
@@ -388,31 +390,45 @@ export default class OpenChannel extends React.Component<
                         >
                             {localeString('views.OpenChannel.satsPerByte')}
                         </Text>
-                        <TouchableWithoutFeedback
-                            onPress={() =>
-                                navigation.navigate('EditFee', {
-                                    onNavigateBack: this.handleOnNavigateBack
-                                })
-                            }
-                        >
-                            <View
-                                style={{
-                                    ...styles.editFeeBox,
-
-                                    borderColor: 'rgba(255, 217, 63, .6)',
-                                    borderWidth: 3
-                                }}
+                        {enableMempoolRates ? (
+                            <TouchableWithoutFeedback
+                                onPress={() =>
+                                    navigation.navigate('EditFee', {
+                                        onNavigateBack:
+                                            this.handleOnNavigateBack
+                                    })
+                                }
                             >
-                                <Text
+                                <View
                                     style={{
-                                        color: themeColor('text'),
-                                        fontSize: 18
+                                        ...styles.editFeeBox,
+
+                                        borderColor: 'rgba(255, 217, 63, .6)',
+                                        borderWidth: 3
                                     }}
                                 >
-                                    {sat_per_byte}
-                                </Text>
-                            </View>
-                        </TouchableWithoutFeedback>
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontSize: 18
+                                        }}
+                                    >
+                                        {sat_per_byte}
+                                    </Text>
+                                </View>
+                            </TouchableWithoutFeedback>
+                        ) : (
+                            <TextInput
+                                keyboardType="numeric"
+                                placeholder={'2'}
+                                value={sat_per_byte}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        sat_per_byte: text
+                                    })
+                                }
+                            />
+                        )}
                     </>
 
                     {RESTUtils.supportsCoinControl() &&
