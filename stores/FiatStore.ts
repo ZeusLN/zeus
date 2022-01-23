@@ -20,6 +20,12 @@ export default class FiatStore {
         this.settingsStore = settingsStore;
     }
 
+    numberWithCommas = (x: string | number) =>
+        new Intl.NumberFormat('en-EN').format(x);
+
+    numberWithDecimals = (x: string | number) =>
+        new Intl.NumberFormat('de-DE').format(x);
+
     private symbolLookup = (symbol: string): CurrencyDisplayRules => {
         const symbolPairs: any = {
             USD: {
@@ -28,6 +34,7 @@ export default class FiatStore {
                 rtl: false,
                 separatorSwap: false
             },
+            ARS: { symbol: '$', space: true, rtl: false, separatorSwap: true },
             AUD: { symbol: '$', space: true, rtl: false, separatorSwap: false },
             BRL: {
                 symbol: 'R$',
@@ -80,9 +87,16 @@ export default class FiatStore {
                 rtl: true,
                 separatorSwap: true
             },
+            ILS: { symbol: '₪', space: true, rtl: false, separatorSwap: true },
             INR: { symbol: '₹', space: true, rtl: false, separatorSwap: false },
             JPY: { symbol: '¥', space: true, rtl: false, separatorSwap: false },
             KRW: { symbol: '₩', space: true, rtl: false, separatorSwap: false },
+            NGN: {
+                symbol: '₦',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
             NZD: { symbol: '$', space: true, rtl: false, separatorSwap: false },
             PLN: { symbol: 'zł', space: true, rtl: true, separatorSwap: false },
             RUB: {
@@ -119,16 +133,14 @@ export default class FiatStore {
     @action getSymbol = () => {
         const { settings } = this.settingsStore;
         const { fiat } = settings;
-        if (fiat) {
+        if (fiat && this.fiatRates.filter) {
             const fiatEntry = this.fiatRates.filter(
                 (entry: any) => entry.code === fiat
             )[0];
             return this.symbolLookup(fiatEntry.code);
         } else {
-            console.log('no fiat?');
-            // TODO: what do we do in this case?
             return {
-                symbol: '???',
+                symbol: fiat,
                 space: true,
                 rtl: true,
                 separatorSwap: false
@@ -140,28 +152,39 @@ export default class FiatStore {
     public getRate = () => {
         const { settings } = this.settingsStore;
         const { fiat } = settings;
-        if (fiat) {
+        if (fiat && this.fiatRates.filter) {
             const fiatEntry = this.fiatRates.filter(
                 (entry: any) => entry.code === fiat
             )[0];
             const rate = fiatEntry.rate;
-            // TODO: fix rate display
-            const symbol = this.symbolLookup(fiatEntry.code).symbol;
-            return `${symbol}${rate} BTC/${fiat}`;
+            const { symbol, space, rtl, separatorSwap } = this.symbolLookup(
+                fiatEntry.code
+            );
+
+            const formattedRate = separatorSwap
+                ? this.numberWithDecimals(rate)
+                : this.numberWithCommas(rate);
+
+            if (rtl) {
+                return `${formattedRate}${
+                    space ? ' ' : ''
+                }${symbol} BTC/${fiat}`;
+            } else {
+                return `${symbol}${
+                    space ? ' ' : ''
+                }${formattedRate} BTC/${fiat}`;
+            }
         }
-        return 'N/A';
+        return '$N/A';
     };
 
     @action
     public getFiatRates = () => {
         this.loading = true;
-        RNFetchBlob.config({
-            trusty: true
-        })
-            .fetch(
-                'GET',
-                'https://pay.zeusln.app/api/rates?storeId=Fjt7gLnGpg4UeBMFccLquy3GTTEz4cHU4PZMU63zqMBo'
-            )
+        RNFetchBlob.fetch(
+            'GET',
+            'https://pay.zeusln.app/api/rates?storeId=Fjt7gLnGpg4UeBMFccLquy3GTTEz4cHU4PZMU63zqMBo'
+        )
             .then((response: any) => {
                 const status = response.info().status;
                 if (status == 200) {

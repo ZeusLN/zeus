@@ -288,9 +288,10 @@ export default class Send extends React.Component<SendProps, SendState> {
         const { units, changeUnits } = UnitsStore;
         const { fiatRates }: any = FiatStore;
 
-        const fiatEntry = fiat
-            ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
-            : null;
+        const fiatEntry =
+            fiat && fiatRates && fiatRates.filter
+                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+                : null;
 
         const rate =
             fiat && fiat !== 'Disabled' && fiatRates && fiatEntry

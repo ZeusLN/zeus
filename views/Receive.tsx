@@ -132,9 +132,10 @@ export default class Receive extends React.Component<
         const { fiat } = settings;
         const address = onChainAddress;
 
-        const fiatEntry = fiat
-            ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
-            : null;
+        const fiatEntry =
+            fiat && fiatRates && fiatRates.filter
+                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+                : null;
 
         const rate =
             fiat && fiat !== 'Disabled' && fiatRates && fiatEntry
