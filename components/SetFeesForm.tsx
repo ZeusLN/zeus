@@ -1,8 +1,14 @@
 import * as React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
+
 import Button from './../components/Button';
+import {
+    SuccessMessage,
+    ErrorMessage
+} from './../components/SuccessErrorMessage';
 import TextInput from './../components/TextInput';
+
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
@@ -123,26 +129,22 @@ export default class SetFeesForm extends React.Component<
                             </Text>
                         )}
                         {feesSubmitted && setFeesSuccess && (
-                            <Text
-                                style={{
-                                    color: 'green'
-                                }}
-                            >
-                                {localeString('components.SetFeesForm.success')}
-                            </Text>
+                            <SuccessMessage
+                                message={localeString(
+                                    'components.SetFeesForm.success'
+                                )}
+                            />
                         )}
                         {feesSubmitted && setFeesError && (
-                            <Text
-                                style={{
-                                    color: 'red'
-                                }}
-                            >
-                                {setFeesErrorMsg
-                                    ? setFeesErrorMsg
-                                    : localeString(
-                                          'components.SetFeesForm.error'
-                                      )}
-                            </Text>
+                            <ErrorMessage
+                                message={
+                                    setFeesErrorMsg
+                                        ? setFeesErrorMsg
+                                        : localeString(
+                                              'components.SetFeesForm.error'
+                                          )
+                                }
+                            />
                         )}
 
                         <Text style={{ color: themeColor('text') }}>
