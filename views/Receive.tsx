@@ -312,7 +312,11 @@ export default class Receive extends React.Component<
                                         )}
                                     />
                                 )}
-                                <Text style={{ color: themeColor('text') }}>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
                                     {localeString('views.Receive.memo')}
                                 </Text>
                                 <TextInput
@@ -326,7 +330,11 @@ export default class Receive extends React.Component<
                                 />
 
                                 <TouchableOpacity onPress={() => changeUnits()}>
-                                    <Text style={{ color: themeColor('text') }}>
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
                                         {localeString('views.Receive.amount')} (
                                         {units === 'fiat' ? fiat : units})
                                         {lnurl &&
@@ -388,7 +396,9 @@ export default class Receive extends React.Component<
                                     <>
                                         <Text
                                             style={{
-                                                color: themeColor('text'),
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
                                                 paddingTop: 10
                                             }}
                                         >
@@ -412,7 +422,9 @@ export default class Receive extends React.Component<
                                         <Text
                                             style={{
                                                 ...styles.text,
-                                                color: themeColor('text')
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
                                             }}
                                         >
                                             {localeString(
@@ -442,7 +454,9 @@ export default class Receive extends React.Component<
                                         <Text
                                             style={{
                                                 ...styles.text,
-                                                color: themeColor('text')
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
                                             }}
                                         >
                                             {localeString(
