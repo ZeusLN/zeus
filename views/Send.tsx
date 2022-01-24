@@ -289,7 +289,8 @@ export default class Send extends React.Component<SendProps, SendState> {
         } = this.state;
         const { confirmedBlockchainBalance } = BalanceStore;
         const { implementation, settings } = SettingsStore;
-        const { fiat } = settings;
+        const { fiat, privacy } = settings;
+        const enableMempoolRates = privacy && privacy.enableMempoolRates;
         const { units, changeUnits } = UnitsStore;
         const { fiatRates }: any = FiatStore;
 
@@ -460,33 +461,44 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 >
                                     {localeString('views.Send.feeSats')}:
                                 </Text>
-                                <TouchableWithoutFeedback
-                                    onPress={() =>
-                                        navigation.navigate('EditFee', {
-                                            onNavigateBack:
-                                                this.handleOnNavigateBack
-                                        })
-                                    }
-                                >
-                                    <View
-                                        style={{
-                                            ...styles.editFeeBox,
-                                            borderColor:
-                                                'rgba(255, 217, 63, .6)',
-                                            borderWidth: 3
-                                        }}
+                                {enableMempoolRates ? (
+                                    <TouchableWithoutFeedback
+                                        onPress={() =>
+                                            navigation.navigate('EditFee', {
+                                                onNavigateBack:
+                                                    this.handleOnNavigateBack
+                                            })
+                                        }
                                     >
-                                        <Text
+                                        <View
                                             style={{
-                                                ...styles.text,
-                                                fontSize: 18,
-                                                color: themeColor('text')
+                                                ...styles.editFeeBox,
+                                                borderColor:
+                                                    'rgba(255, 217, 63, .6)',
+                                                borderWidth: 3
                                             }}
                                         >
-                                            {fee}
-                                        </Text>
-                                    </View>
-                                </TouchableWithoutFeedback>
+                                            <Text
+                                                style={{
+                                                    ...styles.text,
+                                                    fontSize: 18,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {fee}
+                                            </Text>
+                                        </View>
+                                    </TouchableWithoutFeedback>
+                                ) : (
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        value={fee}
+                                        onChangeText={(text: string) =>
+                                            this.setState({ fee: text })
+                                        }
+                                        style={styles.textInput}
+                                    />
+                                )}
 
                                 {RESTUtils.supportsCoinControl() && (
                                     <UTXOPicker

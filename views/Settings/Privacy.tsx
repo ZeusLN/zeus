@@ -22,6 +22,7 @@ interface PrivacyState {
     customBlockExplorer: string;
     clipboard: boolean;
     lurkerMode: boolean;
+    enableMempoolRates: boolean;
 }
 
 @inject('SettingsStore')
@@ -36,7 +37,8 @@ export default class Privacy extends React.Component<
         defaultBlockExplorer: 'mempool.space',
         customBlockExplorer: '',
         clipboard: false,
-        lurkerMode: false
+        lurkerMode: false,
+        enableMempoolRates: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -52,7 +54,9 @@ export default class Privacy extends React.Component<
                 (settings.privacy && settings.privacy.customBlockExplorer) ||
                 '',
             clipboard: settings.privacy && settings.privacy.clipboard,
-            lurkerMode: settings.privacy && settings.privacy.lurkerMode
+            lurkerMode: settings.privacy && settings.privacy.lurkerMode,
+            enableMempoolRates:
+                settings.privacy && settings.privacy.enableMempoolRates
         });
     }
 
@@ -71,7 +75,8 @@ export default class Privacy extends React.Component<
             defaultBlockExplorer,
             customBlockExplorer,
             clipboard,
-            lurkerMode
+            lurkerMode,
+            enableMempoolRates
         } = this.state;
         const { setSettings, getSettings }: any = SettingsStore;
 
@@ -103,7 +108,9 @@ export default class Privacy extends React.Component<
                     }}
                     backgroundColor={themeColor('secondary')}
                 />
-                <ScrollView style={{ flex: 1, padding: 15 }}>
+                <ScrollView
+                    style={{ flex: 1, paddingLeft: 10, paddingTop: 15 }}
+                >
                     <DropdownSetting
                         title={localeString(
                             'views.Settings.Privacy.blockExplorer'
@@ -129,7 +136,8 @@ export default class Privacy extends React.Component<
                                                   defaultBlockExplorer: value,
                                                   customBlockExplorer,
                                                   clipboard,
-                                                  lurkerMode
+                                                  lurkerMode,
+                                                  enableMempoolRates
                                               }
                                           }
                                         : {
@@ -137,7 +145,8 @@ export default class Privacy extends React.Component<
                                                   defaultBlockExplorer: value,
                                                   customBlockExplorer,
                                                   clipboard,
-                                                  lurkerMode
+                                                  lurkerMode,
+                                                  enableMempoolRates
                                               }
                                           }
                                 )
@@ -180,7 +189,8 @@ export default class Privacy extends React.Component<
                                                           customBlockExplorer:
                                                               text,
                                                           clipboard,
-                                                          lurkerMode
+                                                          lurkerMode,
+                                                          enableMempoolRates
                                                       }
                                                   }
                                                 : {
@@ -189,7 +199,8 @@ export default class Privacy extends React.Component<
                                                           customBlockExplorer:
                                                               text,
                                                           clipboard,
-                                                          lurkerMode
+                                                          lurkerMode,
+                                                          enableMempoolRates
                                                       }
                                                   }
                                         )
@@ -243,7 +254,8 @@ export default class Privacy extends React.Component<
                                                           defaultBlockExplorer,
                                                           customBlockExplorer,
                                                           clipboard: !clipboard,
-                                                          lurkerMode
+                                                          lurkerMode,
+                                                          enableMempoolRates
                                                       }
                                                   }
                                                 : {
@@ -251,7 +263,8 @@ export default class Privacy extends React.Component<
                                                           defaultBlockExplorer,
                                                           customBlockExplorer,
                                                           clipboard: !clipboard,
-                                                          lurkerMode
+                                                          lurkerMode,
+                                                          enableMempoolRates
                                                       }
                                                   }
                                         )
@@ -309,7 +322,8 @@ export default class Privacy extends React.Component<
                                                           customBlockExplorer,
                                                           clipboard,
                                                           lurkerMode:
-                                                              !lurkerMode
+                                                              !lurkerMode,
+                                                          enableMempoolRates
                                                       }
                                                   }
                                                 : {
@@ -318,7 +332,79 @@ export default class Privacy extends React.Component<
                                                           customBlockExplorer,
                                                           clipboard,
                                                           lurkerMode:
-                                                              !lurkerMode
+                                                              !lurkerMode,
+                                                          enableMempoolRates
+                                                      }
+                                                  }
+                                        )
+                                    );
+                                }}
+                                trackColor={{
+                                    false: '#767577',
+                                    true: themeColor('highlight')
+                                }}
+                            />
+                        </View>
+                    </ListItem>
+                    <ListItem
+                        containerStyle={{
+                            borderBottomWidth: 0,
+                            backgroundColor: themeColor('background')
+                        }}
+                    >
+                        <ListItem.Title
+                            style={{
+                                color: themeColor('secondaryText'),
+                                left: -10
+                            }}
+                        >
+                            {localeString(
+                                'views.Settings.Privacy.enableMempoolRates'
+                            )}
+                        </ListItem.Title>
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                justifyContent: 'flex-end'
+                            }}
+                        >
+                            <Switch
+                                value={enableMempoolRates}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        enableMempoolRates: !enableMempoolRates
+                                    });
+                                    const settings = await getSettings();
+                                    await setSettings(
+                                        JSON.stringify(
+                                            settings
+                                                ? {
+                                                      nodes: settings.nodes,
+                                                      theme: settings.theme,
+                                                      selectedNode:
+                                                          settings.selectedNode,
+                                                      fiat: settings.fiat,
+                                                      passphrase:
+                                                          settings.passphrase,
+                                                      locale: settings.locale,
+                                                      privacy: {
+                                                          defaultBlockExplorer,
+                                                          customBlockExplorer,
+                                                          clipboard,
+                                                          lurkerMode,
+                                                          enableMempoolRates:
+                                                              !enableMempoolRates
+                                                      }
+                                                  }
+                                                : {
+                                                      privacy: {
+                                                          defaultBlockExplorer,
+                                                          customBlockExplorer,
+                                                          clipboard,
+                                                          lurkerMode,
+                                                          enableMempoolRates:
+                                                              !enableMempoolRates
                                                       }
                                                   }
                                         )
