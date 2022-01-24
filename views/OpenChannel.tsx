@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Platform,
     ScrollView,
     StyleSheet,
     Switch,
@@ -14,6 +15,10 @@ import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
 
 import Button from './../components/Button';
 import LoadingIndicator from './../components/LoadingIndicator';
+import {
+    SuccessMessage,
+    ErrorMessage
+} from './../components/SuccessErrorMessage';
 import TextInput from './../components/TextInput';
 import UTXOPicker from './../components/UTXOPicker';
 
@@ -86,10 +91,19 @@ export default class OpenChannel extends React.Component<
 
     async componentDidMount() {
         this.initFromProps(this.props);
-        await this.initNfc();
+
+        if (Platform.OS === 'android') {
+            await this.enableNfc();
+        }
     }
 
-    initNfc = async () => {
+    disableNfc = () => {
+        NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
+        NfcManager.setEventListener(NfcEvents.SessionClosed, null);
+    };
+
+    enableNfc = async () => {
+        this.disableNfc();
         await NfcManager.start();
 
         return new Promise((resolve: any) => {
@@ -270,21 +284,27 @@ export default class OpenChannel extends React.Component<
                         <LoadingIndicator />
                     )}
                     {peerSuccess && (
-                        <Text style={{ color: 'green' }}>
-                            {localeString('views.OpenChannel.peerSuccess')}
-                        </Text>
+                        <SuccessMessage
+                            message={localeString(
+                                'views.OpenChannel.peerSuccess'
+                            )}
+                        />
                     )}
                     {channelSuccess && (
-                        <Text style={{ color: 'green' }}>
-                            {localeString('views.OpenChannel.channelSuccess')}
-                        </Text>
+                        <SuccessMessage
+                            message={localeString(
+                                'views.OpenChannel.channelSuccess'
+                            )}
+                        />
                     )}
                     {(errorMsgPeer || errorMsgChannel) && (
-                        <Text style={{ color: 'red' }}>
-                            {errorMsgChannel ||
+                        <ErrorMessage
+                            message={
+                                errorMsgChannel ||
                                 errorMsgPeer ||
-                                localeString('general.error')}
-                        </Text>
+                                localeString('general.error')
+                            }
+                        />
                     )}
 
                     <Text
@@ -466,6 +486,21 @@ export default class OpenChannel extends React.Component<
                             secondary
                         />
                     </View>
+
+                    {Platform.OS === 'ios' && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString('general.enableNfc')}
+                                icon={{
+                                    name: 'nfc',
+                                    size: 25,
+                                    color: 'white'
+                                }}
+                                onPress={() => this.enableNfc()}
+                                secondary
+                            />
+                        </View>
+                    )}
                 </View>
             </ScrollView>
         );
