@@ -57,8 +57,8 @@ import IntroSplash from './views/IntroSplash';
 import EditFee from './views/EditFee';
 
 const AppScenes = {
-    Lockscreen: {
-        screen: Lockscreen
+    Wallet: {
+        screen: Wallet
     },
     IntroSplash: {
         screen: IntroSplash
@@ -66,14 +66,11 @@ const AppScenes = {
     Intro: {
         screen: Intro
     },
-    Wallet: {
-        screen: Wallet
+    Lockscreen: {
+        screen: Lockscreen
     },
-    AddressQRCodeScanner: {
-        screen: AddressQRScanner
-    },
-    NodeQRCodeScanner: {
-        screen: NodeQRScanner
+    Send: {
+        screen: Send
     },
     EditFee: {
         screen: EditFee
@@ -126,9 +123,6 @@ const AppScenes = {
     Invoice: {
         screen: Invoice
     },
-    Send: {
-        screen: Send
-    },
     LnurlPay: {
         screen: LnurlPay
     },
@@ -152,15 +146,6 @@ const AppScenes = {
     },
     SendingLightning: {
         screen: SendingLightning
-    },
-    BTCPayConfigQRScanner: {
-        screen: BTCPayConfigQRScanner
-    },
-    LNDConnectConfigQRScanner: {
-        screen: LNDConnectConfigQRScanner
-    },
-    LNDHubQRScanner: {
-        screen: LNDHubQRScanner
     },
     NodeInfo: {
         screen: NodeInfo
@@ -188,6 +173,21 @@ const AppScenes = {
     },
     ImportAccount: {
         screen: ImportAccount
+    },
+    AddressQRCodeScanner: {
+        screen: AddressQRScanner
+    },
+    NodeQRCodeScanner: {
+        screen: NodeQRScanner
+    },
+    BTCPayConfigQRScanner: {
+        screen: BTCPayConfigQRScanner
+    },
+    LNDConnectConfigQRScanner: {
+        screen: LNDConnectConfigQRScanner
+    },
+    LNDHubQRScanner: {
+        screen: LNDHubQRScanner
     },
     ImportAccountQRScanner: {
         screen: ImportAccountQRScanner
