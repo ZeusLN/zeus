@@ -156,9 +156,6 @@ export default class UnitsStore {
                 const { symbol, space, rtl, separatorSwap } =
                     this.fiatStore.symbolLookup(fiatEntry.code);
 
-                const valueToProcess =
-                    (wholeSats && wholeSats.toString()) || '0';
-
                 const amount = (
                     FeeUtils.toFixed(Number(wholeSats || 0) / satoshisPerBTC) *
                     rate
