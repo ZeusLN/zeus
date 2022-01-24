@@ -14,6 +14,7 @@ import { inject, observer } from 'mobx-react';
 
 import Success from '../images/GIF/Success.gif';
 
+import { Amount } from './../components/Amount';
 import Button from './../components/Button';
 import CollapsedQR from './../components/CollapsedQR';
 import LoadingIndicator from './../components/LoadingIndicator';
@@ -355,36 +356,18 @@ export default class Receive extends React.Component<
                                     }
                                 />
                                 {units !== 'sats' && (
-                                    <TouchableOpacity
-                                        onPress={() => changeUnits()}
-                                    >
-                                        <Text
-                                            style={{
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {UnitsStore.getAmount(
-                                                satAmount,
-                                                'sats'
-                                            )}{' '}
-                                        </Text>
-                                    </TouchableOpacity>
+                                    <Amount
+                                        sats={satAmount}
+                                        fixedUnits="sats"
+                                        toggleable
+                                    />
                                 )}
                                 {units !== 'btc' && (
-                                    <TouchableOpacity
-                                        onPress={() => changeUnits()}
-                                    >
-                                        <Text
-                                            style={{
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {UnitsStore.getAmount(
-                                                satAmount,
-                                                'btc'
-                                            )}{' '}
-                                        </Text>
-                                    </TouchableOpacity>
+                                    <Amount
+                                        sats={satAmount}
+                                        fixedUnits="btc"
+                                        toggleable
+                                    />
                                 )}
 
                                 {units === 'fiat' && (
@@ -396,7 +379,7 @@ export default class Receive extends React.Component<
                                                 color: themeColor('text')
                                             }}
                                         >
-                                            {FiatStore.getRate()}{' '}
+                                            {FiatStore.getRate()}
                                         </Text>
                                     </TouchableOpacity>
                                 )}
