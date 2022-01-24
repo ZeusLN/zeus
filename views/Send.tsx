@@ -26,7 +26,6 @@ import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
 import FiatStore from './../stores/FiatStore';
 
 import Button from './../components/Button';
-import FeeTable from './../components/FeeTable';
 import { ErrorMessage } from './../components/SuccessErrorMessage';
 import TextInput from './../components/TextInput';
 import UTXOPicker from './../components/UTXOPicker';
@@ -755,8 +754,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     style={styles.textInput}
                                 />
                             </View>
-                        )
-                    }
+                        )}
                 </View>
             </ScrollView>
         );
