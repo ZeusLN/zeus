@@ -26,8 +26,10 @@ import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
 import FiatStore from './../stores/FiatStore';
 
 import Button from './../components/Button';
-import UTXOPicker from './../components/UTXOPicker';
+import FeeTable from './../components/FeeTable';
+import { ErrorMessage } from './../components/SuccessErrorMessage';
 import TextInput from './../components/TextInput';
+import UTXOPicker from './../components/UTXOPicker';
 
 import RESTUtils from './../utils/RESTUtils';
 import NFCUtils from './../utils/NFCUtils';
@@ -360,6 +362,11 @@ export default class Send extends React.Component<SendProps, SendState> {
                         }}
                         style={styles.textInput}
                     />
+                    {!!error_msg && !!destination && (
+                        <View style={{ paddingTop: 10, paddingBottom: 10 }}>
+                            <ErrorMessage message={error_msg} />
+                        </View>
+                    )}
                     {!isValid && !!destination && (
                         <Text
                             style={{
@@ -748,21 +755,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     style={styles.textInput}
                                 />
                             </View>
-                        )}
-
-                    {!!error_msg && (
-                        <React.Fragment>
-                            <Text
-                                style={{
-                                    ...styles.text,
-                                    marginTop: 10,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {error_msg}
-                            </Text>
-                        </React.Fragment>
-                    )}
+                        )
+                    }
                 </View>
             </ScrollView>
         );
