@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Platform,
     ScrollView,
     StyleSheet,
     Switch,
@@ -99,10 +100,19 @@ export default class OpenChannel extends React.Component<
 
     async componentDidMount() {
         this.initFromProps(this.props);
-        await this.initNfc();
+
+        if (Platform.OS === 'android') {
+            await this.enableNfc();
+        }
     }
 
-    initNfc = async () => {
+    disableNfc = () => {
+        NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
+        NfcManager.setEventListener(NfcEvents.SessionClosed, null);
+    };
+
+    enableNfc = async () => {
+        this.disableNfc();
         await NfcManager.start();
 
         return new Promise((resolve: any) => {
@@ -486,6 +496,20 @@ export default class OpenChannel extends React.Component<
                             secondary
                         />
                     </View>
+                    {Platform.OS === 'ios' && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString('general.enableNfc')}
+                                icon={{
+                                    name: 'nfc',
+                                    size: 25,
+                                    color: 'white'
+                                }}
+                                onPress={() => this.enableNfc()}
+                                secondary
+                            />
+                        </View>
+                    )}
                     <View style={styles.button}>
                         <FeeTable setFee={this.setFee} FeeStore={FeeStore} />
                     </View>
