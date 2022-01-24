@@ -1,8 +1,15 @@
 import * as React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
+
 import Button from './../components/Button';
+import LoadingIndicator from './../components/LoadingIndicator';
+import {
+    SuccessMessage,
+    ErrorMessage
+} from './../components/SuccessErrorMessage';
 import TextInput from './../components/TextInput';
+
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
@@ -20,6 +27,8 @@ interface SetFeesFormProps {
     channelPoint?: string;
     channelId?: string;
     expanded?: boolean;
+    minHtlc?: string;
+    maxHtlc?: string;
 }
 
 interface SetFeesFormState {
@@ -28,6 +37,8 @@ interface SetFeesFormState {
     newBaseFee: string;
     newFeeRate: string;
     newTimeLockDelta: string;
+    newMinHtlc: string;
+    newMaxHtlc: string;
 }
 
 @inject('FeeStore', 'ChannelsStore', 'SettingsStore')
@@ -46,11 +57,14 @@ export default class SetFeesForm extends React.Component<
             showNewFeesForm: false,
             feesSubmitted: false,
             newBaseFee: props.baseFee || '1',
-            newFeeRate:
-                props.feeRate || implementation === 'c-lightning-REST'
-                    ? '1'
-                    : '0.001',
-            newTimeLockDelta: props.timeLockDelta || '144'
+            newFeeRate: props.feeRate
+                ? props.feeRate
+                : implementation === 'c-lightning-REST'
+                ? '1'
+                : '0.001',
+            newTimeLockDelta: props.timeLockDelta || '144',
+            newMinHtlc: props.minHtlc,
+            newMaxHtlc: props.maxHtlc
         };
     }
 
@@ -60,7 +74,9 @@ export default class SetFeesForm extends React.Component<
             feesSubmitted,
             newBaseFee,
             newFeeRate,
-            newTimeLockDelta
+            newTimeLockDelta,
+            newMinHtlc,
+            newMaxHtlc
         } = this.state;
         const {
             FeeStore,
@@ -71,7 +87,9 @@ export default class SetFeesForm extends React.Component<
             timeLockDelta,
             channelPoint,
             channelId,
-            expanded
+            expanded,
+            minHTLC,
+            maxHTLC
         } = this.props;
         const {
             setFees,
@@ -107,32 +125,24 @@ export default class SetFeesForm extends React.Component<
 
                 {(expanded || showNewFeesForm) && (
                     <React.Fragment>
-                        {loading && (
-                            <Text style={{ color: themeColor('text') }}>
-                                {localeString('components.SetFeesForm.setting')}
-                            </Text>
-                        )}
+                        {loading && <LoadingIndicator />}
                         {feesSubmitted && setFeesSuccess && (
-                            <Text
-                                style={{
-                                    color: 'green'
-                                }}
-                            >
-                                {localeString('components.SetFeesForm.success')}
-                            </Text>
+                            <SuccessMessage
+                                message={localeString(
+                                    'components.SetFeesForm.success'
+                                )}
+                            />
                         )}
                         {feesSubmitted && setFeesError && (
-                            <Text
-                                style={{
-                                    color: 'red'
-                                }}
-                            >
-                                {setFeesErrorMsg
-                                    ? setFeesErrorMsg
-                                    : localeString(
-                                          'components.SetFeesForm.error'
-                                      )}
-                            </Text>
+                            <ErrorMessage
+                                message={
+                                    setFeesErrorMsg
+                                        ? setFeesErrorMsg
+                                        : localeString(
+                                              'components.SetFeesForm.error'
+                                          )
+                                }
+                            />
                         )}
 
                         <Text style={{ color: themeColor('text') }}>
@@ -195,6 +205,46 @@ export default class SetFeesForm extends React.Component<
                             autoCorrect={false}
                         />
 
+                        {implementation === 'lnd' && (
+                            <>
+                                <Text style={{ color: themeColor('text') }}>
+                                    {localeString(
+                                        'components.SetFeesForm.minHtlc'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    placeholder={minHTLC || '1'}
+                                    value={newMinHtlc}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            newMinHtlc: text
+                                        })
+                                    }
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                />
+
+                                <Text style={{ color: themeColor('text') }}>
+                                    {localeString(
+                                        'components.SetFeesForm.maxHtlc'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    placeholder={maxHTLC || '250000'}
+                                    value={newMaxHtlc}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            newMaxHtlc: text
+                                        })
+                                    }
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                />
+                            </>
+                        )}
+
                         <View style={styles.button}>
                             <Button
                                 title={localeString(
@@ -206,7 +256,9 @@ export default class SetFeesForm extends React.Component<
                                         newFeeRate,
                                         Number(newTimeLockDelta),
                                         channelPoint,
-                                        channelId
+                                        channelId,
+                                        newMinHtlc,
+                                        newMaxHtlc
                                     ).then(() => {
                                         if (
                                             channelId &&

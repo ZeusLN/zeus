@@ -120,7 +120,9 @@ export default class FeeStore {
         newFeeRate: string,
         timeLockDelta = 4,
         channelPoint?: string,
-        channelId?: string
+        channelId?: string,
+        minHtlc?: string,
+        maxHtlc?: string
     ) => {
         this.loading = true;
         this.setFeesError = false;
@@ -149,6 +151,13 @@ export default class FeeStore {
 
         if (!channelId && !channelPoint) {
             data.global = true;
+        }
+
+        if (minHtlc) {
+            data.min_htlc = minHtlc;
+        }
+        if (maxHtlc) {
+            data.max_htlc = maxHtlc;
         }
 
         return RESTUtils.setFees(data)
