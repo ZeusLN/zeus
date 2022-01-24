@@ -1,16 +1,11 @@
 import * as React from 'react';
-import {
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View
-} from 'react-native';
+import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
 
+import { Amount } from './../components/Amount';
 import HopPicker from './../components/HopPicker';
+import KeyValue from './../components/KeyValue';
 import LoadingIndicator from './../components/LoadingIndicator';
 import TextInput from './../components/TextInput';
 
@@ -96,7 +91,6 @@ export default class PaymentRequest extends React.Component<
             successProbability,
             feeEstimate
         } = InvoicesStore;
-        const { units, changeUnits, getAmount } = UnitsStore;
 
         const requestAmount = pay_req && pay_req.getRequestAmount;
         const expiry = pay_req && pay_req.expiry;
@@ -169,212 +163,88 @@ export default class PaymentRequest extends React.Component<
                     {!!pay_req && (
                         <View style={styles.content}>
                             <View style={styles.center}>
-                                <TouchableOpacity onPress={() => changeUnits()}>
-                                    <Text
-                                        style={{
-                                            ...styles.amount,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {units && getAmount(requestAmount || 0)}
-                                    </Text>
-                                </TouchableOpacity>
+                                <Amount
+                                    sats={requestAmount || 0}
+                                    jumboText
+                                    toggleable
+                                />
                             </View>
 
                             {(!!feeEstimate || feeEstimate === 0) && (
-                                <React.Fragment>
-                                    <TouchableOpacity
-                                        onPress={() => changeUnits()}
-                                    >
-                                        <Text
-                                            style={{
-                                                ...styles.label,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.PaymentRequest.feeEstimate'
-                                            )}
-                                            :
-                                        </Text>
-                                        <Text
-                                            style={{
-                                                ...styles.value,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {units && getAmount(feeEstimate)}
-                                        </Text>
-                                    </TouchableOpacity>
-                                </React.Fragment>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.PaymentRequest.feeEstimate'
+                                    )}
+                                    value={
+                                        <Amount
+                                            sats={feeEstimate || 0}
+                                            toggleable
+                                        />
+                                    }
+                                />
                             )}
 
                             {!!successProbability && (
-                                <React.Fragment>
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.PaymentRequest.successProbability'
-                                        )}
-                                        :
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            ...styles.value,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {`${successProbability}%`}
-                                    </Text>
-                                </React.Fragment>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.PaymentRequest.successProbability'
+                                    )}
+                                    value={`${successProbability}%`}
+                                />
                             )}
 
                             {!!description && (
-                                <React.Fragment>
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.PaymentRequest.description'
-                                        )}
-                                        :
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            ...styles.value,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {description}
-                                    </Text>
-                                </React.Fragment>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.PaymentRequest.description'
+                                    )}
+                                    value={description}
+                                />
                             )}
 
                             {!!timestamp && (
-                                <React.Fragment>
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.PaymentRequest.timestamp'
-                                        )}
-                                        :
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            ...styles.value,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {date}
-                                    </Text>
-                                </React.Fragment>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.PaymentRequest.timestamp'
+                                    )}
+                                    value={date}
+                                />
                             )}
 
                             {!!expiry && (
-                                <React.Fragment>
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.PaymentRequest.expiry'
-                                        )}
-                                        :
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            ...styles.value,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {expiry}
-                                    </Text>
-                                </React.Fragment>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.PaymentRequest.expiry'
+                                    )}
+                                    value={expiry}
+                                />
                             )}
 
                             {!!cltv_expiry && (
-                                <React.Fragment>
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.PaymentRequest.cltvExpiry'
-                                        )}
-                                        :
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            ...styles.value,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {cltv_expiry}
-                                    </Text>
-                                </React.Fragment>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.PaymentRequest.cltvExpiry'
+                                    )}
+                                    value={cltv_expiry}
+                                />
                             )}
 
                             {!!destination && (
-                                <React.Fragment>
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.PaymentRequest.destination'
-                                        )}
-                                        :
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            ...styles.value,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {destination}
-                                    </Text>
-                                </React.Fragment>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.PaymentRequest.destination'
+                                    )}
+                                    value={destination}
+                                />
                             )}
 
                             {!!payment_hash && (
-                                <React.Fragment>
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.PaymentRequest.paymentHash'
-                                        )}
-                                        :
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            ...styles.value,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {payment_hash}
-                                    </Text>
-                                </React.Fragment>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.PaymentRequest.paymentHash'
+                                    )}
+                                    value={payment_hash}
+                                />
                             )}
 
                             {!!pay_req && RESTUtils.supportsHopPicking() && (
