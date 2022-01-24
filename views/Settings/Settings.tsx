@@ -85,7 +85,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             height: selectedNode ? 70 : 50,
                             borderRadius: 10,
                             alignSelf: 'center',
-                            marginTop: 40
+                            marginTop: 20
                         }}
                     >
                         <View
@@ -424,7 +424,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         style={styles.columnField}
                         onPress={() => navigation.navigate('Theme')}
                     >
-                        <View style={{ padding: 5 }}>
+                        <View style={{ paddingLeft: 5, paddingTop: 2 }}>
                             <BrushIcon
                                 stroke={themeColor('text')}
                                 fill={themeColor('secondary')}
@@ -457,7 +457,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         style={styles.columnField}
                         onPress={() => navigation.navigate('Help')}
                     >
-                        <View style={{ padding: 5 }}>
+                        <View style={{ paddingLeft: 5, paddingTop: 4 }}>
                             <HelpIcon />
                         </View>
                         <Text
@@ -478,7 +478,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         fontSize: 16,
                         color: '#A7A9AC',
                         alignSelf: 'center',
-                        bottom: 25,
+                        bottom: 20,
                         position: 'absolute'
                     }}
                 >
@@ -490,9 +490,6 @@ export default class Settings extends React.Component<SettingsProps, {}> {
 }
 
 const styles = StyleSheet.create({
-    error: {
-        color: 'red'
-    },
     columnField: {
         flex: 1,
         flexDirection: 'row',
@@ -503,7 +500,7 @@ const styles = StyleSheet.create({
         left: '30%',
         position: 'absolute',
         marginLeft: -55,
-        padding: 6,
+        paddingTop: 3,
         flex: 1
     },
     separationLine: {
