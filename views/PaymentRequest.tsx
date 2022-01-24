@@ -127,7 +127,7 @@ export default class PaymentRequest extends React.Component<
         const BackButton = () => (
             <Icon
                 name="arrow-back"
-                onPress={() => navigation.goBack()}
+                onPress={() => navigation.navigate('Wallet', { refresh: true })}
                 color="#fff"
                 underlayColor="transparent"
             />

@@ -48,7 +48,7 @@ export default class AddressQRScanner extends React.Component<
                 title={localeString('views.AddressQRScanner.title')}
                 text={localeString('views.AddressQRScanner.text')}
                 handleQRScanned={this.handleAddressInvoiceScanned}
-                goBack={() => navigation.navigate('Send')}
+                goBack={() => navigation.goBack()}
             />
         );
     }

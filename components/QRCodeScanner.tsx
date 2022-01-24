@@ -17,9 +17,8 @@ interface QRState {
     cameraStatus: any;
 }
 
-const scannedCache: any = {};
-
 export default class QRCodeScanner extends React.Component<QRProps, QRState> {
+    scannedCache: any = {};
     state = {
         cameraStatus: null
     };
@@ -32,12 +31,12 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
 
     handleRead = (data: any) => {
         const hash = createHash('sha256').update(data).digest().toString('hex');
-        if (scannedCache[hash]) {
+        if (this.scannedCache[hash]) {
             // this QR was already scanned let's prevent firing duplicate
             // callbacks
             return;
         }
-        scannedCache[hash] = +new Date();
+        this.scannedCache[hash] = +new Date();
         this.props.handleQRScanned(data);
     };
 
