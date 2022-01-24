@@ -17,6 +17,10 @@ import Success from '../images/GIF/Success.gif';
 import Button from './../components/Button';
 import CollapsedQR from './../components/CollapsedQR';
 import LoadingIndicator from './../components/LoadingIndicator';
+import {
+    SuccessMessage,
+    ErrorMessage
+} from './../components/SuccessErrorMessage';
 import TextInput from './../components/TextInput';
 
 import FiatStore from './../stores/FiatStore';
@@ -263,24 +267,30 @@ export default class Receive extends React.Component<
                         selectedIndex === 0 && (
                             <View>
                                 {!!payment_request && (
-                                    <Text
-                                        style={{ color: 'green', padding: 20 }}
-                                    >
-                                        {localeString(
-                                            'views.Receive.successCreate'
+                                    <>
+                                        <SuccessMessage
+                                            message={localeString(
+                                                'views.Receive.successCreate'
+                                            )}
+                                        />
+                                        {!!lnurl && (
+                                            <SuccessMessage
+                                                message={
+                                                    !!lnurl &&
+                                                    ` ${localeString(
+                                                        'views.Receive.andSentTo'
+                                                    )} ${lnurl.domain}`
+                                                }
+                                            />
                                         )}
-                                        {!!lnurl &&
-                                            ` ${localeString(
-                                                'views.Receive.andSentTo'
-                                            )} ${lnurl.domain}`}
-                                    </Text>
+                                    </>
                                 )}
                                 {creatingInvoiceError && (
-                                    <Text style={{ color: 'red', padding: 20 }}>
-                                        {localeString(
+                                    <ErrorMessage
+                                        message={localeString(
                                             'views.Receive.errorCreate'
                                         )}
-                                    </Text>
+                                    />
                                 )}
                                 {error_msg && (
                                     <Text
@@ -302,7 +312,7 @@ export default class Receive extends React.Component<
                                     />
                                 )}
                                 <Text style={{ color: themeColor('text') }}>
-                                    {localeString('views.Receive.memo')}:
+                                    {localeString('views.Receive.memo')}
                                 </Text>
                                 <TextInput
                                     placeholder={localeString(
@@ -395,13 +405,13 @@ export default class Receive extends React.Component<
                                     <>
                                         <Text
                                             style={{
-                                                color: themeColor('text')
+                                                color: themeColor('text'),
+                                                paddingTop: 10
                                             }}
                                         >
                                             {localeString(
                                                 'views.Receive.expiration'
                                             )}
-                                            :
                                         </Text>
                                         <TextInput
                                             keyboardType="numeric"
@@ -425,7 +435,6 @@ export default class Receive extends React.Component<
                                             {localeString(
                                                 'views.Receive.routeHints'
                                             )}
-                                            :
                                         </Text>
                                         <Switch
                                             value={routeHints}
@@ -456,7 +465,6 @@ export default class Receive extends React.Component<
                                             {localeString(
                                                 'views.Receive.ampInvoice'
                                             )}
-                                            :
                                         </Text>
                                         <Switch
                                             value={ampInvoice}
