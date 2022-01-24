@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Platform,
     StyleSheet,
     Text,
     View,
@@ -18,7 +19,6 @@ import handleAnything from './../utils/handleAnything';
 import InvoicesStore from './../stores/InvoicesStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
 import TransactionsStore from './../stores/TransactionsStore';
-import FeeStore from './../stores/FeeStore';
 import BalanceStore from './../stores/BalanceStore';
 import UTXOsStore from './../stores/UTXOsStore';
 import SettingsStore from './../stores/SettingsStore';
@@ -45,7 +45,6 @@ interface SendProps {
     TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;
     FiatStore: FiatStore;
-    FeeStore: FeeStore;
     UnitsStore: UnitsStore;
     UTXOsStore: UTXOsStore;
 }
@@ -73,7 +72,6 @@ interface SendState {
     'BalanceStore',
     'SettingsStore',
     'UnitsStore',
-    'FeeStore',
     'FiatStore',
     'UTXOsStore'
 )
@@ -121,10 +119,18 @@ export default class Send extends React.Component<SendProps, SendState> {
             this.validateAddress(this.state.destination);
         }
 
-        await this.initNfc();
+        if (Platform.OS === 'android') {
+            await this.enableNfc();
+        }
     }
 
-    initNfc = async () => {
+    disableNfc = () => {
+        NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
+        NfcManager.setEventListener(NfcEvents.SessionClosed, null);
+    };
+
+    enableNfc = async () => {
+        this.disableNfc();
         await NfcManager.start();
 
         return new Promise((resolve: any) => {
@@ -263,7 +269,6 @@ export default class Send extends React.Component<SendProps, SendState> {
         const {
             SettingsStore,
             UnitsStore,
-            FeeStore,
             FiatStore,
             BalanceStore,
             UTXOsStore,
@@ -289,9 +294,10 @@ export default class Send extends React.Component<SendProps, SendState> {
         const { units, changeUnits } = UnitsStore;
         const { fiatRates }: any = FiatStore;
 
-        const fiatEntry = fiat
-            ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
-            : null;
+        const fiatEntry =
+            fiat && fiatRates && fiatRates.filter
+                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+                : null;
 
         const rate =
             fiat && fiat !== 'Disabled' && fiatRates && fiatEntry
@@ -720,8 +726,23 @@ export default class Send extends React.Component<SendProps, SendState> {
                         />
                     </View>
 
+                    {Platform.OS === 'ios' && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString('general.enableNfc')}
+                                icon={{
+                                    name: 'nfc',
+                                    size: 25,
+                                    color: 'white'
+                                }}
+                                onPress={() => this.enableNfc()}
+                                secondary
+                            />
+                        </View>
+                    )}
+
                     {transactionType === 'On-chain' &&
-                        (implementation === 'eclair' ? (
+                        implementation === 'eclair' && (
                             <View style={styles.feeTableButton}>
                                 <TextInput
                                     keyboardType="numeric"
@@ -734,14 +755,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     style={styles.textInput}
                                 />
                             </View>
-                        ) : (
-                            <View style={styles.feeTableButton}>
-                                <FeeTable
-                                    setFee={this.setFee}
-                                    FeeStore={FeeStore}
-                                />
-                            </View>
-                        ))}
+                        )
+                    }
                 </View>
             </ScrollView>
         );
