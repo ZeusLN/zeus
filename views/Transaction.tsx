@@ -81,6 +81,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                             </Text>
                         </TouchableOpacity>
                     }
+                    key={key}
                     sensitive
                 />
             )
