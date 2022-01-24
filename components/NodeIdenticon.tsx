@@ -5,7 +5,7 @@ import PrivacyUtils from './../utils/PrivacyUtils';
 
 const hash = require('object-hash');
 
-export const NodeTitle = (selectedNode: any) => {
+export const NodeTitle = (selectedNode: any, maxLength = 24) => {
     const displayName =
         selectedNode && selectedNode.nickname
             ? selectedNode.nickname
@@ -20,7 +20,9 @@ export const NodeTitle = (selectedNode: any) => {
             : (selectedNode && selectedNode.host) || 'Unknown';
 
     const title = PrivacyUtils.sensitiveValue(displayName, 8);
-    return title.length > 21 ? title.substring(0, 18) + '...' : title;
+    return title.length > maxLength
+        ? title.substring(0, maxLength - 3) + '...'
+        : title;
 };
 
 export default function NodeIdenticon({
