@@ -3,6 +3,7 @@ import { FlatList, View } from 'react-native';
 import { Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
+import { Amount } from './../../components/Amount';
 import LoadingIndicator from './../../components/LoadingIndicator';
 
 import { localeString } from './../../utils/LocaleUtils';
@@ -10,15 +11,13 @@ import RESTUtils from './../../utils/RESTUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import UTXOsStore from './../../stores/UTXOsStore';
-import UnitsStore from './../../stores/UnitsStore';
 
 interface CoinControlProps {
     navigation: any;
     UTXOsStore: UTXOsStore;
-    UnitsStore: UnitsStore;
 }
 
-@inject('UTXOsStore', 'UnitsStore')
+@inject('UTXOsStore')
 @observer
 export default class CoinControl extends React.Component<CoinControlProps, {}> {
     async UNSAFE_componentWillMount() {
@@ -40,8 +39,7 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
     );
 
     render() {
-        const { navigation, UTXOsStore, UnitsStore } = this.props;
-        const { getAmount } = UnitsStore;
+        const { navigation, UTXOsStore } = this.props;
         const { loading, utxos, getUTXOs } = UTXOsStore;
 
         const CloseButton = () => (
@@ -82,7 +80,6 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                     <FlatList
                         data={utxos}
                         renderItem={({ item }) => {
-                            const displayName = getAmount(item.getAmount);
                             const subTitle = item.address;
 
                             return (
@@ -100,15 +97,10 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                                         }}
                                     >
                                         <ListItem.Content>
-                                            <ListItem.Title
-                                                right
-                                                style={{
-                                                    fontWeight: '600',
-                                                    color: themeColor('text')
-                                                }}
-                                            >
-                                                {displayName}
-                                            </ListItem.Title>
+                                            <Amount
+                                                sats={item.getAmount}
+                                                sensitive
+                                            />
                                             <ListItem.Subtitle
                                                 right
                                                 style={{

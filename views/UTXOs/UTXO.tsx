@@ -8,27 +8,28 @@ import {
 } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import UrlUtils from './../../utils/UrlUtils';
-import Utxo from './../../models/Utxo';
-import PrivacyUtils from './../../utils/PrivacyUtils';
 
-import NodeInfoStore from './../../stores/NodeInfoStore';
-import UnitsStore from './../../stores/UnitsStore';
+import { Amount } from './../../components/Amount';
+import KeyValue from './../../components/KeyValue';
+
+import Utxo from './../../models/Utxo';
+
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
+import UrlUtils from './../../utils/UrlUtils';
+
+import NodeInfoStore from './../../stores/NodeInfoStore';
 
 interface UTXOProps {
     navigation: any;
     NodeInfoStore: NodeInfoStore;
-    UnitsStore: UnitsStore;
 }
 
-@inject('NodeInfoStore', 'UnitsStore')
+@inject('NodeInfoStore')
 @observer
 export default class UTXO extends React.Component<UTXOProps> {
     render() {
-        const { NodeInfoStore, UnitsStore, navigation } = this.props;
-        const { changeUnits, getAmount, units } = UnitsStore;
+        const { NodeInfoStore, navigation } = this.props;
         const utxo: Utxo = navigation.getParam('utxo', null);
         const { testnet } = NodeInfoStore;
 
@@ -44,12 +45,6 @@ export default class UTXO extends React.Component<UTXOProps> {
                 color={themeColor('text')}
                 underlayColor="transparent"
             />
-        );
-
-        const amountDisplay = PrivacyUtils.sensitiveValue(
-            getAmount(amount),
-            8,
-            true
         );
 
         return (
@@ -69,123 +64,69 @@ export default class UTXO extends React.Component<UTXOProps> {
                     backgroundColor={themeColor('secondary')}
                 />
                 <View style={styles.center}>
-                    <TouchableOpacity onPress={() => changeUnits()}>
-                        <Text
-                            style={{
-                                color: themeColor('text'),
-                                fontSize: 30,
-                                fontWeight: 'bold'
-                            }}
-                        >
-                            {units && amountDisplay}
-                        </Text>
-                    </TouchableOpacity>
+                    <Amount sats={amount} jumboText toggleable sensitive />
                 </View>
 
                 <View style={styles.content}>
-                    <View>
-                        <Text
-                            style={{
-                                ...styles.label,
-                                color: themeColor('text')
-                            }}
-                        >
-                            {localeString('general.outpoint')}:
-                        </Text>
-                        <Text
-                            style={{
-                                ...styles.value,
-                                color: themeColor('text')
-                            }}
-                        >
-                            {getOutpoint}
-                        </Text>
-                    </View>
+                    <KeyValue
+                        keyValue={localeString('general.outpoint')}
+                        value={getOutpoint}
+                    />
 
                     {!!address && (
-                        <View>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('general.address')}:
-                            </Text>
-                            <TouchableOpacity
-                                onPress={() =>
-                                    UrlUtils.goToBlockExplorerAddress(
-                                        address,
-                                        testnet
-                                    )
-                                }
-                            >
-                                <Text style={styles.valueWithLink}>
-                                    {PrivacyUtils.sensitiveValue(address)}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
+                        <KeyValue
+                            keyValue={localeString('general.address')}
+                            value={
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        UrlUtils.goToBlockExplorerAddress(
+                                            address,
+                                            testnet
+                                        )
+                                    }
+                                >
+                                    <Text style={styles.valueWithLink}>
+                                        {address}
+                                    </Text>
+                                </TouchableOpacity>
+                            }
+                            sensitive
+                        />
                     )}
 
-                    <Text
-                        style={{ ...styles.label, color: themeColor('text') }}
-                    >
-                        {localeString('views.Transaction.transactionHash')}:
-                    </Text>
-                    <TouchableOpacity
-                        onPress={() =>
-                            UrlUtils.goToBlockExplorerTXID(tx, testnet)
+                    <KeyValue
+                        keyValue={localeString(
+                            'views.Transaction.transactionHash'
+                        )}
+                        value={
+                            <TouchableOpacity
+                                onPress={() =>
+                                    UrlUtils.goToBlockExplorerTXID(tx, testnet)
+                                }
+                            >
+                                <Text style={styles.valueWithLink}>{tx}</Text>
+                            </TouchableOpacity>
                         }
-                    >
-                        <Text style={styles.valueWithLink}>
-                            {PrivacyUtils.sensitiveValue(tx)}
-                        </Text>
-                    </TouchableOpacity>
+                        sensitive
+                    />
 
                     {!!getConfs && (
-                        <View>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Transaction.numConf')}:
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.value,
-                                    color: isUnconfirmed ? 'red' : 'green'
-                                }}
-                            >
-                                {PrivacyUtils.sensitiveValue(getConfs, 3, true)}
-                            </Text>
-                        </View>
+                        <KeyValue
+                            keyValue={localeString('views.Transaction.numConf')}
+                            value={getConfs}
+                            color={isUnconfirmed ? 'red' : 'green'}
+                            sensitive
+                        />
                     )}
 
                     {blockheight && (
-                        <View>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Transaction.blockHeight')}:
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.value,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {PrivacyUtils.sensitiveValue(
-                                    blockheight,
-                                    6,
-                                    true
-                                )}
-                            </Text>
-                        </View>
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Transaction.blockHeight'
+                            )}
+                            value={blockheight}
+                            sensitive
+                        />
                     )}
                 </View>
             </ScrollView>
@@ -202,12 +143,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingTop: 15,
         paddingBottom: 15
-    },
-    label: {
-        paddingTop: 5
-    },
-    value: {
-        paddingBottom: 5
     },
     valueWithLink: {
         paddingBottom: 5,
