@@ -6,6 +6,10 @@ import { inject, observer } from 'mobx-react';
 import Button from './../../components/Button';
 import CopyButton from './../../components/CopyButton';
 import LoadingIndicator from './../../components/LoadingIndicator';
+import {
+    SuccessMessage,
+    ErrorMessage
+} from './../../components/SuccessErrorMessage';
 import TextInput from './../../components/TextInput';
 
 import { themeColor } from './../../utils/ThemeUtils';
@@ -278,21 +282,23 @@ export default class SignVerifyMessage extends React.Component<
                         </View>
 
                         {valid && (
-                            <Text style={styles.successField}>
-                                {`${localeString(
+                            <SuccessMessage
+                                message={`${localeString(
                                     'views.Settings.SignMessage.success'
                                 )} ${pubkey}`}
-                            </Text>
+                            />
                         )}
 
                         {(error || valid === false) && (
-                            <Text style={styles.errorField}>
-                                {error
-                                    ? error
-                                    : localeString(
-                                          'views.Settings.SignMessage.error'
-                                      )}
-                            </Text>
+                            <ErrorMessage
+                                message={
+                                    error
+                                        ? error
+                                        : localeString(
+                                              'views.Settings.SignMessage.error'
+                                          )
+                                }
+                            />
                         )}
 
                         <View style={styles.button}>
@@ -368,25 +374,5 @@ const styles = StyleSheet.create({
         borderRadius: 6,
         marginBottom: 20,
         padding: 10
-    },
-    successField: {
-        fontSize: 20,
-        width: '100%',
-        top: 10,
-        color: '#41CF3E',
-        backgroundColor: '#273832',
-        borderRadius: 6,
-        marginBottom: 20,
-        padding: 15
-    },
-    errorField: {
-        fontSize: 20,
-        width: '100%',
-        top: 10,
-        color: '#E14C4C',
-        backgroundColor: '#372C33',
-        borderRadius: 6,
-        marginBottom: 20,
-        padding: 15
     }
 });

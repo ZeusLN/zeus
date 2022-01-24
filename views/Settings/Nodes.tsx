@@ -1,16 +1,13 @@
 import * as React from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { FlatList, View } from 'react-native';
 import { Header, Icon, ListItem } from 'react-native-elements';
-import Identicon from 'identicon.js';
 import { inject, observer } from 'mobx-react';
 
 import Button from './../../components/Button';
 import NodeIdenticon, { NodeTitle } from './../../components/NodeIdenticon';
 import SettingsStore from './../../stores/SettingsStore';
-import PrivacyUtils from './../../utils/PrivacyUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
-const hash = require('object-hash');
 
 interface NodesProps {
     nodes: any[];

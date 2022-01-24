@@ -15,6 +15,10 @@ import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
 import Button from './../components/Button';
 import FeeTable from './../components/FeeTable';
 import LoadingIndicator from './../components/LoadingIndicator';
+import {
+    SuccessMessage,
+    ErrorMessage
+} from './../components/SuccessErrorMessage';
 import TextInput from './../components/TextInput';
 import UTXOPicker from './../components/UTXOPicker';
 
@@ -100,11 +104,6 @@ export default class OpenChannel extends React.Component<
 
     initNfc = async () => {
         await NfcManager.start();
-
-        const cleanUp = () => {
-            NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
-            NfcManager.setEventListener(NfcEvents.SessionClosed, null);
-        };
 
         return new Promise((resolve: any) => {
             let tagFound = null;
@@ -285,21 +284,27 @@ export default class OpenChannel extends React.Component<
                         <LoadingIndicator />
                     )}
                     {peerSuccess && (
-                        <Text style={{ color: 'green' }}>
-                            {localeString('views.OpenChannel.peerSuccess')}
-                        </Text>
+                        <SuccessMessage
+                            message={localeString(
+                                'views.OpenChannel.peerSuccess'
+                            )}
+                        />
                     )}
                     {channelSuccess && (
-                        <Text style={{ color: 'green' }}>
-                            {localeString('views.OpenChannel.channelSuccess')}
-                        </Text>
+                        <SuccessMessage
+                            message={localeString(
+                                'views.OpenChannel.channelSuccess'
+                            )}
+                        />
                     )}
                     {(errorMsgPeer || errorMsgChannel) && (
-                        <Text style={{ color: 'red' }}>
-                            {errorMsgChannel ||
+                        <ErrorMessage
+                            message={
+                                errorMsgChannel ||
                                 errorMsgPeer ||
-                                localeString('general.error')}
-                        </Text>
+                                localeString('general.error')
+                            }
+                        />
                     )}
 
                     <Text

@@ -1,17 +1,13 @@
 import * as React from 'react';
 import {
-    ActionSheetIOS,
     Modal,
-    Platform,
     StyleSheet,
     Switch,
     Text,
     View,
-    ScrollView,
-    TouchableOpacity
+    ScrollView
 } from 'react-native';
 import Clipboard from '@react-native-community/clipboard';
-import { Picker } from '@react-native-picker/picker';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -384,7 +380,6 @@ export default class AddEditNode extends React.Component<
             loading,
             createAccountError,
             createAccountSuccess,
-            settings,
             createAccount
         } = SettingsStore;
 
@@ -1107,7 +1102,7 @@ export default class AddEditNode extends React.Component<
                         </View>
                     )}
 
-                    <View style={styles.button}>
+                    <View style={{ ...styles.button, marginTop: 20 }}>
                         <Button
                             title={
                                 saved
@@ -1186,7 +1181,7 @@ export default class AddEditNode extends React.Component<
 
                     {(implementation === 'lnd' ||
                         implementation === 'c-lightning-REST') && (
-                        <View style={styles.button}>
+                        <View style={{ ...styles.button, marginBottom: 40 }}>
                             <Button
                                 title={localeString(
                                     'views.Settings.AddEditNode.scanBtcpay'

@@ -1,12 +1,5 @@
 import * as React from 'react';
-import {
-    Image,
-    StyleSheet,
-    Text,
-    ScrollView,
-    View,
-    TouchableOpacity
-} from 'react-native';
+import { Image, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button } from 'react-native-elements';
 
@@ -37,7 +30,7 @@ export default class SendingOnChain extends React.Component<
 > {
     getBackgroundColor() {
         const { TransactionsStore } = this.props;
-        const { txid, publishSuccess, error } = TransactionsStore;
+        const { error } = TransactionsStore;
 
         if (error) {
             return 'darkred';

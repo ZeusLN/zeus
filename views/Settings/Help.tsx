@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, ScrollView, Text, View } from 'react-native';
+import { FlatList, View } from 'react-native';
 import { Header, Icon, ListItem } from 'react-native-elements';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -56,7 +56,7 @@ function Help(props: HelpProps) {
             />
             <FlatList
                 data={HELP_ITEMS}
-                renderItem={({ item, index }) => (
+                renderItem={({ item }) => (
                     <ListItem
                         containerStyle={{
                             borderBottomWidth: 0,

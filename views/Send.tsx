@@ -126,11 +126,6 @@ export default class Send extends React.Component<SendProps, SendState> {
     initNfc = async () => {
         await NfcManager.start();
 
-        const cleanUp = () => {
-            NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
-            NfcManager.setEventListener(NfcEvents.SessionClosed, null);
-        };
-
         return new Promise((resolve: any) => {
             let tagFound = null;
 
@@ -293,9 +288,10 @@ export default class Send extends React.Component<SendProps, SendState> {
         const { units, changeUnits } = UnitsStore;
         const { fiatRates }: any = FiatStore;
 
-        const fiatEntry = fiat
-            ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
-            : null;
+        const fiatEntry =
+            fiat && fiatRates && fiatRates.filter
+                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+                : null;
 
         const rate =
             fiat && fiat !== 'Disabled' && fiatRates && fiatEntry
@@ -747,6 +743,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <Text
                                 style={{
                                     ...styles.text,
+                                    marginTop: 10,
                                     color: themeColor('text')
                                 }}
                             >

@@ -2,7 +2,6 @@ import * as React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import Identicon from 'identicon.js';
 
 import ForwardIcon from '../../images/SVG/Caret Right-3.svg';
 import AccountIcon from '../../images/SVG/Wallet2.svg';
@@ -19,12 +18,10 @@ import NodeOn from '../../images/SVG/Node On.svg';
 import NodeIdenticon, { NodeTitle } from './../../components/NodeIdenticon';
 import { themeColor } from './../../utils/ThemeUtils';
 import { localeString } from './../../utils/LocaleUtils';
-import PrivacyUtils from './../../utils/PrivacyUtils';
 import RESTUtils from './../../utils/RESTUtils';
 import { version } from './../../package.json';
 import SettingsStore from './../stores/SettingsStore';
 import UnitsStore from './../stores/UnitsStore';
-const hash = require('object-hash');
 
 interface SettingsProps {
     navigation: any;

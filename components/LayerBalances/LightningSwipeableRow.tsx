@@ -5,7 +5,6 @@ import {
     Text,
     View,
     I18nManager,
-    Image,
     TouchableOpacity
 } from 'react-native';
 
@@ -80,10 +79,7 @@ export default class LightningSwipeableRow extends Component<
         );
     };
 
-    private renderActions = (
-        progress: Animated.AnimatedInterpolation,
-        _dragAnimatedValue: Animated.AnimatedInterpolation
-    ) => (
+    private renderActions = (progress: Animated.AnimatedInterpolation) => (
         <View
             style={{
                 marginLeft: 15,
