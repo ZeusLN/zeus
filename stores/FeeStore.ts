@@ -35,27 +35,6 @@ export default class FeeStore {
     }
 
     @action
-    public getOnchainFees = () => {
-        this.loading = true;
-        RNFetchBlob.fetch('get', 'https://whatthefee.io/data.json')
-            .then((response: any) => {
-                const status = response.info().status;
-                if (status == 200) {
-                    const data = response.json();
-                    this.loading = false;
-                    this.dataFrame = data;
-                } else {
-                    this.dataFrame = {};
-                    this.loading = false;
-                }
-            })
-            .catch(() => {
-                this.dataFrame = {};
-                this.loading = false;
-            });
-    };
-
-    @action
     public getOnchainFeesviaMempool = () => {
         this.loading = true;
         this.error = false;
