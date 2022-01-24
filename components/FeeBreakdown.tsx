@@ -262,10 +262,12 @@ export default class FeeBreakdown extends React.Component<
                                 keyValue={localeString('views.Channel.minHTLC')}
                                 value={
                                     <Amount
-                                        sats={
-                                            chanInfo[channelId].node2_policy
-                                                .min_htlc
-                                        }
+                                        sats={`${
+                                            Number(
+                                                chanInfo[channelId].node2_policy
+                                                    .min_htlc
+                                            ) / 1000
+                                        }`}
                                         toggleable
                                         sensitive
                                     />
@@ -320,6 +322,18 @@ export default class FeeBreakdown extends React.Component<
                                     timeLockDelta={chanInfo[
                                         channelId
                                     ].node2_policy.time_lock_delta.toString()}
+                                    minHtlc={`${
+                                        Number(
+                                            chanInfo[channelId].node2_policy
+                                                .min_htlc
+                                        ) / 1000
+                                    }`}
+                                    maxHtlc={`${
+                                        Number(
+                                            chanInfo[channelId].node2_policy
+                                                .max_htlc_msat
+                                        ) / 1000
+                                    }`}
                                     channelPoint={channelPoint}
                                     channelId={channelId}
                                     FeeStore={FeeStore}

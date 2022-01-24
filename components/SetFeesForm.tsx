@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
 import Button from './../components/Button';
+import LoadingIndicator from './../components/LoadingIndicator';
 import {
     SuccessMessage,
     ErrorMessage
@@ -56,10 +57,11 @@ export default class SetFeesForm extends React.Component<
             showNewFeesForm: false,
             feesSubmitted: false,
             newBaseFee: props.baseFee || '1',
-            newFeeRate:
-                props.feeRate || implementation === 'c-lightning-REST'
-                    ? '1'
-                    : '0.001',
+            newFeeRate: props.feeRate
+                ? props.feeRate
+                : implementation === 'c-lightning-REST'
+                ? '1'
+                : '0.001',
             newTimeLockDelta: props.timeLockDelta || '144',
             newMinHtlc: props.minHtlc,
             newMaxHtlc: props.maxHtlc
@@ -123,11 +125,7 @@ export default class SetFeesForm extends React.Component<
 
                 {(expanded || showNewFeesForm) && (
                     <React.Fragment>
-                        {loading && (
-                            <Text style={{ color: themeColor('text') }}>
-                                {localeString('components.SetFeesForm.setting')}
-                            </Text>
-                        )}
+                        {loading && <LoadingIndicator />}
                         {feesSubmitted && setFeesSuccess && (
                             <SuccessMessage
                                 message={localeString(

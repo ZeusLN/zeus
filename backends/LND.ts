@@ -246,9 +246,13 @@ export default class LND {
                 base_fee_msat: data.base_fee_msat,
                 fee_rate: `${Number(data.fee_rate) / 100}`,
                 global: true,
-                time_lock_delta: data.time_lock_delta,
-                min_htlc_msat: `${Number(data.min_htlc) * 1000}`,
-                max_htlc_msat: `${Number(data.max_htlc) * 1000}`,
+                time_lock_delta: Number(data.time_lock_delta),
+                min_htlc_msat: data.min_htlc
+                    ? `${Number(data.min_htlc) * 1000}`
+                    : null,
+                max_htlc_msat: data.max_htlc
+                    ? `${Number(data.max_htlc) * 1000}`
+                    : null,
                 min_htlc_msat_specified: data.min_htlc ? true : false
             });
         }
@@ -259,9 +263,13 @@ export default class LND {
                 funding_txid_str: data.chan_point.funding_txid_str,
                 output_index: data.chan_point.output_index
             },
-            time_lock_delta: data.time_lock_delta,
-            min_htlc_msat: `${Number(data.min_htlc) * 1000}`,
-            max_htlc_msat: `${Number(data.max_htlc) * 1000}`,
+            time_lock_delta: Number(data.time_lock_delta),
+            min_htlc_msat: data.min_htlc
+                ? `${Number(data.min_htlc) * 1000}`
+                : null,
+            max_htlc_msat: data.max_htlc
+                ? `${Number(data.max_htlc) * 1000}`
+                : null,
             min_htlc_msat_specified: data.min_htlc ? true : false
         });
     };
