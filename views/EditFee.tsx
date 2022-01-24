@@ -1,6 +1,5 @@
 import * as React from 'react';
 import {
-    Image,
     ScrollView,
     StyleSheet,
     Text,
@@ -22,8 +21,6 @@ import Refresh from '../images/SVG/Refresh.svg';
 import ErrorIcon from '../images/SVG/ErrorIcon.svg';
 
 import FeeStore from './../stores/FeeStore';
-
-const MempoolSpace = require('../images/mempool-space-logo.png');
 
 interface NodeInfoProps {
     FeeStore: FeeStore;
@@ -88,19 +85,6 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                     rightComponent={<ReloadButton />}
                 />
                 <ScrollView style={{ paddingTop: 10, paddingLeft: 20 }}>
-                    <Image
-                        source={MempoolSpace}
-                        style={{
-                            alignSelf: 'center',
-                            margin: 20,
-                            height: 35,
-                            width: 140,
-                            backgroundColor:
-                                themeColor('generalStyle') === 'light'
-                                    ? '#1d1f31'
-                                    : themeColor('background')
-                        }}
-                    />
                     {loading && !error && (
                         <View style={{ flex: 1, justifyContent: 'center' }}>
                             <LoadingIndicator />
