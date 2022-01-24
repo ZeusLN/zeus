@@ -62,7 +62,10 @@ export default class Receive extends React.Component<
     };
 
     componentDidMount() {
-        const { navigation } = this.props;
+        const { navigation, InvoicesStore } = this.props;
+        const { reset } = InvoicesStore;
+
+        reset();
         const lnurl: LNURLWithdrawParams | undefined =
             navigation.getParam('lnurlParams');
 
