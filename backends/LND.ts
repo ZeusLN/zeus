@@ -51,6 +51,13 @@ export default class LND {
                 .then((response: any) => {
                     delete calls[id];
                     if (response.info().status < 300) {
+                        // handle ws responses
+                        if (response.data.includes('\n')) {
+                            const split = response.data.split('\n');
+                            const length = split.length;
+                            // last instance is empty
+                            return JSON.parse(split[length - 2]);
+                        }
                         return response.json();
                     } else {
                         const errorInfo = response.json();

@@ -173,11 +173,13 @@ export default class InvoicesStore {
                     const formattedRhash = invoice.r_hash
                         .replace(/\+/g, '-')
                         .replace(/\//g, '_');
-                    RESTUtils.subscribeInvoice(formattedRhash)
-                        // TODO: get this to catch the response properly
-                        .finally(() => {
-                            this.watchedInvoicePaid = true;
-                        });
+                    RESTUtils.subscribeInvoice(formattedRhash).then(
+                        (response: any) => {
+                            if (response.result && response.result.settled) {
+                                this.watchedInvoicePaid = true;
+                            }
+                        }
+                    );
                 }
             })
             .catch((error: any) => {
