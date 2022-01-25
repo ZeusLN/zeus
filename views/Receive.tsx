@@ -67,7 +67,10 @@ export default class Receive extends React.Component<
     };
 
     componentDidMount() {
-        const { navigation } = this.props;
+        const { navigation, InvoicesStore } = this.props;
+        const { reset } = InvoicesStore;
+
+        reset();
         const lnurl: LNURLWithdrawParams | undefined =
             navigation.getParam('lnurlParams');
 
@@ -119,7 +122,7 @@ export default class Receive extends React.Component<
         } = this.props;
         const { selectedIndex, memo, value, expiry, ampInvoice, routeHints } =
             this.state;
-        const { units, changeUnits } = UnitsStore;
+        const { units, changeUnits, getAmount } = UnitsStore;
         const { fiatRates }: any = FiatStore;
 
         const {
@@ -261,7 +264,7 @@ export default class Receive extends React.Component<
                             >
                                 {`${localeString(
                                     'view.Receive.youReceived'
-                                )} ${payment_request_amt} sats`}
+                                )} ${getAmount(payment_request_amt)}`}
                             </Text>
                         </View>
                     ) : (
