@@ -698,7 +698,9 @@ export default class AddEditNode extends React.Component<
                     </View>
                 )}
 
-                <ScrollView style={{ flex: 1, padding: 15 }}>
+                <ScrollView
+                    style={{ flex: 1, paddingLeft: 15, paddingRight: 15 }}
+                >
                     <View style={styles.form}>
                         {!!createAccountError &&
                             implementation === 'lndhub' &&
