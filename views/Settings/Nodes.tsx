@@ -133,7 +133,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 color: themeColor('text')
                                             }}
                                         >
-                                            {NodeTitle(item)}
+                                            {NodeTitle(item, 32)}
                                         </ListItem.Title>
                                         <ListItem.Subtitle
                                             style={{
