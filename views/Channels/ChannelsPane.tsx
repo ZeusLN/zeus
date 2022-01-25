@@ -1,11 +1,5 @@
 import * as React from 'react';
-import {
-    FlatList,
-    View,
-    StyleSheet,
-    Text,
-    TouchableHighlight
-} from 'react-native';
+import { FlatList, View, StyleSheet, TouchableHighlight } from 'react-native';
 
 import { inject, observer } from 'mobx-react';
 import {
@@ -111,13 +105,13 @@ export default class ChannelsPane extends React.PureComponent<
                         totalInbound={totalInbound}
                         totalOutbound={totalOutbound}
                         totalOffline={totalOffline}
+                        radius={donutHeight / 2}
                     />
                 </View>
                 <ChannelsHeader
                     totalInbound={totalInbound}
                     totalOutbound={totalOutbound}
                     totalOffline={totalOffline}
-                    height={donutHeight}
                 />
                 <FlatList
                     data={channels}

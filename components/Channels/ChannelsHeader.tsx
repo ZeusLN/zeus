@@ -14,9 +14,10 @@ const inboundYellow = themeColor('inbound');
 const offlineGray = themeColor('secondaryText');
 
 export function ChannelsDonut(props) {
-    const radius = 42,
-        strokeWidth = 6;
-    const { totalInbound, totalOutbound, totalOffline } = props;
+    const { totalInbound, totalOutbound, totalOffline, radius } = props;
+
+    const strokeWidth = 6;
+
     const halfCircle = radius + strokeWidth;
     const circumference = 2 * Math.PI * radius;
     const color = 'black';
@@ -26,13 +27,13 @@ export function ChannelsDonut(props) {
     const inboundLength = (totalInbound / total) * circumference;
     const offlineLength = (totalOffline / total) * circumference;
 
-    const defaultHeight = radius * 2;
+    const height = radius * 2;
 
     return (
-        <View style={{ width: defaultHeight }}>
+        <View style={{ width: height }}>
             <Svg
-                height={radius * 2}
-                width={radius * 2}
+                height={height}
+                width={height}
                 viewBox={`0 0 ${halfCircle * 2} ${halfCircle * 2}`}
             >
                 <G rotation="-90" origin={`${halfCircle}, ${halfCircle}`}>
