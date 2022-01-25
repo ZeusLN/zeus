@@ -14,9 +14,14 @@ import { inject, observer } from 'mobx-react';
 
 import Success from '../images/GIF/Success.gif';
 
+import { Amount } from './../components/Amount';
 import Button from './../components/Button';
 import CollapsedQR from './../components/CollapsedQR';
 import LoadingIndicator from './../components/LoadingIndicator';
+import {
+    SuccessMessage,
+    ErrorMessage
+} from './../components/SuccessErrorMessage';
 import TextInput from './../components/TextInput';
 
 import FiatStore from './../stores/FiatStore';
@@ -263,24 +268,30 @@ export default class Receive extends React.Component<
                         selectedIndex === 0 && (
                             <View>
                                 {!!payment_request && (
-                                    <Text
-                                        style={{ color: 'green', padding: 20 }}
-                                    >
-                                        {localeString(
-                                            'views.Receive.successCreate'
+                                    <>
+                                        <SuccessMessage
+                                            message={localeString(
+                                                'views.Receive.successCreate'
+                                            )}
+                                        />
+                                        {!!lnurl && (
+                                            <SuccessMessage
+                                                message={
+                                                    !!lnurl &&
+                                                    ` ${localeString(
+                                                        'views.Receive.andSentTo'
+                                                    )} ${lnurl.domain}`
+                                                }
+                                            />
                                         )}
-                                        {!!lnurl &&
-                                            ` ${localeString(
-                                                'views.Receive.andSentTo'
-                                            )} ${lnurl.domain}`}
-                                    </Text>
+                                    </>
                                 )}
                                 {creatingInvoiceError && (
-                                    <Text style={{ color: 'red', padding: 20 }}>
-                                        {localeString(
+                                    <ErrorMessage
+                                        message={localeString(
                                             'views.Receive.errorCreate'
                                         )}
-                                    </Text>
+                                    />
                                 )}
                                 {error_msg && (
                                     <Text
@@ -301,8 +312,12 @@ export default class Receive extends React.Component<
                                         )}
                                     />
                                 )}
-                                <Text style={{ color: themeColor('text') }}>
-                                    {localeString('views.Receive.memo')}:
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString('views.Receive.memo')}
                                 </Text>
                                 <TextInput
                                     placeholder={localeString(
@@ -315,7 +330,11 @@ export default class Receive extends React.Component<
                                 />
 
                                 <TouchableOpacity onPress={() => changeUnits()}>
-                                    <Text style={{ color: themeColor('text') }}>
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
                                         {localeString('views.Receive.amount')} (
                                         {units === 'fiat' ? fiat : units})
                                         {lnurl &&
@@ -345,36 +364,18 @@ export default class Receive extends React.Component<
                                     }
                                 />
                                 {units !== 'sats' && (
-                                    <TouchableOpacity
-                                        onPress={() => changeUnits()}
-                                    >
-                                        <Text
-                                            style={{
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {UnitsStore.getAmount(
-                                                satAmount,
-                                                'sats'
-                                            )}{' '}
-                                        </Text>
-                                    </TouchableOpacity>
+                                    <Amount
+                                        sats={satAmount}
+                                        fixedUnits="sats"
+                                        toggleable
+                                    />
                                 )}
                                 {units !== 'btc' && (
-                                    <TouchableOpacity
-                                        onPress={() => changeUnits()}
-                                    >
-                                        <Text
-                                            style={{
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {UnitsStore.getAmount(
-                                                satAmount,
-                                                'btc'
-                                            )}{' '}
-                                        </Text>
-                                    </TouchableOpacity>
+                                    <Amount
+                                        sats={satAmount}
+                                        fixedUnits="btc"
+                                        toggleable
+                                    />
                                 )}
 
                                 {units === 'fiat' && (
@@ -386,7 +387,7 @@ export default class Receive extends React.Component<
                                                 color: themeColor('text')
                                             }}
                                         >
-                                            {FiatStore.getRate()}{' '}
+                                            {FiatStore.getRate()}
                                         </Text>
                                     </TouchableOpacity>
                                 )}
@@ -395,13 +396,15 @@ export default class Receive extends React.Component<
                                     <>
                                         <Text
                                             style={{
-                                                color: themeColor('text')
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                paddingTop: 10
                                             }}
                                         >
                                             {localeString(
                                                 'views.Receive.expiration'
                                             )}
-                                            :
                                         </Text>
                                         <TextInput
                                             keyboardType="numeric"
@@ -419,13 +422,14 @@ export default class Receive extends React.Component<
                                         <Text
                                             style={{
                                                 ...styles.text,
-                                                color: themeColor('text')
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
                                             }}
                                         >
                                             {localeString(
                                                 'views.Receive.routeHints'
                                             )}
-                                            :
                                         </Text>
                                         <Switch
                                             value={routeHints}
@@ -450,13 +454,14 @@ export default class Receive extends React.Component<
                                         <Text
                                             style={{
                                                 ...styles.text,
-                                                color: themeColor('text')
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
                                             }}
                                         >
                                             {localeString(
                                                 'views.Receive.ampInvoice'
                                             )}
-                                            :
                                         </Text>
                                         <Switch
                                             value={ampInvoice}
