@@ -2,13 +2,17 @@ import * as React from 'react';
 import { FlatList, ScrollView, View } from 'react-native';
 import { Header, Icon, ListItem, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+
+import UnitsStore from './../../stores/UnitsStore';
 import SettingsStore, { CURRENCY_KEYS } from './../../stores/SettingsStore';
+
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 interface CurrencyProps {
     navigation: any;
     SettingsStore: SettingsStore;
+    UnitsStore: UnitsStore;
 }
 
 interface CurrencyState {
@@ -17,7 +21,7 @@ interface CurrencyState {
     currencies: any;
 }
 
-@inject('SettingsStore')
+@inject('SettingsStore', 'UnitsStore')
 @observer
 export default class Currency extends React.Component<
     CurrencyProps,
@@ -59,7 +63,7 @@ export default class Currency extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation, SettingsStore, UnitsStore } = this.props;
         const { selectedCurrency, search, currencies } = this.state;
         const { setSettings, getSettings }: any = SettingsStore;
 
@@ -131,6 +135,7 @@ export default class Currency extends React.Component<
                                                 : { fiat: item.value }
                                         )
                                     ).then(() => {
+                                        UnitsStore.resetUnits();
                                         getSettings();
                                         navigation.navigate('Settings', {
                                             refresh: true
