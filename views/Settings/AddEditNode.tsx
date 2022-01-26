@@ -20,6 +20,10 @@ import Button from './../../components/Button';
 import CollapsedQR from './../../components/CollapsedQR';
 import DropdownSetting from './../../components/DropdownSetting';
 import LoadingIndicator from './../../components/LoadingIndicator';
+import {
+    SuccessMessage,
+    ErrorMessage
+} from './../../components/SuccessErrorMessage';
 import TextInput from './../../components/TextInput';
 
 import SettingsStore, { INTERFACE_KEYS } from './../../stores/SettingsStore';
@@ -705,19 +709,15 @@ export default class AddEditNode extends React.Component<
                         {!!createAccountError &&
                             implementation === 'lndhub' &&
                             !loading && (
-                                <Text style={{ color: 'red', marginBottom: 5 }}>
-                                    {createAccountError}
-                                </Text>
+                                <ErrorMessage message={createAccountError} />
                             )}
 
                         {!!createAccountSuccess &&
                             implementation === 'lndhub' &&
                             !loading && (
-                                <Text
-                                    style={{ color: 'green', marginBottom: 5 }}
-                                >
-                                    {createAccountSuccess}
-                                </Text>
+                                <SuccessMessage
+                                    message={createAccountSuccess}
+                                />
                             )}
 
                         <View>
@@ -1238,9 +1238,6 @@ export default class AddEditNode extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    error: {
-        color: 'red'
-    },
     form: {
         paddingTop: 20,
         paddingLeft: 5,
