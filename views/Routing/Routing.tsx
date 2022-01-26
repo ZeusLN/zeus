@@ -203,7 +203,7 @@ export default class Routing extends React.PureComponent<
                     fullSize={implementation !== 'lnd'}
                 />
                 {implementation === 'lnd' && (
-                    <View>
+                    <View style={{ flex: 1 }}>
                         <ButtonGroup
                             onPress={(selectedIndex: number) => {
                                 getForwardingHistory(HOURS[selectedIndex]);
