@@ -88,7 +88,7 @@ export const CURRENCY_KEYS = [
     { key: '🇭🇰 Hong Kong Dollar (HKD)', value: 'HKD' },
     { key: '🇨🇦 Canadian Dollar (CAD)', value: 'CAD' },
     { key: '🇳🇿 New Zealand Dollar (NZD)', value: 'NZD' },
-    { key: '🇦🇺 Austrlian Dollar (AUD)', value: 'AUD' },
+    { key: '🇦🇺 Australian Dollar (AUD)', value: 'AUD' },
     { key: '🇨🇱 Chilean Peso (CLP)', value: 'CLP' },
     { key: '🇬🇧 Great British Pound (GBP)', value: 'GBP' },
     { key: '🇩🇰 Danish Krone (DKK)', value: 'DKK' },
