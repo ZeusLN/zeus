@@ -3,6 +3,7 @@ import { FlatList, View, Text, TouchableOpacity } from 'react-native';
 import { ButtonGroup, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
+import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Spacer } from '../../components/layout/Spacer';
 import LoadingIndicator from '../../components/LoadingIndicator';
 
@@ -251,11 +252,11 @@ export default class Routing extends React.PureComponent<
                             </Text>
                         )}
                         {forwardingHistoryError && !loading && (
-                            <Text style={{ color: 'red' }}>
-                                {localeString(
+                            <ErrorMessage
+                                message={localeString(
                                     'views.NodeInfo.ForwardingHistory.error'
                                 )}
-                            </Text>
+                            />
                         )}
                     </View>
                 )}
