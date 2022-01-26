@@ -63,6 +63,7 @@
     "models.Invoice.never": "Never",
     "models.Payment.forwarded": "Forwarded",
     "models.Payment.fee": "Fee",
+    "views.Accounts.title": "Accounts",
     "views.LnurlPay.LnurlPay.amount": "Amount to pay (in Satoshis)",
     "views.LnurlPay.LnurlPay.comment": "Comment",
     "views.LnurlPay.LnurlPay.invalidParams": "Invalid lnurl params!",

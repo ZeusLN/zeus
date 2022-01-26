@@ -76,15 +76,16 @@ class RESTUtils {
     getForwardingHistory = (...args: any[]) =>
         this.call('getForwardingHistory', args);
     getUTXOs = (...args: any[]) => this.call('getUTXOs', args);
-    listAccounts = (...args: any[]) => this.call('listAccounts', args);
-    importAccount = (...args: any[]) => this.call('importAccount', args);
     signMessage = (...args: any[]) => this.call('signMessage', args);
     verifyMessage = (...args: any[]) => this.call('verifyMessage', args);
-
+    // accounts
+    listAccounts = (...args: any[]) => this.call('listAccounts', args);
+    importAccount = (...args: any[]) => this.call('importAccount', args);
     fundPsbt = (...args: any[]) => this.call('fundPsbt', args);
     finalizePsbt = (...args: any[]) => this.call('finalizePsbt', args);
     publishTransaction = (...args: any[]) =>
         this.call('publishTransaction', args);
+
     bumpFee = (...args: any[]) => this.call('bumpFee', args);
     subscribeInvoice = (...args: any[]) => this.call('subscribeInvoice', args);
 

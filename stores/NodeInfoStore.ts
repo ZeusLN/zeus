@@ -50,7 +50,7 @@ export default class NodeInfoStore {
     public getNodeInfo = () => {
         this.errorMsg = '';
         this.loading = true;
-        RESTUtils.getMyNodeInfo()
+        return RESTUtils.getMyNodeInfo()
             .then((data: any) => {
                 const nodeInfo = new NodeInfo(data);
                 this.nodeInfo = nodeInfo;
@@ -60,6 +60,7 @@ export default class NodeInfoStore {
                     nodeInfo.network === 'regtest' || nodeInfo.regtest || false;
                 this.loading = false;
                 this.error = false;
+                return this.nodeInfo;
             })
             .catch((error: any) => {
                 // handle error

@@ -10,6 +10,7 @@ export default class BalanceStore {
     @observable public error = false;
     @observable public pendingOpenBalance: number | string;
     @observable public lightningBalance: number | string;
+    @observable public otherAccounts: any = {};
     settingsStore: SettingsStore;
 
     constructor(settingsStore: SettingsStore) {
@@ -37,6 +38,7 @@ export default class BalanceStore {
         this.unconfirmedBlockchainBalance = 0;
         this.confirmedBlockchainBalance = 0;
         this.totalBlockchainBalance = 0;
+        this.otherAccounts = {};
     };
 
     resetLightningBalance = () => {
@@ -55,6 +57,11 @@ export default class BalanceStore {
         this.resetBlockchainBalance();
         RESTUtils.getBlockchainBalance()
             .then((data: any) => {
+                // process external accounts
+                const accounts = data.account_balance;
+                delete accounts.default;
+                this.otherAccounts = accounts;
+
                 this.unconfirmedBlockchainBalance = Number(
                     data.unconfirmed_balance
                 );

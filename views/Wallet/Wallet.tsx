@@ -17,6 +17,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import ChannelsPane from '../Channels/ChannelsPane';
 import MainPane from './MainPane';
 
+import LayerBalances from './../../components/LayerBalances';
 import LoadingIndicator from './../../components/LoadingIndicator';
 
 import RESTUtils from './../../utils/RESTUtils';
@@ -32,7 +33,7 @@ import NodeInfoStore from './../../stores/NodeInfoStore';
 import SettingsStore from './../../stores/SettingsStore';
 import FiatStore from './../../stores/FiatStore';
 import UnitsStore from './../../stores/UnitsStore';
-import LayerBalances from './../../components/LayerBalances';
+import UTXOsStore from './../../stores/UTXOsStore';
 
 import Temple from './../../images/SVG/Temple.svg';
 import ChannelsIcon from './../../images/SVG/Channels.svg';
@@ -52,6 +53,7 @@ interface WalletProps {
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
     FiatStore: FiatStore;
+    UTXOsStore: UTXOsStore;
 }
 
 @inject(
@@ -61,7 +63,8 @@ interface WalletProps {
     'FeeStore',
     'SettingsStore',
     'UnitsStore',
-    'FiatStore'
+    'FiatStore',
+    'UTXOsStore'
 )
 @observer
 export default class Wallet extends React.Component<WalletProps, {}> {
@@ -174,11 +177,11 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                 BalanceStore.getLightningBalance();
             });
         } else {
-            NodeInfoStore.getNodeInfo();
             BalanceStore.getBlockchainBalance();
             BalanceStore.getLightningBalance();
             ChannelsStore.getChannels();
             FeeStore.getFees();
+            NodeInfoStore.getNodeInfo();
         }
 
         if (implementation === 'lnd') {

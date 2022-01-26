@@ -72,10 +72,6 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                     }}
                     backgroundColor="#1f2328"
                 />
-                <Button
-                    title="Add Account"
-                    onPress={() => navigation.navigate('ImportAccount')}
-                />
                 {loading ? (
                     <View style={{ padding: 50 }}>
                         <LoadingIndicator />

@@ -47,10 +47,10 @@ export default class UTXOsStore {
     };
 
     @action
-    public listAccounts = (data: any) => {
+    public listAccounts = () => {
         this.errorMsg = '';
         this.loadingAccounts = true;
-        RESTUtils.listAccounts(data)
+        RESTUtils.listAccounts()
             .then((data: any) => {
                 this.loadingAccounts = false;
                 this.accounts = data.accounts;

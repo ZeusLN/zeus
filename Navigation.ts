@@ -48,6 +48,7 @@ import Activity from './views/Activity/Activity';
 import ActivityFilter from './views/Activity/ActivityFilter';
 
 // Accounts
+import Accounts from './views/Accounts/Accounts';
 import CoinControl from './views/UTXOs/CoinControl';
 import Utxo from './views/UTXOs/UTXO';
 import ImportAccount from './views/Accounts/ImportAccount';
@@ -173,6 +174,9 @@ const AppScenes = {
     },
     Utxo: {
         screen: Utxo
+    },
+    Accounts: {
+        screen: Accounts
     },
     ImportAccount: {
         screen: ImportAccount

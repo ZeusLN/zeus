@@ -17,6 +17,7 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import OnChain from './../../images/SVG/OnChain.svg';
 import Lightning from './../../images/SVG/Lightning.svg';
+import Wallet from './../../images/SVG/Wallet Account.svg';
 
 interface LayerBalancesProps {
     BalanceStore: BalanceStore;
@@ -40,7 +41,13 @@ const Row = ({ item }: { item: DataRow }) => (
         }}
     >
         <View style={styles.left}>
-            {item.layer === 'On-chain' ? <OnChain /> : <Lightning />}
+            {item.layer === 'On-chain' ? (
+                <OnChain />
+            ) : item.layer === 'Lightning' ? (
+                <Lightning />
+            ) : (
+                <Wallet />
+            )}
             <Spacer width={5} />
             <Text style={{ ...styles.layerText, color: themeColor('text') }}>
                 {item.layer}
@@ -60,18 +67,18 @@ const SwipeableRow = ({
     index: number;
     navigation: any;
 }) => {
-    if (index === 1) {
+    if (index === 0) {
         return (
-            <OnchainSwipeableRow navigation={navigation}>
+            <LightningSwipeableRow navigation={navigation}>
                 <Row item={item} />
-            </OnchainSwipeableRow>
+            </LightningSwipeableRow>
         );
     }
 
     return (
-        <LightningSwipeableRow navigation={navigation}>
+        <OnchainSwipeableRow navigation={navigation}>
             <Row item={item} />
-        </LightningSwipeableRow>
+        </OnchainSwipeableRow>
     );
 };
 
@@ -81,7 +88,8 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
     render() {
         const { BalanceStore, navigation } = this.props;
 
-        const { totalBlockchainBalance, lightningBalance } = BalanceStore;
+        const { totalBlockchainBalance, lightningBalance, otherAccounts } =
+            BalanceStore;
 
         const DATA: DataRow[] = [
             {
@@ -93,6 +101,15 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                 balance: totalBlockchainBalance
             }
         ];
+
+        if (Object.keys(otherAccounts).length > 0) {
+            for (const key in otherAccounts) {
+                DATA.push({
+                    layer: key,
+                    balance: otherAccounts[key].confirmed_balance
+                });
+            }
+        }
 
         return (
             <FlatList
