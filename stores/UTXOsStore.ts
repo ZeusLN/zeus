@@ -29,10 +29,20 @@ export default class UTXOsStore {
     };
 
     @action
-    public getUTXOs = () => {
+    public getUTXOs = (data: any) => {
         this.errorMsg = '';
         this.loading = true;
-        RESTUtils.getUTXOs()
+
+        const request = {
+            min_confs: 0,
+            max_confs: 200000
+        };
+
+        if (data && data.account) {
+            request.account = data.account;
+        }
+
+        RESTUtils.getUTXOs(request)
             .then((data: any) => {
                 this.loading = false;
                 const utxos = data.utxos || data.outputs;

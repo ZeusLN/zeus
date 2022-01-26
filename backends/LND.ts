@@ -301,7 +301,7 @@ export default class LND {
     finalizePsbt = (data: any) =>
         this.postRequest('/v2/wallet/psbt/finalize', data);
     publishTransaction = (data: any) => this.postRequest('/v2/wallet/tx', data);
-    getUTXOs = () => this.getRequest('/v1/utxos?min_confs=0&max_confs=200000');
+    getUTXOs = (data: any) => this.postRequest('/v2/wallet/utxos', data);
     bumpFee = (data: any) => this.postRequest('/v2/wallet/bumpfee', data);
     listAccounts = () => this.getRequest('/v2/wallet/accounts');
     importAccount = (data: any) =>
