@@ -46,9 +46,12 @@ import SetFees from './views/Routing/SetFees';
 // new views
 import Activity from './views/Activity/Activity';
 import ActivityFilter from './views/Activity/ActivityFilter';
+
+// Accounts
 import CoinControl from './views/UTXOs/CoinControl';
 import Utxo from './views/UTXOs/UTXO';
 import ImportAccount from './views/Accounts/ImportAccount';
+import ImportingAccount from './views/Accounts/ImportingAccount';
 import ImportAccountQRScanner from './views/Accounts/ImportAccountQRScanner';
 
 import Intro from './views/Intro';
@@ -173,6 +176,9 @@ const AppScenes = {
     },
     ImportAccount: {
         screen: ImportAccount
+    },
+    ImportingAccount: {
+        screen: ImportingAccount
     },
     AddressQRCodeScanner: {
         screen: AddressQRScanner

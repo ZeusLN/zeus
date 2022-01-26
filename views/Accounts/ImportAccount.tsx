@@ -1,8 +1,13 @@
 import * as React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Button, Header, Icon } from 'react-native-elements';
+import { Header, Icon } from 'react-native-elements';
+import { inject, observer } from 'mobx-react';
 
+import Button from './../../components/Button';
+import { ErrorMessage } from './../../components/SuccessErrorMessage';
+import LoadingIndicator from './../../components/LoadingIndicator';
 import TextInput from './../../components/TextInput';
+
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -18,6 +23,8 @@ interface ImportAccountState {
     address_type: string;
 }
 
+@inject('UTXOsStore')
+@observer
 export default class ImportAccount extends React.Component<
     ImportAccountProps,
     ImportAccountState
@@ -35,34 +42,40 @@ export default class ImportAccount extends React.Component<
     UNSAFE_componentWillReceiveProps = (newProps: any) => {
         const { navigation } = newProps;
         const qrResponse = navigation.getParam('qrResponse', null);
-        console.log('~~~');
-        console.log(qrResponse);
         const parsed = JSON.parse(qrResponse);
         const name = (parsed.keystore && parsed.keystore.label) || '';
         const extended_public_key =
             parsed.ExtPubKey || (parsed.keystore && parsed.keystore.xpub) || '';
-        const master_key_fingerprint =
-            parsed.MasterFingerprint ||
-            (parsed.keystore && parsed.keystore.ckcc_xfp.toString()) ||
-            '';
+        // const master_key_fingerprint =
+        //     parsed.MasterFingerprint ||
+        //     (parsed.keystore && parsed.keystore.ckcc_xfp.toString()) ||
+        //     '';
+        // const master_key_fingerprint =
+        //     parsed.keystore.derivation && parsed.keystore.derivation ||
+        //     '';
         const address_type = parsed.wallet_type || '';
 
         this.setState({
             name,
             extended_public_key,
-            master_key_fingerprint,
+            // master_key_fingerprint,
             address_type
         });
     };
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, UTXOsStore } = this.props;
+        const { errorMsg, importingAccount, accountToImport } = UTXOsStore;
         const {
             name,
             extended_public_key,
             master_key_fingerprint,
             address_type
         } = this.state;
+
+        if (accountToImport) {
+            navigation.navigate('ImportingAccount');
+        }
 
         const BackButton = () => (
             <Icon
@@ -90,9 +103,9 @@ export default class ImportAccount extends React.Component<
                     backgroundColor="grey"
                 />
                 <View style={styles.content}>
-                    <Text
-                        style={{ ...styles.label, color: themeColor('text') }}
-                    >
+                    {!!errorMsg && <ErrorMessage message={errorMsg} />}
+                    {!!importingAccount && <LoadingIndicator />}
+                    <Text style={styles.label}>
                         {localeString('views.ImportAccount.name')}
                     </Text>
                     <TextInput
@@ -104,9 +117,7 @@ export default class ImportAccount extends React.Component<
                             })
                         }
                     />
-                    <Text
-                        style={{ ...styles.label, color: themeColor('text') }}
-                    >
+                    <Text style={styles.label}>
                         {localeString('views.ImportAccount.extendedPubKey')}
                     </Text>
                     <TextInput
@@ -122,29 +133,31 @@ export default class ImportAccount extends React.Component<
                         numberOfLines={4}
                         multiline
                     />
-                    <Text
-                        style={{ ...styles.label, color: themeColor('text') }}
-                    >
-                        {localeString(
-                            'views.ImportAccount.masterKeyFingerprint'
-                        )}
-                    </Text>
-                    <TextInput
-                        placeholder={"m/44'/0'/0'/0"}
-                        value={master_key_fingerprint}
-                        onChangeText={(text: string) =>
-                            this.setState({
-                                master_key_fingerprint: text
-                            })
-                        }
-                    />
-                    <Text
-                        style={{ ...styles.label, color: themeColor('text') }}
-                    >
+
+                    {false && (
+                        <>
+                            <Text style={styles.label}>
+                                {localeString(
+                                    'views.ImportAccount.masterKeyFingerprint'
+                                )}
+                            </Text>
+                            <TextInput
+                                placeholder={'2753778918'}
+                                value={master_key_fingerprint}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        master_key_fingerprint: text
+                                    })
+                                }
+                            />
+                        </>
+                    )}
+
+                    <Text style={styles.label}>
                         {localeString('views.ImportAccount.addressType')}
                     </Text>
                     <TextInput
-                        placeholder={'mkf'}
+                        placeholder={'standard'}
                         value={address_type}
                         onChangeText={(text: string) =>
                             this.setState({
@@ -152,21 +165,26 @@ export default class ImportAccount extends React.Component<
                             })
                         }
                     />
-                    <Button
-                        title="ImportAccount"
-                        onPress={() =>
-                            this.props.UTXOsStore.importAccount({
-                                ...this.state,
-                                dry_run: true
-                            })
-                        }
-                    />
-                    <Button
-                        title="Scan"
-                        onPress={() =>
-                            navigation.navigate('ImportAccountQRScanner')
-                        }
-                    />
+                    <View style={styles.button}>
+                        <Button
+                            title="Import Account"
+                            onPress={() =>
+                                UTXOsStore.importAccount({
+                                    ...this.state,
+                                    dry_run: true
+                                })
+                            }
+                        />
+                    </View>
+                    <View style={styles.button}>
+                        <Button
+                            title="Scan"
+                            onPress={() =>
+                                navigation.navigate('ImportAccountQRScanner')
+                            }
+                            secondary
+                        />
+                    </View>
                 </View>
             </ScrollView>
         );
@@ -177,16 +195,16 @@ const styles = StyleSheet.create({
     content: {
         paddingTop: 20,
         paddingBottom: 20,
-        paddingLeft: 5,
-        paddingRight: 5
+        paddingLeft: 15,
+        paddingRight: 15
     },
     label: {
-        textDecorationLine: 'underline'
+        color: themeColor('secondaryText')
     },
     button: {
         paddingTop: 10,
         paddingBottom: 10,
-        width: 250,
+        width: '90%',
         alignSelf: 'center'
     },
     clipboardImport: {
