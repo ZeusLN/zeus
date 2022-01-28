@@ -167,7 +167,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         await this.getSettingsAndRefresh();
     };
 
-    refresh = () => {
+    async refresh() {
         const {
             NodeInfoStore,
             BalanceStore,
@@ -187,15 +187,19 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         } = SettingsStore;
         const { fiat } = settings;
 
+        if (!!fiat && fiat !== 'Disabled') {
+            FiatStore.getFiatRates();
+        }
+
         if (implementation === 'lndhub') {
             login({ login: username, password }).then(() => {
                 BalanceStore.resetBlockchainBalance();
                 BalanceStore.getLightningBalance();
             });
         } else {
+            await BalanceStore.getBlockchainBalance();
+            await BalanceStore.getLightningBalance();
             NodeInfoStore.getNodeInfo();
-            BalanceStore.getBlockchainBalance();
-            BalanceStore.getLightningBalance();
             ChannelsStore.getChannels();
             FeeStore.getFees();
         }
@@ -204,14 +208,10 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             FeeStore.getForwardingHistory();
         }
 
-        if (!!fiat && fiat !== 'Disabled') {
-            FiatStore.getFiatRates();
-        }
-
         if (connecting) {
             setConnectingStatus(false);
         }
-    };
+    }
 
     render() {
         const Tab = createBottomTabNavigator();

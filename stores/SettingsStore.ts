@@ -140,6 +140,7 @@ export default class SettingsStore {
     @observable implementation: string;
     @observable certVerification: boolean | undefined;
     @observable public loggedIn = false;
+    @observable public connecting = true;
     // LNDHub
     @observable username: string;
     @observable password: string;
