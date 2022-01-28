@@ -58,7 +58,7 @@ export default class Lockscreen extends React.Component<
     };
 
     onAttemptLogIn = () => {
-        const { navigation } = this.props;
+        const { SettingsStore, navigation } = this.props;
         const { passphrase, passphraseAttempt } = this.state;
 
         this.setState({
@@ -66,6 +66,7 @@ export default class Lockscreen extends React.Component<
         });
 
         if (passphraseAttempt === passphrase) {
+            SettingsStore.setLoginStatus(true);
             navigation.navigate('Wallet');
         } else {
             this.setState({
