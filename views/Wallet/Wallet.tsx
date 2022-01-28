@@ -192,13 +192,17 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         }
 
         if (implementation === 'lndhub') {
-            login({ login: username, password }).then(() => {
-                BalanceStore.resetBlockchainBalance();
-                BalanceStore.getLightningBalance();
+            login({ login: username, password }).then(async() => {
+                await Promise.all([
+                    BalanceStore.getBlockchainBalance(),
+                    BalanceStore.getLightningBalance()
+                ]);
             });
         } else {
-            await BalanceStore.getBlockchainBalance();
-            await BalanceStore.getLightningBalance();
+            await Promise.all([
+                BalanceStore.getBlockchainBalance(),
+                BalanceStore.getLightningBalance()
+            ]);
             NodeInfoStore.getNodeInfo();
             ChannelsStore.getChannels();
             FeeStore.getFees();

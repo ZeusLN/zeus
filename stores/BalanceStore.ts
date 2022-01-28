@@ -55,7 +55,7 @@ export default class BalanceStore {
     public getBlockchainBalance = () => {
         this.loadingBlockchainBalance = true;
         this.resetBlockchainBalance();
-        RESTUtils.getBlockchainBalance()
+        return RESTUtils.getBlockchainBalance()
             .then((data: any) => {
                 this.unconfirmedBlockchainBalance = Number(
                     data.unconfirmed_balance
@@ -75,7 +75,7 @@ export default class BalanceStore {
     public getLightningBalance = () => {
         this.loadingLightningBalance = true;
         this.resetLightningBalance();
-        RESTUtils.getLightningBalance()
+        return RESTUtils.getLightningBalance()
             .then((data: any) => {
                 this.pendingOpenBalance = Number(data.pending_open_balance);
                 this.lightningBalance = Number(data.balance);
