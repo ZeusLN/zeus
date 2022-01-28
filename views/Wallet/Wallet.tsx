@@ -115,7 +115,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             this.clipboard = await Clipboard.getString();
         }
 
-        this.getSettingsAndRefresh();
+        this.refresh();
     }
 
     UNSAFE_componentWillReceiveProps = (nextProps: any) => {
@@ -123,7 +123,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         const refresh = navigation.getParam('refresh', null);
 
         if (refresh) {
-            this.getSettingsAndRefresh();
+            this.refresh();
         }
     };
 
@@ -141,14 +141,14 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                 settings.nodes &&
                 settings.nodes.length > 0
             ) {
-                this.refresh();
+                this.fetchData();
             } else {
                 navigation.navigate('IntroSplash');
             }
         });
     }
 
-    async getSettingsAndRefresh() {
+    async refresh() {
         const { NodeInfoStore, BalanceStore, ChannelsStore, SettingsStore } =
             this.props;
 
@@ -164,10 +164,10 @@ export default class Wallet extends React.Component<WalletProps, {}> {
     restartTorAndReload = async () => {
         this.props.NodeInfoStore.setLoading();
         await restartTor();
-        await this.getSettingsAndRefresh();
+        await this.refresh();
     };
 
-    async refresh() {
+    async fetchData() {
         const {
             NodeInfoStore,
             BalanceStore,
@@ -192,7 +192,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         }
 
         if (implementation === 'lndhub') {
-            login({ login: username, password }).then(async() => {
+            login({ login: username, password }).then(async () => {
                 await Promise.all([
                     BalanceStore.getBlockchainBalance(),
                     BalanceStore.getLightningBalance()
