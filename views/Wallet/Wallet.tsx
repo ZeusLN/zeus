@@ -101,6 +101,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                 console.error(localeString('views.Wallet.Wallet.error'), err)
             );
 
+        // triggers when loaded from navigation or back action
         navigation.addListener('didFocus', () => {
             this.getSettingsAndNavigate();
         });
@@ -211,7 +212,8 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         const { implementation, enableTor, settings, loggedIn } = SettingsStore;
         const loginRequired =
             !settings || (settings && settings.passphrase && !loggedIn);
-        const dataAvailable = implementation === 'lndhub' || nodeInfo.version;
+        const dataAvailable =
+            !loading && (implementation === 'lndhub' || nodeInfo.version);
 
         const WalletScreen = () => {
             return (
@@ -221,7 +223,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                         flex: 1
                     }}
                 >
-                    {dataAvailable && !loading && (
+                    {dataAvailable && (
                         <MainPane
                             navigation={navigation}
                             NodeInfoStore={NodeInfoStore}
@@ -316,7 +318,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                     colors={themeColor('gradient')}
                     style={{ flex: 1 }}
                 >
-                    {!loading && !loginRequired && (
+                    {!loginRequired && dataAvailable && (
                         <NavigationContainer theme={Theme}>
                             <Tab.Navigator
                                 screenOptions={({ route }) => ({
@@ -366,7 +368,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                             </Tab.Navigator>
                         </NavigationContainer>
                     )}
-                    {loading && (
+                    {!dataAvailable && (
                         <>
                             {!loginRequired && (
                                 <>
