@@ -149,11 +149,14 @@ export default class Wallet extends React.Component<WalletProps, {}> {
     }
 
     async getSettingsAndRefresh() {
-        const { NodeInfoStore, BalanceStore, ChannelsStore } = this.props;
+        const { NodeInfoStore, BalanceStore, ChannelsStore, SettingsStore } =
+            this.props;
 
-        NodeInfoStore.reset();
-        BalanceStore.reset();
-        ChannelsStore.reset();
+        if (SettingsStore.connecting) {
+            NodeInfoStore.reset();
+            BalanceStore.reset();
+            ChannelsStore.reset();
+        }
 
         this.getSettingsAndNavigate();
     }
@@ -173,8 +176,15 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             SettingsStore,
             FiatStore
         } = this.props;
-        const { settings, implementation, username, password, login } =
-            SettingsStore;
+        const {
+            settings,
+            implementation,
+            username,
+            password,
+            login,
+            connecting,
+            setConnectingStatus
+        } = SettingsStore;
         const { fiat } = settings;
 
         if (implementation === 'lndhub') {
@@ -197,6 +207,10 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         if (!!fiat && fiat !== 'Disabled') {
             FiatStore.getFiatRates();
         }
+
+        if (connecting) {
+            setConnectingStatus(false);
+        }
     };
 
     render() {
@@ -208,12 +222,12 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             SettingsStore,
             navigation
         } = this.props;
-        const { error, loading, nodeInfo } = NodeInfoStore;
-        const { implementation, enableTor, settings, loggedIn } = SettingsStore;
+        const { error, nodeInfo } = NodeInfoStore;
+        const { implementation, enableTor, settings, loggedIn, connecting } =
+            SettingsStore;
         const loginRequired =
             !settings || (settings && settings.passphrase && !loggedIn);
-        const dataAvailable =
-            !loading && (implementation === 'lndhub' || nodeInfo.version);
+        const dataAvailable = implementation === 'lndhub' || nodeInfo.version;
 
         const WalletScreen = () => {
             return (
@@ -223,15 +237,13 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                         flex: 1
                     }}
                 >
-                    {dataAvailable && (
-                        <MainPane
-                            navigation={navigation}
-                            NodeInfoStore={NodeInfoStore}
-                            UnitsStore={UnitsStore}
-                            BalanceStore={BalanceStore}
-                            SettingsStore={SettingsStore}
-                        />
-                    )}
+                    <MainPane
+                        navigation={navigation}
+                        NodeInfoStore={NodeInfoStore}
+                        UnitsStore={UnitsStore}
+                        BalanceStore={BalanceStore}
+                        SettingsStore={SettingsStore}
+                    />
 
                     {error && enableTor && (
                         <View style={{ marginTop: 10 }}>
@@ -253,14 +265,21 @@ export default class Wallet extends React.Component<WalletProps, {}> {
 
                     {dataAvailable && (
                         <>
-                            <LayerBalances
-                                navigation={navigation}
-                                BalanceStore={BalanceStore}
-                                UnitsStore={UnitsStore}
-                            />
+                            {!BalanceStore.loadingLightningBalance &&
+                            !BalanceStore.loadingBlockchainBalance ? (
+                                <LayerBalances
+                                    navigation={navigation}
+                                    BalanceStore={BalanceStore}
+                                    UnitsStore={UnitsStore}
+                                />
+                            ) : (
+                                <LoadingIndicator size={120} />
+                            )}
 
                             <Animated.View
                                 style={{
+                                    flex: 1,
+                                    justifyContent: 'flex-end',
                                     alignSelf: 'center',
                                     bottom: 10,
                                     paddingTop: 40,
@@ -318,7 +337,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                     colors={themeColor('gradient')}
                     style={{ flex: 1 }}
                 >
-                    {!loginRequired && dataAvailable && (
+                    {!connecting && !loginRequired && (
                         <NavigationContainer theme={Theme}>
                             <Tab.Navigator
                                 screenOptions={({ route }) => ({
@@ -343,7 +362,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                         ? themeColor('error')
                                         : RESTUtils.supportsChannelManagement()
                                         ? 'gray'
-                                        : themeColor('highlight'),
+                                        : themeColor('highliseght'),
                                     showLabel: false
                                 }}
                             >
@@ -368,30 +387,24 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                             </Tab.Navigator>
                         </NavigationContainer>
                     )}
-                    {!dataAvailable && (
+                    {connecting && !loginRequired && (
                         <>
-                            {!loginRequired && (
-                                <>
-                                    <WordLogo
-                                        height={150}
-                                        style={{
-                                            alignSelf: 'center',
-                                            marginTop: 250
-                                        }}
-                                    />
-                                    <Text
-                                        style={{
-                                            color: themeColor('text'),
-                                            alignSelf: 'center',
-                                            fontSize: 15
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Wallet.Wallet.connecting'
-                                        )}
-                                    </Text>
-                                </>
-                            )}
+                            <WordLogo
+                                height={150}
+                                style={{
+                                    alignSelf: 'center',
+                                    marginTop: 250
+                                }}
+                            />
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    alignSelf: 'center',
+                                    fontSize: 15
+                                }}
+                            >
+                                {localeString('views.Wallet.Wallet.connecting')}
+                            </Text>
                             <LoadingIndicator size={120} />
                             <View
                                 style={{

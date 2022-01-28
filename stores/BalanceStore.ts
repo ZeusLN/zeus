@@ -6,7 +6,8 @@ export default class BalanceStore {
     @observable public totalBlockchainBalance: number | string;
     @observable public confirmedBlockchainBalance: number | string;
     @observable public unconfirmedBlockchainBalance: number | string;
-    @observable public loading = false;
+    @observable public loadingBlockchainBalance = false;
+    @observable public loadingLightningBalance = false;
     @observable public error = false;
     @observable public pendingOpenBalance: number | string;
     @observable public lightningBalance: number | string;
@@ -46,12 +47,13 @@ export default class BalanceStore {
 
     balanceError = () => {
         this.error = true;
-        this.loading = false;
+        this.loadingBlockchainBalance = false;
+        this.loadingLightningBalance = false;
     };
 
     @action
     public getBlockchainBalance = () => {
-        this.loading = true;
+        this.loadingBlockchainBalance = true;
         this.resetBlockchainBalance();
         RESTUtils.getBlockchainBalance()
             .then((data: any) => {
@@ -62,7 +64,7 @@ export default class BalanceStore {
                     data.confirmed_balance
                 );
                 this.totalBlockchainBalance = Number(data.total_balance);
-                this.loading = false;
+                this.loadingBlockchainBalance = false;
             })
             .catch(() => {
                 this.balanceError();
@@ -71,13 +73,13 @@ export default class BalanceStore {
 
     @action
     public getLightningBalance = () => {
-        this.loading = true;
+        this.loadingLightningBalance = true;
         this.resetLightningBalance();
         RESTUtils.getLightningBalance()
             .then((data: any) => {
                 this.pendingOpenBalance = Number(data.pending_open_balance);
                 this.lightningBalance = Number(data.balance);
-                this.loading = false;
+                this.loadingLightningBalance = false;
             })
             .catch(() => {
                 this.balanceError();

@@ -299,4 +299,9 @@ export default class SettingsStore {
     public setLoginStatus = (status = false) => {
         this.loggedIn = status;
     };
+
+    @action
+    public setConnectingStatus = (status = false) => {
+        this.connecting = status;
+    };
 }
