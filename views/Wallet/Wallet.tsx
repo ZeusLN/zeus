@@ -366,7 +366,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                         ? themeColor('error')
                                         : RESTUtils.supportsChannelManagement()
                                         ? 'gray'
-                                        : themeColor('highliseght'),
+                                        : themeColor('highlight'),
                                     showLabel: false
                                 }}
                             >
