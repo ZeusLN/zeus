@@ -65,6 +65,12 @@ export default class BalanceStore {
                 );
                 this.totalBlockchainBalance = Number(data.total_balance);
                 this.loadingBlockchainBalance = false;
+                return {
+                    unconfirmedBlockchainBalance:
+                        this.unconfirmedBlockchainBalance,
+                    confirmedBlockchainBalance: this.confirmedBlockchainBalance,
+                    totalBlockchainBalance: this.totalBlockchainBalance
+                };
             })
             .catch(() => {
                 this.balanceError();
@@ -80,6 +86,10 @@ export default class BalanceStore {
                 this.pendingOpenBalance = Number(data.pending_open_balance);
                 this.lightningBalance = Number(data.balance);
                 this.loadingLightningBalance = false;
+                return {
+                    pendingOpenBalance: this.pendingOpenBalance,
+                    lightningBalance: this.lightningBalance
+                };
             })
             .catch(() => {
                 this.balanceError();
