@@ -275,6 +275,11 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                     navigation={navigation}
                                     BalanceStore={BalanceStore}
                                     UnitsStore={UnitsStore}
+                                    onRefresh={() => this.refresh()}
+                                    refreshing={
+                                        BalanceStore.loadingLightningBalance ||
+                                        BalanceStore.loadingBlockchainBalance
+                                    }
                                 />
                             ) : (
                                 <LoadingIndicator size={120} />
