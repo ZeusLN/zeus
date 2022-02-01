@@ -325,6 +325,7 @@
     "views.Send.onChainNotSupported": "On-chain sends are not supported on",
     "views.Send.amount": "Amount",
     "views.Send.satoshis": "satoshis",
+    "views.Send.message": "Message",
     "views.Send.feeSats": "Fee (satoshis per byte)",
     "views.Send.feeSatsVbyte": "Fee (satoshis per vByte)",
     "views.Send.sendCoins": "Send Coins",

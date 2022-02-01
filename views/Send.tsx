@@ -62,6 +62,7 @@ interface SendState {
     maxShardAmt: string;
     timeoutSeconds: string;
     feeLimitSat: string;
+    message: string;
 }
 
 @inject(
@@ -97,7 +98,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             maxParts: '16',
             maxShardAmt: '',
             timeoutSeconds: '20',
-            feeLimitSat: ''
+            feeLimitSat: '',
+            message: ''
         };
     }
 
@@ -231,13 +233,15 @@ export default class Send extends React.Component<SendProps, SendState> {
             maxParts,
             maxShardAmt,
             timeoutSeconds,
-            feeLimitSat
+            feeLimitSat,
+            message
         } = this.state;
 
         if (RESTUtils.supportsAMP()) {
             TransactionsStore.sendPayment({
                 amount: satAmount.toString(),
                 pubkey: destination,
+                message: message,
                 max_parts: maxParts,
                 max_shard_amt: maxShardAmt,
                 timeout_seconds: timeoutSeconds,
@@ -247,7 +251,8 @@ export default class Send extends React.Component<SendProps, SendState> {
         } else {
             TransactionsStore.sendPayment({
                 amount: satAmount.toString(),
-                pubkey: destination
+                pubkey: destination,
+                message: message
             });
         }
 
@@ -285,7 +290,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             maxParts,
             maxShardAmt,
             timeoutSeconds,
-            feeLimitSat
+            feeLimitSat,
+            message
         } = this.state;
         const { confirmedBlockchainBalance } = BalanceStore;
         const { implementation, settings } = SettingsStore;
@@ -562,6 +568,30 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         </Text>
                                     </TouchableOpacity>
                                 )}
+                                <Text
+                                    style={{
+                                        color: themeColor(
+                                            'secondaryText'
+                                        )
+                                    }}
+                                >
+                                    {`${localeString(
+                                        'views.Send.message'
+                                    )} (${localeString(
+                                        'general.optional'
+                                    )})`}
+                                    :
+                                </Text>
+                                <TextInput
+                                    keyboardType="default"
+                                    value={message}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            message: text
+                                        })
+                                    }
+                                    style={styles.textInput}
+                                />
                                 {RESTUtils.supportsAMP() && (
                                     <React.Fragment>
                                         <Text

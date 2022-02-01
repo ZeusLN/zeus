@@ -9,6 +9,7 @@ import RESTUtils from './../utils/RESTUtils';
 import Base64Utils from './../utils/Base64Utils';
 
 const keySendPreimageType = '5482373484';
+const keySendMessageType = '34349334';
 const preimageByteLength = 32;
 
 interface SendPaymentReq {
@@ -21,6 +22,7 @@ interface SendPaymentReq {
     fee_limit_sat?: string | null;
     outgoing_chan_id?: string | null;
     last_hop_pubkey?: string | null;
+    message?: string | null;
     amp?: boolean;
 }
 
@@ -191,6 +193,7 @@ export default class TransactionsStore {
         fee_limit_sat,
         outgoing_chan_id,
         last_hop_pubkey,
+        message,
         amp
     }: SendPaymentReq) => {
         this.loading = true;
@@ -209,21 +212,26 @@ export default class TransactionsStore {
         if (amount) {
             data.amt = amount;
         }
-        if (pubkey) {
-            if (!amp) {
-                const preimage = randomBytes(preimageByteLength);
-                const secret = preimage.toString('base64');
-                const payment_hash = Buffer.from(
-                    sha256(preimage),
-                    'hex'
-                ).toString('base64');
 
-                data.dest_string = pubkey;
-                data.dest_custom_records = { [keySendPreimageType]: secret };
-                data.payment_hash = payment_hash;
-            } else {
-                data.dest = Base64Utils.hexToBase64(pubkey);
-            }
+        if (pubkey) {
+            const preimage = randomBytes(preimageByteLength);
+            const secret = preimage.toString('base64');
+            const payment_hash = Buffer.from(
+                sha256(preimage),
+                'hex'
+            ).toString('base64');
+
+            data.dest = Base64Utils.hexToBase64(pubkey);
+            data.dest_custom_records = { [keySendPreimageType]: secret };
+            data.payment_hash = payment_hash;
+        }
+
+        if (message) {
+            const hex_message = Buffer.from(
+                message,
+                'utf8'
+            ).toString('hex');
+            data.dest_custom_records![keySendMessageType] = hex_message;
         }
 
         // multi-path payments
