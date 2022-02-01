@@ -1,4 +1,3 @@
-import { Buffer } from 'buffer';
 import { action, reaction, observable } from 'mobx';
 import { randomBytes } from 'react-native-randombytes';
 import { sha256 } from 'js-sha256';
@@ -216,22 +215,16 @@ export default class TransactionsStore {
         if (pubkey) {
             const preimage = randomBytes(preimageByteLength);
             const secret = preimage.toString('base64');
-            const payment_hash = Buffer.from(
-                sha256(preimage),
-                'hex'
-            ).toString('base64');
+            const payment_hash = Base64Utils.hexToBase64(sha256(preimage));
 
             data.dest = Base64Utils.hexToBase64(pubkey);
             data.dest_custom_records = { [keySendPreimageType]: secret };
             data.payment_hash = payment_hash;
-        }
 
-        if (message) {
-            const hex_message = Buffer.from(
-                message,
-                'utf8'
-            ).toString('hex');
-            data.dest_custom_records![keySendMessageType] = hex_message;
+            if (message) {
+                const hex_message = Base64Utils.hexToBase64(Base64Utils.utf8ToHexString(message));
+                data.dest_custom_records![keySendMessageType] = hex_message;
+            }
         }
 
         // multi-path payments
