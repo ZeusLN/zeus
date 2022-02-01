@@ -222,12 +222,13 @@ export default class LND {
     listNode = () => this.getRequest('/v1/network/listNode');
     decodePaymentRequest = (urlParams?: Array<string>) =>
         this.getRequest(`/v1/payreq/${urlParams && urlParams[0]}`);
-    payLightningInvoice = (data: any) =>
-        this.postRequest('/v1/channels/transactions', data);
-    payLightningInvoiceV2 = (data: any) =>
-        this.postRequest('/v2/router/send', data);
-    payLightningInvoiceV2Streaming = (data: any) =>
-        this.wsReq('/v2/router/send', 'POST', data);
+    payLightningInvoice = (data: any) => {
+        if (data.pubkey) delete data.pubkey;
+        return this.postRequest('/v2/router/send', {
+            ...data,
+            timeout_seconds: 60
+        });
+    };
     closeChannel = (urlParams?: Array<string>) => {
         if (urlParams && urlParams.length === 4) {
             return this.deleteRequest(
