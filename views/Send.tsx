@@ -60,7 +60,6 @@ interface SendState {
     confirmationTarget: string;
     maxParts: string;
     maxShardAmt: string;
-    timeoutSeconds: string;
     feeLimitSat: string;
 }
 
@@ -96,7 +95,6 @@ export default class Send extends React.Component<SendProps, SendState> {
             error_msg: '',
             maxParts: '16',
             maxShardAmt: '',
-            timeoutSeconds: '20',
             feeLimitSat: ''
         };
     }
@@ -226,13 +224,7 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     sendKeySendPayment = (satAmount: string | number) => {
         const { TransactionsStore, navigation } = this.props;
-        const {
-            destination,
-            maxParts,
-            maxShardAmt,
-            timeoutSeconds,
-            feeLimitSat
-        } = this.state;
+        const { destination, maxParts, maxShardAmt, feeLimitSat } = this.state;
 
         if (RESTUtils.supportsAMP()) {
             TransactionsStore.sendPayment({
@@ -240,7 +232,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                 pubkey: destination,
                 max_parts: maxParts,
                 max_shard_amt: maxShardAmt,
-                timeout_seconds: timeoutSeconds,
                 fee_limit_sat: feeLimitSat,
                 amp: true
             });
@@ -284,7 +275,6 @@ export default class Send extends React.Component<SendProps, SendState> {
             error_msg,
             maxParts,
             maxShardAmt,
-            timeoutSeconds,
             feeLimitSat
         } = this.state;
         const { confirmedBlockchainBalance } = BalanceStore;
@@ -564,29 +554,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 )}
                                 {RESTUtils.supportsAMP() && (
                                     <React.Fragment>
-                                        <Text
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.PaymentRequest.timeout'
-                                            )}
-                                            :
-                                        </Text>
-                                        <TextInput
-                                            keyboardType="numeric"
-                                            placeholder="20"
-                                            value={timeoutSeconds}
-                                            onChangeText={(text: string) =>
-                                                this.setState({
-                                                    timeoutSeconds: text
-                                                })
-                                            }
-                                            style={styles.textInput}
-                                        />
                                         <Text
                                             style={{
                                                 color: themeColor(

@@ -17,7 +17,6 @@ interface SendPaymentReq {
     pubkey?: string;
     max_parts?: string | null;
     max_shard_amt?: string | null;
-    timeout_seconds?: string | null;
     fee_limit_sat?: string | null;
     outgoing_chan_id?: string | null;
     last_hop_pubkey?: string | null;
@@ -187,7 +186,6 @@ export default class TransactionsStore {
         pubkey,
         max_parts,
         max_shard_amt,
-        timeout_seconds,
         fee_limit_sat,
         outgoing_chan_id,
         last_hop_pubkey,
@@ -210,28 +208,21 @@ export default class TransactionsStore {
             data.amt = amount;
         }
         if (pubkey) {
-            if (!amp) {
-                const preimage = randomBytes(preimageByteLength);
-                const secret = preimage.toString('base64');
-                const payment_hash = Buffer.from(
-                    sha256(preimage),
-                    'hex'
-                ).toString('base64');
+            const preimage = randomBytes(preimageByteLength);
+            const secret = preimage.toString('base64');
+            const payment_hash = Buffer.from(sha256(preimage), 'hex').toString(
+                'base64'
+            );
 
-                data.dest_string = pubkey;
-                data.dest_custom_records = { [keySendPreimageType]: secret };
-                data.payment_hash = payment_hash;
-            } else {
-                data.dest = Base64Utils.hexToBase64(pubkey);
-            }
+            data.dest = Base64Utils.hexToBase64(pubkey);
+            data.dest_custom_records = { [keySendPreimageType]: secret };
+            data.payment_hash = payment_hash;
+            data.pubkey = pubkey;
         }
 
         // multi-path payments
         if (max_parts) {
             data.max_parts = max_parts;
-        }
-        if (timeout_seconds) {
-            data.timeout_seconds = timeout_seconds;
         }
         if (fee_limit_sat) {
             data.fee_limit_sat = Number(fee_limit_sat);
@@ -256,11 +247,10 @@ export default class TransactionsStore {
             data.last_hop_pubkey = Base64Utils.hexToBase64(last_hop_pubkey);
         }
 
-        const payFunc = amp
-            ? RESTUtils.payLightningInvoiceV2
-            : max_parts
-            ? RESTUtils.payLightningInvoiceV2Streaming
-            : RESTUtils.payLightningInvoice;
+        const payFunc =
+            this.settingsStore.implementation === 'c-lightning-REST' && pubkey
+                ? RESTUtils.sendKeysend
+                : RESTUtils.payLightningInvoice;
 
         payFunc(data)
             .then((response: any) => {
