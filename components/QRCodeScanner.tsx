@@ -4,6 +4,8 @@ import { Header, Icon } from 'react-native-elements';
 import { RNCamera } from 'react-native-camera';
 import { localeString } from './../utils/LocaleUtils';
 
+const createHash = require('create-hash');
+
 interface QRProps {
     title: string;
     text: string;
@@ -16,6 +18,7 @@ interface QRState {
 }
 
 export default class QRCodeScanner extends React.Component<QRProps, QRState> {
+    scannedCache: any = {};
     state = {
         cameraStatus: null
     };
@@ -26,9 +29,20 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
         });
     };
 
+    handleRead = (data: any) => {
+        const hash = createHash('sha256').update(data).digest().toString('hex');
+        if (this.scannedCache[hash]) {
+            // this QR was already scanned let's prevent firing duplicate
+            // callbacks
+            return;
+        }
+        this.scannedCache[hash] = +new Date();
+        this.props.handleQRScanned(data);
+    };
+
     render() {
         const { cameraStatus } = this.state;
-        const { title, text, handleQRScanned, goBack } = this.props;
+        const { title, text, goBack } = this.props;
 
         return (
             <React.Fragment>
@@ -50,7 +64,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                 {cameraStatus !==
                     RNCamera.Constants.CameraStatus.NOT_AUTHORIZED && (
                     <RNCamera
-                        onBarCodeRead={(ret: any) => handleQRScanned(ret.data)}
+                        onBarCodeRead={(ret: any) => this.handleRead(ret.data)}
                         style={{
                             flex: 1
                         }}

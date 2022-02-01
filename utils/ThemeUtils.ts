@@ -5,6 +5,7 @@ export function themeColor(themeString: string): any {
     const { theme } = settings;
 
     const Light: { [key: string]: any } = {
+        generalStyle: 'light',
         background: '#fff',
         secondary: '#f0f0f0',
         text: 'black',
@@ -27,6 +28,7 @@ export function themeColor(themeString: string): any {
     };
 
     const Dark: { [key: string]: any } = {
+        generalStyle: 'dark',
         background: '#1f2328',
         secondary: '#2b3037',
         text: 'white',
@@ -43,6 +45,7 @@ export function themeColor(themeString: string): any {
     };
 
     const Junkie: { [key: string]: any } = {
+        generalStyle: 'dark',
         background: 'rgb(51, 51, 51)',
         secondary: 'rgb(191, 0, 28)',
         text: 'white',

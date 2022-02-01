@@ -1,10 +1,12 @@
 import url from 'url';
 import * as React from 'react';
 import RNFetchBlob from 'rn-fetch-blob';
-import { Alert, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Button, Header, Icon } from 'react-native-elements';
 import querystring from 'querystring-es3';
 import { Hash as sha256Hash, HMAC as sha256HMAC } from 'fast-sha256';
+
+import LoadingIndicator from './../components/LoadingIndicator';
 
 import { themeColor } from './../utils/ThemeUtils';
 import { localeString } from './../utils/LocaleUtils';
@@ -87,7 +89,7 @@ export default class LnurlAuth extends React.Component<
     triggerSign() {
         this.setState({ preparingSignature: true });
 
-        const body = Base64Utils.btoa(LNURLAUTH_CANONICAL_PHRASE);
+        const body = LNURLAUTH_CANONICAL_PHRASE;
 
         RESTUtils.signMessage(body)
             .then((signature: any) => {
@@ -263,7 +265,7 @@ export default class LnurlAuth extends React.Component<
 
                     <View style={styles.content}>
                         {(preparingSignature || authenticating) && (
-                            <ActivityIndicator size="large" color="#0000ff" />
+                            <LoadingIndicator />
                         )}
                         {lnurlAuthSuccess && (
                             <Text style={{ color: 'green' }}>

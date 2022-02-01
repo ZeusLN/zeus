@@ -5,7 +5,7 @@ import {
     Text,
     View,
     I18nManager,
-    Image
+    TouchableOpacity
 } from 'react-native';
 
 import { RectButton } from 'react-native-gesture-handler';
@@ -16,6 +16,7 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import Receive from './../../images/SVG/Receive.svg';
 import Routing from './../../images/SVG/Routing.svg';
+import Send from './../../images/SVG/Send.svg';
 
 interface LightningSwipeableRowProps {
     navigation: any;
@@ -31,7 +32,7 @@ export default class LightningSwipeableRow extends Component<
         progress: Animated.AnimatedInterpolation
     ) => {
         const trans = progress.interpolate({
-            inputRange: [0, 1],
+            inputRange: [0.25, 1],
             outputRange: [x, 0]
         });
         const pressHandler = () => {
@@ -41,6 +42,8 @@ export default class LightningSwipeableRow extends Component<
                 this.props.navigation.navigate('Receive');
             } else if (text === localeString('general.routing')) {
                 this.props.navigation.navigate('Routing');
+            } else if (text === localeString('general.send')) {
+                this.props.navigation.navigate('Send');
             }
         };
 
@@ -50,10 +53,25 @@ export default class LightningSwipeableRow extends Component<
             >
                 <RectButton style={[styles.action]} onPress={pressHandler}>
                     {text === localeString('general.routing') && (
-                        <Routing fill={themeColor('highlight')} />
+                        <Routing
+                            fill={themeColor('highlight')}
+                            width={30}
+                            height={30}
+                        />
                     )}
                     {text === localeString('general.receive') && (
-                        <Receive fill={themeColor('highlight')} />
+                        <Receive
+                            fill={themeColor('highlight')}
+                            width={30}
+                            height={30}
+                        />
+                    )}
+                    {text === localeString('general.send') && (
+                        <Send
+                            fill={themeColor('highlight')}
+                            width={30}
+                            height={30}
+                        />
                     )}
                     <Text style={styles.actionText}>{text}</Text>
                 </RectButton>
@@ -61,20 +79,17 @@ export default class LightningSwipeableRow extends Component<
         );
     };
 
-    private renderActions = (
-        progress: Animated.AnimatedInterpolation,
-        _dragAnimatedValue: Animated.AnimatedInterpolation
-    ) => (
+    private renderActions = (progress: Animated.AnimatedInterpolation) => (
         <View
             style={{
                 marginLeft: 15,
-                width: RESTUtils.supportsRouting() ? 150 : 75,
+                width: RESTUtils.supportsRouting() ? 200 : 135,
                 flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row'
             }}
         >
             {this.renderAction(
                 localeString('general.receive'),
-                RESTUtils.supportsRouting() ? 150 : 75,
+                RESTUtils.supportsRouting() ? 200 : 135,
                 progress
             )}
             {RESTUtils.supportsRouting() &&
@@ -83,6 +98,11 @@ export default class LightningSwipeableRow extends Component<
                     100,
                     progress
                 )}
+            {this.renderAction(
+                localeString('general.send'),
+                RESTUtils.supportsRouting() ? 200 : 135,
+                progress
+            )}
         </View>
     );
 
@@ -91,9 +111,15 @@ export default class LightningSwipeableRow extends Component<
     private updateRef = (ref: Swipeable) => {
         this.swipeableRow = ref;
     };
+
     private close = () => {
         this.swipeableRow.close();
     };
+
+    private open = () => {
+        this.swipeableRow.openLeft();
+    };
+
     render() {
         const { children } = this.props;
         return (
@@ -105,7 +131,9 @@ export default class LightningSwipeableRow extends Component<
                 rightThreshold={40}
                 renderLeftActions={this.renderActions}
             >
-                {children}
+                <TouchableOpacity onPress={() => this.open()} activeOpacity={1}>
+                    {children}
+                </TouchableOpacity>
             </Swipeable>
         );
     }

@@ -64,10 +64,9 @@ class RESTUtils {
         this.call('decodePaymentRequest', args);
     payLightningInvoice = (...args: any[]) =>
         this.call('payLightningInvoice', args);
-    payLightningInvoiceV2 = (...args: any[]) =>
-        this.call('payLightningInvoiceV2', args);
-    payLightningInvoiceV2Streaming = (...args: any[]) =>
-        this.call('payLightningInvoiceV2Streaming', args);
+    payLightningInvoiceStreaming = (...args: any[]) =>
+        this.call('payLightningInvoiceStreaming', args);
+    sendKeysend = (...args: any[]) => this.call('sendKeysend', args);
     closeChannel = (...args: any[]) => this.call('closeChannel', args);
     getNodeInfo = (...args: any[]) => this.call('getNodeInfo', args);
     getFees = (...args: any[]) => this.call('getFees', args);
@@ -79,12 +78,14 @@ class RESTUtils {
     listAccounts = (...args: any[]) => this.call('listAccounts', args);
     importAccount = (...args: any[]) => this.call('importAccount', args);
     signMessage = (...args: any[]) => this.call('signMessage', args);
+    verifyMessage = (...args: any[]) => this.call('verifyMessage', args);
 
     fundPsbt = (...args: any[]) => this.call('fundPsbt', args);
     finalizePsbt = (...args: any[]) => this.call('finalizePsbt', args);
     publishTransaction = (...args: any[]) =>
         this.call('publishTransaction', args);
     bumpFee = (...args: any[]) => this.call('bumpFee', args);
+    subscribeInvoice = (...args: any[]) => this.call('subscribeInvoice', args);
 
     // lndhub
     createAccount = (...args: any[]) => this.call('createAccount', args);
@@ -101,6 +102,7 @@ class RESTUtils {
     supportsAccounts = () => this.call('supportsAccounts');
     supportsRouting = () => this.call('supportsRouting');
     supportsNodeInfo = () => this.call('supportsNodeInfo');
+    singleFeesEarnedTotal = () => this.call('singleFeesEarnedTotal');
 }
 
 const restUtils = new RESTUtils();

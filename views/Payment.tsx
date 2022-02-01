@@ -1,48 +1,27 @@
 import * as React from 'react';
-import {
-    StyleSheet,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View
-} from 'react-native';
+import { StyleSheet, ScrollView, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+
+import { Amount } from './../components/Amount';
+import KeyValue from './../components/KeyValue';
+
 import Payment from './../models/Payment';
 import PrivacyUtils from './../utils/PrivacyUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
-import UnitsStore from './../stores/UnitsStore';
 import SettingsStore from './../stores/SettingsStore';
 import LnurlPayStore from './../stores/LnurlPayStore';
 import LnurlPayHistorical from './LnurlPay/Historical';
 
 interface PaymentProps {
     navigation: any;
-    UnitsStore: UnitsStore;
     SettingsStore: SettingsStore;
     LnurlPayStore: LnurlPayStore;
 }
 
-const PaymentPath = ({ path }: any) => {
-    if (path.length === 1) {
-        return path[0];
-    }
-
-    const multiPathDisplay: any = [];
-    for (let i = 0; i < path.length; i++) {
-        multiPathDisplay.push(`Part ${i + 1}/${path.length}`);
-        for (let j = 0; j < path[i].length; j++) {
-            multiPathDisplay.push(path[i][j]);
-        }
-        multiPathDisplay.push('');
-    }
-
-    return multiPathDisplay.join('\n');
-};
-
-@inject('UnitsStore', 'SettingsStore', 'LnurlPayStore')
+@inject('SettingsStore', 'LnurlPayStore')
 @observer
 export default class PaymentView extends React.Component<PaymentProps> {
     state = {
@@ -59,18 +38,17 @@ export default class PaymentView extends React.Component<PaymentProps> {
     }
 
     render() {
-        const { navigation, UnitsStore, SettingsStore } = this.props;
-        const { changeUnits, getAmount, units } = UnitsStore;
+        const { navigation, SettingsStore } = this.props;
         const { settings } = SettingsStore;
         const { privacy } = settings;
-        const { lurkerMode } = privacy;
+        const lurkerMode = (privacy && privacy.lurkerMode) || false;
 
         const payment: Payment = navigation.getParam('payment', null);
         const {
             getDisplayTime,
             getFee,
             payment_hash,
-            payment_preimage,
+            getPreimage,
             enhancedPath
         } = payment;
         const date = getDisplayTime;
@@ -83,13 +61,6 @@ export default class PaymentView extends React.Component<PaymentProps> {
                 underlayColor="transparent"
             />
         );
-
-        const amount = PrivacyUtils.sensitiveValue(
-            getAmount(payment.getAmount),
-            8,
-            true
-        );
-        const fee = PrivacyUtils.sensitiveValue(getAmount(getFee), 3, true);
 
         const lnurlpaytx = this.state.lnurlpaytx;
 
@@ -109,17 +80,13 @@ export default class PaymentView extends React.Component<PaymentProps> {
                     backgroundColor="#1f2328"
                 />
                 <View style={styles.center}>
-                    <TouchableOpacity onPress={() => changeUnits()}>
-                        <Text
-                            style={{
-                                color: 'red',
-                                fontSize: 30,
-                                fontWeight: 'bold'
-                            }}
-                        >
-                            {units && amount}
-                        </Text>
-                    </TouchableOpacity>
+                    <Amount
+                        sats={payment.getAmount}
+                        debit
+                        jumboText
+                        sensitive
+                        toggleable
+                    />
                 </View>
 
                 {lnurlpaytx && (
@@ -127,104 +94,59 @@ export default class PaymentView extends React.Component<PaymentProps> {
                         <LnurlPayHistorical
                             navigation={navigation}
                             lnurlpaytx={lnurlpaytx}
-                            preimage={payment_preimage}
+                            preimage={getPreimage}
                         />
                     </View>
                 )}
 
                 <View style={styles.content}>
                     {getFee && (
-                        <View>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Payment.fee')}:
-                            </Text>
-                            <TouchableOpacity onPress={() => changeUnits()}>
-                                <Text
-                                    style={{
-                                        ...styles.value,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {units && fee}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
+                        <KeyValue
+                            keyValue={localeString('views.Payment.fee')}
+                            value={
+                                <Amount
+                                    sats={getFee}
+                                    debit
+                                    sensitive
+                                    toggleable
+                                />
+                            }
+                            toggleable
+                        />
                     )}
 
                     {typeof payment_hash === 'string' && (
-                        <>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Payment.paymentHash')}:
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.value,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {PrivacyUtils.sensitiveValue(payment_hash)}
-                            </Text>
-                        </>
+                        <KeyValue
+                            keyValue={localeString('views.Payment.paymentHash')}
+                            value={payment_hash}
+                            sensitive
+                        />
                     )}
 
-                    <Text
-                        style={{ ...styles.label, color: themeColor('text') }}
-                    >
-                        {localeString('views.Payment.paymentPreimage')}:
-                    </Text>
-                    <Text
-                        style={{ ...styles.value, color: themeColor('text') }}
-                    >
-                        {PrivacyUtils.sensitiveValue(payment_preimage)}
-                    </Text>
+                    <KeyValue
+                        keyValue={localeString('views.Payment.paymentPreimage')}
+                        value={getPreimage}
+                        sensitive
+                    />
 
-                    <Text
-                        style={{ ...styles.label, color: themeColor('text') }}
-                    >
-                        {localeString('views.Payment.creationDate')}:
-                    </Text>
-                    <Text
-                        style={{ ...styles.value, color: themeColor('text') }}
-                    >
-                        {PrivacyUtils.sensitiveValue(date, 14)}
-                    </Text>
+                    <KeyValue
+                        keyValue={localeString('views.Payment.creationDate')}
+                        value={date}
+                        sensitive
+                    />
 
                     {enhancedPath.length > 0 && (
-                        <Text
-                            style={{
-                                ...styles.label,
-                                color: themeColor('text')
-                            }}
-                        >
-                            {localeString('views.Payment.path')}:
-                        </Text>
-                    )}
-                    {enhancedPath.length > 0 && (
-                        <Text
-                            style={{
-                                ...styles.value,
-                                color: themeColor('text')
-                            }}
-                            selectable
-                        >
-                            {lurkerMode ? (
-                                PrivacyUtils.sensitiveValue(
-                                    enhancedPath.join(', ')
-                                )
-                            ) : (
-                                <PaymentPath path={enhancedPath} />
-                            )}
-                        </Text>
+                        <KeyValue
+                            keyValue={localeString('views.Payment.path')}
+                            value={
+                                lurkerMode
+                                    ? PrivacyUtils.sensitiveValue(
+                                          enhancedPath.join(', ')
+                                      )
+                                    : `${enhancedPath}`
+                            }
+                            sensitive
+                        />
                     )}
                 </View>
             </ScrollView>
@@ -241,15 +163,5 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingTop: 15,
         paddingBottom: 15
-    },
-    label: {
-        paddingTop: 5
-    },
-    value: {
-        paddingBottom: 5
-    },
-    valueWithLink: {
-        paddingBottom: 5,
-        color: 'rgba(92, 99,216, 1)'
     }
 });

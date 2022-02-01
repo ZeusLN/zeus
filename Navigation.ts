@@ -35,7 +35,7 @@ import Language from './views/Settings/Language';
 import Currency from './views/Settings/Currency';
 import Theme from './views/Settings/Theme';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
-import SignMessage from './views/Settings/SignMessage';
+import SignVerifyMessage from './views/Settings/SignVerifyMessage';
 import Help from './views/Settings/Help';
 
 // Routing
@@ -46,7 +46,6 @@ import SetFees from './views/Routing/SetFees';
 // new views
 import Activity from './views/Activity/Activity';
 import ActivityFilter from './views/Activity/ActivityFilter';
-import Channels from './views/Channels';
 import CoinControl from './views/UTXOs/CoinControl';
 import Utxo from './views/UTXOs/UTXO';
 import ImportAccount from './views/Accounts/ImportAccount';
@@ -58,8 +57,8 @@ import IntroSplash from './views/IntroSplash';
 import EditFee from './views/EditFee';
 
 const AppScenes = {
-    Lockscreen: {
-        screen: Lockscreen
+    Wallet: {
+        screen: Wallet
     },
     IntroSplash: {
         screen: IntroSplash
@@ -67,14 +66,11 @@ const AppScenes = {
     Intro: {
         screen: Intro
     },
-    Wallet: {
-        screen: Wallet
+    Lockscreen: {
+        screen: Lockscreen
     },
-    AddressQRCodeScanner: {
-        screen: AddressQRScanner
-    },
-    NodeQRCodeScanner: {
-        screen: NodeQRScanner
+    Send: {
+        screen: Send
     },
     EditFee: {
         screen: EditFee
@@ -112,8 +108,8 @@ const AppScenes = {
     CertInstallInstructions: {
         screen: CertInstallInstructions
     },
-    SignMessage: {
-        screen: SignMessage
+    SignVerifyMessage: {
+        screen: SignVerifyMessage
     },
     Transaction: {
         screen: Transaction
@@ -126,9 +122,6 @@ const AppScenes = {
     },
     Invoice: {
         screen: Invoice
-    },
-    Send: {
-        screen: Send
     },
     LnurlPay: {
         screen: LnurlPay
@@ -153,15 +146,6 @@ const AppScenes = {
     },
     SendingLightning: {
         screen: SendingLightning
-    },
-    BTCPayConfigQRScanner: {
-        screen: BTCPayConfigQRScanner
-    },
-    LNDConnectConfigQRScanner: {
-        screen: LNDConnectConfigQRScanner
-    },
-    LNDHubQRScanner: {
-        screen: LNDHubQRScanner
     },
     NodeInfo: {
         screen: NodeInfo
@@ -189,6 +173,21 @@ const AppScenes = {
     },
     ImportAccount: {
         screen: ImportAccount
+    },
+    AddressQRCodeScanner: {
+        screen: AddressQRScanner
+    },
+    NodeQRCodeScanner: {
+        screen: NodeQRScanner
+    },
+    BTCPayConfigQRScanner: {
+        screen: BTCPayConfigQRScanner
+    },
+    LNDConnectConfigQRScanner: {
+        screen: LNDConnectConfigQRScanner
+    },
+    LNDHubQRScanner: {
+        screen: LNDHubQRScanner
     },
     ImportAccountQRScanner: {
         screen: ImportAccountQRScanner

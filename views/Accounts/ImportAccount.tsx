@@ -1,30 +1,14 @@
 import * as React from 'react';
-import {
-    ActivityIndicator,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View
-} from 'react-native';
-import Clipboard from '@react-native-community/clipboard';
-import { inject, observer } from 'mobx-react';
-import { Button, CheckBox, Header, Icon } from 'react-native-elements';
-import FeeTable from './../../components/FeeTable';
-import UTXOPicker from './../../components/UTXOPicker';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Button, Header, Icon } from 'react-native-elements';
 
-import RESTUtils from './../../utils/RESTUtils';
+import TextInput from './../../components/TextInput';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
-
-import SettingsStore from './../../stores/SettingsStore';
-import UTXOsStore from './../../stores/UTXOsStore';
 
 interface ImportAccountProps {
     exitSetup: any;
     navigation: any;
-    SettingsStore: SettingsStore;
-    UTXOsStore: UTXOsStore;
 }
 
 interface ImportAccountState {
@@ -34,8 +18,6 @@ interface ImportAccountState {
     address_type: string;
 }
 
-@inject('SettingsStore', 'UTXOsStore')
-@observer
 export default class ImportAccount extends React.Component<
     ImportAccountProps,
     ImportAccountState
@@ -74,7 +56,7 @@ export default class ImportAccount extends React.Component<
     };
 
     render() {
-        const { SettingsStore, UTXOsStore, navigation } = this.props;
+        const { navigation } = this.props;
         const {
             name,
             extended_public_key,
@@ -121,11 +103,6 @@ export default class ImportAccount extends React.Component<
                                 name: text
                             })
                         }
-                        style={{
-                            ...styles.textInput,
-                            color: themeColor('text')
-                        }}
-                        placeholderTextColor="gray"
                     />
                     <Text
                         style={{ ...styles.label, color: themeColor('text') }}
@@ -142,11 +119,6 @@ export default class ImportAccount extends React.Component<
                                 extended_public_key: text
                             })
                         }
-                        style={{
-                            ...styles.textInput,
-                            color: themeColor('text')
-                        }}
-                        placeholderTextColor="gray"
                         numberOfLines={4}
                         multiline
                     />
@@ -165,11 +137,6 @@ export default class ImportAccount extends React.Component<
                                 master_key_fingerprint: text
                             })
                         }
-                        style={{
-                            ...styles.textInput,
-                            color: themeColor('text')
-                        }}
-                        placeholderTextColor="gray"
                     />
                     <Text
                         style={{ ...styles.label, color: themeColor('text') }}
@@ -184,11 +151,6 @@ export default class ImportAccount extends React.Component<
                                 address_type: text
                             })
                         }
-                        style={{
-                            ...styles.textInput,
-                            color: themeColor('text')
-                        }}
-                        placeholderTextColor="gray"
                     />
                     <Button
                         title="ImportAccount"
@@ -212,9 +174,6 @@ export default class ImportAccount extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    textInput: {
-        fontSize: 20
-    },
     content: {
         paddingTop: 20,
         paddingBottom: 20,

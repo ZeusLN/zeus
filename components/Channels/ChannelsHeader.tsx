@@ -13,10 +13,11 @@ const outboundYellow = themeColor('outbound');
 const inboundYellow = themeColor('inbound');
 const offlineGray = themeColor('secondaryText');
 
-function Donut(props) {
-    const radius = 42,
-        strokeWidth = 6;
-    const { totalInbound, totalOutbound, totalOffline } = props;
+export function ChannelsDonut(props) {
+    const { totalInbound, totalOutbound, totalOffline, radius } = props;
+
+    const strokeWidth = 6;
+
     const halfCircle = radius + strokeWidth;
     const circumference = 2 * Math.PI * radius;
     const color = 'black';
@@ -26,11 +27,13 @@ function Donut(props) {
     const inboundLength = (totalInbound / total) * circumference;
     const offlineLength = (totalOffline / total) * circumference;
 
+    const height = radius * 2;
+
     return (
-        <View style={{ width: radius * 2, height: radius * 2 }}>
+        <View style={{ width: height }}>
             <Svg
-                height={radius * 2}
-                width={radius * 2}
+                height={height}
+                width={height}
                 viewBox={`0 0 ${halfCircle * 2} ${halfCircle * 2}`}
             >
                 <G rotation="-90" origin={`${halfCircle}, ${halfCircle}`}>
@@ -121,6 +124,7 @@ function TotalRow({
 
 export function ChannelsHeader(props) {
     const { totalInbound, totalOutbound, totalOffline } = props;
+
     return (
         <View
             style={{
@@ -129,13 +133,6 @@ export function ChannelsHeader(props) {
                 color: themeColor('text')
             }}
         >
-            <View style={styles.donut}>
-                <Donut
-                    totalInbound={totalInbound}
-                    totalOutbound={totalOutbound}
-                    totalOffline={totalOffline}
-                />
-            </View>
             <TotalRow
                 kind="outbound"
                 amount={totalOutbound}
@@ -162,19 +159,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 16
     },
-    donut: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 8
-    },
     wrapper: {
         display: 'flex',
         justifyContent: 'space-between',
-        height: 200,
-        paddingBottom: 16,
-        paddingLeft: 16,
-        paddingRight: 16,
+        height: 100,
+        padding: 16,
         borderBottomLeftRadius: 20,
         borderBottomRightRadius: 20,
         // TODO: this shadow stuff probably needs tweaking on iOS

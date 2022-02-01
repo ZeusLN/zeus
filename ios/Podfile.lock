@@ -230,16 +230,20 @@ PODS:
   - React-jsinspector (0.67.0-rc.3)
   - React-logger (0.67.0-rc.3):
     - glog
-  - react-native-camera (4.0.1):
+  - react-native-camera (4.2.1):
     - React-Core
-    - react-native-camera/RCT (= 4.0.1)
-    - react-native-camera/RN (= 4.0.1)
-  - react-native-camera/RCT (4.0.1):
+    - react-native-camera/RCT (= 4.2.1)
+    - react-native-camera/RN (= 4.2.1)
+  - react-native-camera/RCT (4.2.1):
     - React-Core
-  - react-native-camera/RN (4.0.1):
+  - react-native-camera/RN (4.2.1):
     - React-Core
   - react-native-date-picker (3.4.0):
     - React-Core
+  - react-native-hce (0.1.2):
+    - React
+  - react-native-nfc-manager (3.11.0):
+    - React
   - react-native-randombytes (3.5.3):
     - React
   - react-native-safe-area-context (0.6.2):
@@ -321,10 +325,10 @@ PODS:
     - React-Core
   - RNCMaskedView (0.1.11):
     - React
-  - RNCPicker (1.16.1):
+  - RNCPicker (2.2.1):
     - React-Core
-  - RNGestureHandler (1.10.3):
-    - React-Core
+  - RNGestureHandler (1.5.3):
+    - React
   - RNOS (1.2.6):
     - React
   - RNReanimated (1.13.3):
@@ -367,6 +371,8 @@ DEPENDENCIES:
   - React-logger (from `../node_modules/react-native/ReactCommon/logger`)
   - react-native-camera (from `../node_modules/react-native-camera`)
   - react-native-date-picker (from `../node_modules/react-native-date-picker`)
+  - react-native-hce (from `../node_modules/react-native-hce`)
+  - react-native-nfc-manager (from `../node_modules/react-native-nfc-manager`)
   - react-native-randombytes (from `../node_modules/react-native-randombytes`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - react-native-tor (from `../node_modules/react-native-tor`)
@@ -447,6 +453,10 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-camera"
   react-native-date-picker:
     :path: "../node_modules/react-native-date-picker"
+  react-native-hce:
+    :path: "../node_modules/react-native-hce"
+  react-native-nfc-manager:
+    :path: "../node_modules/react-native-nfc-manager"
   react-native-randombytes:
     :path: "../node_modules/react-native-randombytes"
   react-native-safe-area-context:
@@ -531,8 +541,10 @@ SPEC CHECKSUMS:
   React-jsiexecutor: be5edc66c7ff4e5911f7b522948db375f4cf5078
   React-jsinspector: dc88b5ac5571c5b76b5598ece9a9c51be3ef7455
   React-logger: 8f90b2483b905c22ba8c28003e1b6a961976b55c
-  react-native-camera: 11166fe7e3a673493c152f52966e8ab1c5cdcacc
-  react-native-date-picker: 96a07ca27a6225da8a3935324d85046028456b0f
+  react-native-camera: 3eae183c1d111103963f3dd913b65d01aef8110f
+  react-native-date-picker: 8c5a9cbf6d311ae85230543ae0d8d378c7be0c74
+  react-native-hce: 677aa1c41edf183523bb7b1014d106a08631ff88
+  react-native-nfc-manager: e74f24f05274fbfdfe51e46e72d62d5ae460c724
   react-native-randombytes: 3638d24759d67c68f6ccba60c52a7a8a8faa6a23
   react-native-safe-area-context: 25260c5d0b9c53fd7aa88e569e2edae72af1f6a3
   react-native-tor: 6a64351e96ccd6a49941989703f63ec81fc1ae7c
@@ -553,8 +565,8 @@ SPEC CHECKSUMS:
   RNCAsyncStorage: 39831e0dc5f547a1fb2669eb9e091d460a9be2be
   RNCClipboard: 41d8d918092ae8e676f18adada19104fa3e68495
   RNCMaskedView: 0e1bc4bfa8365eba5fbbb71e07fbdc0555249489
-  RNCPicker: 61c7a0645b9e4ac67960aa7f22a3effcecfdfb8d
-  RNGestureHandler: a479ebd5ed4221a810967000735517df0d2db211
+  RNCPicker: cb57c823d5ce8d2d0b5dfb45ad97b737260dc59e
+  RNGestureHandler: 02905abe54e1f6e59c081a10b4bd689721e17aa6
   RNOS: 6f2f9a70895bbbfbdad7196abd952e7b01d45027
   RNReanimated: 514a11da3a2bcc6c3dfd9de32b38e2b9bf101926
   RNScreens: b20bdb598fe95ac37aada88a5e92f36622549e49

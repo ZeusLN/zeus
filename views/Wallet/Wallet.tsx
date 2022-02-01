@@ -1,23 +1,24 @@
 import * as React from 'react';
 import {
-    ActivityIndicator,
-    Image,
+    Animated,
     Linking,
+    PanResponder,
     Text,
-    View,
-    TouchableOpacity
+    TouchableOpacity,
+    View
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import { Button, ButtonGroup } from 'react-native-elements';
+import { Button } from 'react-native-elements';
 
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-community/clipboard';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import ChannelsPane from '../Channels/ChannelsPane';
-import Channels from './Channels';
 import MainPane from './MainPane';
-import PrivacyUtils from './../../utils/PrivacyUtils';
+
+import LoadingIndicator from './../../components/LoadingIndicator';
+
 import RESTUtils from './../../utils/RESTUtils';
 import { restartTor } from './../../utils/TorUtils';
 import { localeString } from './../../utils/LocaleUtils';
@@ -33,10 +34,10 @@ import FiatStore from './../../stores/FiatStore';
 import UnitsStore from './../../stores/UnitsStore';
 import LayerBalances from './../../components/LayerBalances';
 
-import WalletIcon from './../../images/SVG/Wallet.svg';
+import Temple from './../../images/SVG/Temple.svg';
 import ChannelsIcon from './../../images/SVG/Channels.svg';
-import QRIcon from './../../images/SVG/QR.svg';
 import CaretUp from './../../images/SVG/Caret Up.svg';
+import WordLogo from './../../images/SVG/Word Logo.svg';
 
 import handleAnything from './../../utils/handleAnything';
 
@@ -66,6 +67,25 @@ interface WalletProps {
 export default class Wallet extends React.Component<WalletProps, {}> {
     clipboard: string;
 
+    constructor(props) {
+        super(props);
+        this.pan = new Animated.ValueXY();
+        this.panResponder = PanResponder.create({
+            onMoveShouldSetPanResponder: () => true,
+            onPanResponderMove: Animated.event(
+                [null, { dx: this.pan.x, dy: this.pan.y }],
+                { useNativeDriver: false }
+            ),
+            onPanResponderRelease: () => {
+                Animated.spring(this.pan, {
+                    toValue: { x: 0, y: 0 },
+                    useNativeDriver: false
+                }).start();
+                props.navigation.navigate('Activity');
+            }
+        });
+    }
+
     componentDidMount() {
         Linking.addEventListener('url', this._handleOpenURL);
 
@@ -92,6 +112,11 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             .catch((err) =>
                 console.error(localeString('views.Wallet.Wallet.error'), err)
             );
+
+        // triggers when loaded from navigation or back action
+        navigation.addListener('didFocus', () => {
+            this.getSettingsAndNavigate();
+        });
     }
 
     async UNSAFE_componentWillMount() {
@@ -102,7 +127,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             this.clipboard = await Clipboard.getString();
         }
 
-        this.getSettingsAndRefresh();
+        this.refresh();
     }
 
     UNSAFE_componentWillReceiveProps = (nextProps: any) => {
@@ -110,31 +135,51 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         const refresh = navigation.getParam('refresh', null);
 
         if (refresh) {
-            this.getSettingsAndRefresh();
+            this.refresh();
         }
     };
 
-    async getSettingsAndRefresh() {
-        const { SettingsStore, NodeInfoStore, BalanceStore, ChannelsStore } =
-            this.props;
-
-        NodeInfoStore.reset();
-        BalanceStore.reset();
-        ChannelsStore.reset();
+    async getSettingsAndNavigate() {
+        const { SettingsStore, navigation } = this.props;
 
         // This awaits on settings, so should await on Tor being bootstrapped before making requests
-        await SettingsStore.getSettings().then(() => {
-            this.refresh();
+        await SettingsStore.getSettings().then((settings: any) => {
+            const loginRequired =
+                settings && settings.passphrase && !SettingsStore.loggedIn;
+            if (loginRequired) {
+                navigation.navigate('Lockscreen');
+            } else if (
+                settings &&
+                settings.nodes &&
+                settings.nodes.length > 0
+            ) {
+                this.fetchData();
+            } else {
+                navigation.navigate('IntroSplash');
+            }
         });
+    }
+
+    async refresh() {
+        const { NodeInfoStore, BalanceStore, ChannelsStore, SettingsStore } =
+            this.props;
+
+        if (SettingsStore.connecting) {
+            NodeInfoStore.reset();
+            BalanceStore.reset();
+            ChannelsStore.reset();
+        }
+
+        this.getSettingsAndNavigate();
     }
 
     restartTorAndReload = async () => {
         this.props.NodeInfoStore.setLoading();
         await restartTor();
-        await this.getSettingsAndRefresh();
+        await this.refresh();
     };
 
-    refresh = () => {
+    async fetchData() {
         const {
             NodeInfoStore,
             BalanceStore,
@@ -143,18 +188,34 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             SettingsStore,
             FiatStore
         } = this.props;
-        const { settings, implementation, username, password, login } =
-            SettingsStore;
+        const {
+            settings,
+            implementation,
+            username,
+            password,
+            login,
+            connecting,
+            setConnectingStatus
+        } = SettingsStore;
         const { fiat } = settings;
 
+        if (!!fiat && fiat !== 'Disabled') {
+            FiatStore.getFiatRates();
+        }
+
         if (implementation === 'lndhub') {
-            login({ login: username, password }).then(() => {
-                BalanceStore.getLightningBalance();
+            login({ login: username, password }).then(async () => {
+                await Promise.all([
+                    BalanceStore.getBlockchainBalance(),
+                    BalanceStore.getLightningBalance()
+                ]);
             });
         } else {
+            await Promise.all([
+                BalanceStore.getBlockchainBalance(),
+                BalanceStore.getLightningBalance()
+            ]);
             NodeInfoStore.getNodeInfo();
-            BalanceStore.getBlockchainBalance();
-            BalanceStore.getLightningBalance();
             ChannelsStore.getChannels();
             FeeStore.getFees();
         }
@@ -163,10 +224,10 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             FeeStore.getForwardingHistory();
         }
 
-        if (!!fiat && fiat !== 'Disabled') {
-            FiatStore.getFiatRates();
+        if (connecting) {
+            setConnectingStatus(false);
         }
-    };
+    }
 
     render() {
         const Tab = createBottomTabNavigator();
@@ -177,8 +238,12 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             SettingsStore,
             navigation
         } = this.props;
-        const { error, loading, nodeInfo } = NodeInfoStore;
-        const { implementation, enableTor } = SettingsStore;
+        const { error, nodeInfo } = NodeInfoStore;
+        const { implementation, enableTor, settings, loggedIn, connecting } =
+            SettingsStore;
+        const loginRequired =
+            !settings || (settings && settings.passphrase && !loggedIn);
+        const dataAvailable = implementation === 'lndhub' || nodeInfo.version;
 
         const WalletScreen = () => {
             return (
@@ -214,26 +279,51 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                         </View>
                     )}
 
-                    {(implementation === 'lndhub' || nodeInfo.version) && (
+                    {dataAvailable && (
                         <>
-                            <LayerBalances
-                                navigation={navigation}
-                                BalanceStore={BalanceStore}
-                                UnitsStore={UnitsStore}
-                            />
+                            {!BalanceStore.loadingLightningBalance &&
+                            !BalanceStore.loadingBlockchainBalance ? (
+                                <LayerBalances
+                                    navigation={navigation}
+                                    BalanceStore={BalanceStore}
+                                    UnitsStore={UnitsStore}
+                                    onRefresh={() => this.refresh()}
+                                    refreshing={
+                                        BalanceStore.loadingLightningBalance ||
+                                        BalanceStore.loadingBlockchainBalance
+                                    }
+                                />
+                            ) : (
+                                <LoadingIndicator size={120} />
+                            )}
 
-                            <TouchableOpacity
-                                onPress={() =>
-                                    this.props.navigation.navigate('Activity')
-                                }
+                            <Animated.View
                                 style={{
+                                    flex: 1,
+                                    justifyContent: 'flex-end',
                                     alignSelf: 'center',
-                                    bottom: 85,
-                                    padding: 25
+                                    bottom: 10,
+                                    paddingTop: 40,
+                                    paddingBottom: 35,
+                                    width: '100%',
+                                    transform: [{ translateY: this.pan.y }],
+                                    alignItems: 'center'
                                 }}
+                                {...this.panResponder.panHandlers}
                             >
-                                <CaretUp />
-                            </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        this.props.navigation.navigate(
+                                            'Activity'
+                                        )
+                                    }
+                                >
+                                    <CaretUp
+                                        stroke={themeColor('text')}
+                                        fill={themeColor('text')}
+                                    />
+                                </TouchableOpacity>
+                            </Animated.View>
                         </>
                     )}
                 </View>
@@ -262,93 +352,19 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             }
         };
 
-        const scanAndSend = `${localeString('general.scan')} / ${localeString(
-            'general.send'
-        )}`;
-
-        // TODO: reorg? maybe just detect if on channels page and shrink middle button
         return (
             <View style={{ flex: 1 }}>
                 <LinearGradient
                     colors={themeColor('gradient')}
                     style={{ flex: 1 }}
                 >
-                    {!loading && (
+                    {!connecting && !loginRequired && (
                         <NavigationContainer theme={Theme}>
                             <Tab.Navigator
                                 screenOptions={({ route }) => ({
-                                    tabBarIcon: ({ focused, color, size }) => {
-                                        let iconName;
-
+                                    tabBarIcon: ({ color }) => {
                                         if (route.name === 'Wallet') {
-                                            return <WalletIcon color={color} />;
-                                        }
-                                        if (route.name === scanAndSend) {
-                                            return (
-                                                <View
-                                                    style={{
-                                                        bottom: 75,
-                                                        alignItems: 'center'
-                                                    }}
-                                                >
-                                                    <TouchableOpacity
-                                                        style={{
-                                                            position:
-                                                                'absolute',
-                                                            height: 90,
-                                                            width: 90,
-                                                            borderRadius: 90,
-                                                            backgroundColor:
-                                                                themeColor(
-                                                                    'secondary'
-                                                                ),
-                                                            justifyContent:
-                                                                'center',
-                                                            alignItems:
-                                                                'center',
-                                                            shadowColor:
-                                                                'black',
-                                                            shadowRadius: 5,
-                                                            shadowOpacity: 0.8,
-                                                            elevation: 2
-                                                        }}
-                                                        onPress={() => {
-                                                            const {
-                                                                navigation
-                                                            } = this.props;
-                                                            // if clipboard is loaded check for potential matches, otherwise do nothing
-                                                            handleAnything(
-                                                                this.clipboard
-                                                            )
-                                                                .then(
-                                                                    ([
-                                                                        route,
-                                                                        props
-                                                                    ]) => {
-                                                                        navigation.navigate(
-                                                                            route,
-                                                                            props
-                                                                        );
-                                                                    }
-                                                                )
-                                                                .catch(() =>
-                                                                    navigation.navigate(
-                                                                        'AddressQRCodeScanner'
-                                                                    )
-                                                                );
-                                                        }}
-                                                    >
-                                                        <QRIcon
-                                                            style={{
-                                                                padding: 25
-                                                            }}
-                                                            fill={themeColor(
-                                                                'highlight'
-                                                            )}
-                                                        />
-                                                    </TouchableOpacity>
-                                                </View>
-                                            );
+                                            return <Temple fill={color} />;
                                         }
                                         if (
                                             RESTUtils.supportsChannelManagement()
@@ -362,24 +378,19 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                 tabBarOptions={{
                                     activeTintColor: error
                                         ? themeColor('error')
-                                        : themeColor('highlight'),
+                                        : themeColor('text'),
                                     inactiveTintColor: error
                                         ? themeColor('error')
                                         : RESTUtils.supportsChannelManagement()
                                         ? 'gray'
-                                        : themeColor('highlight')
+                                        : themeColor('highlight'),
+                                    showLabel: false
                                 }}
                             >
                                 <Tab.Screen
                                     name="Wallet"
                                     component={WalletScreen}
                                 />
-                                {!error && (
-                                    <Tab.Screen
-                                        name={scanAndSend}
-                                        component={WalletScreen}
-                                    />
-                                )}
                                 {RESTUtils.supportsChannelManagement() &&
                                 !error ? (
                                     <Tab.Screen
@@ -397,18 +408,56 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                             </Tab.Navigator>
                         </NavigationContainer>
                     )}
-                    {loading && (
-                        <ActivityIndicator
-                            color={themeColor('text')}
-                            style={{
-                                flex: 1,
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                            }}
-                        />
+                    {connecting && !loginRequired && (
+                        <>
+                            <WordLogo
+                                height={150}
+                                style={{
+                                    alignSelf: 'center',
+                                    marginTop: 250
+                                }}
+                            />
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    alignSelf: 'center',
+                                    fontSize: 15
+                                }}
+                            >
+                                {localeString('views.Wallet.Wallet.connecting')}
+                            </Text>
+                            <LoadingIndicator size={120} />
+                            <View
+                                style={{
+                                    flex: 1,
+                                    justifyContent: 'flex-end',
+                                    bottom: 20
+                                }}
+                            >
+                                <Button
+                                    icon={{
+                                        name: 'settings',
+                                        size: 25,
+                                        color: '#fff'
+                                    }}
+                                    buttonStyle={{
+                                        backgroundColor: 'gray',
+                                        borderRadius: 30
+                                    }}
+                                    containerStyle={{
+                                        alignItems: 'center'
+                                    }}
+                                    onPress={() =>
+                                        navigation.navigate('Settings')
+                                    }
+                                    adaptiveWidth
+                                />
+                            </View>
+                        </>
                     )}
                 </LinearGradient>
             </View>
         );
     }
 }
+''

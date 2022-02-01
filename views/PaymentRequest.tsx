@@ -1,27 +1,23 @@
 import * as React from 'react';
-import {
-    ActivityIndicator,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
-} from 'react-native';
+import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Button, Header, Icon } from 'react-native-elements';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+
+import { Amount } from './../components/Amount';
+import HopPicker from './../components/HopPicker';
+import KeyValue from './../components/KeyValue';
+import LoadingIndicator from './../components/LoadingIndicator';
+import TextInput from './../components/TextInput';
 
 import InvoicesStore from './../stores/InvoicesStore';
 import TransactionsStore from './../stores/TransactionsStore';
 import UnitsStore from './../stores/UnitsStore';
 import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
-import RESTUtils from './../utils/RESTUtils';
 
-import HopPicker from './../components/HopPicker';
+import { localeString } from './../utils/LocaleUtils';
+import RESTUtils from './../utils/RESTUtils';
+import { themeColor } from './../utils/ThemeUtils';
 
 interface InvoiceProps {
     exitSetup: any;
@@ -34,15 +30,13 @@ interface InvoiceProps {
 }
 
 interface InvoiceState {
-    setCustomAmount: boolean;
-    customAmount: string;
     enableMultiPathPayment: boolean;
     enableAtomicMultiPathPayment: boolean;
     maxParts: string;
     maxShardAmt: string;
     timeoutSeconds: string;
     feeLimitSat: string;
-    outgoingChanIds: Array<string> | null;
+    outgoingChanId: string | null;
     lastHopPubkey: string | null;
 }
 
@@ -59,15 +53,13 @@ export default class PaymentRequest extends React.Component<
     InvoiceState
 > {
     state = {
-        setCustomAmount: false,
-        customAmount: '',
         enableMultiPathPayment: false,
         enableAtomicMultiPathPayment: false,
         maxParts: '16',
         maxShardAmt: '',
         timeoutSeconds: '20',
         feeLimitSat: '',
-        outgoingChanIds: null,
+        outgoingChanId: null,
         lastHopPubkey: null
     };
 
@@ -81,15 +73,13 @@ export default class PaymentRequest extends React.Component<
             navigation
         } = this.props;
         const {
-            setCustomAmount,
-            customAmount,
             enableMultiPathPayment,
             enableAtomicMultiPathPayment,
             maxParts,
             maxShardAmt,
             timeoutSeconds,
             feeLimitSat,
-            outgoingChanIds,
+            outgoingChanId,
             lastHopPubkey
         } = this.state;
         const {
@@ -101,7 +91,6 @@ export default class PaymentRequest extends React.Component<
             successProbability,
             feeEstimate
         } = InvoicesStore;
-        const { units, changeUnits, getAmount } = UnitsStore;
 
         const requestAmount = pay_req && pay_req.getRequestAmount;
         const expiry = pay_req && pay_req.expiry;
@@ -127,18 +116,12 @@ export default class PaymentRequest extends React.Component<
 
         const date = new Date(Number(timestamp) * 1000).toString();
 
-        const { implementation, enableTor } = SettingsStore;
-
-        const isLnd: boolean = implementation === 'lnd';
-
-        // c-lightning can only pay custom amounts if the amount is not specified
-        const canPayCustomAmount: boolean =
-            isLnd || !requestAmount || requestAmount === 0;
+        const { enableTor } = SettingsStore;
 
         const BackButton = () => (
             <Icon
                 name="arrow-back"
-                onPress={() => navigation.navigate('Send')}
+                onPress={() => navigation.navigate('Wallet', { refresh: true })}
                 color="#fff"
                 underlayColor="transparent"
             />
@@ -160,9 +143,7 @@ export default class PaymentRequest extends React.Component<
                     backgroundColor="#1f2328"
                 />
 
-                {(loading || loadingFeeEstimate) && (
-                    <ActivityIndicator size="large" color="#0000ff" />
-                )}
+                {(loading || loadingFeeEstimate) && <LoadingIndicator />}
 
                 <ScrollView>
                     {!!getPayReqError && (
@@ -182,291 +163,88 @@ export default class PaymentRequest extends React.Component<
                     {!!pay_req && (
                         <View style={styles.content}>
                             <View style={styles.center}>
-                                {!setCustomAmount && (
-                                    <TouchableOpacity
-                                        onPress={() => changeUnits()}
-                                    >
-                                        <Text
-                                            style={{
-                                                ...styles.amount,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {units &&
-                                                getAmount(requestAmount || 0)}
-                                        </Text>
-                                    </TouchableOpacity>
-                                )}
-                                {setCustomAmount && (
-                                    <Text
-                                        style={{
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.PaymentRequest.customAmt'
-                                        )}
-                                    </Text>
-                                )}
-                                {setCustomAmount && (
-                                    <TextInput
-                                        keyboardType="numeric"
-                                        placeholder={
-                                            requestAmount
-                                                ? requestAmount.toString()
-                                                : '0'
-                                        }
-                                        value={customAmount}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                customAmount: text
-                                            })
-                                        }
-                                        numberOfLines={1}
-                                        style={{
-                                            ...styles.textInput,
-                                            color: themeColor('text')
-                                        }}
-                                        placeholderTextColor="gray"
-                                    />
-                                )}
-                                {canPayCustomAmount && (
-                                    <View style={styles.button}>
-                                        <Button
-                                            title={
-                                                setCustomAmount
-                                                    ? localeString(
-                                                          'views.PaymentRequest.payDefault'
-                                                      )
-                                                    : localeString(
-                                                          'views.PaymentRequest.payCustom'
-                                                      )
-                                            }
-                                            icon={{
-                                                name: 'edit',
-                                                size: 25,
-                                                color: themeColor('background')
-                                            }}
-                                            onPress={() => {
-                                                if (setCustomAmount) {
-                                                    this.setState({
-                                                        setCustomAmount: false,
-                                                        customAmount: ''
-                                                    });
-                                                } else {
-                                                    this.setState({
-                                                        setCustomAmount: true
-                                                    });
-                                                }
-                                            }}
-                                            style={styles.button}
-                                            titleStyle={{
-                                                color: themeColor('background')
-                                            }}
-                                            buttonStyle={{
-                                                backgroundColor:
-                                                    themeColor('text'),
-                                                borderRadius: 30
-                                            }}
-                                        />
-                                    </View>
-                                )}
+                                <Amount
+                                    sats={requestAmount || 0}
+                                    jumboText
+                                    toggleable
+                                />
                             </View>
 
                             {(!!feeEstimate || feeEstimate === 0) && (
-                                <React.Fragment>
-                                    <TouchableOpacity
-                                        onPress={() => changeUnits()}
-                                    >
-                                        <Text
-                                            style={{
-                                                ...styles.label,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.PaymentRequest.feeEstimate'
-                                            )}
-                                            :
-                                        </Text>
-                                        <Text
-                                            style={{
-                                                ...styles.value,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {units && getAmount(feeEstimate)}
-                                        </Text>
-                                    </TouchableOpacity>
-                                </React.Fragment>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.PaymentRequest.feeEstimate'
+                                    )}
+                                    value={
+                                        <Amount
+                                            sats={feeEstimate || 0}
+                                            toggleable
+                                        />
+                                    }
+                                />
                             )}
 
                             {!!successProbability && (
-                                <React.Fragment>
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.PaymentRequest.successProbability'
-                                        )}
-                                        :
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            ...styles.value,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {`${successProbability}%`}
-                                    </Text>
-                                </React.Fragment>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.PaymentRequest.successProbability'
+                                    )}
+                                    value={`${successProbability}%`}
+                                />
                             )}
 
                             {!!description && (
-                                <React.Fragment>
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.PaymentRequest.description'
-                                        )}
-                                        :
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            ...styles.value,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {description}
-                                    </Text>
-                                </React.Fragment>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.PaymentRequest.description'
+                                    )}
+                                    value={description}
+                                />
                             )}
 
                             {!!timestamp && (
-                                <React.Fragment>
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.PaymentRequest.timestamp'
-                                        )}
-                                        :
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            ...styles.value,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {date}
-                                    </Text>
-                                </React.Fragment>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.PaymentRequest.timestamp'
+                                    )}
+                                    value={date}
+                                />
                             )}
 
                             {!!expiry && (
-                                <React.Fragment>
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.PaymentRequest.expiry'
-                                        )}
-                                        :
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            ...styles.value,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {expiry}
-                                    </Text>
-                                </React.Fragment>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.PaymentRequest.expiry'
+                                    )}
+                                    value={expiry}
+                                />
                             )}
 
                             {!!cltv_expiry && (
-                                <React.Fragment>
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.PaymentRequest.cltvExpiry'
-                                        )}
-                                        :
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            ...styles.value,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {cltv_expiry}
-                                    </Text>
-                                </React.Fragment>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.PaymentRequest.cltvExpiry'
+                                    )}
+                                    value={cltv_expiry}
+                                />
                             )}
 
                             {!!destination && (
-                                <React.Fragment>
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.PaymentRequest.destination'
-                                        )}
-                                        :
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            ...styles.value,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {destination}
-                                    </Text>
-                                </React.Fragment>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.PaymentRequest.destination'
+                                    )}
+                                    value={destination}
+                                />
                             )}
 
                             {!!payment_hash && (
-                                <React.Fragment>
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.PaymentRequest.paymentHash'
-                                        )}
-                                        :
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            ...styles.value,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {payment_hash}
-                                    </Text>
-                                </React.Fragment>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.PaymentRequest.paymentHash'
+                                    )}
+                                    value={payment_hash}
+                                />
                             )}
 
                             {!!pay_req && RESTUtils.supportsHopPicking() && (
@@ -475,12 +253,14 @@ export default class PaymentRequest extends React.Component<
                                         <HopPicker
                                             onValueChange={(item: any) =>
                                                 this.setState({
-                                                    outgoingChanIds: item
-                                                        ? [item.channelId]
+                                                    outgoingChanId: item
+                                                        ? item.channelId
                                                         : null
                                                 })
                                             }
-                                            title="First Hop"
+                                            title={localeString(
+                                                'views.PaymentRequest.firstHop'
+                                            )}
                                             ChannelsStore={ChannelsStore}
                                             UnitsStore={UnitsStore}
                                         />
@@ -494,7 +274,9 @@ export default class PaymentRequest extends React.Component<
                                                         : null
                                                 })
                                             }
-                                            title="Last Hop"
+                                            title={localeString(
+                                                'views.PaymentRequest.lastHop'
+                                            )}
                                             ChannelsStore={ChannelsStore}
                                             UnitsStore={UnitsStore}
                                         />
@@ -504,11 +286,16 @@ export default class PaymentRequest extends React.Component<
 
                             {!!pay_req && RESTUtils.supportsAMP() && (
                                 <React.Fragment>
-                                    <Text style={{ ...styles.label, top: 25 }}>
+                                    <Text
+                                        style={{
+                                            ...styles.label,
+                                            color: themeColor('text'),
+                                            top: 25
+                                        }}
+                                    >
                                         {localeString(
                                             'views.PaymentRequest.amp'
                                         )}
-                                        :
                                     </Text>
                                     <Switch
                                         value={enableAmp}
@@ -577,12 +364,6 @@ export default class PaymentRequest extends React.Component<
                                                 timeoutSeconds: text
                                             })
                                         }
-                                        numberOfLines={1}
-                                        style={{
-                                            ...styles.textInput,
-                                            color: themeColor('text')
-                                        }}
-                                        placeholderTextColor="gray"
                                     />
                                     <Text
                                         style={{
@@ -609,12 +390,6 @@ export default class PaymentRequest extends React.Component<
                                                 maxParts: text
                                             })
                                         }
-                                        numberOfLines={1}
-                                        style={{
-                                            ...styles.textInput,
-                                            color: themeColor('text')
-                                        }}
-                                        placeholderTextColor="gray"
                                     />
                                     <Text
                                         style={{
@@ -650,12 +425,6 @@ export default class PaymentRequest extends React.Component<
                                                 feeLimitSat: text
                                             })
                                         }
-                                        numberOfLines={1}
-                                        style={{
-                                            ...styles.textInput,
-                                            color: themeColor('text')
-                                        }}
-                                        placeholderTextColor="gray"
                                     />
                                 </React.Fragment>
                             )}
@@ -685,12 +454,6 @@ export default class PaymentRequest extends React.Component<
                                                 maxShardAmt: text
                                             })
                                         }
-                                        numberOfLines={1}
-                                        style={{
-                                            ...styles.textInput,
-                                            color: themeColor('text')
-                                        }}
-                                        placeholderTextColor="gray"
                                     />
                                 </React.Fragment>
                             )}
@@ -707,21 +470,17 @@ export default class PaymentRequest extends React.Component<
                                         onPress={() => {
                                             TransactionsStore.sendPayment({
                                                 payment_request: paymentRequest,
-                                                amount: customAmount,
                                                 max_parts: ampOrMppEnabled
                                                     ? maxParts
                                                     : null,
                                                 max_shard_amt: ampOrMppEnabled
                                                     ? maxShardAmt
                                                     : null,
-                                                timeout_seconds: ampOrMppEnabled
-                                                    ? timeoutSeconds
-                                                    : null,
                                                 fee_limit_sat: ampOrMppEnabled
                                                     ? feeLimitSat
                                                     : null,
-                                                outgoing_chan_ids:
-                                                    outgoingChanIds,
+                                                outgoing_chan_id:
+                                                    outgoingChanId,
                                                 last_hop_pubkey: lastHopPubkey,
                                                 amp: enableAmp
                                             });
@@ -769,9 +528,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingTop: 15,
         paddingBottom: 15
-    },
-    textInput: {
-        fontSize: 20
     },
     mppForm: {
         paddingLeft: 20,

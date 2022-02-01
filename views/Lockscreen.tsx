@@ -1,14 +1,8 @@
 import * as React from 'react';
-import {
-    TouchableOpacity,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View
-} from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Button } from 'react-native-elements';
+import Button from './../components/Button';
+import { ErrorMessage } from './../components/SuccessErrorMessage';
 import { localeString } from './../utils/LocaleUtils';
 
 import SettingsStore from './../stores/SettingsStore';
@@ -64,7 +58,7 @@ export default class Lockscreen extends React.Component<
     };
 
     onAttemptLogIn = () => {
-        const { navigation } = this.props;
+        const { SettingsStore, navigation } = this.props;
         const { passphrase, passphraseAttempt } = this.state;
 
         this.setState({
@@ -72,6 +66,7 @@ export default class Lockscreen extends React.Component<
         });
 
         if (passphraseAttempt === passphrase) {
+            SettingsStore.setLoginStatus(true);
             navigation.navigate('Wallet');
         } else {
             this.setState({
@@ -84,13 +79,15 @@ export default class Lockscreen extends React.Component<
         const { passphrase, passphraseAttempt, hidden, error } = this.state;
 
         return (
-            <ScrollView style={styles.darkThemeStyle}>
+            <ScrollView style={styles.container}>
                 {!!passphrase && (
                     <View style={styles.content}>
                         {error && (
-                            <Text style={{ color: 'red' }}>
-                                {localeString('views.Lockscreen.incorrect')}
-                            </Text>
+                            <ErrorMessage
+                                message={localeString(
+                                    'views.Lockscreen.incorrect'
+                                )}
+                            />
                         )}
                         <Text style={{ color: 'white' }}>
                             {localeString('views.Lockscreen.passphrase')}
@@ -111,21 +108,27 @@ export default class Lockscreen extends React.Component<
                             secureTextEntry={hidden}
                             style={styles.textInputDark}
                         />
-                        <TouchableOpacity onPress={this.onInputLabelPressed}>
-                            <Text style={{ color: 'white' }}>
-                                {hidden
-                                    ? localeString('general.show')
-                                    : localeString('general.hide')}
-                            </Text>
-                        </TouchableOpacity>
-                        <Button
-                            title={localeString('views.Lockscreen.login')}
-                            buttonStyle={{
-                                backgroundColor: 'orange',
-                                marginTop: 20
-                            }}
-                            onPress={() => this.onAttemptLogIn()}
-                        />
+                        <View style={styles.button}>
+                            <Button
+                                title={
+                                    hidden
+                                        ? localeString('general.show')
+                                        : localeString('general.hide')
+                                }
+                                onPress={() => this.onInputLabelPressed()}
+                                containerStyle={{ width: 300 }}
+                                adaptiveWidth
+                                secondary
+                            />
+                        </View>
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString('views.Lockscreen.login')}
+                                onPress={() => this.onAttemptLogIn()}
+                                containerStyle={{ width: 300 }}
+                                adaptiveWidth
+                            />
+                        </View>
                     </View>
                 )}
             </ScrollView>
@@ -140,18 +143,19 @@ const styles = StyleSheet.create({
         paddingRight: 20,
         alignItems: 'center'
     },
-    darkThemeStyle: {
+    container: {
         flex: 1,
-        backgroundColor: 'black'
+        backgroundColor: 'black',
+        paddingTop: 200
     },
     button: {
-        paddingTop: 10,
-        paddingBottom: 10
+        paddingTop: 15,
+        paddingBottom: 15
     },
     buttons: {
-        alignItems: 'center',
         paddingTop: 20,
-        paddingBottom: 20
+        paddingBottom: 20,
+        width: '100%'
     },
     textInputDark: {
         fontSize: 20,

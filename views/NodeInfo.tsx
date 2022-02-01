@@ -31,7 +31,7 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
         const { nodeInfo } = NodeInfoStore;
         const { settings } = SettingsStore;
         const { privacy } = settings;
-        const { lurkerMode } = privacy;
+        const lurkerMode = (privacy && privacy.lurkerMode) || false;
 
         const BackButton = () => (
             <Icon

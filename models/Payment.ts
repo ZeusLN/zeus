@@ -22,13 +22,13 @@ export default class Payment extends BaseModel {
     // payment_hash: string;
     destination?: string;
     amount_msat?: string;
+    // amount_sent_msat?: string;
     msatoshi_sent?: string;
     msatoshi?: string;
-    // amount_sent_msat?: string;
     created_at?: string;
     timestamp?: string;
     // status: string;
-    // payment_preimage: string;
+    preimage: string;
     bolt11?: string;
     htlcs?: Array<any>;
     nodes?: any;
@@ -40,6 +40,10 @@ export default class Payment extends BaseModel {
 
     @computed public get model(): string {
         return localeString('views.Payment.title');
+    }
+
+    @computed public get getPreimage(): string {
+        return this.preimage || this.payment_preimage;
     }
 
     @computed public get getTimestamp(): string | number {
@@ -59,7 +63,9 @@ export default class Payment extends BaseModel {
     }
 
     @computed public get getAmount(): number | string {
-        return this.value || Number(this.msatoshi_sent) / 1000 || 0;
+        return this.amount_msat
+            ? Number(this.amount_msat.replace('msat', '')) / 1000
+            : this.value || Number(this.msatoshi_sent) / 1000 || 0;
     }
 
     @computed public get getFee(): string {
@@ -68,10 +74,12 @@ export default class Payment extends BaseModel {
             return this.fee_sat || (Number(this.fee_msat) / 1000).toString();
         }
 
-        // c-lightning
-        if (this.msatoshi && this.msatoshi_sent) {
-            const msatoshi_sent: any = this.msatoshi_sent;
-            const msatoshi: any = this.msatoshi;
+        // c-lightning-REST
+        if (this.amount_msat && this.amount_sent_msat) {
+            const msatoshi_sent: any = Number(
+                this.amount_sent_msat.replace('msat', '')
+            );
+            const msatoshi: any = Number(this.amount_msat.replace('msat', ''));
             const fee = Number(msatoshi_sent - msatoshi) / 1000;
             return fee.toString();
         }

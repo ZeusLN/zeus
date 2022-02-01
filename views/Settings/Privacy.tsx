@@ -1,14 +1,6 @@
 import * as React from 'react';
-import {
-    FlatList,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    View
-} from 'react-native';
-import { Header, Icon, ListItem, SearchBar } from 'react-native-elements';
+import { ScrollView, Switch, Text, View } from 'react-native';
+import { Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import SettingsStore, {
     BLOCK_EXPLORER_KEYS
@@ -16,6 +8,7 @@ import SettingsStore, {
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 import DropdownSetting from './../../components/DropdownSetting';
+import TextInput from './../../components/TextInput';
 
 interface PrivacyProps {
     navigation: any;
@@ -29,6 +22,7 @@ interface PrivacyState {
     customBlockExplorer: string;
     clipboard: boolean;
     lurkerMode: boolean;
+    enableMempoolRates: boolean;
 }
 
 @inject('SettingsStore')
@@ -43,7 +37,8 @@ export default class Privacy extends React.Component<
         defaultBlockExplorer: 'mempool.space',
         customBlockExplorer: '',
         clipboard: false,
-        lurkerMode: false
+        lurkerMode: false,
+        enableMempoolRates: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -59,7 +54,9 @@ export default class Privacy extends React.Component<
                 (settings.privacy && settings.privacy.customBlockExplorer) ||
                 '',
             clipboard: settings.privacy && settings.privacy.clipboard,
-            lurkerMode: settings.privacy && settings.privacy.lurkerMode
+            lurkerMode: settings.privacy && settings.privacy.lurkerMode,
+            enableMempoolRates:
+                settings.privacy && settings.privacy.enableMempoolRates
         });
     }
 
@@ -73,19 +70,24 @@ export default class Privacy extends React.Component<
     );
 
     render() {
-        const { navigation, selectedNode, SettingsStore } = this.props;
+        const { navigation, SettingsStore } = this.props;
         const {
             defaultBlockExplorer,
             customBlockExplorer,
             clipboard,
-            lurkerMode
+            lurkerMode,
+            enableMempoolRates
         } = this.state;
         const { setSettings, getSettings }: any = SettingsStore;
 
         const BackButton = () => (
             <Icon
                 name="arrow-back"
-                onPress={() => navigation.goBack()}
+                onPress={() =>
+                    navigation.navigate('Settings', {
+                        refresh: true
+                    })
+                }
                 color={themeColor('text')}
                 underlayColor="transparent"
             />
@@ -106,7 +108,9 @@ export default class Privacy extends React.Component<
                     }}
                     backgroundColor={themeColor('secondary')}
                 />
-                <ScrollView style={{ flex: 1, padding: 15 }}>
+                <ScrollView
+                    style={{ flex: 1, paddingLeft: 10, paddingTop: 15 }}
+                >
                     <DropdownSetting
                         title={localeString(
                             'views.Settings.Privacy.blockExplorer'
@@ -118,21 +122,34 @@ export default class Privacy extends React.Component<
                             });
                             const settings = await getSettings();
                             await setSettings(
-                                JSON.stringify({
-                                    nodes: settings.nodes,
-                                    theme: settings.theme,
-                                    selectedNode: settings.selectedNode,
-                                    onChainAddress: settings.onChainAddress,
-                                    fiat: settings.fiat,
-                                    passphrase: settings.passphrase,
-                                    locale: settings.locale,
-                                    privacy: {
-                                        defaultBlockExplorer: value,
-                                        customBlockExplorer,
-                                        clipboard,
-                                        lurkerMode
-                                    }
-                                })
+                                JSON.stringify(
+                                    settings
+                                        ? {
+                                              nodes: settings.nodes,
+                                              theme: settings.theme,
+                                              selectedNode:
+                                                  settings.selectedNode,
+                                              fiat: settings.fiat,
+                                              passphrase: settings.passphrase,
+                                              locale: settings.locale,
+                                              privacy: {
+                                                  defaultBlockExplorer: value,
+                                                  customBlockExplorer,
+                                                  clipboard,
+                                                  lurkerMode,
+                                                  enableMempoolRates
+                                              }
+                                          }
+                                        : {
+                                              privacy: {
+                                                  defaultBlockExplorer: value,
+                                                  customBlockExplorer,
+                                                  clipboard,
+                                                  lurkerMode,
+                                                  enableMempoolRates
+                                              }
+                                          }
+                                )
                             );
                         }}
                         values={BLOCK_EXPLORER_KEYS}
@@ -156,28 +173,38 @@ export default class Privacy extends React.Component<
 
                                     const settings = await getSettings();
                                     await setSettings(
-                                        JSON.stringify({
-                                            nodes: settings.nodes,
-                                            theme: settings.theme,
-                                            selectedNode: settings.selectedNode,
-                                            onChainAddress:
-                                                settings.onChainAddress,
-                                            fiat: settings.fiat,
-                                            passphrase: settings.passphrase,
-                                            locale: settings.locale,
-                                            privacy: {
-                                                defaultBlockExplorer,
-                                                customBlockExplorer: text,
-                                                clipboard,
-                                                lurkerMode
-                                            }
-                                        })
+                                        JSON.stringify(
+                                            settings
+                                                ? {
+                                                      nodes: settings.nodes,
+                                                      theme: settings.theme,
+                                                      selectedNode:
+                                                          settings.selectedNode,
+                                                      fiat: settings.fiat,
+                                                      passphrase:
+                                                          settings.passphrase,
+                                                      locale: settings.locale,
+                                                      privacy: {
+                                                          defaultBlockExplorer,
+                                                          customBlockExplorer:
+                                                              text,
+                                                          clipboard,
+                                                          lurkerMode,
+                                                          enableMempoolRates
+                                                      }
+                                                  }
+                                                : {
+                                                      privacy: {
+                                                          defaultBlockExplorer,
+                                                          customBlockExplorer:
+                                                              text,
+                                                          clipboard,
+                                                          lurkerMode,
+                                                          enableMempoolRates
+                                                      }
+                                                  }
+                                        )
                                     );
-                                }}
-                                numberOfLines={1}
-                                style={{
-                                    ...styles.textInput,
-                                    color: themeColor('text')
                                 }}
                             />
                         </>
@@ -212,22 +239,35 @@ export default class Privacy extends React.Component<
                                     });
                                     const settings = await getSettings();
                                     await setSettings(
-                                        JSON.stringify({
-                                            nodes: settings.nodes,
-                                            theme: settings.theme,
-                                            selectedNode: settings.selectedNode,
-                                            onChainAddress:
-                                                settings.onChainAddress,
-                                            fiat: settings.fiat,
-                                            passphrase: settings.passphrase,
-                                            locale: settings.locale,
-                                            privacy: {
-                                                defaultBlockExplorer,
-                                                customBlockExplorer,
-                                                clipboard: !clipboard,
-                                                lurkerMode
-                                            }
-                                        })
+                                        JSON.stringify(
+                                            settings
+                                                ? {
+                                                      nodes: settings.nodes,
+                                                      theme: settings.theme,
+                                                      selectedNode:
+                                                          settings.selectedNode,
+                                                      fiat: settings.fiat,
+                                                      passphrase:
+                                                          settings.passphrase,
+                                                      locale: settings.locale,
+                                                      privacy: {
+                                                          defaultBlockExplorer,
+                                                          customBlockExplorer,
+                                                          clipboard: !clipboard,
+                                                          lurkerMode,
+                                                          enableMempoolRates
+                                                      }
+                                                  }
+                                                : {
+                                                      privacy: {
+                                                          defaultBlockExplorer,
+                                                          customBlockExplorer,
+                                                          clipboard: !clipboard,
+                                                          lurkerMode,
+                                                          enableMempoolRates
+                                                      }
+                                                  }
+                                        )
                                     );
                                 }}
                                 trackColor={{
@@ -266,22 +306,108 @@ export default class Privacy extends React.Component<
                                     });
                                     const settings = await getSettings();
                                     await setSettings(
-                                        JSON.stringify({
-                                            nodes: settings.nodes,
-                                            theme: settings.theme,
-                                            selectedNode: settings.selectedNode,
-                                            onChainAddress:
-                                                settings.onChainAddress,
-                                            fiat: settings.fiat,
-                                            passphrase: settings.passphrase,
-                                            locale: settings.locale,
-                                            privacy: {
-                                                defaultBlockExplorer,
-                                                customBlockExplorer,
-                                                clipboard,
-                                                lurkerMode: !lurkerMode
-                                            }
-                                        })
+                                        JSON.stringify(
+                                            settings
+                                                ? {
+                                                      nodes: settings.nodes,
+                                                      theme: settings.theme,
+                                                      selectedNode:
+                                                          settings.selectedNode,
+                                                      fiat: settings.fiat,
+                                                      passphrase:
+                                                          settings.passphrase,
+                                                      locale: settings.locale,
+                                                      privacy: {
+                                                          defaultBlockExplorer,
+                                                          customBlockExplorer,
+                                                          clipboard,
+                                                          lurkerMode:
+                                                              !lurkerMode,
+                                                          enableMempoolRates
+                                                      }
+                                                  }
+                                                : {
+                                                      privacy: {
+                                                          defaultBlockExplorer,
+                                                          customBlockExplorer,
+                                                          clipboard,
+                                                          lurkerMode:
+                                                              !lurkerMode,
+                                                          enableMempoolRates
+                                                      }
+                                                  }
+                                        )
+                                    );
+                                }}
+                                trackColor={{
+                                    false: '#767577',
+                                    true: themeColor('highlight')
+                                }}
+                            />
+                        </View>
+                    </ListItem>
+                    <ListItem
+                        containerStyle={{
+                            borderBottomWidth: 0,
+                            backgroundColor: themeColor('background')
+                        }}
+                    >
+                        <ListItem.Title
+                            style={{
+                                color: themeColor('secondaryText'),
+                                left: -10
+                            }}
+                        >
+                            {localeString(
+                                'views.Settings.Privacy.enableMempoolRates'
+                            )}
+                        </ListItem.Title>
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                justifyContent: 'flex-end'
+                            }}
+                        >
+                            <Switch
+                                value={enableMempoolRates}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        enableMempoolRates: !enableMempoolRates
+                                    });
+                                    const settings = await getSettings();
+                                    await setSettings(
+                                        JSON.stringify(
+                                            settings
+                                                ? {
+                                                      nodes: settings.nodes,
+                                                      theme: settings.theme,
+                                                      selectedNode:
+                                                          settings.selectedNode,
+                                                      fiat: settings.fiat,
+                                                      passphrase:
+                                                          settings.passphrase,
+                                                      locale: settings.locale,
+                                                      privacy: {
+                                                          defaultBlockExplorer,
+                                                          customBlockExplorer,
+                                                          clipboard,
+                                                          lurkerMode,
+                                                          enableMempoolRates:
+                                                              !enableMempoolRates
+                                                      }
+                                                  }
+                                                : {
+                                                      privacy: {
+                                                          defaultBlockExplorer,
+                                                          customBlockExplorer,
+                                                          clipboard,
+                                                          lurkerMode,
+                                                          enableMempoolRates:
+                                                              !enableMempoolRates
+                                                      }
+                                                  }
+                                        )
                                     );
                                 }}
                                 trackColor={{
@@ -296,16 +422,3 @@ export default class Privacy extends React.Component<
         );
     }
 }
-
-const styles = StyleSheet.create({
-    textInput: {
-        fontSize: 20,
-        width: '100%',
-        height: 60,
-        top: 10,
-        backgroundColor: '#31363F',
-        borderRadius: 6,
-        marginBottom: 20,
-        paddingLeft: 5
-    }
-});

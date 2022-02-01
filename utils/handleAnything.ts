@@ -3,6 +3,7 @@ import RNFetchBlob from 'rn-fetch-blob';
 import stores from '../stores/Stores';
 import AddressUtils from './../utils/AddressUtils';
 import LndConnectUtils from './../utils/LndConnectUtils';
+import NodeUriUtils from './../utils/NodeUriUtils';
 import { localeString } from './../utils/LocaleUtils';
 
 const { nodeInfoStore, invoicesStore } = stores;
@@ -98,6 +99,15 @@ export default async function (data: string): Promise<any> {
             .catch(() => {
                 throw new Error(error);
             });
+    } else if (NodeUriUtils.isValidNodeUri(value)) {
+        const { pubkey, host } = NodeUriUtils.processNodeUri(value);
+        return [
+            'OpenChannel',
+            {
+                pubkey,
+                host
+            }
+        ];
     } else if (findlnurl(value) !== null) {
         const raw: string = findlnurl(value) || '';
         return getlnurlParams(raw).then((params: any) => {
@@ -144,8 +154,6 @@ export default async function (data: string): Promise<any> {
             }
         });
     } else {
-        throw new Error(
-            'Scanned QR code was not a valid Bitcoin address or Lightning Invoice'
-        );
+        throw new Error(localeString('utils.handleAnything.notValid'));
     }
 }

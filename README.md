@@ -5,8 +5,6 @@ Zeus is a mobile Bitcoin/Lightning node manager and wallet application for lnd, 
 
 Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 
-⚠️ *Disclaimer*: Zeus and Lightning in general are software projects in their early development stages. Please be wary when using Lightning and Zeus, do not fund your node with more money than you are willing to lose.
-
 ### App Store links
 * [Google Play](https://play.google.com/store/apps/details?id=app.zeusln.zeus)
 * [Apple App Store](https://apps.apple.com/us/app/zeus-ln/id1456038895)
@@ -106,10 +104,6 @@ Zeus is proud to be integrated on the following platforms:
 2. install node dependencies with `npm i`
 3. `cd ios && pod install`
 4. open `ios/zeus.xcworkspace` in Xcode and hit Run
-
-## Google Play Releases
-
-Google Play releases aren't fully featured due to Google policies. To get the fully featured version of Zeus on Android you must download the APK from the [Zeus website](https://zeusln.app), GitHub, or F-Droid. Google Play releases are managed on the `play-releases` branch. Commits used for Google Play builds will be marked in the release notes.
 
 ## Contributing
 

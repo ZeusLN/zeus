@@ -37,7 +37,6 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
         } = BalanceStore;
         const { implementation } = SettingsStore;
         const nodeAddress = SettingsStore.host || SettingsStore.url;
-        const loading = NodeInfoStore.loading || BalanceStore.loading;
 
         const pendingUnconfirmedBalance =
             Number(pendingOpenBalance) + Number(unconfirmedBlockchainBalance);
@@ -118,22 +117,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
 
         let mainPane;
 
-        if (loading) {
-            mainPane = (
-                <View style={styles.loadingContainer}>
-                    <WalletHeader navigation={navigation} loading={true} />
-                    <Button
-                        title=""
-                        loading
-                        buttonStyle={{
-                            backgroundColor: 'transparent'
-                        }}
-                        onPress={() => void 0}
-                        iconOnly
-                    />
-                </View>
-            );
-        } else if (!NodeInfoStore.error) {
+        if (!NodeInfoStore.error) {
             mainPane = (
                 <View
                     style={{
@@ -142,13 +126,21 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                         backgroundColor: themeColor('secondary')
                     }}
                 >
-                    <WalletHeader navigation={navigation} />
-                    {implementation === 'lndhub' ? (
-                        <LightningBalance />
-                    ) : (
-                        <BalanceViewCombined />
-                    )}
-                    {infoValue !== 'ⓘ' && <NetworkBadge />}
+                    <WalletHeader
+                        navigation={navigation}
+                        SettingsStore={SettingsStore}
+                    />
+                    {!BalanceStore.loadingLightningBalance &&
+                        !BalanceStore.loadingBlockchainBalance && (
+                            <>
+                                {implementation === 'lndhub' ? (
+                                    <LightningBalance />
+                                ) : (
+                                    <BalanceViewCombined />
+                                )}
+                                {infoValue !== 'ⓘ' && <NetworkBadge />}
+                            </>
+                        )}
                 </View>
             );
         } else {
@@ -190,7 +182,6 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                             alignItems: 'center'
                         }}
                         onPress={() => navigation.navigate('Settings')}
-                        tertiary
                         adaptiveWidth
                     />
                     <Text

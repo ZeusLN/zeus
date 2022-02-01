@@ -14,7 +14,6 @@ interface Node {
     accessKey?: string;
     implementation?: string;
     certVerification?: boolean;
-    onChainAddress?: string;
     enableTor?: boolean;
     nickname?: string;
 }
@@ -24,6 +23,7 @@ interface PrivacySettings {
     customBlockExplorer?: string;
     clipboard?: boolean;
     lurkerMode?: boolean;
+    enableMempoolRates?: boolean;
 }
 
 interface Settings {
@@ -33,7 +33,6 @@ interface Settings {
     passphrase?: string;
     fiat?: string;
     locale?: string;
-    onChainAddress?: string;
     privacy: PrivacySettings;
 }
 
@@ -59,13 +58,25 @@ export const LOCALE_KEYS = [
     { key: 'Češka', value: 'Češka' },
     { key: 'Slovák', value: 'Slovák' },
     { key: 'Deutsch', value: 'Deutsch' },
+    { key: 'Polski', value: 'Polski' },
     { key: 'Türkçe', value: 'Türkçe' },
     { key: 'magyar nyelv', value: 'magyar nyelv' },
     { key: '简化字', value: '简化字' },
+    { key: 'Nederlands', value: 'Nederlands' },
+    { key: 'Bokmål', value: 'Bokmål' },
+    { key: 'Svenska', value: 'Svenska' },
+    { key: 'ภาษาไทย', value: 'ภาษาไทย' },
+    { key: 'украї́нська мо́ва', value: 'украї́нська мо́ва' },
+    { key: 'Limba română', value: 'Limba română' },
     // in progress
     { key: 'Ελληνικά', value: 'Ελληνικά' },
     { key: 'زبان فارسي', value: 'زبان فارسي' },
-    { key: 'Nederlands', value: 'Nederlands' }
+    { key: 'Slovenski jezik', value: 'Slovenski jezik' },
+    { key: 'русский язык', value: 'русский язык' },
+    { key: 'Suomen kieli', value: 'Suomen kieli' },
+    { key: 'Italiano', value: 'Italiano' },
+    { key: 'Tiếng Việt', value: 'Tiếng Việt' },
+    { key: '日本語', value: '日本語' }
 ];
 
 export const CURRENCY_KEYS = [
@@ -77,7 +88,7 @@ export const CURRENCY_KEYS = [
     { key: '🇭🇰 Hong Kong Dollar (HKD)', value: 'HKD' },
     { key: '🇨🇦 Canadian Dollar (CAD)', value: 'CAD' },
     { key: '🇳🇿 New Zealand Dollar (NZD)', value: 'NZD' },
-    { key: '🇦🇺 Austrlian Dollar (AUD)', value: 'AUD' },
+    { key: '🇦🇺 Australian Dollar (AUD)', value: 'AUD' },
     { key: '🇨🇱 Chilean Peso (CLP)', value: 'CLP' },
     { key: '🇬🇧 Great British Pound (GBP)', value: 'GBP' },
     { key: '🇩🇰 Danish Krone (DKK)', value: 'DKK' },
@@ -90,7 +101,14 @@ export const CURRENCY_KEYS = [
     { key: '🇵🇱 Polish Złoty (PLN)', value: 'PLN' },
     { key: '🇹🇭 Thai Baht (THB)', value: 'THB' },
     { key: '🇰🇷 South Korean Won (KRW)', value: 'KRW' },
-    { key: '🇹🇼 Taiwan New Dollar (TWD)', value: 'TWD' }
+    { key: '🇹🇼 New Taiwan Dollar (TWD)', value: 'TWD' },
+    { key: '🇨🇿 Czech Koruna (CZK)', value: 'CZK' },
+    { key: '🇭🇺 Hungarian Forint (HUF)', value: 'HUF' },
+    { key: '🇮🇳 Indian Rupee (INR)', value: 'INR' },
+    { key: '🇹🇷 Turkish Lira (TRY)', value: 'TRY' },
+    { key: '🇳🇬 Nigerian Naira (NGN)', value: 'NGN' },
+    { key: '🇦🇷 Argentine Peso (ARS)', value: 'ARS' },
+    { key: '🇮🇱 Israeli New Shekel (ILS)', value: 'ILS' }
 ];
 
 export const THEME_KEYS = [
@@ -108,7 +126,8 @@ export default class SettingsStore {
             defaultBlockExplorer: 'mempool.space',
             customBlockExplorer: '',
             clipboard: false,
-            lurkerMode: false
+            lurkerMode: false,
+            enableMempoolRates: false
         }
     };
     @observable public loading = false;
@@ -120,7 +139,8 @@ export default class SettingsStore {
     @observable accessKey: string;
     @observable implementation: string;
     @observable certVerification: boolean | undefined;
-    @observable chainAddress: string | undefined;
+    @observable public loggedIn = false;
+    @observable public connecting = true;
     // LNDHub
     @observable username: string;
     @observable password: string;
@@ -204,7 +224,6 @@ export default class SettingsStore {
                     this.accessKey = node.accessKey;
                     this.implementation = node.implementation || 'lnd';
                     this.certVerification = node.certVerification || false;
-                    this.chainAddress = node.onChainAddress;
                     this.enableTor = node.enableTor;
                 }
                 return this.settings;
@@ -230,24 +249,6 @@ export default class SettingsStore {
             return settings;
         });
     }
-
-    @action
-    public getNewAddress = () => {
-        return RESTUtils.getNewAddress().then((data: any) => {
-            const newAddress = data.address || data[0].address;
-            if (this.settings.nodes) {
-                this.settings.nodes[
-                    this.settings.selectedNode || 0
-                ].onChainAddress = newAddress;
-            }
-
-            const newSettings = this.settings;
-
-            this.setSettings(JSON.stringify(newSettings)).then(() => {
-                this.getSettings();
-            });
-        });
-    };
 
     // LNDHub
     @action
@@ -293,5 +294,15 @@ export default class SettingsStore {
                 // handle error
                 this.loading = false;
             });
+    };
+
+    @action
+    public setLoginStatus = (status = false) => {
+        this.loggedIn = status;
+    };
+
+    @action
+    public setConnectingStatus = (status = false) => {
+        this.connecting = status;
     };
 }

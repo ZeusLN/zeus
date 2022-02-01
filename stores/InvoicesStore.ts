@@ -17,11 +17,14 @@ export default class InvoicesStore {
     @observable getPayReqError: string | null = null;
     @observable invoices: Array<Invoice> = [];
     @observable invoice: Invoice | null;
+    @observable onChainAddress: string | null;
     @observable pay_req: Invoice | null;
     @observable payment_request: string | null;
+    @observable payment_request_amt: string | null;
     @observable creatingInvoice = false;
     @observable creatingInvoiceError = false;
     @observable invoicesCount: number;
+    @observable watchedInvoicePaid = false;
     settingsStore: SettingsStore;
 
     // lnd
@@ -66,6 +69,7 @@ export default class InvoicesStore {
         this.loadingFeeEstimate = false;
         this.feeEstimate = null;
         this.successProbability = null;
+        this.watchedInvoicePaid = false;
     };
 
     @action
@@ -108,6 +112,7 @@ export default class InvoicesStore {
         routeHints?: boolean
     ) => {
         this.payment_request = null;
+        this.payment_request_amt = null;
         this.creatingInvoice = true;
         this.creatingInvoiceError = false;
         this.error_msg = null;
@@ -125,6 +130,7 @@ export default class InvoicesStore {
             .then((data: any) => {
                 const invoice = new Invoice(data);
                 this.payment_request = invoice.getPaymentRequest;
+                this.payment_request_amt = value;
                 this.creatingInvoice = false;
 
                 if (lnurl) {
@@ -162,6 +168,19 @@ export default class InvoicesStore {
                             }
                         });
                 }
+
+                if (this.settingsStore.implementation === 'lnd') {
+                    const formattedRhash = invoice.r_hash
+                        .replace(/\+/g, '-')
+                        .replace(/\//g, '_');
+                    RESTUtils.subscribeInvoice(formattedRhash).then(
+                        (response: any) => {
+                            if (response.result && response.result.settled) {
+                                this.watchedInvoicePaid = true;
+                            }
+                        }
+                    );
+                }
             })
             .catch((error: any) => {
                 // handle error
@@ -169,6 +188,13 @@ export default class InvoicesStore {
                 this.creatingInvoice = false;
                 this.error_msg = error.toString() || 'Error creating invoice';
             });
+    };
+
+    @action
+    public getNewAddress = () => {
+        return RESTUtils.getNewAddress().then((data: any) => {
+            this.onChainAddress = data.address || data[0].address;
+        });
     };
 
     @action

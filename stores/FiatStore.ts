@@ -20,34 +20,131 @@ export default class FiatStore {
         this.settingsStore = settingsStore;
     }
 
-    // TODO: do more of these symbol pairs. I'm referring to
-    // https://fastspring.com/blog/how-to-format-30-currencies-from-countries-all-over-the-world/
+    numberWithCommas = (x: string | number) =>
+        new Intl.NumberFormat('en-EN').format(x);
+
+    numberWithDecimals = (x: string | number) =>
+        new Intl.NumberFormat('de-DE').format(x);
+
     private symbolLookup = (symbol: string): CurrencyDisplayRules => {
         const symbolPairs: any = {
-            USD: { symbol: '$', space: false, rtl: false },
-            EUR: { symbol: '€', space: true, rtl: false },
-            GBP: { symbol: '£', space: false, rtl: false },
-            JPY: { symbol: '¥', space: true, rtl: false },
-            THB: { symbol: '฿', space: true, rtl: true }
+            USD: {
+                symbol: '$',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
+            ARS: { symbol: '$', space: true, rtl: false, separatorSwap: true },
+            AUD: { symbol: '$', space: true, rtl: false, separatorSwap: false },
+            BRL: {
+                symbol: 'R$',
+                space: true,
+                rtl: false,
+                separatorSwap: false
+            },
+            CAD: { symbol: '$', space: true, rtl: false, separatorSwap: false },
+            CHF: {
+                symbol: 'fr.',
+                space: true,
+                rtl: false,
+                separatorSwap: false
+            },
+            CLP: { symbol: '$', space: true, rtl: false, separatorSwap: false },
+            CNY: { symbol: '¥', space: true, rtl: false, separatorSwap: false },
+            CZK: {
+                symbol: 'Kč',
+                space: true,
+                rtl: true,
+                separatorSwap: true
+            },
+            DKK: {
+                symbol: 'kr.',
+                space: true,
+                rtl: false,
+                separatorSwap: true
+            },
+            EUR: {
+                symbol: '€',
+                space: false,
+                rtl: false,
+                separatorSwap: true
+            },
+            GBP: {
+                symbol: '£',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
+            HKD: {
+                symbol: 'HK$',
+                space: true,
+                rtl: false,
+                separatorSwap: false
+            },
+            HUF: {
+                symbol: 'Ft',
+                space: true,
+                rtl: true,
+                separatorSwap: true
+            },
+            ILS: { symbol: '₪', space: true, rtl: false, separatorSwap: false },
+            INR: { symbol: '₹', space: true, rtl: false, separatorSwap: false },
+            JPY: { symbol: '¥', space: true, rtl: false, separatorSwap: false },
+            KRW: { symbol: '₩', space: true, rtl: false, separatorSwap: false },
+            NGN: {
+                symbol: '₦',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
+            NZD: { symbol: '$', space: true, rtl: false, separatorSwap: false },
+            PLN: { symbol: 'zł', space: true, rtl: true, separatorSwap: false },
+            RUB: {
+                symbol: 'p.',
+                space: true,
+                rtl: true,
+                separatorSwap: true
+            },
+            SAR: { symbol: '﷼', space: true, rtl: true, separatorSwap: false },
+            SEK: {
+                symbol: 'kr',
+                space: true,
+                rtl: true,
+                separatorSwap: true
+            },
+            SGD: {
+                symbol: '$',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
+            THB: { symbol: '฿', space: true, rtl: true, separatorSwap: false },
+            TRY: { symbol: '₺', space: true, rtl: true, separatorSwap: false },
+            TWD: { symbol: '元', space: true, rtl: false, separatorSwap: false }
         };
 
         if (symbol in symbolPairs) {
-            // TODO: how do I get typescript less mad here?
             return symbolPairs[symbol];
         } else {
-            return { symbol, space: true, rtl: false };
+            return { symbol, space: true, rtl: false, separatorSwap: false };
         }
     };
 
     @action getSymbol = () => {
         const { settings } = this.settingsStore;
         const { fiat } = settings;
-        if (fiat) {
-            return this.symbolLookup(this.fiatRates[fiat].symbol);
+        if (fiat && this.fiatRates.filter) {
+            const fiatEntry = this.fiatRates.filter(
+                (entry: any) => entry.code === fiat
+            )[0];
+            return this.symbolLookup(fiatEntry.code);
         } else {
-            console.log('no fiat?');
-            // TODO: what do we do in this case?
-            return { symbol: '???', space: true, rtl: true };
+            return {
+                symbol: fiat,
+                space: true,
+                rtl: true,
+                separatorSwap: false
+            };
         }
     };
 
@@ -55,19 +152,39 @@ export default class FiatStore {
     public getRate = () => {
         const { settings } = this.settingsStore;
         const { fiat } = settings;
-        if (fiat) {
-            const rate = this.fiatRates[fiat]['15m'];
-            //const symbol = this.symbolLookup(this.fiatRates[fiat].symbol);
-            const symbol = '$';
-            return `${symbol}${rate} BTC/${fiat}`;
+        if (fiat && this.fiatRates.filter) {
+            const fiatEntry = this.fiatRates.filter(
+                (entry: any) => entry.code === fiat
+            )[0];
+            const rate = fiatEntry.rate;
+            const { symbol, space, rtl, separatorSwap } = this.symbolLookup(
+                fiatEntry.code
+            );
+
+            const formattedRate = separatorSwap
+                ? this.numberWithDecimals(rate)
+                : this.numberWithCommas(rate);
+
+            if (rtl) {
+                return `${formattedRate}${
+                    space ? ' ' : ''
+                }${symbol} BTC/${fiat}`;
+            } else {
+                return `${symbol}${
+                    space ? ' ' : ''
+                }${formattedRate} BTC/${fiat}`;
+            }
         }
-        return 'N/A';
+        return '$N/A';
     };
 
     @action
     public getFiatRates = () => {
         this.loading = true;
-        RNFetchBlob.fetch('get', 'https://blockchain.info/ticker')
+        RNFetchBlob.fetch(
+            'GET',
+            'https://pay.zeusln.app/api/rates?storeId=Fjt7gLnGpg4UeBMFccLquy3GTTEz4cHU4PZMU63zqMBo'
+        )
             .then((response: any) => {
                 const status = response.info().status;
                 if (status == 200) {

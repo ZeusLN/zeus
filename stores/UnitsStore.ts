@@ -54,9 +54,6 @@ export default class UnitsStore {
         this.units = 'sats';
     };
 
-    numberWithCommas = (x: string | number) =>
-        x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
     @action getUnformattedAmount = (
         value: string | number = 0,
         fixedUnits?: string
@@ -79,7 +76,7 @@ export default class UnitsStore {
             };
         } else if (units === 'sats') {
             return {
-                amount: this.numberWithCommas(absValueSats),
+                amount: this.fiatStore.numberWithCommas(absValueSats),
                 unit: 'sats',
                 negative,
                 plural: !(Number(value) === 1 || Number(value) === -1)
@@ -96,23 +93,32 @@ export default class UnitsStore {
                 };
             }
 
-            // TODO: what should we do when this is undefined?
-            const rate =
-                this.fiatStore.fiatRates[currency] &&
-                this.fiatStore.fiatRates[currency]['15m'];
-            const { symbol, space, rtl } = this.fiatStore.getSymbol();
+            if (this.fiatStore.fiatRates && this.fiatStore.fiatRates.filter) {
+                const fiatEntry = this.fiatStore.fiatRates.filter(
+                    (entry: any) => entry.code === fiat
+                )[0];
+                const rate = fiatEntry.rate;
+                const { symbol, space, rtl, separatorSwap } =
+                    this.fiatStore.getSymbol();
 
-            return {
-                amount: (
+                const amount = (
                     FeeUtils.toFixed(absValueSats / satoshisPerBTC) * rate
-                ).toFixed(2),
-                unit: 'fiat',
-                symbol,
-                negative,
-                plural: false,
-                rtl,
-                space
-            };
+                ).toFixed(2);
+
+                return {
+                    amount: separatorSwap
+                        ? this.fiatStore.numberWithDecimals(amount)
+                        : this.fiatStore.numberWithCommas(amount),
+                    unit: 'fiat',
+                    symbol,
+                    negative,
+                    plural: false,
+                    rtl,
+                    space
+                };
+            } else {
+                return { error: 'Error fetching fiat rates' };
+            }
         }
     };
 
@@ -137,26 +143,36 @@ export default class UnitsStore {
                 Number(wholeSats || 0) / satoshisPerBTC
             )}`;
         } else if (units === 'sats') {
-            const sats = `${value || 0} ${
+            const sats = `${this.fiatStore.numberWithCommas(value) || 0} ${
                 Number(value) === 1 || Number(value) === -1 ? 'sat' : 'sats'
             }`;
-            return this.numberWithCommas(sats);
+            return sats;
         } else if (units === 'fiat' && fiat) {
-            const rate = this.fiatStore.fiatRates[fiat]['15m'];
-            const symbol = this.fiatStore.fiatRates[fiat].symbol;
+            if (this.fiatStore.fiatRates && this.fiatStore.fiatRates.filter) {
+                const fiatEntry = this.fiatStore.fiatRates.filter(
+                    (entry: any) => entry.code === fiat
+                )[0];
+                const rate = fiatEntry.rate;
+                const { symbol, space, rtl, separatorSwap } =
+                    this.fiatStore.symbolLookup(fiatEntry.code);
 
-            const valueToProcess = (wholeSats && wholeSats.toString()) || '0';
-            if (valueToProcess.includes('-')) {
-                const processedValue = valueToProcess.split('-')[1];
-                return `-${symbol}${(
-                    FeeUtils.toFixed(Number(processedValue) / satoshisPerBTC) *
+                const amount = (
+                    FeeUtils.toFixed(Number(wholeSats || 0) / satoshisPerBTC) *
                     rate
-                ).toFixed(2)}`;
-            }
+                ).toFixed(2);
 
-            return `${symbol}${(
-                FeeUtils.toFixed(Number(wholeSats || 0) / satoshisPerBTC) * rate
-            ).toFixed(2)}`;
+                const formattedAmount = separatorSwap
+                    ? this.fiatStore.numberWithDecimals(amount)
+                    : this.fiatStore.numberWithCommas(amount);
+
+                if (rtl) {
+                    return `${formattedAmount}${space ? ' ' : ''}${symbol}`;
+                } else {
+                    return `${symbol}${space ? ' ' : ''}${formattedAmount}`;
+                }
+            } else {
+                return '$N/A';
+            }
         }
     };
 }

@@ -156,6 +156,39 @@ export class Amount extends React.Component<AmountProps, {}> {
 
         const unformattedAmount = UnitsStore.getUnformattedAmount(value, units);
 
+        // display fiat amounts when rate fetch fails as $N/A
+        if (unformattedAmount.error) {
+            const amount = 'N/A';
+            const unit = 'fiat';
+            const symbol = '$';
+
+            if (toggleable) {
+                return (
+                    <TouchableOpacity onPress={() => UnitsStore.changeUnits()}>
+                        <AmountDisplay
+                            amount={amount}
+                            unit={unit}
+                            symbol={symbol}
+                            negative={false}
+                            jumboText={jumboText}
+                            pending={pending}
+                        />
+                    </TouchableOpacity>
+                );
+            }
+
+            return (
+                <AmountDisplay
+                    amount={amount}
+                    unit={unit}
+                    symbol={symbol}
+                    negative={false}
+                    jumboText={jumboText}
+                    pending={pending}
+                />
+            );
+        }
+
         const textColor = debit
             ? 'warning'
             : credit

@@ -80,7 +80,7 @@ export default class CLightningREST extends LND {
             expiry: data.expiry,
             private: true
         });
-    getPayments = () => this.getRequest('/v1/pay/listPayments');
+    getPayments = () => this.getRequest('/v1/pay/listPays');
     getNewAddress = () => this.getRequest('/v1/newaddr');
     openChannel = (data: OpenChannelRequest) => {
         let request: any;
@@ -117,6 +117,11 @@ export default class CLightningREST extends LND {
             invoice: data.payment_request,
             amount: Number(data.amt && data.amt * 1000)
         });
+    sendKeysend = (data: any) =>
+        this.postRequest('/v1/pay/keysend', {
+            pubkey: data.pubkey,
+            amount: Number(data.amt && data.amt * 1000)
+        });
     closeChannel = (urlParams?: Array<string>) =>
         this.deleteRequest(
             `/v1/channel/closeChannel/${urlParams && urlParams[0]}/`
@@ -138,6 +143,10 @@ export default class CLightningREST extends LND {
         this.postRequest('/v1/utility/signMessage', {
             message: message
         });
+    verifyMessage = (data: any) =>
+        this.getRequest(
+            `/v1/utility/checkMessage/${data.msg}/${data.signature}`
+        );
 
     supportsMessageSigning = () => true;
     supportsMPP = () => false;
@@ -146,4 +155,5 @@ export default class CLightningREST extends LND {
     supportsHopPicking = () => false;
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
+    singleFeesEarnedTotal = () => true;
 }

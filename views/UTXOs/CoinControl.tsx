@@ -1,26 +1,23 @@
 import * as React from 'react';
-import { ActivityIndicator, FlatList, View } from 'react-native';
-import { Avatar, Button, Header, Icon, ListItem } from 'react-native-elements';
+import { FlatList, View } from 'react-native';
+import { Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import DateTimeUtils from './../../utils/DateTimeUtils';
-import PrivacyUtils from './../../utils/PrivacyUtils';
-import RESTUtils from './../../utils/RESTUtils';
-import Pill from './../../components/Pill';
+
+import { Amount } from './../../components/Amount';
+import LoadingIndicator from './../../components/LoadingIndicator';
+
 import { localeString } from './../../utils/LocaleUtils';
+import RESTUtils from './../../utils/RESTUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import UTXOsStore from './../../stores/UTXOsStore';
-import UnitsStore from './../../stores/UnitsStore';
-import SettingsStore from './../../stores/SettingsStore';
 
 interface CoinControlProps {
     navigation: any;
     UTXOsStore: UTXOsStore;
-    UnitsStore: UnitsStore;
-    SettingsStore: SettingsStore;
 }
 
-@inject('UTXOsStore', 'UnitsStore', 'SettingsStore')
+@inject('UTXOsStore')
 @observer
 export default class CoinControl extends React.Component<CoinControlProps, {}> {
     async UNSAFE_componentWillMount() {
@@ -42,25 +39,8 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
     );
 
     render() {
-        const { navigation, UTXOsStore, UnitsStore, SettingsStore } =
-            this.props;
-        const { getAmount, units } = UnitsStore;
+        const { navigation, UTXOsStore } = this.props;
         const { loading, utxos, getUTXOs } = UTXOsStore;
-        const { settings } = SettingsStore;
-        const { privacy } = settings;
-        const { lurkerMode } = privacy;
-
-        const AddPill = () => (
-            <Pill title={localeString('general.add').toUpperCase()} />
-        );
-        const FrozenPill = () => (
-            <Pill
-                title={localeString('general.frozen')}
-                textColor="white"
-                borderColor="darkred"
-                backgroundColor="darkred"
-            />
-        );
 
         const CloseButton = () => (
             <Icon
@@ -94,16 +74,12 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                 />
                 {loading ? (
                     <View style={{ padding: 50 }}>
-                        <ActivityIndicator
-                            size="large"
-                            color={themeColor('highlight')}
-                        />
+                        <LoadingIndicator />
                     </View>
                 ) : !!utxos && utxos.length > 0 ? (
                     <FlatList
                         data={utxos}
                         renderItem={({ item }) => {
-                            const displayName = getAmount(item.getAmount);
                             const subTitle = item.address;
 
                             return (
@@ -121,15 +97,10 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                                         }}
                                     >
                                         <ListItem.Content>
-                                            <ListItem.Title
-                                                right
-                                                style={{
-                                                    fontWeight: '600',
-                                                    color: themeColor('text')
-                                                }}
-                                            >
-                                                {displayName}
-                                            </ListItem.Title>
+                                            <Amount
+                                                sats={item.getAmount}
+                                                sensitive
+                                            />
                                             <ListItem.Subtitle
                                                 right
                                                 style={{

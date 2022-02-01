@@ -1,33 +1,20 @@
 import * as React from 'react';
-import {
-    StyleSheet,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View
-} from 'react-native';
+import { StyleSheet, ScrollView, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
-import { inject, observer } from 'mobx-react';
 import Invoice from './../models/Invoice';
-import PrivacyUtils from './../utils/PrivacyUtils';
+import { Amount } from './../components/Amount';
 import CollapsedQR from './../components/CollapsedQR';
+import KeyValue from './../components/KeyValue';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
-import UnitsStore from './../stores/UnitsStore';
-
 interface InvoiceProps {
     navigation: any;
-    UnitsStore: UnitsStore;
 }
 
-@inject('UnitsStore')
-@observer
 export default class InvoiceView extends React.Component<InvoiceProps> {
     render() {
-        const { navigation, UnitsStore } = this.props;
-        const { changeUnits, getAmount, units } = UnitsStore;
-
+        const { navigation } = this.props;
         const invoice: Invoice = navigation.getParam('invoice', null);
         const {
             fallback_addr,
@@ -55,12 +42,6 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
             />
         );
 
-        const amount = PrivacyUtils.sensitiveValue(
-            getAmount(invoice.getAmount),
-            8,
-            true
-        );
-
         return (
             <ScrollView
                 style={{
@@ -77,301 +58,125 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                     backgroundColor={themeColor('secondary')}
                 />
                 <View style={styles.center}>
-                    <TouchableOpacity onPress={() => changeUnits()}>
-                        <Text
-                            style={{
-                                ...styles.amount,
-                                color: themeColor('text')
-                            }}
-                        >{`${
-                            isPaid
-                                ? localeString('views.Invoice.paid')
-                                : localeString('views.Invoice.unpaid')
-                        }: ${units && amount}`}</Text>
-                    </TouchableOpacity>
+                    <Amount
+                        sats={invoice.getAmount}
+                        sensitive
+                        jumboText
+                        toggleable
+                        pending={!invoice.isExpired && !invoice.isPaid}
+                        credit={invoice.isPaid}
+                    />
                 </View>
 
                 <View style={styles.content}>
                     {getMemo && (
-                        <React.Fragment>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Invoice.memo')}:
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.value,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {PrivacyUtils.sensitiveValue(getMemo)}
-                            </Text>
-                        </React.Fragment>
+                        <KeyValue
+                            keyValue={localeString('views.Invoice.memo')}
+                            value={getMemo}
+                            sensitive
+                        />
                     )}
 
                     {!!receipt && (
-                        <React.Fragment>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Invoice.receipt')}:
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.value,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {PrivacyUtils.sensitiveValue(receipt)}
-                            </Text>
-                        </React.Fragment>
+                        <KeyValue
+                            keyValue={localeString('views.Invoice.receipt')}
+                            value={receipt}
+                            sensitive
+                        />
                     )}
 
                     {isPaid && (
-                        <React.Fragment>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Invoice.settleDate')}:
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.value,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {PrivacyUtils.sensitiveValue(
-                                    invoice.settleDate,
-                                    14
-                                )}
-                            </Text>
-                        </React.Fragment>
+                        <KeyValue
+                            keyValue={localeString('views.Invoice.settleDate')}
+                            value={invoice.settleDate}
+                            sensitive
+                        />
                     )}
 
                     {!!creation_date && (
-                        <React.Fragment>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Invoice.creationDate')}:
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.value,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {PrivacyUtils.sensitiveValue(
-                                    invoice.creationDate,
-                                    14
-                                )}
-                            </Text>
-                        </React.Fragment>
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Invoice.creationDate'
+                            )}
+                            value={invoice.creationDate}
+                            sensitive
+                        />
                     )}
 
                     {!!expirationDate && (
-                        <React.Fragment>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Invoice.expiration')}:
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.value,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {PrivacyUtils.sensitiveValue(
-                                    expirationDate,
-                                    14
-                                )}
-                            </Text>
-                        </React.Fragment>
+                        <KeyValue
+                            keyValue={localeString('views.Invoice.expiration')}
+                            value={expirationDate}
+                            sensitive
+                        />
                     )}
 
                     {!!privateInvoice && (
-                        <React.Fragment>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Invoice.private')}:
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.value,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {privateInvoice}
-                            </Text>
-                        </React.Fragment>
+                        <KeyValue
+                            keyValue={localeString('views.Invoice.private')}
+                            value={privateInvoice}
+                        />
                     )}
 
                     {!!fallback_addr && (
-                        <React.Fragment>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Invoice.fallbackAddress')}:
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.value,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {PrivacyUtils.sensitiveValue(fallback_addr)}
-                            </Text>
-                        </React.Fragment>
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Invoice.fallbackAddress'
+                            )}
+                            value={fallback_addr}
+                            sensitive
+                        />
                     )}
 
                     {!!cltv_expiry && (
-                        <React.Fragment>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Invoice.cltvExpiry')}:
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.value,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {cltv_expiry}
-                            </Text>
-                        </React.Fragment>
+                        <KeyValue
+                            keyValue={localeString('views.Invoice.cltvExpiry')}
+                            value={cltv_expiry}
+                        />
                     )}
 
                     {!!r_hash && typeof r_hash === 'string' && (
-                        <React.Fragment>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Invoice.rHash')}:
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.value,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {PrivacyUtils.sensitiveValue(r_hash)}
-                            </Text>
-                        </React.Fragment>
+                        <KeyValue
+                            keyValue={localeString('views.Invoice.rHash')}
+                            value={r_hash}
+                            sensitive
+                        />
                     )}
 
                     {!!r_preimage && (
-                        <React.Fragment>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Invoice.rPreimage')}:
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.value,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {PrivacyUtils.sensitiveValue(r_preimage)}
-                            </Text>
-                        </React.Fragment>
+                        <KeyValue
+                            keyValue={localeString('views.Invoice.rPreimage')}
+                            value={r_preimage}
+                            sensitive
+                        />
                     )}
 
                     {!!description_hash && (
-                        <React.Fragment>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Invoice.descriptionHash')}:
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.value,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {PrivacyUtils.sensitiveValue(description_hash)}
-                            </Text>
-                        </React.Fragment>
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Invoice.descriptionHash'
+                            )}
+                            value={description_hash}
+                            sensitive
+                        />
                     )}
 
                     {!!payment_hash && (
-                        <React.Fragment>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Invoice.paymentHash')}:
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.value,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {PrivacyUtils.sensitiveValue(payment_hash)}
-                            </Text>
-                        </React.Fragment>
+                        <KeyValue
+                            keyValue={localeString('views.Invoice.paymentHash')}
+                            value={payment_hash}
+                            sensitive
+                        />
                     )}
 
                     {!!payment_request && (
-                        <React.Fragment>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Invoice.paymentRequest')}:
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.value,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {PrivacyUtils.sensitiveValue(payment_request)}
-                            </Text>
-                        </React.Fragment>
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Invoice.paymentRequest'
+                            )}
+                            value={payment_request}
+                            sensitive
+                        />
                     )}
 
                     {!!payment_request && (
@@ -385,24 +190,13 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                     )}
 
                     {!!bolt11 && (
-                        <React.Fragment>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Invoice.paymentRequest')}:
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.value,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {PrivacyUtils.sensitiveValue(bolt11)}
-                            </Text>
-                        </React.Fragment>
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Invoice.paymentRequest'
+                            )}
+                            value={bolt11}
+                            sensitive
+                        />
                     )}
 
                     {!!bolt11 && (
@@ -433,11 +227,5 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingTop: 15,
         paddingBottom: 15
-    },
-    label: {
-        paddingTop: 5
-    },
-    value: {
-        paddingBottom: 5
     }
 });

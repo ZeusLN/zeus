@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { FlatList, ScrollView, View } from 'react-native';
 import { Header, Icon, ListItem, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import SettingsStore, { LOCALE_KEYS } from './../../stores/SettingsStore';
@@ -59,7 +59,7 @@ export default class Language extends React.Component<
     };
 
     render() {
-        const { navigation, selectedNode, SettingsStore } = this.props;
+        const { navigation, SettingsStore } = this.props;
         const { locales, selectedLocale, search } = this.state;
         const { setSettings, getSettings }: any = SettingsStore;
 
@@ -79,7 +79,7 @@ export default class Language extends React.Component<
                     backgroundColor: themeColor('background')
                 }}
             >
-                <View>
+                <ScrollView>
                     <Header
                         leftComponent={<BackButton />}
                         centerComponent={{
@@ -106,7 +106,7 @@ export default class Language extends React.Component<
                     />
                     <FlatList
                         data={locales}
-                        renderItem={({ item, index }) => (
+                        renderItem={({ item }) => (
                             <ListItem
                                 containerStyle={{
                                     borderBottomWidth: 0,
@@ -115,17 +115,21 @@ export default class Language extends React.Component<
                                 onPress={async () => {
                                     const settings = await getSettings();
                                     await setSettings(
-                                        JSON.stringify({
-                                            nodes: settings.nodes,
-                                            theme: settings.theme,
-                                            selectedNode: settings.selectedNode,
-                                            onChainAddress:
-                                                settings.onChainAddress,
-                                            fiat: settings.fiat,
-                                            passphrase: settings.passphrase,
-                                            locale: item.value,
-                                            privacy: settings.privacy
-                                        })
+                                        JSON.stringify(
+                                            settings
+                                                ? {
+                                                      nodes: settings.nodes,
+                                                      theme: settings.theme,
+                                                      selectedNode:
+                                                          settings.selectedNode,
+                                                      fiat: settings.fiat,
+                                                      passphrase:
+                                                          settings.passphrase,
+                                                      locale: item.value,
+                                                      privacy: settings.privacy
+                                                  }
+                                                : { locale: item.value }
+                                        )
                                     ).then(() => {
                                         getSettings();
                                         navigation.navigate('Settings', {
@@ -147,19 +151,19 @@ export default class Language extends React.Component<
                                     </ListItem.Title>
                                 </ListItem.Content>
                                 {selectedLocale === item.value && (
-                                    <Text style={{ textAlign: 'right' }}>
+                                    <View style={{ textAlign: 'right' }}>
                                         <Icon
                                             name="check"
                                             color={themeColor('highlight')}
                                         />
-                                    </Text>
+                                    </View>
                                 )}
                             </ListItem>
                         )}
                         keyExtractor={(item, index) => `${item.host}-${index}`}
                         ItemSeparatorComponent={this.renderSeparator}
                     />
-                </View>
+                </ScrollView>
             </View>
         );
     }

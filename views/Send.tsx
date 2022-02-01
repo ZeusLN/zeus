@@ -1,8 +1,8 @@
 import * as React from 'react';
 import {
+    Platform,
     StyleSheet,
     Text,
-    TextInput,
     View,
     ScrollView,
     TouchableOpacity,
@@ -11,12 +11,14 @@ import {
 import Clipboard from '@react-native-community/clipboard';
 import { inject, observer } from 'mobx-react';
 import { Header, Icon } from 'react-native-elements';
+
+import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
+
 import handleAnything from './../utils/handleAnything';
 
 import InvoicesStore from './../stores/InvoicesStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
 import TransactionsStore from './../stores/TransactionsStore';
-import FeeStore from './../stores/FeeStore';
 import BalanceStore from './../stores/BalanceStore';
 import UTXOsStore from './../stores/UTXOsStore';
 import SettingsStore from './../stores/SettingsStore';
@@ -24,10 +26,12 @@ import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
 import FiatStore from './../stores/FiatStore';
 
 import Button from './../components/Button';
+import { ErrorMessage } from './../components/SuccessErrorMessage';
+import TextInput from './../components/TextInput';
 import UTXOPicker from './../components/UTXOPicker';
-import FeeTable from './../components/FeeTable';
 
 import RESTUtils from './../utils/RESTUtils';
+import NFCUtils from './../utils/NFCUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
@@ -40,7 +44,6 @@ interface SendProps {
     TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;
     FiatStore: FiatStore;
-    FeeStore: FeeStore;
     UnitsStore: UnitsStore;
     UTXOsStore: UTXOsStore;
 }
@@ -57,7 +60,6 @@ interface SendState {
     confirmationTarget: string;
     maxParts: string;
     maxShardAmt: string;
-    timeoutSeconds: string;
     feeLimitSat: string;
 }
 
@@ -68,7 +70,6 @@ interface SendState {
     'BalanceStore',
     'SettingsStore',
     'UnitsStore',
-    'FeeStore',
     'FiatStore',
     'UTXOsStore'
 )
@@ -94,7 +95,6 @@ export default class Send extends React.Component<SendProps, SendState> {
             error_msg: '',
             maxParts: '16',
             maxShardAmt: '',
-            timeoutSeconds: '20',
             feeLimitSat: ''
         };
     }
@@ -111,11 +111,45 @@ export default class Send extends React.Component<SendProps, SendState> {
         }
     }
 
-    componentDidMount() {
+    async componentDidMount() {
         if (this.state.destination) {
             this.validateAddress(this.state.destination);
         }
+
+        if (Platform.OS === 'android') {
+            await this.enableNfc();
+        }
     }
+
+    disableNfc = () => {
+        NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
+        NfcManager.setEventListener(NfcEvents.SessionClosed, null);
+    };
+
+    enableNfc = async () => {
+        this.disableNfc();
+        await NfcManager.start();
+
+        return new Promise((resolve: any) => {
+            let tagFound = null;
+
+            NfcManager.setEventListener(NfcEvents.DiscoverTag, (tag: any) => {
+                tagFound = tag;
+                const bytes = new Uint8Array(tagFound.ndefMessage[0].payload);
+                const str = NFCUtils.nfcUtf8ArrayToStr(bytes);
+                resolve(this.validateAddress(str));
+                NfcManager.unregisterTagEvent().catch(() => 0);
+            });
+
+            NfcManager.setEventListener(NfcEvents.SessionClosed, () => {
+                if (!tagFound) {
+                    resolve();
+                }
+            });
+
+            NfcManager.registerTagEvent();
+        });
+    };
 
     selectUTXOs = (utxos: Array<string>, utxoBalance: number) => {
         const { SettingsStore } = this.props;
@@ -188,29 +222,24 @@ export default class Send extends React.Component<SendProps, SendState> {
         navigation.navigate('SendingOnChain');
     };
 
-    sendKeySendPayment = () => {
+    sendKeySendPayment = (satAmount: string | number) => {
         const { TransactionsStore, navigation } = this.props;
-        const {
-            destination,
-            amount,
-            maxParts,
-            maxShardAmt,
-            timeoutSeconds,
-            feeLimitSat
-        } = this.state;
+        const { destination, maxParts, maxShardAmt, feeLimitSat } = this.state;
 
         if (RESTUtils.supportsAMP()) {
             TransactionsStore.sendPayment({
-                amount,
+                amount: satAmount.toString(),
                 pubkey: destination,
                 max_parts: maxParts,
                 max_shard_amt: maxShardAmt,
-                timeout_seconds: timeoutSeconds,
                 fee_limit_sat: feeLimitSat,
                 amp: true
             });
         } else {
-            TransactionsStore.sendPayment({ amount, pubkey: destination });
+            TransactionsStore.sendPayment({
+                amount: satAmount.toString(),
+                pubkey: destination
+            });
         }
 
         navigation.navigate('SendingLightning');
@@ -230,7 +259,6 @@ export default class Send extends React.Component<SendProps, SendState> {
         const {
             SettingsStore,
             UnitsStore,
-            FeeStore,
             FiatStore,
             BalanceStore,
             UTXOsStore,
@@ -247,18 +275,23 @@ export default class Send extends React.Component<SendProps, SendState> {
             error_msg,
             maxParts,
             maxShardAmt,
-            timeoutSeconds,
             feeLimitSat
         } = this.state;
         const { confirmedBlockchainBalance } = BalanceStore;
         const { implementation, settings } = SettingsStore;
-        const { fiat } = settings;
+        const { fiat, privacy } = settings;
+        const enableMempoolRates = privacy && privacy.enableMempoolRates;
         const { units, changeUnits } = UnitsStore;
         const { fiatRates }: any = FiatStore;
 
+        const fiatEntry =
+            fiat && fiatRates && fiatRates.filter
+                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+                : null;
+
         const rate =
-            fiat && fiat !== 'Disabled' && fiatRates
-                ? fiatRates[fiat]['15m']
+            fiat && fiat !== 'Disabled' && fiatRates && fiatEntry
+                ? fiatEntry.rate
                 : 0;
 
         let satAmount: string | number;
@@ -308,9 +341,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     backgroundColor="grey"
                 />
                 <View style={styles.content}>
-                    <Text
-                        style={{ ...styles.label, color: themeColor('text') }}
-                    >
+                    <Text style={{ color: themeColor('secondaryText') }}>
                         {paymentOptions.join(', ')}
                     </Text>
                     <TextInput
@@ -319,12 +350,13 @@ export default class Send extends React.Component<SendProps, SendState> {
                         onChangeText={(text: string) => {
                             this.validateAddress(text);
                         }}
-                        style={{
-                            ...styles.textInput,
-                            color: themeColor('text')
-                        }}
-                        placeholderTextColor="gray"
+                        style={styles.textInput}
                     />
+                    {!!error_msg && !!destination && (
+                        <View style={{ paddingTop: 10, paddingBottom: 10 }}>
+                            <ErrorMessage message={error_msg} />
+                        </View>
+                    )}
                     {!isValid && !!destination && (
                         <Text
                             style={{
@@ -349,8 +381,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         !RESTUtils.supportsOnchainSends() && (
                             <Text
                                 style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
+                                    color: themeColor('secondaryText')
                                 }}
                             >
                                 {localeString('views.Send.onChainNotSupported')}{' '}
@@ -363,8 +394,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 <TouchableOpacity onPress={() => changeUnits()}>
                                     <Text
                                         style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
+                                            color: themeColor('secondaryText')
                                         }}
                                     >
                                         {localeString('views.Send.amount')} (
@@ -377,11 +407,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     onChangeText={(text: string) =>
                                         this.setState({ amount: text })
                                     }
-                                    style={{
-                                        ...styles.textInput,
-                                        color: themeColor('text')
-                                    }}
-                                    placeholderTextColor="gray"
+                                    style={styles.textInput}
                                 />
                                 {units !== 'sats' && amount !== 'all' && (
                                     <TouchableOpacity
@@ -389,8 +415,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     >
                                         <Text
                                             style={{
-                                                ...styles.label,
-                                                color: themeColor('text')
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
                                             }}
                                         >
                                             {satAmount}{' '}
@@ -416,41 +443,52 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         )}`}
                                     </Text>
                                 )}
+
                                 <Text
                                     style={{
-                                        ...styles.label,
-                                        color: themeColor('text')
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString('views.Send.feeSats')}:
                                 </Text>
-                                <TouchableWithoutFeedback
-                                    onPress={() =>
-                                        navigation.navigate('EditFee', {
-                                            onNavigateBack:
-                                                this.handleOnNavigateBack
-                                        })
-                                    }
-                                >
-                                    <View
-                                        style={{
-                                            ...styles.editFeeBox,
-
-                                            borderColor:
-                                                'rgba(255, 217, 63, .6)',
-                                            borderWidth: 3
-                                        }}
+                                {enableMempoolRates ? (
+                                    <TouchableWithoutFeedback
+                                        onPress={() =>
+                                            navigation.navigate('EditFee', {
+                                                onNavigateBack:
+                                                    this.handleOnNavigateBack
+                                            })
+                                        }
                                     >
-                                        <Text
+                                        <View
                                             style={{
-                                                ...styles.text,
-                                                fontSize: 18
+                                                ...styles.editFeeBox,
+                                                borderColor:
+                                                    'rgba(255, 217, 63, .6)',
+                                                borderWidth: 3
                                             }}
                                         >
-                                            {fee}
-                                        </Text>
-                                    </View>
-                                </TouchableWithoutFeedback>
+                                            <Text
+                                                style={{
+                                                    ...styles.text,
+                                                    fontSize: 18,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {fee}
+                                            </Text>
+                                        </View>
+                                    </TouchableWithoutFeedback>
+                                ) : (
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        value={fee}
+                                        onChangeText={(text: string) =>
+                                            this.setState({ fee: text })
+                                        }
+                                        style={styles.textInput}
+                                    />
+                                )}
 
                                 {RESTUtils.supportsCoinControl() && (
                                     <UTXOPicker
@@ -481,8 +519,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 <TouchableOpacity onPress={() => changeUnits()}>
                                     <Text
                                         style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
+                                            color: themeColor('secondaryText')
                                         }}
                                     >
                                         {localeString('views.Send.amount')} (
@@ -495,11 +532,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     onChangeText={(text: string) =>
                                         this.setState({ amount: text })
                                     }
-                                    style={{
-                                        ...styles.textInput,
-                                        color: themeColor('text')
-                                    }}
-                                    placeholderTextColor="gray"
+                                    style={styles.textInput}
                                 />
                                 {units !== 'sats' && (
                                     <TouchableOpacity
@@ -507,8 +540,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     >
                                         <Text
                                             style={{
-                                                ...styles.label,
-                                                color: themeColor('text')
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
                                             }}
                                         >
                                             {satAmount}{' '}
@@ -522,35 +556,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     <React.Fragment>
                                         <Text
                                             style={{
-                                                ...styles.label,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.PaymentRequest.timeout'
-                                            )}
-                                            :
-                                        </Text>
-                                        <TextInput
-                                            keyboardType="numeric"
-                                            placeholder="20"
-                                            value={timeoutSeconds}
-                                            onChangeText={(text: string) =>
-                                                this.setState({
-                                                    timeoutSeconds: text
-                                                })
-                                            }
-                                            numberOfLines={1}
-                                            style={{
-                                                ...styles.textInput,
-                                                color: themeColor('text')
-                                            }}
-                                            placeholderTextColor="gray"
-                                        />
-                                        <Text
-                                            style={{
-                                                ...styles.label,
-                                                color: themeColor('text')
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
                                             }}
                                         >
                                             {`${localeString(
@@ -568,12 +576,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                     maxParts: text
                                                 })
                                             }
-                                            numberOfLines={1}
-                                            style={{
-                                                ...styles.textInput,
-                                                color: themeColor('text')
-                                            }}
-                                            placeholderTextColor="gray"
+                                            style={styles.textInput}
                                         />
                                         <Text
                                             style={{
@@ -587,8 +590,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         </Text>
                                         <Text
                                             style={{
-                                                ...styles.label,
-                                                color: themeColor('text')
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
                                             }}
                                         >
                                             {`${localeString(
@@ -609,17 +613,13 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                     feeLimitSat: text
                                                 })
                                             }
-                                            numberOfLines={1}
-                                            style={{
-                                                ...styles.textInput,
-                                                color: themeColor('text')
-                                            }}
-                                            placeholderTextColor="gray"
+                                            style={styles.textInput}
                                         />
                                         <Text
                                             style={{
-                                                ...styles.label,
-                                                color: themeColor('text')
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
                                             }}
                                         >
                                             {`${localeString(
@@ -639,12 +639,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                     maxShardAmt: text
                                                 })
                                             }
-                                            numberOfLines={1}
-                                            style={{
-                                                ...styles.textInput,
-                                                color: themeColor('text')
-                                            }}
-                                            placeholderTextColor="gray"
+                                            style={styles.textInput}
                                         />
                                     </React.Fragment>
                                 )}
@@ -657,7 +652,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             color: 'white'
                                         }}
                                         onPress={() =>
-                                            this.sendKeySendPayment()
+                                            this.sendKeySendPayment(satAmount)
                                         }
                                     />
                                 </View>
@@ -668,8 +663,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <React.Fragment>
                                 <Text
                                     style={{
-                                        ...styles.label,
-                                        color: themeColor('text')
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString('views.Send.sorry')},{' '}
@@ -710,8 +704,23 @@ export default class Send extends React.Component<SendProps, SendState> {
                         />
                     </View>
 
+                    {Platform.OS === 'ios' && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString('general.enableNfc')}
+                                icon={{
+                                    name: 'nfc',
+                                    size: 25,
+                                    color: 'white'
+                                }}
+                                onPress={() => this.enableNfc()}
+                                secondary
+                            />
+                        </View>
+                    )}
+
                     {transactionType === 'On-chain' &&
-                        (implementation === 'eclair' ? (
+                        implementation === 'eclair' && (
                             <View style={styles.feeTableButton}>
                                 <TextInput
                                     keyboardType="numeric"
@@ -721,34 +730,10 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             confirmationTarget: text
                                         })
                                     }
-                                    style={{
-                                        ...styles.textInput,
-                                        color: themeColor('text')
-                                    }}
-                                    placeholderTextColor="gray"
+                                    style={styles.textInput}
                                 />
                             </View>
-                        ) : (
-                            <View style={styles.feeTableButton}>
-                                <FeeTable
-                                    setFee={this.setFee}
-                                    FeeStore={FeeStore}
-                                />
-                            </View>
-                        ))}
-
-                    {!!error_msg && (
-                        <React.Fragment>
-                            <Text
-                                style={{
-                                    ...styles.text,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {error_msg}
-                            </Text>
-                        </React.Fragment>
-                    )}
+                        )}
                 </View>
             </ScrollView>
         );
@@ -762,16 +747,13 @@ const styles = StyleSheet.create({
         marginTop: 15,
         borderRadius: 4,
         borderColor: '#FFD93F',
-        borderWidth: 2
-    },
-    label: {
-        textDecorationLine: 'underline'
+        borderWidth: 2,
+        marginBottom: 20
     },
     text: {
         paddingBottom: 5
     },
     textInput: {
-        fontSize: 20,
         paddingTop: 10,
         paddingBottom: 10
     },

@@ -10,27 +10,28 @@ import {
 } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+
+import { Amount } from './../components/Amount';
+import KeyValue from './../components/KeyValue';
+
 import UrlUtils from './../utils/UrlUtils';
 import Transaction from './../models/Transaction';
 import PrivacyUtils from './../utils/PrivacyUtils';
 
 import NodeInfoStore from './../stores/NodeInfoStore';
-import UnitsStore from './../stores/UnitsStore';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
 interface TransactionProps {
     navigation: any;
     NodeInfoStore: NodeInfoStore;
-    UnitsStore: UnitsStore;
 }
 
-@inject('NodeInfoStore', 'UnitsStore')
+@inject('NodeInfoStore')
 @observer
 export default class TransactionView extends React.Component<TransactionProps> {
     render() {
-        const { NodeInfoStore, UnitsStore, navigation } = this.props;
-        const { changeUnits, getAmount, units } = UnitsStore;
+        const { NodeInfoStore, navigation } = this.props;
         const transaction: Transaction = navigation.getParam(
             'transaction',
             null
@@ -51,18 +52,38 @@ export default class TransactionView extends React.Component<TransactionProps> {
         const date = time_stamp && new Date(Number(time_stamp) * 1000);
         const addresses: Array<any> = [];
 
+        destAddresses.length > 1
+            ? `${localeString('views.Transaction.destAddresses')}:`
+            : `${localeString('views.Transaction.destAddress')}:`;
+
         forEach(destAddresses, (address: any, key: string) =>
             addresses.push(
-                <TouchableOpacity
-                    key={`${address}-${key}`}
-                    onPress={() =>
-                        UrlUtils.goToBlockExplorerAddress(address, testnet)
+                <KeyValue
+                    keyValue={
+                        destAddresses.length > 1
+                            ? `${localeString(
+                                  'views.Transaction.destAddresses'
+                              )} #${Number(key) + 1}`
+                            : localeString('views.Transaction.destAddress')
                     }
-                >
-                    <Text style={styles.valueWithLink}>
-                        {PrivacyUtils.sensitiveValue(address)}
-                    </Text>
-                </TouchableOpacity>
+                    value={
+                        <TouchableOpacity
+                            key={`${address}-${key}`}
+                            onPress={() =>
+                                UrlUtils.goToBlockExplorerAddress(
+                                    address,
+                                    testnet
+                                )
+                            }
+                        >
+                            <Text style={styles.valueWithLink}>
+                                {PrivacyUtils.sensitiveValue(address)}
+                            </Text>
+                        </TouchableOpacity>
+                    }
+                    key={key}
+                    sensitive
+                />
             )
         );
 
@@ -73,17 +94,6 @@ export default class TransactionView extends React.Component<TransactionProps> {
                 color={themeColor('text')}
                 underlayColor="transparent"
             />
-        );
-
-        const amountDisplay = PrivacyUtils.sensitiveValue(
-            getAmount(amount),
-            8,
-            true
-        );
-        const totalFees = PrivacyUtils.sensitiveValue(
-            getAmount(total_fees || 0),
-            4,
-            true
         );
 
         return (
@@ -102,201 +112,127 @@ export default class TransactionView extends React.Component<TransactionProps> {
                     backgroundColor="#1f2328"
                 />
                 <View style={styles.center}>
-                    <TouchableOpacity onPress={() => changeUnits()}>
-                        <Text
-                            style={{
-                                color: amount > 0 ? 'green' : 'red',
-                                fontSize: 30,
-                                fontWeight: 'bold'
-                            }}
-                        >{`${amount > 0 ? '+' : ''}${
-                            units && amountDisplay
-                        }`}</Text>
-                    </TouchableOpacity>
+                    <Amount
+                        sats={amount}
+                        debit={Number(amount) <= 0}
+                        credit={Number(amount) > 0}
+                        sensitive
+                        jumboText
+                        toggleable
+                    />
                 </View>
 
                 <View style={styles.content}>
                     {total_fees ? (
-                        <View>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Transaction.totalFees')}:
-                            </Text>
-                            <TouchableOpacity onPress={() => changeUnits()}>
-                                <Text
-                                    style={{
-                                        ...styles.value,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {units && totalFees}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Transaction.totalFees'
+                            )}
+                            value={
+                                <Amount
+                                    sats={total_fees || 0}
+                                    toggleable
+                                    sensitive
+                                />
+                            }
+                        />
                     ) : null}
 
-                    <Text
-                        style={{ ...styles.label, color: themeColor('text') }}
-                    >
-                        {localeString('views.Transaction.transactionHash')}:
-                    </Text>
-                    <TouchableOpacity
-                        onPress={() =>
-                            UrlUtils.goToBlockExplorerTXID(tx, testnet)
-                        }
-                    >
-                        <Text style={styles.valueWithLink}>
-                            {PrivacyUtils.sensitiveValue(tx)}
-                        </Text>
-                    </TouchableOpacity>
-
-                    {!!block_hash && (
-                        <View>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Transaction.blockHash')}:
-                            </Text>
+                    <KeyValue
+                        keyValue={localeString(
+                            'views.Transaction.transactionHash'
+                        )}
+                        value={
                             <TouchableOpacity
                                 onPress={() =>
-                                    UrlUtils.goToBlockExplorerBlockHash(
-                                        block_hash,
-                                        testnet
-                                    )
+                                    UrlUtils.goToBlockExplorerTXID(tx, testnet)
                                 }
                             >
                                 <Text style={styles.valueWithLink}>
-                                    {PrivacyUtils.sensitiveValue(block_hash)}
+                                    {PrivacyUtils.sensitiveValue(tx)}
                                 </Text>
                             </TouchableOpacity>
-                        </View>
+                        }
+                    />
+
+                    {!!block_hash && (
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Transaction.blockHash'
+                            )}
+                            value={
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        UrlUtils.goToBlockExplorerBlockHash(
+                                            block_hash,
+                                            testnet
+                                        )
+                                    }
+                                >
+                                    <Text style={styles.valueWithLink}>
+                                        {PrivacyUtils.sensitiveValue(
+                                            block_hash
+                                        )}
+                                    </Text>
+                                </TouchableOpacity>
+                            }
+                        />
                     )}
 
                     {!!getBlockHeight && (
-                        <Text
-                            style={{
-                                ...styles.label,
-                                color: themeColor('text')
-                            }}
-                        >
-                            {localeString('views.Transaction.blockHeight')}:
-                        </Text>
-                    )}
-                    {!!getBlockHeight && (
-                        <TouchableOpacity
-                            onPress={() =>
-                                UrlUtils.goToBlockExplorerBlockHeight(
-                                    getBlockHeight.toString(),
-                                    testnet
-                                )
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Transaction.blockHeight'
+                            )}
+                            value={
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        UrlUtils.goToBlockExplorerBlockHeight(
+                                            getBlockHeight.toString(),
+                                            testnet
+                                        )
+                                    }
+                                >
+                                    <Text style={styles.valueWithLink}>
+                                        {PrivacyUtils.sensitiveValue(
+                                            getBlockHeight.toString(),
+                                            5,
+                                            true
+                                        )}
+                                    </Text>
+                                </TouchableOpacity>
                             }
-                        >
-                            <Text style={styles.valueWithLink}>
-                                {PrivacyUtils.sensitiveValue(
-                                    getBlockHeight.toString(),
-                                    5,
-                                    true
-                                )}
-                            </Text>
-                        </TouchableOpacity>
+                        />
                     )}
 
                     {!!num_confirmations && !isNull(num_confirmations) && (
-                        <View>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Transaction.numConf')}:
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.value,
-                                    color:
-                                        num_confirmations > 0 ? 'green' : 'red'
-                                }}
-                            >
-                                {PrivacyUtils.sensitiveValue(
-                                    num_confirmations,
-                                    3,
-                                    true
-                                )}
-                            </Text>
-                        </View>
+                        <KeyValue
+                            keyValue={localeString('views.Transaction.numConf')}
+                            value={num_confirmations}
+                            color={num_confirmations > 0 ? 'green' : 'red'}
+                            sensitive
+                        />
                     )}
 
                     {!!status && (
-                        <View>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Transaction.status')}:
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.value,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {status}
-                            </Text>
-                        </View>
+                        <KeyValue
+                            keyValue={localeString('views.Transaction.status')}
+                            value={status}
+                        />
                     )}
 
                     {!!date && (
-                        <View>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Transaction.timestamp')}:
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.value,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {PrivacyUtils.sensitiveValue(
-                                    date.toString(),
-                                    14
-                                )}
-                            </Text>
-                        </View>
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Transaction.timestamp'
+                            )}
+                            value={date.toString()}
+                            sensitive
+                        />
                     )}
 
-                    {destAddresses && (
-                        <View>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {destAddresses.length > 1
-                                    ? `${localeString(
-                                          'views.Transaction.destAddresses'
-                                      )}:`
-                                    : `${localeString(
-                                          'views.Transaction.destAddress'
-                                      )}:`}
-                            </Text>
-                            <React.Fragment>{addresses}</React.Fragment>
-                        </View>
+                    {!!destAddresses && (
+                        <React.Fragment>{addresses}</React.Fragment>
                     )}
                 </View>
             </ScrollView>
@@ -314,14 +250,8 @@ const styles = StyleSheet.create({
         paddingTop: 15,
         paddingBottom: 15
     },
-    label: {
-        paddingTop: 5
-    },
-    value: {
-        paddingBottom: 5
-    },
     valueWithLink: {
         paddingBottom: 5,
-        color: 'rgba(92, 99,216, 1)'
+        color: themeColor('highlight')
     }
 });
