@@ -210,14 +210,14 @@ export default class TransactionsStore {
         if (pubkey) {
             const preimage = randomBytes(preimageByteLength);
             const secret = preimage.toString('base64');
-            const payment_hash = Buffer.from(
-                sha256(preimage),
-                'hex'
-            ).toString('base64');
+            const payment_hash = Buffer.from(sha256(preimage), 'hex').toString(
+                'base64'
+            );
 
             data.dest = Base64Utils.hexToBase64(pubkey);
             data.dest_custom_records = { [keySendPreimageType]: secret };
             data.payment_hash = payment_hash;
+            data.pubkey = pubkey;
         }
 
         // multi-path payments
@@ -247,7 +247,12 @@ export default class TransactionsStore {
             data.last_hop_pubkey = Base64Utils.hexToBase64(last_hop_pubkey);
         }
 
-        RESTUtils.payLightningInvoice(data)
+        const payFunc =
+            this.settingsStore.implementation === 'c-lightning-REST' && pubkey
+                ? RESTUtils.sendKeysend
+                : RESTUtils.payLightningInvoice;
+
+        payFunc(data)
             .then((response: any) => {
                 const result = response.result || response;
                 this.loading = false;

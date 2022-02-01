@@ -66,6 +66,7 @@ class RESTUtils {
         this.call('payLightningInvoice', args);
     payLightningInvoiceStreaming = (...args: any[]) =>
         this.call('payLightningInvoiceStreaming', args);
+    sendKeysend = (...args: any[]) => this.call('sendKeysend', args);
     closeChannel = (...args: any[]) => this.call('closeChannel', args);
     getNodeInfo = (...args: any[]) => this.call('getNodeInfo', args);
     getFees = (...args: any[]) => this.call('getFees', args);
