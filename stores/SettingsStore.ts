@@ -139,6 +139,8 @@ export default class SettingsStore {
     @observable accessKey: string;
     @observable implementation: string;
     @observable certVerification: boolean | undefined;
+    @observable public loggedIn = false;
+    @observable public connecting = true;
     // LNDHub
     @observable username: string;
     @observable password: string;
@@ -292,5 +294,15 @@ export default class SettingsStore {
                 // handle error
                 this.loading = false;
             });
+    };
+
+    @action
+    public setLoginStatus = (status = false) => {
+        this.loggedIn = status;
+    };
+
+    @action
+    public setConnectingStatus = (status = false) => {
+        this.connecting = status;
     };
 }

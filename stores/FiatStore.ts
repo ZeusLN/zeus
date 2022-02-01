@@ -87,7 +87,7 @@ export default class FiatStore {
                 rtl: true,
                 separatorSwap: true
             },
-            ILS: { symbol: '₪', space: true, rtl: false, separatorSwap: true },
+            ILS: { symbol: '₪', space: true, rtl: false, separatorSwap: false },
             INR: { symbol: '₹', space: true, rtl: false, separatorSwap: false },
             JPY: { symbol: '¥', space: true, rtl: false, separatorSwap: false },
             KRW: { symbol: '₩', space: true, rtl: false, separatorSwap: false },

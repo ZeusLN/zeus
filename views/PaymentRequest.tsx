@@ -476,9 +476,6 @@ export default class PaymentRequest extends React.Component<
                                                 max_shard_amt: ampOrMppEnabled
                                                     ? maxShardAmt
                                                     : null,
-                                                timeout_seconds: ampOrMppEnabled
-                                                    ? timeoutSeconds
-                                                    : null,
                                                 fee_limit_sat: ampOrMppEnabled
                                                     ? feeLimitSat
                                                     : null,
