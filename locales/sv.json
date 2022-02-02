@@ -320,6 +320,7 @@
     "views.Send.onChainNotSupported": "Onchain-försändelser stöds inte på",
     "views.Send.amount": "Summa",
     "views.Send.satoshis": "satoshis",
+    "views.Send.message": "Message",
     "views.Send.feeSats": "Avgift (satoshis per byte)",
     "views.Send.feeSatsVbyte": "Avgift (satoshis per vByte)",
     "views.Send.sendCoins": "Skicka mynt",

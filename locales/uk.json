@@ -320,6 +320,7 @@
     "views.Send.onChainNotSupported": "Надсилання в мереж і не підтримуються на",
     "views.Send.amount": "Сума",
     "views.Send.satoshis": "сатоші",
+    "views.Send.message": "Message",
     "views.Send.feeSats": "Комісія (сатоші за byte)",
     "views.Send.feeSatsVbyte": "Комісія (сатоші за vByte)",
     "views.Send.sendCoins": "Надіслати монети",

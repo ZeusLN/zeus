@@ -320,6 +320,7 @@
     "views.Send.onChainNotSupported": "Les envois on-chain ne sont pas pris en charge sur",
     "views.Send.amount": "Montant",
     "views.Send.satoshis": "satoshis",
+    "views.Send.message": "Message",
     "views.Send.feeSats": "Frais (satoshis par octet)",
     "views.Send.feeSatsVbyte": "Fee (satoshis per vByte)",
     "views.Send.sendCoins": "Envoyer les coins",

@@ -320,6 +320,7 @@
     "views.Send.onChainNotSupported": "Sending på kjeden er ikke støttet på",
     "views.Send.amount": "Beløp",
     "views.Send.satoshis": "satoshi",
+    "views.Send.message": "Message",
     "views.Send.feeSats": "Avgift (satoshi per byte)",
     "views.Send.feeSatsVbyte": "Avgift (satoshi per vByte)",
     "views.Send.sendCoins": "Send mynter",

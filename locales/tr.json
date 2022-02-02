@@ -320,6 +320,7 @@
     "views.Send.onChainNotSupported": "Ana zincir gönderileri desteklenmemekte",
     "views.Send.amount": "Miktar",
     "views.Send.satoshis": "Satoşi",
+    "views.Send.message": "Message",
     "views.Send.feeSats": "Ücret (satoshi/byte)",
     "views.Send.feeSatsVbyte": "Fee (satoshis per vByte)",
     "views.Send.sendCoins": "Coin gönder",

@@ -320,6 +320,7 @@
     "views.Send.onChainNotSupported": "链上发送还不支持在",
     "views.Send.amount": "金额",
     "views.Send.satoshis": "聪",
+    "views.Send.message": "Message",
     "views.Send.feeSats": "手续费（聪/每字节）",
     "views.Send.feeSatsVbyte": "Fee (satoshis per vByte)",
     "views.Send.sendCoins": "发送Coins",

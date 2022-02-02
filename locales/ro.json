@@ -320,6 +320,7 @@
     "views.Send.onChainNotSupported": "Tranzacții on-chain nu sunt suportate în",
     "views.Send.amount": "Cantitate",
     "views.Send.satoshis": "satoshi",
+    "views.Send.message": "Message",
     "views.Send.feeSats": "Comision (satoshi per octet)",
     "views.Send.feeSatsVbyte": "Fee (satoshis per vByte)",
     "views.Send.sendCoins": "Trimite Monede",
