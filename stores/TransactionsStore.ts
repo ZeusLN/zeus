@@ -221,12 +221,8 @@ export default class TransactionsStore {
             data.pubkey = pubkey;
 
             if (message) {
-                if (this.settingsStore.implementation === 'c-lightning-REST') {
-                    data.label = message;
-                } else {
-                    const hex_message = Base64Utils.hexToBase64(Base64Utils.utf8ToHexString(message));
-                    data.dest_custom_records![keySendMessageType] = hex_message;
-                }
+                const hex_message = Base64Utils.hexToBase64(Base64Utils.utf8ToHexString(message));
+                data.dest_custom_records![keySendMessageType] = hex_message;
             }
         }
 
