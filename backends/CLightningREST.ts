@@ -120,7 +120,8 @@ export default class CLightningREST extends LND {
     sendKeysend = (data: any) =>
         this.postRequest('/v1/pay/keysend', {
             pubkey: data.pubkey,
-            amount: Number(data.amt && data.amt * 1000)
+            amount: Number(data.amt && data.amt * 1000),
+            label: data.label
         });
     closeChannel = (urlParams?: Array<string>) =>
         this.deleteRequest(
