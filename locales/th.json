@@ -320,7 +320,6 @@
     "views.Send.onChainNotSupported": "การส่งบนเชนไม่รองรับบน",
     "views.Send.amount": "จำนวน",
     "views.Send.satoshis": "satoshis",
-    "views.Send.message": "Message",
     "views.Send.feeSats": "ค่าธรรมเนียม (satoshis ต่อ byte)",
     "views.Send.feeSatsVbyte": "ค่าธรรมเนียม (satoshis ต่อ vByte)",
     "views.Send.sendCoins": "ส่งเหรียญ",

@@ -320,7 +320,6 @@
     "views.Send.onChainNotSupported": "On-chain odeslání není podporováno",
     "views.Send.amount": "Částka",
     "views.Send.satoshis": "satoshi",
-    "views.Send.message": "Message",
     "views.Send.feeSats": "Poplatek (satoshi za byte)",
     "views.Send.feeSatsVbyte": "Poplatek (satoshi za vByte)",
     "views.Send.sendCoins": "Poslat mince",

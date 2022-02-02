@@ -320,7 +320,6 @@
     "views.Send.onChainNotSupported": "On-chain küldések jelenleg nem támogatottak ",
     "views.Send.amount": "Összeg",
     "views.Send.satoshis": "satoshik",
-    "views.Send.message": "Message",
     "views.Send.feeSats": "Díj (satoshik bájtonként)",
     "views.Send.feeSatsVbyte": "Fee (satoshis per vByte)",
     "views.Send.sendCoins": "Érmék küldése",

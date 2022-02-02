@@ -320,7 +320,6 @@
     "views.Send.onChainNotSupported": "On-chain sends are not supported on",
     "views.Send.amount": "مبلغ",
     "views.Send.satoshis": "ساتوشی",
-    "views.Send.message": "Message",
     "views.Send.feeSats": "کارمزد (ساتوشی بر بایت)",
     "views.Send.feeSatsVbyte": "Fee (satoshis per vByte)",
     "views.Send.sendCoins": "ارسال سکه",

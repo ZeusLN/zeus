@@ -320,7 +320,6 @@
     "views.Send.onChainNotSupported": "Pääketjussa tapahtuvia lähetyksiä ei tueta",
     "views.Send.amount": "Määrä",
     "views.Send.satoshis": "satoshia",
-    "views.Send.message": "Message",
     "views.Send.feeSats": "Siirtokulu (satoshis per byte)",
     "views.Send.feeSatsVbyte": "Siirtokulu (satoshis per vByte)",
     "views.Send.sendCoins": "Lähetä kolikoita",

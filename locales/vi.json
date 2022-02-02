@@ -320,7 +320,6 @@
     "views.Send.onChainNotSupported": "Gửi trên chuỗi chưa được hỗ trợ trên",
     "views.Send.amount": "Số lượng",
     "views.Send.satoshis": "satoshi",
-    "views.Send.message": "Message",
     "views.Send.feeSats": "Phí (satoshi mỗi byte)",
     "views.Send.feeSatsVbyte": "Phí (satoshi mỗi vByte)",
     "views.Send.sendCoins": "Gửi Coin",

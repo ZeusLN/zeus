@@ -320,7 +320,6 @@
     "views.Send.onChainNotSupported": "On-chain sends are not supported on",
     "views.Send.amount": "Znesek",
     "views.Send.satoshis": "satošijev",
-    "views.Send.message": "Message",
     "views.Send.feeSats": "Omrežnina (satošijev na bajt)",
     "views.Send.feeSatsVbyte": "Omrežnina (satošijev na vBajt)",
     "views.Send.sendCoins": "Pošlji kovance",

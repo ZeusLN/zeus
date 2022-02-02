@@ -320,7 +320,6 @@
     "views.Send.onChainNotSupported": "Блокчейн переводы не поддерживаются на",
     "views.Send.amount": "Количество",
     "views.Send.satoshis": "сатоши",
-    "views.Send.message": "Message",
     "views.Send.feeSats": "Комиссия (сатоши за байт)",
     "views.Send.feeSatsVbyte": "Комиссия (сатоши за виртуальный байт)",
     "views.Send.sendCoins": "Отправить Монеты",
