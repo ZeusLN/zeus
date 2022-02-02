@@ -226,7 +226,8 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     sendKeySendPayment = (satAmount: string | number) => {
         const { TransactionsStore, navigation } = this.props;
-        const { destination, maxParts, maxShardAmt, feeLimitSat, message } = this.state;
+        const { destination, maxParts, maxShardAmt, feeLimitSat, message } =
+            this.state;
 
         if (RESTUtils.supportsAMP()) {
             TransactionsStore.sendPayment({

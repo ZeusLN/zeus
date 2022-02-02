@@ -221,7 +221,9 @@ export default class TransactionsStore {
             data.pubkey = pubkey;
 
             if (message) {
-                const hex_message = Base64Utils.hexToBase64(Base64Utils.utf8ToHexString(message));
+                const hex_message = Base64Utils.hexToBase64(
+                    Base64Utils.utf8ToHexString(message)
+                );
                 data.dest_custom_records![keySendMessageType] = hex_message;
             }
         }
