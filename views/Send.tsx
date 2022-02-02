@@ -557,32 +557,32 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         </Text>
                                     </TouchableOpacity>
                                 )}
-                                <Text
-                                    style={{
-                                        color: themeColor(
-                                            'secondaryText'
-                                        )
-                                    }}
-                                >
-                                    {`${localeString(
-                                        'views.Send.message'
-                                    )} (${localeString(
-                                        'general.optional'
-                                    )})`}
-                                    :
-                                </Text>
-                                <TextInput
-                                    keyboardType="default"
-                                    value={message}
-                                    onChangeText={(text: string) =>
-                                        this.setState({
-                                            message: text
-                                        })
-                                    }
-                                    style={styles.textInput}
-                                />
                                 {RESTUtils.supportsAMP() && (
                                     <React.Fragment>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {`${localeString(
+                                                'views.Send.message'
+                                            )} (${localeString(
+                                                'general.optional'
+                                            )})`}
+                                            :
+                                        </Text>
+                                        <TextInput
+                                            keyboardType="default"
+                                            value={message}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    message: text
+                                                })
+                                            }
+                                            style={styles.textInput}
+                                        />
                                         <Text
                                             style={{
                                                 color: themeColor(
