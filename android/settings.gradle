@@ -10,7 +10,5 @@ project(':react-native-linear-gradient').projectDir = new File(rootProject.proje
 apply from: file("../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesSettingsGradle(settings)
 include ':react-native-secure-key-store'
 project(':react-native-secure-key-store').projectDir = new File(rootProject.projectDir, 	'../node_modules/react-native-secure-key-store/android')
-include ':react-native-tor'
-project(':react-native-tor').projectDir = new File(rootProject.projectDir, 	'../node_modules/react-native-tor/android')
 
 include ':app'

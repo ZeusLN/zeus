@@ -359,8 +359,9 @@ PODS:
     - React-RCTText
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNScreens (2.0.0-alpha.29):
-    - React
+  - RNScreens (3.10.1):
+    - React-Core
+    - React-RCTImage
   - RNSecureKeyStore (1.0.0):
     - React
   - RNSVG (9.13.6):
@@ -595,7 +596,7 @@ SPEC CHECKSUMS:
   RNGestureHandler: bf572f552ea324acd5b5464b8d30755b2d8c1de6
   RNOS: 6f2f9a70895bbbfbdad7196abd952e7b01d45027
   RNReanimated: 1326679461fa5d2399d54c18ca1432ba3e816b9e
-  RNScreens: b20bdb598fe95ac37aada88a5e92f36622549e49
+  RNScreens: 522705f2e5c9d27efb17f24aceb2bf8335bc7b8e
   RNSecureKeyStore: f1ad870e53806453039f650720d2845c678d89c8
   RNSVG: 8ba35cbeb385a52fd960fd28db9d7d18b4c2974f
   RNVectorIcons: bc69e6a278b14842063605de32bec61f0b251a59
