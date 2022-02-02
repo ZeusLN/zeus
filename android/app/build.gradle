@@ -185,18 +185,10 @@ android {
     }
 
     packagingOptions {
-        // Make sure libjsc.so does not packed in APK
-        // pickFirst '**/armeabi-v7a/libc++_shared.so'
-        // pickFirst '**/x86/libc++_shared.so'
-        // pickFirst '**/arm64-v8a/libc++_shared.so'
-        // pickFirst '**/x86_64/libc++_shared.so'
-        // pickFirst '**/x86/libjsc.so'
-        // pickFirst '**/armeabi-v7a/libjsc.so'
-        // exclude ARMEABI native so file, ARMEABI has been removed in NDK r17.
-        exclude "lib/armeabi/**"
-	// v8 mod
-        // Make sure libjsc.so does not packed in AK
-        exclude "**/libjsc.so"
+        pickFirst "lib/armeabi-v7a/libc++_shared.so"
+        pickFirst "lib/arm64-v8a/libc++_shared.so"
+        pickFirst "lib/x86/libc++_shared.so"
+        pickFirst "lib/x86_64/libc++_shared.so"
     }
 }
 
@@ -223,9 +215,6 @@ dependencies {
     } else {
         implementation jscFlavor
     }
-    // v8 mod
-    // Add v8-android - prebuilt libv8android.so into APK
-    implementation 'org.chromium:v8-android:+'
 }
 
 // Run this once to be able to run the application with BUCK

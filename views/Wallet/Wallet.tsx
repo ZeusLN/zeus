@@ -89,9 +89,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
     componentDidMount() {
         Linking.addEventListener('url', this._handleOpenURL);
 
-        Linking.getInitialURL().then(
-            (url) => url && this._handleDeepLink(url)
-        );
+        Linking.getInitialURL().then((url) => url && this._handleDeepLink(url));
     }
 
     componentWillUnmount() {
@@ -460,4 +458,3 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         );
     }
 }
-''
