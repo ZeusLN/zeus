@@ -233,7 +233,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             TransactionsStore.sendPayment({
                 amount: satAmount.toString(),
                 pubkey: destination,
-                message: message,
+                message,
                 max_parts: maxParts,
                 max_shard_amt: maxShardAmt,
                 fee_limit_sat: feeLimitSat,
@@ -243,7 +243,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             TransactionsStore.sendPayment({
                 amount: satAmount.toString(),
                 pubkey: destination,
-                message: message
+                message
             });
         }
 
