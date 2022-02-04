@@ -79,15 +79,15 @@ export default class Send extends React.Component<SendProps, SendState> {
         super(props);
         const { navigation } = props;
         const destination = navigation.getParam('destination', null);
-        const amount = navigation.getParam('amount', null);
+        const amount = navigation.getParam('amount', '');
         const transactionType = navigation.getParam('transactionType', null);
         const isValid = navigation.getParam('isValid', null);
 
         this.state = {
             isValid: isValid || false,
-            transactionType: transactionType,
+            transactionType,
             destination: destination || '',
-            amount: amount || '',
+            amount,
             fee: '2',
             utxos: [],
             utxoBalance: 0,

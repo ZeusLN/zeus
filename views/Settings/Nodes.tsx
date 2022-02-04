@@ -160,7 +160,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                         onPress={() =>
                                             navigation.navigate('AddEditNode', {
                                                 node: item,
-                                                index: index,
+                                                index,
                                                 active: selectedNode === index,
                                                 saved: true
                                             })
