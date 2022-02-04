@@ -1,6 +1,6 @@
 import { action } from 'mobx';
 import { LNURLPaySuccessAction } from 'js-lnurl';
-import AsyncStorage from '@react-native-community/async-storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import SettingsStore from './SettingsStore';
 import NodeInfoStore from './NodeInfoStore';
 

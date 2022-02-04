@@ -226,7 +226,8 @@ export default class LND {
         if (data.pubkey) delete data.pubkey;
         return this.postRequest('/v2/router/send', {
             ...data,
-            timeout_seconds: 60
+            // Tor timeout is 60 seconds so make sure LND times out first
+            timeout_seconds: 57
         });
     };
     closeChannel = (urlParams?: Array<string>) => {
