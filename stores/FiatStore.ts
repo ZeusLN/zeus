@@ -21,10 +21,12 @@ export default class FiatStore {
     }
 
     numberWithCommas = (x: string | number) =>
-        new Intl.NumberFormat('en-EN').format(x);
+        x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
     numberWithDecimals = (x: string | number) =>
-        new Intl.NumberFormat('de-DE').format(x);
+        this.numberWithCommas(x).replace(/[,.]/g, (y: string) =>
+            y === ',' ? '.' : ','
+        );
 
     private symbolLookup = (symbol: string): CurrencyDisplayRules => {
         const symbolPairs: any = {
