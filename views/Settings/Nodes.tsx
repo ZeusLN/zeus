@@ -68,7 +68,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
     render() {
         const { navigation, SettingsStore } = this.props;
         const { loading, nodes } = this.state;
-        const { setSettings, settings }: any = SettingsStore;
+        const { setSettings, settings, setConnectingStatus }: any =
+            SettingsStore;
         const { selectedNode } = settings;
 
         const BackButton = () => (
@@ -117,6 +118,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 privacy: settings.privacy
                                             })
                                         ).then(() => {
+                                            setConnectingStatus(true);
                                             navigation.navigate('Wallet', {
                                                 refresh: true
                                             });
@@ -158,7 +160,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                         onPress={() =>
                                             navigation.navigate('AddEditNode', {
                                                 node: item,
-                                                index: index,
+                                                index,
                                                 active: selectedNode === index,
                                                 saved: true
                                             })

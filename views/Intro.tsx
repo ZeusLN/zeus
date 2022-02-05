@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Image, Text, View, SafeAreaView } from 'react-native';
+import { Dimensions, Image, Text, View, SafeAreaView } from 'react-native';
 
 import Carousel, { Pagination } from 'react-native-snap-carousel';
 import Button from './../components/Button';
@@ -23,9 +23,11 @@ interface IntroState {
 
 export default class Intro extends React.Component<IntroProps, IntroState> {
     carousel: any;
+    screenWidth: number;
 
     constructor(props: any) {
         super(props);
+        this.screenWidth = Dimensions.get('window').width;
         this.state = {
             activeIndex: 0,
             carouselItems: [
@@ -63,14 +65,14 @@ export default class Intro extends React.Component<IntroProps, IntroState> {
             >
                 <Image
                     source={item.illustration}
-                    style={{ width: 400, height: 500 }}
+                    style={{ width: this.screenWidth, height: 520 }}
                 />
                 <Text
                     style={{
                         fontSize: 25,
                         color: themeColor('text'),
                         alignSelf: 'center',
-                        padding: 10
+                        paddingTop: 10
                     }}
                 >
                     {item.title}
@@ -109,8 +111,8 @@ export default class Intro extends React.Component<IntroProps, IntroState> {
                         layout="default"
                         ref={(ref) => (this.carousel = ref)}
                         data={carouselItems}
-                        sliderWidth={400}
-                        itemWidth={400}
+                        sliderWidth={this.screenWidth}
+                        itemWidth={this.screenWidth}
                         itemHeight={600}
                         renderItem={this._renderItem}
                         onSnapToItem={(index) =>

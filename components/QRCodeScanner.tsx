@@ -59,7 +59,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                     backgroundColor="grey"
                 />
                 <View style={styles.content}>
-                    <Text>{text}</Text>
+                    <Text style={{ color: 'black' }}>{text}</Text>
                 </View>
                 {cameraStatus !==
                     RNCamera.Constants.CameraStatus.NOT_AUTHORIZED && (

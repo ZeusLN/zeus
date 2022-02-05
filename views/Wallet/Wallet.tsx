@@ -1,7 +1,6 @@
 import * as React from 'react';
 import {
     Animated,
-    Linking,
     PanResponder,
     Text,
     TouchableOpacity,
@@ -20,6 +19,7 @@ import MainPane from './MainPane';
 import LoadingIndicator from './../../components/LoadingIndicator';
 
 import RESTUtils from './../../utils/RESTUtils';
+import LinkingUtils from './../../utils/LinkingUtils';
 import { restartTor } from './../../utils/TorUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -38,8 +38,6 @@ import Temple from './../../images/SVG/Temple.svg';
 import ChannelsIcon from './../../images/SVG/Channels.svg';
 import CaretUp from './../../images/SVG/Caret Up.svg';
 import WordLogo from './../../images/SVG/Word Logo.svg';
-
-import handleAnything from './../../utils/handleAnything';
 
 interface WalletProps {
     enterSetup: any;
@@ -87,24 +85,14 @@ export default class Wallet extends React.Component<WalletProps, {}> {
     }
 
     componentDidMount() {
-        const { navigation } = this.props;
-
-        Linking.getInitialURL()
-            .then((url) => {
-                if (url) {
-                    handleAnything(url).then(([route, props]) => {
-                        navigation.navigate(route, props);
-                    });
-                }
-            })
-            .catch((err) =>
-                console.error(localeString('views.Wallet.Wallet.error'), err)
-            );
-
         // triggers when loaded from navigation or back action
-        navigation.addListener('didFocus', () => {
+        this.props.navigation.addListener('didFocus', () => {
             this.getSettingsAndNavigate();
         });
+    }
+
+    componentWillUnmount() {
+        LinkingUtils.removeEventListener();
     }
 
     async UNSAFE_componentWillMount() {
@@ -115,7 +103,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             this.clipboard = await Clipboard.getString();
         }
 
-        this.getSettingsAndRefresh();
+        this.refresh();
     }
 
     UNSAFE_componentWillReceiveProps = (nextProps: any) => {
@@ -123,7 +111,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         const refresh = navigation.getParam('refresh', null);
 
         if (refresh) {
-            this.getSettingsAndRefresh();
+            this.refresh();
         }
     };
 
@@ -141,19 +129,22 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                 settings.nodes &&
                 settings.nodes.length > 0
             ) {
-                this.refresh();
+                this.fetchData();
             } else {
                 navigation.navigate('IntroSplash');
             }
         });
     }
 
-    async getSettingsAndRefresh() {
-        const { NodeInfoStore, BalanceStore, ChannelsStore } = this.props;
+    async refresh() {
+        const { NodeInfoStore, BalanceStore, ChannelsStore, SettingsStore } =
+            this.props;
 
-        NodeInfoStore.reset();
-        BalanceStore.reset();
-        ChannelsStore.reset();
+        if (SettingsStore.connecting) {
+            NodeInfoStore.reset();
+            BalanceStore.reset();
+            ChannelsStore.reset();
+        }
 
         this.getSettingsAndNavigate();
     }
@@ -161,31 +152,47 @@ export default class Wallet extends React.Component<WalletProps, {}> {
     restartTorAndReload = async () => {
         this.props.NodeInfoStore.setLoading();
         await restartTor();
-        await this.getSettingsAndRefresh();
+        await this.refresh();
     };
 
-    refresh = () => {
+    async fetchData() {
         const {
             NodeInfoStore,
             BalanceStore,
             ChannelsStore,
             FeeStore,
             SettingsStore,
-            FiatStore
+            FiatStore,
+            navigation
         } = this.props;
-        const { settings, implementation, username, password, login } =
-            SettingsStore;
+        const {
+            settings,
+            implementation,
+            username,
+            password,
+            login,
+            connecting,
+            setConnectingStatus
+        } = SettingsStore;
         const { fiat } = settings;
 
+        if (!!fiat && fiat !== 'Disabled') {
+            FiatStore.getFiatRates();
+        }
+
         if (implementation === 'lndhub') {
-            login({ login: username, password }).then(() => {
-                BalanceStore.resetBlockchainBalance();
-                BalanceStore.getLightningBalance();
+            login({ login: username, password }).then(async () => {
+                await Promise.all([
+                    BalanceStore.getBlockchainBalance(),
+                    BalanceStore.getLightningBalance()
+                ]);
             });
         } else {
+            await Promise.all([
+                BalanceStore.getBlockchainBalance(),
+                BalanceStore.getLightningBalance()
+            ]);
             NodeInfoStore.getNodeInfo();
-            BalanceStore.getBlockchainBalance();
-            BalanceStore.getLightningBalance();
             ChannelsStore.getChannels();
             FeeStore.getFees();
         }
@@ -194,10 +201,12 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             FeeStore.getForwardingHistory();
         }
 
-        if (!!fiat && fiat !== 'Disabled') {
-            FiatStore.getFiatRates();
+        if (connecting) {
+            setConnectingStatus(false);
+            LinkingUtils.addEventListener();
+            LinkingUtils.handleInitialUrl(navigation);
         }
-    };
+    }
 
     render() {
         const Tab = createBottomTabNavigator();
@@ -208,12 +217,12 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             SettingsStore,
             navigation
         } = this.props;
-        const { error, loading, nodeInfo } = NodeInfoStore;
-        const { implementation, enableTor, settings, loggedIn } = SettingsStore;
+        const { error, nodeInfo } = NodeInfoStore;
+        const { implementation, enableTor, settings, loggedIn, connecting } =
+            SettingsStore;
         const loginRequired =
             !settings || (settings && settings.passphrase && !loggedIn);
-        const dataAvailable =
-            !loading && (implementation === 'lndhub' || nodeInfo.version);
+        const dataAvailable = implementation === 'lndhub' || nodeInfo.version;
 
         const WalletScreen = () => {
             return (
@@ -223,15 +232,13 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                         flex: 1
                     }}
                 >
-                    {dataAvailable && (
-                        <MainPane
-                            navigation={navigation}
-                            NodeInfoStore={NodeInfoStore}
-                            UnitsStore={UnitsStore}
-                            BalanceStore={BalanceStore}
-                            SettingsStore={SettingsStore}
-                        />
-                    )}
+                    <MainPane
+                        navigation={navigation}
+                        NodeInfoStore={NodeInfoStore}
+                        UnitsStore={UnitsStore}
+                        BalanceStore={BalanceStore}
+                        SettingsStore={SettingsStore}
+                    />
 
                     {error && enableTor && (
                         <View style={{ marginTop: 10 }}>
@@ -253,14 +260,26 @@ export default class Wallet extends React.Component<WalletProps, {}> {
 
                     {dataAvailable && (
                         <>
-                            <LayerBalances
-                                navigation={navigation}
-                                BalanceStore={BalanceStore}
-                                UnitsStore={UnitsStore}
-                            />
+                            {!BalanceStore.loadingLightningBalance &&
+                            !BalanceStore.loadingBlockchainBalance ? (
+                                <LayerBalances
+                                    navigation={navigation}
+                                    BalanceStore={BalanceStore}
+                                    UnitsStore={UnitsStore}
+                                    onRefresh={() => this.refresh()}
+                                    refreshing={
+                                        BalanceStore.loadingLightningBalance ||
+                                        BalanceStore.loadingBlockchainBalance
+                                    }
+                                />
+                            ) : (
+                                <LoadingIndicator size={120} />
+                            )}
 
                             <Animated.View
                                 style={{
+                                    flex: 1,
+                                    justifyContent: 'flex-end',
                                     alignSelf: 'center',
                                     bottom: 10,
                                     paddingTop: 40,
@@ -318,7 +337,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                     colors={themeColor('gradient')}
                     style={{ flex: 1 }}
                 >
-                    {!loginRequired && dataAvailable && (
+                    {!connecting && !loginRequired && (
                         <NavigationContainer theme={Theme}>
                             <Tab.Navigator
                                 screenOptions={({ route }) => ({
@@ -368,30 +387,24 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                             </Tab.Navigator>
                         </NavigationContainer>
                     )}
-                    {!dataAvailable && (
+                    {connecting && !loginRequired && (
                         <>
-                            {!loginRequired && (
-                                <>
-                                    <WordLogo
-                                        height={150}
-                                        style={{
-                                            alignSelf: 'center',
-                                            marginTop: 250
-                                        }}
-                                    />
-                                    <Text
-                                        style={{
-                                            color: themeColor('text'),
-                                            alignSelf: 'center',
-                                            fontSize: 15
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Wallet.Wallet.connecting'
-                                        )}
-                                    </Text>
-                                </>
-                            )}
+                            <WordLogo
+                                height={150}
+                                style={{
+                                    alignSelf: 'center',
+                                    marginTop: 250
+                                }}
+                            />
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    alignSelf: 'center',
+                                    fontSize: 15
+                                }}
+                            >
+                                {localeString('views.Wallet.Wallet.connecting')}
+                            </Text>
                             <LoadingIndicator size={120} />
                             <View
                                 style={{

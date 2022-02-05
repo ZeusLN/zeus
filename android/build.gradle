@@ -2,19 +2,20 @@
 
 buildscript {
     ext {
-        buildToolsVersion = "28.0.3"
         minSdkVersion = 26
-        compileSdkVersion = 28
-        targetSdkVersion = 29
+        compileSdkVersion = 31
+        targetSdkVersion = 31
+        ndkVersion = "22.1.7171670"
         supportLibVersion = "28.0.0"
         kotlin_version = '1.4.10'
     }
     repositories {
         google()
+        mavenCentral()
         jcenter()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:3.4.2")
+        classpath("com.android.tools.build:gradle:4.2.2")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version")
 
         // NOTE: Do not place your application dependencies here; they belong
@@ -24,17 +25,11 @@ buildscript {
 
 allprojects {
     repositories {
+        mavenCentral()
         mavenLocal()
-	// v8 mod
         maven {
-           // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
-           // url("$rootDir/../node_modules/react-native/android")
-           // Replace AAR from original RN with AAR from react-native-v8
-            url("$rootDir/../node_modules/react-native-v8/dist")
-        }
-        maven {
-            // prebuilt libv8android.so
-            url("$rootDir/../node_modules/v8-android/dist")
+            // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
+            url("$rootDir/../node_modules/react-native/android")
         }
         maven {
             // Android JSC is installed from npm
@@ -42,18 +37,8 @@ allprojects {
         }
         google()
         jcenter()
-        maven { url 'https://jitpack.io' }
-    }
-}
-
-subprojects {
-    afterEvaluate {
-        project ->
-            if (project.hasProperty("android")) {
-                android {
-                    compileSdkVersion = 28
-                    buildToolsVersion = "28.0.3"
-                }
-            }
+        maven {
+            url "https://www.jitpack.io"
+        }
     }
 }
