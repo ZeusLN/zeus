@@ -120,7 +120,7 @@ export default class LnurlAuth extends React.Component<
                 const signedMessageDER = signedMessage.toDER();
 
                 this.setState({
-                    linkingKeyPub: linkingKeyPub,
+                    linkingKeyPub,
                     signedMessageDER:
                         Base64Utils.bytesToHexString(signedMessageDER),
                     preparingSignature: false,

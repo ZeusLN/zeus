@@ -76,7 +76,7 @@ export default class LnurlChannel extends React.Component<
             uri: lnurl.uri,
             domain: lnurl.domain,
             node_pubkey_string: pubkey,
-            host: host,
+            host,
             k1: lnurl.k1,
             localnodeids: [],
             localnodeid: '',
@@ -95,7 +95,7 @@ export default class LnurlChannel extends React.Component<
         RESTUtils.connectPeer({
             addr: {
                 pubkey: node_pubkey_string,
-                host: host
+                host
             }
         })
             .then(() => {

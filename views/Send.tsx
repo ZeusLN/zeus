@@ -60,8 +60,8 @@ interface SendState {
     confirmationTarget: string;
     maxParts: string;
     maxShardAmt: string;
-    timeoutSeconds: string;
     feeLimitSat: string;
+    message: string;
 }
 
 @inject(
@@ -80,15 +80,15 @@ export default class Send extends React.Component<SendProps, SendState> {
         super(props);
         const { navigation } = props;
         const destination = navigation.getParam('destination', null);
-        const amount = navigation.getParam('amount', null);
+        const amount = navigation.getParam('amount', '');
         const transactionType = navigation.getParam('transactionType', null);
         const isValid = navigation.getParam('isValid', null);
 
         this.state = {
             isValid: isValid || false,
-            transactionType: transactionType,
+            transactionType,
             destination: destination || '',
-            amount: amount || '',
+            amount,
             fee: '2',
             utxos: [],
             utxoBalance: 0,
@@ -96,8 +96,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             error_msg: '',
             maxParts: '16',
             maxShardAmt: '',
-            timeoutSeconds: '20',
-            feeLimitSat: ''
+            feeLimitSat: '',
+            message: ''
         };
     }
 
@@ -226,28 +226,24 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     sendKeySendPayment = (satAmount: string | number) => {
         const { TransactionsStore, navigation } = this.props;
-        const {
-            destination,
-            maxParts,
-            maxShardAmt,
-            timeoutSeconds,
-            feeLimitSat
-        } = this.state;
+        const { destination, maxParts, maxShardAmt, feeLimitSat, message } =
+            this.state;
 
         if (RESTUtils.supportsAMP()) {
             TransactionsStore.sendPayment({
                 amount: satAmount.toString(),
                 pubkey: destination,
+                message,
                 max_parts: maxParts,
                 max_shard_amt: maxShardAmt,
-                timeout_seconds: timeoutSeconds,
                 fee_limit_sat: feeLimitSat,
                 amp: true
             });
         } else {
             TransactionsStore.sendPayment({
                 amount: satAmount.toString(),
-                pubkey: destination
+                pubkey: destination,
+                message
             });
         }
 
@@ -284,8 +280,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             error_msg,
             maxParts,
             maxShardAmt,
-            timeoutSeconds,
-            feeLimitSat
+            feeLimitSat,
+            message
         } = this.state;
         const { confirmedBlockchainBalance } = BalanceStore;
         const { implementation, settings } = SettingsStore;
@@ -571,18 +567,19 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 )
                                             }}
                                         >
-                                            {localeString(
-                                                'views.PaymentRequest.timeout'
-                                            )}
+                                            {`${localeString(
+                                                'views.Send.message'
+                                            )} (${localeString(
+                                                'general.optional'
+                                            )})`}
                                             :
                                         </Text>
                                         <TextInput
-                                            keyboardType="numeric"
-                                            placeholder="20"
-                                            value={timeoutSeconds}
+                                            keyboardType="default"
+                                            value={message}
                                             onChangeText={(text: string) =>
                                                 this.setState({
-                                                    timeoutSeconds: text
+                                                    message: text
                                                 })
                                             }
                                             style={styles.textInput}

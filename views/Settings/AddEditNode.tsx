@@ -295,7 +295,7 @@ export default class AddEditNode extends React.Component<
             if (nodes.length === 1) {
                 navigation.navigate('Wallet', { refresh: true });
             } else {
-                navigation.navigate('Settings', { refresh: true });
+                navigation.navigate('Nodes', { refresh: true });
             }
         });
     };

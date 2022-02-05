@@ -1,11 +1,8 @@
 import * as React from 'react';
-import { FlatList, View, StyleSheet, TouchableHighlight } from 'react-native';
+import { FlatList, View, TouchableHighlight } from 'react-native';
 
 import { inject, observer } from 'mobx-react';
-import {
-    ChannelsDonut,
-    ChannelsHeader
-} from '../../components/Channels/ChannelsHeader';
+import { ChannelsHeader } from '../../components/Channels/ChannelsHeader';
 import { WalletHeader } from '../../components/WalletHeader';
 import { ChannelItem } from '../../components/Channels/ChannelItem';
 import { localeString } from '../../utils/LocaleUtils';
@@ -26,20 +23,12 @@ interface ChannelsProps {
     ChannelsStore: ChannelsStore;
 }
 
-interface ChannelsState {
-    listPositionY: number;
-}
-
 @inject('ChannelsStore', 'SettingsStore')
 @observer
 export default class ChannelsPane extends React.PureComponent<
     ChannelsProps,
-    ChannelsState
+    {}
 > {
-    state = {
-        listPositionY: 0
-    };
-
     headerString = `${localeString('views.Wallet.Wallet.channels')} (${
         this.props.ChannelsStore.channels.length
     })`;
@@ -71,15 +60,8 @@ export default class ChannelsPane extends React.PureComponent<
         );
     };
 
-    handleScroll = (event: any) => {
-        this.setState({
-            listPositionY: event.nativeEvent.contentOffset.y
-        });
-    };
-
     render() {
         const { ChannelsStore, SettingsStore, navigation } = this.props;
-        const { listPositionY } = this.state;
         const {
             loading,
             getChannels,
@@ -88,9 +70,6 @@ export default class ChannelsPane extends React.PureComponent<
             totalOffline,
             channels
         } = ChannelsStore;
-        const defaultHeight = 106;
-        const donutHeight =
-            listPositionY > defaultHeight ? 0 : defaultHeight - listPositionY;
 
         return (
             <View style={{ flex: 1 }}>
@@ -100,14 +79,6 @@ export default class ChannelsPane extends React.PureComponent<
                     SettingsStore={SettingsStore}
                     channels
                 />
-                <View style={{ ...styles.donut, height: donutHeight }}>
-                    <ChannelsDonut
-                        totalInbound={totalInbound}
-                        totalOutbound={totalOutbound}
-                        totalOffline={totalOffline}
-                        radius={donutHeight / 2}
-                    />
-                </View>
                 <ChannelsHeader
                     totalInbound={totalInbound}
                     totalOutbound={totalOutbound}
@@ -122,18 +93,8 @@ export default class ChannelsPane extends React.PureComponent<
                     keyExtractor={(item, index) =>
                         `${item.remote_pubkey}-${index}`
                     }
-                    onScroll={this.handleScroll}
                 />
             </View>
         );
     }
 }
-
-const styles = StyleSheet.create({
-    donut: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        overflow: 'hidden'
-    }
-});

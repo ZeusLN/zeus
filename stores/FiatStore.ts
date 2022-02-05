@@ -21,10 +21,12 @@ export default class FiatStore {
     }
 
     numberWithCommas = (x: string | number) =>
-        new Intl.NumberFormat('en-EN').format(x);
+        x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
     numberWithDecimals = (x: string | number) =>
-        new Intl.NumberFormat('de-DE').format(x);
+        this.numberWithCommas(x).replace(/[,.]/g, (y: string) =>
+            y === ',' ? '.' : ','
+        );
 
     private symbolLookup = (symbol: string): CurrencyDisplayRules => {
         const symbolPairs: any = {
@@ -87,7 +89,7 @@ export default class FiatStore {
                 rtl: true,
                 separatorSwap: true
             },
-            ILS: { symbol: '₪', space: true, rtl: false, separatorSwap: true },
+            ILS: { symbol: '₪', space: true, rtl: false, separatorSwap: false },
             INR: { symbol: '₹', space: true, rtl: false, separatorSwap: false },
             JPY: { symbol: '¥', space: true, rtl: false, separatorSwap: false },
             KRW: { symbol: '₩', space: true, rtl: false, separatorSwap: false },
