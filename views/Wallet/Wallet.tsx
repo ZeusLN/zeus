@@ -1,7 +1,6 @@
 import * as React from 'react';
 import {
     Animated,
-    Linking,
     PanResponder,
     Text,
     TouchableOpacity,
@@ -20,6 +19,7 @@ import MainPane from './MainPane';
 import LoadingIndicator from './../../components/LoadingIndicator';
 
 import RESTUtils from './../../utils/RESTUtils';
+import LinkingUtils from './../../utils/LinkingUtils';
 import { restartTor } from './../../utils/TorUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -38,8 +38,6 @@ import Temple from './../../images/SVG/Temple.svg';
 import ChannelsIcon from './../../images/SVG/Channels.svg';
 import CaretUp from './../../images/SVG/Caret Up.svg';
 import WordLogo from './../../images/SVG/Word Logo.svg';
-
-import handleAnything from './../../utils/handleAnything';
 
 interface WalletProps {
     enterSetup: any;
@@ -87,34 +85,14 @@ export default class Wallet extends React.Component<WalletProps, {}> {
     }
 
     componentDidMount() {
-        Linking.addEventListener('url', this._handleOpenURL);
-
-        Linking.getInitialURL().then((url) => url && this._handleDeepLink(url));
+        // triggers when loaded from navigation or back action
+        this.props.navigation.addListener('didFocus', () => {
+            this.getSettingsAndNavigate();
+        });
     }
 
     componentWillUnmount() {
-        Linking.removeEventListener('url', this._handleOpenURL);
-    }
-
-    _handleOpenURL(event) {
-        if (event.url) {
-            this._handleDeepLink(event.url);
-        }
-    }
-
-    _handleDeepLink(url) {
-        handleAnything(url)
-            .then(([route, props]) => {
-                this.props.navigation.navigate(route, props);
-            })
-            .catch((err) =>
-                console.error(localeString('views.Wallet.Wallet.error'), err)
-            );
-
-        // triggers when loaded from navigation or back action
-        navigation.addListener('didFocus', () => {
-            this.getSettingsAndNavigate();
-        });
+        LinkingUtils.removeEventListener();
     }
 
     async UNSAFE_componentWillMount() {
@@ -184,7 +162,8 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             ChannelsStore,
             FeeStore,
             SettingsStore,
-            FiatStore
+            FiatStore,
+            navigation
         } = this.props;
         const {
             settings,
@@ -224,6 +203,8 @@ export default class Wallet extends React.Component<WalletProps, {}> {
 
         if (connecting) {
             setConnectingStatus(false);
+            LinkingUtils.addEventListener();
+            LinkingUtils.handleInitialUrl(navigation);
         }
     }
 
