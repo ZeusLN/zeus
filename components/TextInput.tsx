@@ -40,7 +40,8 @@ function TextInput(props: TextInputProps) {
               backgroundColor: themeColor('secondary'),
               borderRadius: 6,
               marginBottom: 20,
-              paddingLeft: 5
+              padding: 10,
+              paddingTop: 10
           }
         : {
               color: themeColor('text'),
@@ -51,7 +52,7 @@ function TextInput(props: TextInputProps) {
               backgroundColor: themeColor('secondary'),
               borderRadius: 6,
               marginBottom: 20,
-              paddingLeft: 5
+              padding: 10
           };
 
     return (
