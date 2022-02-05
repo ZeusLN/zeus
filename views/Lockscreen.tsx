@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Button from './../components/Button';
 import { ErrorMessage } from './../components/SuccessErrorMessage';
+import LinkingUtils from './../utils/LinkingUtils';
 import { localeString } from './../utils/LocaleUtils';
 
 import SettingsStore from './../stores/SettingsStore';
@@ -67,6 +68,7 @@ export default class Lockscreen extends React.Component<
 
         if (passphraseAttempt === passphrase) {
             SettingsStore.setLoginStatus(true);
+            LinkingUtils.handleInitialUrl(navigation);
             navigation.navigate('Wallet');
         } else {
             this.setState({
