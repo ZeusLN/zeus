@@ -64,7 +64,7 @@ export default class ChannelView extends React.Component<
             confirmCloseChannel: false,
             satPerByte: '',
             forceClose: false,
-            channel: channel
+            channel
         };
 
         if (implementation === 'lnd') {
