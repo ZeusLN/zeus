@@ -30,7 +30,10 @@ export default class IntroSplash extends React.Component<IntroSplashProps, {}> {
                         justifyContent: 'center'
                     }}
                 >
-                    <Image source={Splash} style={{ flex: 1, width: '100%' }} />
+                    <Image
+                        source={Splash}
+                        style={{ flex: 1, width: '95%', alignSelf: 'center' }}
+                    />
                 </View>
                 <View
                     style={{
