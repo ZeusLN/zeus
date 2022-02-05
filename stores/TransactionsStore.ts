@@ -1,4 +1,3 @@
-import { Buffer } from 'buffer';
 import { action, reaction, observable } from 'mobx';
 import { randomBytes } from 'react-native-randombytes';
 import { sha256 } from 'js-sha256';
@@ -9,6 +8,7 @@ import RESTUtils from './../utils/RESTUtils';
 import Base64Utils from './../utils/Base64Utils';
 
 const keySendPreimageType = '5482373484';
+const keySendMessageType = '34349334';
 const preimageByteLength = 32;
 
 interface SendPaymentReq {
@@ -20,6 +20,7 @@ interface SendPaymentReq {
     fee_limit_sat?: string | null;
     outgoing_chan_id?: string | null;
     last_hop_pubkey?: string | null;
+    message?: string | null;
     amp?: boolean;
 }
 
@@ -189,6 +190,7 @@ export default class TransactionsStore {
         fee_limit_sat,
         outgoing_chan_id,
         last_hop_pubkey,
+        message,
         amp
     }: SendPaymentReq) => {
         this.loading = true;
@@ -207,17 +209,23 @@ export default class TransactionsStore {
         if (amount) {
             data.amt = amount;
         }
+
         if (pubkey) {
             const preimage = randomBytes(preimageByteLength);
             const secret = preimage.toString('base64');
-            const payment_hash = Buffer.from(sha256(preimage), 'hex').toString(
-                'base64'
-            );
+            const payment_hash = Base64Utils.hexToBase64(sha256(preimage));
 
             data.dest = Base64Utils.hexToBase64(pubkey);
             data.dest_custom_records = { [keySendPreimageType]: secret };
             data.payment_hash = payment_hash;
             data.pubkey = pubkey;
+
+            if (message) {
+                const hex_message = Base64Utils.hexToBase64(
+                    Base64Utils.utf8ToHexString(message)
+                );
+                data.dest_custom_records![keySendMessageType] = hex_message;
+            }
         }
 
         // multi-path payments
