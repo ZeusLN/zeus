@@ -3,12 +3,12 @@ import {
     Animated,
     Linking,
     PanResponder,
+    StyleSheet,
     Text,
     TouchableOpacity,
     View
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import { Button } from 'react-native-elements';
 
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-community/clipboard';
@@ -17,7 +17,10 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import ChannelsPane from '../Channels/ChannelsPane';
 import MainPane from './MainPane';
 
+import Button from './../../components/Button';
 import LoadingIndicator from './../../components/LoadingIndicator';
+import { Row } from './../../components/layout/Row';
+import { WalletHeader } from './../../components/WalletHeader';
 
 import RESTUtils from './../../utils/RESTUtils';
 import { restartTor } from './../../utils/TorUtils';
@@ -36,6 +39,7 @@ import LayerBalances from './../../components/LayerBalances';
 
 import Temple from './../../images/SVG/Temple.svg';
 import ChannelsIcon from './../../images/SVG/Channels.svg';
+import Bitcoin from './../../images/SVG/Bitcoin.svg';
 import CaretUp from './../../images/SVG/Caret Up.svg';
 import WordLogo from './../../images/SVG/Word Logo.svg';
 
@@ -54,6 +58,10 @@ interface WalletProps {
     FiatStore: FiatStore;
 }
 
+interface WalletState {
+    amount: string;
+}
+
 @inject(
     'BalanceStore',
     'ChannelsStore',
@@ -64,11 +72,14 @@ interface WalletProps {
     'FiatStore'
 )
 @observer
-export default class Wallet extends React.Component<WalletProps, {}> {
+export default class Wallet extends React.Component<WalletProps, WalletState> {
     clipboard: string;
 
     constructor(props) {
         super(props);
+        this.state = {
+            amount: '0'
+        };
         this.pan = new Animated.ValueXY();
         this.panResponder = PanResponder.create({
             onMoveShouldSetPanResponder: () => true,
@@ -177,6 +188,37 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         await this.refresh();
     };
 
+    amountAppend = (amount: string) => {
+        if (this.state.amount === '0') {
+            this.setState({
+                amount
+            });
+        } else {
+            this.setState({
+                amount: `${this.state.amount}${amount}`
+            });
+        }
+    };
+
+    amountClear = () => {
+        this.setState({
+            amount: '0'
+        });
+    };
+
+    amountDelete = () => {
+        const { amount } = this.state;
+        if (amount.length === 1) {
+            this.setState({
+                amount: '0'
+            });
+        } else {
+            this.setState({
+                amount: `${amount.slice(0, amount.length - 1)}`
+            });
+        }
+    };
+
     async fetchData() {
         const {
             NodeInfoStore,
@@ -236,6 +278,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             SettingsStore,
             navigation
         } = this.props;
+        const { amount } = this.state;
         const { error, nodeInfo } = NodeInfoStore;
         const { implementation, enableTor, settings, loggedIn, connecting } =
             SettingsStore;
@@ -328,6 +371,210 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             );
         };
 
+        const SendReceiveScreen = () => {
+            return (
+                <View
+                    style={{
+                        backgroundColor: themeColor('background'),
+                        flex: 1
+                    }}
+                >
+                    <WalletHeader
+                        navigation={navigation}
+                        SettingsStore={SettingsStore}
+                    />
+                    <View style={styles.keypadAmount}>
+                        <Row align="flex-end">
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 80
+                                }}
+                            >
+                                {amount}
+                            </Text>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 20,
+                                    top: -20
+                                }}
+                            >
+                                sats
+                            </Text>
+                        </Row>
+                    </View>
+                    <Row align="flex-end" style={styles.keypadRow}>
+                        <TouchableOpacity
+                            onPress={() => this.amountAppend('1')}
+                        >
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontSize: 40
+                                }}
+                            >
+                                {'1'}
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => this.amountAppend('2')}
+                        >
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontSize: 40
+                                }}
+                            >
+                                {'2'}
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => this.amountAppend('3')}
+                        >
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontSize: 40
+                                }}
+                            >
+                                {'3'}
+                            </Text>
+                        </TouchableOpacity>
+                    </Row>
+                    <Row align="flex-end" style={styles.keypadRow}>
+                        <TouchableOpacity
+                            onPress={() => this.amountAppend('4')}
+                        >
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontSize: 40
+                                }}
+                            >
+                                {'4'}
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => this.amountAppend('5')}
+                        >
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontSize: 40
+                                }}
+                            >
+                                {'5'}
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => this.amountAppend('6')}
+                        >
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontSize: 40
+                                }}
+                            >
+                                {'6'}
+                            </Text>
+                        </TouchableOpacity>
+                    </Row>
+                    <Row align="flex-end" style={styles.keypadRow}>
+                        <TouchableOpacity
+                            onPress={() => this.amountAppend('7')}
+                        >
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontSize: 40
+                                }}
+                            >
+                                {'7'}
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => this.amountAppend('8')}
+                        >
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontSize: 40
+                                }}
+                            >
+                                {'8'}
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => this.amountAppend('9')}
+                        >
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontSize: 40
+                                }}
+                            >
+                                {'9'}
+                            </Text>
+                        </TouchableOpacity>
+                    </Row>
+                    <Row align="flex-end" style={styles.keypadRow}>
+                        <TouchableOpacity onPress={() => this.amountClear()}>
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontSize: 40
+                                }}
+                            >
+                                C
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => this.amountAppend('0')}
+                        >
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontSize: 40
+                                }}
+                            >
+                                {'0'}
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => this.amountDelete()}>
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontSize: 40
+                                }}
+                            >
+                                {'<'}
+                            </Text>
+                        </TouchableOpacity>
+                    </Row>
+                    <Row
+                        align="flex-end"
+                        style={{ justifyContent: 'space-evenly', top: 1 }}
+                    >
+                        <Button
+                            title={localeString('general.send')}
+                            onPress={() => this.restartTorAndReload()}
+                            containerStyle={{ width: 150 }}
+                            adaptiveWidth
+                            primary
+                        />
+                        <Button
+                            title={localeString('general.receive')}
+                            onPress={() => this.restartTorAndReload()}
+                            containerStyle={{ width: 150 }}
+                            adaptiveWidth
+                            primary
+                        />
+                    </Row>
+                </View>
+            );
+        };
+
         const ChannelsScreen = () => {
             return (
                 <View
@@ -364,6 +611,9 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                         if (route.name === 'Wallet') {
                                             return <Temple fill={color} />;
                                         }
+                                        if (route.name === 'SendReceive') {
+                                            return <Bitcoin fill={color} />;
+                                        }
                                         if (
                                             RESTUtils.supportsChannelManagement()
                                         ) {
@@ -384,10 +634,15 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                         : themeColor('highlight'),
                                     showLabel: false
                                 }}
+                                initialRouteName="SendReceive"
                             >
                                 <Tab.Screen
                                     name="Wallet"
                                     component={WalletScreen}
+                                />
+                                <Tab.Screen
+                                    name="SendReceive"
+                                    component={SendReceiveScreen}
                                 />
                                 {RESTUtils.supportsChannelManagement() &&
                                 !error ? (
@@ -458,3 +713,15 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         );
     }
 }
+
+const styles = StyleSheet.create({
+    keypadAmount: {
+        alignSelf: 'center',
+        marginTop: 55,
+        marginBottom: 100
+    },
+    keypadRow: {
+        justifyContent: 'space-evenly',
+        bottom: 40
+    }
+});
