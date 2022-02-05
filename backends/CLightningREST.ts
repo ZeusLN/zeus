@@ -141,7 +141,7 @@ export default class CLightningREST extends LND {
     getUTXOs = () => this.getRequest('/v1/listFunds');
     signMessage = (message: string) =>
         this.postRequest('/v1/utility/signMessage', {
-            message: message
+            message
         });
     verifyMessage = (data: any) =>
         this.getRequest(
