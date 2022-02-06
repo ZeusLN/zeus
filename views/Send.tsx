@@ -377,7 +377,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                     {transactionType && (
                         <Text
                             style={{
-                                paddingTop: 10,
+                                paddingBottom: 10,
+                                marginBottom: 10,
                                 color: themeColor('text'),
                                 ...styles.text
                             }}
