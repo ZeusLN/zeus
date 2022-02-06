@@ -8,7 +8,7 @@ import {
     TouchableOpacity,
     TouchableWithoutFeedback
 } from 'react-native';
-import Clipboard from '@react-native-community/clipboard';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import { Header, Icon } from 'react-native-elements';
 
