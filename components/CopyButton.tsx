@@ -1,5 +1,5 @@
 import * as React from 'react';
-import Clipboard from '@react-native-community/clipboard';
+import Clipboard from '@react-native-clipboard/clipboard';
 import Button from './../components/Button';
 import { localeString } from './../utils/LocaleUtils';
 

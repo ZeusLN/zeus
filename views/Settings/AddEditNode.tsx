@@ -7,7 +7,7 @@ import {
     View,
     ScrollView
 } from 'react-native';
-import Clipboard from '@react-native-community/clipboard';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
