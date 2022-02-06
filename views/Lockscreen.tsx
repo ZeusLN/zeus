@@ -91,7 +91,7 @@ export default class Lockscreen extends React.Component<
                                 )}
                             />
                         )}
-                        <Text style={{ color: 'white' }}>
+                        <Text style={{ color: '#A7A9AC' }}>
                             {localeString('views.Lockscreen.passphrase')}
                         </Text>
                         <TextInput
@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
     },
     container: {
         flex: 1,
-        backgroundColor: 'black'
+        backgroundColor: '#1f2328'
     },
     button: {
         paddingTop: 15,
