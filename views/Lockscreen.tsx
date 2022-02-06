@@ -148,8 +148,7 @@ const styles = StyleSheet.create({
     },
     container: {
         flex: 1,
-        backgroundColor: 'black',
-        paddingTop: 200
+        backgroundColor: 'black'
     },
     button: {
         paddingTop: 15,
