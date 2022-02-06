@@ -109,6 +109,7 @@ export default class Lockscreen extends React.Component<
                             autoCorrect={false}
                             secureTextEntry={hidden}
                             style={styles.textInputDark}
+                            autoFocus={true}
                         />
                         <View style={styles.button}>
                             <Button
