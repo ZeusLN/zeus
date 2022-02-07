@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useRef } from 'react';
 import {
     Modal,
     StyleSheet,
@@ -299,6 +300,63 @@ export default class AddEditNode extends React.Component<
             }
         });
     };
+
+    copyNodeConfig = () => {
+        const { SettingsStore, navigation } = this.props;
+        const { setSettings, settings } = SettingsStore;
+        const {
+            nickname,
+            host,
+            port,
+            url,
+            enableTor,
+            lndhubUrl,
+            existingAccount,
+            macaroonHex,
+            accessKey,
+            username,
+            password,
+            implementation,
+            certVerification
+        } = this.state;
+        const { nodes, lurkerMode, passphrase, fiat, locale } = settings;
+
+        const node = {
+            nickname: nickname + ' copy',
+            host,
+            port,
+            url,
+            lndhubUrl,
+            existingAccount,
+            macaroonHex,
+            accessKey,
+            username,
+            password,
+            implementation,
+            certVerification,
+            enableTor
+        };
+
+        setSettings(
+            JSON.stringify({
+                nodes,
+                theme: settings.theme,
+                selectedNode: settings.selectedNode,
+                fiat,
+                locale,
+                lurkerMode,
+                passphrase,
+                privacy: settings.privacy
+            })
+        ).then(() => {
+            navigation.navigate('AddEditNode', {
+                node,
+                newEntry: true,
+                saved: false,
+                index: Number(nodes.length)
+            });
+        });
+    }
 
     deleteNodeConfig = () => {
         const { SettingsStore, navigation } = this.props;
@@ -703,6 +761,7 @@ export default class AddEditNode extends React.Component<
                 )}
 
                 <ScrollView
+                    ref='_scrollView'
                     style={{ flex: 1, paddingLeft: 15, paddingRight: 15 }}
                 >
                     <View style={styles.form}>
@@ -1227,6 +1286,22 @@ export default class AddEditNode extends React.Component<
                                     'views.Settings.AddEditNode.deleteNode'
                                 )}
                                 onPress={() => this.deleteNodeConfig()}
+                                secondary
+                            />
+                        </View>
+                    )}
+
+                    {saved && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString(
+                                    'views.Settings.AddEditNode.copyNode'
+                                )}
+                                onPress={() => {
+                                    this.refs._scrollView.scrollTo({x: 0, y: 0, animated: true});
+                                    this.copyNodeConfig();
+
+                                }}
                                 secondary
                             />
                         </View>
