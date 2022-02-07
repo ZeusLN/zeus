@@ -357,6 +357,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             this.validateAddress(text);
                         }}
                         style={styles.textInput}
+                        autoCorrect={false}
                     />
                     {!!error_msg && !!destination && (
                         <View style={{ paddingTop: 10, paddingBottom: 10 }}>
