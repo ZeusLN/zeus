@@ -112,6 +112,7 @@
     "views.Settings.AddEditNode.scanBtcpay": "Scan BTCPay config",
     "views.Settings.AddEditNode.scanLndhub": "Scan LNDHub QR",
     "views.Settings.AddEditNode.deleteNode": "Delete Node config",
+    "views.Settings.AddEditNode.copyNode": "Copy Node config",
     "views.Settings.AddEditNode.nodeInterface": "Node interface",
     "views.Settings.AddEditNode.useTor": "Use Tor",
     "views.Settings.CertInstallInstructions.title": "Certificate Installation Instructions",
