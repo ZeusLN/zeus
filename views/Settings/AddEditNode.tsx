@@ -321,7 +321,7 @@ export default class AddEditNode extends React.Component<
         const { nodes, lurkerMode, passphrase, fiat, locale } = settings;
 
         const node = {
-            nickname: nickname + ' copy',
+            nickname: `${nickname} copy`,
             host,
             port,
             url,
@@ -1297,6 +1297,11 @@ export default class AddEditNode extends React.Component<
                                     'views.Settings.AddEditNode.copyNode'
                                 )}
                                 onPress={() => {
+                                    /**
+                                     * Scrolls to the top of the screen when going to the node config
+                                     * page for the copied node. Without this, the user would have to
+                                     * manually scroll to the top to edit the copied node properties.
+                                     */
                                     this.refs._scrollView.scrollTo({
                                         x: 0,
                                         y: 0,
