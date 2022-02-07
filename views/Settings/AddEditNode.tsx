@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { useRef } from 'react';
 import {
     Modal,
     StyleSheet,
@@ -356,7 +355,7 @@ export default class AddEditNode extends React.Component<
                 index: Number(nodes.length)
             });
         });
-    }
+    };
 
     deleteNodeConfig = () => {
         const { SettingsStore, navigation } = this.props;
@@ -761,7 +760,7 @@ export default class AddEditNode extends React.Component<
                 )}
 
                 <ScrollView
-                    ref='_scrollView'
+                    ref="_scrollView"
                     style={{ flex: 1, paddingLeft: 15, paddingRight: 15 }}
                 >
                     <View style={styles.form}>
@@ -1298,9 +1297,12 @@ export default class AddEditNode extends React.Component<
                                     'views.Settings.AddEditNode.copyNode'
                                 )}
                                 onPress={() => {
-                                    this.refs._scrollView.scrollTo({x: 0, y: 0, animated: true});
+                                    this.refs._scrollView.scrollTo({
+                                        x: 0,
+                                        y: 0,
+                                        animated: true
+                                    });
                                     this.copyNodeConfig();
-
                                 }}
                                 secondary
                             />
