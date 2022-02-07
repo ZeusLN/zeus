@@ -42,6 +42,10 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         />
     );
 
+    UNSAFE_componentWillReceiveProps = () => {
+        this.refreshSettings();
+    };
+
     componentDidMount() {
         const { SettingsStore } = this.props;
         const { settings } = SettingsStore;
