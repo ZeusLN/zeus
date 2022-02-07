@@ -1,8 +1,11 @@
 import * as React from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
+
 import Button from './../components/Button';
 import { ErrorMessage } from './../components/SuccessErrorMessage';
+import TextInput from './../components/TextInput';
+
 import LinkingUtils from './../utils/LinkingUtils';
 import { localeString } from './../utils/LocaleUtils';
 
