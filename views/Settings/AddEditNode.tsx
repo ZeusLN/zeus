@@ -1282,18 +1282,6 @@ export default class AddEditNode extends React.Component<
                         <View style={styles.button}>
                             <Button
                                 title={localeString(
-                                    'views.Settings.AddEditNode.deleteNode'
-                                )}
-                                onPress={() => this.deleteNodeConfig()}
-                                secondary
-                            />
-                        </View>
-                    )}
-
-                    {saved && (
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString(
                                     'views.Settings.AddEditNode.copyNode'
                                 )}
                                 onPress={() => {
@@ -1309,6 +1297,18 @@ export default class AddEditNode extends React.Component<
                                     });
                                     this.copyNodeConfig();
                                 }}
+                                secondary
+                            />
+                        </View>
+                    )}
+
+                    {saved && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString(
+                                    'views.Settings.AddEditNode.deleteNode'
+                                )}
+                                onPress={() => this.deleteNodeConfig()}
                                 secondary
                             />
                         </View>
