@@ -326,7 +326,7 @@ export default class AddEditNode extends React.Component<
                 privacy: settings.privacy
             })
         ).then(() => {
-            navigation.navigate('Wallet', { refresh: true });
+            navigation.navigate('Nodes', { refresh: true });
         });
     };
 
