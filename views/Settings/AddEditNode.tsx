@@ -508,10 +508,17 @@ export default class AddEditNode extends React.Component<
                         <View style={styles.modal}>
                             {showLndHubModal && (
                                 <>
-                                    <Text style={{ fontSize: 40 }}>
+                                    <Text
+                                        style={{ fontSize: 40, color: 'black' }}
+                                    >
                                         {localeString('general.warning')}
                                     </Text>
-                                    <Text style={{ paddingTop: 20 }}>
+                                    <Text
+                                        style={{
+                                            paddingTop: 20,
+                                            color: 'black'
+                                        }}
+                                    >
                                         {localeString(
                                             'views.Settings.AddEditNode.lndhubWarning'
                                         )}
@@ -519,7 +526,8 @@ export default class AddEditNode extends React.Component<
                                     <Text
                                         style={{
                                             paddingTop: 20,
-                                            paddingBottom: 20
+                                            paddingBottom: 20,
+                                            color: 'black'
                                         }}
                                     >
                                         {localeString(
@@ -572,10 +580,17 @@ export default class AddEditNode extends React.Component<
                             )}
                             {showCertModal && (
                                 <>
-                                    <Text style={{ fontSize: 40 }}>
+                                    <Text
+                                        style={{ fontSize: 40, color: 'black' }}
+                                    >
                                         {localeString('general.warning')}
                                     </Text>
-                                    <Text style={{ paddingTop: 20 }}>
+                                    <Text
+                                        style={{
+                                            paddingTop: 20,
+                                            color: 'black'
+                                        }}
+                                    >
                                         {localeString(
                                             'views.Settings.AddEditNode.certificateWarning1'
                                         )}
@@ -583,7 +598,8 @@ export default class AddEditNode extends React.Component<
                                     <Text
                                         style={{
                                             paddingTop: 20,
-                                            paddingBottom: 20
+                                            paddingBottom: 20,
+                                            color: 'black'
                                         }}
                                     >
                                         {localeString(
