@@ -1,8 +1,11 @@
 import * as React from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
+
 import Button from './../components/Button';
 import { ErrorMessage } from './../components/SuccessErrorMessage';
+import TextInput from './../components/TextInput';
+
 import LinkingUtils from './../utils/LinkingUtils';
 import { localeString } from './../utils/LocaleUtils';
 
@@ -91,7 +94,7 @@ export default class Lockscreen extends React.Component<
                                 )}
                             />
                         )}
-                        <Text style={{ color: 'white' }}>
+                        <Text style={{ color: '#A7A9AC' }}>
                             {localeString('views.Lockscreen.passphrase')}
                         </Text>
                         <TextInput
@@ -109,6 +112,7 @@ export default class Lockscreen extends React.Component<
                             autoCorrect={false}
                             secureTextEntry={hidden}
                             style={styles.textInputDark}
+                            autoFocus={true}
                         />
                         <View style={styles.button}>
                             <Button
@@ -147,8 +151,7 @@ const styles = StyleSheet.create({
     },
     container: {
         flex: 1,
-        backgroundColor: 'black',
-        paddingTop: 200
+        backgroundColor: '#1f2328'
     },
     button: {
         paddingTop: 15,
