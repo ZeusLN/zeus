@@ -172,7 +172,8 @@ export default class FeeStore {
                 // Add up fees earned for this timeframe
                 this.forwardingEvents.map(
                     (event: ForwardEvent) =>
-                        (this.earnedDuringTimeframe += Number(event.fee))
+                        (this.earnedDuringTimeframe +=
+                            Number(event.fee_msat) / 1000)
                 );
 
                 this.lastOffsetIndex = data.last_offset_index;
