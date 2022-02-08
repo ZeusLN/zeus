@@ -4,10 +4,11 @@ import RESTUtils from './../utils/RESTUtils';
 import Base64Utils from './../utils/Base64Utils';
 import ForwardEvent from './../models/ForwardEvent';
 import SettingsStore from './SettingsStore';
+import BigNumber from 'bignumber.js';
 
 export default class FeeStore {
     @observable public fees: any = {};
-    @observable public earnedDuringTimeframe = 0;
+    @observable public earnedDuringTimeframe = new BigNumber(0);
     @observable public channelFees: any = {};
     @observable public dataFrame: any = {};
     @observable public recommendedFees: any = {};
@@ -162,7 +163,7 @@ export default class FeeStore {
         this.loading = true;
         this.forwardingEvents = [];
         this.forwardingHistoryError = false;
-        this.earnedDuringTimeframe = 0;
+        this.earnedDuringTimeframe = new BigNumber(0);
         RESTUtils.getForwardingHistory(params)
             .then((data: any) => {
                 this.forwardingEvents = data.forwarding_events
@@ -170,10 +171,13 @@ export default class FeeStore {
                     .reverse();
 
                 // Add up fees earned for this timeframe
+                // Uses BigNumber to prevent rounding errors in the add operation
                 this.forwardingEvents.map(
                     (event: ForwardEvent) =>
-                        (this.earnedDuringTimeframe +=
-                            Number(event.fee_msat) / 1000)
+                        (this.earnedDuringTimeframe =
+                            this.earnedDuringTimeframe.plus(
+                                Number(event.fee_msat) / 1000
+                            ))
                 );
 
                 this.lastOffsetIndex = data.last_offset_index;
