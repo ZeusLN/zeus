@@ -62,9 +62,7 @@ export default class UnitsStore {
         const { fiat } = settings;
         const units = fixedUnits || this.units;
 
-        // Rounding sats to 3 decimal places because there was a rounding error which
-        // caused repeated 9s from the 4th decimal place onwards in some situations
-        const sats = Math.round(Number(value) * 1000) / 1000;
+        const sats = Number(value);
         const negative = sats < 0;
         const absValueSats = Math.abs(sats);
 
