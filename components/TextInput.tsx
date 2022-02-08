@@ -15,6 +15,7 @@ interface TextInputProps {
     autoCorrect?: boolean;
     multiline?: boolean;
     autoFocus?: boolean;
+    secureTextEntry?: boolean;
 }
 
 function TextInput(props: TextInputProps) {
@@ -30,7 +31,8 @@ function TextInput(props: TextInputProps) {
         autoCapitalize,
         autoCorrect,
         multiline,
-        autoFocus
+        autoFocus,
+        secureTextEntry
     } = props;
 
     const defaultStyle = numberOfLines
@@ -76,6 +78,7 @@ function TextInput(props: TextInputProps) {
             autoCorrect={autoCorrect}
             multiline={multiline}
             autoFocus={autoFocus}
+            secureTextEntry={secureTextEntry}
         />
     );
 }
