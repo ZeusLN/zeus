@@ -7,7 +7,6 @@ import {
     View
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import { Button } from 'react-native-elements';
 
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -16,6 +15,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import ChannelsPane from '../Channels/ChannelsPane';
 import MainPane from './MainPane';
 
+import Button from './../../components/Button';
 import LoadingIndicator from './../../components/LoadingIndicator';
 
 import RESTUtils from './../../utils/RESTUtils';
@@ -241,17 +241,13 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                     />
 
                     {error && enableTor && (
-                        <View style={{ marginTop: 10 }}>
+                        <View style={{ backgroundColor: themeColor('error') }}>
                             <Button
                                 title={localeString('views.Wallet.restartTor')}
                                 icon={{
                                     name: 'sync',
                                     size: 25,
                                     color: 'white'
-                                }}
-                                buttonStyle={{
-                                    backgroundColor: 'gray',
-                                    borderRadius: 30
                                 }}
                                 onPress={() => this.restartTorAndReload()}
                             />
