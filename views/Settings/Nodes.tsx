@@ -31,6 +31,26 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         loading: false
     };
 
+    componentDidMount() {
+        this.refreshSettings();
+    }
+
+    UNSAFE_componentWillReceiveProps = () => {
+        this.refreshSettings();
+    };
+
+    async refreshSettings() {
+        this.setState({
+            loading: true
+        });
+        await this.props.SettingsStore.getSettings().then((settings: any) => {
+            this.setState({
+                loading: false,
+                nodes: (settings && settings.nodes) || []
+            });
+        });
+    }
+
     renderSeparator = () => (
         <View
             style={{
@@ -41,29 +61,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             }}
         />
     );
-
-    componentDidMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-        this.refreshSettings();
-
-        if (settings) {
-            this.setState({
-                nodes: settings.nodes || []
-            });
-        }
-    }
-
-    async refreshSettings() {
-        this.setState({
-            loading: true
-        });
-        await this.props.SettingsStore.getSettings().then(() => {
-            this.setState({
-                loading: false
-            });
-        });
-    }
 
     render() {
         const { navigation, SettingsStore } = this.props;
