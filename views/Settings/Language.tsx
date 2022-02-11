@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, ScrollView, View } from 'react-native';
+import { FlatList, View } from 'react-native';
 import { Header, Icon, ListItem, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import SettingsStore, { LOCALE_KEYS } from './../../stores/SettingsStore';
@@ -79,7 +79,7 @@ export default class Language extends React.Component<
                     backgroundColor: themeColor('background')
                 }}
             >
-                <ScrollView>
+                <View>
                     <Header
                         leftComponent={<BackButton />}
                         centerComponent={{
@@ -132,9 +132,7 @@ export default class Language extends React.Component<
                                         )
                                     ).then(() => {
                                         getSettings();
-                                        navigation.navigate('Settings', {
-                                            refresh: true
-                                        });
+                                        navigation.goBack();
                                     });
                                 }}
                             >
@@ -163,7 +161,7 @@ export default class Language extends React.Component<
                         keyExtractor={(item, index) => `${item.host}-${index}`}
                         ItemSeparatorComponent={this.renderSeparator}
                     />
-                </ScrollView>
+                </View>
             </View>
         );
     }
