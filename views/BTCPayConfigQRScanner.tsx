@@ -29,7 +29,12 @@ export default class BTCPayConfigQRScanner extends React.Component<
                     Alert.alert(
                         localeString('general.error'),
                         SettingsStore.btcPayError,
-                        [{ text: 'OK', onPress: () => void 0 }],
+                        [
+                            {
+                                text: localeString('general.ok'),
+                                onPress: () => void 0
+                            }
+                        ],
                         { cancelable: false }
                     );
                 }
@@ -39,7 +44,12 @@ export default class BTCPayConfigQRScanner extends React.Component<
                 Alert.alert(
                     localeString('general.error'),
                     localeString('views.BTCPayConfigQRScanner.error'),
-                    [{ text: 'OK', onPress: () => void 0 }],
+                    [
+                        {
+                            text: localeString('general.ok'),
+                            onPress: () => void 0
+                        }
+                    ],
                     { cancelable: false }
                 );
 

@@ -62,7 +62,7 @@ export default class LnurlChannel extends React.Component<
             Alert.alert(
                 localeString('views.LnurlPay.LnurlPay.invalidParams'),
                 err.message,
-                [{ text: 'OK', onPress: () => void 0 }],
+                [{ text: localeString('general.ok'), onPress: () => void 0 }],
                 { cancelable: false }
             );
         }
@@ -160,7 +160,12 @@ export default class LnurlChannel extends React.Component<
                     Alert.alert(
                         `[error] ${domain} says:`,
                         data.reason,
-                        [{ text: 'OK', onPress: () => void 0 }],
+                        [
+                            {
+                                text: localeString('general.ok'),
+                                onPress: () => void 0
+                            }
+                        ],
                         { cancelable: false }
                     );
                     return;

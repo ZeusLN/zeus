@@ -305,7 +305,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             case 'sats':
                 satAmount = amount;
                 break;
-            case 'btc':
+            case 'BTC':
                 satAmount = Number(amount) * satoshisPerBTC;
                 break;
             case 'fiat':
