@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Image } from 'react-native';
 
-import Loading from './../images/GIF/Loading.gif';
+import Loading from './../assets/images/GIF/Loading.gif';
 
 interface LoadingIndicatorProps {
     size?: number;

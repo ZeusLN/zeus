@@ -451,7 +451,7 @@ export default class AddEditNode extends React.Component<
                         text: localeString(
                             'views.Settings.AddEditNode.nodeConfig'
                         ),
-                        style: { color: themeColor('text') }
+                        style: styles.text
                     }}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
@@ -460,17 +460,22 @@ export default class AddEditNode extends React.Component<
                 />
                 {!!suggestImport && (
                     <View style={styles.clipboardImport}>
-                        <Text style={{ color: 'white' }}>
+                        <Text style={styles.whiteText}>
                             {localeString(
                                 'views.Settings.AddEditNode.connectionStringClipboard'
                             )}
                         </Text>
-                        <Text style={{ color: 'white', padding: 15 }}>
+                        <Text
+                            style={{
+                                ...styles.whiteText,
+                                padding: 15
+                            }}
+                        >
                             {suggestImport.length > 100
                                 ? `${suggestImport.substring(0, 100)}...`
                                 : suggestImport}
                         </Text>
-                        <Text style={{ color: 'white' }}>
+                        <Text style={styles.whiteText}>
                             {localeString(
                                 'views.Settings.AddEditNode.importPrompt'
                             )}
@@ -512,7 +517,10 @@ export default class AddEditNode extends React.Component<
                             {showLndHubModal && (
                                 <>
                                     <Text
-                                        style={{ fontSize: 40, color: 'black' }}
+                                        style={{
+                                            ...styles.blackText,
+                                            fontSize: 40
+                                        }}
                                     >
                                         {localeString('general.warning')}
                                     </Text>
@@ -528,9 +536,9 @@ export default class AddEditNode extends React.Component<
                                     </Text>
                                     <Text
                                         style={{
+                                            ...styles.blackText,
                                             paddingTop: 20,
-                                            paddingBottom: 20,
-                                            color: 'black'
+                                            paddingBottom: 20
                                         }}
                                     >
                                         {localeString(
@@ -584,14 +592,17 @@ export default class AddEditNode extends React.Component<
                             {showCertModal && (
                                 <>
                                     <Text
-                                        style={{ fontSize: 40, color: 'black' }}
+                                        style={{
+                                            ...styles.blackText,
+                                            fontSize: 40
+                                        }}
                                     >
                                         {localeString('general.warning')}
                                     </Text>
                                     <Text
                                         style={{
-                                            paddingTop: 20,
-                                            color: 'black'
+                                            ...styles.blackText,
+                                            paddingTop: 20
                                         }}
                                     >
                                         {localeString(
@@ -600,9 +611,9 @@ export default class AddEditNode extends React.Component<
                                     </Text>
                                     <Text
                                         style={{
+                                            ...styles.blackText,
                                             paddingTop: 20,
-                                            paddingBottom: 20,
-                                            color: 'black'
+                                            paddingBottom: 20
                                         }}
                                     >
                                         {localeString(
@@ -687,7 +698,7 @@ export default class AddEditNode extends React.Component<
                                 >
                                     <Text
                                         style={{
-                                            color: themeColor('text'),
+                                            ...styles.text,
                                             alignSelf: 'center',
                                             padding: 2
                                         }}
@@ -708,7 +719,7 @@ export default class AddEditNode extends React.Component<
                                 >
                                     <Text
                                         style={{
-                                            color: themeColor('text'),
+                                            ...styles.text,
                                             alignSelf: 'center',
                                             padding: 2
                                         }}
@@ -740,9 +751,7 @@ export default class AddEditNode extends React.Component<
                             )}
 
                         <View>
-                            <Text
-                                style={{ color: themeColor('secondaryText') }}
-                            >
+                            <Text style={styles.secondaryText}>
                                 {localeString(
                                     'views.Settings.AddEditNode.nickname'
                                 )}
@@ -765,11 +774,7 @@ export default class AddEditNode extends React.Component<
                         {(implementation === 'spark' ||
                             implementation == 'eclair') && (
                             <>
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
+                                <Text style={styles.secondaryText}>
                                     {localeString(
                                         'views.Settings.AddEditNode.host'
                                     )}
@@ -1257,6 +1262,22 @@ export default class AddEditNode extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    text: {
+        color: themeColor('text'),
+        fontFamily: 'Lato-Regular'
+    },
+    secondaryText: {
+        color: themeColor('text'),
+        fontFamily: 'Lato-Regular'
+    },
+    whiteText: {
+        color: 'white',
+        fontFamily: 'Lato-Regular'
+    },
+    blackText: {
+        color: 'black',
+        fontFamily: 'Lato-Regular'
+    },
     form: {
         paddingTop: 20,
         paddingLeft: 5,

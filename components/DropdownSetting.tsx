@@ -118,6 +118,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 20,
         marginBottom: 20,
         paddingLeft: 10,
-        overflow: 'hidden'
+        overflow: 'hidden',
+        fontFamily: 'Lato-Regular'
     }
 });

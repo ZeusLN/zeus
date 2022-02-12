@@ -7,10 +7,10 @@ import Button from './../components/Button';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
-const One = require('./../images/intro/1.png');
-const Two = require('./../images/intro/2.png');
-const Three = require('./../images/intro/3.png');
-const Four = require('./../images/intro/4.png');
+const One = require('./../assets/images/intro/1.png');
+const Two = require('./../assets/images/intro/2.png');
+const Three = require('./../assets/images/intro/3.png');
+const Four = require('./../assets/images/intro/4.png');
 
 interface IntroProps {
     navigation: any;

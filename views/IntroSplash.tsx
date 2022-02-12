@@ -3,8 +3,8 @@ import { Image, View, SafeAreaView, TouchableOpacity } from 'react-native';
 import { Header } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Globe from '../images/SVG/Globe.svg';
-import WordLogo from '../images/SVG/Word Logo - no outline.svg';
+import Globe from '../assets/images/SVG/Globe.svg';
+import WordLogo from '../assets/images/SVG/Word Logo - no outline.svg';
 
 import Button from './../components/Button';
 
@@ -13,7 +13,7 @@ import SettingsStore from './../stores/SettingsStore';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
-const Splash = require('./../images/intro/splash.png');
+const Splash = require('./../assets/images/intro/splash.png');
 
 interface IntroSplashProps {
     navigation: any;

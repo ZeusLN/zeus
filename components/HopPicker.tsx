@@ -24,8 +24,8 @@ import Button from './../components/Button';
 import PrivacyUtils from './../utils/PrivacyUtils';
 const hash = require('object-hash');
 
-const SelectedLight = require('./../images/selected-light.png');
-const SelectedDark = require('./../images/selected-dark.png');
+const SelectedLight = require('./../assets/images/selected-light.png');
+const SelectedDark = require('./../assets/images/selected-dark.png');
 
 interface ChannelPickerProps {
     title?: string;

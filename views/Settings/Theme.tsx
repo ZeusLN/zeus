@@ -78,7 +78,6 @@ export default class Theme extends React.Component<ThemeProps, ThemeStore> {
                         data={THEME_KEYS}
                         renderItem={({ item }) => (
                             <ListItem
-                                title={item.key}
                                 containerStyle={{
                                     borderBottomWidth: 0,
                                     backgroundColor: themeColor('background')
@@ -107,16 +106,33 @@ export default class Theme extends React.Component<ThemeProps, ThemeStore> {
                                         });
                                     });
                                 }}
-                                titleStyle={{
-                                    color:
-                                        selectedTheme === item.value
-                                            ? themeColor('highlight')
-                                            : themeColor('text')
-                                }}
-                                subtitleStyle={{
-                                    color: themeColor('secondaryText')
-                                }}
-                            />
+                            >
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color:
+                                                selectedTheme === item.value ||
+                                                (!selectedTheme &&
+                                                    item.value === 'dark')
+                                                    ? themeColor('highlight')
+                                                    : themeColor('text'),
+                                            fontFamily: 'Lato-Regular'
+                                        }}
+                                    >
+                                        {item.key}
+                                    </ListItem.Title>
+                                </ListItem.Content>
+                                {(selectedTheme === item.value ||
+                                    (!selectedTheme &&
+                                        item.value === 'dark')) && (
+                                    <View style={{ textAlign: 'right' }}>
+                                        <Icon
+                                            name="check"
+                                            color={themeColor('highlight')}
+                                        />
+                                    </View>
+                                )}
+                            </ListItem>
                         )}
                         refreshing={loading}
                         keyExtractor={(item, index) => `${item.host}-${index}`}

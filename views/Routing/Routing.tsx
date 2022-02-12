@@ -7,7 +7,7 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Spacer } from '../../components/layout/Spacer';
 import LoadingIndicator from '../../components/LoadingIndicator';
 
-import Pie from '../../images/SVG/Pie.svg';
+import Pie from '../../assets/images/SVG/Pie.svg';
 
 import FeeStore from '../../stores/FeeStore';
 import SettingsStore from '../../stores/SettingsStore';

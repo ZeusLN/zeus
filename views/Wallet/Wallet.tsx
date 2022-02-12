@@ -34,10 +34,10 @@ import FiatStore from './../../stores/FiatStore';
 import UnitsStore from './../../stores/UnitsStore';
 import LayerBalances from './../../components/LayerBalances';
 
-import Temple from './../../images/SVG/Temple.svg';
-import ChannelsIcon from './../../images/SVG/Channels.svg';
-import CaretUp from './../../images/SVG/Caret Up.svg';
-import WordLogo from './../../images/SVG/Word Logo.svg';
+import Temple from './../../assets/images/SVG/Temple.svg';
+import ChannelsIcon from './../../assets/images/SVG/Channels.svg';
+import CaretUp from './../../assets/images/SVG/Caret Up.svg';
+import WordLogo from './../../assets/images/SVG/Word Logo.svg';
 
 interface WalletProps {
     enterSetup: any;

@@ -13,8 +13,8 @@ import LnurlPayStore from './../stores/LnurlPayStore';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
-import Success from './../images/GIF/Success.gif';
-import WordLogo from './../images/SVG/Word Logo.svg';
+import Success from './../assets/images/GIF/Success.gif';
+import WordLogo from './../assets/images/SVG/Word Logo.svg';
 
 interface SendingLightningProps {
     navigation: any;

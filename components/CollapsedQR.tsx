@@ -9,7 +9,7 @@ import CopyButton from './CopyButton';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
-const secondaryLogo = require('../images/secondary.png');
+const secondaryLogo = require('../assets/images/secondary.png');
 
 let simulation: any;
 

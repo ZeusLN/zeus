@@ -13,8 +13,8 @@ import UrlUtils from './../utils/UrlUtils';
 import NodeInfoStore from './../stores/NodeInfoStore';
 import TransactionsStore from './../stores/TransactionsStore';
 
-import Success from './../images/GIF/Success.gif';
-import WordLogo from './../images/SVG/Word Logo.svg';
+import Success from './../assets/images/GIF/Success.gif';
+import WordLogo from './../assets/images/SVG/Word Logo.svg';
 
 interface SendingOnChainProps {
     navigation: any;

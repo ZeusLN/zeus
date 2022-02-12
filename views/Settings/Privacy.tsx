@@ -104,7 +104,10 @@ export default class Privacy extends React.Component<
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Settings.Privacy.title'),
-                        style: { color: themeColor('text') }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
@@ -161,7 +164,10 @@ export default class Privacy extends React.Component<
                     {defaultBlockExplorer === 'Custom' && (
                         <>
                             <Text
-                                style={{ color: themeColor('secondaryText') }}
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'Lato-Regular'
+                                }}
                             >
                                 {localeString(
                                     'views.Settings.Privacy.customBlockExplorer'
@@ -222,6 +228,7 @@ export default class Privacy extends React.Component<
                         <ListItem.Title
                             style={{
                                 color: themeColor('secondaryText'),
+                                fontFamily: 'Lato-Regular',
                                 left: -10
                             }}
                         >
@@ -289,6 +296,7 @@ export default class Privacy extends React.Component<
                         <ListItem.Title
                             style={{
                                 color: themeColor('secondaryText'),
+                                fontFamily: 'Lato-Regular',
                                 left: -10
                             }}
                         >
@@ -358,6 +366,7 @@ export default class Privacy extends React.Component<
                         <ListItem.Title
                             style={{
                                 color: themeColor('secondaryText'),
+                                fontFamily: 'Lato-Regular',
                                 left: -10
                             }}
                         >

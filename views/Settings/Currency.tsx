@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, ScrollView, View } from 'react-native';
+import { FlatList, View } from 'react-native';
 import { Header, Icon, ListItem, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -83,12 +83,15 @@ export default class Currency extends React.Component<
                     backgroundColor: themeColor('background')
                 }}
             >
-                <ScrollView>
+                <View>
                     <Header
                         leftComponent={<BackButton />}
                         centerComponent={{
                             text: localeString('views.Settings.Currency.title'),
-                            style: { color: themeColor('text') }
+                            style: {
+                                color: themeColor('text'),
+                                fontFamily: 'Lato-Regular'
+                            }
                         }}
                         backgroundColor={themeColor('background')}
                         containerStyle={{
@@ -100,7 +103,8 @@ export default class Currency extends React.Component<
                         onChangeText={this.updateSearch}
                         value={search}
                         inputStyle={{
-                            color: themeColor('text')
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
                         }}
                         placeholderTextColor={themeColor('secondaryText')}
                         containerStyle={{
@@ -157,13 +161,16 @@ export default class Currency extends React.Component<
                                                 (!selectedCurrency &&
                                                     item.value === 'Disabled')
                                                     ? themeColor('highlight')
-                                                    : themeColor('text')
+                                                    : themeColor('text'),
+                                            fontFamily: 'Lato-Regular'
                                         }}
                                     >
                                         {item.key}
                                     </ListItem.Title>
                                 </ListItem.Content>
-                                {selectedCurrency === item.value && (
+                                {(selectedCurrency === item.value ||
+                                    (!selectedCurrency &&
+                                        item.value === 'Disabled')) && (
                                     <View style={{ textAlign: 'right' }}>
                                         <Icon
                                             name="check"
@@ -176,7 +183,7 @@ export default class Currency extends React.Component<
                         keyExtractor={(item, index) => `${item.host}-${index}`}
                         ItemSeparatorComponent={this.renderSeparator}
                     />
-                </ScrollView>
+                </View>
             </View>
         );
     }

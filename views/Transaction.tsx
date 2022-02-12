@@ -107,7 +107,10 @@ export default class TransactionView extends React.Component<TransactionProps> {
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Transaction.title'),
-                        style: { color: themeColor('text') }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
