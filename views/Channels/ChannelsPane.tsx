@@ -2,9 +2,12 @@ import * as React from 'react';
 import { FlatList, View, TouchableHighlight } from 'react-native';
 
 import { inject, observer } from 'mobx-react';
+
 import { ChannelsHeader } from '../../components/Channels/ChannelsHeader';
-import { WalletHeader } from '../../components/WalletHeader';
 import { ChannelItem } from '../../components/Channels/ChannelItem';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import { WalletHeader } from '../../components/WalletHeader';
+
 import { localeString } from '../../utils/LocaleUtils';
 import { Spacer } from '../../components/layout/Spacer';
 
@@ -84,16 +87,20 @@ export default class ChannelsPane extends React.PureComponent<
                     totalOutbound={totalOutbound}
                     totalOffline={totalOffline}
                 />
-                <FlatList
-                    data={channels}
-                    renderItem={this.renderItem}
-                    ListFooterComponent={<Spacer height={100} />}
-                    onRefresh={() => getChannels()}
-                    refreshing={loading}
-                    keyExtractor={(item, index) =>
-                        `${item.remote_pubkey}-${index}`
-                    }
-                />
+                {loading ? (
+                    <LoadingIndicator />
+                ) : (
+                    <FlatList
+                        data={channels}
+                        renderItem={this.renderItem}
+                        ListFooterComponent={<Spacer height={100} />}
+                        onRefresh={() => getChannels()}
+                        refreshing={loading}
+                        keyExtractor={(item, index) =>
+                            `${item.remote_pubkey}-${index}`
+                        }
+                    />
+                )}
             </View>
         );
     }
