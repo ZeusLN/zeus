@@ -6,7 +6,7 @@ import Button from './../components/Button';
 
 import { localeString } from './../utils/LocaleUtils';
 
-import Scan from './../images/SVG/ScanFrame.svg';
+import Scan from './../assets/images/SVG/ScanFrame.svg';
 
 const createHash = require('create-hash');
 
