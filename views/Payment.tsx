@@ -56,7 +56,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
         const BackButton = () => (
             <Icon
                 name="arrow-back"
-                onPress={() => navigation.navigate('Wallet')}
+                onPress={() => navigation.goBack()}
                 color="#fff"
                 underlayColor="transparent"
             />
