@@ -32,8 +32,6 @@ function NodeQRScanner(props: NodeQRProps) {
 
     return (
         <QRCodeScanner
-            title={localeString('views.NodeQRScanner.title')}
-            text={localeString('views.NodeQRScanner.text')}
             handleQRScanned={handleNodeScanned}
             goBack={() => navigation.navigate('OpenChannel')}
         />
