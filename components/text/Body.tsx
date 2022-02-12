@@ -37,7 +37,8 @@ export function Body({
                     ? themeColor('secondaryText')
                     : themeColor('text'),
                 fontWeight: bold ? 'bold' : 'normal',
-                fontSize: small ? 12 : big ? 20 : jumbo ? 40 : 16
+                fontSize: small ? 12 : big ? 20 : jumbo ? 40 : 16,
+                fontFamily: 'Lato-Regular'
             }}
         >
             {children}

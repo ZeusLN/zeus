@@ -59,7 +59,10 @@ export default class UTXO extends React.Component<UTXOProps> {
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('general.utxo'),
-                        style: { color: themeColor('text') }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
@@ -149,6 +152,7 @@ const styles = StyleSheet.create({
     },
     valueWithLink: {
         paddingBottom: 5,
-        color: themeColor('highlight')
+        color: themeColor('highlight'),
+        fontFamily: 'Lato-Regular'
     }
 });

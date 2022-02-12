@@ -125,8 +125,8 @@ export default class UTXOPicker extends React.Component<
                                 <>
                                     <Text
                                         style={{
-                                            fontSize: 25,
-                                            color: themeColor('text')
+                                            ...styles.text,
+                                            fontSize: 25
                                         }}
                                     >
                                         {localeString(
@@ -135,9 +135,9 @@ export default class UTXOPicker extends React.Component<
                                     </Text>
                                     <Text
                                         style={{
+                                            ...styles.text,
                                             paddingTop: 20,
-                                            paddingBottom: 20,
-                                            color: themeColor('text')
+                                            paddingBottom: 20
                                         }}
                                     >
                                         {localeString(
@@ -147,10 +147,10 @@ export default class UTXOPicker extends React.Component<
 
                                     <Text
                                         style={{
+                                            ...styles.text,
                                             fontSize: 20,
                                             paddingTop: 20,
-                                            paddingBottom: 20,
-                                            color: themeColor('text')
+                                            paddingBottom: 20
                                         }}
                                     >
                                         {`${selectedBalance} ${localeString(
@@ -243,20 +243,16 @@ export default class UTXOPicker extends React.Component<
                 </Modal>
 
                 <View>
-                    <Text
-                        style={{
-                            color: themeColor('secondaryText')
-                        }}
-                    >
+                    <Text style={styles.secondaryText}>
                         {title || DEFAULT_TITLE}
                     </Text>
                     {utxosSet.length > 0 ? (
                         <TouchableOpacity onPress={() => this.clearSelection()}>
                             <Text
                                 style={{
+                                    ...styles.text,
                                     padding: 10,
-                                    fontSize: 16,
-                                    color: themeColor('text')
+                                    fontSize: 16
                                 }}
                             >
                                 {this.displayValues()}
@@ -266,9 +262,9 @@ export default class UTXOPicker extends React.Component<
                         <TouchableOpacity onPress={() => this.openPicker()}>
                             <Text
                                 style={{
+                                    ...styles.text,
                                     padding: 10,
-                                    fontSize: 16,
-                                    color: themeColor('text')
+                                    fontSize: 16
                                 }}
                             >
                                 {localeString(
@@ -284,6 +280,14 @@ export default class UTXOPicker extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    text: {
+        color: themeColor('text'),
+        fontFamily: 'Lato-Regular'
+    },
+    secondaryText: {
+        color: themeColor('secondaryText'),
+        fontFamily: 'Lato-Regular'
+    },
     button: {
         paddingTop: 10,
         paddingBottom: 10

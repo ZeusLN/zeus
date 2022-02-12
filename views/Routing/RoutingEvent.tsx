@@ -124,11 +124,7 @@ export default class RoutingEvent extends React.Component<
                                             })
                                         }
                                     >
-                                        <Text
-                                            style={{
-                                                color: themeColor('highlight')
-                                            }}
-                                        >
+                                        <Text style={styles.highlight}>
                                             {chanInLabel}
                                         </Text>
                                     </TouchableOpacity>
@@ -154,11 +150,7 @@ export default class RoutingEvent extends React.Component<
                                             })
                                         }
                                     >
-                                        <Text
-                                            style={{
-                                                color: themeColor('highlight')
-                                            }}
-                                        >
+                                        <Text style={styles.highlight}>
                                             {chanOutLabel}
                                         </Text>
                                     </TouchableOpacity>
@@ -199,7 +191,7 @@ export default class RoutingEvent extends React.Component<
 
                     <Text
                         style={{
-                            color: themeColor('text'),
+                            ...styles.text,
                             ...styles.breakdownHeader
                         }}
                     >
@@ -214,7 +206,7 @@ export default class RoutingEvent extends React.Component<
                     />
                     <Text
                         style={{
-                            color: themeColor('text'),
+                            ...styles.text,
                             ...styles.breakdownHeader
                         }}
                     >
@@ -235,6 +227,14 @@ export default class RoutingEvent extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    highlight: {
+        color: themeColor('text'),
+        fontFamily: 'Lato-Regular'
+    },
+    highlight: {
+        color: themeColor('highlight'),
+        fontFamily: 'Lato-Regular'
+    },
     content: {
         paddingLeft: 20,
         paddingRight: 20

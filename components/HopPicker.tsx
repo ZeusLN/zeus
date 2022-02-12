@@ -24,8 +24,8 @@ import Button from './../components/Button';
 import PrivacyUtils from './../utils/PrivacyUtils';
 const hash = require('object-hash');
 
-const SelectedLight = require('./../images/selected-light.png');
-const SelectedDark = require('./../images/selected-dark.png');
+const SelectedLight = require('./../assets/images/selected-light.png');
+const SelectedDark = require('./../assets/images/selected-dark.png');
 
 interface ChannelPickerProps {
     title?: string;
@@ -112,8 +112,8 @@ export default class ChannelPicker extends React.Component<
                                 <>
                                     <Text
                                         style={{
-                                            fontSize: 25,
-                                            color: themeColor('text')
+                                            ...styles.text,
+                                            fontSize: 25
                                         }}
                                     >
                                         {localeString(
@@ -122,9 +122,9 @@ export default class ChannelPicker extends React.Component<
                                     </Text>
                                     <Text
                                         style={{
+                                            ...styles.text,
                                             paddingTop: 20,
-                                            paddingBottom: 20,
-                                            color: themeColor('text')
+                                            paddingBottom: 20
                                         }}
                                     >
                                         {localeString(
@@ -338,7 +338,7 @@ export default class ChannelPicker extends React.Component<
                 <View style={styles.field}>
                     <Text
                         style={{
-                            color: themeColor('text'),
+                            ...styles.text,
                             paddingLeft: 10
                         }}
                     >
@@ -348,9 +348,9 @@ export default class ChannelPicker extends React.Component<
                         <TouchableOpacity onPress={() => this.clearSelection()}>
                             <Text
                                 style={{
+                                    ...styles.text,
                                     padding: 10,
-                                    fontSize: 16,
-                                    color: themeColor('text')
+                                    fontSize: 16
                                 }}
                             >
                                 {valueSet}
@@ -360,9 +360,9 @@ export default class ChannelPicker extends React.Component<
                         <TouchableOpacity onPress={() => this.openPicker()}>
                             <Text
                                 style={{
+                                    ...styles.text,
                                     padding: 10,
-                                    fontSize: 16,
-                                    color: themeColor('text')
+                                    fontSize: 16
                                 }}
                             >
                                 {localeString(
@@ -378,6 +378,10 @@ export default class ChannelPicker extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    text: {
+        color: themeColor('text'),
+        fontFamily: 'Lato-Regular'
+    },
     field: {
         paddingTop: 10,
         marginLeft: Platform.OS === 'ios' ? 0 : -8

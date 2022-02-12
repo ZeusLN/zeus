@@ -14,9 +14,9 @@ import RESTUtils from './../../utils/RESTUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
-import Coins from './../../images/SVG/Coins.svg';
-import Receive from './../../images/SVG/Receive.svg';
-import Send from './../../images/SVG/Send.svg';
+import Coins from './../../assets/images/SVG/Coins.svg';
+import Receive from './../../assets/images/SVG/Receive.svg';
+import Send from './../../assets/images/SVG/Send.svg';
 
 interface OnchainSwipeableRowProps {
     navigation: any;
@@ -140,7 +140,8 @@ const styles = StyleSheet.create({
         color: 'gray',
         fontSize: 12,
         backgroundColor: 'transparent',
-        padding: 10
+        padding: 10,
+        fontFamily: 'Lato-Regular'
     },
     action: {
         alignItems: 'center',

@@ -57,7 +57,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
             <Icon
                 name="arrow-back"
                 onPress={() => navigation.goBack()}
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
@@ -75,7 +75,10 @@ export default class PaymentView extends React.Component<PaymentProps> {
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Payment.title'),
-                        style: { color: themeColor('text') }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
                     backgroundColor={themeColor('background')}
                     containerStyle={{

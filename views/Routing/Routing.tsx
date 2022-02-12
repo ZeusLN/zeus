@@ -7,7 +7,7 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Spacer } from '../../components/layout/Spacer';
 import LoadingIndicator from '../../components/LoadingIndicator';
 
-import Pie from '../../images/SVG/Pie.svg';
+import Pie from '../../assets/images/SVG/Pie.svg';
 
 import FeeStore from '../../stores/FeeStore';
 import SettingsStore from '../../stores/SettingsStore';
@@ -117,6 +117,7 @@ export default class Routing extends React.PureComponent<
         const oneDButton = () => (
             <Text
                 style={{
+                    fontFamily: 'Lato-Regular',
                     color: selectedIndex === 0 ? 'black' : 'white'
                 }}
             >
@@ -126,6 +127,7 @@ export default class Routing extends React.PureComponent<
         const oneWButton = () => (
             <Text
                 style={{
+                    fontFamily: 'Lato-Regular',
                     color: selectedIndex === 1 ? 'black' : 'white'
                 }}
             >
@@ -135,6 +137,7 @@ export default class Routing extends React.PureComponent<
         const oneMButton = () => (
             <Text
                 style={{
+                    fontFamily: 'Lato-Regular',
                     color: selectedIndex === 2 ? 'black' : 'white'
                 }}
             >
@@ -144,6 +147,7 @@ export default class Routing extends React.PureComponent<
         const threeMButton = () => (
             <Text
                 style={{
+                    fontFamily: 'Lato-Regular',
                     color: selectedIndex === 3 ? 'black' : 'white'
                 }}
             >
@@ -153,6 +157,7 @@ export default class Routing extends React.PureComponent<
         const sixMButton = () => (
             <Text
                 style={{
+                    fontFamily: 'Lato-Regular',
                     color: selectedIndex === 4 ? 'black' : 'white'
                 }}
             >
@@ -162,6 +167,7 @@ export default class Routing extends React.PureComponent<
         const oneYButton = () => (
             <Text
                 style={{
+                    fontFamily: 'Lato-Regular',
                     color: selectedIndex === 5 ? 'black' : 'white'
                 }}
             >
@@ -246,6 +252,7 @@ export default class Routing extends React.PureComponent<
                         {forwardingEvents.length === 0 && !loading && (
                             <Text
                                 style={{
+                                    fontFamily: 'Lato-Regular',
                                     color: themeColor('text'),
                                     alignSelf: 'center',
                                     top: 100

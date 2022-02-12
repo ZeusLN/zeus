@@ -17,9 +17,9 @@ import LoadingIndicator from '../components/LoadingIndicator';
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
 
-import MempoolSpace from '../images/affiliates/Mempool.svg';
-import Refresh from '../images/SVG/Refresh.svg';
-import ErrorIcon from '../images/SVG/ErrorIcon.svg';
+import MempoolSpace from '../assets/images/affiliates/Mempool.svg';
+import Refresh from '../assets/images/SVG/Refresh.svg';
+import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
 
 import FeeStore from './../stores/FeeStore';
 
