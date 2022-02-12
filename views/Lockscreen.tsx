@@ -111,8 +111,8 @@ export default class Lockscreen extends React.Component<
                             autoCapitalize="none"
                             autoCorrect={false}
                             secureTextEntry={hidden}
-                            style={styles.textInputDark}
                             autoFocus={true}
+                            style={styles.textInput}
                         />
                         <View style={styles.button}>
                             <Button
@@ -157,14 +157,7 @@ const styles = StyleSheet.create({
         paddingTop: 15,
         paddingBottom: 15
     },
-    buttons: {
-        paddingTop: 20,
-        paddingBottom: 20,
-        width: '100%'
-    },
-    textInputDark: {
-        fontSize: 20,
-        color: 'white',
+    textInput: {
         textAlign: 'center'
     }
 });
