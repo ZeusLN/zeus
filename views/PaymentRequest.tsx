@@ -30,6 +30,7 @@ interface InvoiceProps {
 }
 
 interface InvoiceState {
+    customAmount: string;
     enableMultiPathPayment: boolean;
     enableAtomicMultiPathPayment: boolean;
     maxParts: string;
@@ -53,6 +54,7 @@ export default class PaymentRequest extends React.Component<
     InvoiceState
 > {
     state = {
+        customAmount: '',
         enableMultiPathPayment: false,
         enableAtomicMultiPathPayment: false,
         maxParts: '16',
@@ -80,7 +82,8 @@ export default class PaymentRequest extends React.Component<
             timeoutSeconds,
             feeLimitSat,
             outgoingChanId,
-            lastHopPubkey
+            lastHopPubkey,
+            customAmount
         } = this.state;
         const {
             pay_req,
@@ -118,6 +121,9 @@ export default class PaymentRequest extends React.Component<
 
         const { enableTor } = SettingsStore;
 
+        const isNoAmountInvoice: boolean =
+            !requestAmount || requestAmount === 0;
+
         const BackButton = () => (
             <Icon
                 name="arrow-back"
@@ -148,12 +154,7 @@ export default class PaymentRequest extends React.Component<
                 <ScrollView>
                     {!!getPayReqError && (
                         <View style={styles.content}>
-                            <Text
-                                style={{
-                                    ...styles.label,
-                                    color: themeColor('text')
-                                }}
-                            >
+                            <Text style={styles.label}>
                                 {localeString('views.PaymentRequest.error')}:{' '}
                                 {getPayReqError}
                             </Text>
@@ -163,11 +164,45 @@ export default class PaymentRequest extends React.Component<
                     {!!pay_req && (
                         <View style={styles.content}>
                             <View style={styles.center}>
-                                <Amount
-                                    sats={requestAmount || 0}
-                                    jumboText
-                                    toggleable
-                                />
+                                {isNoAmountInvoice ? (
+                                    <>
+                                        <Text
+                                            style={{
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.PaymentRequest.customAmt'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            keyboardType="numeric"
+                                            placeholder={
+                                                requestAmount
+                                                    ? requestAmount.toString()
+                                                    : '0'
+                                            }
+                                            value={customAmount}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    customAmount: text
+                                                })
+                                            }
+                                            numberOfLines={1}
+                                            style={{
+                                                ...styles.textInput,
+                                                color: themeColor('text')
+                                            }}
+                                            placeholderTextColor="gray"
+                                        />
+                                    </>
+                                ) : (
+                                    <Amount
+                                        sats={requestAmount}
+                                        jumboText
+                                        toggleable
+                                    />
+                                )}
                             </View>
 
                             {(!!feeEstimate || feeEstimate === 0) && (
@@ -289,7 +324,6 @@ export default class PaymentRequest extends React.Component<
                                     <Text
                                         style={{
                                             ...styles.label,
-                                            color: themeColor('text'),
                                             top: 25
                                         }}
                                     >
@@ -344,12 +378,7 @@ export default class PaymentRequest extends React.Component<
 
                             {ampOrMppEnabled && (
                                 <React.Fragment>
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
+                                    <Text style={styles.label}>
                                         {localeString(
                                             'views.PaymentRequest.timeout'
                                         )}
@@ -365,12 +394,7 @@ export default class PaymentRequest extends React.Component<
                                             })
                                         }
                                     />
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
+                                    <Text style={styles.label}>
                                         {enableMultiPathPayment
                                             ? localeString(
                                                   'views.PaymentRequest.maxParts'
@@ -391,22 +415,12 @@ export default class PaymentRequest extends React.Component<
                                             })
                                         }
                                     />
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
+                                    <Text style={styles.label}>
                                         {localeString(
                                             'views.PaymentRequest.maxPartsDescription'
                                         )}
                                     </Text>
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
+                                    <Text style={styles.label}>
                                         {`${localeString(
                                             'views.PaymentRequest.feeLimit'
                                         )} (${localeString(
@@ -431,12 +445,7 @@ export default class PaymentRequest extends React.Component<
 
                             {enableAmp && (
                                 <React.Fragment>
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
+                                    <Text style={styles.label}>
                                         {`${localeString(
                                             'views.PaymentRequest.maxShardAmt'
                                         )} (${localeString(
@@ -470,6 +479,7 @@ export default class PaymentRequest extends React.Component<
                                         onPress={() => {
                                             TransactionsStore.sendPayment({
                                                 payment_request: paymentRequest,
+                                                amount: customAmount,
                                                 max_parts: ampOrMppEnabled
                                                     ? maxParts
                                                     : null,
@@ -509,6 +519,7 @@ const styles = StyleSheet.create({
         padding: 20
     },
     label: {
+        color: themeColor('text'),
         fontFamily: 'Lato-Regular',
         paddingTop: 5
     },

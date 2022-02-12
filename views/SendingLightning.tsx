@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import LnurlPaySuccess from './LnurlPay/Success';
 
@@ -65,7 +65,7 @@ export default class SendingLightning extends React.Component<
             payment_route || status === 'complete' || status === 'SUCCEEDED';
 
         return (
-            <View
+            <ScrollView
                 style={{
                     ...styles.container,
                     backgroundColor
@@ -175,7 +175,7 @@ export default class SendingLightning extends React.Component<
 
                     <View style={styles.buttons}>
                         {payment_hash && (
-                            <View style={{ marginBottom: 10, width: '100%' }}>
+                            <View style={{ margin: 10, width: '100%' }}>
                                 <CopyButton
                                     title={localeString(
                                         'views.SendingLightning.copyPaymentHash'
@@ -208,7 +208,7 @@ export default class SendingLightning extends React.Component<
                         )}
                     </View>
                 </View>
-            </View>
+            </ScrollView>
         );
     }
 }
