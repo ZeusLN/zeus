@@ -86,7 +86,10 @@ export default class Language extends React.Component<
                             text: localeString('views.Settings.Language.title'),
                             style: { color: themeColor('text') }
                         }}
-                        backgroundColor={themeColor('secondary')}
+                        backgroundColor={themeColor('background')}
+                        containerStyle={{
+                            borderBottomWidth: 0
+                        }}
                     />
                     <SearchBar
                         placeholder={localeString('general.search')}
@@ -97,7 +100,9 @@ export default class Language extends React.Component<
                         }}
                         placeholderTextColor={themeColor('secondaryText')}
                         containerStyle={{
-                            backgroundColor: themeColor('background')
+                            backgroundColor: themeColor('background'),
+                            borderTopWidth: 0,
+                            borderBottomWidth: 0
                         }}
                         inputContainerStyle={{
                             borderRadius: 15,

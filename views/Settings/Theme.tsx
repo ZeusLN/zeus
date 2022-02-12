@@ -69,7 +69,10 @@ export default class Theme extends React.Component<ThemeProps, ThemeStore> {
                             text: localeString('views.Settings.Theme.title'),
                             style: { color: themeColor('text') }
                         }}
-                        backgroundColor={themeColor('secondary')}
+                        backgroundColor={themeColor('background')}
+                        containerStyle={{
+                            borderBottomWidth: 0
+                        }}
                     />
                     <FlatList
                         data={THEME_KEYS}

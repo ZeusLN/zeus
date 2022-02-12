@@ -53,9 +53,12 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Invoice.title'),
-                        style: { color: '#fff' }
+                        style: { color: themeColor('text') }
                     }}
-                    backgroundColor={themeColor('secondary')}
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <View style={styles.center}>
                     <Amount

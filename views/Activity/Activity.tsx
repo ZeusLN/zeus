@@ -108,6 +108,9 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                     }}
                     rightComponent={<FilterButton />}
                     backgroundColor="#1f2328"
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 {loading ? (
                     <View style={{ padding: 50 }}>

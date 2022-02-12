@@ -136,7 +136,10 @@ export default class SignVerifyMessage extends React.Component<
                         text: localeString('views.Settings.SignMessage.title'),
                         style: { color: themeColor('text') }
                     }}
-                    backgroundColor={themeColor('secondary')}
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
 
                 <View style={styles.content}>

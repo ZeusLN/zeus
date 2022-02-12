@@ -92,7 +92,10 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                             text: localeString('views.Settings.Nodes.title'),
                             style: { color: themeColor('text') }
                         }}
-                        backgroundColor={themeColor('secondary')}
+                        backgroundColor={themeColor('background')}
+                        containerStyle={{
+                            borderBottomWidth: 0
+                        }}
                     />
                     {!!nodes && nodes.length > 0 && (
                         <FlatList

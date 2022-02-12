@@ -190,9 +190,12 @@ export default class ChannelView extends React.Component<
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Channel.title'),
-                        style: { color: '#fff' }
+                        style: { color: themeColor('text') }
                     }}
-                    backgroundColor="#1f2328"
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <View style={styles.content}>
                     <View style={styles.center}>

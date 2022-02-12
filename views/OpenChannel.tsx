@@ -6,6 +6,7 @@ import {
     Switch,
     Text,
     View,
+    TouchableOpacity,
     TouchableWithoutFeedback
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -31,6 +32,8 @@ import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
 import BalanceStore from './../stores/BalanceStore';
 import UTXOsStore from './../stores/UTXOsStore';
+
+import Scan from './../images/SVG/Scan.svg';
 
 interface OpenChannelProps {
     exitSetup: any;
@@ -237,6 +240,14 @@ export default class OpenChannel extends React.Component<
             />
         );
 
+        const ScanButton = () => (
+            <TouchableOpacity
+                onPress={() => navigation.navigate('NodeQRCodeScanner')}
+            >
+                <Scan fill={themeColor('text')} />
+            </TouchableOpacity>
+        );
+
         return (
             <ScrollView
                 style={{
@@ -248,9 +259,13 @@ export default class OpenChannel extends React.Component<
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.OpenChannel.openChannel'),
-                        style: { color: '#fff' }
+                        style: { color: themeColor('text') }
                     }}
-                    backgroundColor="grey"
+                    rightComponent={<ScanButton />}
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
 
                 {!!suggestImport && (
@@ -486,20 +501,6 @@ export default class OpenChannel extends React.Component<
                                 color: 'white'
                             }}
                             onPress={() => connectPeer(this.state)}
-                        />
-                    </View>
-                    <View style={styles.button}>
-                        <Button
-                            title={localeString('general.scan')}
-                            icon={{
-                                name: 'crop-free',
-                                size: 25,
-                                color: 'white'
-                            }}
-                            onPress={() =>
-                                navigation.navigate('NodeQRCodeScanner')
-                            }
-                            secondary
                         />
                     </View>
 

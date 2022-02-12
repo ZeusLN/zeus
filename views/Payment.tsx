@@ -75,9 +75,12 @@ export default class PaymentView extends React.Component<PaymentProps> {
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Payment.title'),
-                        style: { color: '#fff' }
+                        style: { color: themeColor('text') }
                     }}
-                    backgroundColor="#1f2328"
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <View style={styles.center}>
                     <Amount
