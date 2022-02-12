@@ -52,7 +52,10 @@ function Help(props: HelpProps) {
                     text: localeString('general.help'),
                     style: { color: themeColor('text') }
                 }}
-                backgroundColor={themeColor('secondary')}
+                backgroundColor={themeColor('background')}
+                containerStyle={{
+                    borderBottomWidth: 0
+                }}
             />
             <FlatList
                 data={HELP_ITEMS}

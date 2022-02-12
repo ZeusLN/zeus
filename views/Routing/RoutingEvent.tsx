@@ -94,7 +94,10 @@ export default class RoutingEvent extends React.Component<
                         text: localeString('views.Routing.RoutingEvent.title'),
                         style: { color: themeColor('text') }
                     }}
-                    backgroundColor={themeColor('secondary')}
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <View style={styles.content}>
                     <View style={styles.amount}>

@@ -106,7 +106,10 @@ export default class Privacy extends React.Component<
                         text: localeString('views.Settings.Privacy.title'),
                         style: { color: themeColor('text') }
                     }}
-                    backgroundColor={themeColor('secondary')}
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <ScrollView
                     style={{ flex: 1, paddingLeft: 10, paddingTop: 15 }}

@@ -38,7 +38,10 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
                         text: localeString('views.Routing.SetFees'),
                         style: { color: themeColor('text') }
                     }}
-                    backgroundColor={themeColor('secondary')}
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <View
                     style={{

@@ -194,6 +194,9 @@ export default class Routing extends React.PureComponent<
                     }}
                     rightComponent={<FeeBadge navigation={navigation} />}
                     backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <RoutingHeader
                     dayEarned={dayEarned}

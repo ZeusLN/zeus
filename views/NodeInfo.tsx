@@ -128,9 +128,12 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.NodeInfo.title'),
-                        style: { color: '#fff' }
+                        style: { color: themeColor('text') }
                     }}
-                    backgroundColor="#1f2328"
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
 
                 <View style={styles.content}>

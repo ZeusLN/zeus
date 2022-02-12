@@ -50,7 +50,10 @@ function Security(props: SecurityProps) {
                     text: localeString('views.Settings.Security.title'),
                     style: { color: themeColor('text') }
                 }}
-                backgroundColor={themeColor('secondary')}
+                backgroundColor={themeColor('background')}
+                containerStyle={{
+                    borderBottomWidth: 0
+                }}
             />
             <FlatList
                 data={SECURITY_ITEMS}

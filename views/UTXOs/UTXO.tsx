@@ -61,7 +61,10 @@ export default class UTXO extends React.Component<UTXOProps> {
                         text: localeString('general.utxo'),
                         style: { color: themeColor('text') }
                     }}
-                    backgroundColor={themeColor('secondary')}
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <View style={styles.center}>
                     <Amount sats={amount} jumboText toggleable sensitive />
