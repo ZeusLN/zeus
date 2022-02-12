@@ -430,7 +430,6 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                         borderRadius: 30
                                     }}
                                     containerStyle={{
-                                        alignItems: 'center',
                                         width: 320
                                     }}
                                     onPress={() =>
