@@ -35,7 +35,6 @@ interface InvoiceState {
     enableAtomicMultiPathPayment: boolean;
     maxParts: string;
     maxShardAmt: string;
-    timeoutSeconds: string;
     feeLimitSat: string;
     outgoingChanId: string | null;
     lastHopPubkey: string | null;
@@ -59,8 +58,7 @@ export default class PaymentRequest extends React.Component<
         enableAtomicMultiPathPayment: false,
         maxParts: '16',
         maxShardAmt: '',
-        timeoutSeconds: '20',
-        feeLimitSat: '',
+        feeLimitSat: '10',
         outgoingChanId: null,
         lastHopPubkey: null
     };
@@ -79,7 +77,6 @@ export default class PaymentRequest extends React.Component<
             enableAtomicMultiPathPayment,
             maxParts,
             maxShardAmt,
-            timeoutSeconds,
             feeLimitSat,
             outgoingChanId,
             lastHopPubkey,
@@ -119,7 +116,9 @@ export default class PaymentRequest extends React.Component<
 
         const date = new Date(Number(timestamp) * 1000).toString();
 
-        const { enableTor } = SettingsStore;
+        const { enableTor, implementation } = SettingsStore;
+
+        const isLnd: boolean = implementation === 'lnd';
 
         const isNoAmountInvoice: boolean =
             !requestAmount || requestAmount === 0;
@@ -144,9 +143,15 @@ export default class PaymentRequest extends React.Component<
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.PaymentRequest.title'),
-                        style: { color: '#fff' }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
-                    backgroundColor="#1f2328"
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
 
                 {(loading || loadingFeeEstimate) && <LoadingIndicator />}
@@ -205,29 +210,6 @@ export default class PaymentRequest extends React.Component<
                                 )}
                             </View>
 
-                            {(!!feeEstimate || feeEstimate === 0) && (
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.PaymentRequest.feeEstimate'
-                                    )}
-                                    value={
-                                        <Amount
-                                            sats={feeEstimate || 0}
-                                            toggleable
-                                        />
-                                    }
-                                />
-                            )}
-
-                            {!!successProbability && (
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.PaymentRequest.successProbability'
-                                    )}
-                                    value={`${successProbability}%`}
-                                />
-                            )}
-
                             {!!description && (
                                 <KeyValue
                                     keyValue={localeString(
@@ -280,6 +262,49 @@ export default class PaymentRequest extends React.Component<
                                     )}
                                     value={payment_hash}
                                 />
+                            )}
+
+                            {!!successProbability && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.PaymentRequest.successProbability'
+                                    )}
+                                    value={`${successProbability}%`}
+                                />
+                            )}
+
+                            {(!!feeEstimate || feeEstimate === 0) && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.PaymentRequest.feeEstimate'
+                                    )}
+                                    value={
+                                        <Amount
+                                            sats={feeEstimate || 0}
+                                            toggleable
+                                        />
+                                    }
+                                />
+                            )}
+
+                            {isLnd && (
+                                <>
+                                    <Text style={styles.label}>
+                                        {`${localeString(
+                                            'views.PaymentRequest.feeLimit'
+                                        )} (${localeString('general.sats')})`}
+                                    </Text>
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        placeholder={feeEstimate || '10'}
+                                        value={feeLimitSat}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                feeLimitSat: text
+                                            })
+                                        }
+                                    />
+                                </>
                             )}
 
                             {!!pay_req && RESTUtils.supportsHopPicking() && (
@@ -358,7 +383,6 @@ export default class PaymentRequest extends React.Component<
                                             {localeString(
                                                 'views.PaymentRequest.mpp'
                                             )}
-                                            :
                                         </Text>
                                         <Switch
                                             value={enableMultiPathPayment}
@@ -379,22 +403,6 @@ export default class PaymentRequest extends React.Component<
                             {ampOrMppEnabled && (
                                 <React.Fragment>
                                     <Text style={styles.label}>
-                                        {localeString(
-                                            'views.PaymentRequest.timeout'
-                                        )}
-                                        :
-                                    </Text>
-                                    <TextInput
-                                        keyboardType="numeric"
-                                        placeholder="20"
-                                        value={timeoutSeconds}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                timeoutSeconds: text
-                                            })
-                                        }
-                                    />
-                                    <Text style={styles.label}>
                                         {enableMultiPathPayment
                                             ? localeString(
                                                   'views.PaymentRequest.maxParts'
@@ -404,7 +412,6 @@ export default class PaymentRequest extends React.Component<
                                               )} (${localeString(
                                                   'general.optional'
                                               )})`}
-                                        :
                                     </Text>
                                     <TextInput
                                         keyboardType="numeric"
@@ -415,31 +422,11 @@ export default class PaymentRequest extends React.Component<
                                             })
                                         }
                                     />
-                                    <Text style={styles.label}>
+                                    <Text style={styles.labelSecondary}>
                                         {localeString(
                                             'views.PaymentRequest.maxPartsDescription'
                                         )}
                                     </Text>
-                                    <Text style={styles.label}>
-                                        {`${localeString(
-                                            'views.PaymentRequest.feeLimit'
-                                        )} (${localeString(
-                                            'general.sats'
-                                        )}) (${localeString(
-                                            'general.optional'
-                                        )})`}
-                                        :
-                                    </Text>
-                                    <TextInput
-                                        keyboardType="numeric"
-                                        placeholder="100"
-                                        value={feeLimitSat}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                feeLimitSat: text
-                                            })
-                                        }
-                                    />
                                 </React.Fragment>
                             )}
 
@@ -453,7 +440,6 @@ export default class PaymentRequest extends React.Component<
                                         )}) (${localeString(
                                             'general.optional'
                                         )})`}
-                                        :
                                     </Text>
                                     <TextInput
                                         keyboardType="numeric"
@@ -486,7 +472,7 @@ export default class PaymentRequest extends React.Component<
                                                 max_shard_amt: ampOrMppEnabled
                                                     ? maxShardAmt
                                                     : null,
-                                                fee_limit_sat: ampOrMppEnabled
+                                                fee_limit_sat: isLnd
                                                     ? feeLimitSat
                                                     : null,
                                                 outgoing_chan_id:
@@ -520,6 +506,11 @@ const styles = StyleSheet.create({
     },
     label: {
         color: themeColor('text'),
+        fontFamily: 'Lato-Regular',
+        paddingTop: 5
+    },
+    labelSecondary: {
+        color: themeColor('secondaryText'),
         fontFamily: 'Lato-Regular',
         paddingTop: 5
     },
