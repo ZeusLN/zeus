@@ -8,6 +8,7 @@ interface ButtonProps {
     onPress?: any;
     secondary?: boolean;
     tertiary?: boolean;
+    quaternary?: boolean;
     iconOnly?: boolean;
     adaptiveWidth?: boolean;
     containerStyle?: any;
@@ -20,6 +21,7 @@ function Button(props: ButtonProps) {
         onPress,
         secondary,
         tertiary,
+        quaternary,
         iconOnly,
         adaptiveWidth,
         containerStyle
@@ -56,6 +58,8 @@ function Button(props: ButtonProps) {
             buttonStyle={{
                 backgroundColor: iconOnly
                     ? 'transparent'
+                    : quaternary
+                    ? themeColor('background')
                     : tertiary
                     ? themeColor('highlight')
                     : secondary
@@ -64,6 +68,8 @@ function Button(props: ButtonProps) {
             }}
             titleStyle={{
                 color: iconOnly
+                    ? themeColor('text')
+                    : quaternary
                     ? themeColor('text')
                     : secondary
                     ? themeColor('highlight')
