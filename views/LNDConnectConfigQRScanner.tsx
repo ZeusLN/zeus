@@ -44,8 +44,6 @@ export default class LNDConnectConfigQRScanner extends React.Component<
 
         return (
             <QRCodeScanner
-                title={localeString('views.LNDConnectConfigQRScanner.title')}
-                text={localeString('views.LNDConnectConfigQRScanner.text')}
                 handleQRScanned={this.handleLNDConnectConfigInvoiceScanned}
                 goBack={() => navigation.navigate('AddEditNode', { index })}
             />

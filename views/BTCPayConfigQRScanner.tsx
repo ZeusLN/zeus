@@ -54,7 +54,6 @@ export default class BTCPayConfigQRScanner extends React.Component<
 
         return (
             <QRCodeScanner
-                title={localeString('views.BTCPayConfigQRScanner.title')}
                 text={localeString('views.BTCPayConfigQRScanner.text')}
                 handleQRScanned={this.handleBTCPayConfigInvoiceScanned}
                 goBack={() => navigation.navigate('AddEditNode', { index })}
