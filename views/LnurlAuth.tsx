@@ -182,7 +182,12 @@ export default class LnurlAuth extends React.Component<
                     Alert.alert(
                         `[error] ${domain} says:`,
                         data.reason,
-                        [{ text: 'OK', onPress: () => void 0 }],
+                        [
+                            {
+                                text: localeString('general.ok'),
+                                onPress: () => void 0
+                            }
+                        ],
                         { cancelable: false }
                     );
                     return;
