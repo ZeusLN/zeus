@@ -104,7 +104,7 @@ export default async function (data: string): Promise<any> {
         return [
             'OpenChannel',
             {
-                pubkey,
+                node_pubkey_string: pubkey,
                 host
             }
         ];

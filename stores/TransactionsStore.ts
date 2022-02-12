@@ -207,7 +207,7 @@ export default class TransactionsStore {
             data.payment_request = payment_request;
         }
         if (amount) {
-            data.amt = amount;
+            data.amt = Number(amount);
         }
 
         if (pubkey) {

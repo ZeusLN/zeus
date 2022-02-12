@@ -63,7 +63,7 @@ export default class CopyButton extends React.Component<
                     size: 25
                 }}
                 containerStyle={{
-                    marginBottom: 10
+                    margin: 10
                 }}
                 onPress={() => this.copyToClipboard()}
                 secondary

@@ -112,8 +112,7 @@ export default class CollapsedQR extends React.Component<
                         color: '#fff'
                     }}
                     containerStyle={{
-                        marginTop: 10,
-                        marginBottom: Platform.OS === 'android' ? 10 : 20
+                        margin: 20
                     }}
                     onPress={() => this.toggleCollapse()}
                 />
@@ -128,7 +127,7 @@ export default class CollapsedQR extends React.Component<
                                   )
                         }
                         containerStyle={{
-                            marginBottom: 20
+                            margin: 20
                         }}
                         onPress={() => this.toggleNfc()}
                         tertiary
@@ -149,6 +148,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         alignSelf: 'center',
         padding: 5,
-        marginBottom: 10
+        margin: 10
     }
 });
