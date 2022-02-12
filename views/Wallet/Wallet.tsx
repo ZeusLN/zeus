@@ -182,10 +182,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
 
         if (implementation === 'lndhub') {
             login({ login: username, password }).then(async () => {
-                await Promise.all([
-                    BalanceStore.getBlockchainBalance(),
-                    BalanceStore.getLightningBalance()
-                ]);
+                BalanceStore.getLightningBalance();
             });
         } else {
             await Promise.all([
@@ -256,8 +253,10 @@ export default class Wallet extends React.Component<WalletProps, {}> {
 
                     {dataAvailable && (
                         <>
-                            {!BalanceStore.loadingLightningBalance &&
-                            !BalanceStore.loadingBlockchainBalance ? (
+                            {BalanceStore.loadingLightningBalance ||
+                            BalanceStore.loadingBlockchainBalance ? (
+                                <LoadingIndicator size={120} />
+                            ) : (
                                 <LayerBalances
                                     navigation={navigation}
                                     BalanceStore={BalanceStore}
@@ -268,8 +267,6 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                         BalanceStore.loadingBlockchainBalance
                                     }
                                 />
-                            ) : (
-                                <LoadingIndicator size={120} />
                             )}
 
                             <Animated.View

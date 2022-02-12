@@ -3,7 +3,7 @@ import SettingsStore from './SettingsStore';
 import FiatStore from './FiatStore';
 import FeeUtils from './../utils/FeeUtils';
 
-type Units = 'sats' | 'btc' | 'fiat';
+type Units = 'sats' | 'BTC' | 'fiat';
 
 export const satoshisPerBTC = 100000000;
 
@@ -33,13 +33,13 @@ export default class UnitsStore {
         const { fiat } = settings;
 
         if (!fiat || fiat === 'Disabled') {
-            this.units = this.units == 'sats' ? 'btc' : 'sats';
+            this.units = this.units == 'sats' ? 'BTC' : 'sats';
         } else {
             switch (this.units) {
                 case 'sats':
-                    this.units = 'btc';
+                    this.units = 'BTC';
                     break;
-                case 'btc':
+                case 'BTC':
                     this.units = 'fiat';
                     break;
                 case 'fiat':
@@ -67,10 +67,10 @@ export default class UnitsStore {
         const negative = sats < 0;
         const absValueSats = Math.abs(sats);
 
-        if (units === 'btc') {
+        if (units === 'BTC') {
             return {
                 amount: FeeUtils.toFixed(absValueSats / satoshisPerBTC),
-                unit: 'btc',
+                unit: 'BTC',
                 negative,
                 space: false
             };
@@ -129,7 +129,7 @@ export default class UnitsStore {
         const units = fixedUnits || this.units;
 
         const [wholeSats] = value.toString().split('.');
-        if (units === 'btc') {
+        if (units === 'BTC') {
             // handle negative values
             const valueToProcess = (wholeSats && wholeSats.toString()) || '0';
             if (valueToProcess.includes('-')) {

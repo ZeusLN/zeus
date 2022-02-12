@@ -155,7 +155,7 @@ export default class Receive extends React.Component<
             case 'sats':
                 satAmount = value;
                 break;
-            case 'btc':
+            case 'BTC':
                 satAmount = Number(value) * satoshisPerBTC;
                 break;
             case 'fiat':
@@ -378,10 +378,10 @@ export default class Receive extends React.Component<
                                         toggleable
                                     />
                                 )}
-                                {units !== 'btc' && (
+                                {units !== 'BTC' && (
                                     <Amount
                                         sats={satAmount}
-                                        fixedUnits="btc"
+                                        fixedUnits="BTC"
                                         toggleable
                                     />
                                 )}
