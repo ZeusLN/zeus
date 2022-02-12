@@ -50,7 +50,6 @@ export default class LNDHubQRScanner extends React.Component<
 
         return (
             <QRCodeScanner
-                title={localeString('views.LNDHubQRScanner.title')}
                 text={localeString('views.LNDHubQRScanner.text')}
                 handleQRScanned={this.handleCodeScanned}
                 goBack={() => navigation.goBack()}
