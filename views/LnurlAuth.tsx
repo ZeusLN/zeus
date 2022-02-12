@@ -2,10 +2,11 @@ import url from 'url';
 import * as React from 'react';
 import RNFetchBlob from 'rn-fetch-blob';
 import { Alert, StyleSheet, Text, View } from 'react-native';
-import { Button, Header, Icon } from 'react-native-elements';
+import { Header, Icon } from 'react-native-elements';
 import querystring from 'querystring-es3';
 import { Hash as sha256Hash, HMAC as sha256HMAC } from 'fast-sha256';
 
+import Button from './../components/Button';
 import LoadingIndicator from './../components/LoadingIndicator';
 
 import { themeColor } from './../utils/ThemeUtils';
@@ -62,7 +63,7 @@ export default class LnurlAuth extends React.Component<
             Alert.alert(
                 localeString('views.LnurlPay.LnurlPay.invalidParams'),
                 err.message,
-                [{ text: 'OK', onPress: () => void 0 }],
+                [{ text: localeString('general.ok'), onPress: () => void 0 }],
                 { cancelable: false }
             );
         }
@@ -226,9 +227,15 @@ export default class LnurlAuth extends React.Component<
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: 'Authentication Request',
-                        style: { color: '#fff' }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
-                    backgroundColor="grey"
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <View style={styles.content}>
                     <Text
