@@ -42,6 +42,7 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
                     body = (
                         <Text
                             style={{
+                                fontFamily: 'Lato-Regular',
                                 color: color || themeColor('text'),
                                 fontSize: 40
                             }}
@@ -55,6 +56,7 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
                         <TouchableOpacity onPress={() => this.URLClicked()}>
                             <Text
                                 style={{
+                                    fontFamily: 'Lato-Regular',
                                     color: color || themeColor('text'),
                                     fontSize: 18
                                 }}
@@ -74,6 +76,7 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
                         <React.Fragment>
                             <Text
                                 style={{
+                                    fontFamily: 'Lato-Regular',
                                     color: color || themeColor('text'),
                                     fontSize: 18
                                 }}
@@ -82,6 +85,7 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
                             </Text>
                             <Text
                                 style={{
+                                    fontFamily: 'Lato-Regular',
                                     color: color || themeColor('text'),
                                     fontSize: 18
                                 }}
@@ -105,6 +109,7 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
                         padding: 20,
                         fontWeight: 'bold',
                         fontSize: 22,
+                        fontFamily: 'Lato-Regular',
                         color: color || themeColor('text')
                     }}
                 >

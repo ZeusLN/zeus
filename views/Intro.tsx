@@ -71,6 +71,7 @@ export default class Intro extends React.Component<IntroProps, IntroState> {
                     style={{
                         fontSize: 25,
                         color: themeColor('text'),
+                        fontFamily: 'Lato-Regular',
                         alignSelf: 'center',
                         paddingTop: 10
                     }}
@@ -81,6 +82,7 @@ export default class Intro extends React.Component<IntroProps, IntroState> {
                     style={{
                         fontSize: 20,
                         color: themeColor('secondaryText'),
+                        fontFamily: 'Lato-Regular',
                         alignSelf: 'center',
                         padding: 10
                     }}

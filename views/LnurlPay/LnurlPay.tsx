@@ -170,17 +170,17 @@ export default class LnurlPay extends React.Component<
                 <View style={styles.content}>
                     <Text
                         style={{
+                            ...styles.text,
                             padding: 20,
                             fontWeight: 'bold',
-                            fontSize: 22,
-                            color: themeColor('text')
+                            fontSize: 22
                         }}
                     >
                         {domain}
                     </Text>
                 </View>
                 <View style={styles.content}>
-                    <Text style={{ color: themeColor('text') }}>
+                    <Text style={styles.text}>
                         {localeString('views.LnurlPay.LnurlPay.amount')}
                         {lnurl && lnurl.minSendable !== lnurl.maxSendable
                             ? ` (${Math.ceil(
@@ -203,7 +203,7 @@ export default class LnurlPay extends React.Component<
                     />
                     {lnurl.commentAllowed > 0 ? (
                         <>
-                            <Text style={{ color: themeColor('text') }}>
+                            <Text style={styles.text}>
                                 {localeString(
                                     'views.LnurlPay.LnurlPay.comment'
                                 ) + ` (${lnurl.commentAllowed} char)`}
@@ -246,6 +246,10 @@ export default class LnurlPay extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    text: {
+        color: themeColor('secondaryText'),
+        fontFamily: 'Lato-Regular'
+    },
     textInput: {
         paddingTop: 10,
         paddingBottom: 10

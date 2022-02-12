@@ -509,6 +509,7 @@ const styles = StyleSheet.create({
         padding: 20
     },
     label: {
+        fontFamily: 'Lato-Regular',
         paddingTop: 5
     },
     value: {

@@ -142,8 +142,6 @@ export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
                         autoCorrect={false}
                         secureTextEntry={true}
                         style={{
-                            fontSize: 20,
-                            color: themeColor('text'),
                             paddingLeft: 10
                         }}
                     />
@@ -165,8 +163,6 @@ export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
                         autoCorrect={false}
                         secureTextEntry={true}
                         style={{
-                            fontSize: 20,
-                            color: themeColor('text'),
                             paddingLeft: 10
                         }}
                     />

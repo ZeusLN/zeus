@@ -85,7 +85,8 @@ export default class CollapsedQR extends React.Component<
                     <Text
                         style={{
                             ...styles.value,
-                            color: themeColor('secondaryText')
+                            color: themeColor('secondaryText'),
+                            fontFamily: 'Lato-Regular'
                         }}
                     >
                         {value}

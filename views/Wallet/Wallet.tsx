@@ -395,6 +395,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                             <Text
                                 style={{
                                     color: themeColor('text'),
+                                    fontFamily: 'Lato-Regular',
                                     alignSelf: 'center',
                                     fontSize: 15
                                 }}

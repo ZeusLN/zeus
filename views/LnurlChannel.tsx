@@ -205,18 +205,29 @@ export default class LnurlChannel extends React.Component<
                             padding: 20,
                             fontWeight: 'bold',
                             fontSize: 22,
-                            color: themeColor('text')
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
                         }}
                     >
                         {domain}
                     </Text>
                 </View>
                 <View style={styles.content}>
-                    <Text style={{ color: themeColor('text') }}>
+                    <Text
+                        style={{
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }}
+                    >
                         {localeString('views.LnurlChannel.uri')}
                         {':'}
                     </Text>
-                    <Text style={{ color: themeColor('text') }}>
+                    <Text
+                        style={{
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }}
+                    >
                         {lnurl.uri}
                     </Text>
 
@@ -225,7 +236,8 @@ export default class LnurlChannel extends React.Component<
                             <Text
                                 style={{
                                     top: 10,
-                                    color: themeColor('secondaryText')
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'Lato-Regular'
                                 }}
                             >
                                 {localeString('views.OpenChannel.private')}
@@ -270,19 +282,34 @@ export default class LnurlChannel extends React.Component<
                     <View style={styles.content}>
                         {this.state.connectingToPeer && <LoadingIndicator />}
                         {this.state.peerSuccess && (
-                            <Text style={{ color: 'green' }}>
+                            <Text
+                                style={{
+                                    color: 'green',
+                                    fontFamily: 'Lato-Regular'
+                                }}
+                            >
                                 {localeString('views.OpenChannel.peerSuccess')}
                             </Text>
                         )}
                         {this.state.lnurlChannelSuccess && (
-                            <Text style={{ color: 'green' }}>
+                            <Text
+                                style={{
+                                    color: 'green',
+                                    fontFamily: 'Lato-Regular'
+                                }}
+                            >
                                 {localeString('views.LnurlChannel.success')}
                             </Text>
                         )}
                         {this.state.errorMsgPeer &&
                             !this.state.peerSuccess &&
                             !this.state.lnurlChannelSuccess && (
-                                <Text style={{ color: 'red' }}>
+                                <Text
+                                    style={{
+                                        color: 'red',
+                                        fontFamily: 'Lato-Regular'
+                                    }}
+                                >
                                     {this.state.errorMsgPeer ||
                                         localeString('general.error')}
                                 </Text>

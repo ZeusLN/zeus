@@ -59,7 +59,11 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                     backgroundColor="grey"
                 />
                 <View style={styles.content}>
-                    <Text style={{ color: 'black' }}>{text}</Text>
+                    <Text
+                        style={{ color: 'black', fontFamily: 'Lato-Regular' }}
+                    >
+                        {text}
+                    </Text>
                 </View>
                 {cameraStatus !==
                     RNCamera.Constants.CameraStatus.NOT_AUTHORIZED && (
@@ -83,7 +87,12 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                 {cameraStatus ===
                     RNCamera.Constants.CameraStatus.NOT_AUTHORIZED && (
                     <View style={styles.content}>
-                        <Text>
+                        <Text
+                            style={{
+                                fontFamily: 'Lato-Regular',
+                                color: 'black'
+                            }}
+                        >
                             {localeString(
                                 'components.QRCodeScanner.noCameraAccess'
                             )}

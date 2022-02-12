@@ -154,6 +154,7 @@ const styles = StyleSheet.create({
     },
     error: {
         paddingBottom: 5,
-        color: 'red'
+        color: 'red',
+        fontFamily: 'Lato-Regular'
     }
 });

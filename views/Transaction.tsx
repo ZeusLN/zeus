@@ -258,6 +258,7 @@ const styles = StyleSheet.create({
     },
     valueWithLink: {
         paddingBottom: 5,
-        color: themeColor('highlight')
+        color: themeColor('highlight'),
+        fontFamily: 'Lato-Regular'
     }
 });
