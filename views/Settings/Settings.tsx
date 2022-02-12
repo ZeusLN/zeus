@@ -75,7 +75,10 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         text: localeString('views.Settings.title'),
                         style: { color: themeColor('text') }
                     }}
-                    backgroundColor={themeColor('secondary')}
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <TouchableOpacity onPress={() => navigation.navigate('Nodes')}>
                     <View

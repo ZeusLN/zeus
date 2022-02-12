@@ -256,9 +256,12 @@ export default class ActivityFilter extends React.Component<
                     leftComponent={<CloseButton />}
                     centerComponent={{
                         text: localeString('views.ActivityFilter.title'),
-                        style: { color: '#fff' }
+                        style: { color: themeColor('text') }
                     }}
-                    backgroundColor="#1f2328"
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <FlatList
                     data={FILTERS}

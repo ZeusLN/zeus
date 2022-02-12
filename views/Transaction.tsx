@@ -109,7 +109,10 @@ export default class TransactionView extends React.Component<TransactionProps> {
                         text: localeString('views.Transaction.title'),
                         style: { color: themeColor('text') }
                     }}
-                    backgroundColor="#1f2328"
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <View style={styles.center}>
                     <Amount

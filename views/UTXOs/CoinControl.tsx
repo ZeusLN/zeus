@@ -68,9 +68,12 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                                       utxos.length
                                   })`
                                 : localeString('general.coins'),
-                        style: { color: '#fff' }
+                        style: { color: themeColor('text') }
                     }}
-                    backgroundColor="#1f2328"
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 {loading ? (
                     <View style={{ padding: 50 }}>

@@ -451,9 +451,12 @@ export default class AddEditNode extends React.Component<
                         text: localeString(
                             'views.Settings.AddEditNode.nodeConfig'
                         ),
-                        style: { color: '#fff' }
+                        style: { color: themeColor('text') }
                     }}
-                    backgroundColor="#1f2328"
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 {!!suggestImport && (
                     <View style={styles.clipboardImport}>
