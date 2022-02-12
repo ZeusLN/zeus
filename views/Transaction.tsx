@@ -90,7 +90,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
         const BackButton = () => (
             <Icon
                 name="arrow-back"
-                onPress={() => navigation.navigate('Wallet')}
+                onPress={() => navigation.goBack()}
                 color={themeColor('text')}
                 underlayColor="transparent"
             />

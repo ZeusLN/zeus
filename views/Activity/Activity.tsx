@@ -29,6 +29,12 @@ export default class Activity extends React.Component<ActivityProps, {}> {
         getActivityAndFilter();
     }
 
+    UNSAFE_componentWillReceiveProps = (newProps: any) => {
+        const { ActivityStore } = newProps;
+        const { getActivityAndFilter } = ActivityStore;
+        getActivityAndFilter();
+    };
+
     renderSeparator = () => (
         <View
             style={{
