@@ -4,6 +4,7 @@ import { Header } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import Globe from '../images/SVG/Globe.svg';
+import WordLogo from '../images/SVG/Word Logo - no outline.svg';
 
 import Button from './../components/Button';
 
@@ -65,11 +66,15 @@ export default class IntroSplash extends React.Component<IntroSplashProps, {}> {
                             source={Splash}
                             style={{
                                 flex: 1,
-                                width: '95%',
+                                width: '80%',
+                                height: '80%',
+                                resizeMode: 'contain',
                                 alignSelf: 'center'
                             }}
                         />
                     </View>
+                    <WordLogo width="55%" height="20%" alignSelf="center" />
+                    <View style={{ height: 40 }}></View>
                     <View
                         style={{
                             padding: 10
@@ -78,7 +83,7 @@ export default class IntroSplash extends React.Component<IntroSplashProps, {}> {
                         <Button
                             title={localeString('views.Intro.whatIsZeus')}
                             onPress={() => navigation.navigate('Intro')}
-                            secondary
+                            quaternary
                         />
                     </View>
                     <View
