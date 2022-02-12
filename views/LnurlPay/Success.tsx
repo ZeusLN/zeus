@@ -107,9 +107,8 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
                 <Text
                     style={{
                         padding: 20,
-                        fontWeight: 'bold',
                         fontSize: 22,
-                        fontFamily: 'Lato-Regular',
+                        fontFamily: 'Lato-Bold',
                         color: color || themeColor('text')
                     }}
                 >

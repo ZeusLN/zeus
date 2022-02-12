@@ -221,10 +221,6 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
 }
 
 const styles = StyleSheet.create({
-    amount: {
-        fontSize: 25,
-        fontWeight: 'bold'
-    },
     content: {
         paddingLeft: 20,
         paddingRight: 20

@@ -98,6 +98,7 @@
 		<string>Zocial.ttf</string>
 		<string>Fontisto.ttf</string>
 		<string>Lato-Regular.ttf</string>
+		<string>Lato-Bold.ttf</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>

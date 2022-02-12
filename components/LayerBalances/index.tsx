@@ -144,8 +144,7 @@ const styles = StyleSheet.create({
     },
     layerText: {
         backgroundColor: 'transparent',
-        fontWeight: 'bold',
         fontSize: 15,
-        fontFamily: 'Lato-Regular'
+        fontFamily: 'Lato-Bold'
     }
 });

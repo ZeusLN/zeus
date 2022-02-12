@@ -91,6 +91,7 @@
 		6A673AD44360495CA3420B41 /* unselected-dark.png in Resources */ = {isa = PBXBuildFile; fileRef = 36B30030DF68491AAE083605 /* unselected-dark.png */; };
 		C828236E76604E1AA387F6FA /* unselected-light.png in Resources */ = {isa = PBXBuildFile; fileRef = 4E34B29C815447F38137D933 /* unselected-light.png */; };
 		1316C039CEF7429B88ABE9E2 /* Lato-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 025DDDDD0022456CB347E97B /* Lato-Regular.ttf */; };
+		E24CC9BAF7FF4BA6BCC7F17B /* Lato-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C099E154C6C8479188E39851 /* Lato-Bold.ttf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -415,6 +416,7 @@
 		36B30030DF68491AAE083605 /* unselected-dark.png */ = {isa = PBXFileReference; name = "unselected-dark.png"; path = "../assets/images/unselected-dark.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 		4E34B29C815447F38137D933 /* unselected-light.png */ = {isa = PBXFileReference; name = "unselected-light.png"; path = "../assets/images/unselected-light.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 		025DDDDD0022456CB347E97B /* Lato-Regular.ttf */ = {isa = PBXFileReference; name = "Lato-Regular.ttf"; path = "../assets/fonts/Lato-Regular.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		C099E154C6C8479188E39851 /* Lato-Bold.ttf */ = {isa = PBXFileReference; name = "Lato-Bold.ttf"; path = "../assets/fonts/Lato-Bold.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -791,6 +793,7 @@
 				36B30030DF68491AAE083605 /* unselected-dark.png */,
 				4E34B29C815447F38137D933 /* unselected-light.png */,
 				025DDDDD0022456CB347E97B /* Lato-Regular.ttf */,
+				C099E154C6C8479188E39851 /* Lato-Bold.ttf */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -1226,6 +1229,7 @@
 				6A673AD44360495CA3420B41 /* unselected-dark.png in Resources */,
 				C828236E76604E1AA387F6FA /* unselected-light.png in Resources */,
 				1316C039CEF7429B88ABE9E2 /* Lato-Regular.ttf in Resources */,
+				E24CC9BAF7FF4BA6BCC7F17B /* Lato-Bold.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

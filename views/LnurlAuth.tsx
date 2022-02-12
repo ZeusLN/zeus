@@ -234,10 +234,9 @@ export default class LnurlAuth extends React.Component<
                     <Text
                         style={{
                             padding: 20,
-                            fontWeight: 'bold',
                             fontSize: 22,
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'Lato-Bold'
                         }}
                     >
                         {domain}
