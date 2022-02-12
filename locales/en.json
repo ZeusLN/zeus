@@ -91,7 +91,7 @@
     "views.Settings.AddEditNode.lndhubUnderstand": "I understand, create my account",
     "views.Settings.AddEditNode.certificateWarning1": "Opting not to use Certificate Verification may leave you vulnerable to a man-in-the-middle attack. Do so at your own discretion.",
     "views.Settings.AddEditNode.certificateWarning2": "If you're not verifying your connection with a VPN or Tor v3 hidden service configuration, we strongly advise you install your node's certificate on this device.",
-    "views.Settings.AddEditNode.certificateUnderstand": "I understand, save my node config",
+    "views.Settings.AddEditNode.certificateUnderstand": "I understand, save node config",
     "views.Settings.AddEditNode.existingAccount": "Existing Account",
     "views.Settings.AddEditNode.username": "Username",
     "views.Settings.AddEditNode.password": "Password",

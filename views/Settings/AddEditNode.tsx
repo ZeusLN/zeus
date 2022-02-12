@@ -573,7 +573,7 @@ export default class AddEditNode extends React.Component<
                                                     showLndHubModal: false
                                                 })
                                             }
-                                            secondary
+                                            primary
                                         />
                                     </View>
                                 </>
@@ -638,7 +638,7 @@ export default class AddEditNode extends React.Component<
                                                 borderRadius: 30,
                                                 backgroundColor: 'grey'
                                             }}
-                                            secondary
+                                            primary
                                         />
                                     </View>
                                 </>
