@@ -13,8 +13,8 @@ import UrlUtils from './../utils/UrlUtils';
 import NodeInfoStore from './../stores/NodeInfoStore';
 import TransactionsStore from './../stores/TransactionsStore';
 
-import Success from './../images/GIF/Success.gif';
-import WordLogo from './../images/SVG/Word Logo.svg';
+import Success from './../assets/images/GIF/Success.gif';
+import WordLogo from './../assets/images/SVG/Word Logo.svg';
 
 interface SendingOnChainProps {
     navigation: any;
@@ -59,11 +59,7 @@ export default class SendingOnChain extends React.Component<
                 >
                     {loading && <LoadingIndicator />}
                     {loading && (
-                        <Text
-                            style={{
-                                color: themeColor('text')
-                            }}
-                        >
+                        <Text style={styles.text}>
                             {localeString('views.SendingOnChain.broadcasting')}
                         </Text>
                     )}
@@ -89,7 +85,7 @@ export default class SendingOnChain extends React.Component<
                     {error && error_msg && (
                         <Text
                             style={{
-                                color: themeColor('text'),
+                                ...styles.text,
                                 padding: 20,
                                 fontSize: 30,
                                 alignSelf: 'center'
@@ -101,7 +97,7 @@ export default class SendingOnChain extends React.Component<
                     {publishSuccess && (
                         <Text
                             style={{
-                                color: 'white',
+                                ...styles.textWhite,
                                 padding: 20,
                                 fontSize: 22,
                                 alignSelf: 'center'
@@ -118,7 +114,7 @@ export default class SendingOnChain extends React.Component<
                         >
                             <Text
                                 style={{
-                                    color: 'white',
+                                    ...styles.textWhite,
                                     padding: 20,
                                     fontSize: 15
                                 }}
@@ -189,6 +185,14 @@ export default class SendingOnChain extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    text: {
+        fontFamily: 'Lato-Regular',
+        color: themeColor('text')
+    },
+    textWhite: {
+        fontFamily: 'Lato-Regular',
+        color: 'white'
+    },
     container: {
         flex: 1
     },

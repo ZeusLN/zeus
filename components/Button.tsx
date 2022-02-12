@@ -75,7 +75,7 @@ function Button(props: ButtonProps) {
                     ? themeColor('highlight')
                     : themeColor('background'),
                 textTransform: 'uppercase',
-                fontWeight: 'bold'
+                fontFamily: 'Lato-Bold'
             }}
             onPress={onPress}
             containerStyle={newContainerStyle}

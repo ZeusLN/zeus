@@ -145,7 +145,7 @@ export default class SetFeesForm extends React.Component<
                             />
                         )}
 
-                        <Text style={{ color: themeColor('text') }}>
+                        <Text style={styles.text}>
                             {`${localeString(
                                 'components.SetFeesForm.baseFee'
                             )} (${localeString('general.sats')})`}
@@ -163,7 +163,7 @@ export default class SetFeesForm extends React.Component<
                             autoCorrect={false}
                         />
 
-                        <Text style={{ color: themeColor('text') }}>
+                        <Text style={styles.text}>
                             {`${localeString(
                                 'components.SetFeesForm.feeRate'
                             )} (${
@@ -187,7 +187,7 @@ export default class SetFeesForm extends React.Component<
                             autoCorrect={false}
                         />
 
-                        <Text style={{ color: themeColor('text') }}>
+                        <Text style={styles.text}>
                             {localeString(
                                 'components.SetFeesForm.timeLockDelta'
                             )}
@@ -207,7 +207,7 @@ export default class SetFeesForm extends React.Component<
 
                         {implementation === 'lnd' && (
                             <>
-                                <Text style={{ color: themeColor('text') }}>
+                                <Text style={styles.text}>
                                     {localeString(
                                         'components.SetFeesForm.minHtlc'
                                     )}
@@ -225,7 +225,7 @@ export default class SetFeesForm extends React.Component<
                                     autoCorrect={false}
                                 />
 
-                                <Text style={{ color: themeColor('text') }}>
+                                <Text style={styles.text}>
                                     {localeString(
                                         'components.SetFeesForm.maxHtlc'
                                     )}
@@ -283,6 +283,10 @@ export default class SetFeesForm extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    text: {
+        color: themeColor('text'),
+        fontFamily: 'Lato-Regular'
+    },
     button: {
         paddingTop: 15,
         paddingBottom: 10

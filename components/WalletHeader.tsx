@@ -3,8 +3,8 @@ import { Button, Header } from 'react-native-elements';
 import { TouchableOpacity } from 'react-native';
 import NodeIdenticon from '../components/NodeIdenticon';
 import { themeColor } from '../utils/ThemeUtils';
-import Contact from '../images/SVG/Contact.svg';
-import Scan from '../images/SVG/Scan.svg';
+import Contact from '../assets/images/SVG/Contact.svg';
+import Scan from '../assets/images/SVG/Scan.svg';
 import { Body } from './text/Body';
 
 const OpenChannelButton = ({ navigation }: { navigation: any }) => (

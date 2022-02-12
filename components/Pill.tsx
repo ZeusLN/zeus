@@ -25,7 +25,12 @@ function Pill(props: PillProps) {
                 borderRadius: 50
             }}
         >
-            <Text style={{ color: textColor || themeColor('highlight') }}>
+            <Text
+                style={{
+                    color: textColor || themeColor('highlight'),
+                    fontFamily: 'Lato-Regular'
+                }}
+            >
                 {title}
             </Text>
         </TouchableOpacity>

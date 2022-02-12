@@ -134,7 +134,10 @@ export default class SignVerifyMessage extends React.Component<
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Settings.SignMessage.title'),
-                        style: { color: themeColor('text') }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
@@ -166,7 +169,7 @@ export default class SignVerifyMessage extends React.Component<
                     {selectedIndex === 0 && (
                         <View>
                             <View style={styles.form}>
-                                <Text style={{ color: themeColor('text') }}>
+                                <Text style={styles.text}>
                                     {localeString(
                                         'views.Settings.SignMessage.messageToSign'
                                     )}
@@ -241,11 +244,7 @@ export default class SignVerifyMessage extends React.Component<
                     {selectedIndex === 1 && (
                         <View>
                             <View style={styles.form}>
-                                <Text
-                                    style={{
-                                        color: themeColor('text')
-                                    }}
-                                >
+                                <Text style={styles.text}>
                                     {localeString(
                                         'views.Settings.SignMessage.messageToVerify'
                                     )}
@@ -267,11 +266,7 @@ export default class SignVerifyMessage extends React.Component<
                             </View>
 
                             <View style={styles.form}>
-                                <Text
-                                    style={{
-                                        color: themeColor('text')
-                                    }}
-                                >
+                                <Text style={styles.text}>
                                     {localeString(
                                         'views.Settings.SignMessage.signatureToVerify'
                                     )}
@@ -377,6 +372,10 @@ const styles = StyleSheet.create({
         paddingTop: 20,
         paddingLeft: 5,
         paddingRight: 5
+    },
+    text: {
+        color: themeColor('secondaryText'),
+        fontFamily: 'Lato-Regular'
     },
     textInput: {
         fontSize: 20,

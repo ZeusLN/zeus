@@ -34,10 +34,10 @@ import FiatStore from './../../stores/FiatStore';
 import UnitsStore from './../../stores/UnitsStore';
 import LayerBalances from './../../components/LayerBalances';
 
-import Temple from './../../images/SVG/Temple.svg';
-import ChannelsIcon from './../../images/SVG/Channels.svg';
-import CaretUp from './../../images/SVG/Caret Up.svg';
-import WordLogo from './../../images/SVG/Word Logo - no outline.svg';
+import Temple from './../../assets/images/SVG/Temple.svg';
+import ChannelsIcon from './../../assets/images/SVG/Channels.svg';
+import CaretUp from './../../assets/images/SVG/Caret Up.svg';
+import WordLogo from './../../asssets/images/SVG/Word Logo - no outline.svg';
 
 interface WalletProps {
     enterSetup: any;
@@ -407,6 +407,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                 <Text
                                     style={{
                                         color: themeColor('secondaryText'),
+                                        fontFamily: 'Lato-Regular',
                                         alignSelf: 'center',
                                         fontSize: 15,
                                         padding: 8

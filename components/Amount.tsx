@@ -3,7 +3,7 @@ import { TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import UnitsStore from '../stores/UnitsStore';
 import PrivacyUtils from '../utils/PrivacyUtils';
-import ClockIcon from '../images/SVG/Clock.svg';
+import ClockIcon from '../assets/images/SVG/Clock.svg';
 import { themeColor } from '../utils/ThemeUtils';
 import { Spacer } from './layout/Spacer';
 import { Row } from './layout/Row';

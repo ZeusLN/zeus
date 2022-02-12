@@ -13,8 +13,8 @@ import LnurlPayStore from './../stores/LnurlPayStore';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
-import Success from './../images/GIF/Success.gif';
-import WordLogo from './../images/SVG/Word Logo.svg';
+import Success from './../assets/images/GIF/Success.gif';
+import WordLogo from './../assets/images/SVG/Word Logo.svg';
 
 interface SendingLightningProps {
     navigation: any;
@@ -80,7 +80,8 @@ export default class SendingLightning extends React.Component<
                     {loading && (
                         <Text
                             style={{
-                                color: themeColor('text')
+                                color: themeColor('text'),
+                                fontFamily: 'Lato-Regular'
                             }}
                         >
                             {localeString('views.SendingLightning.sending')}
@@ -109,6 +110,7 @@ export default class SendingLightning extends React.Component<
                         <Text
                             style={{
                                 color: 'white',
+                                fontFamily: 'Lato-Regular',
                                 marginTop: 70,
                                 padding: 20,
                                 fontSize:
@@ -138,6 +140,7 @@ export default class SendingLightning extends React.Component<
                         <Text
                             style={{
                                 color: 'white',
+                                fontFamily: 'Lato-Regular',
                                 padding: 20,
                                 fontSize: 22
                             }}
@@ -159,6 +162,7 @@ export default class SendingLightning extends React.Component<
                         <Text
                             style={{
                                 color: 'white',
+                                fontFamily: 'Lato-Regular',
                                 paddingTop: 20,
                                 paddingLeft: 50,
                                 paddingRight: 50,

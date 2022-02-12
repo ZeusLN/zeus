@@ -12,7 +12,7 @@ import { LNURLWithdrawParams } from 'js-lnurl';
 import { ButtonGroup, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Success from '../images/GIF/Success.gif';
+import Success from '../assets/images/GIF/Success.gif';
 
 import { Amount } from './../components/Amount';
 import Button from './../components/Button';
@@ -171,7 +171,10 @@ export default class Receive extends React.Component<
         const lightningButton = () => (
             <React.Fragment>
                 <Text
-                    style={{ color: selectedIndex === 1 ? 'white' : 'black' }}
+                    style={{
+                        color: selectedIndex === 1 ? 'white' : 'black',
+                        fontFamily: 'Lato-Regular'
+                    }}
                 >
                     {localeString('general.lightning')}
                 </Text>
@@ -181,7 +184,10 @@ export default class Receive extends React.Component<
         const onChainButton = () => (
             <React.Fragment>
                 <Text
-                    style={{ color: selectedIndex === 0 ? 'white' : 'black' }}
+                    style={{
+                        color: selectedIndex === 0 ? 'white' : 'black',
+                        fontFamily: 'Lato-Regular'
+                    }}
                 >
                     {localeString('general.onchain')}
                 </Text>
@@ -216,7 +222,10 @@ export default class Receive extends React.Component<
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Receive.title'),
-                        style: { color: themeColor('text') }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
@@ -259,9 +268,9 @@ export default class Receive extends React.Component<
                             />
                             <Text
                                 style={{
+                                    ...styles.text,
                                     fontSize: 20,
                                     top: -50,
-                                    color: themeColor('text'),
                                     alignSelf: 'center'
                                 }}
                             >
@@ -303,6 +312,7 @@ export default class Receive extends React.Component<
                                     <Text
                                         style={{
                                             ...styles.text,
+                                            top: 20,
                                             padding: 20
                                         }}
                                     >
@@ -318,11 +328,7 @@ export default class Receive extends React.Component<
                                         )}
                                     />
                                 )}
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
+                                <Text style={styles.secondaryText}>
                                     {localeString('views.Receive.memo')}
                                 </Text>
                                 <TextInput
@@ -336,11 +342,7 @@ export default class Receive extends React.Component<
                                 />
 
                                 <TouchableOpacity onPress={() => changeUnits()}>
-                                    <Text
-                                        style={{
-                                            color: themeColor('secondaryText')
-                                        }}
-                                    >
+                                    <Text style={styles.secondaryText}>
                                         {localeString('views.Receive.amount')} (
                                         {units === 'fiat' ? fiat : units})
                                         {lnurl &&
@@ -388,11 +390,7 @@ export default class Receive extends React.Component<
                                     <TouchableOpacity
                                         onPress={() => changeUnits()}
                                     >
-                                        <Text
-                                            style={{
-                                                color: themeColor('text')
-                                            }}
-                                        >
+                                        <Text style={styles.text}>
                                             {FiatStore.getRate()}
                                         </Text>
                                     </TouchableOpacity>
@@ -402,9 +400,7 @@ export default class Receive extends React.Component<
                                     <>
                                         <Text
                                             style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                ),
+                                                ...styles.secondaryText,
                                                 paddingTop: 10
                                             }}
                                         >
@@ -427,10 +423,8 @@ export default class Receive extends React.Component<
                                     <>
                                         <Text
                                             style={{
-                                                ...styles.text,
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
+                                                ...styles.secondaryText,
+                                                top: 20
                                             }}
                                         >
                                             {localeString(
@@ -459,10 +453,8 @@ export default class Receive extends React.Component<
                                     <>
                                         <Text
                                             style={{
-                                                ...styles.text,
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
+                                                ...styles.secondaryText,
+                                                top: 20
                                             }}
                                         >
                                             {localeString(
@@ -517,7 +509,7 @@ export default class Receive extends React.Component<
                     {selectedIndex === 1 && (
                         <React.Fragment>
                             {!address && !loading && (
-                                <Text style={{ color: themeColor('text') }}>
+                                <Text style={styles.text}>
                                     {localeString('views.Receive.noOnChain')}
                                 </Text>
                             )}
@@ -567,6 +559,11 @@ const styles = StyleSheet.create({
         paddingBottom: 15
     },
     text: {
-        top: 20
+        color: themeColor('text'),
+        fontFamily: 'Lato-Regular'
+    },
+    secondaryText: {
+        color: themeColor('secondaryText'),
+        fontFamily: 'Lato-Regular'
     }
 });

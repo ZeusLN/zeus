@@ -190,7 +190,7 @@ export default class ChannelView extends React.Component<
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Channel.title'),
-                        style: { color: themeColor('text') }
+                        style: styles.text
                     }}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
@@ -201,8 +201,8 @@ export default class ChannelView extends React.Component<
                     <View style={styles.center}>
                         <Text
                             style={{
-                                ...styles.alias,
-                                color: themeColor('text')
+                                ...styles.text,
+                                ...styles.alias
                             }}
                         >
                             {peerDisplay}
@@ -210,8 +210,8 @@ export default class ChannelView extends React.Component<
                         {remote_pubkey && (
                             <Text
                                 style={{
-                                    ...styles.pubkey,
-                                    color: themeColor('text')
+                                    ...styles.text,
+                                    ...styles.pubkey
                                 }}
                             >
                                 {PrivacyUtils.sensitiveValue(remote_pubkey)}
@@ -228,16 +228,16 @@ export default class ChannelView extends React.Component<
                         <TouchableOpacity onPress={() => changeUnits()}>
                             <Text
                                 style={{
-                                    ...styles.balance,
-                                    color: themeColor('text')
+                                    ...styles.text,
+                                    ...styles.balance
                                 }}
                             >{`${localeString('views.Channel.localBalance')}: ${
                                 units && channelBalanceLocal
                             }`}</Text>
                             <Text
                                 style={{
-                                    ...styles.balance,
-                                    color: themeColor('text')
+                                    ...styles.text,
+                                    ...styles.balance
                                 }}
                             >{`${localeString(
                                 'views.Channel.remoteBalance'
@@ -245,8 +245,8 @@ export default class ChannelView extends React.Component<
                             {unsettled_balance && (
                                 <Text
                                     style={{
-                                        ...styles.balance,
-                                        color: themeColor('text')
+                                        ...styles.text,
+                                        ...styles.balance
                                     }}
                                 >{`${localeString(
                                     'views.Channel.unsettledBalance'
@@ -414,11 +414,7 @@ export default class ChannelView extends React.Component<
                         <React.Fragment>
                             {(implementation === 'lnd' || !implementation) && (
                                 <React.Fragment>
-                                    <Text
-                                        style={{
-                                            color: themeColor('text')
-                                        }}
-                                    >
+                                    <Text style={styles.text}>
                                         {localeString(
                                             'views.Channel.closingRate'
                                         )}
@@ -439,10 +435,8 @@ export default class ChannelView extends React.Component<
                                         <>
                                             <Text
                                                 style={{
-                                                    top: 20,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
+                                                    ...styles.secondaryText,
+                                                    top: 20
                                                 }}
                                             >
                                                 {localeString(
@@ -500,6 +494,14 @@ export default class ChannelView extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    text: {
+        color: themeColor('text'),
+        fontFamily: 'Lato-Regular'
+    },
+    secondaryText: {
+        color: themeColor('secondaryText'),
+        fontFamily: 'Lato-Regular'
+    },
     content: {
         paddingLeft: 20,
         paddingRight: 20

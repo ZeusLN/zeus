@@ -14,9 +14,9 @@ import RESTUtils from './../../utils/RESTUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
-import Receive from './../../images/SVG/Receive.svg';
-import Routing from './../../images/SVG/Routing.svg';
-import Send from './../../images/SVG/Send.svg';
+import Receive from './../../assets/images/SVG/Receive.svg';
+import Routing from './../../assets/images/SVG/Routing.svg';
+import Send from './../../assets/images/SVG/Send.svg';
 
 interface LightningSwipeableRowProps {
     navigation: any;
@@ -144,7 +144,8 @@ const styles = StyleSheet.create({
         color: 'gray',
         fontSize: 12,
         backgroundColor: 'transparent',
-        padding: 10
+        padding: 10,
+        fontFamily: 'Lato-Regular'
     },
     action: {
         alignItems: 'center',

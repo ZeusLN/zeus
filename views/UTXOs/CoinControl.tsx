@@ -68,7 +68,10 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                                       utxos.length
                                   })`
                                 : localeString('general.coins'),
-                        style: { color: themeColor('text') }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
@@ -145,7 +148,8 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                             borderRadius: 30
                         }}
                         titleStyle={{
-                            color: themeColor('text')
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
                         }}
                     />
                 )}

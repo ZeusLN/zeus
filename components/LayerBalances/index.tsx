@@ -15,8 +15,8 @@ import UnitsStore from './../../stores/UnitsStore';
 
 import { themeColor } from './../../utils/ThemeUtils';
 
-import OnChain from './../../images/SVG/OnChain.svg';
-import Lightning from './../../images/SVG/Lightning.svg';
+import OnChain from './../../assets/images/SVG/OnChain.svg';
+import Lightning from './../../assets/images/SVG/Lightning.svg';
 
 interface LayerBalancesProps {
     BalanceStore: BalanceStore;
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     },
     layerText: {
         backgroundColor: 'transparent',
-        fontWeight: 'bold',
-        fontSize: 15
+        fontSize: 15,
+        fontFamily: 'Lato-Bold'
     }
 });

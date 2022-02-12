@@ -94,7 +94,12 @@ export default class Lockscreen extends React.Component<
                                 )}
                             />
                         )}
-                        <Text style={{ color: '#A7A9AC' }}>
+                        <Text
+                            style={{
+                                color: '#A7A9AC',
+                                fontFamily: 'Lato-Regular'
+                            }}
+                        >
                             {localeString('views.Lockscreen.passphrase')}
                         </Text>
                         <TextInput

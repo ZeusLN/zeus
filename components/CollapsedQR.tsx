@@ -9,7 +9,7 @@ import CopyButton from './CopyButton';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
-const secondaryLogo = require('../images/secondary.png');
+const secondaryLogo = require('../assets/images/secondary.png');
 
 let simulation: any;
 
@@ -85,7 +85,8 @@ export default class CollapsedQR extends React.Component<
                     <Text
                         style={{
                             ...styles.value,
-                            color: themeColor('secondaryText')
+                            color: themeColor('secondaryText'),
+                            fontFamily: 'Lato-Regular'
                         }}
                     >
                         {value}

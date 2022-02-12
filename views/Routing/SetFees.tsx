@@ -36,7 +36,10 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Routing.SetFees'),
-                        style: { color: themeColor('text') }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
                     backgroundColor={themeColor('background')}
                     containerStyle={{

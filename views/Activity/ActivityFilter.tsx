@@ -93,7 +93,10 @@ export default class ActivityFilter extends React.Component<
                                 : this.setState({ setStartDate: !setStartDate })
                         }
                         buttonStyle={{ backgroundColor: 'white' }}
-                        titleStyle={{ color: 'black' }}
+                        titleStyle={{
+                            color: 'black',
+                            fontFamily: 'Lato-Regular'
+                        }}
                         title={
                             startDate
                                 ? localeString(
@@ -113,6 +116,10 @@ export default class ActivityFilter extends React.Component<
                                 : this.setState({ setEndDate: !setEndDate })
                         }
                         buttonStyle={{ backgroundColor: 'orange' }}
+                        titleStyle={{
+                            color: 'white',
+                            fontFamily: 'Lato-Regular'
+                        }}
                         title={
                             endDate
                                 ? localeString(
@@ -258,7 +265,10 @@ export default class ActivityFilter extends React.Component<
                     leftComponent={<CloseButton />}
                     centerComponent={{
                         text: localeString('views.ActivityFilter.title'),
-                        style: { color: themeColor('text') }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
@@ -277,7 +287,8 @@ export default class ActivityFilter extends React.Component<
                             >
                                 <ListItem.Title
                                     style={{
-                                        color: themeColor('text')
+                                        color: themeColor('text'),
+                                        fontFamily: 'Lato-Regular'
                                     }}
                                 >
                                     {item.label}
@@ -333,7 +344,8 @@ export default class ActivityFilter extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        paddingTop: 30
+        paddingTop: 30,
+        fontFamily: 'Lato-Regular'
     },
     button: {
         paddingTop: 15,

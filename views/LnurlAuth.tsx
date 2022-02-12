@@ -234,9 +234,9 @@ export default class LnurlAuth extends React.Component<
                     <Text
                         style={{
                             padding: 20,
-                            fontWeight: 'bold',
                             fontSize: 22,
-                            color: themeColor('text')
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Bold'
                         }}
                     >
                         {domain}
@@ -268,7 +268,12 @@ export default class LnurlAuth extends React.Component<
                             <LoadingIndicator />
                         )}
                         {lnurlAuthSuccess && (
-                            <Text style={{ color: 'green' }}>
+                            <Text
+                                style={{
+                                    color: 'green',
+                                    fontFamily: 'Lato-Regular'
+                                }}
+                            >
                                 {localeString('views.LnurlAuth.loginSuccess')}
                             </Text>
                         )}
@@ -276,7 +281,12 @@ export default class LnurlAuth extends React.Component<
                             !signatureSuccess &&
                             !authenticating &&
                             !lnurlAuthSuccess && (
-                                <Text style={{ color: 'red' }}>
+                                <Text
+                                    style={{
+                                        color: 'red',
+                                        fontFamily: 'Lato-Regular'
+                                    }}
+                                >
                                     {errorMsgAuth ||
                                         localeString('general.error')}
                                 </Text>

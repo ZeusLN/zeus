@@ -509,10 +509,8 @@ const styles = StyleSheet.create({
         padding: 20
     },
     label: {
+        fontFamily: 'Lato-Regular',
         paddingTop: 5
-    },
-    value: {
-        paddingBottom: 5
     },
     button: {
         paddingTop: 30,
@@ -520,17 +518,9 @@ const styles = StyleSheet.create({
         paddingLeft: 10,
         paddingRight: 10
     },
-    amount: {
-        fontSize: 25,
-        fontWeight: 'bold'
-    },
     center: {
         alignItems: 'center',
         paddingTop: 15,
         paddingBottom: 15
-    },
-    mppForm: {
-        paddingLeft: 20,
-        paddingBottom: 10
     }
 });

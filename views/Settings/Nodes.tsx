@@ -90,7 +90,10 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                         leftComponent={<BackButton />}
                         centerComponent={{
                             text: localeString('views.Settings.Nodes.title'),
-                            style: { color: themeColor('text') }
+                            style: {
+                                color: themeColor('text'),
+                                fontFamily: 'Lato-Regular'
+                            }
                         }}
                         backgroundColor={themeColor('background')}
                         containerStyle={{
@@ -132,7 +135,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                     <ListItem.Content>
                                         <ListItem.Title
                                             style={{
-                                                color: themeColor('text')
+                                                color: themeColor('text'),
+                                                fontFamily: 'Lato-Regular'
                                             }}
                                         >
                                             {NodeTitle(item, 32)}
@@ -141,7 +145,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                             style={{
                                                 color: themeColor(
                                                     'secondaryText'
-                                                )
+                                                ),
+                                                fontFamily: 'Lato-Regular'
                                             }}
                                         >
                                             {selectedNode === index ||

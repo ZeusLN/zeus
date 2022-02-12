@@ -14,7 +14,7 @@ import SettingsStore from './../../stores/SettingsStore';
 
 import { version, playStore } from './../../package.json';
 
-const TorIcon = require('./../../images/tor.png');
+const TorIcon = require('./../../assets/images/tor.png');
 
 interface MainPaneProps {
     navigation: any;
@@ -155,6 +155,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                 >
                     <Text
                         style={{
+                            fontFamily: 'Lato-Regular',
                             color: '#fff',
                             fontSize: 20,
                             marginTop: 20,
@@ -186,6 +187,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                     />
                     <Text
                         style={{
+                            fontFamily: 'Lato-Regular',
                             color: '#fff',
                             fontSize: 12,
                             marginTop: 20,

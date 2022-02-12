@@ -37,26 +37,10 @@ function TextInput(props: TextInputProps) {
 
     const defaultStyle = numberOfLines
         ? {
-              color: themeColor('text'),
-              fontSize: 20,
-              width: '100%',
-              top: 10,
-              backgroundColor: themeColor('secondary'),
-              borderRadius: 6,
-              marginBottom: 20,
-              padding: 10,
               paddingTop: 10
           }
         : {
-              color: themeColor('text'),
-              fontSize: 20,
-              width: '100%',
-              height: 60,
-              top: 10,
-              backgroundColor: themeColor('secondary'),
-              borderRadius: 6,
-              marginBottom: 20,
-              padding: 10
+              height: 60
           };
 
     return (
@@ -67,7 +51,16 @@ function TextInput(props: TextInputProps) {
             numberOfLines={numberOfLines || 1}
             style={{
                 ...style,
-                ...defaultStyle
+                ...defaultStyle,
+                color: themeColor('text'),
+                backgroundColor: themeColor('secondary'),
+                fontSize: 20,
+                width: '100%',
+                top: 10,
+                borderRadius: 6,
+                marginBottom: 20,
+                padding: 10,
+                fontFamily: 'Lato-Regular'
             }}
             placeholderTextColor={
                 placeholderTextColor || themeColor('secondaryText')
