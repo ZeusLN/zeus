@@ -3,9 +3,10 @@ import * as React from 'react';
 import RNFetchBlob from 'rn-fetch-blob';
 import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Button, Header, Icon } from 'react-native-elements';
+import { Header, Icon } from 'react-native-elements';
 import querystring from 'querystring-es3';
 
+import Button from './../components/Button';
 import LoadingIndicator from './../components/LoadingIndicator';
 
 import ChannelsStore from './../stores/ChannelsStore';
@@ -195,9 +196,15 @@ export default class LnurlChannel extends React.Component<
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: 'Incoming Channel',
-                        style: { color: '#fff' }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
-                    backgroundColor="grey"
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <View style={styles.content}>
                     <Text

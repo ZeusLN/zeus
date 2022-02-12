@@ -37,7 +37,7 @@ import LayerBalances from './../../components/LayerBalances';
 import Temple from './../../assets/images/SVG/Temple.svg';
 import ChannelsIcon from './../../assets/images/SVG/Channels.svg';
 import CaretUp from './../../assets/images/SVG/Caret Up.svg';
-import WordLogo from './../../asssets/images/SVG/Word Logo - no outline.svg';
+import WordLogo from './../../assets/images/SVG/Word Logo - no outline.svg';
 
 interface WalletProps {
     enterSetup: any;
