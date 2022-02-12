@@ -37,7 +37,7 @@ import LayerBalances from './../../components/LayerBalances';
 import Temple from './../../assets/images/SVG/Temple.svg';
 import ChannelsIcon from './../../assets/images/SVG/Channels.svg';
 import CaretUp from './../../assets/images/SVG/Caret Up.svg';
-import WordLogo from './../../assets/images/SVG/Word Logo.svg';
+import WordLogo from './../../asssets/images/SVG/Word Logo - no outline.svg';
 
 interface WalletProps {
     enterSetup: any;
@@ -384,52 +384,63 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                         </NavigationContainer>
                     )}
                     {connecting && !loginRequired && (
-                        <>
-                            <WordLogo
-                                height={150}
-                                style={{
-                                    alignSelf: 'center',
-                                    marginTop: 250
-                                }}
-                            />
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    fontFamily: 'Lato-Regular',
-                                    alignSelf: 'center',
-                                    fontSize: 15
-                                }}
-                            >
-                                {localeString('views.Wallet.Wallet.connecting')}
-                            </Text>
-                            <LoadingIndicator size={120} />
+                        <View
+                            style={{
+                                backgroundColor: '#1F242D',
+                                height: '100%'
+                            }}
+                        >
                             <View
                                 style={{
                                     flex: 1,
-                                    justifyContent: 'flex-end',
-                                    bottom: 20
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    top: 50
+                                }}
+                            >
+                                <WordLogo
+                                    height={100}
+                                    style={{
+                                        alignSelf: 'center'
+                                    }}
+                                />
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'Lato-Regular',
+                                        alignSelf: 'center',
+                                        fontSize: 15,
+                                        padding: 8
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Wallet.Wallet.connecting'
+                                    )}
+                                </Text>
+                                <LoadingIndicator size={120} />
+                            </View>
+                            <View
+                                style={{
+                                    bottom: 56
                                 }}
                             >
                                 <Button
-                                    icon={{
-                                        name: 'settings',
-                                        size: 25,
-                                        color: '#fff'
-                                    }}
+                                    title={localeString('views.Settings.title')}
                                     buttonStyle={{
                                         backgroundColor: 'gray',
                                         borderRadius: 30
                                     }}
                                     containerStyle={{
-                                        alignItems: 'center'
+                                        width: 320
                                     }}
                                     onPress={() =>
                                         navigation.navigate('Settings')
                                     }
                                     adaptiveWidth
+                                    iconOnly
                                 />
                             </View>
-                        </>
+                        </View>
                     )}
                 </LinearGradient>
             </View>
