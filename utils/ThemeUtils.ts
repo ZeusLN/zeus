@@ -22,7 +22,12 @@ export function themeColor(themeString: string): any {
             'grey',
             'grey'
         ],
-        separator: '#CED0CE'
+        separator: '#CED0CE',
+        outbound: '#FFD93F',
+        inbound: '#FFF0CA',
+        success: '#46BE43',
+        warning: '#E14C4C',
+        bitcoin: '#FFB040'
         // TODO: pick outbound and inbound colors for light and junkie themes
         // TODO: success / warning / bitcoin colors for light and junkie (are they just the same?)
     };
@@ -87,8 +92,8 @@ export function themeColor(themeString: string): any {
     const Orange: { [key: string]: any } = {
         generalStyle: 'light',
         background: 'orange',
-        secondary: '#fff',
-        text: 'black',
+        secondary: 'darkorange',
+        text: 'white',
         secondaryText: 'lightgray',
         highlight: 'black',
         error: '#cc3300',
