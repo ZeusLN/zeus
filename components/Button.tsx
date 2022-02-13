@@ -12,6 +12,7 @@ interface ButtonProps {
     iconOnly?: boolean;
     adaptiveWidth?: boolean;
     containerStyle?: any;
+    noUppercase?: boolean;
 }
 
 function Button(props: ButtonProps) {
@@ -24,7 +25,8 @@ function Button(props: ButtonProps) {
         quaternary,
         iconOnly,
         adaptiveWidth,
-        containerStyle
+        containerStyle,
+        noUppercase
     } = props;
 
     const newContainerStyle: any = adaptiveWidth
@@ -74,7 +76,7 @@ function Button(props: ButtonProps) {
                     : secondary
                     ? themeColor('highlight')
                     : themeColor('background'),
-                textTransform: 'uppercase',
+                textTransform: noUppercase ? 'none' : 'uppercase',
                 fontFamily: 'Lato-Bold'
             }}
             onPress={onPress}
