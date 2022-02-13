@@ -63,11 +63,34 @@ export function themeColor(themeString: string): any {
         inbound: '#FFF0CA'
     };
 
+    const BPM: { [key: string]: any } = {
+        generalStyle: 'light',
+        background: '#fff',
+        secondary: '#f0f0f0',
+        text: '#2b74b4',
+        secondaryText: '#8a8999',
+        highlight: '#2b74b4',
+        error: '#cc3300',
+        gradient: [
+            'white',
+            'white',
+            'white',
+            'white',
+            'white',
+            'lightgrey',
+            'grey',
+            'grey'
+        ],
+        separator: '#CED0CE'
+    };
+
     switch (theme) {
         case 'light':
             return Light[themeString] || Dark[themeString];
         case 'junkie':
             return Junkie[themeString] || Dark[themeString];
+        case 'bpm':
+            return BPM[themeString] || Dark[themeString];
         default:
             return Dark[themeString];
     }

@@ -4,6 +4,7 @@ import { Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import DatePicker from 'react-native-date-picker';
+
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -174,7 +175,7 @@ export default class ActivityFilter extends React.Component<
                                 setStartDate ? workingStartDate : workingEndDate
                             }
                             maximumDate={new Date()}
-                            textColor="#fff"
+                            textColor={themeColor('text')}
                             mode="date"
                         />
                         <View style={{ padding: 2 }}>
