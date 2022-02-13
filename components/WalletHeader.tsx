@@ -1,11 +1,12 @@
 import React from 'react';
-import { Button, Header } from 'react-native-elements';
+import { Button, Header, Image } from 'react-native-elements';
 import { TouchableOpacity } from 'react-native';
 import NodeIdenticon from '../components/NodeIdenticon';
 import { themeColor } from '../utils/ThemeUtils';
-import Contact from '../assets/images/SVG/Contact.svg';
 import Scan from '../assets/images/SVG/Scan.svg';
 import { Body } from './text/Body';
+
+const Contact = require('./../assets/images/Contact.png');
 
 const OpenChannelButton = ({ navigation }: { navigation: any }) => (
     <Button
@@ -45,6 +46,8 @@ export function WalletHeader({
     channels?: boolean;
 }) {
     const { settings } = SettingsStore;
+    const multipleNodes: boolean =
+        settings && settings.nodes && settings.nodes.length > 1;
     const selectedNode: any =
         (settings &&
             settings.nodes &&
@@ -53,10 +56,16 @@ export function WalletHeader({
 
     const SettingsButton = () => (
         <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
-            {selectedNode ? (
+            {multipleNodes ? (
                 <NodeIdenticon selectedNode={selectedNode} width={30} />
             ) : (
-                <Contact fill={themeColor('text')} width={30} height={30} />
+                <Image
+                    source={Contact}
+                    style={{
+                        width: 30,
+                        height: 30
+                    }}
+                />
             )}
         </TouchableOpacity>
     );
