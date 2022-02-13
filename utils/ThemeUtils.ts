@@ -89,7 +89,7 @@ export function themeColor(themeString: string): any {
         background: 'orange',
         secondary: '#fff',
         text: 'black',
-        secondaryText: '#fff',
+        secondaryText: 'lightgray',
         highlight: 'black',
         error: '#cc3300',
         gradient: [
