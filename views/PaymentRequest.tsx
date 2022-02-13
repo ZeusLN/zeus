@@ -159,7 +159,12 @@ export default class PaymentRequest extends React.Component<
                 <ScrollView>
                     {!!getPayReqError && (
                         <View style={styles.content}>
-                            <Text style={styles.label}>
+                            <Text
+                                style={{
+                                    ...styles.label,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 {localeString('views.PaymentRequest.error')}:{' '}
                                 {getPayReqError}
                             </Text>
@@ -289,7 +294,12 @@ export default class PaymentRequest extends React.Component<
 
                             {isLnd && (
                                 <>
-                                    <Text style={styles.label}>
+                                    <Text
+                                        style={{
+                                            ...styles.label,
+                                            color: themeColor('text')
+                                        }}
+                                    >
                                         {`${localeString(
                                             'views.PaymentRequest.feeLimit'
                                         )} (${localeString('general.sats')})`}
@@ -349,6 +359,7 @@ export default class PaymentRequest extends React.Component<
                                     <Text
                                         style={{
                                             ...styles.label,
+                                            color: themeColor('text'),
                                             top: 25
                                         }}
                                     >
@@ -378,7 +389,11 @@ export default class PaymentRequest extends React.Component<
                                 !enableTor && (
                                     <React.Fragment>
                                         <Text
-                                            style={{ ...styles.label, top: 25 }}
+                                            style={{
+                                                ...styles.label,
+                                                color: themeColor('text'),
+                                                top: 25
+                                            }}
                                         >
                                             {localeString(
                                                 'views.PaymentRequest.mpp'
@@ -402,7 +417,12 @@ export default class PaymentRequest extends React.Component<
 
                             {ampOrMppEnabled && (
                                 <React.Fragment>
-                                    <Text style={styles.label}>
+                                    <Text
+                                        style={{
+                                            ...styles.label,
+                                            color: themeColor('text')
+                                        }}
+                                    >
                                         {enableMultiPathPayment
                                             ? localeString(
                                                   'views.PaymentRequest.maxParts'
@@ -422,7 +442,12 @@ export default class PaymentRequest extends React.Component<
                                             })
                                         }
                                     />
-                                    <Text style={styles.labelSecondary}>
+                                    <Text
+                                        style={{
+                                            ...styles.labelSecondary,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
                                         {localeString(
                                             'views.PaymentRequest.maxPartsDescription'
                                         )}
@@ -432,7 +457,12 @@ export default class PaymentRequest extends React.Component<
 
                             {enableAmp && (
                                 <React.Fragment>
-                                    <Text style={styles.label}>
+                                    <Text
+                                        style={{
+                                            ...styles.label,
+                                            color: themeColor('text')
+                                        }}
+                                    >
                                         {`${localeString(
                                             'views.PaymentRequest.maxShardAmt'
                                         )} (${localeString(
@@ -505,12 +535,10 @@ const styles = StyleSheet.create({
         padding: 20
     },
     label: {
-        color: themeColor('text'),
         fontFamily: 'Lato-Regular',
         paddingTop: 5
     },
     labelSecondary: {
-        color: themeColor('secondaryText'),
         fontFamily: 'Lato-Regular',
         paddingTop: 5
     },

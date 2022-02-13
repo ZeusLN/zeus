@@ -59,7 +59,12 @@ export default class SendingOnChain extends React.Component<
                 >
                     {loading && <LoadingIndicator />}
                     {loading && (
-                        <Text style={styles.text}>
+                        <Text
+                            style={{
+                                ...styles.text,
+                                color: themeColor('text')
+                            }}
+                        >
                             {localeString('views.SendingOnChain.broadcasting')}
                         </Text>
                     )}
@@ -86,6 +91,7 @@ export default class SendingOnChain extends React.Component<
                         <Text
                             style={{
                                 ...styles.text,
+                                color: themeColor('text'),
                                 padding: 20,
                                 fontSize: 30,
                                 alignSelf: 'center'
@@ -186,8 +192,7 @@ export default class SendingOnChain extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'Lato-Regular',
-        color: themeColor('text')
+        fontFamily: 'Lato-Regular'
     },
     textWhite: {
         fontFamily: 'Lato-Regular',

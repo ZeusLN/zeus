@@ -356,7 +356,12 @@ export default class Send extends React.Component<SendProps, SendState> {
                     }}
                 />
                 <View style={styles.content}>
-                    <Text style={styles.secondaryText}>
+                    <Text
+                        style={{
+                            ...styles.secondaryText,
+                            color: themeColor('secondaryText')
+                        }}
+                    >
                         {paymentOptions.join(', ')}
                     </Text>
                     <TextInput
@@ -377,6 +382,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         <Text
                             style={{
                                 ...styles.text,
+                                color: themeColor('text'),
                                 paddingBottom: 5
                             }}
                         >
@@ -388,6 +394,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         <Text
                             style={{
                                 ...styles.text,
+                                color: themeColor('text'),
                                 paddingBottom: 10,
                                 marginBottom: 10,
                                 paddingBottom: 5
@@ -396,7 +403,12 @@ export default class Send extends React.Component<SendProps, SendState> {
                     )}
                     {transactionType === 'On-chain' &&
                         !RESTUtils.supportsOnchainSends() && (
-                            <Text style={styles.secondaryText}>
+                            <Text
+                                style={{
+                                    ...styles.secondaryText,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
                                 {localeString('views.Send.onChainNotSupported')}{' '}
                                 {implementation}
                             </Text>
@@ -405,7 +417,12 @@ export default class Send extends React.Component<SendProps, SendState> {
                         RESTUtils.supportsOnchainSends() && (
                             <React.Fragment>
                                 <TouchableOpacity onPress={() => changeUnits()}>
-                                    <Text style={styles.secondaryText}>
+                                    <Text
+                                        style={{
+                                            ...styles.secondaryText,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
                                         {localeString('views.Send.amount')} (
                                         {units === 'fiat' ? fiat : units})
                                     </Text>
@@ -459,14 +476,24 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         <TouchableOpacity
                                             onPress={() => changeUnits()}
                                         >
-                                            <Text style={styles.text}>
+                                            <Text
+                                                style={{
+                                                    ...styles.text,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
                                                 {FiatStore.getRate()}
                                             </Text>
                                         </TouchableOpacity>
                                     )}
                                 </View>
 
-                                <Text style={styles.secondaryText}>
+                                <Text
+                                    style={{
+                                        ...styles.secondaryText,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
                                     {localeString('views.Send.feeSats')}:
                                 </Text>
                                 {enableMempoolRates ? (
@@ -489,6 +516,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             <Text
                                                 style={{
                                                     ...styles.text,
+                                                    color: themeColor('text'),
                                                     paddingBottom: 5,
                                                     fontSize: 18
                                                 }}
@@ -535,7 +563,12 @@ export default class Send extends React.Component<SendProps, SendState> {
                         RESTUtils.supportsKeysend() && (
                             <React.Fragment>
                                 <TouchableOpacity onPress={() => changeUnits()}>
-                                    <Text style={styles.secondaryText}>
+                                    <Text
+                                        style={{
+                                            ...styles.secondaryText,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
                                         {localeString('views.Send.amount')} (
                                         {units === 'fiat' ? fiat : units})
                                     </Text>
@@ -552,7 +585,14 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     <TouchableOpacity
                                         onPress={() => changeUnits()}
                                     >
-                                        <Text style={styles.secondaryText}>
+                                        <Text
+                                            style={{
+                                                ...styles.secondaryText,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
                                             {satAmount}{' '}
                                             {localeString(
                                                 'views.Send.satoshis'
@@ -562,7 +602,14 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 )}
                                 {RESTUtils.supportsAMP() && (
                                     <React.Fragment>
-                                        <Text style={styles.secondaryText}>
+                                        <Text
+                                            style={{
+                                                ...styles.secondaryText,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
                                             {`${localeString(
                                                 'views.Send.message'
                                             )} (${localeString(
@@ -580,7 +627,14 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             }
                                             style={styles.textInput}
                                         />
-                                        <Text style={styles.secondaryText}>
+                                        <Text
+                                            style={{
+                                                ...styles.secondaryText,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
                                             {`${localeString(
                                                 'views.PaymentRequest.maxParts'
                                             )} (${localeString(
@@ -601,6 +655,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         <Text
                                             style={{
                                                 ...styles.text,
+                                                color: themeColor('text'),
                                                 paddingBottom: 15
                                             }}
                                         >
@@ -608,7 +663,14 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 'views.PaymentRequest.maxPartsDescription'
                                             )}
                                         </Text>
-                                        <Text style={styles.secondaryText}>
+                                        <Text
+                                            style={{
+                                                ...styles.secondaryText,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
                                             {`${localeString(
                                                 'views.PaymentRequest.feeLimit'
                                             )} (${localeString(
@@ -629,7 +691,14 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             }
                                             style={styles.textInput}
                                         />
-                                        <Text style={styles.secondaryText}>
+                                        <Text
+                                            style={{
+                                                ...styles.secondaryText,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
                                             {`${localeString(
                                                 'views.PaymentRequest.maxShardAmt'
                                             )} (${localeString(
@@ -669,7 +738,12 @@ export default class Send extends React.Component<SendProps, SendState> {
                     {transactionType === 'Keysend' &&
                         !RESTUtils.supportsKeysend() && (
                             <React.Fragment>
-                                <Text style={styles.secondaryText}>
+                                <Text
+                                    style={{
+                                        ...styles.secondaryText,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
                                     {localeString('views.Send.sorry')},{' '}
                                     {implementation}{' '}
                                     {localeString(
@@ -755,11 +829,9 @@ const styles = StyleSheet.create({
         marginBottom: 20
     },
     text: {
-        color: themeColor('text'),
         fontFamily: 'Lato-Regular'
     },
     secondaryText: {
-        color: themeColor('secondaryText'),
         fontFamily: 'Lato-Regular'
     },
     textInput: {

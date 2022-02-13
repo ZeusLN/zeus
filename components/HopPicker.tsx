@@ -113,6 +113,7 @@ export default class ChannelPicker extends React.Component<
                                     <Text
                                         style={{
                                             ...styles.text,
+                                            color: themeColor('text'),
                                             fontSize: 25
                                         }}
                                     >
@@ -123,6 +124,7 @@ export default class ChannelPicker extends React.Component<
                                     <Text
                                         style={{
                                             ...styles.text,
+                                            color: themeColor('text'),
                                             paddingTop: 20,
                                             paddingBottom: 20
                                         }}
@@ -339,6 +341,7 @@ export default class ChannelPicker extends React.Component<
                     <Text
                         style={{
                             ...styles.text,
+                            color: themeColor('text'),
                             paddingLeft: 10
                         }}
                     >
@@ -349,6 +352,7 @@ export default class ChannelPicker extends React.Component<
                             <Text
                                 style={{
                                     ...styles.text,
+                                    color: themeColor('text'),
                                     padding: 10,
                                     fontSize: 16
                                 }}
@@ -361,6 +365,7 @@ export default class ChannelPicker extends React.Component<
                             <Text
                                 style={{
                                     ...styles.text,
+                                    color: themeColor('text'),
                                     padding: 10,
                                     fontSize: 16
                                 }}
@@ -379,7 +384,6 @@ export default class ChannelPicker extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        color: themeColor('text'),
         fontFamily: 'Lato-Regular'
     },
     field: {

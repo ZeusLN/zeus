@@ -172,7 +172,10 @@ export default class Receive extends React.Component<
             <React.Fragment>
                 <Text
                     style={{
-                        color: selectedIndex === 1 ? 'white' : 'black',
+                        color:
+                            selectedIndex === 1
+                                ? themeColor('text')
+                                : themeColor('background'),
                         fontFamily: 'Lato-Regular'
                     }}
                 >
@@ -185,7 +188,10 @@ export default class Receive extends React.Component<
             <React.Fragment>
                 <Text
                     style={{
-                        color: selectedIndex === 0 ? 'white' : 'black',
+                        color:
+                            selectedIndex === 0
+                                ? themeColor('text')
+                                : themeColor('background'),
                         fontFamily: 'Lato-Regular'
                     }}
                 >
@@ -328,7 +334,12 @@ export default class Receive extends React.Component<
                                         )}
                                     />
                                 )}
-                                <Text style={styles.secondaryText}>
+                                <Text
+                                    style={{
+                                        ...styles.secondaryText,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
                                     {localeString('views.Receive.memo')}
                                 </Text>
                                 <TextInput
@@ -342,7 +353,12 @@ export default class Receive extends React.Component<
                                 />
 
                                 <TouchableOpacity onPress={() => changeUnits()}>
-                                    <Text style={styles.secondaryText}>
+                                    <Text
+                                        style={{
+                                            ...styles.secondaryText,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
                                         {localeString('views.Receive.amount')} (
                                         {units === 'fiat' ? fiat : units})
                                         {lnurl &&
@@ -390,7 +406,12 @@ export default class Receive extends React.Component<
                                     <TouchableOpacity
                                         onPress={() => changeUnits()}
                                     >
-                                        <Text style={styles.text}>
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor('text')
+                                            }}
+                                        >
                                             {FiatStore.getRate()}
                                         </Text>
                                     </TouchableOpacity>
@@ -401,6 +422,9 @@ export default class Receive extends React.Component<
                                         <Text
                                             style={{
                                                 ...styles.secondaryText,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
                                                 paddingTop: 10
                                             }}
                                         >
@@ -424,6 +448,9 @@ export default class Receive extends React.Component<
                                         <Text
                                             style={{
                                                 ...styles.secondaryText,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
                                                 top: 20
                                             }}
                                         >
@@ -454,6 +481,9 @@ export default class Receive extends React.Component<
                                         <Text
                                             style={{
                                                 ...styles.secondaryText,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
                                                 top: 20
                                             }}
                                         >
@@ -509,7 +539,12 @@ export default class Receive extends React.Component<
                     {selectedIndex === 1 && (
                         <React.Fragment>
                             {!address && !loading && (
-                                <Text style={styles.text}>
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('text')
+                                    }}
+                                >
                                     {localeString('views.Receive.noOnChain')}
                                 </Text>
                             )}
@@ -559,11 +594,9 @@ const styles = StyleSheet.create({
         paddingBottom: 15
     },
     text: {
-        color: themeColor('text'),
         fontFamily: 'Lato-Regular'
     },
     secondaryText: {
-        color: themeColor('secondaryText'),
         fontFamily: 'Lato-Regular'
     }
 });
