@@ -12,8 +12,12 @@ export default async function (data: string): Promise<any> {
     const { nodeInfo } = nodeInfoStore;
     const { isTestNet, isRegTest } = nodeInfo;
     const { value, amount }: any = AddressUtils.processSendAddress(data);
+    const hasAt: boolean = value.includes('@');
 
-    if (AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest)) {
+    if (
+        !hasAt &&
+        AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest)
+    ) {
         return [
             'Send',
             {
@@ -22,7 +26,7 @@ export default async function (data: string): Promise<any> {
                 transactionType: 'On-chain'
             }
         ];
-    } else if (AddressUtils.isValidLightningPubKey(value)) {
+    } else if (!hasAt && AddressUtils.isValidLightningPubKey(value)) {
         return [
             'Send',
             {
@@ -30,7 +34,7 @@ export default async function (data: string): Promise<any> {
                 transactionType: 'Keysend'
             }
         ];
-    } else if (AddressUtils.isValidLightningPaymentRequest(value)) {
+    } else if (!hasAt && AddressUtils.isValidLightningPaymentRequest(value)) {
         invoicesStore.getPayReq(value);
         return ['PaymentRequest', {}];
     } else if (value.includes('lndconnect')) {
@@ -75,7 +79,16 @@ export default async function (data: string): Promise<any> {
                 newEntry: true
             }
         ];
-    } else if (AddressUtils.isValidLightningAddress(value)) {
+    } else if (hasAt && NodeUriUtils.isValidNodeUri(value)) {
+        const { pubkey, host } = NodeUriUtils.processNodeUri(value);
+        return [
+            'OpenChannel',
+            {
+                node_pubkey_string: pubkey,
+                host
+            }
+        ];
+    } else if (hasAt && AddressUtils.isValidLightningAddress(value)) {
         const [username, domain] = value.split('@');
         const url = `https://${domain}/.well-known/lnurlp/${username}`;
         const error = localeString(
@@ -99,15 +112,6 @@ export default async function (data: string): Promise<any> {
             .catch(() => {
                 throw new Error(error);
             });
-    } else if (NodeUriUtils.isValidNodeUri(value)) {
-        const { pubkey, host } = NodeUriUtils.processNodeUri(value);
-        return [
-            'OpenChannel',
-            {
-                node_pubkey_string: pubkey,
-                host
-            }
-        ];
     } else if (findlnurl(value) !== null) {
         const raw: string = findlnurl(value) || '';
         return getlnurlParams(raw).then((params: any) => {
