@@ -1,7 +1,9 @@
 import RNSecureKeyStore, { ACCESSIBLE } from 'react-native-secure-key-store';
 import { action, observable } from 'mobx';
 import RNFetchBlob from 'rn-fetch-blob';
+
 import RESTUtils from '../utils/RESTUtils';
+import { localeString } from '../utils/LocaleUtils';
 
 // lndhub
 import LoginRequest from './../models/LoginRequest';
@@ -114,7 +116,9 @@ export const CURRENCY_KEYS = [
 export const THEME_KEYS = [
     { key: 'Dark', value: 'dark' },
     { key: 'Light', value: 'light' },
-    { key: 'Junkie', value: 'junkie' }
+    { key: 'Junkie', value: 'junkie' },
+    { key: 'BPM', value: 'bpm' },
+    { key: 'Orange', value: 'orange' }
 ];
 
 export const DEFAULT_THEME = 'dark';
@@ -172,8 +176,9 @@ export default class SettingsStore {
                         configuration;
 
                     if (type !== 'lnd-rest' && type !== 'clightning-rest') {
-                        this.btcPayError =
-                            'Sorry, we currently only support BTCPay instances using lnd or c-lightning';
+                        this.btcPayError = localeString(
+                            'stores.SettingsStore.btcPayImplementationSupport'
+                        );
                     } else {
                         const config = {
                             host: uri,
@@ -187,12 +192,16 @@ export default class SettingsStore {
                         return config;
                     }
                 } else {
-                    this.btcPayError = 'Error getting BTCPay configuration';
+                    this.btcPayError = localeString(
+                        'stores.SettingsStore.btcPayFetchConfigError'
+                    );
                 }
             })
             .catch((err: any) => {
                 // handle error
-                this.btcPayError = `Error getting BTCPay configuration: ${err.toString()}`;
+                this.btcPayError = `${localeString(
+                    'stores.SettingsStore.btcPayFetchConfigError'
+                )}: ${err.toString()}`;
             });
     };
 
@@ -263,15 +272,17 @@ export default class SettingsStore {
         return RESTUtils.createAccount(host, certVerification, enableTor)
             .then((data: any) => {
                 this.loading = false;
-                this.createAccountSuccess =
-                    'Successfully created LNDHub account. Record the username and password somewhere so you can restore your funds if something happens to your device. Then hit Save Node Config to continue.';
+                this.createAccountSuccess = localeString(
+                    'stores.SettingsStore.lndhubSuccess'
+                );
                 return data;
             })
             .catch(() => {
                 // handle error
                 this.loading = false;
-                this.createAccountError =
-                    'Error creating LNDHub account. Please check the host and try again.';
+                this.createAccountError = localeString(
+                    'stores.SettingsStore.lndhubError'
+                );
             });
     };
 

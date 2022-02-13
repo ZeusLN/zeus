@@ -79,7 +79,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
             <Icon
                 name="close"
                 onPress={() => navigation.navigate('Wallet')}
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
@@ -88,7 +88,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
             <TouchableOpacity
                 onPress={() => navigation.navigate('ActivityFilter')}
             >
-                <Filter />
+                <Filter fill={themeColor('text')} />
             </TouchableOpacity>
         );
 
@@ -110,7 +110,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                         }
                     }}
                     rightComponent={<FilterButton />}
-                    backgroundColor="#1f2328"
+                    backgroundColor={themeColor('background')}
                     containerStyle={{
                         borderBottomWidth: 0
                     }}

@@ -37,7 +37,7 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
             <Icon
                 name="arrow-back"
                 onPress={() => navigation.navigate('Wallet')}
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
