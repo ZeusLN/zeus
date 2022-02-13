@@ -25,6 +25,7 @@ import SettingsStore from './../stores/SettingsStore';
 import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
 import FiatStore from './../stores/FiatStore';
 
+import { Amount } from './../components/Amount';
 import Button from './../components/Button';
 import { ErrorMessage } from './../components/SuccessErrorMessage';
 import TextInput from './../components/TextInput';
@@ -309,7 +310,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                 satAmount = Number(amount) * satoshisPerBTC;
                 break;
             case 'fiat':
-                satAmount = Number(Number(amount) / rate).toFixed(0);
+                satAmount = Number(
+                    (Number(amount) / Number(rate)) * Number(satoshisPerBTC)
+                ).toFixed(0);
                 break;
         }
 
@@ -415,34 +418,57 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     }
                                     style={styles.textInput}
                                 />
-                                {units !== 'sats' && amount !== 'all' && (
-                                    <TouchableOpacity
-                                        onPress={() => changeUnits()}
-                                    >
-                                        <Text style={styles.secondaryText}>
-                                            {satAmount}{' '}
-                                            {localeString(
-                                                'views.Send.satoshis'
-                                            )}
-                                        </Text>
-                                    </TouchableOpacity>
-                                )}
-                                {amount === 'all' && (
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            paddingBottom: 5
-                                        }}
-                                    >
-                                        {`${
-                                            utxoBalance > 0
-                                                ? utxoBalance
-                                                : confirmedBlockchainBalance
-                                        } ${localeString(
-                                            'views.Receive.satoshis'
-                                        )}`}
-                                    </Text>
-                                )}
+                                <View style={{ paddingBottom: 15 }}>
+                                    {units !== 'sats' &&
+                                        amount !== 'all' &&
+                                        !!amount && (
+                                            <Amount
+                                                sats={satAmount}
+                                                fixedUnits="sats"
+                                                toggleable
+                                            />
+                                        )}
+                                    {units !== 'BTC' &&
+                                        amount !== 'all' &&
+                                        !!amount && (
+                                            <Amount
+                                                sats={satAmount}
+                                                fixedUnits="BTC"
+                                                toggleable
+                                            />
+                                        )}
+                                    {amount === 'all' && (
+                                        <>
+                                            <Amount
+                                                sats={
+                                                    utxoBalance > 0
+                                                        ? utxoBalance
+                                                        : confirmedBlockchainBalance
+                                                }
+                                                fixedUnits="BTC"
+                                                toggleable
+                                            />
+                                            <Amount
+                                                sats={
+                                                    utxoBalance > 0
+                                                        ? utxoBalance
+                                                        : confirmedBlockchainBalance
+                                                }
+                                                fixedUnits="sats"
+                                                toggleable
+                                            />
+                                        </>
+                                    )}
+                                    {units === 'fiat' && (
+                                        <TouchableOpacity
+                                            onPress={() => changeUnits()}
+                                        >
+                                            <Text style={styles.text}>
+                                                {FiatStore.getRate()}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
 
                                 <Text style={styles.secondaryText}>
                                     {localeString('views.Send.feeSats')}:
