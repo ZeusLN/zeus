@@ -206,7 +206,7 @@ export default class Receive extends React.Component<
                     reset();
                     navigation.navigate('Wallet');
                 }}
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );

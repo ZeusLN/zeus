@@ -72,7 +72,7 @@ export default class ActivityFilter extends React.Component<
                 onPress={() =>
                     navigation.navigate('Activity', { refresh: true })
                 }
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );

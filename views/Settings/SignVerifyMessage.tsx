@@ -96,7 +96,7 @@ export default class SignVerifyMessage extends React.Component<
                 onPress={() =>
                     navigation.navigate('Settings', { refresh: true })
                 }
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
@@ -104,7 +104,12 @@ export default class SignVerifyMessage extends React.Component<
         const signButton = () => (
             <React.Fragment>
                 <Text
-                    style={{ color: selectedIndex === 1 ? 'white' : 'black' }}
+                    style={{
+                        color:
+                            selectedIndex === 1
+                                ? themeColor('text')
+                                : themeColor('background')
+                    }}
                 >
                     {localeString('views.Settings.SignMessage.sign')}
                 </Text>
@@ -114,7 +119,12 @@ export default class SignVerifyMessage extends React.Component<
         const verifyButton = () => (
             <React.Fragment>
                 <Text
-                    style={{ color: selectedIndex === 0 ? 'white' : 'black' }}
+                    style={{
+                        color:
+                            selectedIndex === 0
+                                ? themeColor('text')
+                                : themeColor('background')
+                    }}
                 >
                     {localeString('views.Settings.SignMessage.verify')}
                 </Text>

@@ -320,7 +320,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             <Icon
                 name="arrow-back"
                 onPress={() => navigation.navigate('Wallet')}
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
@@ -601,7 +601,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         <Text
                                             style={{
                                                 ...styles.text,
-                                                paddingBottom: 5
+                                                paddingBottom: 15
                                             }}
                                         >
                                             {localeString(

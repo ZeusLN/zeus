@@ -127,7 +127,7 @@ export default class PaymentRequest extends React.Component<
             <Icon
                 name="arrow-back"
                 onPress={() => navigation.navigate('Wallet', { refresh: true })}
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
