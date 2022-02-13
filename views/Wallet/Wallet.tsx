@@ -330,7 +330,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                     colors={themeColor('gradient')}
                     style={{ flex: 1 }}
                 >
-                    {!connecting && !loginRequired && (
+                    {false && (
                         <NavigationContainer theme={Theme}>
                             <Tab.Navigator
                                 screenOptions={({ route }) => ({
@@ -380,7 +380,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                             </Tab.Navigator>
                         </NavigationContainer>
                     )}
-                    {connecting && !loginRequired && (
+                    {true && (
                         <View
                             style={{
                                 backgroundColor: '#1F242D',
