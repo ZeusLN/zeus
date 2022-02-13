@@ -419,24 +419,20 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     style={styles.textInput}
                                 />
                                 <View style={{ paddingBottom: 15 }}>
-                                    {units !== 'sats' &&
-                                        amount !== 'all' &&
-                                        !!amount && (
-                                            <Amount
-                                                sats={satAmount}
-                                                fixedUnits="sats"
-                                                toggleable
-                                            />
-                                        )}
-                                    {units !== 'BTC' &&
-                                        amount !== 'all' &&
-                                        !!amount && (
-                                            <Amount
-                                                sats={satAmount}
-                                                fixedUnits="BTC"
-                                                toggleable
-                                            />
-                                        )}
+                                    {units !== 'sats' && amount !== 'all' && (
+                                        <Amount
+                                            sats={satAmount}
+                                            fixedUnits="sats"
+                                            toggleable
+                                        />
+                                    )}
+                                    {units !== 'BTC' && amount !== 'all' && (
+                                        <Amount
+                                            sats={satAmount}
+                                            fixedUnits="BTC"
+                                            toggleable
+                                        />
+                                    )}
                                     {amount === 'all' && (
                                         <>
                                             <Amount
