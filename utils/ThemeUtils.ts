@@ -84,13 +84,36 @@ export function themeColor(themeString: string): any {
         separator: '#CED0CE'
     };
 
+    const Orange: { [key: string]: any } = {
+        generalStyle: 'light',
+        background: 'orange',
+        secondary: '#fff',
+        text: 'black',
+        secondaryText: '#fff',
+        highlight: 'black',
+        error: '#cc3300',
+        gradient: [
+            'white',
+            'white',
+            'white',
+            'white',
+            'white',
+            'lightgrey',
+            'grey',
+            'grey'
+        ],
+        separator: '#CED0CE'
+    };
+
     switch (theme) {
         case 'light':
             return Light[themeString] || Dark[themeString];
         case 'junkie':
             return Junkie[themeString] || Dark[themeString];
         case 'bpm':
-            return BPM[themeString] || Dark[themeString];
+            return BPM[themeString] || Light[themeString];
+        case 'orange':
+            return Orange[themeString] || Light[themeString];
         default:
             return Dark[themeString];
     }

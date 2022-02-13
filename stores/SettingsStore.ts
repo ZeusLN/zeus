@@ -117,7 +117,8 @@ export const THEME_KEYS = [
     { key: 'Dark', value: 'dark' },
     { key: 'Light', value: 'light' },
     { key: 'Junkie', value: 'junkie' },
-    { key: 'BPM', value: 'bpm' }
+    { key: 'BPM', value: 'bpm' },
+    { key: 'Orange', value: 'orange' }
 ];
 
 export const DEFAULT_THEME = 'dark';
