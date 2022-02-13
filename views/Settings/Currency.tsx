@@ -83,7 +83,7 @@ export default class Currency extends React.Component<
                     backgroundColor: themeColor('background')
                 }}
             >
-                <View>
+                <View style={{ flex: 1 }}>
                     <Header
                         leftComponent={<BackButton />}
                         centerComponent={{
