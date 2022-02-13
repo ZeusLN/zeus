@@ -96,7 +96,7 @@ export default class SignVerifyMessage extends React.Component<
                 onPress={() =>
                     navigation.navigate('Settings', { refresh: true })
                 }
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
@@ -104,7 +104,12 @@ export default class SignVerifyMessage extends React.Component<
         const signButton = () => (
             <React.Fragment>
                 <Text
-                    style={{ color: selectedIndex === 1 ? 'white' : 'black' }}
+                    style={{
+                        color:
+                            selectedIndex === 1
+                                ? themeColor('text')
+                                : themeColor('background')
+                    }}
                 >
                     {localeString('views.Settings.SignMessage.sign')}
                 </Text>
@@ -114,7 +119,12 @@ export default class SignVerifyMessage extends React.Component<
         const verifyButton = () => (
             <React.Fragment>
                 <Text
-                    style={{ color: selectedIndex === 0 ? 'white' : 'black' }}
+                    style={{
+                        color:
+                            selectedIndex === 0
+                                ? themeColor('text')
+                                : themeColor('background')
+                    }}
                 >
                     {localeString('views.Settings.SignMessage.verify')}
                 </Text>
@@ -169,7 +179,12 @@ export default class SignVerifyMessage extends React.Component<
                     {selectedIndex === 0 && (
                         <View>
                             <View style={styles.form}>
-                                <Text style={styles.text}>
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
                                     {localeString(
                                         'views.Settings.SignMessage.messageToSign'
                                     )}
@@ -244,7 +259,12 @@ export default class SignVerifyMessage extends React.Component<
                     {selectedIndex === 1 && (
                         <View>
                             <View style={styles.form}>
-                                <Text style={styles.text}>
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
                                     {localeString(
                                         'views.Settings.SignMessage.messageToVerify'
                                     )}
@@ -266,7 +286,12 @@ export default class SignVerifyMessage extends React.Component<
                             </View>
 
                             <View style={styles.form}>
-                                <Text style={styles.text}>
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
                                     {localeString(
                                         'views.Settings.SignMessage.signatureToVerify'
                                     )}
@@ -374,7 +399,6 @@ const styles = StyleSheet.create({
         paddingRight: 5
     },
     text: {
-        color: themeColor('secondaryText'),
         fontFamily: 'Lato-Regular'
     },
     textInput: {

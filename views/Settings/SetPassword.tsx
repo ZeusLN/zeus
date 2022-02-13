@@ -124,7 +124,7 @@ export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
                             )}
                         />
                     )}
-                    <Text style={styles.text}>
+                    <Text style={{ ...styles.text, color: themeColor('text') }}>
                         {localeString('views.Settings.newPassword')}
                     </Text>
                     <TextInput
@@ -145,7 +145,7 @@ export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
                             paddingLeft: 10
                         }}
                     />
-                    <Text style={styles.text}>
+                    <Text style={{ ...styles.text, color: themeColor('text') }}>
                         {localeString('views.Settings.confirmPassword')}
                     </Text>
                     <TextInput
@@ -187,7 +187,6 @@ export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
 
 const styles = StyleSheet.create({
     text: {
-        color: themeColor('secondaryText'),
         fontFamily: 'Lato-Regular'
     }
 });

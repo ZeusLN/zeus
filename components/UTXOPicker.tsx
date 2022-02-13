@@ -126,6 +126,7 @@ export default class UTXOPicker extends React.Component<
                                     <Text
                                         style={{
                                             ...styles.text,
+                                            color: themeColor('text'),
                                             fontSize: 25
                                         }}
                                     >
@@ -136,6 +137,7 @@ export default class UTXOPicker extends React.Component<
                                     <Text
                                         style={{
                                             ...styles.text,
+                                            color: themeColor('text'),
                                             paddingTop: 20,
                                             paddingBottom: 20
                                         }}
@@ -148,6 +150,7 @@ export default class UTXOPicker extends React.Component<
                                     <Text
                                         style={{
                                             ...styles.text,
+                                            color: themeColor('text'),
                                             fontSize: 20,
                                             paddingTop: 20,
                                             paddingBottom: 20
@@ -243,7 +246,12 @@ export default class UTXOPicker extends React.Component<
                 </Modal>
 
                 <View>
-                    <Text style={styles.secondaryText}>
+                    <Text
+                        style={{
+                            ...styles.secondaryText,
+                            color: themeColor('secondaryText')
+                        }}
+                    >
                         {title || DEFAULT_TITLE}
                     </Text>
                     {utxosSet.length > 0 ? (
@@ -251,6 +259,7 @@ export default class UTXOPicker extends React.Component<
                             <Text
                                 style={{
                                     ...styles.text,
+                                    color: themeColor('text'),
                                     padding: 10,
                                     fontSize: 16
                                 }}
@@ -263,6 +272,7 @@ export default class UTXOPicker extends React.Component<
                             <Text
                                 style={{
                                     ...styles.text,
+                                    color: themeColor('text'),
                                     padding: 10,
                                     fontSize: 16
                                 }}
@@ -281,11 +291,9 @@ export default class UTXOPicker extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        color: themeColor('text'),
         fontFamily: 'Lato-Regular'
     },
     secondaryText: {
-        color: themeColor('secondaryText'),
         fontFamily: 'Lato-Regular'
     },
     button: {

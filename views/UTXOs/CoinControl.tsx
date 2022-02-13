@@ -46,7 +46,7 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
             <Icon
                 name="close"
                 onPress={() => navigation.navigate('Wallet')}
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );

@@ -393,7 +393,7 @@ export default class AddEditNode extends React.Component<
                 onPress={() =>
                     navigation.navigate('Settings', { refresh: true })
                 }
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
@@ -451,7 +451,7 @@ export default class AddEditNode extends React.Component<
                         text: localeString(
                             'views.Settings.AddEditNode.nodeConfig'
                         ),
-                        style: styles.text
+                        style: { ...styles.text, color: themeColor('text') }
                     }}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
@@ -699,6 +699,7 @@ export default class AddEditNode extends React.Component<
                                     <Text
                                         style={{
                                             ...styles.text,
+                                            color: themeColor('text'),
                                             alignSelf: 'center',
                                             padding: 2
                                         }}
@@ -720,6 +721,7 @@ export default class AddEditNode extends React.Component<
                                     <Text
                                         style={{
                                             ...styles.text,
+                                            color: themeColor('text'),
                                             alignSelf: 'center',
                                             padding: 2
                                         }}
@@ -751,7 +753,12 @@ export default class AddEditNode extends React.Component<
                             )}
 
                         <View>
-                            <Text style={styles.secondaryText}>
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 {localeString(
                                     'views.Settings.AddEditNode.nickname'
                                 )}
@@ -774,7 +781,12 @@ export default class AddEditNode extends React.Component<
                         {(implementation === 'spark' ||
                             implementation == 'eclair') && (
                             <>
-                                <Text style={styles.secondaryText}>
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('text')
+                                    }}
+                                >
                                     {localeString(
                                         'views.Settings.AddEditNode.host'
                                     )}
@@ -1263,11 +1275,6 @@ export default class AddEditNode extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        color: themeColor('text'),
-        fontFamily: 'Lato-Regular'
-    },
-    secondaryText: {
-        color: themeColor('text'),
         fontFamily: 'Lato-Regular'
     },
     whiteText: {
