@@ -118,7 +118,10 @@ export default class Routing extends React.PureComponent<
             <Text
                 style={{
                     fontFamily: 'Lato-Regular',
-                    color: selectedIndex === 0 ? 'black' : 'white'
+                    color:
+                        selectedIndex === 0
+                            ? themeColor('background')
+                            : themeColor('text')
                 }}
             >
                 D
@@ -128,7 +131,10 @@ export default class Routing extends React.PureComponent<
             <Text
                 style={{
                     fontFamily: 'Lato-Regular',
-                    color: selectedIndex === 1 ? 'black' : 'white'
+                    color:
+                        selectedIndex === 1
+                            ? themeColor('background')
+                            : themeColor('text')
                 }}
             >
                 1W
@@ -138,7 +144,10 @@ export default class Routing extends React.PureComponent<
             <Text
                 style={{
                     fontFamily: 'Lato-Regular',
-                    color: selectedIndex === 2 ? 'black' : 'white'
+                    color:
+                        selectedIndex === 2
+                            ? themeColor('background')
+                            : themeColor('text')
                 }}
             >
                 1M
@@ -148,7 +157,10 @@ export default class Routing extends React.PureComponent<
             <Text
                 style={{
                     fontFamily: 'Lato-Regular',
-                    color: selectedIndex === 3 ? 'black' : 'white'
+                    color:
+                        selectedIndex === 3
+                            ? themeColor('background')
+                            : themeColor('text')
                 }}
             >
                 3M
@@ -158,7 +170,10 @@ export default class Routing extends React.PureComponent<
             <Text
                 style={{
                     fontFamily: 'Lato-Regular',
-                    color: selectedIndex === 4 ? 'black' : 'white'
+                    color:
+                        selectedIndex === 4
+                            ? themeColor('background')
+                            : themeColor('text')
                 }}
             >
                 6M
@@ -168,7 +183,10 @@ export default class Routing extends React.PureComponent<
             <Text
                 style={{
                     fontFamily: 'Lato-Regular',
-                    color: selectedIndex === 5 ? 'black' : 'white'
+                    color:
+                        selectedIndex === 5
+                            ? themeColor('background')
+                            : themeColor('text')
                 }}
             >
                 1Y

@@ -43,7 +43,14 @@ export default class DropdownSetting extends React.Component<
             <React.Fragment>
                 {Platform.OS !== 'ios' && (
                     <View style={{ height: 75 }}>
-                        <Text style={styles.secondaryText}>{title}</Text>
+                        <Text
+                            style={{
+                                ...styles.secondaryText,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {title}
+                        </Text>
                         <Picker
                             selectedValue={`${selectedValue}`}
                             onValueChange={(itemValue: string) =>
@@ -60,7 +67,14 @@ export default class DropdownSetting extends React.Component<
 
                 {Platform.OS === 'ios' && (
                     <View>
-                        <Text style={styles.secondaryText}>{title}</Text>
+                        <Text
+                            style={{
+                                ...styles.secondaryText,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {title}
+                        </Text>
                         <TouchableOpacity
                             onPress={() =>
                                 ActionSheetIOS.showActionSheetWithOptions(
@@ -96,7 +110,6 @@ export default class DropdownSetting extends React.Component<
 
 const styles = StyleSheet.create({
     secondaryText: {
-        color: themeColor('secondaryText'),
         fontFamily: 'Lato-Regular'
     },
     field: {

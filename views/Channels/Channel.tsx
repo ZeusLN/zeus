@@ -173,7 +173,7 @@ export default class ChannelView extends React.Component<
             <Icon
                 name="arrow-back"
                 onPress={() => navigation.navigate('Wallet')}
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
@@ -190,7 +190,10 @@ export default class ChannelView extends React.Component<
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Channel.title'),
-                        style: styles.text
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
@@ -201,7 +204,8 @@ export default class ChannelView extends React.Component<
                     <View style={styles.center}>
                         <Text
                             style={{
-                                ...styles.text,
+                                color: themeColor('text'),
+                                fontFamily: 'Lato-Regular',
                                 ...styles.alias
                             }}
                         >
@@ -210,7 +214,8 @@ export default class ChannelView extends React.Component<
                         {remote_pubkey && (
                             <Text
                                 style={{
-                                    ...styles.text,
+                                    color: themeColor('text'),
+                                    fontFamily: 'Lato-Regular',
                                     ...styles.pubkey
                                 }}
                             >
@@ -228,7 +233,8 @@ export default class ChannelView extends React.Component<
                         <TouchableOpacity onPress={() => changeUnits()}>
                             <Text
                                 style={{
-                                    ...styles.text,
+                                    color: themeColor('text'),
+                                    fontFamily: 'Lato-Regular',
                                     ...styles.balance
                                 }}
                             >{`${localeString('views.Channel.localBalance')}: ${
@@ -236,7 +242,8 @@ export default class ChannelView extends React.Component<
                             }`}</Text>
                             <Text
                                 style={{
-                                    ...styles.text,
+                                    color: themeColor('text'),
+                                    fontFamily: 'Lato-Regular',
                                     ...styles.balance
                                 }}
                             >{`${localeString(
@@ -245,7 +252,8 @@ export default class ChannelView extends React.Component<
                             {unsettled_balance && (
                                 <Text
                                     style={{
-                                        ...styles.text,
+                                        color: themeColor('text'),
+                                        fontFamily: 'Lato-Regular',
                                         ...styles.balance
                                     }}
                                 >{`${localeString(

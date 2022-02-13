@@ -68,7 +68,7 @@ export default class ImportAccount extends React.Component<
             <Icon
                 name="arrow-back"
                 onPress={() => navigation.goBack()}
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );

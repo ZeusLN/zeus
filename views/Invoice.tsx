@@ -37,7 +37,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
             <Icon
                 name="arrow-back"
                 onPress={() => navigation.goBack()}
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );

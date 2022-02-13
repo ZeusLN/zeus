@@ -76,7 +76,12 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                 )
                             }
                         >
-                            <Text style={styles.valueWithLink}>
+                            <Text
+                                style={{
+                                    ...styles.valueWithLink,
+                                    color: themeColor('highlight')
+                                }}
+                            >
                                 {PrivacyUtils.sensitiveValue(address)}
                             </Text>
                         </TouchableOpacity>
@@ -154,7 +159,12 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                     UrlUtils.goToBlockExplorerTXID(tx, testnet)
                                 }
                             >
-                                <Text style={styles.valueWithLink}>
+                                <Text
+                                    style={{
+                                        ...styles.valueWithLink,
+                                        color: themeColor('highlight')
+                                    }}
+                                >
                                     {PrivacyUtils.sensitiveValue(tx)}
                                 </Text>
                             </TouchableOpacity>
@@ -175,7 +185,12 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                         )
                                     }
                                 >
-                                    <Text style={styles.valueWithLink}>
+                                    <Text
+                                        style={{
+                                            ...styles.valueWithLink,
+                                            color: themeColor('highlight')
+                                        }}
+                                    >
                                         {PrivacyUtils.sensitiveValue(
                                             block_hash
                                         )}
@@ -199,7 +214,12 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                         )
                                     }
                                 >
-                                    <Text style={styles.valueWithLink}>
+                                    <Text
+                                        style={{
+                                            ...styles.valueWithLink,
+                                            color: themeColor('highlight')
+                                        }}
+                                    >
                                         {PrivacyUtils.sensitiveValue(
                                             getBlockHeight.toString(),
                                             5,
@@ -258,7 +278,6 @@ const styles = StyleSheet.create({
     },
     valueWithLink: {
         paddingBottom: 5,
-        color: themeColor('highlight'),
         fontFamily: 'Lato-Regular'
     }
 });

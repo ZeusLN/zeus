@@ -235,7 +235,7 @@ export default class OpenChannel extends React.Component<
             <Icon
                 name="arrow-back"
                 onPress={() => navigation.navigate('Wallet')}
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
@@ -327,7 +327,12 @@ export default class OpenChannel extends React.Component<
                         />
                     )}
 
-                    <Text style={styles.secondaryText}>
+                    <Text
+                        style={{
+                            ...styles.secondaryText,
+                            color: themeColor('secondaryText')
+                        }}
+                    >
                         {localeString('views.OpenChannel.nodePubkey')}
                     </Text>
                     <TextInput
@@ -339,7 +344,12 @@ export default class OpenChannel extends React.Component<
                         editable={!openingChannel}
                     />
 
-                    <Text style={styles.secondaryText}>
+                    <Text
+                        style={{
+                            ...styles.secondaryText,
+                            color: themeColor('secondaryText')
+                        }}
+                    >
                         {localeString('views.OpenChannel.host')}
                     </Text>
                     <TextInput
@@ -351,7 +361,12 @@ export default class OpenChannel extends React.Component<
                         editable={!openingChannel}
                     />
 
-                    <Text style={styles.secondaryText}>
+                    <Text
+                        style={{
+                            ...styles.secondaryText,
+                            color: themeColor('secondaryText')
+                        }}
+                    >
                         {localeString('views.OpenChannel.localAmt')}
                     </Text>
                     <TextInput
@@ -366,7 +381,12 @@ export default class OpenChannel extends React.Component<
                         editable={!openingChannel}
                     />
                     {local_funding_amount === 'all' && (
-                        <Text style={styles.text}>
+                        <Text
+                            style={{
+                                ...styles.text,
+                                color: themeColor('text')
+                            }}
+                        >
                             {`${
                                 utxoBalance > 0
                                     ? utxoBalance
@@ -375,7 +395,12 @@ export default class OpenChannel extends React.Component<
                         </Text>
                     )}
 
-                    <Text style={styles.secondaryText}>
+                    <Text
+                        style={{
+                            ...styles.secondaryText,
+                            color: themeColor('secondaryText')
+                        }}
+                    >
                         {localeString('views.OpenChannel.numConf')}
                     </Text>
                     <TextInput
@@ -391,7 +416,12 @@ export default class OpenChannel extends React.Component<
                     />
 
                     <>
-                        <Text style={styles.secondaryText}>
+                        <Text
+                            style={{
+                                ...styles.secondaryText,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
                             {localeString('views.OpenChannel.satsPerByte')}
                         </Text>
                         {enableMempoolRates ? (
@@ -414,6 +444,7 @@ export default class OpenChannel extends React.Component<
                                     <Text
                                         style={{
                                             ...styles.text,
+                                            color: themeColor('text'),
                                             fontSize: 18
                                         }}
                                     >
@@ -505,11 +536,9 @@ export default class OpenChannel extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        color: themeColor('text'),
         fontFamily: 'Lato-Regular'
     },
     secondaryText: {
-        color: themeColor('secondaryText'),
         fontFamily: 'Lato-Regular'
     },
     textWhite: {
