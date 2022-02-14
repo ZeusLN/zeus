@@ -1,12 +1,13 @@
 import React from 'react';
-import { Button, Header, Image } from 'react-native-elements';
+import { Button, Header } from 'react-native-elements';
 import { TouchableOpacity } from 'react-native';
 import NodeIdenticon from '../components/NodeIdenticon';
 import { themeColor } from '../utils/ThemeUtils';
-import Scan from '../assets/images/SVG/Scan.svg';
-import { Body } from './text/Body';
 
-const Contact = require('./../assets/images/Contact.png');
+import Contact from '../assets/images/SVG/Mascot contact.svg';
+import Scan from '../assets/images/SVG/Scan.svg';
+
+import { Body } from './text/Body';
 
 const OpenChannelButton = ({ navigation }: { navigation: any }) => (
     <Button
@@ -59,13 +60,7 @@ export function WalletHeader({
             {multipleNodes ? (
                 <NodeIdenticon selectedNode={selectedNode} width={30} />
             ) : (
-                <Image
-                    source={Contact}
-                    style={{
-                        width: 30,
-                        height: 30
-                    }}
-                />
+                <Contact width={30} />
             )}
         </TouchableOpacity>
     );
