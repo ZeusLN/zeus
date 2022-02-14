@@ -377,7 +377,8 @@ export default class PaymentRequest extends React.Component<
                                         }
                                         trackColor={{
                                             false: '#767577',
-                                            true: themeColor('highlight')
+                                            true: themeColor('highlight'),
+                                            alignSelf: 'flex-end'
                                         }}
                                         disabled={lockAtomicMultiPathPayment}
                                     />
