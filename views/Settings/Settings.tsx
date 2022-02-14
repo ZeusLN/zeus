@@ -107,6 +107,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     <NodeIdenticon
                                         selectedNode={selectedNode}
                                         width={50}
+                                        rounded
                                     />
                                 </View>
                             )}
