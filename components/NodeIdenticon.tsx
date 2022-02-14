@@ -1,6 +1,9 @@
 import * as React from 'react';
-import { Avatar } from 'react-native-elements';
+import { View } from 'react-native';
 import Identicon from 'identicon.js';
+import { SvgXml } from 'react-native-svg';
+
+import Base64Utils from './../utils/Base64Utils';
 import PrivacyUtils from './../utils/PrivacyUtils';
 
 const hash = require('object-hash');
@@ -33,10 +36,12 @@ export const NodeTitle = (
 
 export default function NodeIdenticon({
     selectedNode,
-    width
+    width,
+    rounded
 }: {
     selectedNode: any;
     width?: number;
+    rounded?: boolean;
 }) {
     const title = NodeTitle(selectedNode, 24, true);
 
@@ -46,28 +51,16 @@ export default function NodeIdenticon({
                 ? `${title}-${selectedNode.username}`
                 : title
         ),
-        255
+        {
+            background: [255, 255, 255, 255],
+            size: width,
+            format: 'svg'
+        }
     ).toString();
 
-    const identicon = width ? (
-        <Avatar
-            source={{
-                uri: `data:image/png;base64,${data}`
-            }}
-            size="medium"
-            rounded
-            width={width}
-            height={width}
-        />
-    ) : (
-        <Avatar
-            source={{
-                uri: `data:image/png;base64,${data}`
-            }}
-            size="medium"
-            rounded
-        />
+    return (
+        <View style={{ borderRadius: rounded ? width : 0, overflow: 'hidden' }}>
+            <SvgXml xml={Base64Utils.atob(data)} />
+        </View>
     );
-
-    return identicon;
 }
