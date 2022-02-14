@@ -227,7 +227,8 @@ export default class LND {
         return this.postRequest('/v2/router/send', {
             ...data,
             // Tor timeout is 60 seconds so make sure LND times out first
-            timeout_seconds: 57
+            timeout_seconds: 57,
+            allow_self_payment: true
         });
     };
     closeChannel = (urlParams?: Array<string>) => {
