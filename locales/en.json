@@ -125,7 +125,6 @@
     "views.Settings.CertInstallInstructions.graph5": "If you're connecting to your node via an external hostname or via Tor you must add the hostname to the certificate. lnd provides an option to do this with the TLSExtraDomain option in its config. You'll have to delete and regenerate the certificate after you make the change.",
     "views.Settings.Nodes.title": "Nodes",
     "views.Settings.Nodes.noNodes": "No Nodes",
-    "views.Settings.Nodes.add": "Add a new node",
     "views.Settings.security": "Security",
     "views.Settings.Security.title": "Security settings",
     "views.ImportAccount.title": "Import account",
@@ -418,5 +417,9 @@
     "components.ChannelPicker.modal.set": "Set Channel",
     "backends.LND.wsReq.warning": "You may have to enable Certificate Verification to make these kind of calls",
     "utils.handleAnything.lightningAddressError": "Error fetching Lightning Address data",
-    "utils.handleAnything.notValid": "Value provided was not a valid Bitcoin address or Lightning Invoice"
+    "utils.handleAnything.notValid": "Value provided was not a valid Bitcoin address or Lightning Invoice",
+    "stores.SettingsStore.btcPayImplementationSupport": "Sorry, we currently only support BTCPay instances using lnd or c-lightning",
+    "stores.SettingsStore.btcPayFetchConfigError": "Error fetching BTCPay configuration",
+    "stores.SettingsStore.lndhubSuccess": "Successfully created LNDHub account. Record the username and password somewhere so you can restore your funds if something happens to your device. Then hit Save Node Config to continue.",
+    "stores.SettingsStore.lndhubError": "Error creating LNDHub account. Please check the host and try again."
 }

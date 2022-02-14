@@ -279,7 +279,12 @@ export default class EditFee extends React.Component<
                                 </View>
                             </TouchableWithoutFeedback>
 
-                            <Text style={styles.custom}>
+                            <Text
+                                style={{
+                                    ...styles.custom,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 {localeString('views.EditFee.custom')}
                             </Text>
                             <TouchableWithoutFeedback>
@@ -369,8 +374,7 @@ const styles = StyleSheet.create({
         color: '#A7A9AC',
         fontSize: 18,
         top: 48,
-        left: 15,
-        color: themeColor('text')
+        left: 15
     },
     confirmButton: {
         marginTop: 20,

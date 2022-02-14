@@ -57,10 +57,20 @@ export default class FeeBreakdown extends React.Component<
                 chanInfo[channelId].node1_policy ? (
                     <React.Fragment>
                         <View style={styles.title}>
-                            <Text style={styles.text}>
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 {localeString('views.Channel.initiatingParty')}
                             </Text>
-                            <Text style={styles.secondaryText}>
+                            <Text
+                                style={{
+                                    ...styles.secondaryText,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
                                 {chanInfo[channelId].node1_pub === nodeId
                                     ? localeString('views.Channel.yourNode')
                                     : peerDisplay ||
@@ -176,12 +186,22 @@ export default class FeeBreakdown extends React.Component<
                 ) : (
                     <React.Fragment>
                         <View style={styles.title}>
-                            <Text style={styles.text}>
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 {localeString(
                                     'components.FeeBreakdown.nowClosed'
                                 )}
                             </Text>
-                            <Text style={styles.secondaryText}>
+                            <Text
+                                style={{
+                                    ...styles.secondaryText,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
                                 {peerDisplay}
                             </Text>
                         </View>
@@ -193,10 +213,20 @@ export default class FeeBreakdown extends React.Component<
                     chanInfo[channelId].node2_policy && (
                         <React.Fragment>
                             <View style={styles.title}>
-                                <Text style={styles.text}>
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('text')
+                                    }}
+                                >
                                     {localeString('views.Channel.counterparty')}
                                 </Text>
-                                <Text style={styles.secondaryText}>
+                                <Text
+                                    style={{
+                                        ...styles.secondaryText,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
                                     {chanInfo[channelId].node2_pub === nodeId
                                         ? localeString('views.Channel.yourNode')
                                         : peerDisplay ||
@@ -321,12 +351,10 @@ export default class FeeBreakdown extends React.Component<
 const styles = StyleSheet.create({
     text: {
         fontFamily: 'Lato-Regular',
-        color: themeColor('text'),
         alignSelf: 'center'
     },
     secondaryText: {
         fontFamily: 'Lato-Regular',
-        color: themeColor('secondaryText'),
         alignSelf: 'center'
     },
     title: {

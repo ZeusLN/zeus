@@ -124,7 +124,7 @@ export default class SetFeesForm extends React.Component<
                 )}
 
                 {(expanded || showNewFeesForm) && (
-                    <React.Fragment>
+                    <View style={{ paddingTop: 15 }}>
                         {loading && <LoadingIndicator />}
                         {feesSubmitted && setFeesSuccess && (
                             <SuccessMessage
@@ -145,7 +145,12 @@ export default class SetFeesForm extends React.Component<
                             />
                         )}
 
-                        <Text style={styles.text}>
+                        <Text
+                            style={{
+                                ...styles.text,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
                             {`${localeString(
                                 'components.SetFeesForm.baseFee'
                             )} (${localeString('general.sats')})`}
@@ -163,7 +168,12 @@ export default class SetFeesForm extends React.Component<
                             autoCorrect={false}
                         />
 
-                        <Text style={styles.text}>
+                        <Text
+                            style={{
+                                ...styles.text,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
                             {`${localeString(
                                 'components.SetFeesForm.feeRate'
                             )} (${
@@ -187,7 +197,12 @@ export default class SetFeesForm extends React.Component<
                             autoCorrect={false}
                         />
 
-                        <Text style={styles.text}>
+                        <Text
+                            style={{
+                                ...styles.text,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
                             {localeString(
                                 'components.SetFeesForm.timeLockDelta'
                             )}
@@ -207,7 +222,12 @@ export default class SetFeesForm extends React.Component<
 
                         {implementation === 'lnd' && (
                             <>
-                                <Text style={styles.text}>
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
                                     {localeString(
                                         'components.SetFeesForm.minHtlc'
                                     )}
@@ -225,7 +245,12 @@ export default class SetFeesForm extends React.Component<
                                     autoCorrect={false}
                                 />
 
-                                <Text style={styles.text}>
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
                                     {localeString(
                                         'components.SetFeesForm.maxHtlc'
                                     )}
@@ -275,7 +300,7 @@ export default class SetFeesForm extends React.Component<
                                 tertiary
                             />
                         </View>
-                    </React.Fragment>
+                    </View>
                 )}
             </React.Fragment>
         );
@@ -284,7 +309,6 @@ export default class SetFeesForm extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        color: themeColor('text'),
         fontFamily: 'Lato-Regular'
     },
     button: {

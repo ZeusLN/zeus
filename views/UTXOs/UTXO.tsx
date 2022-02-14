@@ -91,7 +91,12 @@ export default class UTXO extends React.Component<UTXOProps> {
                                         )
                                     }
                                 >
-                                    <Text style={styles.valueWithLink}>
+                                    <Text
+                                        style={{
+                                            ...styles.valueWithLink,
+                                            color: themeColor('highlight')
+                                        }}
+                                    >
                                         {address}
                                     </Text>
                                 </TouchableOpacity>
@@ -110,7 +115,14 @@ export default class UTXO extends React.Component<UTXOProps> {
                                     UrlUtils.goToBlockExplorerTXID(tx, testnet)
                                 }
                             >
-                                <Text style={styles.valueWithLink}>{tx}</Text>
+                                <Text
+                                    style={{
+                                        ...styles.valueWithLink,
+                                        color: themeColor('highlight')
+                                    }}
+                                >
+                                    {tx}
+                                </Text>
                             </TouchableOpacity>
                         }
                         sensitive
@@ -152,7 +164,6 @@ const styles = StyleSheet.create({
     },
     valueWithLink: {
         paddingBottom: 5,
-        color: themeColor('highlight'),
         fontFamily: 'Lato-Regular'
     }
 });

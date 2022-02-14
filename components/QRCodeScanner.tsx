@@ -102,6 +102,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                                     title={localeString('general.cancel')}
                                     onPress={() => goBack()}
                                     iconOnly
+                                    noUppercase
                                 />
                             </View>
                         </RNCamera>
