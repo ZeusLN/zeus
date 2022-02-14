@@ -2,6 +2,7 @@ import RNSecureKeyStore, { ACCESSIBLE } from 'react-native-secure-key-store';
 import { action, observable } from 'mobx';
 import RNFetchBlob from 'rn-fetch-blob';
 import RESTUtils from '../utils/RESTUtils';
+import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 
 // lndhub
 import LoginRequest from './../models/LoginRequest';
@@ -162,39 +163,54 @@ export default class SettingsStore {
         const configRoute = data.split('config=')[1];
         this.btcPayError = null;
 
-        return RNFetchBlob.fetch('get', configRoute)
-            .then((response: any) => {
-                const status = response.info().status;
-                if (status == 200) {
-                    const data = response.json();
-                    const configuration = data.configurations[0];
-                    const { adminMacaroon, macaroon, type, uri } =
-                        configuration;
-
-                    if (type !== 'lnd-rest' && type !== 'clightning-rest') {
-                        this.btcPayError =
-                            'Sorry, we currently only support BTCPay instances using lnd or c-lightning';
+        if (configRoute.includes(".onion")) {
+            return doTorRequest(configRoute, RequestMethod.GET)
+                .then((response: any) => {
+                    return this.parseBTCPayConfig(response);
+                })
+                .catch((err: any) => {
+                    // handle error
+                    this.btcPayError = `Error getting BTCPay configuration: ${err.toString()}`;
+                });
+        } else {
+            return RNFetchBlob.fetch('get', configRoute)
+                .then((response: any) => {
+                    const status = response.info().status;
+                    if (status == 200) {
+                        const data = response.json();
+                        return this.parseBTCPayConfig(data);
                     } else {
-                        const config = {
-                            host: uri,
-                            macaroonHex: adminMacaroon || macaroon,
-                            implementation:
-                                type === 'clightning-rest'
-                                    ? 'c-lightning-REST'
-                                    : 'lnd'
-                        };
-
-                        return config;
+                        this.btcPayError = 'Error getting BTCPay configuration';
                     }
-                } else {
-                    this.btcPayError = 'Error getting BTCPay configuration';
-                }
-            })
-            .catch((err: any) => {
-                // handle error
-                this.btcPayError = `Error getting BTCPay configuration: ${err.toString()}`;
-            });
+                })
+                .catch((err: any) => {
+                    // handle error
+                    this.btcPayError = `Error getting BTCPay configuration: ${err.toString()}`;
+                });
+        }
     };
+
+    parseBTCPayConfig(data: any) {
+        const configuration = data.configurations[0];
+        const { adminMacaroon, macaroon, type, uri } =
+            configuration;
+
+        if (type !== 'lnd-rest' && type !== 'clightning-rest') {
+            this.btcPayError =
+                'Sorry, we currently only support BTCPay instances using lnd or c-lightning';
+        } else {
+            const config = {
+                host: uri,
+                macaroonHex: adminMacaroon || macaroon,
+                implementation:
+                    type === 'clightning-rest'
+                        ? 'c-lightning-REST'
+                        : 'lnd'
+            };
+
+            return config;
+        }
+    }
 
     hasCredentials() {
         return this.macaroonHex || this.accessKey ? true : false;
