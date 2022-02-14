@@ -3,6 +3,7 @@ import { action, observable } from 'mobx';
 import RNFetchBlob from 'rn-fetch-blob';
 
 import RESTUtils from '../utils/RESTUtils';
+import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import { localeString } from '../utils/LocaleUtils';
 
 // lndhub
@@ -166,44 +167,58 @@ export default class SettingsStore {
         const configRoute = data.split('config=')[1];
         this.btcPayError = null;
 
-        return RNFetchBlob.fetch('get', configRoute)
-            .then((response: any) => {
-                const status = response.info().status;
-                if (status == 200) {
-                    const data = response.json();
-                    const configuration = data.configurations[0];
-                    const { adminMacaroon, macaroon, type, uri } =
-                        configuration;
-
-                    if (type !== 'lnd-rest' && type !== 'clightning-rest') {
-                        this.btcPayError = localeString(
-                            'stores.SettingsStore.btcPayImplementationSupport'
-                        );
-                    } else {
-                        const config = {
-                            host: uri,
-                            macaroonHex: adminMacaroon || macaroon,
-                            implementation:
-                                type === 'clightning-rest'
-                                    ? 'c-lightning-REST'
-                                    : 'lnd'
-                        };
-
-                        return config;
-                    }
-                } else {
-                    this.btcPayError = localeString(
+        if (configRoute.includes('.onion')) {
+            return doTorRequest(configRoute, RequestMethod.GET)
+                .then((response: any) => {
+                    return this.parseBTCPayConfig(response);
+                })
+                .catch((err: any) => {
+                    // handle error
+                    this.btcPayError = `${localeString(
                         'stores.SettingsStore.btcPayFetchConfigError'
-                    );
-                }
-            })
-            .catch((err: any) => {
-                // handle error
-                this.btcPayError = `${localeString(
-                    'stores.SettingsStore.btcPayFetchConfigError'
-                )}: ${err.toString()}`;
-            });
+                    )}: ${err.toString()}`;
+                });
+        } else {
+            return RNFetchBlob.fetch('get', configRoute)
+                .then((response: any) => {
+                    const status = response.info().status;
+                    if (status == 200) {
+                        const data = response.json();
+                        return this.parseBTCPayConfig(data);
+                    } else {
+                        this.btcPayError = localeString(
+                            'stores.SettingsStore.btcPayFetchConfigError'
+                        );
+                    }
+                })
+                .catch((err: any) => {
+                    // handle error
+                    this.btcPayError = `${localeString(
+                        'stores.SettingsStore.btcPayFetchConfigError'
+                    )}: ${err.toString()}`;
+                });
+        }
     };
+
+    parseBTCPayConfig(data: any) {
+        const configuration = data.configurations[0];
+        const { adminMacaroon, macaroon, type, uri } = configuration;
+
+        if (type !== 'lnd-rest' && type !== 'clightning-rest') {
+            this.btcPayError = localeString(
+                'stores.SettingsStore.btcPayImplementationSupport'
+            );
+        } else {
+            const config = {
+                host: uri,
+                macaroonHex: adminMacaroon || macaroon,
+                implementation:
+                    type === 'clightning-rest' ? 'c-lightning-REST' : 'lnd'
+            };
+
+            return config;
+        }
+    }
 
     hasCredentials() {
         return this.macaroonHex || this.accessKey ? true : false;
