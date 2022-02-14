@@ -58,7 +58,7 @@ export function WalletHeader({
     const SettingsButton = () => (
         <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
             {multipleNodes ? (
-                <NodeIdenticon selectedNode={selectedNode} width={30} />
+                <NodeIdenticon selectedNode={selectedNode} width={30} rounded />
             ) : (
                 <Contact width={30} />
             )}
