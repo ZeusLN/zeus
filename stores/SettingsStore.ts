@@ -163,7 +163,7 @@ export default class SettingsStore {
         const configRoute = data.split('config=')[1];
         this.btcPayError = null;
 
-        if (configRoute.includes(".onion")) {
+        if (configRoute.includes('.onion')) {
             return doTorRequest(configRoute, RequestMethod.GET)
                 .then((response: any) => {
                     return this.parseBTCPayConfig(response);
@@ -192,8 +192,7 @@ export default class SettingsStore {
 
     parseBTCPayConfig(data: any) {
         const configuration = data.configurations[0];
-        const { adminMacaroon, macaroon, type, uri } =
-            configuration;
+        const { adminMacaroon, macaroon, type, uri } = configuration;
 
         if (type !== 'lnd-rest' && type !== 'clightning-rest') {
             this.btcPayError =
@@ -203,9 +202,7 @@ export default class SettingsStore {
                 host: uri,
                 macaroonHex: adminMacaroon || macaroon,
                 implementation:
-                    type === 'clightning-rest'
-                        ? 'c-lightning-REST'
-                        : 'lnd'
+                    type === 'clightning-rest' ? 'c-lightning-REST' : 'lnd'
             };
 
             return config;
