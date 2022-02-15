@@ -1,9 +1,10 @@
 import * as React from 'react';
 import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Button, Header, Icon } from 'react-native-elements';
+import { Header, Icon } from 'react-native-elements';
 
 import { Amount } from './../components/Amount';
+import Button from './../components/Button';
 import HopPicker from './../components/HopPicker';
 import KeyValue from './../components/KeyValue';
 import LoadingIndicator from './../components/LoadingIndicator';
@@ -367,21 +368,40 @@ export default class PaymentRequest extends React.Component<
                                             'views.PaymentRequest.amp'
                                         )}
                                     </Text>
-                                    <Switch
-                                        value={enableAmp}
-                                        onValueChange={() =>
-                                            this.setState({
-                                                enableAtomicMultiPathPayment:
-                                                    !enableAtomicMultiPathPayment
-                                            })
-                                        }
-                                        trackColor={{
-                                            false: '#767577',
-                                            true: themeColor('highlight'),
-                                            alignSelf: 'flex-end'
+                                    <View
+                                        style={{
+                                            flex: 1,
+                                            flexDirection: 'row',
+                                            justifyContent: 'flex-end'
                                         }}
-                                        disabled={lockAtomicMultiPathPayment}
-                                    />
+                                    >
+                                        <View
+                                            style={{
+                                                flex: 1,
+                                                flexDirection: 'row',
+                                                justifyContent: 'flex-end'
+                                            }}
+                                        >
+                                            <Switch
+                                                value={enableAmp}
+                                                onValueChange={() =>
+                                                    this.setState({
+                                                        enableAtomicMultiPathPayment:
+                                                            !enableAtomicMultiPathPayment
+                                                    })
+                                                }
+                                                trackColor={{
+                                                    false: '#767577',
+                                                    true: themeColor(
+                                                        'highlight'
+                                                    )
+                                                }}
+                                                disabled={
+                                                    lockAtomicMultiPathPayment
+                                                }
+                                            />
+                                        </View>
+                                    </View>
                                 </React.Fragment>
                             )}
 
@@ -515,10 +535,6 @@ export default class PaymentRequest extends React.Component<
                                             navigation.navigate(
                                                 'SendingLightning'
                                             );
-                                        }}
-                                        buttonStyle={{
-                                            backgroundColor: 'orange',
-                                            borderRadius: 30
                                         }}
                                     />
                                 </View>
