@@ -24,7 +24,7 @@ export default class BTCPayConfigQRScanner extends React.Component<
         const index = navigation.getParam('index', null);
 
         fetchBTCPayConfig(data)
-            .then((config: any) => {
+            .then((node: any) => {
                 if (SettingsStore.btcPayError) {
                     Alert.alert(
                         localeString('general.error'),
@@ -38,7 +38,11 @@ export default class BTCPayConfigQRScanner extends React.Component<
                         { cancelable: false }
                     );
                 }
-                navigation.navigate('AddEditNode', { node: config, index });
+                navigation.navigate('AddEditNode', {
+                    node,
+                    enableTor: node.host && node.host.includes('.onion'),
+                    index
+                });
             })
             .catch(() => {
                 Alert.alert(
