@@ -16,7 +16,8 @@ function NodeQRScanner(props: NodeQRProps) {
             const { pubkey, host } = NodeUriUtils.processNodeUri(data);
             navigation.navigate('OpenChannel', {
                 node_pubkey_string: pubkey,
-                host
+                host,
+                enableTor: host.includes('.onion')
             });
         } else {
             Alert.alert(

@@ -85,7 +85,8 @@ export default async function (data: string): Promise<any> {
             'OpenChannel',
             {
                 node_pubkey_string: pubkey,
-                host
+                host,
+                enableTor: host.includes('.onion')
             }
         ];
     } else if (hasAt && AddressUtils.isValidLightningAddress(value)) {
