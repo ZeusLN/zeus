@@ -139,7 +139,7 @@ export default class SendingLightning extends React.Component<
                     {!!success && !error && (
                         <Text
                             style={{
-                                color: 'white',
+                                color: themeColor('text'),
                                 fontFamily: 'Lato-Regular',
                                 padding: 20,
                                 fontSize: 22
@@ -158,10 +158,10 @@ export default class SendingLightning extends React.Component<
                                 preimage={payment_preimage}
                             />
                         )}
-                    {!!payment_hash && (
+                    {!!payment_hash && !(!!error || !!payment_error) && (
                         <Text
                             style={{
-                                color: 'white',
+                                color: themeColor('text'),
                                 fontFamily: 'Lato-Regular',
                                 paddingTop: 20,
                                 paddingLeft: 50,
@@ -174,7 +174,7 @@ export default class SendingLightning extends React.Component<
                     )}
 
                     <View style={styles.buttons}>
-                        {payment_hash && (
+                        {payment_hash && !(!!error || !!payment_error) && (
                             <View style={{ margin: 10, width: '100%' }}>
                                 <CopyButton
                                     title={localeString(
@@ -193,7 +193,10 @@ export default class SendingLightning extends React.Component<
                                 icon={{
                                     name: 'list',
                                     size: 25,
-                                    color: backgroundColor
+                                    color:
+                                        !!error || !!payment_error
+                                            ? 'darkred'
+                                            : backgroundColor
                                 }}
                                 onPress={() =>
                                     navigation.navigate('Wallet', {
@@ -201,8 +204,18 @@ export default class SendingLightning extends React.Component<
                                     })
                                 }
                                 titleStyle={{
-                                    color: backgroundColor
+                                    color:
+                                        !!error || !!payment_error
+                                            ? 'darkred'
+                                            : backgroundColor
                                 }}
+                                buttonStyle={
+                                    !!error || !!payment_error
+                                        ? {
+                                              backgroundColor: 'white'
+                                          }
+                                        : null
+                                }
                                 containerStyle={{ width: '100%' }}
                             />
                         )}
