@@ -171,6 +171,7 @@ export default class AddEditNode extends React.Component<
         const node = navigation.getParam('node', null);
         const index = navigation.getParam('index', null);
         const active = navigation.getParam('active', null);
+        const tor = navigation.getParam('enableTor', false);
         const saved = navigation.getParam('saved', null);
         const newEntry = navigation.getParam('newEntry', null);
 
@@ -208,7 +209,7 @@ export default class AddEditNode extends React.Component<
                 active,
                 saved,
                 newEntry,
-                enableTor
+                enableTor: tor || enableTor
             });
         } else {
             this.setState({

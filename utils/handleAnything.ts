@@ -43,6 +43,7 @@ export default async function (data: string): Promise<any> {
             'AddEditNode',
             {
                 node,
+                enableTor: node.host && node.host.includes('.onion'),
                 newEntry: true
             }
         ];
