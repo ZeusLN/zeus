@@ -520,8 +520,7 @@ export default class OpenChannel extends React.Component<
                                 title={localeString('general.enableNfc')}
                                 icon={{
                                     name: 'nfc',
-                                    size: 25,
-                                    color: 'white'
+                                    size: 25
                                 }}
                                 onPress={() => this.enableNfc()}
                                 secondary

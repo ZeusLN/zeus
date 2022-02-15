@@ -171,6 +171,7 @@ export default class AddEditNode extends React.Component<
         const node = navigation.getParam('node', null);
         const index = navigation.getParam('index', null);
         const active = navigation.getParam('active', null);
+        const tor = navigation.getParam('enableTor', false);
         const saved = navigation.getParam('saved', null);
         const newEntry = navigation.getParam('newEntry', null);
 
@@ -208,7 +209,7 @@ export default class AddEditNode extends React.Component<
                 active,
                 saved,
                 newEntry,
-                enableTor
+                enableTor: tor || enableTor
             });
         } else {
             this.setState({
@@ -409,9 +410,6 @@ export default class AddEditNode extends React.Component<
                             showCertModal: false
                         });
                         navigation.navigate('CertInstallInstructions');
-                    }}
-                    titleStyle={{
-                        color: 'white'
                     }}
                     secondary
                 />
@@ -632,9 +630,6 @@ export default class AddEditNode extends React.Component<
                                                     showCertModal: false
                                                 });
                                             }}
-                                            buttonStyle={{
-                                                borderRadius: 30
-                                            }}
                                             tertiary
                                         />
                                     </View>
@@ -648,10 +643,6 @@ export default class AddEditNode extends React.Component<
                                                     showCertModal: false
                                                 })
                                             }
-                                            buttonStyle={{
-                                                borderRadius: 30,
-                                                backgroundColor: 'grey'
-                                            }}
                                             primary
                                         />
                                     </View>
@@ -801,6 +792,7 @@ export default class AddEditNode extends React.Component<
                                         })
                                     }
                                     editable={!loading}
+                                    autoCorrect={false}
                                 />
 
                                 {implementation === 'spark' && (
@@ -878,6 +870,7 @@ export default class AddEditNode extends React.Component<
                                         })
                                     }
                                     editable={!loading}
+                                    autoCorrect={false}
                                 />
 
                                 <>
@@ -1158,13 +1151,6 @@ export default class AddEditNode extends React.Component<
                                     this.saveNodeConfiguration();
                                 }
                             }}
-                            buttonStyle={{
-                                backgroundColor: saved ? '#fff' : '#261339',
-                                borderRadius: 30
-                            }}
-                            titleStyle={{
-                                color: saved ? 'black' : 'white'
-                            }}
                         />
                     </View>
 
@@ -1187,9 +1173,6 @@ export default class AddEditNode extends React.Component<
                                 onPress={() =>
                                     this.setNodeConfigurationAsActive()
                                 }
-                                titleStyle={{
-                                    color: active ? 'white' : 'purple'
-                                }}
                             />
                         </View>
                     )}
@@ -1209,9 +1192,6 @@ export default class AddEditNode extends React.Component<
                                         }
                                     )
                                 }
-                                titleStyle={{
-                                    color: themeColor('background')
-                                }}
                                 secondary
                             />
                         </View>
@@ -1248,9 +1228,6 @@ export default class AddEditNode extends React.Component<
                                         index
                                     })
                                 }
-                                buttonStyle={{
-                                    borderRadius: 30
-                                }}
                                 secondary
                             />
                         </View>
@@ -1263,6 +1240,12 @@ export default class AddEditNode extends React.Component<
                                     'views.Settings.AddEditNode.deleteNode'
                                 )}
                                 onPress={() => this.deleteNodeConfig()}
+                                containerStyle={{
+                                    borderColor: 'red'
+                                }}
+                                titleStyle={{
+                                    color: 'red'
+                                }}
                                 secondary
                             />
                         </View>

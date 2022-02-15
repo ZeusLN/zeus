@@ -83,7 +83,7 @@
     "react-native-svg": "9.13.6",
     "react-native-svg-transformer": "1.0.0",
     "react-native-tcp": "3.3.2",
-    "react-native-tor": "github:Sifir-io/react-native-tor#feat/rn65_timeout",
+    "react-native-tor": "0.1.8",
     "react-native-udp": "2.7.0",
     "react-native-unimodules": "0.7.0",
     "react-native-v8": "0.61.5-patch.4",

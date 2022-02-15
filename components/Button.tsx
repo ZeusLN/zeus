@@ -5,6 +5,7 @@ import { themeColor } from './../utils/ThemeUtils';
 interface ButtonProps {
     title: string;
     icon?: any;
+    titleStyle?: any;
     onPress?: any;
     secondary?: boolean;
     tertiary?: boolean;
@@ -12,6 +13,7 @@ interface ButtonProps {
     iconOnly?: boolean;
     adaptiveWidth?: boolean;
     containerStyle?: any;
+    buttonStyle?: any;
     noUppercase?: boolean;
 }
 
@@ -19,6 +21,7 @@ function Button(props: ButtonProps) {
     const {
         title,
         icon,
+        titleStyle,
         onPress,
         secondary,
         tertiary,
@@ -26,6 +29,7 @@ function Button(props: ButtonProps) {
         iconOnly,
         adaptiveWidth,
         containerStyle,
+        buttonStyle,
         noUppercase
     } = props;
 
@@ -33,14 +37,18 @@ function Button(props: ButtonProps) {
         ? {
               ...containerStyle,
               borderWidth: secondary ? 2 : 0,
-              borderColor: themeColor('highlight'),
+              borderColor:
+                  (containerStyle && containerStyle.borderColor) ||
+                  themeColor('highlight'),
               alignSelf: 'center',
               borderRadius: 30
           }
         : {
               ...containerStyle,
               borderWidth: secondary ? 2 : 0,
-              borderColor: themeColor('highlight'),
+              borderColor:
+                  (containerStyle && containerStyle.borderColor) ||
+                  themeColor('highlight'),
               alignSelf: 'center',
               borderRadius: 30,
               width: '90%'
@@ -48,37 +56,61 @@ function Button(props: ButtonProps) {
 
     return (
         <ElementsButton
-            icon={{
-                ...icon,
-                color: iconOnly
-                    ? themeColor('text')
-                    : secondary
-                    ? themeColor('highlight')
-                    : themeColor('background')
-            }}
+            icon={
+                icon
+                    ? {
+                          color: icon.color
+                              ? icon.color
+                              : iconOnly
+                              ? themeColor('text')
+                              : secondary
+                              ? themeColor('highlight')
+                              : themeColor('background'),
+                          ...icon
+                      }
+                    : {
+                          color: iconOnly
+                              ? themeColor('text')
+                              : secondary
+                              ? themeColor('highlight')
+                              : themeColor('background')
+                      }
+            }
             title={title}
-            buttonStyle={{
-                backgroundColor: iconOnly
-                    ? 'transparent'
-                    : quaternary
-                    ? themeColor('background')
-                    : tertiary
-                    ? themeColor('highlight')
-                    : secondary
-                    ? themeColor('secondary')
-                    : themeColor('text')
-            }}
-            titleStyle={{
-                color: iconOnly
-                    ? themeColor('text')
-                    : quaternary
-                    ? themeColor('text')
-                    : secondary
-                    ? themeColor('highlight')
-                    : themeColor('background'),
-                textTransform: noUppercase ? 'none' : 'uppercase',
-                fontFamily: 'Lato-Bold'
-            }}
+            buttonStyle={
+                buttonStyle
+                    ? buttonStyle
+                    : {
+                          backgroundColor: iconOnly
+                              ? 'transparent'
+                              : quaternary
+                              ? themeColor('background')
+                              : tertiary
+                              ? themeColor('highlight')
+                              : secondary
+                              ? themeColor('secondary')
+                              : themeColor('text')
+                      }
+            }
+            titleStyle={
+                titleStyle
+                    ? {
+                          ...titleStyle,
+                          textTransform: noUppercase ? 'none' : 'uppercase',
+                          fontFamily: 'Lato-Bold'
+                      }
+                    : {
+                          color: iconOnly
+                              ? themeColor('text')
+                              : quaternary
+                              ? themeColor('text')
+                              : secondary
+                              ? themeColor('highlight')
+                              : themeColor('background'),
+                          textTransform: noUppercase ? 'none' : 'uppercase',
+                          fontFamily: 'Lato-Bold'
+                      }
+            }
             onPress={onPress}
             containerStyle={newContainerStyle}
         />
