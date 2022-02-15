@@ -549,8 +549,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         )}
                                         icon={{
                                             name: 'send',
-                                            size: 25,
-                                            color: 'white'
+                                            size: 25
                                         }}
                                         onPress={() =>
                                             this.sendCoins(satAmount)
@@ -725,8 +724,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         title={localeString('general.send')}
                                         icon={{
                                             name: 'send',
-                                            size: 25,
-                                            color: 'white'
+                                            size: 25
                                         }}
                                         onPress={() =>
                                             this.sendKeySendPayment(satAmount)
@@ -758,8 +756,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 title={localeString('views.Send.lookup')}
                                 icon={{
                                     name: 'send',
-                                    size: 25,
-                                    color: 'white'
+                                    size: 25
                                 }}
                                 onPress={() =>
                                     navigation.navigate('PaymentRequest')
@@ -772,8 +769,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             title={localeString('general.scan')}
                             icon={{
                                 name: 'crop-free',
-                                size: 25,
-                                color: 'white'
+                                size: 25
                             }}
                             onPress={() =>
                                 navigation.navigate('AddressQRCodeScanner')
@@ -788,8 +784,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 title={localeString('general.enableNfc')}
                                 icon={{
                                     name: 'nfc',
-                                    size: 25,
-                                    color: 'white'
+                                    size: 25
                                 }}
                                 onPress={() => this.enableNfc()}
                                 secondary
