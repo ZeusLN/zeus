@@ -255,6 +255,11 @@ export default class TransactionsStore {
             data.last_hop_pubkey = Base64Utils.hexToBase64(last_hop_pubkey);
         }
 
+        // Tor can't handle streaming updates
+        if (this.settingsStore.enableTor) {
+            data.no_inflight_updates = true;
+        }
+
         const payFunc =
             this.settingsStore.implementation === 'c-lightning-REST' && pubkey
                 ? RESTUtils.sendKeysend
