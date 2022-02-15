@@ -129,6 +129,10 @@ export default class CollapsedQR extends React.Component<
                         containerStyle={{
                             margin: 20
                         }}
+                        icon={{
+                            name: 'nfc',
+                            size: 25
+                        }}
                         onPress={() => this.toggleNfc()}
                         tertiary
                     />
