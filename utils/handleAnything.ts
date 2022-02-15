@@ -43,6 +43,7 @@ export default async function (data: string): Promise<any> {
             'AddEditNode',
             {
                 node,
+                enableTor: node.host && node.host.includes('.onion'),
                 newEntry: true
             }
         ];
@@ -85,8 +86,7 @@ export default async function (data: string): Promise<any> {
             'OpenChannel',
             {
                 node_pubkey_string: pubkey,
-                host,
-                enableTor: host.includes('.onion')
+                host
             }
         ];
     } else if (hasAt && AddressUtils.isValidLightningAddress(value)) {
