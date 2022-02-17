@@ -6,7 +6,6 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -326,8 +325,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
 
         return (
             <View style={{ flex: 1 }}>
-                <LinearGradient
-                    colors={themeColor('gradient')}
+                <View
                     style={{ flex: 1 }}
                 >
                     {!connecting && !loginRequired && (
@@ -439,7 +437,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                             </View>
                         </View>
                     )}
-                </LinearGradient>
+                </View>
             </View>
         );
     }
