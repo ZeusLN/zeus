@@ -6,7 +6,8 @@ import {
     View,
     ScrollView,
     TouchableOpacity,
-    TouchableWithoutFeedback
+    TouchableWithoutFeedback,
+    Switch
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
@@ -63,6 +64,7 @@ interface SendState {
     maxShardAmt: string;
     feeLimitSat: string;
     message: string;
+    enableAtomicMultiPathPayment: boolean;
 }
 
 @inject(
@@ -98,7 +100,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             maxParts: '16',
             maxShardAmt: '',
             feeLimitSat: '',
-            message: ''
+            message: '',
+            enableAtomicMultiPathPayment: false
         };
     }
 
@@ -227,10 +230,16 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     sendKeySendPayment = (satAmount: string | number) => {
         const { TransactionsStore, navigation } = this.props;
-        const { destination, maxParts, maxShardAmt, feeLimitSat, message } =
-            this.state;
+        const {
+            destination,
+            maxParts,
+            maxShardAmt,
+            feeLimitSat,
+            message,
+            enableAtomicMultiPathPayment
+        } = this.state;
 
-        if (RESTUtils.supportsAMP()) {
+        if (enableAtomicMultiPathPayment) {
             TransactionsStore.sendPayment({
                 amount: satAmount.toString(),
                 pubkey: destination,
@@ -282,7 +291,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             maxParts,
             maxShardAmt,
             feeLimitSat,
-            message
+            message,
+            enableAtomicMultiPathPayment
         } = this.state;
         const { confirmedBlockchainBalance } = BalanceStore;
         const { implementation, settings } = SettingsStore;
@@ -626,97 +636,148 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             }
                                             style={styles.textInput}
                                         />
+                                    </React.Fragment>
+                                )}
+                                {RESTUtils.supportsAMP() &&
+                                    enableAtomicMultiPathPayment && (
+                                        <React.Fragment>
+                                            <Text
+                                                style={{
+                                                    ...styles.secondaryText,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {`${localeString(
+                                                    'views.PaymentRequest.maxParts'
+                                                )} (${localeString(
+                                                    'general.optional'
+                                                )})`}
+                                                :
+                                            </Text>
+                                            <TextInput
+                                                keyboardType="numeric"
+                                                value={maxParts}
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        maxParts: text
+                                                    })
+                                                }
+                                                style={styles.textInput}
+                                            />
+                                            <Text
+                                                style={{
+                                                    ...styles.text,
+                                                    color: themeColor('text'),
+                                                    paddingBottom: 15
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.PaymentRequest.maxPartsDescription'
+                                                )}
+                                            </Text>
+                                            <Text
+                                                style={{
+                                                    ...styles.secondaryText,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {`${localeString(
+                                                    'views.PaymentRequest.feeLimit'
+                                                )} (${localeString(
+                                                    'general.sats'
+                                                )}) (${localeString(
+                                                    'general.optional'
+                                                )})`}
+                                                :
+                                            </Text>
+                                            <TextInput
+                                                keyboardType="numeric"
+                                                placeholder="100"
+                                                value={feeLimitSat}
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        feeLimitSat: text
+                                                    })
+                                                }
+                                                style={styles.textInput}
+                                            />
+                                            <Text
+                                                style={{
+                                                    ...styles.secondaryText,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {`${localeString(
+                                                    'views.PaymentRequest.maxShardAmt'
+                                                )} (${localeString(
+                                                    'general.sats'
+                                                )}) (${localeString(
+                                                    'general.optional'
+                                                )})`}
+                                                :
+                                            </Text>
+                                            <TextInput
+                                                keyboardType="numeric"
+                                                value={maxShardAmt}
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        maxShardAmt: text
+                                                    })
+                                                }
+                                                style={styles.textInput}
+                                            />
+                                        </React.Fragment>
+                                    )}
+                                {RESTUtils.supportsAMP() && (
+                                    <React.Fragment>
                                         <Text
                                             style={{
-                                                ...styles.secondaryText,
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {`${localeString(
-                                                'views.PaymentRequest.maxParts'
-                                            )} (${localeString(
-                                                'general.optional'
-                                            )})`}
-                                            :
-                                        </Text>
-                                        <TextInput
-                                            keyboardType="numeric"
-                                            value={maxParts}
-                                            onChangeText={(text: string) =>
-                                                this.setState({
-                                                    maxParts: text
-                                                })
-                                            }
-                                            style={styles.textInput}
-                                        />
-                                        <Text
-                                            style={{
-                                                ...styles.text,
+                                                ...styles.label,
                                                 color: themeColor('text'),
-                                                paddingBottom: 15
+                                                top: 25
                                             }}
                                         >
-                                            {localeString(
-                                                'views.PaymentRequest.maxPartsDescription'
-                                            )}
+                                            {localeString('views.Send.amp')}
                                         </Text>
-                                        <Text
+                                        <View
                                             style={{
-                                                ...styles.secondaryText,
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
+                                                flex: 1,
+                                                flexDirection: 'row',
+                                                justifyContent: 'flex-end'
                                             }}
                                         >
-                                            {`${localeString(
-                                                'views.PaymentRequest.feeLimit'
-                                            )} (${localeString(
-                                                'general.sats'
-                                            )}) (${localeString(
-                                                'general.optional'
-                                            )})`}
-                                            :
-                                        </Text>
-                                        <TextInput
-                                            keyboardType="numeric"
-                                            placeholder="100"
-                                            value={feeLimitSat}
-                                            onChangeText={(text: string) =>
-                                                this.setState({
-                                                    feeLimitSat: text
-                                                })
-                                            }
-                                            style={styles.textInput}
-                                        />
-                                        <Text
-                                            style={{
-                                                ...styles.secondaryText,
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {`${localeString(
-                                                'views.PaymentRequest.maxShardAmt'
-                                            )} (${localeString(
-                                                'general.sats'
-                                            )}) (${localeString(
-                                                'general.optional'
-                                            )})`}
-                                            :
-                                        </Text>
-                                        <TextInput
-                                            keyboardType="numeric"
-                                            value={maxShardAmt}
-                                            onChangeText={(text: string) =>
-                                                this.setState({
-                                                    maxShardAmt: text
-                                                })
-                                            }
-                                            style={styles.textInput}
-                                        />
+                                            <View
+                                                style={{
+                                                    flex: 1,
+                                                    flexDirection: 'row',
+                                                    justifyContent: 'flex-end'
+                                                }}
+                                            >
+                                                <Switch
+                                                    value={
+                                                        enableAtomicMultiPathPayment
+                                                    }
+                                                    onValueChange={() =>
+                                                        this.setState({
+                                                            enableAtomicMultiPathPayment:
+                                                                !enableAtomicMultiPathPayment
+                                                        })
+                                                    }
+                                                    trackColor={{
+                                                        false: '#767577',
+                                                        true: themeColor(
+                                                            'highlight'
+                                                        )
+                                                    }}
+                                                />
+                                            </View>
+                                        </View>
                                     </React.Fragment>
                                 )}
                                 <View style={styles.button}>
@@ -848,5 +909,9 @@ const styles = StyleSheet.create({
     editFeeButton: {
         paddingTop: 15,
         alignItems: 'center'
+    },
+    label: {
+        fontFamily: 'Lato-Regular',
+        paddingTop: 5
     }
 });

@@ -327,6 +327,7 @@
     "views.Send.editNetworkFees": "Edit network fees",
     "views.Send.keysendNotSupported": "does not support sending keysend payments at the moment.",
     "views.Send.lookup": "Look Up Payment Request",
+    "views.Send.amp": "Attempt atomic multi-path payment",
     "views.SendingLightning.sending": "Sending Transaction",
     "views.SendingLightning.success": "Transaction successfully sent",
     "views.SendingLightning.paymentHash": "Payment Hash",
