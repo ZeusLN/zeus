@@ -3,8 +3,7 @@ import {
     StyleSheet,
     Text,
     View,
-    Keyboard,
-    TouchableWithoutFeedback
+    ScrollView
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
@@ -130,188 +129,183 @@ export default class SetFeesForm extends React.Component<
                 )}
 
                 {(expanded || showNewFeesForm) && (
-                    <TouchableWithoutFeedback
-                        onPress={Keyboard.dismiss}
-                        accessible={false}
-                    >
-                        <View style={{ paddingTop: 15 }}>
-                            {loading && <LoadingIndicator />}
-                            {feesSubmitted && setFeesSuccess && (
-                                <SuccessMessage
-                                    message={localeString(
-                                        'components.SetFeesForm.success'
-                                    )}
-                                />
-                            )}
-                            {feesSubmitted && setFeesError && (
-                                <ErrorMessage
-                                    message={
-                                        setFeesErrorMsg
-                                            ? setFeesErrorMsg
-                                            : localeString(
-                                                  'components.SetFeesForm.error'
-                                              )
-                                    }
-                                />
-                            )}
-
-                            <Text
-                                style={{
-                                    ...styles.text,
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {`${localeString(
-                                    'components.SetFeesForm.baseFee'
-                                )} (${localeString('general.sats')})`}
-                            </Text>
-                            <TextInput
-                                keyboardType="numeric"
-                                placeholder={baseFee || '1'}
-                                value={newBaseFee}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        newBaseFee: text
-                                    })
-                                }
-                                autoCapitalize="none"
-                                autoCorrect={false}
-                            />
-
-                            <Text
-                                style={{
-                                    ...styles.text,
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {`${localeString(
-                                    'components.SetFeesForm.feeRate'
-                                )} (${
-                                    implementation === 'c-lightning-REST'
-                                        ? localeString(
-                                              'components.SetFeesForm.ppmMilliMsat'
-                                          )
-                                        : localeString('general.percentage')
-                                })`}
-                            </Text>
-                            <TextInput
-                                keyboardType="numeric"
-                                placeholder={feeRate || '1'}
-                                value={newFeeRate}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        newFeeRate: text
-                                    })
-                                }
-                                autoCapitalize="none"
-                                autoCorrect={false}
-                            />
-
-                            <Text
-                                style={{
-                                    ...styles.text,
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {localeString(
-                                    'components.SetFeesForm.timeLockDelta'
+                    <ScrollView style={{ paddingTop: 15 }}>
+                        {loading && <LoadingIndicator />}
+                        {feesSubmitted && setFeesSuccess && (
+                            <SuccessMessage
+                                message={localeString(
+                                    'components.SetFeesForm.success'
                                 )}
-                            </Text>
-                            <TextInput
-                                keyboardType="numeric"
-                                placeholder={timeLockDelta || '144'}
-                                value={newTimeLockDelta}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        newTimeLockDelta: text
-                                    })
-                                }
-                                autoCapitalize="none"
-                                autoCorrect={false}
                             />
+                        )}
+                        {feesSubmitted && setFeesError && (
+                            <ErrorMessage
+                                message={
+                                    setFeesErrorMsg
+                                        ? setFeesErrorMsg
+                                        : localeString(
+                                                'components.SetFeesForm.error'
+                                            )
+                                }
+                            />
+                        )}
 
-                            {implementation === 'lnd' && (
-                                <>
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('secondaryText')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'components.SetFeesForm.minHtlc'
-                                        )}
-                                    </Text>
-                                    <TextInput
-                                        keyboardType="numeric"
-                                        placeholder={minHTLC || '1'}
-                                        value={newMinHtlc}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                newMinHtlc: text
-                                            })
-                                        }
-                                        autoCapitalize="none"
-                                        autoCorrect={false}
-                                    />
+                        <Text
+                            style={{
+                                ...styles.text,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {`${localeString(
+                                'components.SetFeesForm.baseFee'
+                            )} (${localeString('general.sats')})`}
+                        </Text>
+                        <TextInput
+                            keyboardType="numeric"
+                            placeholder={baseFee || '1'}
+                            value={newBaseFee}
+                            onChangeText={(text: string) =>
+                                this.setState({
+                                    newBaseFee: text
+                                })
+                            }
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                        />
 
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('secondaryText')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'components.SetFeesForm.maxHtlc'
-                                        )}
-                                    </Text>
-                                    <TextInput
-                                        keyboardType="numeric"
-                                        placeholder={maxHTLC || '250000'}
-                                        value={newMaxHtlc}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                newMaxHtlc: text
-                                            })
-                                        }
-                                        autoCapitalize="none"
-                                        autoCorrect={false}
-                                    />
-                                </>
+                        <Text
+                            style={{
+                                ...styles.text,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {`${localeString(
+                                'components.SetFeesForm.feeRate'
+                            )} (${
+                                implementation === 'c-lightning-REST'
+                                    ? localeString(
+                                            'components.SetFeesForm.ppmMilliMsat'
+                                        )
+                                    : localeString('general.percentage')
+                            })`}
+                        </Text>
+                        <TextInput
+                            keyboardType="numeric"
+                            placeholder={feeRate || '1'}
+                            value={newFeeRate}
+                            onChangeText={(text: string) =>
+                                this.setState({
+                                    newFeeRate: text
+                                })
+                            }
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                        />
+
+                        <Text
+                            style={{
+                                ...styles.text,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {localeString(
+                                'components.SetFeesForm.timeLockDelta'
                             )}
+                        </Text>
+                        <TextInput
+                            keyboardType="numeric"
+                            placeholder={timeLockDelta || '144'}
+                            value={newTimeLockDelta}
+                            onChangeText={(text: string) =>
+                                this.setState({
+                                    newTimeLockDelta: text
+                                })
+                            }
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                        />
 
-                            <View style={styles.button}>
-                                <Button
-                                    title={localeString(
-                                        'components.SetFeesForm.submit'
-                                    )}
-                                    onPress={() => {
-                                        setFees(
-                                            newBaseFee,
-                                            newFeeRate,
-                                            Number(newTimeLockDelta),
-                                            channelPoint,
-                                            channelId,
-                                            newMinHtlc,
-                                            newMaxHtlc
-                                        ).then(() => {
-                                            if (
-                                                channelId &&
-                                                implementation === 'lnd' &&
-                                                !setFeesError
-                                            ) {
-                                                ChannelsStore.getChannelInfo(
-                                                    channelId
-                                                );
-                                            }
-                                        });
-                                        this.setState({ feesSubmitted: true });
+                        {implementation === 'lnd' && (
+                            <>
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('secondaryText')
                                     }}
-                                    tertiary
+                                >
+                                    {localeString(
+                                        'components.SetFeesForm.minHtlc'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    placeholder={minHTLC || '1'}
+                                    value={newMinHtlc}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            newMinHtlc: text
+                                        })
+                                    }
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
                                 />
-                            </View>
+
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'components.SetFeesForm.maxHtlc'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    placeholder={maxHTLC || '250000'}
+                                    value={newMaxHtlc}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            newMaxHtlc: text
+                                        })
+                                    }
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                />
+                            </>
+                        )}
+
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString(
+                                    'components.SetFeesForm.submit'
+                                )}
+                                onPress={() => {
+                                    setFees(
+                                        newBaseFee,
+                                        newFeeRate,
+                                        Number(newTimeLockDelta),
+                                        channelPoint,
+                                        channelId,
+                                        newMinHtlc,
+                                        newMaxHtlc
+                                    ).then(() => {
+                                        if (
+                                            channelId &&
+                                            implementation === 'lnd' &&
+                                            !setFeesError
+                                        ) {
+                                            ChannelsStore.getChannelInfo(
+                                                channelId
+                                            );
+                                        }
+                                    });
+                                    this.setState({ feesSubmitted: true });
+                                }}
+                                tertiary
+                            />
                         </View>
-                    </TouchableWithoutFeedback>
+                    </ScrollView>
                 )}
             </React.Fragment>
         );
