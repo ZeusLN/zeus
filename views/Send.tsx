@@ -743,7 +743,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 top: 25
                                             }}
                                         >
-                                            {localeString('views.Send.amp')}
+                                            {localeString('views.PaymentRequest.amp')}
                                         </Text>
                                         <View
                                             style={{
