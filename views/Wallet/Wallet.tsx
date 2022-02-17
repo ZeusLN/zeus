@@ -423,10 +423,6 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                             >
                                 <Button
                                     title={localeString('views.Settings.title')}
-                                    buttonStyle={{
-                                        backgroundColor: 'gray',
-                                        borderRadius: 30
-                                    }}
                                     containerStyle={{
                                         width: 320
                                     }}
