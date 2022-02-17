@@ -1,10 +1,5 @@
 import * as React from 'react';
-import {
-    StyleSheet,
-    Text,
-    View,
-    ScrollView
-} from 'react-native';
+import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
 import Button from './../components/Button';
@@ -144,8 +139,8 @@ export default class SetFeesForm extends React.Component<
                                     setFeesErrorMsg
                                         ? setFeesErrorMsg
                                         : localeString(
-                                                'components.SetFeesForm.error'
-                                            )
+                                              'components.SetFeesForm.error'
+                                          )
                                 }
                             />
                         )}
@@ -184,8 +179,8 @@ export default class SetFeesForm extends React.Component<
                             )} (${
                                 implementation === 'c-lightning-REST'
                                     ? localeString(
-                                            'components.SetFeesForm.ppmMilliMsat'
-                                        )
+                                          'components.SetFeesForm.ppmMilliMsat'
+                                      )
                                     : localeString('general.percentage')
                             })`}
                         </Text>
