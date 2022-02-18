@@ -636,6 +636,50 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             }
                                             style={styles.textInput}
                                         />
+                                        <Text
+                                            style={{
+                                                ...styles.label,
+                                                color: themeColor('text'),
+                                                top: 25
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.PaymentRequest.amp'
+                                            )}
+                                        </Text>
+                                        <View
+                                            style={{
+                                                flex: 1,
+                                                flexDirection: 'row',
+                                                justifyContent: 'flex-end'
+                                            }}
+                                        >
+                                            <View
+                                                style={{
+                                                    flex: 1,
+                                                    flexDirection: 'row',
+                                                    justifyContent: 'flex-end'
+                                                }}
+                                            >
+                                                <Switch
+                                                    value={
+                                                        enableAtomicMultiPathPayment
+                                                    }
+                                                    onValueChange={() =>
+                                                        this.setState({
+                                                            enableAtomicMultiPathPayment:
+                                                                !enableAtomicMultiPathPayment
+                                                        })
+                                                    }
+                                                    trackColor={{
+                                                        false: '#767577',
+                                                        true: themeColor(
+                                                            'highlight'
+                                                        )
+                                                    }}
+                                                />
+                                            </View>
+                                        </View>
                                     </React.Fragment>
                                 )}
                                 {RESTUtils.supportsAMP() &&
@@ -734,52 +778,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             />
                                         </React.Fragment>
                                     )}
-                                {RESTUtils.supportsAMP() && (
-                                    <React.Fragment>
-                                        <Text
-                                            style={{
-                                                ...styles.label,
-                                                color: themeColor('text'),
-                                                top: 25
-                                            }}
-                                        >
-                                            {localeString('views.PaymentRequest.amp')}
-                                        </Text>
-                                        <View
-                                            style={{
-                                                flex: 1,
-                                                flexDirection: 'row',
-                                                justifyContent: 'flex-end'
-                                            }}
-                                        >
-                                            <View
-                                                style={{
-                                                    flex: 1,
-                                                    flexDirection: 'row',
-                                                    justifyContent: 'flex-end'
-                                                }}
-                                            >
-                                                <Switch
-                                                    value={
-                                                        enableAtomicMultiPathPayment
-                                                    }
-                                                    onValueChange={() =>
-                                                        this.setState({
-                                                            enableAtomicMultiPathPayment:
-                                                                !enableAtomicMultiPathPayment
-                                                        })
-                                                    }
-                                                    trackColor={{
-                                                        false: '#767577',
-                                                        true: themeColor(
-                                                            'highlight'
-                                                        )
-                                                    }}
-                                                />
-                                            </View>
-                                        </View>
-                                    </React.Fragment>
-                                )}
                                 <View style={styles.button}>
                                     <Button
                                         title={localeString('general.send')}
