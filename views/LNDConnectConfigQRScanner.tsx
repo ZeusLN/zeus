@@ -23,6 +23,7 @@ export default class LNDConnectConfigQRScanner extends React.Component<
         if (host && port && macaroonHex) {
             navigation.navigate('AddEditNode', {
                 node: { host, port, macaroonHex },
+                enableTor: host && host.includes('.onion'),
                 index
             });
         } else {
