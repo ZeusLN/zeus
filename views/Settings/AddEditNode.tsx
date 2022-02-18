@@ -536,7 +536,8 @@ export default class AddEditNode extends React.Component<
                                         style={{
                                             ...styles.blackText,
                                             paddingTop: 20,
-                                            paddingBottom: 20
+                                            paddingBottom: 20,
+                                            color: 'black'
                                         }}
                                     >
                                         {localeString(
@@ -611,7 +612,8 @@ export default class AddEditNode extends React.Component<
                                         style={{
                                             ...styles.blackText,
                                             paddingTop: 20,
-                                            paddingBottom: 20
+                                            paddingBottom: 20,
+                                            color: 'black'
                                         }}
                                     >
                                         {localeString(
