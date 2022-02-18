@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
 import Button from './../components/Button';
@@ -124,7 +124,7 @@ export default class SetFeesForm extends React.Component<
                 )}
 
                 {(expanded || showNewFeesForm) && (
-                    <View style={{ paddingTop: 15 }}>
+                    <ScrollView style={{ paddingTop: 15 }}>
                         {loading && <LoadingIndicator />}
                         {feesSubmitted && setFeesSuccess && (
                             <SuccessMessage
@@ -300,7 +300,7 @@ export default class SetFeesForm extends React.Component<
                                 tertiary
                             />
                         </View>
-                    </View>
+                    </ScrollView>
                 )}
             </React.Fragment>
         );
