@@ -33,15 +33,10 @@ interface SettingsProps {
 @observer
 export default class Settings extends React.Component<SettingsProps, {}> {
     componentDidMount() {
-        this.refreshSettings();
-    }
-
-    UNSAFE_componentWillReceiveProps = () => {
-        this.refreshSettings();
-    };
-
-    async refreshSettings() {
-        await this.props.SettingsStore.getSettings();
+        // triggers when loaded from navigation or back action
+        this.props.navigation.addListener('didFocus', () => {
+            this.props.SettingsStore.getSettings();
+        });
     }
 
     render() {
