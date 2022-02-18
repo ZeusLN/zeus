@@ -382,9 +382,7 @@ export default class ChannelView extends React.Component<
                             <Button
                                 title={localeString('views.Channel.keysend')}
                                 icon={{
-                                    name: 'send',
-                                    size: 25,
-                                    color: '#fff'
+                                    name: 'send'
                                 }}
                                 onPress={() =>
                                     navigation.navigate('Send', {
@@ -405,9 +403,7 @@ export default class ChannelView extends React.Component<
                                     : localeString('views.Channel.close')
                             }
                             icon={{
-                                name: confirmCloseChannel ? 'cancel' : 'delete',
-                                size: 25,
-                                color: '#fff'
+                                name: confirmCloseChannel ? 'cancel' : 'delete'
                             }}
                             onPress={() =>
                                 this.setState({
@@ -478,9 +474,7 @@ export default class ChannelView extends React.Component<
                                         'views.Channel.confirmClose'
                                     )}
                                     icon={{
-                                        name: 'delete-forever',
-                                        size: 25,
-                                        color: '#fff'
+                                        name: 'delete-forever'
                                     }}
                                     onPress={() =>
                                         this.closeChannel(

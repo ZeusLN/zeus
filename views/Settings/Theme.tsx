@@ -86,6 +86,7 @@ export default class Theme extends React.Component<ThemeProps, ThemeStore> {
                                     backgroundColor: themeColor('background')
                                 }}
                                 onPress={async () => {
+                                    const settings = await getSettings();
                                     await setSettings(
                                         JSON.stringify(
                                             settings
@@ -103,10 +104,7 @@ export default class Theme extends React.Component<ThemeProps, ThemeStore> {
                                                 : { theme: item.value }
                                         )
                                     ).then(() => {
-                                        getSettings();
-                                        navigation.navigate('Settings', {
-                                            refresh: true
-                                        });
+                                        navigation.goBack();
                                     });
                                 }}
                             >
