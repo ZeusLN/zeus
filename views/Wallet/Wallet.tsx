@@ -6,7 +6,6 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -326,10 +325,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
 
         return (
             <View style={{ flex: 1 }}>
-                <LinearGradient
-                    colors={themeColor('gradient')}
-                    style={{ flex: 1 }}
-                >
+                <View style={{ flex: 1 }}>
                     {!connecting && !loginRequired && (
                         <NavigationContainer theme={Theme}>
                             <Tab.Navigator
@@ -423,12 +419,11 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                             >
                                 <Button
                                     title={localeString('views.Settings.title')}
-                                    buttonStyle={{
-                                        backgroundColor: 'gray',
-                                        borderRadius: 30
-                                    }}
                                     containerStyle={{
                                         width: 320
+                                    }}
+                                    titleStyle={{
+                                        color: 'white'
                                     }}
                                     onPress={() =>
                                         navigation.navigate('Settings')
@@ -439,7 +434,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                             </View>
                         </View>
                     )}
-                </LinearGradient>
+                </View>
             </View>
         );
     }
