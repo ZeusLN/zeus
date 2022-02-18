@@ -1,5 +1,5 @@
 import { action, observable } from 'mobx';
-import RNFetchBlob from 'rn-fetch-blob';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import SettingsStore from './SettingsStore';
 
 interface CurrencyDisplayRules {
@@ -183,7 +183,7 @@ export default class FiatStore {
     @action
     public getFiatRates = () => {
         this.loading = true;
-        RNFetchBlob.fetch(
+        ReactNativeBlobUtil.fetch(
             'GET',
             'https://pay.zeusln.app/api/rates?storeId=Fjt7gLnGpg4UeBMFccLquy3GTTEz4cHU4PZMU63zqMBo'
         )

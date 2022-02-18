@@ -1,6 +1,6 @@
 import RNSecureKeyStore, { ACCESSIBLE } from 'react-native-secure-key-store';
 import { action, observable } from 'mobx';
-import RNFetchBlob from 'rn-fetch-blob';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import RESTUtils from '../utils/RESTUtils';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
@@ -179,7 +179,7 @@ export default class SettingsStore {
                     )}: ${err.toString()}`;
                 });
         } else {
-            return RNFetchBlob.fetch('get', configRoute)
+            return ReactNativeBlobUtil.fetch('get', configRoute)
                 .then((response: any) => {
                     const status = response.info().status;
                     if (status == 200) {

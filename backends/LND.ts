@@ -1,4 +1,4 @@
-import RNFetchBlob from 'rn-fetch-blob';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import stores from '../stores/Stores';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import OpenChannelRequest from './../models/OpenChannelRequest';
@@ -44,7 +44,7 @@ export default class LND {
                 return response;
             });
         } else {
-            calls[id] = RNFetchBlob.config({
+            calls[id] = ReactNativeBlobUtil.config({
                 trusty: !certVerification
             })
                 .fetch(method, url, headers, data ? JSON.stringify(data) : data)
