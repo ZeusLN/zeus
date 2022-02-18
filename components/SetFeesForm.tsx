@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
 import Button from './../components/Button';
@@ -50,21 +50,14 @@ export default class SetFeesForm extends React.Component<
     constructor(props: any) {
         super(props);
 
-        const { SettingsStore } = props;
-        const { implementation } = SettingsStore;
-
         this.state = {
             showNewFeesForm: false,
             feesSubmitted: false,
-            newBaseFee: props.baseFee || '1',
-            newFeeRate: props.feeRate
-                ? props.feeRate
-                : implementation === 'c-lightning-REST'
-                ? '1'
-                : '0.001',
-            newTimeLockDelta: props.timeLockDelta || '144',
-            newMinHtlc: props.minHtlc,
-            newMaxHtlc: props.maxHtlc
+            newBaseFee: props.baseFee || '',
+            newFeeRate: props.feeRate || '',
+            newTimeLockDelta: props.timeLockDelta || '',
+            newMinHtlc: props.minHtlc || '',
+            newMaxHtlc: props.maxHtlc || ''
         };
     }
 
@@ -124,7 +117,7 @@ export default class SetFeesForm extends React.Component<
                 )}
 
                 {(expanded || showNewFeesForm) && (
-                    <View style={{ paddingTop: 15 }}>
+                    <ScrollView style={{ paddingTop: 15 }}>
                         {loading && <LoadingIndicator />}
                         {feesSubmitted && setFeesSuccess && (
                             <SuccessMessage
@@ -186,7 +179,11 @@ export default class SetFeesForm extends React.Component<
                         </Text>
                         <TextInput
                             keyboardType="numeric"
-                            placeholder={feeRate || '1'}
+                            placeholder={
+                                feeRate || implementation === 'c-lightning-REST'
+                                    ? '1'
+                                    : '0.001'
+                            }
                             value={newFeeRate}
                             onChangeText={(text: string) =>
                                 this.setState({
@@ -300,7 +297,7 @@ export default class SetFeesForm extends React.Component<
                                 tertiary
                             />
                         </View>
-                    </View>
+                    </ScrollView>
                 )}
             </React.Fragment>
         );

@@ -95,6 +95,7 @@ export default class DropdownSetting extends React.Component<
                             <Text
                                 style={{
                                     color: themeColor('text'),
+                                    backgroundColor: themeColor('secondary'),
                                     ...styles.field
                                 }}
                             >
@@ -118,7 +119,6 @@ const styles = StyleSheet.create({
         height: 55,
         top: 10,
         paddingTop: 15,
-        backgroundColor: '#31363F',
         borderRadius: 6,
         borderBottomWidth: 20,
         marginBottom: 20,
