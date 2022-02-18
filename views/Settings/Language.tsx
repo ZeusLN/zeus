@@ -136,7 +136,6 @@ export default class Language extends React.Component<
                                                 : { locale: item.value }
                                         )
                                     ).then(() => {
-                                        getSettings();
                                         navigation.goBack();
                                     });
                                 }}

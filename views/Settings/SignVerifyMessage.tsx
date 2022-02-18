@@ -211,18 +211,9 @@ export default class SignVerifyMessage extends React.Component<
                                         'views.Settings.signMessage.button'
                                     )}
                                     icon={{
-                                        name: 'create',
-                                        size: 25,
-                                        color: 'white'
+                                        name: 'create'
                                     }}
                                     onPress={() => signMessage(messageToSign)}
-                                    buttonStyle={{
-                                        backgroundColor: '#261339',
-                                        borderRadius: 30
-                                    }}
-                                    titleStyle={{
-                                        color: 'white'
-                                    }}
                                 />
                             </View>
 
@@ -340,13 +331,6 @@ export default class SignVerifyMessage extends React.Component<
                                             signature: signatureToVerify
                                         })
                                     }
-                                    buttonStyle={{
-                                        backgroundColor: '#261339',
-                                        borderRadius: 30
-                                    }}
-                                    titleStyle={{
-                                        color: 'white'
-                                    }}
                                 />
                             </View>
                         </View>
