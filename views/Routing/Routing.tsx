@@ -7,7 +7,7 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Spacer } from '../../components/layout/Spacer';
 import LoadingIndicator from '../../components/LoadingIndicator';
 
-import Pie from '../../images/SVG/Pie.svg';
+import Pie from '../../assets/images/SVG/Pie.svg';
 
 import FeeStore from '../../stores/FeeStore';
 import SettingsStore from '../../stores/SettingsStore';
@@ -117,7 +117,11 @@ export default class Routing extends React.PureComponent<
         const oneDButton = () => (
             <Text
                 style={{
-                    color: selectedIndex === 0 ? 'black' : 'white'
+                    fontFamily: 'Lato-Regular',
+                    color:
+                        selectedIndex === 0
+                            ? themeColor('background')
+                            : themeColor('text')
                 }}
             >
                 D
@@ -126,7 +130,11 @@ export default class Routing extends React.PureComponent<
         const oneWButton = () => (
             <Text
                 style={{
-                    color: selectedIndex === 1 ? 'black' : 'white'
+                    fontFamily: 'Lato-Regular',
+                    color:
+                        selectedIndex === 1
+                            ? themeColor('background')
+                            : themeColor('text')
                 }}
             >
                 1W
@@ -135,7 +143,11 @@ export default class Routing extends React.PureComponent<
         const oneMButton = () => (
             <Text
                 style={{
-                    color: selectedIndex === 2 ? 'black' : 'white'
+                    fontFamily: 'Lato-Regular',
+                    color:
+                        selectedIndex === 2
+                            ? themeColor('background')
+                            : themeColor('text')
                 }}
             >
                 1M
@@ -144,7 +156,11 @@ export default class Routing extends React.PureComponent<
         const threeMButton = () => (
             <Text
                 style={{
-                    color: selectedIndex === 3 ? 'black' : 'white'
+                    fontFamily: 'Lato-Regular',
+                    color:
+                        selectedIndex === 3
+                            ? themeColor('background')
+                            : themeColor('text')
                 }}
             >
                 3M
@@ -153,7 +169,11 @@ export default class Routing extends React.PureComponent<
         const sixMButton = () => (
             <Text
                 style={{
-                    color: selectedIndex === 4 ? 'black' : 'white'
+                    fontFamily: 'Lato-Regular',
+                    color:
+                        selectedIndex === 4
+                            ? themeColor('background')
+                            : themeColor('text')
                 }}
             >
                 6M
@@ -162,7 +182,11 @@ export default class Routing extends React.PureComponent<
         const oneYButton = () => (
             <Text
                 style={{
-                    color: selectedIndex === 5 ? 'black' : 'white'
+                    fontFamily: 'Lato-Regular',
+                    color:
+                        selectedIndex === 5
+                            ? themeColor('background')
+                            : themeColor('text')
                 }}
             >
                 1Y
@@ -194,6 +218,9 @@ export default class Routing extends React.PureComponent<
                     }}
                     rightComponent={<FeeBadge navigation={navigation} />}
                     backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <RoutingHeader
                     dayEarned={dayEarned}
@@ -243,6 +270,7 @@ export default class Routing extends React.PureComponent<
                         {forwardingEvents.length === 0 && !loading && (
                             <Text
                                 style={{
+                                    fontFamily: 'Lato-Regular',
                                     color: themeColor('text'),
                                     alignSelf: 'center',
                                     top: 100

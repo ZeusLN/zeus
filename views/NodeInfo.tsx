@@ -37,7 +37,7 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
             <Icon
                 name="arrow-back"
                 onPress={() => navigation.navigate('Wallet')}
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
@@ -128,9 +128,15 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.NodeInfo.title'),
-                        style: { color: '#fff' }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
-                    backgroundColor="#1f2328"
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
 
                 <View style={styles.content}>
@@ -148,6 +154,7 @@ const styles = StyleSheet.create({
     },
     error: {
         paddingBottom: 5,
-        color: 'red'
+        color: 'red',
+        fontFamily: 'Lato-Regular'
     }
 });

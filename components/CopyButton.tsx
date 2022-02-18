@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Platform } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import Button from './../components/Button';
 import { localeString } from './../utils/LocaleUtils';
@@ -63,7 +64,8 @@ export default class CopyButton extends React.Component<
                     size: 25
                 }}
                 containerStyle={{
-                    marginBottom: 10
+                    marginTop: 10,
+                    marginBottom: Platform.OS === 'android' ? 0 : 20
                 }}
                 onPress={() => this.copyToClipboard()}
                 secondary

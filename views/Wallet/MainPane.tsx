@@ -14,7 +14,7 @@ import SettingsStore from './../../stores/SettingsStore';
 
 import { version, playStore } from './../../package.json';
 
-const TorIcon = require('./../../images/tor.png');
+const TorIcon = require('./../../assets/images/tor.png');
 
 interface MainPaneProps {
     navigation: any;
@@ -123,7 +123,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                     style={{
                         height: 220,
                         alignItems: 'center',
-                        backgroundColor: themeColor('secondary')
+                        backgroundColor: themeColor('background')
                     }}
                 >
                     <WalletHeader
@@ -132,14 +132,23 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                     />
                     {!BalanceStore.loadingLightningBalance &&
                         !BalanceStore.loadingBlockchainBalance && (
-                            <>
+                            <View style={{ marginTop: 20 }}>
                                 {implementation === 'lndhub' ? (
                                     <LightningBalance />
                                 ) : (
                                     <BalanceViewCombined />
                                 )}
-                                {infoValue !== 'ⓘ' && <NetworkBadge />}
-                            </>
+                                {infoValue !== 'ⓘ' && (
+                                    <View
+                                        style={{
+                                            marginTop: 5,
+                                            alignItems: 'center'
+                                        }}
+                                    >
+                                        <NetworkBadge />
+                                    </View>
+                                )}
+                            </View>
                         )}
                 </View>
             );
@@ -155,6 +164,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                 >
                     <Text
                         style={{
+                            fontFamily: 'Lato-Regular',
                             color: '#fff',
                             fontSize: 20,
                             marginTop: 20,
@@ -186,6 +196,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                     />
                     <Text
                         style={{
+                            fontFamily: 'Lato-Regular',
                             color: '#fff',
                             fontSize: 12,
                             marginTop: 20,

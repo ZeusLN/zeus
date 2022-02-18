@@ -173,7 +173,7 @@ export default class ChannelView extends React.Component<
             <Icon
                 name="arrow-back"
                 onPress={() => navigation.navigate('Wallet')}
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
@@ -190,16 +190,23 @@ export default class ChannelView extends React.Component<
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Channel.title'),
-                        style: { color: '#fff' }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
-                    backgroundColor="#1f2328"
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <View style={styles.content}>
                     <View style={styles.center}>
                         <Text
                             style={{
-                                ...styles.alias,
-                                color: themeColor('text')
+                                color: themeColor('text'),
+                                fontFamily: 'Lato-Regular',
+                                ...styles.alias
                             }}
                         >
                             {peerDisplay}
@@ -207,8 +214,9 @@ export default class ChannelView extends React.Component<
                         {remote_pubkey && (
                             <Text
                                 style={{
-                                    ...styles.pubkey,
-                                    color: themeColor('text')
+                                    color: themeColor('text'),
+                                    fontFamily: 'Lato-Regular',
+                                    ...styles.pubkey
                                 }}
                             >
                                 {PrivacyUtils.sensitiveValue(remote_pubkey)}
@@ -225,16 +233,18 @@ export default class ChannelView extends React.Component<
                         <TouchableOpacity onPress={() => changeUnits()}>
                             <Text
                                 style={{
-                                    ...styles.balance,
-                                    color: themeColor('text')
+                                    color: themeColor('text'),
+                                    fontFamily: 'Lato-Regular',
+                                    ...styles.balance
                                 }}
                             >{`${localeString('views.Channel.localBalance')}: ${
                                 units && channelBalanceLocal
                             }`}</Text>
                             <Text
                                 style={{
-                                    ...styles.balance,
-                                    color: themeColor('text')
+                                    color: themeColor('text'),
+                                    fontFamily: 'Lato-Regular',
+                                    ...styles.balance
                                 }}
                             >{`${localeString(
                                 'views.Channel.remoteBalance'
@@ -242,8 +252,9 @@ export default class ChannelView extends React.Component<
                             {unsettled_balance && (
                                 <Text
                                     style={{
-                                        ...styles.balance,
-                                        color: themeColor('text')
+                                        color: themeColor('text'),
+                                        fontFamily: 'Lato-Regular',
+                                        ...styles.balance
                                     }}
                                 >{`${localeString(
                                     'views.Channel.unsettledBalance'
@@ -371,9 +382,7 @@ export default class ChannelView extends React.Component<
                             <Button
                                 title={localeString('views.Channel.keysend')}
                                 icon={{
-                                    name: 'send',
-                                    size: 25,
-                                    color: '#fff'
+                                    name: 'send'
                                 }}
                                 onPress={() =>
                                     navigation.navigate('Send', {
@@ -394,9 +403,7 @@ export default class ChannelView extends React.Component<
                                     : localeString('views.Channel.close')
                             }
                             icon={{
-                                name: confirmCloseChannel ? 'cancel' : 'delete',
-                                size: 25,
-                                color: '#fff'
+                                name: confirmCloseChannel ? 'cancel' : 'delete'
                             }}
                             onPress={() =>
                                 this.setState({
@@ -411,11 +418,7 @@ export default class ChannelView extends React.Component<
                         <React.Fragment>
                             {(implementation === 'lnd' || !implementation) && (
                                 <React.Fragment>
-                                    <Text
-                                        style={{
-                                            color: themeColor('text')
-                                        }}
-                                    >
+                                    <Text style={styles.text}>
                                         {localeString(
                                             'views.Channel.closingRate'
                                         )}
@@ -436,10 +439,8 @@ export default class ChannelView extends React.Component<
                                         <>
                                             <Text
                                                 style={{
-                                                    top: 20,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
+                                                    ...styles.secondaryText,
+                                                    top: 20
                                                 }}
                                             >
                                                 {localeString(
@@ -473,9 +474,7 @@ export default class ChannelView extends React.Component<
                                         'views.Channel.confirmClose'
                                     )}
                                     icon={{
-                                        name: 'delete-forever',
-                                        size: 25,
-                                        color: '#fff'
+                                        name: 'delete-forever'
                                     }}
                                     onPress={() =>
                                         this.closeChannel(
@@ -497,6 +496,14 @@ export default class ChannelView extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    text: {
+        color: themeColor('text'),
+        fontFamily: 'Lato-Regular'
+    },
+    secondaryText: {
+        color: themeColor('secondaryText'),
+        fontFamily: 'Lato-Regular'
+    },
     content: {
         paddingLeft: 20,
         paddingRight: 20

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import LnurlPaySuccess from './LnurlPay/Success';
 
@@ -13,8 +13,8 @@ import LnurlPayStore from './../stores/LnurlPayStore';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
-import Success from './../images/GIF/Success.gif';
-import WordLogo from './../images/SVG/Word Logo.svg';
+import Success from './../assets/images/GIF/Success.gif';
+import WordLogo from './../assets/images/SVG/Word Logo.svg';
 
 interface SendingLightningProps {
     navigation: any;
@@ -65,7 +65,7 @@ export default class SendingLightning extends React.Component<
             payment_route || status === 'complete' || status === 'SUCCEEDED';
 
         return (
-            <View
+            <ScrollView
                 style={{
                     ...styles.container,
                     backgroundColor
@@ -80,7 +80,8 @@ export default class SendingLightning extends React.Component<
                     {loading && (
                         <Text
                             style={{
-                                color: themeColor('text')
+                                color: themeColor('text'),
+                                fontFamily: 'Lato-Regular'
                             }}
                         >
                             {localeString('views.SendingLightning.sending')}
@@ -109,6 +110,7 @@ export default class SendingLightning extends React.Component<
                         <Text
                             style={{
                                 color: 'white',
+                                fontFamily: 'Lato-Regular',
                                 marginTop: 70,
                                 padding: 20,
                                 fontSize:
@@ -137,7 +139,8 @@ export default class SendingLightning extends React.Component<
                     {!!success && !error && (
                         <Text
                             style={{
-                                color: 'white',
+                                color: themeColor('text'),
+                                fontFamily: 'Lato-Regular',
                                 padding: 20,
                                 fontSize: 22
                             }}
@@ -155,10 +158,11 @@ export default class SendingLightning extends React.Component<
                                 preimage={payment_preimage}
                             />
                         )}
-                    {!!payment_hash && (
+                    {!!payment_hash && !(!!error || !!payment_error) && (
                         <Text
                             style={{
-                                color: 'white',
+                                color: themeColor('text'),
+                                fontFamily: 'Lato-Regular',
                                 paddingTop: 20,
                                 paddingLeft: 50,
                                 paddingRight: 50,
@@ -170,8 +174,8 @@ export default class SendingLightning extends React.Component<
                     )}
 
                     <View style={styles.buttons}>
-                        {payment_hash && (
-                            <View style={{ marginBottom: 10, width: '100%' }}>
+                        {payment_hash && !(!!error || !!payment_error) && (
+                            <View style={{ margin: 10, width: '100%' }}>
                                 <CopyButton
                                     title={localeString(
                                         'views.SendingLightning.copyPaymentHash'
@@ -189,7 +193,10 @@ export default class SendingLightning extends React.Component<
                                 icon={{
                                     name: 'list',
                                     size: 25,
-                                    color: backgroundColor
+                                    color:
+                                        !!error || !!payment_error
+                                            ? 'darkred'
+                                            : backgroundColor
                                 }}
                                 onPress={() =>
                                     navigation.navigate('Wallet', {
@@ -197,14 +204,24 @@ export default class SendingLightning extends React.Component<
                                     })
                                 }
                                 titleStyle={{
-                                    color: backgroundColor
+                                    color:
+                                        !!error || !!payment_error
+                                            ? 'darkred'
+                                            : backgroundColor
                                 }}
+                                buttonStyle={
+                                    !!error || !!payment_error
+                                        ? {
+                                              backgroundColor: 'white'
+                                          }
+                                        : null
+                                }
                                 containerStyle={{ width: '100%' }}
                             />
                         )}
                     </View>
                 </View>
-            </View>
+            </ScrollView>
         );
     }
 }

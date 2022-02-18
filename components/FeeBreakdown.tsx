@@ -59,16 +59,16 @@ export default class FeeBreakdown extends React.Component<
                         <View style={styles.title}>
                             <Text
                                 style={{
-                                    color: themeColor('text'),
-                                    alignSelf: 'center'
+                                    ...styles.text,
+                                    color: themeColor('text')
                                 }}
                             >
                                 {localeString('views.Channel.initiatingParty')}
                             </Text>
                             <Text
                                 style={{
-                                    color: themeColor('secondaryText'),
-                                    alignSelf: 'center'
+                                    ...styles.secondaryText,
+                                    color: themeColor('secondaryText')
                                 }}
                             >
                                 {chanInfo[channelId].node1_pub === nodeId
@@ -188,8 +188,8 @@ export default class FeeBreakdown extends React.Component<
                         <View style={styles.title}>
                             <Text
                                 style={{
-                                    color: themeColor('text'),
-                                    alignSelf: 'center'
+                                    ...styles.text,
+                                    color: themeColor('text')
                                 }}
                             >
                                 {localeString(
@@ -198,8 +198,8 @@ export default class FeeBreakdown extends React.Component<
                             </Text>
                             <Text
                                 style={{
-                                    color: themeColor('secondaryText'),
-                                    alignSelf: 'center'
+                                    ...styles.secondaryText,
+                                    color: themeColor('secondaryText')
                                 }}
                             >
                                 {peerDisplay}
@@ -215,16 +215,16 @@ export default class FeeBreakdown extends React.Component<
                             <View style={styles.title}>
                                 <Text
                                     style={{
-                                        color: themeColor('text'),
-                                        alignSelf: 'center'
+                                        ...styles.text,
+                                        color: themeColor('text')
                                     }}
                                 >
                                     {localeString('views.Channel.counterparty')}
                                 </Text>
                                 <Text
                                     style={{
-                                        color: themeColor('secondaryText'),
-                                        alignSelf: 'center'
+                                        ...styles.secondaryText,
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {chanInfo[channelId].node2_pub === nodeId
@@ -349,6 +349,14 @@ export default class FeeBreakdown extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    text: {
+        fontFamily: 'Lato-Regular',
+        alignSelf: 'center'
+    },
+    secondaryText: {
+        fontFamily: 'Lato-Regular',
+        alignSelf: 'center'
+    },
     title: {
         paddingTop: 15,
         paddingBottom: 5

@@ -23,13 +23,14 @@ export default class LNDConnectConfigQRScanner extends React.Component<
         if (host && port && macaroonHex) {
             navigation.navigate('AddEditNode', {
                 node: { host, port, macaroonHex },
+                enableTor: host && host.includes('.onion'),
                 index
             });
         } else {
             Alert.alert(
                 localeString('general.error'),
                 localeString('views.LNDConnectConfigQRScanner.error'),
-                [{ text: 'OK', onPress: () => void 0 }],
+                [{ text: localeString('general.ok'), onPress: () => void 0 }],
                 { cancelable: false }
             );
 
@@ -44,8 +45,6 @@ export default class LNDConnectConfigQRScanner extends React.Component<
 
         return (
             <QRCodeScanner
-                title={localeString('views.LNDConnectConfigQRScanner.title')}
-                text={localeString('views.LNDConnectConfigQRScanner.text')}
                 handleQRScanned={this.handleLNDConnectConfigInvoiceScanned}
                 goBack={() => navigation.navigate('AddEditNode', { index })}
             />

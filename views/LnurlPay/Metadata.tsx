@@ -50,7 +50,8 @@ export default class LnurlPayMetadata extends React.Component<LnurlPayMetadataPr
                 ) : null}
                 <Text
                     style={{
-                        color: themeColor('text')
+                        color: themeColor('text'),
+                        fontFamily: 'Lato-Regular'
                     }}
                 >
                     {text}

@@ -7,10 +7,10 @@ import Button from './../components/Button';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
-const One = require('./../images/intro/1.png');
-const Two = require('./../images/intro/2.png');
-const Three = require('./../images/intro/3.png');
-const Four = require('./../images/intro/4.png');
+const One = require('./../assets/images/intro/1.png');
+const Two = require('./../assets/images/intro/2.png');
+const Three = require('./../assets/images/intro/3.png');
+const Four = require('./../assets/images/intro/4.png');
 
 interface IntroProps {
     navigation: any;
@@ -28,6 +28,7 @@ export default class Intro extends React.Component<IntroProps, IntroState> {
     constructor(props: any) {
         super(props);
         this.screenWidth = Dimensions.get('window').width;
+        this.screenHeight = Dimensions.get('window').height;
         this.state = {
             activeIndex: 0,
             carouselItems: [
@@ -55,45 +56,66 @@ export default class Intro extends React.Component<IntroProps, IntroState> {
         };
     }
 
-    _renderItem({ item }: { item: any }) {
-        return (
+    render() {
+        const { navigation } = this.props;
+        const { carouselItems, activeIndex } = this.state;
+
+        const renderItem = ({ item }: { item: any }) => (
             <View
                 style={{
-                    borderRadius: 5,
-                    height: 450
+                    borderRadius: 5
                 }}
             >
                 <Image
                     source={item.illustration}
-                    style={{ width: this.screenWidth, height: 520 }}
+                    style={{
+                        width: this.screenWidth,
+                        height: this.screenHeight - 200
+                    }}
                 />
-                <Text
+                <View
                     style={{
-                        fontSize: 25,
-                        color: themeColor('text'),
-                        alignSelf: 'center',
-                        paddingTop: 10
+                        backgroundColor: themeColor('background'),
+                        width: '100%',
+                        bottom: 45
                     }}
                 >
-                    {item.title}
-                </Text>
-                <Text
-                    style={{
-                        fontSize: 20,
-                        color: themeColor('secondaryText'),
-                        alignSelf: 'center',
-                        padding: 10
-                    }}
-                >
-                    {item.text}
-                </Text>
+                    <Text
+                        style={{
+                            fontSize: 23,
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular',
+                            alignSelf: 'center',
+                            paddingTop: 10
+                        }}
+                    >
+                        {item.title}
+                    </Text>
+                    <Text
+                        style={{
+                            fontSize: 18,
+                            color: themeColor('secondaryText'),
+                            fontFamily: 'Lato-Regular',
+                            alignSelf: 'center',
+                            paddingLeft: 10,
+                            paddingRight: 10,
+                            paddingTop: 6,
+                            paddingBottom: 8
+                        }}
+                    >
+                        {item.text}
+                    </Text>
+                    {item.text ===
+                        localeString('views.Intro.carousel4.text') && (
+                        <Button
+                            title={localeString('views.Intro.getStarted')}
+                            onPress={() => navigation.navigate('Settings')}
+                        />
+                    )}
+                </View>
             </View>
         );
-    }
 
-    render() {
-        const { navigation } = this.props;
-        const { carouselItems, activeIndex } = this.state;
         return (
             <SafeAreaView
                 style={{
@@ -113,20 +135,13 @@ export default class Intro extends React.Component<IntroProps, IntroState> {
                         data={carouselItems}
                         sliderWidth={this.screenWidth}
                         itemWidth={this.screenWidth}
-                        itemHeight={600}
-                        renderItem={this._renderItem}
+                        renderItem={renderItem}
                         onSnapToItem={(index) =>
                             this.setState({ activeIndex: index })
                         }
                         hasParallaxImages={false}
                     />
                 </View>
-                {activeIndex === 3 && (
-                    <Button
-                        title={localeString('views.Intro.getStarted')}
-                        onPress={() => navigation.navigate('Settings')}
-                    />
-                )}
                 <Pagination
                     dotsLength={carouselItems.length}
                     activeDotIndex={activeIndex}

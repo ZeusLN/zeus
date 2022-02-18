@@ -48,7 +48,7 @@ const ImportAccountQRScanner = (props: ImportAccountQRScannerProps) => {
             Alert.alert(
                 localeString('general.error'),
                 localeString('views.LNDConnectConfigQRScanner.error'),
-                [{ text: 'OK', onPress: () => void 0 }],
+                [{ text: localeString('general.ok'), onPress: () => void 0 }],
                 { cancelable: false }
             );
         }
@@ -85,7 +85,7 @@ const ImportAccountQRScanner = (props: ImportAccountQRScannerProps) => {
             Alert.alert(
                 localeString('general.error'),
                 localeString('views.LNDConnectConfigQRScanner.error'),
-                [{ text: 'OK', onPress: () => void 0 }],
+                [{ text: localeString('general.ok'), onPress: () => void 0 }],
                 { cancelable: false }
             );
         }

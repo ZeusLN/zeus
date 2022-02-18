@@ -67,20 +67,26 @@ export default class Theme extends React.Component<ThemeProps, ThemeStore> {
                         leftComponent={<BackButton />}
                         centerComponent={{
                             text: localeString('views.Settings.Theme.title'),
-                            style: { color: themeColor('text') }
+                            style: {
+                                color: themeColor('text'),
+                                fontFamily: 'Lato-Regular'
+                            }
                         }}
-                        backgroundColor={themeColor('secondary')}
+                        backgroundColor={themeColor('background')}
+                        containerStyle={{
+                            borderBottomWidth: 0
+                        }}
                     />
                     <FlatList
                         data={THEME_KEYS}
                         renderItem={({ item }) => (
                             <ListItem
-                                title={item.key}
                                 containerStyle={{
                                     borderBottomWidth: 0,
                                     backgroundColor: themeColor('background')
                                 }}
                                 onPress={async () => {
+                                    const settings = await getSettings();
                                     await setSettings(
                                         JSON.stringify(
                                             settings
@@ -98,22 +104,36 @@ export default class Theme extends React.Component<ThemeProps, ThemeStore> {
                                                 : { theme: item.value }
                                         )
                                     ).then(() => {
-                                        getSettings();
-                                        navigation.navigate('Settings', {
-                                            refresh: true
-                                        });
+                                        navigation.goBack();
                                     });
                                 }}
-                                titleStyle={{
-                                    color:
-                                        selectedTheme === item.value
-                                            ? themeColor('highlight')
-                                            : themeColor('text')
-                                }}
-                                subtitleStyle={{
-                                    color: themeColor('secondaryText')
-                                }}
-                            />
+                            >
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color:
+                                                selectedTheme === item.value ||
+                                                (!selectedTheme &&
+                                                    item.value === 'dark')
+                                                    ? themeColor('highlight')
+                                                    : themeColor('text'),
+                                            fontFamily: 'Lato-Regular'
+                                        }}
+                                    >
+                                        {item.key}
+                                    </ListItem.Title>
+                                </ListItem.Content>
+                                {(selectedTheme === item.value ||
+                                    (!selectedTheme &&
+                                        item.value === 'dark')) && (
+                                    <View style={{ textAlign: 'right' }}>
+                                        <Icon
+                                            name="check"
+                                            color={themeColor('highlight')}
+                                        />
+                                    </View>
+                                )}
+                            </ListItem>
                         )}
                         refreshing={loading}
                         keyExtractor={(item, index) => `${item.host}-${index}`}

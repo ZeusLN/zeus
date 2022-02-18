@@ -22,7 +22,7 @@ export default class CertInstallInstructions extends React.Component<
             <Icon
                 name="arrow-back"
                 onPress={() => navigation.goBack()}
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
@@ -41,9 +41,15 @@ export default class CertInstallInstructions extends React.Component<
                         text: localeString(
                             'views.Settings.CertInstallInstructions.title'
                         ),
-                        style: { color: '#fff' }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
-                    backgroundColor="#1f2328"
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <View style={{ padding: 8 }}>
                     {Platform.OS === 'android' && (

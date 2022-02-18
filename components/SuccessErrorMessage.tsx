@@ -15,6 +15,7 @@ const ErrorMessage = (props: MessageProps) => (
 
 const styles = StyleSheet.create({
     successField: {
+        fontFamily: 'Lato-Regular',
         fontSize: 20,
         width: '100%',
         top: 10,
@@ -25,6 +26,7 @@ const styles = StyleSheet.create({
         padding: 15
     },
     errorField: {
+        fontFamily: 'Lato-Regular',
         fontSize: 20,
         width: '100%',
         top: 10,

@@ -76,7 +76,12 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                 )
                             }
                         >
-                            <Text style={styles.valueWithLink}>
+                            <Text
+                                style={{
+                                    ...styles.valueWithLink,
+                                    color: themeColor('highlight')
+                                }}
+                            >
                                 {PrivacyUtils.sensitiveValue(address)}
                             </Text>
                         </TouchableOpacity>
@@ -90,7 +95,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
         const BackButton = () => (
             <Icon
                 name="arrow-back"
-                onPress={() => navigation.navigate('Wallet')}
+                onPress={() => navigation.goBack()}
                 color={themeColor('text')}
                 underlayColor="transparent"
             />
@@ -107,9 +112,15 @@ export default class TransactionView extends React.Component<TransactionProps> {
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Transaction.title'),
-                        style: { color: themeColor('text') }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
-                    backgroundColor="#1f2328"
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <View style={styles.center}>
                     <Amount
@@ -148,7 +159,12 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                     UrlUtils.goToBlockExplorerTXID(tx, testnet)
                                 }
                             >
-                                <Text style={styles.valueWithLink}>
+                                <Text
+                                    style={{
+                                        ...styles.valueWithLink,
+                                        color: themeColor('highlight')
+                                    }}
+                                >
                                     {PrivacyUtils.sensitiveValue(tx)}
                                 </Text>
                             </TouchableOpacity>
@@ -169,7 +185,12 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                         )
                                     }
                                 >
-                                    <Text style={styles.valueWithLink}>
+                                    <Text
+                                        style={{
+                                            ...styles.valueWithLink,
+                                            color: themeColor('highlight')
+                                        }}
+                                    >
                                         {PrivacyUtils.sensitiveValue(
                                             block_hash
                                         )}
@@ -193,7 +214,12 @@ export default class TransactionView extends React.Component<TransactionProps> {
                                         )
                                     }
                                 >
-                                    <Text style={styles.valueWithLink}>
+                                    <Text
+                                        style={{
+                                            ...styles.valueWithLink,
+                                            color: themeColor('highlight')
+                                        }}
+                                    >
                                         {PrivacyUtils.sensitiveValue(
                                             getBlockHeight.toString(),
                                             5,
@@ -252,6 +278,6 @@ const styles = StyleSheet.create({
     },
     valueWithLink: {
         paddingBottom: 5,
-        color: themeColor('highlight')
+        fontFamily: 'Lato-Regular'
     }
 });

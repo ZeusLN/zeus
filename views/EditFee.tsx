@@ -17,9 +17,9 @@ import LoadingIndicator from '../components/LoadingIndicator';
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
 
-import MempoolSpace from '../images/affiliates/Mempool.svg';
-import Refresh from '../images/SVG/Refresh.svg';
-import ErrorIcon from '../images/SVG/ErrorIcon.svg';
+import MempoolSpace from '../assets/images/affiliates/Mempool.svg';
+import Refresh from '../assets/images/SVG/Refresh.svg';
+import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
 
 import FeeStore from './../stores/FeeStore';
 
@@ -279,7 +279,12 @@ export default class EditFee extends React.Component<
                                 </View>
                             </TouchableWithoutFeedback>
 
-                            <Text style={styles.custom}>
+                            <Text
+                                style={{
+                                    ...styles.custom,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 {localeString('views.EditFee.custom')}
                             </Text>
                             <TouchableWithoutFeedback>
@@ -369,8 +374,7 @@ const styles = StyleSheet.create({
         color: '#A7A9AC',
         fontSize: 18,
         top: 48,
-        left: 15,
-        color: themeColor('text')
+        left: 15
     },
     confirmButton: {
         marginTop: 20,

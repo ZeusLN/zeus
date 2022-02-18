@@ -78,6 +78,21 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             />
         );
 
+        const AddButton = () => (
+            <Icon
+                name="add"
+                onPress={() =>
+                    navigation.navigate('AddEditNode', {
+                        newEntry: true,
+                        index:
+                            (nodes && nodes.length && Number(nodes.length)) || 0
+                    })
+                }
+                color={themeColor('text')}
+                underlayColor="transparent"
+            />
+        );
+
         return (
             <View
                 style={{
@@ -90,9 +105,16 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                         leftComponent={<BackButton />}
                         centerComponent={{
                             text: localeString('views.Settings.Nodes.title'),
-                            style: { color: themeColor('text') }
+                            style: {
+                                color: themeColor('text'),
+                                fontFamily: 'Lato-Regular'
+                            }
                         }}
-                        backgroundColor={themeColor('secondary')}
+                        rightComponent={<AddButton />}
+                        backgroundColor={themeColor('background')}
+                        containerStyle={{
+                            borderBottomWidth: 0
+                        }}
                     />
                     {!!nodes && nodes.length > 0 && (
                         <FlatList
@@ -125,11 +147,13 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                     <NodeIdenticon
                                         selectedNode={item}
                                         width={35}
+                                        rounded
                                     />
                                     <ListItem.Content>
                                         <ListItem.Title
                                             style={{
-                                                color: themeColor('text')
+                                                color: themeColor('text'),
+                                                fontFamily: 'Lato-Regular'
                                             }}
                                         >
                                             {NodeTitle(item, 32)}
@@ -138,7 +162,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                             style={{
                                                 color: themeColor(
                                                     'secondaryText'
-                                                )
+                                                ),
+                                                fontFamily: 'Lato-Regular'
                                             }}
                                         >
                                             {selectedNode === index ||
@@ -184,30 +209,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                 color: themeColor('text')
                             }}
                             iconOnly
-                        />
-                    )}
-                    {!loading && (
-                        <Button
-                            title={localeString('views.Settings.Nodes.add')}
-                            icon={{
-                                name: 'add',
-                                size: 25,
-                                color: 'white'
-                            }}
-                            onPress={() =>
-                                navigation.navigate('AddEditNode', {
-                                    newEntry: true,
-                                    index:
-                                        (nodes &&
-                                            nodes.length &&
-                                            Number(nodes.length)) ||
-                                        0
-                                })
-                            }
-                            titleStyle={{
-                                color: 'white'
-                            }}
-                            adaptiveWidth
                         />
                     )}
                 </View>

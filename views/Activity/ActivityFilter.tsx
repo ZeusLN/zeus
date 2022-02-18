@@ -4,6 +4,7 @@ import { Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import DatePicker from 'react-native-date-picker';
+
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -69,8 +70,10 @@ export default class ActivityFilter extends React.Component<
         const CloseButton = () => (
             <Icon
                 name="close"
-                onPress={() => navigation.navigate('Activity')}
-                color="#fff"
+                onPress={() =>
+                    navigation.navigate('Activity', { refresh: true })
+                }
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
@@ -91,7 +94,10 @@ export default class ActivityFilter extends React.Component<
                                 : this.setState({ setStartDate: !setStartDate })
                         }
                         buttonStyle={{ backgroundColor: 'white' }}
-                        titleStyle={{ color: 'black' }}
+                        titleStyle={{
+                            color: 'black',
+                            fontFamily: 'Lato-Regular'
+                        }}
                         title={
                             startDate
                                 ? localeString(
@@ -111,6 +117,10 @@ export default class ActivityFilter extends React.Component<
                                 : this.setState({ setEndDate: !setEndDate })
                         }
                         buttonStyle={{ backgroundColor: 'orange' }}
+                        titleStyle={{
+                            color: 'white',
+                            fontFamily: 'Lato-Regular'
+                        }}
                         title={
                             endDate
                                 ? localeString(
@@ -165,7 +175,7 @@ export default class ActivityFilter extends React.Component<
                                 setStartDate ? workingStartDate : workingEndDate
                             }
                             maximumDate={new Date()}
-                            textColor="#fff"
+                            textColor={themeColor('text')}
                             mode="date"
                         />
                         <View style={{ padding: 2 }}>
@@ -256,9 +266,15 @@ export default class ActivityFilter extends React.Component<
                     leftComponent={<CloseButton />}
                     centerComponent={{
                         text: localeString('views.ActivityFilter.title'),
-                        style: { color: '#fff' }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
-                    backgroundColor="#1f2328"
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <FlatList
                     data={FILTERS}
@@ -272,7 +288,8 @@ export default class ActivityFilter extends React.Component<
                             >
                                 <ListItem.Title
                                     style={{
-                                        color: themeColor('text')
+                                        color: themeColor('text'),
+                                        fontFamily: 'Lato-Regular'
                                     }}
                                 >
                                     {item.label}
@@ -328,7 +345,8 @@ export default class ActivityFilter extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        paddingTop: 30
+        paddingTop: 30,
+        fontFamily: 'Lato-Regular'
     },
     button: {
         paddingTop: 15,

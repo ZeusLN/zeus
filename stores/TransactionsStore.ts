@@ -207,7 +207,7 @@ export default class TransactionsStore {
             data.payment_request = payment_request;
         }
         if (amount) {
-            data.amt = amount;
+            data.amt = Number(amount);
         }
 
         if (pubkey) {
@@ -253,6 +253,11 @@ export default class TransactionsStore {
         if (last_hop_pubkey) {
             // must be base64 encoded (bytes)
             data.last_hop_pubkey = Base64Utils.hexToBase64(last_hop_pubkey);
+        }
+
+        // Tor can't handle streaming updates
+        if (this.settingsStore.enableTor) {
+            data.no_inflight_updates = true;
         }
 
         const payFunc =

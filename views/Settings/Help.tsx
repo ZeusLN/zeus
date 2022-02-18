@@ -50,9 +50,15 @@ function Help(props: HelpProps) {
                 leftComponent={<BackButton />}
                 centerComponent={{
                     text: localeString('general.help'),
-                    style: { color: themeColor('text') }
+                    style: {
+                        color: themeColor('text'),
+                        fontFamily: 'Lato-Regular'
+                    }
                 }}
-                backgroundColor={themeColor('secondary')}
+                backgroundColor={themeColor('background')}
+                containerStyle={{
+                    borderBottomWidth: 0
+                }}
             />
             <FlatList
                 data={HELP_ITEMS}
@@ -67,7 +73,8 @@ function Help(props: HelpProps) {
                         <ListItem.Content>
                             <ListItem.Title
                                 style={{
-                                    color: themeColor('text')
+                                    color: themeColor('text'),
+                                    fontFamily: 'Lato-Regular'
                                 }}
                             >
                                 {item.label}

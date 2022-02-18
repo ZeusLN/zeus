@@ -1,7 +1,9 @@
 import * as React from 'react';
 import { Alert } from 'react-native';
 import { observer } from 'mobx-react';
+
 import QRCodeScanner from './../components/QRCodeScanner';
+
 import handleAnything from './../utils/handleAnything';
 import { localeString } from './../utils/LocaleUtils';
 
@@ -30,9 +32,14 @@ export default class AddressQRScanner extends React.Component<
             })
             .catch((err) => {
                 Alert.alert(
-                    'Error',
+                    localeString('general.error'),
                     err.message,
-                    [{ text: 'OK', onPress: () => void 0 }],
+                    [
+                        {
+                            text: localeString('general.ok'),
+                            onPress: () => void 0
+                        }
+                    ],
                     { cancelable: false }
                 );
 
@@ -45,8 +52,6 @@ export default class AddressQRScanner extends React.Component<
 
         return (
             <QRCodeScanner
-                title={localeString('views.AddressQRScanner.title')}
-                text={localeString('views.AddressQRScanner.text')}
                 handleQRScanned={this.handleAddressInvoiceScanned}
                 goBack={() => navigation.goBack()}
             />

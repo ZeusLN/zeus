@@ -6,7 +6,6 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -34,10 +33,10 @@ import FiatStore from './../../stores/FiatStore';
 import UnitsStore from './../../stores/UnitsStore';
 import LayerBalances from './../../components/LayerBalances';
 
-import Temple from './../../images/SVG/Temple.svg';
-import ChannelsIcon from './../../images/SVG/Channels.svg';
-import CaretUp from './../../images/SVG/Caret Up.svg';
-import WordLogo from './../../images/SVG/Word Logo.svg';
+import Temple from './../../assets/images/SVG/Temple.svg';
+import ChannelsIcon from './../../assets/images/SVG/Channels.svg';
+import CaretUp from './../../assets/images/SVG/Caret Up.svg';
+import WordLogo from './../../assets/images/SVG/Word Logo - no outline.svg';
 
 interface WalletProps {
     enterSetup: any;
@@ -182,10 +181,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
 
         if (implementation === 'lndhub') {
             login({ login: username, password }).then(async () => {
-                await Promise.all([
-                    BalanceStore.getBlockchainBalance(),
-                    BalanceStore.getLightningBalance()
-                ]);
+                BalanceStore.getLightningBalance();
             });
         } else {
             await Promise.all([
@@ -256,8 +252,10 @@ export default class Wallet extends React.Component<WalletProps, {}> {
 
                     {dataAvailable && (
                         <>
-                            {!BalanceStore.loadingLightningBalance &&
-                            !BalanceStore.loadingBlockchainBalance ? (
+                            {BalanceStore.loadingLightningBalance ||
+                            BalanceStore.loadingBlockchainBalance ? (
+                                <LoadingIndicator size={120} />
+                            ) : (
                                 <LayerBalances
                                     navigation={navigation}
                                     BalanceStore={BalanceStore}
@@ -268,8 +266,6 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                         BalanceStore.loadingBlockchainBalance
                                     }
                                 />
-                            ) : (
-                                <LoadingIndicator size={120} />
                             )}
 
                             <Animated.View
@@ -329,10 +325,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
 
         return (
             <View style={{ flex: 1 }}>
-                <LinearGradient
-                    colors={themeColor('gradient')}
-                    style={{ flex: 1 }}
-                >
+                <View style={{ flex: 1 }}>
                     {!connecting && !loginRequired && (
                         <NavigationContainer theme={Theme}>
                             <Tab.Navigator
@@ -384,53 +377,64 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                         </NavigationContainer>
                     )}
                     {connecting && !loginRequired && (
-                        <>
-                            <WordLogo
-                                height={150}
-                                style={{
-                                    alignSelf: 'center',
-                                    marginTop: 250
-                                }}
-                            />
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    alignSelf: 'center',
-                                    fontSize: 15
-                                }}
-                            >
-                                {localeString('views.Wallet.Wallet.connecting')}
-                            </Text>
-                            <LoadingIndicator size={120} />
+                        <View
+                            style={{
+                                backgroundColor: '#1F242D',
+                                height: '100%'
+                            }}
+                        >
                             <View
                                 style={{
                                     flex: 1,
-                                    justifyContent: 'flex-end',
-                                    bottom: 20
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    top: 50
+                                }}
+                            >
+                                <WordLogo
+                                    height={100}
+                                    style={{
+                                        alignSelf: 'center'
+                                    }}
+                                />
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'Lato-Regular',
+                                        alignSelf: 'center',
+                                        fontSize: 15,
+                                        padding: 8
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Wallet.Wallet.connecting'
+                                    )}
+                                </Text>
+                                <LoadingIndicator size={120} />
+                            </View>
+                            <View
+                                style={{
+                                    bottom: 56
                                 }}
                             >
                                 <Button
-                                    icon={{
-                                        name: 'settings',
-                                        size: 25,
-                                        color: '#fff'
-                                    }}
-                                    buttonStyle={{
-                                        backgroundColor: 'gray',
-                                        borderRadius: 30
-                                    }}
+                                    title={localeString('views.Settings.title')}
                                     containerStyle={{
-                                        alignItems: 'center'
+                                        width: 320
+                                    }}
+                                    titleStyle={{
+                                        color: 'white'
                                     }}
                                     onPress={() =>
                                         navigation.navigate('Settings')
                                     }
                                     adaptiveWidth
+                                    iconOnly
                                 />
                             </View>
-                        </>
+                        </View>
                     )}
-                </LinearGradient>
+                </View>
             </View>
         );
     }

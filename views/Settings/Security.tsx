@@ -48,9 +48,15 @@ function Security(props: SecurityProps) {
                 leftComponent={<BackButton />}
                 centerComponent={{
                     text: localeString('views.Settings.Security.title'),
-                    style: { color: themeColor('text') }
+                    style: {
+                        color: themeColor('text'),
+                        fontFamily: 'Lato-Regular'
+                    }
                 }}
-                backgroundColor={themeColor('secondary')}
+                backgroundColor={themeColor('background')}
+                containerStyle={{
+                    borderBottomWidth: 0
+                }}
             />
             <FlatList
                 data={SECURITY_ITEMS}
@@ -65,7 +71,8 @@ function Security(props: SecurityProps) {
                         <ListItem.Content>
                             <ListItem.Title
                                 style={{
-                                    color: themeColor('secondaryText')
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'Lato-Regular'
                                 }}
                             >
                                 {item.label}
