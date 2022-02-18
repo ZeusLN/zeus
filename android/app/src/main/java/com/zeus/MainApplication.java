@@ -11,7 +11,6 @@ import com.facebook.react.bridge.JSIModulePackage;
 import com.swmansion.reanimated.ReanimatedJSIModulePackage;
 
 import com.facebook.react.ReactApplication;
-import com.BV.LinearGradient.LinearGradientPackage;
 import com.swmansion.gesturehandler.react.RNGestureHandlerPackage;
 import com.oblador.vectoricons.VectorIconsPackage;
 import com.facebook.react.ReactNativeHost;

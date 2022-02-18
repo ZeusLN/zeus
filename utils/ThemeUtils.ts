@@ -12,16 +12,6 @@ export function themeColor(themeString: string): any {
         secondaryText: '#8a8999',
         highlight: 'orange',
         error: '#cc3300',
-        gradient: [
-            'white',
-            'white',
-            'white',
-            'white',
-            'white',
-            'lightgrey',
-            'grey',
-            'grey'
-        ],
         separator: '#CED0CE',
         outbound: '#FFD93F',
         inbound: '#FFF0CA',
@@ -40,7 +30,6 @@ export function themeColor(themeString: string): any {
         secondaryText: '#A7A9AC',
         highlight: '#ffd24b',
         error: '#992600',
-        gradient: ['black', '#1f2328', '#1f2328', '#1f2328'],
         separator: '#31363F',
         outbound: '#FFD93F',
         inbound: '#FFF0CA',
@@ -57,12 +46,6 @@ export function themeColor(themeString: string): any {
         secondaryText: 'lightgray',
         highlight: 'rgb(249, 212, 0)',
         error: '#992600',
-        gradient: [
-            'black',
-            'rgb(51, 51, 51)',
-            'rgb(51, 51, 51)',
-            'rgb(51, 51, 51)'
-        ],
         separator: 'darkgray',
         outbound: '#FFD93F',
         inbound: '#FFF0CA'
@@ -76,16 +59,6 @@ export function themeColor(themeString: string): any {
         secondaryText: '#8a8999',
         highlight: '#2b74b4',
         error: '#cc3300',
-        gradient: [
-            'white',
-            'white',
-            'white',
-            'white',
-            'white',
-            'lightgrey',
-            'grey',
-            'grey'
-        ],
         separator: '#CED0CE'
     };
 
@@ -97,16 +70,6 @@ export function themeColor(themeString: string): any {
         secondaryText: 'lightgray',
         highlight: 'black',
         error: '#cc3300',
-        gradient: [
-            'white',
-            'white',
-            'white',
-            'white',
-            'white',
-            'lightgrey',
-            'grey',
-            'grey'
-        ],
         separator: '#CED0CE'
     };
 
