@@ -33,6 +33,10 @@ function Security(props: SecurityProps) {
         {
             label: localeString('views.Settings.SetPassword.title'),
             screen: 'SetPassword'
+        },
+        {
+            label: localeString('views.Settings.SetDuressPassword.title'),
+            screen: 'SetDuressPassword'
         }
         // { label: 'Verify TLS Certificate', url: 'https://twitter.com/ZeusLN' }
     ];

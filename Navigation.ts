@@ -31,6 +31,7 @@ import Nodes from './views/Settings/Nodes';
 import Privacy from './views/Settings/Privacy';
 import Security from './views/Settings/Security';
 import SetPassword from './views/Settings/SetPassword';
+import SetDuressPassword from './views/Settings/SetDuressPassword';
 import Language from './views/Settings/Language';
 import Currency from './views/Settings/Currency';
 import Theme from './views/Settings/Theme';
@@ -92,6 +93,9 @@ const AppScenes = {
     },
     SetPassword: {
         screen: SetPassword
+    },
+    SetDuressPassword: {
+        screen: SetDuressPassword
     },
     Language: {
         screen: Language

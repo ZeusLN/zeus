@@ -284,6 +284,7 @@ export default class AddEditNode extends React.Component<
                           locale,
                           lurkerMode,
                           passphrase,
+                          duressPassphrase: settings.duressPassphrase,
                           privacy: settings.privacy
                       }
                     : { nodes }
@@ -346,6 +347,7 @@ export default class AddEditNode extends React.Component<
                 locale,
                 lurkerMode,
                 passphrase,
+                duressPassphrase: settings.duressPassphrase,
                 privacy: settings.privacy
             })
         );

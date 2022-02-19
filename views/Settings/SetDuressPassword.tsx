@@ -3,32 +3,37 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Button from './../../components/Button';
-import { ErrorMessage } from './../../components/SuccessErrorMessage';
-import TextInput from './../../components/TextInput';
+import Button from '../../components/Button';
+import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import TextInput from '../../components/TextInput';
 
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
-import SettingsStore from './../../stores/SettingsStore';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import SettingsStore from '../../stores/SettingsStore';
 
-interface SetPINProps {
+interface SetDuressPINProps {
     navigation: any;
     SettingsStore: SettingsStore;
 }
 
-interface SetPINState {
-    passphrase: string;
-    passphraseConfirm: string;
-    passphraseError: boolean;
+interface SetDuressPINState {
+    duressPassphrase: string;
+    duressPassphraseConfirm: string;
+    duressPassphraseMismatchError: boolean;
+    duressPassphraseInvalidError: boolean;
 }
 
 @inject('SettingsStore')
 @observer
-export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
+export default class SetDuressPIN extends React.Component<
+    SetDuressPINProps,
+    SetDuressPINState
+> {
     state = {
-        passphrase: '',
-        passphraseConfirm: '',
-        passphraseError: false
+        duressPassphrase: '',
+        duressPassphraseConfirm: '',
+        duressPassphraseMismatchError: false,
+        duressPassphraseInvalidError: false
     };
 
     renderSeparator = () => (
@@ -42,18 +47,27 @@ export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
 
     saveSettings = async () => {
         const { SettingsStore, navigation } = this.props;
-        const { passphrase, passphraseConfirm } = this.state;
-        const { getSettings, setSettings, setLoginStatus } = SettingsStore;
+        const { duressPassphrase, duressPassphraseConfirm } = this.state;
+        const { getSettings, setSettings } = SettingsStore;
 
-        if (passphrase !== passphraseConfirm) {
+        if (duressPassphrase !== duressPassphraseConfirm) {
             this.setState({
-                passphraseError: true
+                duressPassphraseMismatchError: true
             });
 
             return;
         }
 
         const settings = await getSettings();
+
+        if (duressPassphrase === settings.passphrase) {
+            this.setState({
+                duressPassphraseInvalidError: true
+            });
+
+            return;
+        }
+
         await setSettings(
             JSON.stringify(
                 settings
@@ -64,13 +78,12 @@ export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
                           fiat: settings.fiat,
                           locale: settings.locale,
                           privacy: settings.privacy,
-                          duressPassphrase: settings.duressPassphrase,
-                          passphrase
+                          passphrase: settings.passphrase,
+                          duressPassphrase
                       }
-                    : { passphrase }
+                    : { duressPassphrase }
             )
         ).then(() => {
-            setLoginStatus(false);
             getSettings();
             navigation.navigate('Settings', {
                 refresh: true
@@ -80,7 +93,12 @@ export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
 
     render() {
         const { navigation } = this.props;
-        const { passphrase, passphraseConfirm, passphraseError } = this.state;
+        const {
+            duressPassphrase,
+            duressPassphraseConfirm,
+            duressPassphraseMismatchError,
+            duressPassphraseInvalidError
+        } = this.state;
         const BackButton = () => (
             <Icon
                 name="arrow-back"
@@ -118,24 +136,32 @@ export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
                         paddingTop: 10
                     }}
                 >
-                    {passphraseError && (
+                    {duressPassphraseMismatchError && (
                         <ErrorMessage
                             message={localeString(
                                 'views.Settings.SetPassword.noMatch'
                             )}
                         />
                     )}
+                    {duressPassphraseInvalidError && (
+                        <ErrorMessage
+                            message={localeString(
+                                'views.Settings.SetPassword.invalid'
+                            )}
+                        />
+                    )}
                     <Text style={{ ...styles.text, color: themeColor('text') }}>
-                        {localeString('views.Settings.newPassword')}
+                        {localeString('views.Settings.newDuressPassword')}
                     </Text>
                     <TextInput
                         placeholder={'********'}
                         placeholderTextColor="darkgray"
-                        value={passphrase}
+                        value={duressPassphrase}
                         onChangeText={(text: string) =>
                             this.setState({
-                                passphrase: text,
-                                passphraseError: false
+                                duressPassphrase: text,
+                                duressPassphraseMismatchError: false,
+                                duressPassphraseInvalidError: false
                             })
                         }
                         numberOfLines={1}
@@ -147,16 +173,17 @@ export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
                         }}
                     />
                     <Text style={{ ...styles.text, color: themeColor('text') }}>
-                        {localeString('views.Settings.confirmPassword')}
+                        {localeString('views.Settings.confirmDuressPassword')}
                     </Text>
                     <TextInput
                         placeholder={'********'}
                         placeholderTextColor="darkgray"
-                        value={passphraseConfirm}
+                        value={duressPassphraseConfirm}
                         onChangeText={(text: string) =>
                             this.setState({
-                                passphraseConfirm: text,
-                                passphraseError: false
+                                duressPassphraseConfirm: text,
+                                duressPassphraseMismatchError: false,
+                                duressPassphraseInvalidError: false
                             })
                         }
                         numberOfLines={1}
