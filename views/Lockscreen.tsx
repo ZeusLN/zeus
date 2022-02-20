@@ -48,7 +48,9 @@ export default class Lockscreen extends React.Component<
             if (settings && settings.passphrase) {
                 this.setState({ passphrase: settings.passphrase });
                 if (settings.duressPassphrase) {
-                    this.setState({ duressPassphrase: settings.duressPassphrase })
+                    this.setState({
+                        duressPassphrase: settings.duressPassphrase
+                    });
                 }
             } else if (
                 settings &&
@@ -82,8 +84,7 @@ export default class Lockscreen extends React.Component<
             SettingsStore.setLoginStatus(true);
             LinkingUtils.handleInitialUrl(navigation);
             this.deleteNodes();
-        } else if (passphraseAttempt ) {
-
+        } else if (passphraseAttempt) {
         } else {
             this.setState({
                 error: true
