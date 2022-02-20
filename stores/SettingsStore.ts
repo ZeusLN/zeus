@@ -332,10 +332,4 @@ export default class SettingsStore {
     public setConnectingStatus = (status = false) => {
         this.connecting = status;
     };
-
-    @action
-    public deleteNodes = () => {
-        delete this.settings.nodes //= undefined;
-        delete this.settings.selectedNode //= undefined;
-    };
 }
