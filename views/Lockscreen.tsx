@@ -19,6 +19,7 @@ interface LockscreenProps {
 interface LockscreenState {
     passphrase: string;
     passphraseAttempt: string;
+    duressPassphrase: string;
     hidden: boolean;
     error: boolean;
 }
@@ -34,6 +35,7 @@ export default class Lockscreen extends React.Component<
         this.state = {
             passphraseAttempt: '',
             passphrase: '',
+            duressPassphrase: '',
             hidden: true,
             error: false
         };
@@ -45,6 +47,9 @@ export default class Lockscreen extends React.Component<
         getSettings().then((settings: any) => {
             if (settings && settings.passphrase) {
                 this.setState({ passphrase: settings.passphrase });
+                if (settings.duressPassphrase) {
+                    this.setState({ duressPassphrase: settings.duressPassphrase })
+                }
             } else if (
                 settings &&
                 settings.nodes &&
@@ -63,7 +68,7 @@ export default class Lockscreen extends React.Component<
 
     onAttemptLogIn = () => {
         const { SettingsStore, navigation } = this.props;
-        const { passphrase, passphraseAttempt } = this.state;
+        const { passphrase, duressPassphrase, passphraseAttempt } = this.state;
 
         this.setState({
             error: false
@@ -73,11 +78,37 @@ export default class Lockscreen extends React.Component<
             SettingsStore.setLoginStatus(true);
             LinkingUtils.handleInitialUrl(navigation);
             navigation.navigate('Wallet');
+        } else if (duressPassphrase && passphraseAttempt === duressPassphrase) {
+            SettingsStore.setLoginStatus(true);
+            LinkingUtils.handleInitialUrl(navigation);
+            this.deleteNodes();
+        } else if (passphraseAttempt ) {
+
         } else {
             this.setState({
                 error: true
             });
         }
+    };
+
+    deleteNodes = () => {
+        const { SettingsStore, navigation } = this.props;
+        const { setSettings, settings } = SettingsStore;
+
+        setSettings(
+            JSON.stringify({
+                nodes: undefined,
+                selectedNode: undefined,
+                theme: settings.theme,
+                passphrase: settings.passphrase,
+                duressPassphrase: settings.duressPassphrase,
+                fiat: settings.fiat,
+                locale: settings.locale,
+                privacy: settings.privacy
+            })
+        ).then(() => {
+            navigation.navigate('Wallet');
+        });
     };
 
     render() {
