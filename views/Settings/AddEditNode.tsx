@@ -306,7 +306,7 @@ export default class AddEditNode extends React.Component<
         const { SettingsStore, navigation } = this.props;
         const { setSettings, settings } = SettingsStore;
         const { index } = this.state;
-        const { nodes, lurkerMode, passphrase, fiat, locale } = settings;
+        const { nodes, passphrase, fiat, locale } = settings;
 
         const newNodes: any = [];
         for (let i = 0; nodes && i < nodes.length; i++) {
@@ -323,8 +323,8 @@ export default class AddEditNode extends React.Component<
                     index === settings.selectedNode ? 0 : settings.selectedNode,
                 fiat,
                 locale,
-                lurkerMode,
                 passphrase,
+                duressPassphrase: settings.duressPassphrase,
                 privacy: settings.privacy
             })
         ).then(() => {
