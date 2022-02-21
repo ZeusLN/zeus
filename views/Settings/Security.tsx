@@ -3,6 +3,7 @@ import { FlatList, View } from 'react-native';
 import { Header, Icon, ListItem } from 'react-native-elements';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
+import stores from '../../stores/Stores';
 
 interface SecurityProps {
     navigation: any;
@@ -10,6 +11,7 @@ interface SecurityProps {
 
 function Security(props: SecurityProps) {
     const { navigation } = props;
+    const { settings } = stores.settingsStore;
 
     const renderSeparator = () => (
         <View
@@ -41,6 +43,38 @@ function Security(props: SecurityProps) {
         // { label: 'Verify TLS Certificate', url: 'https://twitter.com/ZeusLN' }
     ];
 
+    const renderItem = ({ item }) => {
+        // Only render SetDuressPassword list item if a passphrase is set
+        if (!settings.passphrase && item.screen === 'SetDuressPassword') {
+            return(<></>);
+        } else {
+            return (
+                <ListItem
+                    containerStyle={{
+                        borderBottomWidth: 0,
+                        backgroundColor: themeColor('background')
+                    }}
+                    onPress={() => navigation.navigate(item.screen)}
+                >
+                    <ListItem.Content>
+                        <ListItem.Title
+                            style={{
+                                color: themeColor('secondaryText'),
+                                fontFamily: 'Lato-Regular'
+                            }}
+                        >
+                            {item.label}
+                        </ListItem.Title>
+                    </ListItem.Content>
+                    <Icon
+                        name="keyboard-arrow-right"
+                        color={themeColor('secondaryText')}
+                    />
+                </ListItem>
+            );
+        }
+      };
+
     return (
         <View
             style={{
@@ -64,30 +98,7 @@ function Security(props: SecurityProps) {
             />
             <FlatList
                 data={SECURITY_ITEMS}
-                renderItem={({ item }) => (
-                    <ListItem
-                        containerStyle={{
-                            borderBottomWidth: 0,
-                            backgroundColor: themeColor('background')
-                        }}
-                        onPress={() => navigation.navigate(item.screen)}
-                    >
-                        <ListItem.Content>
-                            <ListItem.Title
-                                style={{
-                                    color: themeColor('secondaryText'),
-                                    fontFamily: 'Lato-Regular'
-                                }}
-                            >
-                                {item.label}
-                            </ListItem.Title>
-                        </ListItem.Content>
-                        <Icon
-                            name="keyboard-arrow-right"
-                            color={themeColor('secondaryText')}
-                        />
-                    </ListItem>
-                )}
+                renderItem={renderItem}
                 keyExtractor={(item, index) => `${item.label}-${index}`}
                 ItemSeparatorComponent={renderSeparator}
             />
