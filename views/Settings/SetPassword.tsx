@@ -19,7 +19,8 @@ interface SetPINProps {
 interface SetPINState {
     passphrase: string;
     passphraseConfirm: string;
-    passphraseError: boolean;
+    passphraseMismatchError: boolean;
+    passphraseInvalidError: boolean;
 }
 
 @inject('SettingsStore')
@@ -28,7 +29,8 @@ export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
     state = {
         passphrase: '',
         passphraseConfirm: '',
-        passphraseError: false
+        passphraseMismatchError: false,
+        passphraseInvalidError: false
     };
 
     renderSeparator = () => (
@@ -47,13 +49,22 @@ export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
 
         if (passphrase !== passphraseConfirm) {
             this.setState({
-                passphraseError: true
+                passphraseMismatchError: true
             });
 
             return;
         }
 
         const settings = await getSettings();
+
+        if (passphrase === settings.duressPassphrase) {
+            this.setState({
+                passphraseInvalidError: true
+            });
+
+            return;
+        }
+
         await setSettings(
             JSON.stringify(
                 settings
@@ -80,7 +91,12 @@ export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
 
     render() {
         const { navigation } = this.props;
-        const { passphrase, passphraseConfirm, passphraseError } = this.state;
+        const {
+            passphrase,
+            passphraseConfirm,
+            passphraseMismatchError,
+            passphraseInvalidError
+        } = this.state;
         const BackButton = () => (
             <Icon
                 name="arrow-back"
@@ -118,10 +134,17 @@ export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
                         paddingTop: 10
                     }}
                 >
-                    {passphraseError && (
+                    {passphraseMismatchError && (
                         <ErrorMessage
                             message={localeString(
                                 'views.Settings.SetPassword.noMatch'
+                            )}
+                        />
+                    )}
+                    {passphraseInvalidError && (
+                        <ErrorMessage
+                            message={localeString(
+                                'views.Settings.SetPassword.invalid'
                             )}
                         />
                     )}
@@ -135,7 +158,8 @@ export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
                         onChangeText={(text: string) =>
                             this.setState({
                                 passphrase: text,
-                                passphraseError: false
+                                passphraseMismatchError: false,
+                                passphraseInvalidError: false
                             })
                         }
                         numberOfLines={1}
@@ -156,7 +180,8 @@ export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
                         onChangeText={(text: string) =>
                             this.setState({
                                 passphraseConfirm: text,
-                                passphraseError: false
+                                passphraseMismatchError: false,
+                                passphraseInvalidError: false
                             })
                         }
                         numberOfLines={1}

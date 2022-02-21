@@ -46,7 +46,7 @@ function Security(props: SecurityProps) {
     const renderItem = ({ item }) => {
         // Only render SetDuressPassword list item if a passphrase is set
         if (!settings.passphrase && item.screen === 'SetDuressPassword') {
-            return(<></>);
+            return <></>;
         } else {
             return (
                 <ListItem
@@ -73,7 +73,7 @@ function Security(props: SecurityProps) {
                 </ListItem>
             );
         }
-      };
+    };
 
     return (
         <View
