@@ -115,7 +115,8 @@ export default class CLightningREST extends LND {
     payLightningInvoice = (data: any) =>
         this.postRequest('/v1/pay', {
             invoice: data.payment_request,
-            amount: Number(data.amt && data.amt * 1000)
+            amount: Number(data.amt && data.amt * 1000),
+            maxfeepercent: data.max_fee_percent
         });
     sendKeysend = (data: any) =>
         this.postRequest('/v1/pay/keysend', {
