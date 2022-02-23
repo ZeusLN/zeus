@@ -154,7 +154,7 @@
     "views.Wallet.Wallet.onchain": "On-chain",
     "views.Wallet.Wallet.channels": "Channels",
     "views.Wallet.Wallet.connecting": "Zeus is connecting to your node.",
-    "views.Wallet.restartTor": "Restart Tor and Try Again",
+    "views.Wallet.restart": "Restart",
     "views.BTCPayConfigQRScanner.text": "Scan a BTCPay Config under Settings > Services > LND Rest",
     "views.BTCPayConfigQRScanner.error": "Error fetching BTCPay config",
     "views.Channel.baseFee": "Base Fee",
