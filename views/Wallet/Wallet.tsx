@@ -11,6 +11,8 @@ import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import RNRestart from 'react-native-restart';
+
 import ChannelsPane from '../Channels/ChannelsPane';
 import MainPane from './MainPane';
 
@@ -19,7 +21,6 @@ import LoadingIndicator from './../../components/LoadingIndicator';
 
 import RESTUtils from './../../utils/RESTUtils';
 import LinkingUtils from './../../utils/LinkingUtils';
-import { restartTor } from './../../utils/TorUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -148,12 +149,6 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         this.getSettingsAndNavigate();
     }
 
-    restartTorAndReload = async () => {
-        this.props.NodeInfoStore.setLoading();
-        await restartTor();
-        await this.refresh();
-    };
-
     async fetchData() {
         const {
             NodeInfoStore,
@@ -239,13 +234,13 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                     {error && enableTor && (
                         <View style={{ backgroundColor: themeColor('error') }}>
                             <Button
-                                title={localeString('views.Wallet.restartTor')}
+                                title={localeString('views.Wallet.restart')}
                                 icon={{
                                     name: 'sync',
                                     size: 25,
                                     color: 'white'
                                 }}
-                                onPress={() => this.restartTorAndReload()}
+                                onPress={() => RNRestart.Restart()}
                             />
                         </View>
                     )}
