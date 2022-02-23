@@ -75,7 +75,7 @@
     "react-native-qrcode-svg": "6.0.6",
     "react-native-randombytes": "3.5.3",
     "react-native-reanimated": "2.3.1",
-    "react-native-restart": "^0.0.24",
+    "react-native-restart": "0.0.24",
     "react-native-safe-area-context": "0.6.2",
     "react-native-screens": "3.10.1",
     "react-native-secure-key-store": "2.0.5",
