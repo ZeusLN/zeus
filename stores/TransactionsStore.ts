@@ -18,6 +18,7 @@ interface SendPaymentReq {
     max_parts?: string | null;
     max_shard_amt?: string | null;
     fee_limit_sat?: string | null;
+    max_fee_percent?: string | null;
     outgoing_chan_id?: string | null;
     last_hop_pubkey?: string | null;
     message?: string | null;
@@ -188,6 +189,7 @@ export default class TransactionsStore {
         max_parts,
         max_shard_amt,
         fee_limit_sat,
+        max_fee_percent,
         outgoing_chan_id,
         last_hop_pubkey,
         message,
@@ -258,6 +260,11 @@ export default class TransactionsStore {
         // Tor can't handle streaming updates
         if (this.settingsStore.enableTor) {
             data.no_inflight_updates = true;
+        }
+
+        // max fee percent for c-lightning
+        if (max_fee_percent) {
+            data.max_fee_percent = max_fee_percent;
         }
 
         const payFunc =
