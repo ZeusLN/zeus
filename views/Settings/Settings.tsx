@@ -228,7 +228,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         </View>
                     </View>
                 )}
-                {RESTUtils.supportsMessageSigning() ? (
+                {selectedNode && RESTUtils.supportsMessageSigning() ? (
                     <View
                         style={{
                             backgroundColor: themeColor('secondary'),

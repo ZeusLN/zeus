@@ -332,7 +332,9 @@ export default class PaymentRequest extends React.Component<
                                     >
                                         {`${localeString(
                                             'views.PaymentRequest.feeLimit'
-                                        )} (${localeString('general.percentage')})`}
+                                        )} (${localeString(
+                                            'general.percentage'
+                                        )})`}
                                     </Text>
                                     <TextInput
                                         keyboardType="numeric"
