@@ -388,6 +388,7 @@
     "views.Settings.SetPassword.save": "Save",
     "views.Settings.SetPassword.noMatch": "Passwords do not match",
     "views.Settings.SetPassword.invalid": "Password and duress password cannot be the same",
+    "views.Settings.SetPassword.deletePassword": "Delete Password",
     "views.Settings.SetDuressPassword.title": "Set / Change Duress Password",
     "views.Settings.SetPin.title": "Set / Change PIN",
     "views.Settings.SetPin.noMatch": "PINs do not match",
