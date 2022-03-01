@@ -62,7 +62,10 @@ export default class ImportingAccount extends React.Component<
                         text: localeString('views.ImportAccount.title'),
                         style: { color: themeColor('text') }
                     }}
-                    backgroundColor="grey"
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <View style={styles.content}>
                     {!!errorMsg && <ErrorMessage message={errorMsg} />}
