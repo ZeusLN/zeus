@@ -20,6 +20,9 @@ interface LockscreenState {
     passphrase: string;
     passphraseAttempt: string;
     duressPassphrase: string;
+    pin: string;
+    pinAttempt: string;
+    duressPin: string;
     hidden: boolean;
     error: boolean;
 }
@@ -36,6 +39,9 @@ export default class Lockscreen extends React.Component<
             passphraseAttempt: '',
             passphrase: '',
             duressPassphrase: '',
+            pin: '',
+            pinAttempt: '',
+            duressPin: '',
             hidden: true,
             error: false
         };
@@ -50,6 +56,13 @@ export default class Lockscreen extends React.Component<
                 if (settings.duressPassphrase) {
                     this.setState({
                         duressPassphrase: settings.duressPassphrase
+                    });
+                }
+            } else if (settings && settings.pin) {
+                this.setState({ pin: settings.pin });
+                if (settings.duressPin) {
+                    this.setState({
+                        duressPin: settings.duressPin
                     });
                 }
             } else if (
@@ -70,21 +83,31 @@ export default class Lockscreen extends React.Component<
 
     onAttemptLogIn = () => {
         const { SettingsStore, navigation } = this.props;
-        const { passphrase, duressPassphrase, passphraseAttempt } = this.state;
+        const {
+            passphrase,
+            duressPassphrase,
+            passphraseAttempt,
+            pin,
+            pinAttempt,
+            duressPin
+        } = this.state;
 
         this.setState({
             error: false
         });
 
-        if (passphraseAttempt === passphrase) {
+        if (passphraseAttempt === passphrase || pinAttempt === pin) {
             SettingsStore.setLoginStatus(true);
             LinkingUtils.handleInitialUrl(navigation);
             navigation.navigate('Wallet');
-        } else if (duressPassphrase && passphraseAttempt === duressPassphrase) {
+        } else if (
+            (duressPassphrase && passphraseAttempt === duressPassphrase) ||
+            (duressPin && pinAttempt === duressPin)
+        ) {
             SettingsStore.setLoginStatus(true);
             LinkingUtils.handleInitialUrl(navigation);
             this.deleteNodes();
-        } else if (passphraseAttempt) {
+        } else if (passphraseAttempt || pinAttempt) {
         } else {
             this.setState({
                 error: true
@@ -103,6 +126,8 @@ export default class Lockscreen extends React.Component<
                 theme: settings.theme,
                 passphrase: settings.passphrase,
                 duressPassphrase: settings.duressPassphrase,
+                pin: settings.pin,
+                duressPin: settings.duressPin,
                 fiat: settings.fiat,
                 locale: settings.locale,
                 privacy: settings.privacy
@@ -113,7 +138,14 @@ export default class Lockscreen extends React.Component<
     };
 
     render() {
-        const { passphrase, passphraseAttempt, hidden, error } = this.state;
+        const {
+            passphrase,
+            passphraseAttempt,
+            pin,
+            pinAttempt,
+            hidden,
+            error
+        } = this.state;
 
         return (
             <ScrollView style={styles.container}>
@@ -173,6 +205,10 @@ export default class Lockscreen extends React.Component<
                             />
                         </View>
                     </View>
+                )}
+                {!!pin && (
+                    // pin authentication using pinpad component
+                    <View></View>
                 )}
             </ScrollView>
         );

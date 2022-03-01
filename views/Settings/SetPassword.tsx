@@ -11,12 +11,12 @@ import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 import SettingsStore from './../../stores/SettingsStore';
 
-interface SetPINProps {
+interface SetPassphraseProps {
     navigation: any;
     SettingsStore: SettingsStore;
 }
 
-interface SetPINState {
+interface SetPassphraseState {
     passphrase: string;
     passphraseConfirm: string;
     passphraseMismatchError: boolean;
@@ -25,7 +25,10 @@ interface SetPINState {
 
 @inject('SettingsStore')
 @observer
-export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
+export default class SetPassphrase extends React.Component<
+    SetPassphraseProps,
+    SetPassphraseState
+> {
     state = {
         passphrase: '',
         passphraseConfirm: '',

@@ -35,6 +35,8 @@ interface Settings {
     selectedNode?: number;
     passphrase?: string;
     duressPassphrase?: string;
+    pin?: string;
+    duressPin?: string;
     fiat?: string;
     locale?: string;
     privacy: PrivacySettings;

@@ -132,6 +132,9 @@ export default class Language extends React.Component<
                                                           settings.passphrase,
                                                       duressPassphrase:
                                                           settings.duressPassphrase,
+                                                      pin: settings.pin,
+                                                      duressPin:
+                                                          settings.duressPin,
                                                       locale: item.value,
                                                       privacy: settings.privacy
                                                   }
