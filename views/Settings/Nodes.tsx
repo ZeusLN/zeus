@@ -136,6 +136,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 passphrase: settings.passphrase,
                                                 duressPassphrase:
                                                     settings.duressPassphrase,
+                                                pin: settings.pin,
+                                                duressPin: settings.duressPin,
                                                 privacy: settings.privacy
                                             })
                                         ).then(() => {

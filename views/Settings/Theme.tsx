@@ -99,6 +99,9 @@ export default class Theme extends React.Component<ThemeProps, ThemeStore> {
                                                           settings.passphrase,
                                                       duressPassphrase:
                                                           settings.duressPassphrase,
+                                                      pin: settings.pin,
+                                                      duressPin:
+                                                          settings.duressPin,
                                                       locale: settings.locale,
                                                       theme: item.value,
                                                       privacy: settings.privacy

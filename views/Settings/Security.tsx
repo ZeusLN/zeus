@@ -39,13 +39,34 @@ function Security(props: SecurityProps) {
         {
             label: localeString('views.Settings.SetDuressPassword.title'),
             screen: 'SetDuressPassword'
+        },
+        {
+            label: localeString('views.Settings.SetPin.title'),
+            screen: 'SetPin'
+        },
+        {
+            label: localeString('views.Settings.SetDuressPin.title'),
+            screen: 'SetDuressPin'
         }
         // { label: 'Verify TLS Certificate', url: 'https://twitter.com/ZeusLN' }
     ];
 
     const renderItem = ({ item }) => {
-        // Only render SetDuressPassword list item if a passphrase is set
-        if (!settings.passphrase && item.screen === 'SetDuressPassword') {
+        // Three cases:
+        // 1) If no passphrase or pin is set, allow user to set passphrase or pin
+        // 2) If passphrase is set, allow user to set passphrase or duress passphrase
+        // 3) If pin is set, allow user to set pin or duress pin
+        if (
+            (!settings.passphrase &&
+                !settings.pin &&
+                (item.screen === 'SetDuressPassword' ||
+                    item.screen === 'SetDuressPin')) ||
+            (settings.passphrase &&
+                (item.screen === 'SetPin' || item.screen === 'SetDuressPin')) ||
+            (settings.pin &&
+                (item.screen === 'SetPassword' ||
+                    item.screen === 'SetDuressPassword'))
+        ) {
             return <></>;
         } else {
             return (

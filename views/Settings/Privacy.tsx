@@ -145,6 +145,8 @@ export default class Privacy extends React.Component<
                                                       settings.passphrase,
                                                   duressPassphrase:
                                                       settings.duressPassphrase,
+                                                  pin: settings.pin,
+                                                  duressPin: settings.duressPin,
                                                   locale: settings.locale,
                                                   privacy: {
                                                       defaultBlockExplorer:
@@ -204,6 +206,9 @@ export default class Privacy extends React.Component<
                                                               settings.passphrase,
                                                           duressPassphrase:
                                                               settings.duressPassphrase,
+                                                          pin: settings.pin,
+                                                          duressPin:
+                                                              settings.duressPin,
                                                           locale: settings.locale,
                                                           privacy: {
                                                               defaultBlockExplorer,
@@ -275,6 +280,9 @@ export default class Privacy extends React.Component<
                                                               settings.passphrase,
                                                           duressPassphrase:
                                                               settings.duressPassphrase,
+                                                          pin: settings.pin,
+                                                          duressPin:
+                                                              settings.duressPin,
                                                           locale: settings.locale,
                                                           privacy: {
                                                               defaultBlockExplorer,
@@ -349,6 +357,9 @@ export default class Privacy extends React.Component<
                                                               settings.passphrase,
                                                           duressPassphrase:
                                                               settings.duressPassphrase,
+                                                          pin: settings.pin,
+                                                          duressPin:
+                                                              settings.duressPin,
                                                           locale: settings.locale,
                                                           privacy: {
                                                               defaultBlockExplorer,
@@ -424,6 +435,9 @@ export default class Privacy extends React.Component<
                                                               settings.passphrase,
                                                           duressPassphrase:
                                                               settings.duressPassphrase,
+                                                          pin: settings.pin,
+                                                          duressPin:
+                                                              settings.duressPin,
                                                           locale: settings.locale,
                                                           privacy: {
                                                               defaultBlockExplorer,

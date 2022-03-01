@@ -11,12 +11,12 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import SettingsStore from '../../stores/SettingsStore';
 
-interface SetDuressPINProps {
+interface SetDuressPassphraseProps {
     navigation: any;
     SettingsStore: SettingsStore;
 }
 
-interface SetDuressPINState {
+interface SetDuressPassphraseState {
     duressPassphrase: string;
     duressPassphraseConfirm: string;
     duressPassphraseMismatchError: boolean;
@@ -25,9 +25,9 @@ interface SetDuressPINState {
 
 @inject('SettingsStore')
 @observer
-export default class SetDuressPIN extends React.Component<
-    SetDuressPINProps,
-    SetDuressPINState
+export default class SetDuressPassphrase extends React.Component<
+    SetDuressPassphraseProps,
+    SetDuressPassphraseState
 > {
     state = {
         duressPassphrase: '',
