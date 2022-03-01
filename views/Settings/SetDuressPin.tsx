@@ -2,14 +2,11 @@ import * as React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-
-import Button from '../../components/Button';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
-import TextInput from '../../components/TextInput';
-
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import SettingsStore from '../../stores/SettingsStore';
+import PinPad from '../../components/PinPad';
 
 interface SetDuressPinProps {
     navigation: any;
@@ -152,7 +149,7 @@ export default class SetDuressPin extends React.Component<
                             )}
                         />
                     )}
-                    {/* insert PinPad component here */}
+                    <PinPad pin={true} />
                 </View>
             </View>
         );
