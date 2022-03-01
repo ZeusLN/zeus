@@ -19,6 +19,7 @@ interface SetPassphraseProps {
 interface SetPassphraseState {
     passphrase: string;
     passphraseConfirm: string;
+    savedPassphrase: string;
     passphraseMismatchError: boolean;
     passphraseInvalidError: boolean;
 }
@@ -32,9 +33,20 @@ export default class SetPassphrase extends React.Component<
     state = {
         passphrase: '',
         passphraseConfirm: '',
+        savedPassphrase: '',
         passphraseMismatchError: false,
         passphraseInvalidError: false
     };
+
+    async componentDidMount() {
+        const { SettingsStore } = this.props;
+        const { getSettings } = SettingsStore;
+        const settings = await getSettings();
+
+        if (settings.passphrase) {
+            this.setState({ savedPassphrase: settings.passphrase });
+        }
+    }
 
     renderSeparator = () => (
         <View
@@ -92,11 +104,38 @@ export default class SetPassphrase extends React.Component<
         });
     };
 
+    deletePassword = async () => {
+        // deletes passphrase and duress passphrase because duress
+        // passphrase should not exist if passphrase does not exist
+        const { SettingsStore, navigation } = this.props;
+        const { getSettings, setSettings } = SettingsStore;
+
+        const settings = await getSettings();
+
+        await setSettings(
+            JSON.stringify({
+                nodes: settings.nodes,
+                theme: settings.theme,
+                selectedNode: settings.selectedNode,
+                fiat: settings.fiat,
+                locale: settings.locale,
+                privacy: settings.privacy,
+                duressPassphrase: '',
+                passphrase: ''
+            })
+        ).then(() => {
+            navigation.navigate('Settings', {
+                refresh: true
+            });
+        });
+    };
+
     render() {
         const { navigation } = this.props;
         const {
             passphrase,
             passphraseConfirm,
+            savedPassphrase,
             passphraseMismatchError,
             passphraseInvalidError
         } = this.state;
@@ -208,6 +247,23 @@ export default class SetPassphrase extends React.Component<
                             onPress={() => this.saveSettings()}
                         />
                     </View>
+                    {!!savedPassphrase && (
+                        <View style={{ paddingTop: 10, margin: 10 }}>
+                            <Button
+                                title={localeString(
+                                    'views.Settings.SetPassword.deletePassword'
+                                )}
+                                onPress={() => this.deletePassword()}
+                                containerStyle={{
+                                    borderColor: 'red'
+                                }}
+                                titleStyle={{
+                                    color: 'red'
+                                }}
+                                secondary
+                            />
+                        </View>
+                    )}
                 </View>
             </View>
         );
