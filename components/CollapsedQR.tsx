@@ -9,7 +9,7 @@ import CopyButton from './CopyButton';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
-const secondaryLogo = require('../images/secondary.png');
+const secondaryLogo = require('../assets/images/secondary.png');
 
 let simulation: any;
 
@@ -85,7 +85,8 @@ export default class CollapsedQR extends React.Component<
                     <Text
                         style={{
                             ...styles.value,
-                            color: themeColor('secondaryText')
+                            color: themeColor('secondaryText'),
+                            fontFamily: 'Lato-Regular'
                         }}
                     >
                         {value}
@@ -111,8 +112,7 @@ export default class CollapsedQR extends React.Component<
                         color: '#fff'
                     }}
                     containerStyle={{
-                        marginTop: 10,
-                        marginBottom: Platform.OS === 'android' ? 10 : 20
+                        margin: 10
                     }}
                     onPress={() => this.toggleCollapse()}
                 />
@@ -127,7 +127,11 @@ export default class CollapsedQR extends React.Component<
                                   )
                         }
                         containerStyle={{
-                            marginBottom: 20
+                            margin: 20
+                        }}
+                        icon={{
+                            name: 'nfc',
+                            size: 25
                         }}
                         onPress={() => this.toggleNfc()}
                         tertiary
@@ -148,6 +152,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         alignSelf: 'center',
         padding: 5,
-        marginBottom: 10
+        margin: 10
     }
 });

@@ -31,6 +31,26 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         loading: false
     };
 
+    componentDidMount() {
+        this.refreshSettings();
+    }
+
+    UNSAFE_componentWillReceiveProps = () => {
+        this.refreshSettings();
+    };
+
+    async refreshSettings() {
+        this.setState({
+            loading: true
+        });
+        await this.props.SettingsStore.getSettings().then((settings: any) => {
+            this.setState({
+                loading: false,
+                nodes: (settings && settings.nodes) || []
+            });
+        });
+    }
+
     renderSeparator = () => (
         <View
             style={{
@@ -42,39 +62,32 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         />
     );
 
-    componentDidMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-        this.refreshSettings();
-
-        if (settings) {
-            this.setState({
-                nodes: settings.nodes || []
-            });
-        }
-    }
-
-    async refreshSettings() {
-        this.setState({
-            loading: true
-        });
-        await this.props.SettingsStore.getSettings().then(() => {
-            this.setState({
-                loading: false
-            });
-        });
-    }
-
     render() {
         const { navigation, SettingsStore } = this.props;
         const { loading, nodes } = this.state;
-        const { setSettings, settings }: any = SettingsStore;
+        const { setSettings, settings, setConnectingStatus }: any =
+            SettingsStore;
         const { selectedNode } = settings;
 
         const BackButton = () => (
             <Icon
                 name="arrow-back"
                 onPress={() => navigation.goBack()}
+                color={themeColor('text')}
+                underlayColor="transparent"
+            />
+        );
+
+        const AddButton = () => (
+            <Icon
+                name="add"
+                onPress={() =>
+                    navigation.navigate('AddEditNode', {
+                        newEntry: true,
+                        index:
+                            (nodes && nodes.length && Number(nodes.length)) || 0
+                    })
+                }
                 color={themeColor('text')}
                 underlayColor="transparent"
             />
@@ -92,9 +105,16 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                         leftComponent={<BackButton />}
                         centerComponent={{
                             text: localeString('views.Settings.Nodes.title'),
-                            style: { color: themeColor('text') }
+                            style: {
+                                color: themeColor('text'),
+                                fontFamily: 'Lato-Regular'
+                            }
                         }}
-                        backgroundColor={themeColor('secondary')}
+                        rightComponent={<AddButton />}
+                        backgroundColor={themeColor('background')}
+                        containerStyle={{
+                            borderBottomWidth: 0
+                        }}
                     />
                     {!!nodes && nodes.length > 0 && (
                         <FlatList
@@ -117,6 +137,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 privacy: settings.privacy
                                             })
                                         ).then(() => {
+                                            setConnectingStatus(true);
                                             navigation.navigate('Wallet', {
                                                 refresh: true
                                             });
@@ -126,11 +147,13 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                     <NodeIdenticon
                                         selectedNode={item}
                                         width={35}
+                                        rounded
                                     />
                                     <ListItem.Content>
                                         <ListItem.Title
                                             style={{
-                                                color: themeColor('text')
+                                                color: themeColor('text'),
+                                                fontFamily: 'Lato-Regular'
                                             }}
                                         >
                                             {NodeTitle(item, 32)}
@@ -139,7 +162,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                             style={{
                                                 color: themeColor(
                                                     'secondaryText'
-                                                )
+                                                ),
+                                                fontFamily: 'Lato-Regular'
                                             }}
                                         >
                                             {selectedNode === index ||
@@ -158,7 +182,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                         onPress={() =>
                                             navigation.navigate('AddEditNode', {
                                                 node: item,
-                                                index: index,
+                                                index,
                                                 active: selectedNode === index,
                                                 saved: true
                                             })
@@ -185,30 +209,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                 color: themeColor('text')
                             }}
                             iconOnly
-                        />
-                    )}
-                    {!loading && (
-                        <Button
-                            title={localeString('views.Settings.Nodes.add')}
-                            icon={{
-                                name: 'add',
-                                size: 25,
-                                color: 'white'
-                            }}
-                            onPress={() =>
-                                navigation.navigate('AddEditNode', {
-                                    newEntry: true,
-                                    index:
-                                        (nodes &&
-                                            nodes.length &&
-                                            Number(nodes.length)) ||
-                                        0
-                                })
-                            }
-                            titleStyle={{
-                                color: 'white'
-                            }}
-                            adaptiveWidth
                         />
                     )}
                 </View>

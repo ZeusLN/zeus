@@ -12,7 +12,7 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import ActivityStore from './../../stores/ActivityStore';
 
-import Filter from './../../images/SVG/Filter On.svg';
+import Filter from './../../assets/images/SVG/Filter On.svg';
 
 interface ActivityProps {
     navigation: any;
@@ -28,6 +28,12 @@ export default class Activity extends React.Component<ActivityProps, {}> {
         await resetFilters();
         getActivityAndFilter();
     }
+
+    UNSAFE_componentWillReceiveProps = (newProps: any) => {
+        const { ActivityStore } = newProps;
+        const { getActivityAndFilter } = ActivityStore;
+        getActivityAndFilter();
+    };
 
     renderSeparator = () => (
         <View
@@ -73,7 +79,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
             <Icon
                 name="close"
                 onPress={() => navigation.navigate('Wallet')}
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
@@ -82,7 +88,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
             <TouchableOpacity
                 onPress={() => navigation.navigate('ActivityFilter')}
             >
-                <Filter />
+                <Filter fill={themeColor('text')} />
             </TouchableOpacity>
         );
 
@@ -98,10 +104,16 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                     leftComponent={<CloseButton />}
                     centerComponent={{
                         text: localeString('general.activity'),
-                        style: { color: '#fff' }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
                     rightComponent={<FilterButton />}
-                    backgroundColor="#1f2328"
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 {loading ? (
                     <View style={{ padding: 50 }}>
@@ -224,7 +236,8 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                                 right
                                                 style={{
                                                     fontWeight: '600',
-                                                    color: themeColor('text')
+                                                    color: themeColor('text'),
+                                                    fontFamily: 'Lato-Regular'
                                                 }}
                                             >
                                                 {displayName}
@@ -234,7 +247,8 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                                 style={{
                                                     color: themeColor(
                                                         'secondaryText'
-                                                    )
+                                                    ),
+                                                    fontFamily: 'Lato-Regular'
                                                 }}
                                             >
                                                 {subTitle}
@@ -253,7 +267,8 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                                 style={{
                                                     color: themeColor(
                                                         'secondaryText'
-                                                    )
+                                                    ),
+                                                    fontFamily: 'Lato-Regular'
                                                 }}
                                             >
                                                 {item.getTimestamp === 0
@@ -287,7 +302,8 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                             borderRadius: 30
                         }}
                         titleStyle={{
-                            color: themeColor('text')
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
                         }}
                     />
                 )}

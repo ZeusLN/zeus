@@ -1,14 +1,18 @@
 import * as React from 'react';
-import { FlatList, ScrollView, View } from 'react-native';
+import { FlatList, View } from 'react-native';
 import { Header, Icon, ListItem, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+
+import UnitsStore from './../../stores/UnitsStore';
 import SettingsStore, { CURRENCY_KEYS } from './../../stores/SettingsStore';
+
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 interface CurrencyProps {
     navigation: any;
     SettingsStore: SettingsStore;
+    UnitsStore: UnitsStore;
 }
 
 interface CurrencyState {
@@ -17,7 +21,7 @@ interface CurrencyState {
     currencies: any;
 }
 
-@inject('SettingsStore')
+@inject('SettingsStore', 'UnitsStore')
 @observer
 export default class Currency extends React.Component<
     CurrencyProps,
@@ -59,7 +63,7 @@ export default class Currency extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation, SettingsStore, UnitsStore } = this.props;
         const { selectedCurrency, search, currencies } = this.state;
         const { setSettings, getSettings }: any = SettingsStore;
 
@@ -79,25 +83,34 @@ export default class Currency extends React.Component<
                     backgroundColor: themeColor('background')
                 }}
             >
-                <ScrollView>
+                <View style={{ flex: 1 }}>
                     <Header
                         leftComponent={<BackButton />}
                         centerComponent={{
                             text: localeString('views.Settings.Currency.title'),
-                            style: { color: themeColor('text') }
+                            style: {
+                                color: themeColor('text'),
+                                fontFamily: 'Lato-Regular'
+                            }
                         }}
-                        backgroundColor={themeColor('secondary')}
+                        backgroundColor={themeColor('background')}
+                        containerStyle={{
+                            borderBottomWidth: 0
+                        }}
                     />
                     <SearchBar
                         placeholder={localeString('general.search')}
                         onChangeText={this.updateSearch}
                         value={search}
                         inputStyle={{
-                            color: themeColor('text')
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
                         }}
                         placeholderTextColor={themeColor('secondaryText')}
                         containerStyle={{
-                            backgroundColor: themeColor('background')
+                            backgroundColor: themeColor('background'),
+                            borderTopWidth: 0,
+                            borderBottomWidth: 0
                         }}
                         inputContainerStyle={{
                             borderRadius: 15,
@@ -131,6 +144,7 @@ export default class Currency extends React.Component<
                                                 : { fiat: item.value }
                                         )
                                     ).then(() => {
+                                        UnitsStore.resetUnits();
                                         getSettings();
                                         navigation.navigate('Settings', {
                                             refresh: true
@@ -147,13 +161,16 @@ export default class Currency extends React.Component<
                                                 (!selectedCurrency &&
                                                     item.value === 'Disabled')
                                                     ? themeColor('highlight')
-                                                    : themeColor('text')
+                                                    : themeColor('text'),
+                                            fontFamily: 'Lato-Regular'
                                         }}
                                     >
                                         {item.key}
                                     </ListItem.Title>
                                 </ListItem.Content>
-                                {selectedCurrency === item.value && (
+                                {(selectedCurrency === item.value ||
+                                    (!selectedCurrency &&
+                                        item.value === 'Disabled')) && (
                                     <View style={{ textAlign: 'right' }}>
                                         <Icon
                                             name="check"
@@ -166,7 +183,7 @@ export default class Currency extends React.Component<
                         keyExtractor={(item, index) => `${item.host}-${index}`}
                         ItemSeparatorComponent={this.renderSeparator}
                     />
-                </ScrollView>
+                </View>
             </View>
         );
     }

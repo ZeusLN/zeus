@@ -17,17 +17,18 @@ import LoadingIndicator from '../components/LoadingIndicator';
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
 
-import Refresh from '../images/SVG/Refresh.svg';
-import ErrorIcon from '../images/SVG/ErrorIcon.svg';
+import MempoolSpace from '../assets/images/affiliates/Mempool.svg';
+import Refresh from '../assets/images/SVG/Refresh.svg';
+import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
 
 import FeeStore from './../stores/FeeStore';
 
-interface NodeInfoProps {
+interface EditFeeProps {
     FeeStore: FeeStore;
     navigation: any;
 }
 
-interface SendState {
+interface EditFeeState {
     customFee: string;
     selectedFee: string;
     fee: string;
@@ -35,7 +36,10 @@ interface SendState {
 
 @inject('FeeStore')
 @observer
-export default class EditFee extends React.Component<NodeInfoProps, SendState> {
+export default class EditFee extends React.Component<
+    EditFeeProps,
+    EditFeeState
+> {
     constructor(props: any) {
         super(props);
         this.state = {
@@ -84,6 +88,20 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                     leftComponent={<BackButton />}
                     rightComponent={<ReloadButton />}
                 />
+                <View
+                    style={{
+                        backgroundColor:
+                            themeColor('generalStyle') === 'light'
+                                ? '#1d1f31'
+                                : themeColor('background'),
+                        alignItems: 'center',
+                        width: '100%',
+                        paddingTop: 15,
+                        paddingBottom: 15
+                    }}
+                >
+                    <MempoolSpace width={140} height={55} />
+                </View>
                 <ScrollView style={{ paddingTop: 10, paddingLeft: 20 }}>
                     {loading && !error && (
                         <View style={{ flex: 1, justifyContent: 'center' }}>
@@ -112,13 +130,18 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                                         ...styles.feeBox,
                                         borderColor:
                                             selectedFee === 'fastestFee'
-                                                ? 'rgba(255, 217, 63, .6)'
+                                                ? themeColor('highlight')
                                                 : '#A7A9AC',
                                         borderWidth: 3,
                                         color: themeColor('text')
                                     }}
                                 >
-                                    <Text style={styles.feeTitle}>
+                                    <Text
+                                        style={{
+                                            ...styles.feeTitle,
+                                            color: themeColor('text')
+                                        }}
+                                    >
                                         {localeString(
                                             'views.EditFee.fastestFee'
                                         )}
@@ -148,13 +171,18 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                                         ...styles.feeBox,
                                         borderColor:
                                             selectedFee === 'halfHourFee'
-                                                ? 'rgba(255, 217, 63, .6)'
+                                                ? themeColor('highlight')
                                                 : '#A7A9AC',
                                         borderWidth: 3,
                                         color: themeColor('text')
                                     }}
                                 >
-                                    <Text style={styles.feeTitle}>
+                                    <Text
+                                        style={{
+                                            ...styles.feeTitle,
+                                            color: themeColor('text')
+                                        }}
+                                    >
                                         {localeString(
                                             'views.EditFee.halfHourFee'
                                         )}
@@ -185,13 +213,18 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                                         ...styles.feeBox,
                                         borderColor:
                                             selectedFee === 'hourFee'
-                                                ? 'rgba(255, 217, 63, .6)'
+                                                ? themeColor('highlight')
                                                 : '#A7A9AC',
                                         borderWidth: 3,
                                         color: themeColor('text')
                                     }}
                                 >
-                                    <Text style={styles.feeTitle}>
+                                    <Text
+                                        style={{
+                                            ...styles.feeTitle,
+                                            color: themeColor('text')
+                                        }}
+                                    >
                                         {localeString('views.EditFee.hourFee')}
                                     </Text>
                                     <Text
@@ -219,13 +252,18 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                                         ...styles.feeBox,
                                         borderColor:
                                             selectedFee === 'minimumFee'
-                                                ? 'rgba(255, 217, 63, .6)'
+                                                ? themeColor('highlight')
                                                 : '#A7A9AC',
                                         borderWidth: 3,
                                         color: themeColor('text')
                                     }}
                                 >
-                                    <Text style={styles.feeTitle}>
+                                    <Text
+                                        style={{
+                                            ...styles.feeTitle,
+                                            color: themeColor('text')
+                                        }}
+                                    >
                                         {localeString(
                                             'views.EditFee.minimumFee'
                                         )}
@@ -241,7 +279,12 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                                 </View>
                             </TouchableWithoutFeedback>
 
-                            <Text style={styles.custom}>
+                            <Text
+                                style={{
+                                    ...styles.custom,
+                                    color: themeColor('text')
+                                }}
+                            >
                                 {localeString('views.EditFee.custom')}
                             </Text>
                             <TouchableWithoutFeedback>
@@ -251,7 +294,7 @@ export default class EditFee extends React.Component<NodeInfoProps, SendState> {
                                         paddingLeft: '85%',
                                         borderColor:
                                             selectedFee === 'custom'
-                                                ? 'rgba(255, 217, 63, .6)'
+                                                ? themeColor('highlight')
                                                 : '#A7A9AC',
                                         borderWidth: 3,
                                         color: themeColor('text'),
@@ -318,7 +361,6 @@ const styles = StyleSheet.create({
         marginBottom: 10
     },
     feeTitle: {
-        color: '#fff',
         fontSize: 18,
         left: 10,
         top: 10
@@ -332,8 +374,7 @@ const styles = StyleSheet.create({
         color: '#A7A9AC',
         fontSize: 18,
         top: 48,
-        left: 15,
-        color: themeColor('text')
+        left: 15
     },
     confirmButton: {
         marginTop: 20,

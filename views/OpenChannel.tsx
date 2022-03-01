@@ -6,9 +6,10 @@ import {
     Switch,
     Text,
     View,
+    TouchableOpacity,
     TouchableWithoutFeedback
 } from 'react-native';
-import Clipboard from '@react-native-community/clipboard';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import { Header, Icon } from 'react-native-elements';
 import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
@@ -31,6 +32,8 @@ import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
 import BalanceStore from './../stores/BalanceStore';
 import UTXOsStore from './../stores/UTXOsStore';
+
+import Scan from './../assets/images/SVG/Scan.svg';
 
 interface OpenChannelProps {
     exitSetup: any;
@@ -232,9 +235,17 @@ export default class OpenChannel extends React.Component<
             <Icon
                 name="arrow-back"
                 onPress={() => navigation.navigate('Wallet')}
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
+        );
+
+        const ScanButton = () => (
+            <TouchableOpacity
+                onPress={() => navigation.navigate('NodeQRCodeScanner')}
+            >
+                <Scan fill={themeColor('text')} />
+            </TouchableOpacity>
         );
 
         return (
@@ -248,20 +259,27 @@ export default class OpenChannel extends React.Component<
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.OpenChannel.openChannel'),
-                        style: { color: '#fff' }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
-                    backgroundColor="grey"
+                    rightComponent={<ScanButton />}
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
 
                 {!!suggestImport && (
                     <View style={styles.clipboardImport}>
-                        <Text style={{ color: 'white' }}>
+                        <Text style={styles.textWhite}>
                             {localeString('views.OpenChannel.importText')}
                         </Text>
-                        <Text style={{ color: 'white', padding: 15 }}>
+                        <Text style={{ ...styles.textWhite, padding: 15 }}>
                             {suggestImport}
                         </Text>
-                        <Text style={{ color: 'white' }}>
+                        <Text style={styles.textWhite}>
                             {localeString('views.OpenChannel.importPrompt')}
                         </Text>
                         <View style={styles.button}>
@@ -311,6 +329,7 @@ export default class OpenChannel extends React.Component<
 
                     <Text
                         style={{
+                            ...styles.secondaryText,
                             color: themeColor('secondaryText')
                         }}
                     >
@@ -327,6 +346,7 @@ export default class OpenChannel extends React.Component<
 
                     <Text
                         style={{
+                            ...styles.secondaryText,
                             color: themeColor('secondaryText')
                         }}
                     >
@@ -343,6 +363,7 @@ export default class OpenChannel extends React.Component<
 
                     <Text
                         style={{
+                            ...styles.secondaryText,
                             color: themeColor('secondaryText')
                         }}
                     >
@@ -362,6 +383,7 @@ export default class OpenChannel extends React.Component<
                     {local_funding_amount === 'all' && (
                         <Text
                             style={{
+                                ...styles.text,
                                 color: themeColor('text')
                             }}
                         >
@@ -375,6 +397,7 @@ export default class OpenChannel extends React.Component<
 
                     <Text
                         style={{
+                            ...styles.secondaryText,
                             color: themeColor('secondaryText')
                         }}
                     >
@@ -395,6 +418,7 @@ export default class OpenChannel extends React.Component<
                     <>
                         <Text
                             style={{
+                                ...styles.secondaryText,
                                 color: themeColor('secondaryText')
                             }}
                         >
@@ -419,6 +443,7 @@ export default class OpenChannel extends React.Component<
                                 >
                                     <Text
                                         style={{
+                                            ...styles.text,
                                             color: themeColor('text'),
                                             fontSize: 18
                                         }}
@@ -488,20 +513,6 @@ export default class OpenChannel extends React.Component<
                             onPress={() => connectPeer(this.state)}
                         />
                     </View>
-                    <View style={styles.button}>
-                        <Button
-                            title={localeString('general.scan')}
-                            icon={{
-                                name: 'crop-free',
-                                size: 25,
-                                color: 'white'
-                            }}
-                            onPress={() =>
-                                navigation.navigate('NodeQRCodeScanner')
-                            }
-                            secondary
-                        />
-                    </View>
 
                     {Platform.OS === 'ios' && (
                         <View style={styles.button}>
@@ -509,8 +520,7 @@ export default class OpenChannel extends React.Component<
                                 title={localeString('general.enableNfc')}
                                 icon={{
                                     name: 'nfc',
-                                    size: 25,
-                                    color: 'white'
+                                    size: 25
                                 }}
                                 onPress={() => this.enableNfc()}
                                 secondary
@@ -524,6 +534,16 @@ export default class OpenChannel extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    text: {
+        fontFamily: 'Lato-Regular'
+    },
+    secondaryText: {
+        fontFamily: 'Lato-Regular'
+    },
+    textWhite: {
+        color: 'white',
+        fontFamily: 'Lato-Regular'
+    },
     content: {
         paddingTop: 20,
         paddingBottom: 20,

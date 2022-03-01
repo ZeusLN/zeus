@@ -1,11 +1,18 @@
 import * as React from 'react';
-import { Avatar } from 'react-native-elements';
+import { View } from 'react-native';
 import Identicon from 'identicon.js';
+import { SvgXml } from 'react-native-svg';
+
+import Base64Utils from './../utils/Base64Utils';
 import PrivacyUtils from './../utils/PrivacyUtils';
 
 const hash = require('object-hash');
 
-export const NodeTitle = (selectedNode: any, maxLength = 24) => {
+export const NodeTitle = (
+    selectedNode: any,
+    maxLength = 24,
+    overrideSensitivity = false
+) => {
     const displayName =
         selectedNode && selectedNode.nickname
             ? selectedNode.nickname
@@ -19,7 +26,9 @@ export const NodeTitle = (selectedNode: any, maxLength = 24) => {
             ? `${selectedNode.host}:${selectedNode.port}`
             : (selectedNode && selectedNode.host) || 'Unknown';
 
-    const title = PrivacyUtils.sensitiveValue(displayName, 8);
+    const title = overrideSensitivity
+        ? displayName
+        : PrivacyUtils.sensitiveValue(displayName, 8);
     return title.length > maxLength
         ? title.substring(0, maxLength - 3) + '...'
         : title;
@@ -27,12 +36,14 @@ export const NodeTitle = (selectedNode: any, maxLength = 24) => {
 
 export default function NodeIdenticon({
     selectedNode,
-    width
+    width,
+    rounded
 }: {
     selectedNode: any;
     width?: number;
+    rounded?: boolean;
 }) {
-    const title = NodeTitle(selectedNode);
+    const title = NodeTitle(selectedNode, 24, true);
 
     const data = new Identicon(
         hash.sha1(
@@ -40,28 +51,16 @@ export default function NodeIdenticon({
                 ? `${title}-${selectedNode.username}`
                 : title
         ),
-        255
+        {
+            background: [255, 255, 255, 255],
+            size: width,
+            format: 'svg'
+        }
     ).toString();
 
-    const identicon = width ? (
-        <Avatar
-            source={{
-                uri: `data:image/png;base64,${data}`
-            }}
-            size="medium"
-            rounded
-            width={width}
-            height={width}
-        />
-    ) : (
-        <Avatar
-            source={{
-                uri: `data:image/png;base64,${data}`
-            }}
-            size="medium"
-            rounded
-        />
+    return (
+        <View style={{ borderRadius: rounded ? width : 0, overflow: 'hidden' }}>
+            <SvgXml xml={Base64Utils.atob(data)} />
+        </View>
     );
-
-    return identicon;
 }

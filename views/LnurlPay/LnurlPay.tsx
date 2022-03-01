@@ -3,12 +3,17 @@ import * as React from 'react';
 import RNFetchBlob from 'rn-fetch-blob';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Button, Header, Icon } from 'react-native-elements';
+import { Header, Icon } from 'react-native-elements';
 import querystring from 'querystring-es3';
+
+import Button from './../../components/Button';
 import TextInput from './../../components/TextInput';
+
 import InvoicesStore from './../../stores/InvoicesStore';
 import LnurlPayStore from './../../stores/LnurlPayStore';
+
 import LnurlPayMetadata from './Metadata';
+
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -45,7 +50,7 @@ export default class LnurlPay extends React.Component<
             Alert.alert(
                 localeString('views.LnurlPay.LnurlPay.invalidParams'),
                 err.message,
-                [{ text: 'OK', onPress: () => void 0 }],
+                [{ text: localeString('general.ok'), onPress: () => void 0 }],
                 { cancelable: false }
             );
         }
@@ -91,7 +96,12 @@ export default class LnurlPay extends React.Component<
                     Alert.alert(
                         `[error] ${domain} says:`,
                         data.reason,
-                        [{ text: 'OK', onPress: () => void 0 }],
+                        [
+                            {
+                                text: localeString('general.ok'),
+                                onPress: () => void 0
+                            }
+                        ],
                         { cancelable: false }
                     );
                     return;
@@ -109,7 +119,12 @@ export default class LnurlPay extends React.Component<
                                 'views.LnurlPay.LnurlPay.invalidInvoice'
                             ),
                             InvoicesStore.getPayReqError,
-                            [{ text: 'OK', onPress: () => void 0 }],
+                            [
+                                {
+                                    text: localeString('general.ok'),
+                                    onPress: () => void 0
+                                }
+                            ],
                             { cancelable: false }
                         );
                         return;
@@ -146,7 +161,7 @@ export default class LnurlPay extends React.Component<
             <Icon
                 name="arrow-back"
                 onPress={() => navigation.navigate('Wallet')}
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
@@ -163,24 +178,36 @@ export default class LnurlPay extends React.Component<
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: 'Send',
-                        style: { color: themeColor('text') }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
-                    backgroundColor={themeColor('secondary')}
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <View style={styles.content}>
                     <Text
                         style={{
+                            ...styles.text,
+                            color: themeColor('secondaryText'),
                             padding: 20,
                             fontWeight: 'bold',
-                            fontSize: 22,
-                            color: themeColor('text')
+                            fontSize: 22
                         }}
                     >
                         {domain}
                     </Text>
                 </View>
                 <View style={styles.content}>
-                    <Text style={{ color: themeColor('text') }}>
+                    <Text
+                        style={{
+                            ...styles.text,
+                            color: themeColor('secondaryText')
+                        }}
+                    >
                         {localeString('views.LnurlPay.LnurlPay.amount')}
                         {lnurl && lnurl.minSendable !== lnurl.maxSendable
                             ? ` (${Math.ceil(
@@ -203,7 +230,12 @@ export default class LnurlPay extends React.Component<
                     />
                     {lnurl.commentAllowed > 0 ? (
                         <>
-                            <Text style={{ color: themeColor('text') }}>
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
                                 {localeString(
                                     'views.LnurlPay.LnurlPay.comment'
                                 ) + ` (${lnurl.commentAllowed} char)`}
@@ -246,6 +278,9 @@ export default class LnurlPay extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    text: {
+        fontFamily: 'Lato-Regular'
+    },
     textInput: {
         paddingTop: 10,
         paddingBottom: 10

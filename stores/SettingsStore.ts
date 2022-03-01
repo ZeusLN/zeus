@@ -1,7 +1,10 @@
 import RNSecureKeyStore, { ACCESSIBLE } from 'react-native-secure-key-store';
 import { action, observable } from 'mobx';
 import RNFetchBlob from 'rn-fetch-blob';
+
 import RESTUtils from '../utils/RESTUtils';
+import { doTorRequest, RequestMethod } from '../utils/TorUtils';
+import { localeString } from '../utils/LocaleUtils';
 
 // lndhub
 import LoginRequest from './../models/LoginRequest';
@@ -88,7 +91,7 @@ export const CURRENCY_KEYS = [
     { key: '🇭🇰 Hong Kong Dollar (HKD)', value: 'HKD' },
     { key: '🇨🇦 Canadian Dollar (CAD)', value: 'CAD' },
     { key: '🇳🇿 New Zealand Dollar (NZD)', value: 'NZD' },
-    { key: '🇦🇺 Austrlian Dollar (AUD)', value: 'AUD' },
+    { key: '🇦🇺 Australian Dollar (AUD)', value: 'AUD' },
     { key: '🇨🇱 Chilean Peso (CLP)', value: 'CLP' },
     { key: '🇬🇧 Great British Pound (GBP)', value: 'GBP' },
     { key: '🇩🇰 Danish Krone (DKK)', value: 'DKK' },
@@ -114,7 +117,9 @@ export const CURRENCY_KEYS = [
 export const THEME_KEYS = [
     { key: 'Dark', value: 'dark' },
     { key: 'Light', value: 'light' },
-    { key: 'Junkie', value: 'junkie' }
+    { key: 'Junkie', value: 'junkie' },
+    { key: 'BPM', value: 'bpm' },
+    { key: 'Orange', value: 'orange' }
 ];
 
 export const DEFAULT_THEME = 'dark';
@@ -139,6 +144,8 @@ export default class SettingsStore {
     @observable accessKey: string;
     @observable implementation: string;
     @observable certVerification: boolean | undefined;
+    @observable public loggedIn = false;
+    @observable public connecting = true;
     // LNDHub
     @observable username: string;
     @observable password: string;
@@ -160,39 +167,58 @@ export default class SettingsStore {
         const configRoute = data.split('config=')[1];
         this.btcPayError = null;
 
-        return RNFetchBlob.fetch('get', configRoute)
-            .then((response: any) => {
-                const status = response.info().status;
-                if (status == 200) {
-                    const data = response.json();
-                    const configuration = data.configurations[0];
-                    const { adminMacaroon, macaroon, type, uri } =
-                        configuration;
-
-                    if (type !== 'lnd-rest' && type !== 'clightning-rest') {
-                        this.btcPayError =
-                            'Sorry, we currently only support BTCPay instances using lnd or c-lightning';
+        if (configRoute.includes('.onion')) {
+            return doTorRequest(configRoute, RequestMethod.GET)
+                .then((response: any) => {
+                    return this.parseBTCPayConfig(response);
+                })
+                .catch((err: any) => {
+                    // handle error
+                    this.btcPayError = `${localeString(
+                        'stores.SettingsStore.btcPayFetchConfigError'
+                    )}: ${err.toString()}`;
+                });
+        } else {
+            return RNFetchBlob.fetch('get', configRoute)
+                .then((response: any) => {
+                    const status = response.info().status;
+                    if (status == 200) {
+                        const data = response.json();
+                        return this.parseBTCPayConfig(data);
                     } else {
-                        const config = {
-                            host: uri,
-                            macaroonHex: adminMacaroon || macaroon,
-                            implementation:
-                                type === 'clightning-rest'
-                                    ? 'c-lightning-REST'
-                                    : 'lnd'
-                        };
-
-                        return config;
+                        this.btcPayError = localeString(
+                            'stores.SettingsStore.btcPayFetchConfigError'
+                        );
                     }
-                } else {
-                    this.btcPayError = 'Error getting BTCPay configuration';
-                }
-            })
-            .catch((err: any) => {
-                // handle error
-                this.btcPayError = `Error getting BTCPay configuration: ${err.toString()}`;
-            });
+                })
+                .catch((err: any) => {
+                    // handle error
+                    this.btcPayError = `${localeString(
+                        'stores.SettingsStore.btcPayFetchConfigError'
+                    )}: ${err.toString()}`;
+                });
+        }
     };
+
+    parseBTCPayConfig(data: any) {
+        const configuration = data.configurations[0];
+        const { adminMacaroon, macaroon, type, uri } = configuration;
+
+        if (type !== 'lnd-rest' && type !== 'clightning-rest') {
+            this.btcPayError = localeString(
+                'stores.SettingsStore.btcPayImplementationSupport'
+            );
+        } else {
+            const config = {
+                host: uri,
+                macaroonHex: adminMacaroon || macaroon,
+                implementation:
+                    type === 'clightning-rest' ? 'c-lightning-REST' : 'lnd'
+            };
+
+            return config;
+        }
+    }
 
     hasCredentials() {
         return this.macaroonHex || this.accessKey ? true : false;
@@ -261,15 +287,17 @@ export default class SettingsStore {
         return RESTUtils.createAccount(host, certVerification, enableTor)
             .then((data: any) => {
                 this.loading = false;
-                this.createAccountSuccess =
-                    'Successfully created LNDHub account. Record the username and password somewhere so you can restore your funds if something happens to your device. Then hit Save Node Config to continue.';
+                this.createAccountSuccess = localeString(
+                    'stores.SettingsStore.lndhubSuccess'
+                );
                 return data;
             })
             .catch(() => {
                 // handle error
                 this.loading = false;
-                this.createAccountError =
-                    'Error creating LNDHub account. Please check the host and try again.';
+                this.createAccountError = localeString(
+                    'stores.SettingsStore.lndhubError'
+                );
             });
     };
 
@@ -292,5 +320,15 @@ export default class SettingsStore {
                 // handle error
                 this.loading = false;
             });
+    };
+
+    @action
+    public setLoginStatus = (status = false) => {
+        this.loggedIn = status;
+    };
+
+    @action
+    public setConnectingStatus = (status = false) => {
+        this.connecting = status;
     };
 }

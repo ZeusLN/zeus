@@ -46,7 +46,7 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
             <Icon
                 name="close"
                 onPress={() => navigation.navigate('Wallet')}
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
@@ -68,9 +68,15 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                                       utxos.length
                                   })`
                                 : localeString('general.coins'),
-                        style: { color: '#fff' }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
-                    backgroundColor="#1f2328"
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 {loading ? (
                     <View style={{ padding: 50 }}>
@@ -142,7 +148,8 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                             borderRadius: 30
                         }}
                         titleStyle={{
-                            color: themeColor('text')
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
                         }}
                     />
                 )}

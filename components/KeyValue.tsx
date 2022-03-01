@@ -26,7 +26,8 @@ export default function KeyValue({
         typeof value === 'string' || typeof value === 'number' ? (
             <Text
                 style={{
-                    color: color || themeColor('secondaryText')
+                    color: color || themeColor('secondaryText'),
+                    fontFamily: 'Lato-Regular'
                 }}
             >
                 {sensitive ? PrivacyUtils.sensitiveValue(value) : value}

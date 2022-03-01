@@ -22,7 +22,7 @@ function NodeQRScanner(props: NodeQRProps) {
             Alert.alert(
                 localeString('general.error'),
                 localeString('views.NodeQRScanner.error'),
-                [{ text: 'OK', onPress: () => void 0 }],
+                [{ text: localeString('general.ok'), onPress: () => void 0 }],
                 { cancelable: false }
             );
 
@@ -32,8 +32,6 @@ function NodeQRScanner(props: NodeQRProps) {
 
     return (
         <QRCodeScanner
-            title={localeString('views.NodeQRScanner.title')}
-            text={localeString('views.NodeQRScanner.text')}
             handleQRScanned={handleNodeScanned}
             goBack={() => navigation.navigate('OpenChannel')}
         />

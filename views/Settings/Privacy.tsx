@@ -7,7 +7,9 @@ import SettingsStore, {
 } from './../../stores/SettingsStore';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
+
 import DropdownSetting from './../../components/DropdownSetting';
+import LoadingIndicator from './../../components/LoadingIndicator';
 import TextInput from './../../components/TextInput';
 
 interface PrivacyProps {
@@ -78,7 +80,7 @@ export default class Privacy extends React.Component<
             lurkerMode,
             enableMempoolRates
         } = this.state;
-        const { setSettings, getSettings }: any = SettingsStore;
+        const { setSettings, getSettings, loading }: any = SettingsStore;
 
         const BackButton = () => (
             <Icon
@@ -104,320 +106,346 @@ export default class Privacy extends React.Component<
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Settings.Privacy.title'),
-                        style: { color: themeColor('text') }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
-                    backgroundColor={themeColor('secondary')}
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
-                <ScrollView
-                    style={{ flex: 1, paddingLeft: 10, paddingTop: 15 }}
-                >
-                    <DropdownSetting
-                        title={localeString(
-                            'views.Settings.Privacy.blockExplorer'
-                        )}
-                        selectedValue={defaultBlockExplorer}
-                        onValueChange={async (value: string) => {
-                            this.setState({
-                                defaultBlockExplorer: value
-                            });
-                            const settings = await getSettings();
-                            await setSettings(
-                                JSON.stringify(
-                                    settings
-                                        ? {
-                                              nodes: settings.nodes,
-                                              theme: settings.theme,
-                                              selectedNode:
-                                                  settings.selectedNode,
-                                              fiat: settings.fiat,
-                                              passphrase: settings.passphrase,
-                                              locale: settings.locale,
-                                              privacy: {
-                                                  defaultBlockExplorer: value,
-                                                  customBlockExplorer,
-                                                  clipboard,
-                                                  lurkerMode,
-                                                  enableMempoolRates
+                {loading ? (
+                    <LoadingIndicator />
+                ) : (
+                    <ScrollView
+                        style={{ flex: 1, paddingLeft: 10, paddingTop: 15 }}
+                    >
+                        <DropdownSetting
+                            title={localeString(
+                                'views.Settings.Privacy.blockExplorer'
+                            )}
+                            selectedValue={defaultBlockExplorer}
+                            onValueChange={async (value: string) => {
+                                this.setState({
+                                    defaultBlockExplorer: value
+                                });
+                                const settings = await getSettings();
+                                await setSettings(
+                                    JSON.stringify(
+                                        settings
+                                            ? {
+                                                  nodes: settings.nodes,
+                                                  theme: settings.theme,
+                                                  selectedNode:
+                                                      settings.selectedNode,
+                                                  fiat: settings.fiat,
+                                                  passphrase:
+                                                      settings.passphrase,
+                                                  locale: settings.locale,
+                                                  privacy: {
+                                                      defaultBlockExplorer:
+                                                          value,
+                                                      customBlockExplorer,
+                                                      clipboard,
+                                                      lurkerMode,
+                                                      enableMempoolRates
+                                                  }
                                               }
-                                          }
-                                        : {
-                                              privacy: {
-                                                  defaultBlockExplorer: value,
-                                                  customBlockExplorer,
-                                                  clipboard,
-                                                  lurkerMode,
-                                                  enableMempoolRates
+                                            : {
+                                                  privacy: {
+                                                      defaultBlockExplorer:
+                                                          value,
+                                                      customBlockExplorer,
+                                                      clipboard,
+                                                      lurkerMode,
+                                                      enableMempoolRates
+                                                  }
                                               }
-                                          }
-                                )
-                            );
-                        }}
-                        values={BLOCK_EXPLORER_KEYS}
-                    />
+                                    )
+                                );
+                            }}
+                            values={BLOCK_EXPLORER_KEYS}
+                        />
 
-                    {defaultBlockExplorer === 'Custom' && (
-                        <>
-                            <Text
-                                style={{ color: themeColor('secondaryText') }}
+                        {defaultBlockExplorer === 'Custom' && (
+                            <>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'Lato-Regular'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.Privacy.customBlockExplorer'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    value={customBlockExplorer}
+                                    onChangeText={async (text: string) => {
+                                        this.setState({
+                                            customBlockExplorer: text
+                                        });
+
+                                        const settings = await getSettings();
+                                        await setSettings(
+                                            JSON.stringify(
+                                                settings
+                                                    ? {
+                                                          nodes: settings.nodes,
+                                                          theme: settings.theme,
+                                                          selectedNode:
+                                                              settings.selectedNode,
+                                                          fiat: settings.fiat,
+                                                          passphrase:
+                                                              settings.passphrase,
+                                                          locale: settings.locale,
+                                                          privacy: {
+                                                              defaultBlockExplorer,
+                                                              customBlockExplorer:
+                                                                  text,
+                                                              clipboard,
+                                                              lurkerMode,
+                                                              enableMempoolRates
+                                                          }
+                                                      }
+                                                    : {
+                                                          privacy: {
+                                                              defaultBlockExplorer,
+                                                              customBlockExplorer:
+                                                                  text,
+                                                              clipboard,
+                                                              lurkerMode,
+                                                              enableMempoolRates
+                                                          }
+                                                      }
+                                            )
+                                        );
+                                    }}
+                                />
+                            </>
+                        )}
+
+                        <ListItem
+                            containerStyle={{
+                                borderBottomWidth: 0,
+                                backgroundColor: themeColor('background')
+                            }}
+                        >
+                            <ListItem.Title
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'Lato-Regular',
+                                    left: -10
+                                }}
                             >
                                 {localeString(
-                                    'views.Settings.Privacy.customBlockExplorer'
+                                    'views.Settings.Privacy.clipboard'
                                 )}
-                            </Text>
-                            <TextInput
-                                value={customBlockExplorer}
-                                onChangeText={async (text: string) => {
-                                    this.setState({
-                                        customBlockExplorer: text
-                                    });
-
-                                    const settings = await getSettings();
-                                    await setSettings(
-                                        JSON.stringify(
-                                            settings
-                                                ? {
-                                                      nodes: settings.nodes,
-                                                      theme: settings.theme,
-                                                      selectedNode:
-                                                          settings.selectedNode,
-                                                      fiat: settings.fiat,
-                                                      passphrase:
-                                                          settings.passphrase,
-                                                      locale: settings.locale,
-                                                      privacy: {
-                                                          defaultBlockExplorer,
-                                                          customBlockExplorer:
-                                                              text,
-                                                          clipboard,
-                                                          lurkerMode,
-                                                          enableMempoolRates
-                                                      }
-                                                  }
-                                                : {
-                                                      privacy: {
-                                                          defaultBlockExplorer,
-                                                          customBlockExplorer:
-                                                              text,
-                                                          clipboard,
-                                                          lurkerMode,
-                                                          enableMempoolRates
-                                                      }
-                                                  }
-                                        )
-                                    );
+                            </ListItem.Title>
+                            <View
+                                style={{
+                                    flex: 1,
+                                    flexDirection: 'row',
+                                    justifyContent: 'flex-end'
                                 }}
-                            />
-                        </>
-                    )}
-
-                    <ListItem
-                        containerStyle={{
-                            borderBottomWidth: 0,
-                            backgroundColor: themeColor('background')
-                        }}
-                    >
-                        <ListItem.Title
-                            style={{
-                                color: themeColor('secondaryText'),
-                                left: -10
+                            >
+                                <Switch
+                                    value={clipboard}
+                                    onValueChange={async () => {
+                                        this.setState({
+                                            clipboard: !clipboard
+                                        });
+                                        const settings = await getSettings();
+                                        await setSettings(
+                                            JSON.stringify(
+                                                settings
+                                                    ? {
+                                                          nodes: settings.nodes,
+                                                          theme: settings.theme,
+                                                          selectedNode:
+                                                              settings.selectedNode,
+                                                          fiat: settings.fiat,
+                                                          passphrase:
+                                                              settings.passphrase,
+                                                          locale: settings.locale,
+                                                          privacy: {
+                                                              defaultBlockExplorer,
+                                                              customBlockExplorer,
+                                                              clipboard:
+                                                                  !clipboard,
+                                                              lurkerMode,
+                                                              enableMempoolRates
+                                                          }
+                                                      }
+                                                    : {
+                                                          privacy: {
+                                                              defaultBlockExplorer,
+                                                              customBlockExplorer,
+                                                              clipboard:
+                                                                  !clipboard,
+                                                              lurkerMode,
+                                                              enableMempoolRates
+                                                          }
+                                                      }
+                                            )
+                                        );
+                                    }}
+                                    trackColor={{
+                                        false: '#767577',
+                                        true: themeColor('highlight')
+                                    }}
+                                />
+                            </View>
+                        </ListItem>
+                        <ListItem
+                            containerStyle={{
+                                borderBottomWidth: 0,
+                                backgroundColor: themeColor('background')
                             }}
                         >
-                            {localeString('views.Settings.Privacy.clipboard')}
-                        </ListItem.Title>
-                        <View
-                            style={{
-                                flex: 1,
-                                flexDirection: 'row',
-                                justifyContent: 'flex-end'
+                            <ListItem.Title
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'Lato-Regular',
+                                    left: -10
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Privacy.lurkerMode'
+                                )}
+                            </ListItem.Title>
+                            <View
+                                style={{
+                                    flex: 1,
+                                    flexDirection: 'row',
+                                    justifyContent: 'flex-end'
+                                }}
+                            >
+                                <Switch
+                                    value={lurkerMode}
+                                    onValueChange={async () => {
+                                        this.setState({
+                                            lurkerMode: !lurkerMode
+                                        });
+                                        const settings = await getSettings();
+                                        await setSettings(
+                                            JSON.stringify(
+                                                settings
+                                                    ? {
+                                                          nodes: settings.nodes,
+                                                          theme: settings.theme,
+                                                          selectedNode:
+                                                              settings.selectedNode,
+                                                          fiat: settings.fiat,
+                                                          passphrase:
+                                                              settings.passphrase,
+                                                          locale: settings.locale,
+                                                          privacy: {
+                                                              defaultBlockExplorer,
+                                                              customBlockExplorer,
+                                                              clipboard,
+                                                              lurkerMode:
+                                                                  !lurkerMode,
+                                                              enableMempoolRates
+                                                          }
+                                                      }
+                                                    : {
+                                                          privacy: {
+                                                              defaultBlockExplorer,
+                                                              customBlockExplorer,
+                                                              clipboard,
+                                                              lurkerMode:
+                                                                  !lurkerMode,
+                                                              enableMempoolRates
+                                                          }
+                                                      }
+                                            )
+                                        );
+                                    }}
+                                    trackColor={{
+                                        false: '#767577',
+                                        true: themeColor('highlight')
+                                    }}
+                                />
+                            </View>
+                        </ListItem>
+                        <ListItem
+                            containerStyle={{
+                                borderBottomWidth: 0,
+                                backgroundColor: themeColor('background')
                             }}
                         >
-                            <Switch
-                                value={clipboard}
-                                onValueChange={async () => {
-                                    this.setState({
-                                        clipboard: !clipboard
-                                    });
-                                    const settings = await getSettings();
-                                    await setSettings(
-                                        JSON.stringify(
-                                            settings
-                                                ? {
-                                                      nodes: settings.nodes,
-                                                      theme: settings.theme,
-                                                      selectedNode:
-                                                          settings.selectedNode,
-                                                      fiat: settings.fiat,
-                                                      passphrase:
-                                                          settings.passphrase,
-                                                      locale: settings.locale,
-                                                      privacy: {
-                                                          defaultBlockExplorer,
-                                                          customBlockExplorer,
-                                                          clipboard: !clipboard,
-                                                          lurkerMode,
-                                                          enableMempoolRates
-                                                      }
-                                                  }
-                                                : {
-                                                      privacy: {
-                                                          defaultBlockExplorer,
-                                                          customBlockExplorer,
-                                                          clipboard: !clipboard,
-                                                          lurkerMode,
-                                                          enableMempoolRates
-                                                      }
-                                                  }
-                                        )
-                                    );
+                            <ListItem.Title
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'Lato-Regular',
+                                    left: -10
                                 }}
-                                trackColor={{
-                                    false: '#767577',
-                                    true: themeColor('highlight')
+                            >
+                                {localeString(
+                                    'views.Settings.Privacy.enableMempoolRates'
+                                )}
+                            </ListItem.Title>
+                            <View
+                                style={{
+                                    flex: 1,
+                                    flexDirection: 'row',
+                                    justifyContent: 'flex-end'
                                 }}
-                            />
-                        </View>
-                    </ListItem>
-                    <ListItem
-                        containerStyle={{
-                            borderBottomWidth: 0,
-                            backgroundColor: themeColor('background')
-                        }}
-                    >
-                        <ListItem.Title
-                            style={{
-                                color: themeColor('secondaryText'),
-                                left: -10
-                            }}
-                        >
-                            {localeString('views.Settings.Privacy.lurkerMode')}
-                        </ListItem.Title>
-                        <View
-                            style={{
-                                flex: 1,
-                                flexDirection: 'row',
-                                justifyContent: 'flex-end'
-                            }}
-                        >
-                            <Switch
-                                value={lurkerMode}
-                                onValueChange={async () => {
-                                    this.setState({
-                                        lurkerMode: !lurkerMode
-                                    });
-                                    const settings = await getSettings();
-                                    await setSettings(
-                                        JSON.stringify(
-                                            settings
-                                                ? {
-                                                      nodes: settings.nodes,
-                                                      theme: settings.theme,
-                                                      selectedNode:
-                                                          settings.selectedNode,
-                                                      fiat: settings.fiat,
-                                                      passphrase:
-                                                          settings.passphrase,
-                                                      locale: settings.locale,
-                                                      privacy: {
-                                                          defaultBlockExplorer,
-                                                          customBlockExplorer,
-                                                          clipboard,
-                                                          lurkerMode:
-                                                              !lurkerMode,
-                                                          enableMempoolRates
+                            >
+                                <Switch
+                                    value={enableMempoolRates}
+                                    onValueChange={async () => {
+                                        this.setState({
+                                            enableMempoolRates:
+                                                !enableMempoolRates
+                                        });
+                                        const settings = await getSettings();
+                                        await setSettings(
+                                            JSON.stringify(
+                                                settings
+                                                    ? {
+                                                          nodes: settings.nodes,
+                                                          theme: settings.theme,
+                                                          selectedNode:
+                                                              settings.selectedNode,
+                                                          fiat: settings.fiat,
+                                                          passphrase:
+                                                              settings.passphrase,
+                                                          locale: settings.locale,
+                                                          privacy: {
+                                                              defaultBlockExplorer,
+                                                              customBlockExplorer,
+                                                              clipboard,
+                                                              lurkerMode,
+                                                              enableMempoolRates:
+                                                                  !enableMempoolRates
+                                                          }
                                                       }
-                                                  }
-                                                : {
-                                                      privacy: {
-                                                          defaultBlockExplorer,
-                                                          customBlockExplorer,
-                                                          clipboard,
-                                                          lurkerMode:
-                                                              !lurkerMode,
-                                                          enableMempoolRates
+                                                    : {
+                                                          privacy: {
+                                                              defaultBlockExplorer,
+                                                              customBlockExplorer,
+                                                              clipboard,
+                                                              lurkerMode,
+                                                              enableMempoolRates:
+                                                                  !enableMempoolRates
+                                                          }
                                                       }
-                                                  }
-                                        )
-                                    );
-                                }}
-                                trackColor={{
-                                    false: '#767577',
-                                    true: themeColor('highlight')
-                                }}
-                            />
-                        </View>
-                    </ListItem>
-                    <ListItem
-                        containerStyle={{
-                            borderBottomWidth: 0,
-                            backgroundColor: themeColor('background')
-                        }}
-                    >
-                        <ListItem.Title
-                            style={{
-                                color: themeColor('secondaryText'),
-                                left: -10
-                            }}
-                        >
-                            {localeString(
-                                'views.Settings.Privacy.enableMempoolRates'
-                            )}
-                        </ListItem.Title>
-                        <View
-                            style={{
-                                flex: 1,
-                                flexDirection: 'row',
-                                justifyContent: 'flex-end'
-                            }}
-                        >
-                            <Switch
-                                value={enableMempoolRates}
-                                onValueChange={async () => {
-                                    this.setState({
-                                        enableMempoolRates: !enableMempoolRates
-                                    });
-                                    const settings = await getSettings();
-                                    await setSettings(
-                                        JSON.stringify(
-                                            settings
-                                                ? {
-                                                      nodes: settings.nodes,
-                                                      theme: settings.theme,
-                                                      selectedNode:
-                                                          settings.selectedNode,
-                                                      fiat: settings.fiat,
-                                                      passphrase:
-                                                          settings.passphrase,
-                                                      locale: settings.locale,
-                                                      privacy: {
-                                                          defaultBlockExplorer,
-                                                          customBlockExplorer,
-                                                          clipboard,
-                                                          lurkerMode,
-                                                          enableMempoolRates:
-                                                              !enableMempoolRates
-                                                      }
-                                                  }
-                                                : {
-                                                      privacy: {
-                                                          defaultBlockExplorer,
-                                                          customBlockExplorer,
-                                                          clipboard,
-                                                          lurkerMode,
-                                                          enableMempoolRates:
-                                                              !enableMempoolRates
-                                                      }
-                                                  }
-                                        )
-                                    );
-                                }}
-                                trackColor={{
-                                    false: '#767577',
-                                    true: themeColor('highlight')
-                                }}
-                            />
-                        </View>
-                    </ListItem>
-                </ScrollView>
+                                            )
+                                        );
+                                    }}
+                                    trackColor={{
+                                        false: '#767577',
+                                        true: themeColor('highlight')
+                                    }}
+                                />
+                            </View>
+                        </ListItem>
+                    </ScrollView>
+                )}
             </View>
         );
     }

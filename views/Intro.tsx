@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Image, Text, View, SafeAreaView } from 'react-native';
+import { Dimensions, Image, Text, View, SafeAreaView } from 'react-native';
 
 import Carousel, { Pagination } from 'react-native-snap-carousel';
 import Button from './../components/Button';
@@ -7,10 +7,10 @@ import Button from './../components/Button';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
-const One = require('./../images/intro/1.png');
-const Two = require('./../images/intro/2.png');
-const Three = require('./../images/intro/3.png');
-const Four = require('./../images/intro/4.png');
+const One = require('./../assets/images/intro/1.png');
+const Two = require('./../assets/images/intro/2.png');
+const Three = require('./../assets/images/intro/3.png');
+const Four = require('./../assets/images/intro/4.png');
 
 interface IntroProps {
     navigation: any;
@@ -23,9 +23,12 @@ interface IntroState {
 
 export default class Intro extends React.Component<IntroProps, IntroState> {
     carousel: any;
+    screenWidth: number;
 
     constructor(props: any) {
         super(props);
+        this.screenWidth = Dimensions.get('window').width;
+        this.screenHeight = Dimensions.get('window').height;
         this.state = {
             activeIndex: 0,
             carouselItems: [
@@ -53,45 +56,64 @@ export default class Intro extends React.Component<IntroProps, IntroState> {
         };
     }
 
-    _renderItem({ item }: { item: any }) {
-        return (
+    render() {
+        const { navigation } = this.props;
+        const { carouselItems, activeIndex } = this.state;
+
+        const renderItem = ({ item }: { item: any }) => (
             <View
                 style={{
-                    borderRadius: 5,
-                    height: 450
+                    borderRadius: 5
                 }}
             >
                 <Image
                     source={item.illustration}
-                    style={{ width: 400, height: 500 }}
+                    style={{
+                        width: this.screenWidth,
+                        height: '65%'
+                    }}
                 />
-                <Text
+                <View
                     style={{
-                        fontSize: 25,
-                        color: themeColor('text'),
-                        alignSelf: 'center',
-                        padding: 10
+                        backgroundColor: themeColor('background'),
+                        width: '100%',
+                        flexGrow: 1,
+                        justifyContent: 'flex-end'
                     }}
                 >
-                    {item.title}
-                </Text>
-                <Text
-                    style={{
-                        fontSize: 20,
-                        color: themeColor('secondaryText'),
-                        alignSelf: 'center',
-                        padding: 10
-                    }}
-                >
-                    {item.text}
-                </Text>
+                    <Text
+                        style={{
+                            fontSize: 23,
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular',
+                            alignSelf: 'center',
+                            paddingTop: 10
+                        }}
+                    >
+                        {item.title}
+                    </Text>
+                    <Text
+                        style={{
+                            fontSize: 20,
+                            color: themeColor('secondaryText'),
+                            fontFamily: 'Lato-Regular',
+                            alignSelf: 'center',
+                            padding: 10
+                        }}
+                    >
+                        {item.text}
+                    </Text>
+                    {item.text ===
+                        localeString('views.Intro.carousel4.text') && (
+                        <Button
+                            title={localeString('views.Intro.getStarted')}
+                            onPress={() => navigation.navigate('Settings')}
+                        />
+                    )}
+                </View>
             </View>
         );
-    }
 
-    render() {
-        const { navigation } = this.props;
-        const { carouselItems, activeIndex } = this.state;
         return (
             <SafeAreaView
                 style={{
@@ -109,22 +131,15 @@ export default class Intro extends React.Component<IntroProps, IntroState> {
                         layout="default"
                         ref={(ref) => (this.carousel = ref)}
                         data={carouselItems}
-                        sliderWidth={400}
-                        itemWidth={400}
-                        itemHeight={600}
-                        renderItem={this._renderItem}
+                        sliderWidth={this.screenWidth}
+                        itemWidth={this.screenWidth}
+                        renderItem={renderItem}
                         onSnapToItem={(index) =>
                             this.setState({ activeIndex: index })
                         }
                         hasParallaxImages={false}
                     />
                 </View>
-                {activeIndex === 3 && (
-                    <Button
-                        title={localeString('views.Intro.getStarted')}
-                        onPress={() => navigation.navigate('Settings')}
-                    />
-                )}
                 <Pagination
                     dotsLength={carouselItems.length}
                     activeDotIndex={activeIndex}
@@ -134,6 +149,11 @@ export default class Intro extends React.Component<IntroProps, IntroState> {
                     inactiveDotScale={0.6}
                     carouselRef={this.carousel}
                     tappableDots={!!this.carousel}
+                    containerStyle={{
+                        backgroundColor: 'transparent',
+                        marginTop: -30,
+                        marginBottom: -25
+                    }}
                 />
             </SafeAreaView>
         );

@@ -3,18 +3,18 @@ import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import ForwardIcon from '../../images/SVG/Caret Right-3.svg';
-import AccountIcon from '../../images/SVG/Wallet2.svg';
-import ContactIcon from '../../images/SVG/PeersContact.svg';
-import PrivacyIcon from '../../images/SVG/Eye On.svg';
-import SecurityIcon from '../../images/SVG/Lock.svg';
-import SignIcon from '../../images/SVG/Pen.svg';
-import BitcoinIcon from '../../images/SVG/Bitcoin.svg';
-import BrushIcon from '../../images/SVG/Brush.svg';
-import LanguageIcon from '../../images/SVG/Globe.svg';
-import HelpIcon from '../../images/SVG/Help Icon.svg';
-import NodeOn from '../../images/SVG/Node On.svg';
-import Wallet from '../../images/SVG/Wallet.svg';
+import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
+import AccountIcon from '../../assets/images/SVG/Wallet2.svg';
+import ContactIcon from '../../assets/images/SVG/PeersContact.svg';
+import PrivacyIcon from '../../assets/images/SVG/Eye On.svg';
+import SecurityIcon from '../../assets/images/SVG/Lock.svg';
+import SignIcon from '../../assets/images/SVG/Pen.svg';
+import BitcoinIcon from '../../assets/images/SVG/Bitcoin.svg';
+import BrushIcon from '../../assets/images/SVG/Brush.svg';
+import LanguageIcon from '../../assets/images/SVG/Globe.svg';
+import HelpIcon from '../../assets/images/SVG/Help Icon.svg';
+import NodeOn from '../../assets/images/SVG/Node On.svg';
+import Wallet from '../../assets/images/SVG/Wallet.svg';
 
 import NodeIdenticon, { NodeTitle } from './../../components/NodeIdenticon';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -34,15 +34,10 @@ interface SettingsProps {
 @observer
 export default class Settings extends React.Component<SettingsProps, {}> {
     componentDidMount() {
-        this.refreshSettings();
-    }
-
-    UNSAFE_componentWillReceiveProps = () => {
-        this.refreshSettings();
-    };
-
-    async refreshSettings() {
-        await this.props.SettingsStore.getSettings();
+        // triggers when loaded from navigation or back action
+        this.props.navigation.addListener('didFocus', () => {
+            this.props.SettingsStore.getSettings();
+        });
     }
 
     render() {
@@ -74,9 +69,15 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Settings.title'),
-                        style: { color: themeColor('text') }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
-                    backgroundColor={themeColor('secondary')}
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <TouchableOpacity onPress={() => navigation.navigate('Nodes')}>
                     <View
@@ -102,6 +103,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     <NodeIdenticon
                                         selectedNode={selectedNode}
                                         width={50}
+                                        rounded
                                     />
                                 </View>
                             )}
@@ -109,7 +111,8 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                 style={{
                                     fontSize: 20,
                                     color: themeColor('text'),
-                                    paddingLeft: 30
+                                    paddingLeft: 30,
+                                    fontFamily: 'Lato-Regular'
                                 }}
                             >
                                 {selectedNode
@@ -135,7 +138,8 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     color: themeColor('text'),
                                     opacity: 0.6,
                                     top: -10,
-                                    paddingLeft: 109
+                                    paddingLeft: 109,
+                                    fontFamily: 'Lato-Regular'
                                 }}
                             >
                                 {`${selectedNode.implementation}, ${
@@ -280,7 +284,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         </View>
                     </View>
                 )}
-                {RESTUtils.supportsMessageSigning() ? (
+                {selectedNode && RESTUtils.supportsMessageSigning() ? (
                     <View
                         style={{
                             backgroundColor: themeColor('secondary'),
@@ -535,7 +539,8 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         color: '#A7A9AC',
                         alignSelf: 'center',
                         bottom: 20,
-                        position: 'absolute'
+                        position: 'absolute',
+                        fontFamily: 'Lato-Regular'
                     }}
                 >
                     {`Zeus v${version}`}
@@ -556,8 +561,9 @@ const styles = StyleSheet.create({
         left: '30%',
         position: 'absolute',
         marginLeft: -55,
-        paddingTop: 3,
-        flex: 1
+        paddingTop: 5,
+        flex: 1,
+        fontFamily: 'Lato-Regular'
     },
     separationLine: {
         left: '30%',

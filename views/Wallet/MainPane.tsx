@@ -14,7 +14,7 @@ import SettingsStore from './../../stores/SettingsStore';
 
 import { version, playStore } from './../../package.json';
 
-const TorIcon = require('./../../images/tor.png');
+const TorIcon = require('./../../assets/images/tor.png');
 
 interface MainPaneProps {
     navigation: any;
@@ -37,7 +37,6 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
         } = BalanceStore;
         const { implementation } = SettingsStore;
         const nodeAddress = SettingsStore.host || SettingsStore.url;
-        const loading = NodeInfoStore.loading || BalanceStore.loading;
 
         const pendingUnconfirmedBalance =
             Number(pendingOpenBalance) + Number(unconfirmedBlockchainBalance);
@@ -118,44 +117,39 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
 
         let mainPane;
 
-        if (loading) {
-            mainPane = (
-                <View style={styles.loadingContainer}>
-                    <WalletHeader
-                        navigation={navigation}
-                        SettingsStore={SettingsStore}
-                        loading={true}
-                    />
-                    <Button
-                        title=""
-                        loading
-                        buttonStyle={{
-                            backgroundColor: 'transparent'
-                        }}
-                        onPress={() => void 0}
-                        iconOnly
-                    />
-                </View>
-            );
-        } else if (!NodeInfoStore.error) {
+        if (!NodeInfoStore.error) {
             mainPane = (
                 <View
                     style={{
                         height: 220,
                         alignItems: 'center',
-                        backgroundColor: themeColor('secondary')
+                        backgroundColor: themeColor('background')
                     }}
                 >
                     <WalletHeader
                         navigation={navigation}
                         SettingsStore={SettingsStore}
                     />
-                    {implementation === 'lndhub' ? (
-                        <LightningBalance />
-                    ) : (
-                        <BalanceViewCombined />
-                    )}
-                    {infoValue !== 'ⓘ' && <NetworkBadge />}
+                    {!BalanceStore.loadingLightningBalance &&
+                        !BalanceStore.loadingBlockchainBalance && (
+                            <View style={{ marginTop: 20 }}>
+                                {implementation === 'lndhub' ? (
+                                    <LightningBalance />
+                                ) : (
+                                    <BalanceViewCombined />
+                                )}
+                                {infoValue !== 'ⓘ' && (
+                                    <View
+                                        style={{
+                                            marginTop: 5,
+                                            alignItems: 'center'
+                                        }}
+                                    >
+                                        <NetworkBadge />
+                                    </View>
+                                )}
+                            </View>
+                        )}
                 </View>
             );
         } else {
@@ -170,6 +164,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                 >
                     <Text
                         style={{
+                            fontFamily: 'Lato-Regular',
                             color: '#fff',
                             fontSize: 20,
                             marginTop: 20,
@@ -201,6 +196,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                     />
                     <Text
                         style={{
+                            fontFamily: 'Lato-Regular',
                             color: '#fff',
                             fontSize: 12,
                             marginTop: 20,

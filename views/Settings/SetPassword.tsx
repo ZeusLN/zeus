@@ -1,8 +1,12 @@
 import * as React from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+
 import Button from './../../components/Button';
+import { ErrorMessage } from './../../components/SuccessErrorMessage';
+import TextInput from './../../components/TextInput';
+
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 import SettingsStore from './../../stores/SettingsStore';
@@ -39,7 +43,7 @@ export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
     saveSettings = async () => {
         const { SettingsStore, navigation } = this.props;
         const { passphrase, passphraseConfirm } = this.state;
-        const { getSettings, setSettings } = SettingsStore;
+        const { getSettings, setSettings, setLoginStatus } = SettingsStore;
 
         if (passphrase !== passphraseConfirm) {
             this.setState({
@@ -65,6 +69,7 @@ export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
                     : { passphrase }
             )
         ).then(() => {
+            setLoginStatus(false);
             getSettings();
             navigation.navigate('Settings', {
                 refresh: true
@@ -95,90 +100,93 @@ export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Settings.SetPassword.title'),
-                        style: { color: themeColor('text') }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
-                    backgroundColor={themeColor('secondary')}
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
-                {passphraseError && (
-                    <Text
-                        style={{
-                            color: 'red',
-                            textAlign: 'center',
-                            padding: 20
-                        }}
-                    >
-                        Passphrases do not match
-                    </Text>
-                )}
-                <Text
+                <View
                     style={{
-                        color: themeColor('text'),
-                        paddingLeft: 10,
+                        paddingLeft: 15,
+                        paddingRight: 15,
                         paddingTop: 10
                     }}
                 >
-                    {localeString('views.Settings.newPassword')}
-                </Text>
-                <TextInput
-                    placeholder={'********'}
-                    placeholderTextColor="darkgray"
-                    value={passphrase}
-                    onChangeText={(text: string) =>
-                        this.setState({
-                            passphrase: text,
-                            passphraseError: false
-                        })
-                    }
-                    numberOfLines={1}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    secureTextEntry={true}
-                    style={{
-                        fontSize: 20,
-                        color: themeColor('text'),
-                        paddingLeft: 10
-                    }}
-                />
-                <Text
-                    style={{
-                        color: themeColor('text'),
-                        paddingLeft: 10
-                    }}
-                >
-                    {localeString('views.Settings.confirmPassword')}
-                </Text>
-                <TextInput
-                    placeholder={'********'}
-                    placeholderTextColor="darkgray"
-                    value={passphraseConfirm}
-                    onChangeText={(text: string) =>
-                        this.setState({
-                            passphraseConfirm: text,
-                            passphraseError: false
-                        })
-                    }
-                    numberOfLines={1}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    secureTextEntry={true}
-                    style={{
-                        fontSize: 20,
-                        color: themeColor('text'),
-                        paddingLeft: 10
-                    }}
-                />
-                <View style={{ paddingTop: 10, margin: 10 }}>
-                    <Button
-                        title={localeString('views.Settings.SetPassword.save')}
-                        icon={{
-                            name: 'save',
-                            size: 25,
-                            color: 'white'
+                    {passphraseError && (
+                        <ErrorMessage
+                            message={localeString(
+                                'views.Settings.SetPassword.noMatch'
+                            )}
+                        />
+                    )}
+                    <Text style={{ ...styles.text, color: themeColor('text') }}>
+                        {localeString('views.Settings.newPassword')}
+                    </Text>
+                    <TextInput
+                        placeholder={'********'}
+                        placeholderTextColor="darkgray"
+                        value={passphrase}
+                        onChangeText={(text: string) =>
+                            this.setState({
+                                passphrase: text,
+                                passphraseError: false
+                            })
+                        }
+                        numberOfLines={1}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        secureTextEntry={true}
+                        style={{
+                            paddingLeft: 10
                         }}
-                        onPress={() => this.saveSettings()}
                     />
+                    <Text style={{ ...styles.text, color: themeColor('text') }}>
+                        {localeString('views.Settings.confirmPassword')}
+                    </Text>
+                    <TextInput
+                        placeholder={'********'}
+                        placeholderTextColor="darkgray"
+                        value={passphraseConfirm}
+                        onChangeText={(text: string) =>
+                            this.setState({
+                                passphraseConfirm: text,
+                                passphraseError: false
+                            })
+                        }
+                        numberOfLines={1}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        secureTextEntry={true}
+                        style={{
+                            paddingLeft: 10
+                        }}
+                    />
+                    <View style={{ paddingTop: 10, margin: 10 }}>
+                        <Button
+                            title={localeString(
+                                'views.Settings.SetPassword.save'
+                            )}
+                            icon={{
+                                name: 'save',
+                                size: 25,
+                                color: 'white'
+                            }}
+                            onPress={() => this.saveSettings()}
+                        />
+                    </View>
                 </View>
             </View>
         );
     }
 }
+
+const styles = StyleSheet.create({
+    text: {
+        fontFamily: 'Lato-Regular'
+    }
+});

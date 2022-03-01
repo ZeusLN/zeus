@@ -66,7 +66,7 @@ export function RoutingHeader(props) {
                 : 120,
             padding: 16,
             backgroundColor: themeColor('background'),
-            borderBottomLeftRadius: 20,
+            borderBottomLeftRadius: 40,
             borderBottomRightRadius: 20,
             color: themeColor('text'),
             // TODO: this shadow stuff probably needs tweaking on iOS
@@ -87,7 +87,12 @@ export function RoutingHeader(props) {
                 {!fullSize && (
                     <View style={{ alignItems: 'center' }}>
                         <Amount sats={timeframeEarned} jumboText toggleable />
-                        <Text style={{ color: themeColor('text') }}>
+                        <Text
+                            style={{
+                                color: themeColor('text'),
+                                fontFamily: 'Lato-Regular'
+                            }}
+                        >
                             {localeString(
                                 'views.Routing.RoutingHeader.timeframeEarned'
                             )}

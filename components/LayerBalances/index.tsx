@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
-import { StyleSheet, Text, View, I18nManager } from 'react-native';
+import { FlatList, StyleSheet, Text, View, I18nManager } from 'react-native';
 
-import { FlatList, RectButton } from 'react-native-gesture-handler';
+import { RectButton } from 'react-native-gesture-handler';
 
 import { inject, observer } from 'mobx-react';
 import * as Animatable from 'react-native-animatable';
@@ -15,14 +15,16 @@ import UnitsStore from './../../stores/UnitsStore';
 
 import { themeColor } from './../../utils/ThemeUtils';
 
-import OnChain from './../../images/SVG/OnChain.svg';
-import Lightning from './../../images/SVG/Lightning.svg';
-import Wallet from './../../images/SVG/Wallet Account.svg';
+import OnChain from './../../assets/images/SVG/OnChain.svg';
+import Lightning from './../../assets/images/SVG/Lightning.svg';
+import Wallet from './../../assets/images/SVG/Wallet Account.svg';
 
 interface LayerBalancesProps {
     BalanceStore: BalanceStore;
     UnitsStore: UnitsStore;
     navigation: any;
+    onRefresh?: any;
+    refreshing?: boolean;
 }
 
 //  To toggle LTR/RTL change to `true`
@@ -86,7 +88,7 @@ const SwipeableRow = ({
 @observer
 export default class LayerBalances extends Component<LayerBalancesProps, {}> {
     render() {
-        const { BalanceStore, navigation } = this.props;
+        const { BalanceStore, navigation, onRefresh, refreshing } = this.props;
 
         const { totalBlockchainBalance, lightningBalance, otherAccounts } =
             BalanceStore;
@@ -129,6 +131,8 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                 )}
                 keyExtractor={(_item, index) => `message ${index}`}
                 style={{ top: 20 }}
+                onRefresh={() => onRefresh()}
+                refreshing={refreshing}
             />
         );
     }
@@ -157,7 +161,7 @@ const styles = StyleSheet.create({
     },
     layerText: {
         backgroundColor: 'transparent',
-        fontWeight: 'bold',
-        fontSize: 15
+        fontSize: 15,
+        fontFamily: 'Lato-Bold'
     }
 });

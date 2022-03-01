@@ -36,8 +36,8 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
         const BackButton = () => (
             <Icon
                 name="arrow-back"
-                onPress={() => navigation.navigate('Wallet')}
-                color="#fff"
+                onPress={() => navigation.goBack()}
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
@@ -53,9 +53,15 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Invoice.title'),
-                        style: { color: '#fff' }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
-                    backgroundColor={themeColor('secondary')}
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <View style={styles.center}>
                     <Amount
@@ -215,10 +221,6 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
 }
 
 const styles = StyleSheet.create({
-    amount: {
-        fontSize: 25,
-        fontWeight: 'bold'
-    },
     content: {
         paddingLeft: 20,
         paddingRight: 20

@@ -1,8 +1,12 @@
 import * as React from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
+
 import Button from './../components/Button';
 import { ErrorMessage } from './../components/SuccessErrorMessage';
+import TextInput from './../components/TextInput';
+
+import LinkingUtils from './../utils/LinkingUtils';
 import { localeString } from './../utils/LocaleUtils';
 
 import SettingsStore from './../stores/SettingsStore';
@@ -58,7 +62,7 @@ export default class Lockscreen extends React.Component<
     };
 
     onAttemptLogIn = () => {
-        const { navigation } = this.props;
+        const { SettingsStore, navigation } = this.props;
         const { passphrase, passphraseAttempt } = this.state;
 
         this.setState({
@@ -66,6 +70,8 @@ export default class Lockscreen extends React.Component<
         });
 
         if (passphraseAttempt === passphrase) {
+            SettingsStore.setLoginStatus(true);
+            LinkingUtils.handleInitialUrl(navigation);
             navigation.navigate('Wallet');
         } else {
             this.setState({
@@ -88,7 +94,12 @@ export default class Lockscreen extends React.Component<
                                 )}
                             />
                         )}
-                        <Text style={{ color: 'white' }}>
+                        <Text
+                            style={{
+                                color: '#A7A9AC',
+                                fontFamily: 'Lato-Regular'
+                            }}
+                        >
                             {localeString('views.Lockscreen.passphrase')}
                         </Text>
                         <TextInput
@@ -105,7 +116,8 @@ export default class Lockscreen extends React.Component<
                             autoCapitalize="none"
                             autoCorrect={false}
                             secureTextEntry={hidden}
-                            style={styles.textInputDark}
+                            autoFocus={true}
+                            style={styles.textInput}
                         />
                         <View style={styles.button}>
                             <Button
@@ -144,21 +156,13 @@ const styles = StyleSheet.create({
     },
     container: {
         flex: 1,
-        backgroundColor: 'black',
-        paddingTop: 200
+        backgroundColor: '#1f2328'
     },
     button: {
         paddingTop: 15,
         paddingBottom: 15
     },
-    buttons: {
-        paddingTop: 20,
-        paddingBottom: 20,
-        width: '100%'
-    },
-    textInputDark: {
-        fontSize: 20,
-        color: 'white',
+    textInput: {
         textAlign: 'center'
     }
 });

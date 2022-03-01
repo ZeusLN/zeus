@@ -3,7 +3,7 @@ import { TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import UnitsStore from '../stores/UnitsStore';
 import PrivacyUtils from '../utils/PrivacyUtils';
-import ClockIcon from '../images/SVG/Clock.svg';
+import ClockIcon from '../assets/images/SVG/Clock.svg';
 import { themeColor } from '../utils/ThemeUtils';
 import { Spacer } from './layout/Spacer';
 import { Row } from './layout/Row';
@@ -11,7 +11,7 @@ import { Body } from './text/Body';
 
 export const satoshisPerBTC = 100000000;
 
-type Units = 'sats' | 'btc' | 'fiat';
+type Units = 'sats' | 'BTC' | 'fiat';
 
 interface AmountDisplayProps {
     amount: string;
@@ -42,7 +42,7 @@ function AmountDisplay({
         console.error('Must include a symbol when rendering fiat');
     }
 
-    const actualSymbol = unit === 'btc' ? '₿' : symbol;
+    const actualSymbol = unit === 'BTC' ? '₿' : symbol;
 
     const Pending = () => (
         <View
@@ -88,7 +88,7 @@ function AmountDisplay({
                     </View>
                 </Row>
             );
-        case 'btc':
+        case 'BTC':
         case 'fiat':
             if (rtl) {
                 return (

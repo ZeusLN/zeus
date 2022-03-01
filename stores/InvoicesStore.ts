@@ -8,6 +8,7 @@ import hashjs from 'hash.js';
 import Invoice from './../models/Invoice';
 import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
+import { localeString } from './../utils/LocaleUtils';
 
 export default class InvoicesStore {
     @observable paymentRequest: string;
@@ -162,7 +163,12 @@ export default class InvoicesStore {
                                 Alert.alert(
                                     `[error] ${lnurl.domain} says:`,
                                     data.reason,
-                                    [{ text: 'OK', onPress: () => void 0 }],
+                                    [
+                                        {
+                                            text: localeString('general.error'),
+                                            onPress: () => void 0
+                                        }
+                                    ],
                                     { cancelable: false }
                                 );
                             }

@@ -115,6 +115,12 @@ export default class CLightningREST extends LND {
     payLightningInvoice = (data: any) =>
         this.postRequest('/v1/pay', {
             invoice: data.payment_request,
+            amount: Number(data.amt && data.amt * 1000),
+            maxfeepercent: data.max_fee_percent
+        });
+    sendKeysend = (data: any) =>
+        this.postRequest('/v1/pay/keysend', {
+            pubkey: data.pubkey,
             amount: Number(data.amt && data.amt * 1000)
         });
     closeChannel = (urlParams?: Array<string>) =>
@@ -136,7 +142,7 @@ export default class CLightningREST extends LND {
     getUTXOs = () => this.getRequest('/v1/listFunds');
     signMessage = (message: string) =>
         this.postRequest('/v1/utility/signMessage', {
-            message: message
+            message
         });
     verifyMessage = (data: any) =>
         this.getRequest(

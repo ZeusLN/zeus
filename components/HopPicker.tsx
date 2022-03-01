@@ -7,25 +7,22 @@ import {
     Text,
     TouchableOpacity
 } from 'react-native';
-import { Avatar, ListItem } from 'react-native-elements';
+import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Identicon from 'identicon.js';
 import { themeColor } from './../utils/ThemeUtils';
 import { localeString } from './../utils/LocaleUtils';
 
-import stores from './../stores/Stores';
-import ChannelsStore from './../stores/ChannelsStore';
-import Channel from './../models/Channel';
-import UnitsStore from './../stores/UnitsStore';
-
 import BalanceSlider from './../components/BalanceSlider';
 import Button from './../components/Button';
-import PrivacyUtils from './../utils/PrivacyUtils';
-const hash = require('object-hash');
 
-const SelectedLight = require('./../images/selected-light.png');
-const SelectedDark = require('./../images/selected-dark.png');
+import Channel from './../models/Channel';
+
+import stores from './../stores/Stores';
+import ChannelsStore from './../stores/ChannelsStore';
+import UnitsStore from './../stores/UnitsStore';
+
+import PrivacyUtils from './../utils/PrivacyUtils';
 
 interface ChannelPickerProps {
     title?: string;
@@ -41,17 +38,7 @@ interface ChannelPickerState {
     showChannelModal: boolean;
 }
 
-const ChannelIcon = (balanceImage: string) => (
-    <Avatar
-        source={{
-            uri: balanceImage
-        }}
-    />
-);
-
 const DEFAULT_TITLE = localeString('components.HopPicker.defaultTitle');
-
-const Icon = (balanceImage: any) => <Avatar source={balanceImage} />;
 
 @inject('ChannelsStore', 'UnitsStore')
 @observer
@@ -91,7 +78,7 @@ export default class ChannelPicker extends React.Component<
         const { channels, nodes, loading, getChannels } = ChannelsStore;
         const { getAmount, units } = UnitsStore;
         const { settings } = SettingsStore;
-        const { theme, privacy } = settings;
+        const { privacy } = settings;
         const lurkerMode = (privacy && privacy.lurkerMode) || false;
 
         return (
@@ -112,8 +99,9 @@ export default class ChannelPicker extends React.Component<
                                 <>
                                     <Text
                                         style={{
-                                            fontSize: 25,
-                                            color: themeColor('text')
+                                            ...styles.text,
+                                            color: themeColor('text'),
+                                            fontSize: 25
                                         }}
                                     >
                                         {localeString(
@@ -122,9 +110,10 @@ export default class ChannelPicker extends React.Component<
                                     </Text>
                                     <Text
                                         style={{
+                                            ...styles.text,
+                                            color: themeColor('text'),
                                             paddingTop: 20,
-                                            paddingBottom: 20,
-                                            color: themeColor('text')
+                                            paddingBottom: 20
                                         }}
                                     >
                                         {localeString(
@@ -148,11 +137,6 @@ export default class ChannelPicker extends React.Component<
                                                     displayName,
                                                     8
                                                 );
-
-                                            const data = new Identicon(
-                                                hash.sha1(channelTitle),
-                                                255
-                                            ).toString();
 
                                             const localBalanceDisplay =
                                                 PrivacyUtils.sensitiveValue(
@@ -187,18 +171,6 @@ export default class ChannelPicker extends React.Component<
                                                             )
                                                         }
                                                     >
-                                                        {channelSelected ===
-                                                        item
-                                                            ? theme === 'dark'
-                                                                ? Icon(
-                                                                      SelectedDark
-                                                                  )
-                                                                : Icon(
-                                                                      SelectedLight
-                                                                  )
-                                                            : ChannelIcon(
-                                                                  `data:image/png;base64,${data}`
-                                                              )}
                                                         <ListItem.Content>
                                                             <ListItem.Title
                                                                 style={{
@@ -261,7 +233,6 @@ export default class ChannelPicker extends React.Component<
                                                                 ? 50
                                                                 : item.remoteBalance
                                                         }
-                                                        list
                                                     />
                                                 </>
                                             );
@@ -338,6 +309,7 @@ export default class ChannelPicker extends React.Component<
                 <View style={styles.field}>
                     <Text
                         style={{
+                            ...styles.text,
                             color: themeColor('text'),
                             paddingLeft: 10
                         }}
@@ -348,9 +320,10 @@ export default class ChannelPicker extends React.Component<
                         <TouchableOpacity onPress={() => this.clearSelection()}>
                             <Text
                                 style={{
+                                    ...styles.text,
+                                    color: themeColor('text'),
                                     padding: 10,
-                                    fontSize: 16,
-                                    color: themeColor('text')
+                                    fontSize: 16
                                 }}
                             >
                                 {valueSet}
@@ -360,9 +333,10 @@ export default class ChannelPicker extends React.Component<
                         <TouchableOpacity onPress={() => this.openPicker()}>
                             <Text
                                 style={{
+                                    ...styles.text,
+                                    color: themeColor('text'),
                                     padding: 10,
-                                    fontSize: 16,
-                                    color: themeColor('text')
+                                    fontSize: 16
                                 }}
                             >
                                 {localeString(
@@ -378,6 +352,9 @@ export default class ChannelPicker extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    text: {
+        fontFamily: 'Lato-Regular'
+    },
     field: {
         paddingTop: 10,
         marginLeft: Platform.OS === 'ios' ? 0 : -8

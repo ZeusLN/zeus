@@ -24,22 +24,36 @@ export default class BTCPayConfigQRScanner extends React.Component<
         const index = navigation.getParam('index', null);
 
         fetchBTCPayConfig(data)
-            .then((config: any) => {
+            .then((node: any) => {
                 if (SettingsStore.btcPayError) {
                     Alert.alert(
                         localeString('general.error'),
                         SettingsStore.btcPayError,
-                        [{ text: 'OK', onPress: () => void 0 }],
+                        [
+                            {
+                                text: localeString('general.ok'),
+                                onPress: () => void 0
+                            }
+                        ],
                         { cancelable: false }
                     );
                 }
-                navigation.navigate('AddEditNode', { node: config, index });
+                navigation.navigate('AddEditNode', {
+                    node,
+                    enableTor: node.host && node.host.includes('.onion'),
+                    index
+                });
             })
             .catch(() => {
                 Alert.alert(
                     localeString('general.error'),
                     localeString('views.BTCPayConfigQRScanner.error'),
-                    [{ text: 'OK', onPress: () => void 0 }],
+                    [
+                        {
+                            text: localeString('general.ok'),
+                            onPress: () => void 0
+                        }
+                    ],
                     { cancelable: false }
                 );
 
@@ -54,7 +68,6 @@ export default class BTCPayConfigQRScanner extends React.Component<
 
         return (
             <QRCodeScanner
-                title={localeString('views.BTCPayConfigQRScanner.title')}
                 text={localeString('views.BTCPayConfigQRScanner.text')}
                 handleQRScanned={this.handleBTCPayConfigInvoiceScanned}
                 goBack={() => navigation.navigate('AddEditNode', { index })}

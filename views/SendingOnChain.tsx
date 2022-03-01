@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { Image, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Button } from 'react-native-elements';
 
+import Button from './../components/Button';
 import CopyButton from './../components/CopyButton';
 import LoadingIndicator from './../components/LoadingIndicator';
 
@@ -13,8 +13,8 @@ import UrlUtils from './../utils/UrlUtils';
 import NodeInfoStore from './../stores/NodeInfoStore';
 import TransactionsStore from './../stores/TransactionsStore';
 
-import Success from './../images/GIF/Success.gif';
-import WordLogo from './../images/SVG/Word Logo.svg';
+import Success from './../assets/images/GIF/Success.gif';
+import WordLogo from './../assets/images/SVG/Word Logo.svg';
 
 interface SendingOnChainProps {
     navigation: any;
@@ -61,6 +61,7 @@ export default class SendingOnChain extends React.Component<
                     {loading && (
                         <Text
                             style={{
+                                ...styles.text,
                                 color: themeColor('text')
                             }}
                         >
@@ -89,7 +90,8 @@ export default class SendingOnChain extends React.Component<
                     {error && error_msg && (
                         <Text
                             style={{
-                                color: themeColor('text'),
+                                ...styles.text,
+                                color: 'white',
                                 padding: 20,
                                 fontSize: 30,
                                 alignSelf: 'center'
@@ -101,7 +103,8 @@ export default class SendingOnChain extends React.Component<
                     {publishSuccess && (
                         <Text
                             style={{
-                                color: 'white',
+                                ...styles.text,
+                                color: themeColor('text'),
                                 padding: 20,
                                 fontSize: 22,
                                 alignSelf: 'center'
@@ -118,7 +121,8 @@ export default class SendingOnChain extends React.Component<
                         >
                             <Text
                                 style={{
-                                    color: 'white',
+                                    ...styles.text,
+                                    color: themeColor('text'),
                                     padding: 20,
                                     fontSize: 15
                                 }}
@@ -142,6 +146,7 @@ export default class SendingOnChain extends React.Component<
                                 borderRadius: 30
                             }}
                             onPress={() => void 0}
+                            iconOnly
                         />
                     )}
 
@@ -169,15 +174,19 @@ export default class SendingOnChain extends React.Component<
                                         ? themeColor('background')
                                         : 'darkred'
                                 }}
-                                buttonStyle={{
-                                    backgroundColor: '#fff',
-                                    borderRadius: 30
-                                }}
                                 titleStyle={{
                                     color: publishSuccess
                                         ? themeColor('background')
                                         : 'darkred'
                                 }}
+                                buttonStyle={
+                                    publishSuccess
+                                        ? null
+                                        : {
+                                              backgroundColor: 'white'
+                                          }
+                                }
+                                containerStyle={{ width: '100%' }}
                                 onPress={() => navigation.navigate('Wallet')}
                             />
                         )}
@@ -189,6 +198,9 @@ export default class SendingOnChain extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    text: {
+        fontFamily: 'Lato-Regular'
+    },
     container: {
         flex: 1
     },

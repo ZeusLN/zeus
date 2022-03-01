@@ -45,6 +45,7 @@ export default class DropdownSetting extends React.Component<
                     <View style={{ height: 75 }}>
                         <Text
                             style={{
+                                ...styles.secondaryText,
                                 color: themeColor('secondaryText')
                             }}
                         >
@@ -68,6 +69,7 @@ export default class DropdownSetting extends React.Component<
                     <View>
                         <Text
                             style={{
+                                ...styles.secondaryText,
                                 color: themeColor('secondaryText')
                             }}
                         >
@@ -93,6 +95,7 @@ export default class DropdownSetting extends React.Component<
                             <Text
                                 style={{
                                     color: themeColor('text'),
+                                    backgroundColor: themeColor('secondary'),
                                     ...styles.field
                                 }}
                             >
@@ -107,16 +110,20 @@ export default class DropdownSetting extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    secondaryText: {
+        fontFamily: 'Lato-Regular'
+    },
     field: {
         fontSize: 20,
         width: '100%',
         height: 55,
         top: 10,
         paddingTop: 15,
-        backgroundColor: '#31363F',
         borderRadius: 6,
         borderBottomWidth: 20,
         marginBottom: 20,
-        paddingLeft: 5
+        paddingLeft: 10,
+        overflow: 'hidden',
+        fontFamily: 'Lato-Regular'
     }
 });

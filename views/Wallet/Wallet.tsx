@@ -1,27 +1,27 @@
 import * as React from 'react';
 import {
     Animated,
-    Linking,
     PanResponder,
     Text,
     TouchableOpacity,
     View
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
-import { Button } from 'react-native-elements';
 
 import { inject, observer } from 'mobx-react';
-import Clipboard from '@react-native-community/clipboard';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import RNRestart from 'react-native-restart';
+
 import ChannelsPane from '../Channels/ChannelsPane';
 import MainPane from './MainPane';
 
+import Button from './../../components/Button';
 import LayerBalances from './../../components/LayerBalances';
 import LoadingIndicator from './../../components/LoadingIndicator';
 
 import RESTUtils from './../../utils/RESTUtils';
-import { restartTor } from './../../utils/TorUtils';
+import LinkingUtils from './../../utils/LinkingUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -35,12 +35,10 @@ import FiatStore from './../../stores/FiatStore';
 import UnitsStore from './../../stores/UnitsStore';
 import UTXOsStore from './../../stores/UTXOsStore';
 
-import Temple from './../../images/SVG/Temple.svg';
-import ChannelsIcon from './../../images/SVG/Channels.svg';
-import CaretUp from './../../images/SVG/Caret Up.svg';
-import WordLogo from './../../images/SVG/Word Logo.svg';
-
-import handleAnything from './../../utils/handleAnything';
+import Temple from './../../assets/images/SVG/Temple.svg';
+import ChannelsIcon from './../../assets/images/SVG/Channels.svg';
+import CaretUp from './../../assets/images/SVG/Caret Up.svg';
+import WordLogo from './../../assets/images/SVG/Word Logo - no outline.svg';
 
 interface WalletProps {
     enterSetup: any;
@@ -90,17 +88,14 @@ export default class Wallet extends React.Component<WalletProps, {}> {
     }
 
     componentDidMount() {
-        Linking.getInitialURL()
-            .then((url) => {
-                if (url) {
-                    handleAnything(url).then(([route, props]) => {
-                        this.props.navigation.navigate(route, props);
-                    });
-                }
-            })
-            .catch((err) =>
-                console.error(localeString('views.Wallet.Wallet.error'), err)
-            );
+        // triggers when loaded from navigation or back action
+        this.props.navigation.addListener('didFocus', () => {
+            this.getSettingsAndNavigate();
+        });
+    }
+
+    componentWillUnmount() {
+        LinkingUtils.removeEventListener();
     }
 
     async UNSAFE_componentWillMount() {
@@ -111,7 +106,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             this.clipboard = await Clipboard.getString();
         }
 
-        this.getSettingsAndRefresh();
+        this.refresh();
     }
 
     UNSAFE_componentWillReceiveProps = (nextProps: any) => {
@@ -119,66 +114,78 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         const refresh = navigation.getParam('refresh', null);
 
         if (refresh) {
-            this.getSettingsAndRefresh();
+            this.refresh();
         }
     };
 
-    async getSettingsAndRefresh() {
-        const {
-            SettingsStore,
-            NodeInfoStore,
-            BalanceStore,
-            ChannelsStore,
-            navigation
-        } = this.props;
-
-        NodeInfoStore.reset();
-        BalanceStore.reset();
-        ChannelsStore.reset();
+    async getSettingsAndNavigate() {
+        const { SettingsStore, navigation } = this.props;
 
         // This awaits on settings, so should await on Tor being bootstrapped before making requests
         await SettingsStore.getSettings().then((settings: any) => {
-            if (settings && settings.passphrase) {
+            const loginRequired =
+                settings && settings.passphrase && !SettingsStore.loggedIn;
+            if (loginRequired) {
                 navigation.navigate('Lockscreen');
             } else if (
                 settings &&
                 settings.nodes &&
                 settings.nodes.length > 0
             ) {
-                this.refresh();
+                this.fetchData();
             } else {
                 navigation.navigate('IntroSplash');
             }
         });
     }
 
-    restartTorAndReload = async () => {
-        this.props.NodeInfoStore.setLoading();
-        await restartTor();
-        await this.getSettingsAndRefresh();
-    };
+    async refresh() {
+        const { NodeInfoStore, BalanceStore, ChannelsStore, SettingsStore } =
+            this.props;
 
-    refresh = () => {
+        if (SettingsStore.connecting) {
+            NodeInfoStore.reset();
+            BalanceStore.reset();
+            ChannelsStore.reset();
+        }
+
+        this.getSettingsAndNavigate();
+    }
+
+    async fetchData() {
         const {
             NodeInfoStore,
             BalanceStore,
             ChannelsStore,
             FeeStore,
             SettingsStore,
-            FiatStore
+            FiatStore,
+            navigation
         } = this.props;
-        const { settings, implementation, username, password, login } =
-            SettingsStore;
+        const {
+            settings,
+            implementation,
+            username,
+            password,
+            login,
+            connecting,
+            setConnectingStatus
+        } = SettingsStore;
         const { fiat } = settings;
 
+        if (!!fiat && fiat !== 'Disabled') {
+            FiatStore.getFiatRates();
+        }
+
         if (implementation === 'lndhub') {
-            login({ login: username, password }).then(() => {
-                BalanceStore.resetBlockchainBalance();
+            login({ login: username, password }).then(async () => {
                 BalanceStore.getLightningBalance();
             });
         } else {
-            BalanceStore.getBlockchainBalance();
-            BalanceStore.getLightningBalance();
+            await Promise.all([
+                BalanceStore.getBlockchainBalance(),
+                BalanceStore.getLightningBalance()
+            ]);
             ChannelsStore.getChannels();
             FeeStore.getFees();
             NodeInfoStore.getNodeInfo();
@@ -188,10 +195,12 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             FeeStore.getForwardingHistory();
         }
 
-        if (!!fiat && fiat !== 'Disabled') {
-            FiatStore.getFiatRates();
+        if (connecting) {
+            setConnectingStatus(false);
+            LinkingUtils.addEventListener();
+            LinkingUtils.handleInitialUrl(navigation);
         }
-    };
+    }
 
     render() {
         const Tab = createBottomTabNavigator();
@@ -202,8 +211,12 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             SettingsStore,
             navigation
         } = this.props;
-        const { error, loading, nodeInfo } = NodeInfoStore;
-        const { implementation, enableTor } = SettingsStore;
+        const { error, nodeInfo } = NodeInfoStore;
+        const { implementation, settings, loggedIn, connecting } =
+            SettingsStore;
+        const loginRequired =
+            !settings || (settings && settings.passphrase && !loggedIn);
+        const dataAvailable = implementation === 'lndhub' || nodeInfo.version;
 
         const WalletScreen = () => {
             return (
@@ -221,34 +234,41 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                         SettingsStore={SettingsStore}
                     />
 
-                    {error && enableTor && (
-                        <View style={{ marginTop: 10 }}>
+                    {error && (
+                        <View style={{ backgroundColor: themeColor('error') }}>
                             <Button
-                                title={localeString('views.Wallet.restartTor')}
+                                title={localeString('views.Wallet.restart')}
                                 icon={{
                                     name: 'sync',
-                                    size: 25,
-                                    color: 'white'
+                                    size: 25
                                 }}
-                                buttonStyle={{
-                                    backgroundColor: 'gray',
-                                    borderRadius: 30
-                                }}
-                                onPress={() => this.restartTorAndReload()}
+                                onPress={() => RNRestart.Restart()}
                             />
                         </View>
                     )}
 
-                    {(implementation === 'lndhub' || nodeInfo.version) && (
+                    {dataAvailable && (
                         <>
-                            <LayerBalances
-                                navigation={navigation}
-                                BalanceStore={BalanceStore}
-                                UnitsStore={UnitsStore}
-                            />
+                            {BalanceStore.loadingLightningBalance ||
+                            BalanceStore.loadingBlockchainBalance ? (
+                                <LoadingIndicator size={120} />
+                            ) : (
+                                <LayerBalances
+                                    navigation={navigation}
+                                    BalanceStore={BalanceStore}
+                                    UnitsStore={UnitsStore}
+                                    onRefresh={() => this.refresh()}
+                                    refreshing={
+                                        BalanceStore.loadingLightningBalance ||
+                                        BalanceStore.loadingBlockchainBalance
+                                    }
+                                />
+                            )}
 
                             <Animated.View
                                 style={{
+                                    flex: 1,
+                                    justifyContent: 'flex-end',
                                     alignSelf: 'center',
                                     bottom: 10,
                                     paddingTop: 40,
@@ -302,11 +322,8 @@ export default class Wallet extends React.Component<WalletProps, {}> {
 
         return (
             <View style={{ flex: 1 }}>
-                <LinearGradient
-                    colors={themeColor('gradient')}
-                    style={{ flex: 1 }}
-                >
-                    {!loading && (
+                <View style={{ flex: 1 }}>
+                    {!connecting && !loginRequired && (
                         <NavigationContainer theme={Theme}>
                             <Tab.Navigator
                                 screenOptions={({ route }) => ({
@@ -356,51 +373,65 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                             </Tab.Navigator>
                         </NavigationContainer>
                     )}
-                    {loading && (
-                        <>
-                            <WordLogo
-                                height={150}
-                                style={{ alignSelf: 'center', marginTop: 250 }}
-                            />
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    alignSelf: 'center',
-                                    fontSize: 15
-                                }}
-                            >
-                                {localeString('views.Wallet.Wallet.connecting')}
-                            </Text>
-                            <LoadingIndicator size={120} />
+                    {connecting && !loginRequired && (
+                        <View
+                            style={{
+                                backgroundColor: '#1F242D',
+                                height: '100%'
+                            }}
+                        >
                             <View
                                 style={{
                                     flex: 1,
-                                    justifyContent: 'flex-end',
-                                    bottom: 20
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    top: 50
+                                }}
+                            >
+                                <WordLogo
+                                    height={100}
+                                    style={{
+                                        alignSelf: 'center'
+                                    }}
+                                />
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'Lato-Regular',
+                                        alignSelf: 'center',
+                                        fontSize: 15,
+                                        padding: 8
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Wallet.Wallet.connecting'
+                                    )}
+                                </Text>
+                                <LoadingIndicator size={120} />
+                            </View>
+                            <View
+                                style={{
+                                    bottom: 56
                                 }}
                             >
                                 <Button
-                                    icon={{
-                                        name: 'settings',
-                                        size: 25,
-                                        color: '#fff'
-                                    }}
-                                    buttonStyle={{
-                                        backgroundColor: 'gray',
-                                        borderRadius: 30
-                                    }}
+                                    title={localeString('views.Settings.title')}
                                     containerStyle={{
-                                        alignItems: 'center'
+                                        width: 320
+                                    }}
+                                    titleStyle={{
+                                        color: 'white'
                                     }}
                                     onPress={() =>
                                         navigation.navigate('Settings')
                                     }
                                     adaptiveWidth
+                                    iconOnly
                                 />
                             </View>
-                        </>
+                        </View>
                     )}
-                </LinearGradient>
+                </View>
             </View>
         );
     }

@@ -96,7 +96,7 @@ export default class SignVerifyMessage extends React.Component<
                 onPress={() =>
                     navigation.navigate('Settings', { refresh: true })
                 }
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
@@ -104,7 +104,12 @@ export default class SignVerifyMessage extends React.Component<
         const signButton = () => (
             <React.Fragment>
                 <Text
-                    style={{ color: selectedIndex === 1 ? 'white' : 'black' }}
+                    style={{
+                        color:
+                            selectedIndex === 1
+                                ? themeColor('text')
+                                : themeColor('background')
+                    }}
                 >
                     {localeString('views.Settings.SignMessage.sign')}
                 </Text>
@@ -114,7 +119,12 @@ export default class SignVerifyMessage extends React.Component<
         const verifyButton = () => (
             <React.Fragment>
                 <Text
-                    style={{ color: selectedIndex === 0 ? 'white' : 'black' }}
+                    style={{
+                        color:
+                            selectedIndex === 0
+                                ? themeColor('text')
+                                : themeColor('background')
+                    }}
                 >
                     {localeString('views.Settings.SignMessage.verify')}
                 </Text>
@@ -134,9 +144,15 @@ export default class SignVerifyMessage extends React.Component<
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('views.Settings.SignMessage.title'),
-                        style: { color: themeColor('text') }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
-                    backgroundColor={themeColor('secondary')}
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
 
                 <View style={styles.content}>
@@ -163,7 +179,12 @@ export default class SignVerifyMessage extends React.Component<
                     {selectedIndex === 0 && (
                         <View>
                             <View style={styles.form}>
-                                <Text style={{ color: themeColor('text') }}>
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
                                     {localeString(
                                         'views.Settings.SignMessage.messageToSign'
                                     )}
@@ -190,18 +211,9 @@ export default class SignVerifyMessage extends React.Component<
                                         'views.Settings.signMessage.button'
                                     )}
                                     icon={{
-                                        name: 'create',
-                                        size: 25,
-                                        color: 'white'
+                                        name: 'create'
                                     }}
                                     onPress={() => signMessage(messageToSign)}
-                                    buttonStyle={{
-                                        backgroundColor: '#261339',
-                                        borderRadius: 30
-                                    }}
-                                    titleStyle={{
-                                        color: 'white'
-                                    }}
                                 />
                             </View>
 
@@ -240,7 +252,8 @@ export default class SignVerifyMessage extends React.Component<
                             <View style={styles.form}>
                                 <Text
                                     style={{
-                                        color: themeColor('text')
+                                        ...styles.text,
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString(
@@ -266,7 +279,8 @@ export default class SignVerifyMessage extends React.Component<
                             <View style={styles.form}>
                                 <Text
                                     style={{
-                                        color: themeColor('text')
+                                        ...styles.text,
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString(
@@ -317,13 +331,6 @@ export default class SignVerifyMessage extends React.Component<
                                             signature: signatureToVerify
                                         })
                                     }
-                                    buttonStyle={{
-                                        backgroundColor: '#261339',
-                                        borderRadius: 30
-                                    }}
-                                    titleStyle={{
-                                        color: 'white'
-                                    }}
                                 />
                             </View>
                         </View>
@@ -374,6 +381,9 @@ const styles = StyleSheet.create({
         paddingTop: 20,
         paddingLeft: 5,
         paddingRight: 5
+    },
+    text: {
+        fontFamily: 'Lato-Regular'
     },
     textInput: {
         fontSize: 20,

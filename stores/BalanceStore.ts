@@ -6,7 +6,8 @@ export default class BalanceStore {
     @observable public totalBlockchainBalance: number | string;
     @observable public confirmedBlockchainBalance: number | string;
     @observable public unconfirmedBlockchainBalance: number | string;
-    @observable public loading = false;
+    @observable public loadingBlockchainBalance = false;
+    @observable public loadingLightningBalance = false;
     @observable public error = false;
     @observable public pendingOpenBalance: number | string;
     @observable public lightningBalance: number | string;
@@ -48,14 +49,15 @@ export default class BalanceStore {
 
     balanceError = () => {
         this.error = true;
-        this.loading = false;
+        this.loadingBlockchainBalance = false;
+        this.loadingLightningBalance = false;
     };
 
     @action
     public getBlockchainBalance = () => {
-        this.loading = true;
+        this.loadingBlockchainBalance = true;
         this.resetBlockchainBalance();
-        RESTUtils.getBlockchainBalance()
+        return RESTUtils.getBlockchainBalance()
             .then((data: any) => {
                 // process external accounts
                 const accounts = data.account_balance;
@@ -69,7 +71,13 @@ export default class BalanceStore {
                     data.confirmed_balance
                 );
                 this.totalBlockchainBalance = Number(data.total_balance);
-                this.loading = false;
+                this.loadingBlockchainBalance = false;
+                return {
+                    unconfirmedBlockchainBalance:
+                        this.unconfirmedBlockchainBalance,
+                    confirmedBlockchainBalance: this.confirmedBlockchainBalance,
+                    totalBlockchainBalance: this.totalBlockchainBalance
+                };
             })
             .catch(() => {
                 this.balanceError();
@@ -78,13 +86,17 @@ export default class BalanceStore {
 
     @action
     public getLightningBalance = () => {
-        this.loading = true;
+        this.loadingLightningBalance = true;
         this.resetLightningBalance();
-        RESTUtils.getLightningBalance()
+        return RESTUtils.getLightningBalance()
             .then((data: any) => {
                 this.pendingOpenBalance = Number(data.pending_open_balance);
                 this.lightningBalance = Number(data.balance);
-                this.loading = false;
+                this.loadingLightningBalance = false;
+                return {
+                    pendingOpenBalance: this.pendingOpenBalance,
+                    lightningBalance: this.lightningBalance
+                };
             })
             .catch(() => {
                 this.balanceError();

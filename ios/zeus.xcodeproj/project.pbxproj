@@ -7,11 +7,21 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		005E25528DB94022ABAFE58E /* Caret Right-3.svg in Resources */ = {isa = PBXBuildFile; fileRef = FB2BF1C8E61649A58A6E1A61 /* Caret Right-3.svg */; };
 		00E356F31AD99517003FC87E /* zeusTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 00E356F21AD99517003FC87E /* zeusTests.m */; };
+		0A7D9EFFF994475C9E89AD34 /* Lock.svg in Resources */ = {isa = PBXBuildFile; fileRef = 65EBEDD6824B433F875FF553 /* Lock.svg */; };
+		0D0C9325D9514324BC10BE73 /* Word Logo.svg in Resources */ = {isa = PBXBuildFile; fileRef = 454EDE72420A4964823DF6F2 /* Word Logo.svg */; };
+		0E5CAE8C45F0483BB8C8020C /* Eye On.svg in Resources */ = {isa = PBXBuildFile; fileRef = AC03A7A4319C4366A52D94FE /* Eye On.svg */; };
+		0EB04476647C460EA1358028 /* Switch.svg in Resources */ = {isa = PBXBuildFile; fileRef = 647B3F8EC6A6487CB6606AD9 /* Switch.svg */; };
+		1316C039CEF7429B88ABE9E2 /* Lato-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 025DDDDD0022456CB347E97B /* Lato-Regular.ttf */; };
 		13B07FBC1A68108700A75B9A /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A68108700A75B9A /* AppDelegate.m */; };
 		13B07FBD1A68108700A75B9A /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB11A68108700A75B9A /* LaunchScreen.xib */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
+		1D498675CD1F48BBBA31EFD4 /* Alert.svg in Resources */ = {isa = PBXBuildFile; fileRef = 1F20C8EE28BE46F6B99E5ED3 /* Alert.svg */; };
+		22D2AE20933A4FB8BC47A730 /* Eye Off.svg in Resources */ = {isa = PBXBuildFile; fileRef = 28FAC11AA8E5479C81BE8DDA /* Eye Off.svg */; };
+		2733AFC787DA44D3B7B5D502 /* Success.gif in Resources */ = {isa = PBXBuildFile; fileRef = DDCBB2DF7F86404A96FCE2C6 /* Success.gif */; };
+		2B701B9D101047A89EC4CDB6 /* 4.png in Resources */ = {isa = PBXBuildFile; fileRef = 6F3CEE7DB9174923BAB26C47 /* 4.png */; };
 		2D02E4BC1E0B4A80006451C7 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A68108700A75B9A /* AppDelegate.m */; };
 		2D02E4BF1E0B4AB3006451C7 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
 		2D02E4C21E0B4AEC006451C7 /* libRCTAnimation.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5E9157351DD0AC6500FF2AA8 /* libRCTAnimation.a */; };
@@ -23,14 +33,62 @@
 		2D02E4C81E0B4AEC006451C7 /* libRCTWebSocket-tvOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3DAD3E991DF850E9000B6D8A /* libRCTWebSocket-tvOS.a */; };
 		2D16E6881FA4F8E400B85C8A /* libReact.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2D16E6891FA4F8E400B85C8A /* libReact.a */; };
 		2DCD954D1E0B4F2C00145EB5 /* zeusTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 00E356F21AD99517003FC87E /* zeusTests.m */; };
-		2E465242CC73CAED442A3B97 /* libPods-zeus-tvOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = EE664AA94A3B608FC4E5B564 /* libPods-zeus-tvOS.a */; };
-		403F03C847429786752C8E88 /* libPods-zeus-tvOSTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DBDCFFE7DA378BF2269E13EC /* libPods-zeus-tvOSTests.a */; };
+		2F59AB02206B4761AB921130 /* Mempool.svg in Resources */ = {isa = PBXBuildFile; fileRef = 97D9A8F5652E4AC580E97DEF /* Mempool.svg */; };
+		364E53F72FBA457F91578D06 /* Pen.svg in Resources */ = {isa = PBXBuildFile; fileRef = A0A40034EBFA40CF87A744A6 /* Pen.svg */; };
+		395880B8BA0647E3908DBD6A /* Wallet2.svg in Resources */ = {isa = PBXBuildFile; fileRef = D7E370054BBF42359E7A5112 /* Wallet2.svg */; };
+		3D5DCA6D458145CB9735C5E3 /* ScanFrame.svg in Resources */ = {isa = PBXBuildFile; fileRef = C1ADF2824BD24D9C8BF6039B /* ScanFrame.svg */; };
+		40ABC332E9C74327B118D50A /* QR.svg in Resources */ = {isa = PBXBuildFile; fileRef = 80E6686C049240CE9887FA2C /* QR.svg */; };
+		43264510AFC64A6E89EC9BDA /* Menu.svg in Resources */ = {isa = PBXBuildFile; fileRef = 226FAAEEA94A478A945F9A57 /* Menu.svg */; };
+		452DE3B3EC174D45A6007ACD /* Brush.svg in Resources */ = {isa = PBXBuildFile; fileRef = 5CC0E65B8E6447A38BD1EE91 /* Brush.svg */; };
+		47ECEA24A11A4DCFB6640276 /* Clock.svg in Resources */ = {isa = PBXBuildFile; fileRef = 0739DA7692B644DEBC3BAFFC /* Clock.svg */; };
+		4EE81C6E19444556B31C4756 /* splash.png in Resources */ = {isa = PBXBuildFile; fileRef = 107D5D19C89849838D993B6C /* splash.png */; };
+		5373AAA9A29A4603B7C121F6 /* Globe.svg in Resources */ = {isa = PBXBuildFile; fileRef = 058EC85AAE364CEBB5C88C12 /* Globe.svg */; };
+		5BC6B338F0044B6CA0D45C97 /* Help Icon.svg in Resources */ = {isa = PBXBuildFile; fileRef = 77EC666A91C04742A050DEF4 /* Help Icon.svg */; };
+		5DC486FC32AC7ED6014627FE /* libPods-zeus-zeusTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C9DF71CF7B6811CA6A92A8D /* libPods-zeus-zeusTests.a */; };
+		5ECDD76F848B4802B0B5D3C1 /* Loading.gif in Resources */ = {isa = PBXBuildFile; fileRef = 2D6AFC110FCE4DB693ABCF13 /* Loading.gif */; };
+		5ED36312F2F94778BE7418C2 /* Backspace.svg in Resources */ = {isa = PBXBuildFile; fileRef = C8B74E7F5FE74AB1B75DD331 /* Backspace.svg */; };
+		659C049013BD4A618AA4275C /* Temple.svg in Resources */ = {isa = PBXBuildFile; fileRef = 259ED6E1C36A4BB38A5BFB8B /* Temple.svg */; };
+		692A2B7E895144DDB6D5813C /* PeersContact.svg in Resources */ = {isa = PBXBuildFile; fileRef = 299B155651FE4C3CB3D558D1 /* PeersContact.svg */; };
+		6ACB3216EC1B40A190B0A268 /* Channels.svg in Resources */ = {isa = PBXBuildFile; fileRef = 289689C09C974491A933737A /* Channels.svg */; };
+		778075355FE64470901265B5 /* Lightning.svg in Resources */ = {isa = PBXBuildFile; fileRef = D17E42CE8B824083B6E4DCC4 /* Lightning.svg */; };
+		78FB5414F55B4D94804920B7 /* Caret Right-1.svg in Resources */ = {isa = PBXBuildFile; fileRef = 34845404A9F04B35ADA34F80 /* Caret Right-1.svg */; };
+		7C9A1A0DC41A4B56BC555750 /* Node On.svg in Resources */ = {isa = PBXBuildFile; fileRef = 62458EE70D8546B7AE7F87DF /* Node On.svg */; };
+		7D5F7108F3164222AE36A242 /* Filter Off.svg in Resources */ = {isa = PBXBuildFile; fileRef = 2EC02052907E453CB15DBADA /* Filter Off.svg */; };
+		824E335CCF474E769966E342 /* Routing.svg in Resources */ = {isa = PBXBuildFile; fileRef = B36D434AE9B14EE7AD5E6BCE /* Routing.svg */; };
 		85477FC6256D5D3400A4EAD1 /* dummy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85477FC5256D5D3400A4EAD1 /* dummy.swift */; };
 		85477FC7256D5D3400A4EAD1 /* dummy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85477FC5256D5D3400A4EAD1 /* dummy.swift */; };
+		8F14873EE5A54A2EBEC7D0A3 /* Checkmark.svg in Resources */ = {isa = PBXBuildFile; fileRef = F049B384F839491FBB33BBA4 /* Checkmark.svg */; };
 		97D6EBB726C487DC002ADC8C /* ioslauncher.png in Resources */ = {isa = PBXBuildFile; fileRef = 97D6EB5926C47CF5002ADC8C /* ioslauncher.png */; };
-		D595006D2D22710FAA9ADBD4 /* libPods-zeusTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 98FC413518FC2BF679547064 /* libPods-zeusTests.a */; };
+		9A781A49AA6E411DA6371028 /* Delete.svg in Resources */ = {isa = PBXBuildFile; fileRef = 67621A6F1F0042C7ACE3E84F /* Delete.svg */; };
+		9D2CD599CA2E484D8617C922 /* Mascot contact.svg in Resources */ = {isa = PBXBuildFile; fileRef = 4A1152E48A5F4D359855B4D5 /* Mascot contact.svg */; };
+		A09AF727D5F84779808B2B53 /* Receive.svg in Resources */ = {isa = PBXBuildFile; fileRef = EF00F35A868F4C26B9288D74 /* Receive.svg */; };
+		A2AAB31AF9804954A6AD6625 /* Node Off.svg in Resources */ = {isa = PBXBuildFile; fileRef = 8046E6CEF39C45D4A0731EBA /* Node Off.svg */; };
+		A79D6320396A4D6AA420E33C /* Send.svg in Resources */ = {isa = PBXBuildFile; fileRef = 095808991E764378BE2D3052 /* Send.svg */; };
+		BC43A928A3C3466390D20200 /* Pie.svg in Resources */ = {isa = PBXBuildFile; fileRef = 662F3CE13986425FAECE00A8 /* Pie.svg */; };
+		BC7117BDDCFB483CB2345DDB /* Bitcoin.svg in Resources */ = {isa = PBXBuildFile; fileRef = 291FF6091426421DB569BEC4 /* Bitcoin.svg */; };
+		BFEB12685B664218922995B1 /* Scan.svg in Resources */ = {isa = PBXBuildFile; fileRef = 29E002EDCBDC4FB59A29BA2E /* Scan.svg */; };
+		C941FD1729484DBB8E375B20 /* 3.png in Resources */ = {isa = PBXBuildFile; fileRef = DEE698AC647848D9B6DB13F6 /* 3.png */; };
+		CAB3D33C810A481CBDB5D3FE /* 2.png in Resources */ = {isa = PBXBuildFile; fileRef = 794C8E7556B54F62BEAD1975 /* 2.png */; };
+		CCB7B4EFDF784BFE967A4925 /* OnChain.svg in Resources */ = {isa = PBXBuildFile; fileRef = 460BC12A6D1543F7B62C10FC /* OnChain.svg */; };
+		D0057DE9933649AF87CE361C /* Cross.svg in Resources */ = {isa = PBXBuildFile; fileRef = BA49AD114EF94750B63C2C94 /* Cross.svg */; };
+		D1EBD1023E904A66B05DEE97 /* Contact.svg in Resources */ = {isa = PBXBuildFile; fileRef = C2058B1AED6D4B97A6650200 /* Contact.svg */; };
+		D1F6E94001C348F4BF7300D7 /* Caret Right.svg in Resources */ = {isa = PBXBuildFile; fileRef = 89366F98367041A3AD6768BD /* Caret Right.svg */; };
+		D2619D32728445B6A89A8E90 /* Question.svg in Resources */ = {isa = PBXBuildFile; fileRef = 19F1DF8577E64E24B856F202 /* Question.svg */; };
+		D33C80065CFF40A9B839465D /* Caret Left.svg in Resources */ = {isa = PBXBuildFile; fileRef = 571E23F345EB49B99F8150D2 /* Caret Left.svg */; };
+		D39FF9B4BE30499AA85412A6 /* secondary.png in Resources */ = {isa = PBXBuildFile; fileRef = 205F59F6157B4D46BDB7B826 /* secondary.png */; };
+		D48BA6E6D2C944E085CD4C6D /* Filter On.svg in Resources */ = {isa = PBXBuildFile; fileRef = CBA0591D71884F909710032D /* Filter On.svg */; };
+		D66A263DF39F48088A0F8784 /* tor.png in Resources */ = {isa = PBXBuildFile; fileRef = C79E350A2A9640088B2E0231 /* tor.png */; };
+		D939E2C93F2B4F279F9923FD /* 1.png in Resources */ = {isa = PBXBuildFile; fileRef = F2D9FC1C959D40C29AA07FD5 /* 1.png */; };
+		D946E96321314A37803868BB /* secondary-full.png in Resources */ = {isa = PBXBuildFile; fileRef = F90E2A4AC40A40CA94A1D8FE /* secondary-full.png */; };
+		DECF80F7FBFA4D17BB0238D9 /* ErrorIcon.svg in Resources */ = {isa = PBXBuildFile; fileRef = B23A03CFAFEF40D790A7B4E6 /* ErrorIcon.svg */; };
+		DEFE5B1336674812BAE3E366 /* Coins.svg in Resources */ = {isa = PBXBuildFile; fileRef = 8F0CAEBF09CC44E0A55DFB2A /* Coins.svg */; };
+		E248E368B08141929FF4B67F /* Caret Up.svg in Resources */ = {isa = PBXBuildFile; fileRef = F3F9827E17844DA7AC951B88 /* Caret Up.svg */; };
+		E24CC9BAF7FF4BA6BCC7F17B /* Lato-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C099E154C6C8479188E39851 /* Lato-Bold.ttf */; };
+		ECAC6EABDA3B4277AE5D6B7C /* Word Logo - no outline.svg in Resources */ = {isa = PBXBuildFile; fileRef = 904B772D015A42D58EF60A9A /* Word Logo - no outline.svg */; };
 		ED297163215061F000B7C4FE /* JavaScriptCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ED297162215061F000B7C4FE /* JavaScriptCore.framework */; };
 		ED2971652150620600B7C4FE /* JavaScriptCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ED2971642150620600B7C4FE /* JavaScriptCore.framework */; };
+		F64C923F939245A284E8D5E2 /* Refresh.svg in Resources */ = {isa = PBXBuildFile; fileRef = 58468A869AB24054A313D38E /* Refresh.svg */; };
+		F6BA97FE98FB4D8890855BEC /* Wallet.svg in Resources */ = {isa = PBXBuildFile; fileRef = CCFEAC399BB842A091ADB042 /* Wallet.svg */; };
 		FE68A5FF7AF76A7CC17F753E /* libPods-zeus.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C2E5235CC64B00DD9CAF9F8 /* libPods-zeus.a */; };
 /* End PBXBuildFile section */
 
@@ -228,6 +286,11 @@
 		00E356EE1AD99517003FC87E /* zeusTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = zeusTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		00E356F11AD99517003FC87E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		00E356F21AD99517003FC87E /* zeusTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = zeusTests.m; sourceTree = "<group>"; };
+		025DDDDD0022456CB347E97B /* Lato-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-Regular.ttf"; path = "../assets/fonts/Lato-Regular.ttf"; sourceTree = "<group>"; };
+		058EC85AAE364CEBB5C88C12 /* Globe.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Globe.svg; path = ../assets/images/SVG/Globe.svg; sourceTree = "<group>"; };
+		0739DA7692B644DEBC3BAFFC /* Clock.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Clock.svg; path = ../assets/images/SVG/Clock.svg; sourceTree = "<group>"; };
+		095808991E764378BE2D3052 /* Send.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Send.svg; path = ../assets/images/SVG/Send.svg; sourceTree = "<group>"; };
+		107D5D19C89849838D993B6C /* splash.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = splash.png; path = ../assets/images/intro/splash.png; sourceTree = "<group>"; };
 		139105B61AF99BAD00B5F7CC /* RCTSettings.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTSettings.xcodeproj; path = "../node_modules/react-native/Libraries/Settings/RCTSettings.xcodeproj"; sourceTree = "<group>"; };
 		139FDEE61B06529A00C62182 /* RCTWebSocket.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTWebSocket.xcodeproj; path = "../node_modules/react-native/Libraries/WebSocket/RCTWebSocket.xcodeproj"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* zeus.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = zeus.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -237,34 +300,67 @@
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = zeus/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = zeus/Info.plist; sourceTree = "<group>"; };
 		13B07FB71A68108700A75B9A /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = zeus/main.m; sourceTree = "<group>"; };
-		149524898A0BD4460769D7C5 /* Pods-zeus-tvOS.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zeus-tvOS.release.xcconfig"; path = "Target Support Files/Pods-zeus-tvOS/Pods-zeus-tvOS.release.xcconfig"; sourceTree = "<group>"; };
 		18B00F64CC5A4074AB595A5C /* MaterialIcons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = MaterialIcons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/MaterialIcons.ttf"; sourceTree = "<group>"; };
+		19F1DF8577E64E24B856F202 /* Question.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Question.svg; path = ../assets/images/SVG/Question.svg; sourceTree = "<group>"; };
 		1AD743129802428BA25522C5 /* libReactNativePermissions.a */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = archive.ar; path = libReactNativePermissions.a; sourceTree = "<group>"; };
+		1F20C8EE28BE46F6B99E5ED3 /* Alert.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Alert.svg; path = ../assets/images/SVG/Alert.svg; sourceTree = "<group>"; };
+		205F59F6157B4D46BDB7B826 /* secondary.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = secondary.png; path = ../assets/images/secondary.png; sourceTree = "<group>"; };
+		224DF75E684C18FB15931B17 /* Pods-zeus-zeusTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zeus-zeusTests.debug.xcconfig"; path = "Target Support Files/Pods-zeus-zeusTests/Pods-zeus-zeusTests.debug.xcconfig"; sourceTree = "<group>"; };
+		226FAAEEA94A478A945F9A57 /* Menu.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Menu.svg; path = ../assets/images/SVG/Menu.svg; sourceTree = "<group>"; };
+		259ED6E1C36A4BB38A5BFB8B /* Temple.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Temple.svg; path = ../assets/images/SVG/Temple.svg; sourceTree = "<group>"; };
+		289689C09C974491A933737A /* Channels.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Channels.svg; path = ../assets/images/SVG/Channels.svg; sourceTree = "<group>"; };
+		28FAC11AA8E5479C81BE8DDA /* Eye Off.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Eye Off.svg"; path = "../assets/images/SVG/Eye Off.svg"; sourceTree = "<group>"; };
+		291FF6091426421DB569BEC4 /* Bitcoin.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Bitcoin.svg; path = ../assets/images/SVG/Bitcoin.svg; sourceTree = "<group>"; };
+		299B155651FE4C3CB3D558D1 /* PeersContact.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = PeersContact.svg; path = ../assets/images/SVG/PeersContact.svg; sourceTree = "<group>"; };
 		29D6E5A55A7840A6B32ED432 /* EvilIcons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = EvilIcons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/EvilIcons.ttf"; sourceTree = "<group>"; };
+		29E002EDCBDC4FB59A29BA2E /* Scan.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Scan.svg; path = ../assets/images/SVG/Scan.svg; sourceTree = "<group>"; };
 		2D02E47B1E0B4A5D006451C7 /* zeus-tvOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "zeus-tvOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2D02E4901E0B4A5D006451C7 /* zeus-tvOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "zeus-tvOSTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2D16E6891FA4F8E400B85C8A /* libReact.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libReact.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		2D6AFC110FCE4DB693ABCF13 /* Loading.gif */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Loading.gif; path = ../assets/images/GIF/Loading.gif; sourceTree = "<group>"; };
+		2EC02052907E453CB15DBADA /* Filter Off.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Filter Off.svg"; path = "../assets/images/SVG/Filter Off.svg"; sourceTree = "<group>"; };
 		2F3014757945182638091D48 /* Pods-zeusTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zeusTests.release.xcconfig"; path = "Target Support Files/Pods-zeusTests/Pods-zeusTests.release.xcconfig"; sourceTree = "<group>"; };
+		34845404A9F04B35ADA34F80 /* Caret Right-1.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Caret Right-1.svg"; path = "../assets/images/SVG/Caret Right-1.svg"; sourceTree = "<group>"; };
 		38D34AA6DDC20AF412F399A6 /* Pods-zeus.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zeus.debug.xcconfig"; path = "Target Support Files/Pods-zeus/Pods-zeus.debug.xcconfig"; sourceTree = "<group>"; };
+		454EDE72420A4964823DF6F2 /* Word Logo.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Word Logo.svg"; path = "../assets/images/SVG/Word Logo.svg"; sourceTree = "<group>"; };
+		460BC12A6D1543F7B62C10FC /* OnChain.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = OnChain.svg; path = ../assets/images/SVG/OnChain.svg; sourceTree = "<group>"; };
 		49BD28A15F4B4FECA6EE0CDE /* SimpleLineIcons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = SimpleLineIcons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/SimpleLineIcons.ttf"; sourceTree = "<group>"; };
+		4A1152E48A5F4D359855B4D5 /* Mascot contact.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Mascot contact.svg"; path = "../assets/images/SVG/Mascot contact.svg"; sourceTree = "<group>"; };
 		4C8C38BFCA8A45C99AA6FF28 /* MaterialCommunityIcons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = MaterialCommunityIcons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/MaterialCommunityIcons.ttf"; sourceTree = "<group>"; };
 		4D6C56355DAE4697AB55E762 /* Feather.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Feather.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Feather.ttf"; sourceTree = "<group>"; };
 		56E2BCFD302DC5CBB45744D7 /* Pods-zeusTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zeusTests.debug.xcconfig"; path = "Target Support Files/Pods-zeusTests/Pods-zeusTests.debug.xcconfig"; sourceTree = "<group>"; };
+		571E23F345EB49B99F8150D2 /* Caret Left.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Caret Left.svg"; path = "../assets/images/SVG/Caret Left.svg"; sourceTree = "<group>"; };
+		58468A869AB24054A313D38E /* Refresh.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Refresh.svg; path = ../assets/images/SVG/Refresh.svg; sourceTree = "<group>"; };
+		5C9DF71CF7B6811CA6A92A8D /* libPods-zeus-zeusTests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-zeus-zeusTests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		5CC0E65B8E6447A38BD1EE91 /* Brush.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Brush.svg; path = ../assets/images/SVG/Brush.svg; sourceTree = "<group>"; };
 		5E91572D1DD0AC6500FF2AA8 /* RCTAnimation.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTAnimation.xcodeproj; path = "../node_modules/react-native/Libraries/NativeAnimation/RCTAnimation.xcodeproj"; sourceTree = "<group>"; };
+		62458EE70D8546B7AE7F87DF /* Node On.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Node On.svg"; path = "../assets/images/SVG/Node On.svg"; sourceTree = "<group>"; };
+		647B3F8EC6A6487CB6606AD9 /* Switch.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Switch.svg; path = ../assets/images/SVG/Switch.svg; sourceTree = "<group>"; };
+		65EBEDD6824B433F875FF553 /* Lock.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Lock.svg; path = ../assets/images/SVG/Lock.svg; sourceTree = "<group>"; };
+		662F3CE13986425FAECE00A8 /* Pie.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Pie.svg; path = ../assets/images/SVG/Pie.svg; sourceTree = "<group>"; };
+		67621A6F1F0042C7ACE3E84F /* Delete.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Delete.svg; path = ../assets/images/SVG/Delete.svg; sourceTree = "<group>"; };
 		6EA51D451E9C4637BBA7ADDB /* Fontisto.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Fontisto.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Fontisto.ttf"; sourceTree = "<group>"; };
+		6F3CEE7DB9174923BAB26C47 /* 4.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = 4.png; path = ../assets/images/intro/4.png; sourceTree = "<group>"; };
 		6F7490ECB1F7403FB5236410 /* FontAwesome5_Solid.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome5_Solid.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome5_Solid.ttf"; sourceTree = "<group>"; };
 		7407D2CD274E076D00850BAB /* zeus.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = zeus.entitlements; path = zeus/zeus.entitlements; sourceTree = "<group>"; };
 		7407D2CE274E079100850BAB /* zeusRelease.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = zeusRelease.entitlements; path = zeus/zeusRelease.entitlements; sourceTree = "<group>"; };
+		77EC666A91C04742A050DEF4 /* Help Icon.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Help Icon.svg"; path = "../assets/images/SVG/Help Icon.svg"; sourceTree = "<group>"; };
 		78C398B01ACF4ADC00677621 /* RCTLinking.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTLinking.xcodeproj; path = "../node_modules/react-native/Libraries/LinkingIOS/RCTLinking.xcodeproj"; sourceTree = "<group>"; };
+		794C8E7556B54F62BEAD1975 /* 2.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = 2.png; path = ../assets/images/intro/2.png; sourceTree = "<group>"; };
 		7FE4DFA6CD064723B106677B /* Octicons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Octicons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Octicons.ttf"; sourceTree = "<group>"; };
-		81FCEC7269332E4731217DB4 /* Pods-zeus-tvOS.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zeus-tvOS.debug.xcconfig"; path = "Target Support Files/Pods-zeus-tvOS/Pods-zeus-tvOS.debug.xcconfig"; sourceTree = "<group>"; };
+		8046E6CEF39C45D4A0731EBA /* Node Off.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Node Off.svg"; path = "../assets/images/SVG/Node Off.svg"; sourceTree = "<group>"; };
+		80E6686C049240CE9887FA2C /* QR.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = QR.svg; path = ../assets/images/SVG/QR.svg; sourceTree = "<group>"; };
 		832341B01AAA6A8300B99B32 /* RCTText.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTText.xcodeproj; path = "../node_modules/react-native/Libraries/Text/RCTText.xcodeproj"; sourceTree = "<group>"; };
 		85477FC3256D5D3400A4EAD1 /* zeus-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "zeus-Bridging-Header.h"; sourceTree = "<group>"; };
 		85477FC4256D5D3400A4EAD1 /* zeus-tvOS-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "zeus-tvOS-Bridging-Header.h"; sourceTree = "<group>"; };
 		85477FC5256D5D3400A4EAD1 /* dummy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = dummy.swift; sourceTree = "<group>"; };
+		89366F98367041A3AD6768BD /* Caret Right.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Caret Right.svg"; path = "../assets/images/SVG/Caret Right.svg"; sourceTree = "<group>"; };
+		8F0CAEBF09CC44E0A55DFB2A /* Coins.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Coins.svg; path = ../assets/images/SVG/Coins.svg; sourceTree = "<group>"; };
+		904B772D015A42D58EF60A9A /* Word Logo - no outline.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Word Logo - no outline.svg"; path = "../assets/images/SVG/Word Logo - no outline.svg"; sourceTree = "<group>"; };
 		970050862460D71500AA6E33 /* RNRandomBytes.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RNRandomBytes.xcodeproj; path = "../node_modules/react-native-randombytes/RNRandomBytes.xcodeproj"; sourceTree = "<group>"; };
 		971EAC8723DCF75600DB5FB3 /* RNSecureKeyStore.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RNSecureKeyStore.xcodeproj; path = "../node_modules/react-native-secure-key-store/ios/RNSecureKeyStore.xcodeproj"; sourceTree = "<group>"; };
 		97D6EB5926C47CF5002ADC8C /* ioslauncher.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = ioslauncher.png; sourceTree = "<group>"; };
+		97D9A8F5652E4AC580E97DEF /* Mempool.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Mempool.svg; path = ../assets/images/affiliates/Mempool.svg; sourceTree = "<group>"; };
 		97F6D46922054E640030F13B /* Octicons.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Octicons.ttf; sourceTree = "<group>"; };
 		97F6D46A22054E640030F13B /* Feather.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Feather.ttf; sourceTree = "<group>"; };
 		97F6D46B22054E640030F13B /* Entypo.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Entypo.ttf; sourceTree = "<group>"; };
@@ -281,24 +377,42 @@
 		97F6D47622054E640030F13B /* SimpleLineIcons.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = SimpleLineIcons.ttf; sourceTree = "<group>"; };
 		97F6D47722054E640030F13B /* MaterialIcons.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = MaterialIcons.ttf; sourceTree = "<group>"; };
 		9888056290564C60BD300E91 /* Entypo.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Entypo.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Entypo.ttf"; sourceTree = "<group>"; };
-		98FC413518FC2BF679547064 /* libPods-zeusTests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-zeusTests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		9C2E5235CC64B00DD9CAF9F8 /* libPods-zeus.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-zeus.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		9D7BECF54A9B4DA78AF0F25F /* Foundation.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Foundation.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Foundation.ttf"; sourceTree = "<group>"; };
+		A0A40034EBFA40CF87A744A6 /* Pen.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Pen.svg; path = ../assets/images/SVG/Pen.svg; sourceTree = "<group>"; };
 		A5BC3ADC78784B888F34B25B /* libRNCamera.a */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = archive.ar; path = libRNCamera.a; sourceTree = "<group>"; };
+		AC03A7A4319C4366A52D94FE /* Eye On.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Eye On.svg"; path = "../assets/images/SVG/Eye On.svg"; sourceTree = "<group>"; };
 		ADBDB91F1DFEBF0600ED6528 /* RCTBlob.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTBlob.xcodeproj; path = "../node_modules/react-native/Libraries/Blob/RCTBlob.xcodeproj"; sourceTree = "<group>"; };
+		B23A03CFAFEF40D790A7B4E6 /* ErrorIcon.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ErrorIcon.svg; path = ../assets/images/SVG/ErrorIcon.svg; sourceTree = "<group>"; };
+		B36D434AE9B14EE7AD5E6BCE /* Routing.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Routing.svg; path = ../assets/images/SVG/Routing.svg; sourceTree = "<group>"; };
+		BA49AD114EF94750B63C2C94 /* Cross.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Cross.svg; path = ../assets/images/SVG/Cross.svg; sourceTree = "<group>"; };
 		BB0EF52AEE1F4724A178B73A /* Zocial.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Zocial.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Zocial.ttf"; sourceTree = "<group>"; };
-		C05C21C599C9CF0B102FDD0F /* Pods-zeus-tvOSTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zeus-tvOSTests.debug.xcconfig"; path = "Target Support Files/Pods-zeus-tvOSTests/Pods-zeus-tvOSTests.debug.xcconfig"; sourceTree = "<group>"; };
+		C099E154C6C8479188E39851 /* Lato-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-Bold.ttf"; path = "../assets/fonts/Lato-Bold.ttf"; sourceTree = "<group>"; };
+		C1ADF2824BD24D9C8BF6039B /* ScanFrame.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ScanFrame.svg; path = ../assets/images/SVG/ScanFrame.svg; sourceTree = "<group>"; };
+		C2058B1AED6D4B97A6650200 /* Contact.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Contact.svg; path = ../assets/images/SVG/Contact.svg; sourceTree = "<group>"; };
 		C44BB3F9DBFD465EBEEED83E /* Ionicons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Ionicons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Ionicons.ttf"; sourceTree = "<group>"; };
+		C79E350A2A9640088B2E0231 /* tor.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = tor.png; path = ../assets/images/tor.png; sourceTree = "<group>"; };
+		C8B74E7F5FE74AB1B75DD331 /* Backspace.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Backspace.svg; path = ../assets/images/SVG/Backspace.svg; sourceTree = "<group>"; };
+		CBA0591D71884F909710032D /* Filter On.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Filter On.svg"; path = "../assets/images/SVG/Filter On.svg"; sourceTree = "<group>"; };
+		CCFEAC399BB842A091ADB042 /* Wallet.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Wallet.svg; path = ../assets/images/SVG/Wallet.svg; sourceTree = "<group>"; };
 		CE60F60AE34649628EB4D675 /* FontAwesome5_Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome5_Regular.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome5_Regular.ttf"; sourceTree = "<group>"; };
+		D17E42CE8B824083B6E4DCC4 /* Lightning.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Lightning.svg; path = ../assets/images/SVG/Lightning.svg; sourceTree = "<group>"; };
 		D2F679C59D7B4D258A382330 /* FontAwesome5_Brands.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome5_Brands.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome5_Brands.ttf"; sourceTree = "<group>"; };
+		D3BB64D7D85819E1FAB648AB /* Pods-zeus-zeusTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zeus-zeusTests.release.xcconfig"; path = "Target Support Files/Pods-zeus-zeusTests/Pods-zeus-zeusTests.release.xcconfig"; sourceTree = "<group>"; };
 		D7D27BFD5D11478D80A6F85E /* FontAwesome.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome.ttf"; sourceTree = "<group>"; };
-		DBDCFFE7DA378BF2269E13EC /* libPods-zeus-tvOSTests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-zeus-tvOSTests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D7E370054BBF42359E7A5112 /* Wallet2.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Wallet2.svg; path = ../assets/images/SVG/Wallet2.svg; sourceTree = "<group>"; };
+		DDCBB2DF7F86404A96FCE2C6 /* Success.gif */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Success.gif; path = ../assets/images/GIF/Success.gif; sourceTree = "<group>"; };
+		DEE698AC647848D9B6DB13F6 /* 3.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = 3.png; path = ../assets/images/intro/3.png; sourceTree = "<group>"; };
 		E8A7F92C01BB6309848F2912 /* Pods-zeus.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zeus.release.xcconfig"; path = "Target Support Files/Pods-zeus/Pods-zeus.release.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		ED2971642150620600B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS12.0.sdk/System/Library/Frameworks/JavaScriptCore.framework; sourceTree = DEVELOPER_DIR; };
-		EE664AA94A3B608FC4E5B564 /* libPods-zeus-tvOS.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-zeus-tvOS.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		F218C4142385C930466AFEB7 /* Pods-zeus-tvOSTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zeus-tvOSTests.release.xcconfig"; path = "Target Support Files/Pods-zeus-tvOSTests/Pods-zeus-tvOSTests.release.xcconfig"; sourceTree = "<group>"; };
+		EF00F35A868F4C26B9288D74 /* Receive.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Receive.svg; path = ../assets/images/SVG/Receive.svg; sourceTree = "<group>"; };
+		F049B384F839491FBB33BBA4 /* Checkmark.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Checkmark.svg; path = ../assets/images/SVG/Checkmark.svg; sourceTree = "<group>"; };
+		F2D9FC1C959D40C29AA07FD5 /* 1.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = 1.png; path = ../assets/images/intro/1.png; sourceTree = "<group>"; };
+		F3F9827E17844DA7AC951B88 /* Caret Up.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Caret Up.svg"; path = "../assets/images/SVG/Caret Up.svg"; sourceTree = "<group>"; };
 		F7E8164B32C144C1970E0E8E /* AntDesign.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = AntDesign.ttf; path = "../node_modules/react-native-vector-icons/Fonts/AntDesign.ttf"; sourceTree = "<group>"; };
+		F90E2A4AC40A40CA94A1D8FE /* secondary-full.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "secondary-full.png"; path = "../assets/images/secondary-full.png"; sourceTree = "<group>"; };
+		FB2BF1C8E61649A58A6E1A61 /* Caret Right-3.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Caret Right-3.svg"; path = "../assets/images/SVG/Caret Right-3.svg"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -306,7 +420,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D595006D2D22710FAA9ADBD4 /* libPods-zeusTests.a in Frameworks */,
+				5DC486FC32AC7ED6014627FE /* libPods-zeus-zeusTests.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -332,7 +446,6 @@
 				2D02E4C61E0B4AEC006451C7 /* libRCTSettings-tvOS.a in Frameworks */,
 				2D02E4C71E0B4AEC006451C7 /* libRCTText-tvOS.a in Frameworks */,
 				2D02E4C81E0B4AEC006451C7 /* libRCTWebSocket-tvOS.a in Frameworks */,
-				2E465242CC73CAED442A3B97 /* libPods-zeus-tvOS.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -340,7 +453,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				403F03C847429786752C8E88 /* libPods-zeus-tvOSTests.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -446,9 +558,7 @@
 				ED2971642150620600B7C4FE /* JavaScriptCore.framework */,
 				2D16E6891FA4F8E400B85C8A /* libReact.a */,
 				9C2E5235CC64B00DD9CAF9F8 /* libPods-zeus.a */,
-				EE664AA94A3B608FC4E5B564 /* libPods-zeus-tvOS.a */,
-				DBDCFFE7DA378BF2269E13EC /* libPods-zeus-tvOSTests.a */,
-				98FC413518FC2BF679547064 /* libPods-zeusTests.a */,
+				5C9DF71CF7B6811CA6A92A8D /* libPods-zeus-zeusTests.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -532,12 +642,10 @@
 			children = (
 				38D34AA6DDC20AF412F399A6 /* Pods-zeus.debug.xcconfig */,
 				E8A7F92C01BB6309848F2912 /* Pods-zeus.release.xcconfig */,
-				81FCEC7269332E4731217DB4 /* Pods-zeus-tvOS.debug.xcconfig */,
-				149524898A0BD4460769D7C5 /* Pods-zeus-tvOS.release.xcconfig */,
-				C05C21C599C9CF0B102FDD0F /* Pods-zeus-tvOSTests.debug.xcconfig */,
-				F218C4142385C930466AFEB7 /* Pods-zeus-tvOSTests.release.xcconfig */,
 				56E2BCFD302DC5CBB45744D7 /* Pods-zeusTests.debug.xcconfig */,
 				2F3014757945182638091D48 /* Pods-zeusTests.release.xcconfig */,
+				224DF75E684C18FB15931B17 /* Pods-zeus-zeusTests.debug.xcconfig */,
+				D3BB64D7D85819E1FAB648AB /* Pods-zeus-zeusTests.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -620,6 +728,66 @@
 				49BD28A15F4B4FECA6EE0CDE /* SimpleLineIcons.ttf */,
 				BB0EF52AEE1F4724A178B73A /* Zocial.ttf */,
 				6EA51D451E9C4637BBA7ADDB /* Fontisto.ttf */,
+				97D9A8F5652E4AC580E97DEF /* Mempool.svg */,
+				2D6AFC110FCE4DB693ABCF13 /* Loading.gif */,
+				DDCBB2DF7F86404A96FCE2C6 /* Success.gif */,
+				F2D9FC1C959D40C29AA07FD5 /* 1.png */,
+				794C8E7556B54F62BEAD1975 /* 2.png */,
+				DEE698AC647848D9B6DB13F6 /* 3.png */,
+				6F3CEE7DB9174923BAB26C47 /* 4.png */,
+				107D5D19C89849838D993B6C /* splash.png */,
+				F90E2A4AC40A40CA94A1D8FE /* secondary-full.png */,
+				205F59F6157B4D46BDB7B826 /* secondary.png */,
+				1F20C8EE28BE46F6B99E5ED3 /* Alert.svg */,
+				C8B74E7F5FE74AB1B75DD331 /* Backspace.svg */,
+				291FF6091426421DB569BEC4 /* Bitcoin.svg */,
+				5CC0E65B8E6447A38BD1EE91 /* Brush.svg */,
+				571E23F345EB49B99F8150D2 /* Caret Left.svg */,
+				34845404A9F04B35ADA34F80 /* Caret Right-1.svg */,
+				FB2BF1C8E61649A58A6E1A61 /* Caret Right-3.svg */,
+				89366F98367041A3AD6768BD /* Caret Right.svg */,
+				F3F9827E17844DA7AC951B88 /* Caret Up.svg */,
+				289689C09C974491A933737A /* Channels.svg */,
+				F049B384F839491FBB33BBA4 /* Checkmark.svg */,
+				0739DA7692B644DEBC3BAFFC /* Clock.svg */,
+				8F0CAEBF09CC44E0A55DFB2A /* Coins.svg */,
+				C2058B1AED6D4B97A6650200 /* Contact.svg */,
+				BA49AD114EF94750B63C2C94 /* Cross.svg */,
+				67621A6F1F0042C7ACE3E84F /* Delete.svg */,
+				B23A03CFAFEF40D790A7B4E6 /* ErrorIcon.svg */,
+				28FAC11AA8E5479C81BE8DDA /* Eye Off.svg */,
+				AC03A7A4319C4366A52D94FE /* Eye On.svg */,
+				2EC02052907E453CB15DBADA /* Filter Off.svg */,
+				CBA0591D71884F909710032D /* Filter On.svg */,
+				058EC85AAE364CEBB5C88C12 /* Globe.svg */,
+				77EC666A91C04742A050DEF4 /* Help Icon.svg */,
+				D17E42CE8B824083B6E4DCC4 /* Lightning.svg */,
+				65EBEDD6824B433F875FF553 /* Lock.svg */,
+				226FAAEEA94A478A945F9A57 /* Menu.svg */,
+				8046E6CEF39C45D4A0731EBA /* Node Off.svg */,
+				62458EE70D8546B7AE7F87DF /* Node On.svg */,
+				460BC12A6D1543F7B62C10FC /* OnChain.svg */,
+				299B155651FE4C3CB3D558D1 /* PeersContact.svg */,
+				A0A40034EBFA40CF87A744A6 /* Pen.svg */,
+				662F3CE13986425FAECE00A8 /* Pie.svg */,
+				80E6686C049240CE9887FA2C /* QR.svg */,
+				19F1DF8577E64E24B856F202 /* Question.svg */,
+				EF00F35A868F4C26B9288D74 /* Receive.svg */,
+				58468A869AB24054A313D38E /* Refresh.svg */,
+				B36D434AE9B14EE7AD5E6BCE /* Routing.svg */,
+				29E002EDCBDC4FB59A29BA2E /* Scan.svg */,
+				095808991E764378BE2D3052 /* Send.svg */,
+				647B3F8EC6A6487CB6606AD9 /* Switch.svg */,
+				259ED6E1C36A4BB38A5BFB8B /* Temple.svg */,
+				CCFEAC399BB842A091ADB042 /* Wallet.svg */,
+				D7E370054BBF42359E7A5112 /* Wallet2.svg */,
+				904B772D015A42D58EF60A9A /* Word Logo - no outline.svg */,
+				454EDE72420A4964823DF6F2 /* Word Logo.svg */,
+				C79E350A2A9640088B2E0231 /* tor.png */,
+				025DDDDD0022456CB347E97B /* Lato-Regular.ttf */,
+				C099E154C6C8479188E39851 /* Lato-Bold.ttf */,
+				4A1152E48A5F4D359855B4D5 /* Mascot contact.svg */,
+				C1ADF2824BD24D9C8BF6039B /* ScanFrame.svg */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -635,6 +803,8 @@
 				00E356EA1AD99517003FC87E /* Sources */,
 				00E356EB1AD99517003FC87E /* Frameworks */,
 				00E356EC1AD99517003FC87E /* Resources */,
+				D65D5980500ACAA1146D7F13 /* [CP] Embed Pods Frameworks */,
+				1A47DE550F19B5429C140366 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -672,7 +842,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 2D02E4BA1E0B4A5E006451C7 /* Build configuration list for PBXNativeTarget "zeus-tvOS" */;
 			buildPhases = (
-				6C592AB9263E9155D9494ECC /* [CP] Check Pods Manifest.lock */,
 				2D02E4771E0B4A5D006451C7 /* Sources */,
 				2D02E4781E0B4A5D006451C7 /* Frameworks */,
 				2D02E4791E0B4A5D006451C7 /* Resources */,
@@ -691,7 +860,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 2D02E4BB1E0B4A5E006451C7 /* Build configuration list for PBXNativeTarget "zeus-tvOSTests" */;
 			buildPhases = (
-				9547848B2C3A5445666CB03D /* [CP] Check Pods Manifest.lock */,
 				2D02E48C1E0B4A5D006451C7 /* Sources */,
 				2D02E48D1E0B4A5D006451C7 /* Frameworks */,
 				2D02E48E1E0B4A5D006451C7 /* Resources */,
@@ -712,7 +880,7 @@
 		83CBB9F71A601CBA00E9B192 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 940;
+				LastUpgradeCheck = 1320;
 				ORGANIZATIONNAME = Facebook;
 				TargetAttributes = {
 					00E356ED1AD99517003FC87E = {
@@ -994,6 +1162,66 @@
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				97D6EBB726C487DC002ADC8C /* ioslauncher.png in Resources */,
 				13B07FBD1A68108700A75B9A /* LaunchScreen.xib in Resources */,
+				2F59AB02206B4761AB921130 /* Mempool.svg in Resources */,
+				5ECDD76F848B4802B0B5D3C1 /* Loading.gif in Resources */,
+				2733AFC787DA44D3B7B5D502 /* Success.gif in Resources */,
+				D939E2C93F2B4F279F9923FD /* 1.png in Resources */,
+				CAB3D33C810A481CBDB5D3FE /* 2.png in Resources */,
+				C941FD1729484DBB8E375B20 /* 3.png in Resources */,
+				2B701B9D101047A89EC4CDB6 /* 4.png in Resources */,
+				4EE81C6E19444556B31C4756 /* splash.png in Resources */,
+				D946E96321314A37803868BB /* secondary-full.png in Resources */,
+				D39FF9B4BE30499AA85412A6 /* secondary.png in Resources */,
+				1D498675CD1F48BBBA31EFD4 /* Alert.svg in Resources */,
+				5ED36312F2F94778BE7418C2 /* Backspace.svg in Resources */,
+				BC7117BDDCFB483CB2345DDB /* Bitcoin.svg in Resources */,
+				452DE3B3EC174D45A6007ACD /* Brush.svg in Resources */,
+				D33C80065CFF40A9B839465D /* Caret Left.svg in Resources */,
+				78FB5414F55B4D94804920B7 /* Caret Right-1.svg in Resources */,
+				005E25528DB94022ABAFE58E /* Caret Right-3.svg in Resources */,
+				D1F6E94001C348F4BF7300D7 /* Caret Right.svg in Resources */,
+				E248E368B08141929FF4B67F /* Caret Up.svg in Resources */,
+				6ACB3216EC1B40A190B0A268 /* Channels.svg in Resources */,
+				8F14873EE5A54A2EBEC7D0A3 /* Checkmark.svg in Resources */,
+				47ECEA24A11A4DCFB6640276 /* Clock.svg in Resources */,
+				DEFE5B1336674812BAE3E366 /* Coins.svg in Resources */,
+				D1EBD1023E904A66B05DEE97 /* Contact.svg in Resources */,
+				D0057DE9933649AF87CE361C /* Cross.svg in Resources */,
+				9A781A49AA6E411DA6371028 /* Delete.svg in Resources */,
+				DECF80F7FBFA4D17BB0238D9 /* ErrorIcon.svg in Resources */,
+				22D2AE20933A4FB8BC47A730 /* Eye Off.svg in Resources */,
+				0E5CAE8C45F0483BB8C8020C /* Eye On.svg in Resources */,
+				7D5F7108F3164222AE36A242 /* Filter Off.svg in Resources */,
+				D48BA6E6D2C944E085CD4C6D /* Filter On.svg in Resources */,
+				5373AAA9A29A4603B7C121F6 /* Globe.svg in Resources */,
+				5BC6B338F0044B6CA0D45C97 /* Help Icon.svg in Resources */,
+				778075355FE64470901265B5 /* Lightning.svg in Resources */,
+				0A7D9EFFF994475C9E89AD34 /* Lock.svg in Resources */,
+				43264510AFC64A6E89EC9BDA /* Menu.svg in Resources */,
+				A2AAB31AF9804954A6AD6625 /* Node Off.svg in Resources */,
+				7C9A1A0DC41A4B56BC555750 /* Node On.svg in Resources */,
+				CCB7B4EFDF784BFE967A4925 /* OnChain.svg in Resources */,
+				692A2B7E895144DDB6D5813C /* PeersContact.svg in Resources */,
+				364E53F72FBA457F91578D06 /* Pen.svg in Resources */,
+				BC43A928A3C3466390D20200 /* Pie.svg in Resources */,
+				40ABC332E9C74327B118D50A /* QR.svg in Resources */,
+				D2619D32728445B6A89A8E90 /* Question.svg in Resources */,
+				A09AF727D5F84779808B2B53 /* Receive.svg in Resources */,
+				F64C923F939245A284E8D5E2 /* Refresh.svg in Resources */,
+				824E335CCF474E769966E342 /* Routing.svg in Resources */,
+				BFEB12685B664218922995B1 /* Scan.svg in Resources */,
+				A79D6320396A4D6AA420E33C /* Send.svg in Resources */,
+				0EB04476647C460EA1358028 /* Switch.svg in Resources */,
+				659C049013BD4A618AA4275C /* Temple.svg in Resources */,
+				F6BA97FE98FB4D8890855BEC /* Wallet.svg in Resources */,
+				395880B8BA0647E3908DBD6A /* Wallet2.svg in Resources */,
+				ECAC6EABDA3B4277AE5D6B7C /* Word Logo - no outline.svg in Resources */,
+				0D0C9325D9514324BC10BE73 /* Word Logo.svg in Resources */,
+				D66A263DF39F48088A0F8784 /* tor.png in Resources */,
+				1316C039CEF7429B88ABE9E2 /* Lato-Regular.ttf in Resources */,
+				E24CC9BAF7FF4BA6BCC7F17B /* Lato-Bold.ttf in Resources */,
+				9D2CD599CA2E484D8617C922 /* Mascot contact.svg in Resources */,
+				3D5DCA6D458145CB9735C5E3 /* ScanFrame.svg in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1027,6 +1255,56 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "export NODE_BINARY=node\n../node_modules/react-native/scripts/react-native-xcode.sh\n";
+		};
+		1A47DE550F19B5429C140366 /* [CP] Copy Pods Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-zeus-zeusTests/Pods-zeus-zeusTests-resources.sh",
+				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/AntDesign.ttf",
+				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/Entypo.ttf",
+				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/EvilIcons.ttf",
+				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/Feather.ttf",
+				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/FontAwesome.ttf",
+				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/FontAwesome5_Brands.ttf",
+				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/FontAwesome5_Regular.ttf",
+				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/FontAwesome5_Solid.ttf",
+				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/Fontisto.ttf",
+				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/Foundation.ttf",
+				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/Ionicons.ttf",
+				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/MaterialCommunityIcons.ttf",
+				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/MaterialIcons.ttf",
+				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/Octicons.ttf",
+				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/SimpleLineIcons.ttf",
+				"${PODS_ROOT}/../../node_modules/react-native-vector-icons/Fonts/Zocial.ttf",
+				"${PODS_CONFIGURATION_BUILD_DIR}/React-Core/AccessibilityResources.bundle",
+			);
+			name = "[CP] Copy Pods Resources";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/AntDesign.ttf",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Entypo.ttf",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/EvilIcons.ttf",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Feather.ttf",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/FontAwesome.ttf",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/FontAwesome5_Brands.ttf",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/FontAwesome5_Regular.ttf",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/FontAwesome5_Solid.ttf",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Fontisto.ttf",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Foundation.ttf",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Ionicons.ttf",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/MaterialCommunityIcons.ttf",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/MaterialIcons.ttf",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Octicons.ttf",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/SimpleLineIcons.ttf",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Zocial.ttf",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/AccessibilityResources.bundle",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-zeus-zeusTests/Pods-zeus-zeusTests-resources.sh\"\n";
+			showEnvVarsInLog = 0;
 		};
 		2D02E4CB1E0B4B27006451C7 /* Bundle React Native Code And Images */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -1092,50 +1370,6 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-zeus/Pods-zeus-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		6C592AB9263E9155D9494ECC /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-zeus-tvOS-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		9547848B2C3A5445666CB03D /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-zeus-tvOSTests-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
 		97710D0923B7FFEA006C4464 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -1160,11 +1394,11 @@
 			);
 			inputPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-zeus/Pods-zeus-frameworks.sh",
-				"${PODS_ROOT}/../../node_modules/react-native-tor/ios/Libsifir_ios.framework",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/hermes.framework/hermes",
 			);
 			name = "[CP] Embed Pods Frameworks";
 			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Libsifir_ios.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -1208,11 +1442,29 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-zeusTests-checkManifestLockResult.txt",
+				"$(DERIVED_FILE_DIR)/Pods-zeus-zeusTests-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		D65D5980500ACAA1146D7F13 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-zeus-zeusTests/Pods-zeus-zeusTests-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/hermes.framework/hermes",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-zeus-zeusTests/Pods-zeus-zeusTests-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -1284,7 +1536,7 @@
 /* Begin XCBuildConfiguration section */
 		00E356F61AD99517003FC87E /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 56E2BCFD302DC5CBB45744D7 /* Pods-zeusTests.debug.xcconfig */;
+			baseConfigurationReference = 224DF75E684C18FB15931B17 /* Pods-zeus-zeusTests.debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -1299,7 +1551,7 @@
 					"$(SRCROOT)/../node_modules/react-native-camera/ios/**",
 				);
 				INFOPLIST_FILE = zeusTests/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				OTHER_LDFLAGS = (
@@ -1314,7 +1566,7 @@
 		};
 		00E356F71AD99517003FC87E /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 2F3014757945182638091D48 /* Pods-zeusTests.release.xcconfig */;
+			baseConfigurationReference = D3BB64D7D85819E1FAB648AB /* Pods-zeus-zeusTests.release.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -1325,7 +1577,7 @@
 					"$(SRCROOT)/../node_modules/react-native-camera/ios/**",
 				);
 				INFOPLIST_FILE = zeusTests/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				OTHER_LDFLAGS = (
@@ -1348,7 +1600,7 @@
 				CODE_SIGN_ENTITLEMENTS = zeus/zeus.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 34;
 				DEAD_CODE_STRIPPING = NO;
 				DEVELOPMENT_TEAM = 7222UU8F2H;
 				ENABLE_BITCODE = NO;
@@ -1357,7 +1609,7 @@
 					"$(SRCROOT)/../node_modules/react-native-camera/ios/**",
 				);
 				INFOPLIST_FILE = zeus/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 11.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				MARKETING_VERSION = 0.6.0;
 				ONLY_ACTIVE_ARCH = YES;
@@ -1387,7 +1639,7 @@
 				CODE_SIGN_ENTITLEMENTS = zeus/zeusRelease.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 34;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_BITCODE = NO;
 				HEADER_SEARCH_PATHS = (
@@ -1396,7 +1648,7 @@
 					"$(SRCROOT)/../node_modules/react-native-camera/ios/**",
 				);
 				INFOPLIST_FILE = zeus/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 11.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				MARKETING_VERSION = 0.6.0;
 				ONLY_ACTIVE_ARCH = NO;
@@ -1417,7 +1669,6 @@
 		};
 		2D02E4971E0B4A5E006451C7 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 81FCEC7269332E4731217DB4 /* Pods-zeus-tvOS.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
@@ -1448,13 +1699,12 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 3;
-				TVOS_DEPLOYMENT_TARGET = 9.2;
+				TVOS_DEPLOYMENT_TARGET = 12.0;
 			};
 			name = Debug;
 		};
 		2D02E4981E0B4A5E006451C7 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 149524898A0BD4460769D7C5 /* Pods-zeus-tvOS.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
@@ -1484,13 +1734,12 @@
 				SWIFT_OBJC_BRIDGING_HEADER = "zeus-tvOS-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 3;
-				TVOS_DEPLOYMENT_TARGET = 9.2;
+				TVOS_DEPLOYMENT_TARGET = 12.0;
 			};
 			name = Release;
 		};
 		2D02E4991E0B4A5E006451C7 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = C05C21C599C9CF0B102FDD0F /* Pods-zeus-tvOSTests.debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -1517,13 +1766,12 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = appletvos;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/zeus-tvOS.app/zeus-tvOS";
-				TVOS_DEPLOYMENT_TARGET = 10.1;
+				TVOS_DEPLOYMENT_TARGET = 12.0;
 			};
 			name = Debug;
 		};
 		2D02E49A1E0B4A5E006451C7 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = F218C4142385C930466AFEB7 /* Pods-zeus-tvOSTests.release.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -1550,7 +1798,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = appletvos;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/zeus-tvOS.app/zeus-tvOS";
-				TVOS_DEPLOYMENT_TARGET = 10.1;
+				TVOS_DEPLOYMENT_TARGET = 12.0;
 			};
 			name = Release;
 		};
@@ -1576,6 +1824,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -1585,6 +1834,7 @@
 				COPY_PHASE_STRIP = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = i386;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -1600,7 +1850,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -1629,6 +1879,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -1638,6 +1889,7 @@
 				COPY_PHASE_STRIP = YES;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = i386;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -1646,9 +1898,10 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;

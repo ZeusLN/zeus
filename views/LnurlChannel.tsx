@@ -3,9 +3,10 @@ import * as React from 'react';
 import RNFetchBlob from 'rn-fetch-blob';
 import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Button, Header, Icon } from 'react-native-elements';
+import { Header, Icon } from 'react-native-elements';
 import querystring from 'querystring-es3';
 
+import Button from './../components/Button';
 import LoadingIndicator from './../components/LoadingIndicator';
 
 import ChannelsStore from './../stores/ChannelsStore';
@@ -61,7 +62,7 @@ export default class LnurlChannel extends React.Component<
             Alert.alert(
                 localeString('views.LnurlPay.LnurlPay.invalidParams'),
                 err.message,
-                [{ text: 'OK', onPress: () => void 0 }],
+                [{ text: localeString('general.ok'), onPress: () => void 0 }],
                 { cancelable: false }
             );
         }
@@ -76,7 +77,7 @@ export default class LnurlChannel extends React.Component<
             uri: lnurl.uri,
             domain: lnurl.domain,
             node_pubkey_string: pubkey,
-            host: host,
+            host,
             k1: lnurl.k1,
             localnodeids: [],
             localnodeid: '',
@@ -95,7 +96,7 @@ export default class LnurlChannel extends React.Component<
         RESTUtils.connectPeer({
             addr: {
                 pubkey: node_pubkey_string,
-                host: host
+                host
             }
         })
             .then(() => {
@@ -159,7 +160,12 @@ export default class LnurlChannel extends React.Component<
                     Alert.alert(
                         `[error] ${domain} says:`,
                         data.reason,
-                        [{ text: 'OK', onPress: () => void 0 }],
+                        [
+                            {
+                                text: localeString('general.ok'),
+                                onPress: () => void 0
+                            }
+                        ],
                         { cancelable: false }
                     );
                     return;
@@ -179,7 +185,7 @@ export default class LnurlChannel extends React.Component<
             <Icon
                 name="arrow-back"
                 onPress={() => navigation.navigate('Wallet')}
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
@@ -195,28 +201,44 @@ export default class LnurlChannel extends React.Component<
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: 'Incoming Channel',
-                        style: { color: '#fff' }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
-                    backgroundColor="grey"
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <View style={styles.content}>
                     <Text
                         style={{
                             padding: 20,
-                            fontWeight: 'bold',
                             fontSize: 22,
-                            color: themeColor('text')
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Bold'
                         }}
                     >
                         {domain}
                     </Text>
                 </View>
                 <View style={styles.content}>
-                    <Text style={{ color: themeColor('text') }}>
+                    <Text
+                        style={{
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }}
+                    >
                         {localeString('views.LnurlChannel.uri')}
                         {':'}
                     </Text>
-                    <Text style={{ color: themeColor('text') }}>
+                    <Text
+                        style={{
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }}
+                    >
                         {lnurl.uri}
                     </Text>
 
@@ -225,7 +247,8 @@ export default class LnurlChannel extends React.Component<
                             <Text
                                 style={{
                                     top: 10,
-                                    color: themeColor('secondaryText')
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'Lato-Regular'
                                 }}
                             >
                                 {localeString('views.OpenChannel.private')}
@@ -270,19 +293,34 @@ export default class LnurlChannel extends React.Component<
                     <View style={styles.content}>
                         {this.state.connectingToPeer && <LoadingIndicator />}
                         {this.state.peerSuccess && (
-                            <Text style={{ color: 'green' }}>
+                            <Text
+                                style={{
+                                    color: 'green',
+                                    fontFamily: 'Lato-Regular'
+                                }}
+                            >
                                 {localeString('views.OpenChannel.peerSuccess')}
                             </Text>
                         )}
                         {this.state.lnurlChannelSuccess && (
-                            <Text style={{ color: 'green' }}>
+                            <Text
+                                style={{
+                                    color: 'green',
+                                    fontFamily: 'Lato-Regular'
+                                }}
+                            >
                                 {localeString('views.LnurlChannel.success')}
                             </Text>
                         )}
                         {this.state.errorMsgPeer &&
                             !this.state.peerSuccess &&
                             !this.state.lnurlChannelSuccess && (
-                                <Text style={{ color: 'red' }}>
+                                <Text
+                                    style={{
+                                        color: 'red',
+                                        fontFamily: 'Lato-Regular'
+                                    }}
+                                >
                                     {this.state.errorMsgPeer ||
                                         localeString('general.error')}
                                 </Text>

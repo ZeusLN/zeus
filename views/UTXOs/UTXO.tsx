@@ -59,9 +59,15 @@ export default class UTXO extends React.Component<UTXOProps> {
                     leftComponent={<BackButton />}
                     centerComponent={{
                         text: localeString('general.utxo'),
-                        style: { color: themeColor('text') }
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }
                     }}
-                    backgroundColor={themeColor('secondary')}
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <View style={styles.center}>
                     <Amount sats={amount} jumboText toggleable sensitive />
@@ -85,7 +91,12 @@ export default class UTXO extends React.Component<UTXOProps> {
                                         )
                                     }
                                 >
-                                    <Text style={styles.valueWithLink}>
+                                    <Text
+                                        style={{
+                                            ...styles.valueWithLink,
+                                            color: themeColor('highlight')
+                                        }}
+                                    >
                                         {address}
                                     </Text>
                                 </TouchableOpacity>
@@ -104,7 +115,14 @@ export default class UTXO extends React.Component<UTXOProps> {
                                     UrlUtils.goToBlockExplorerTXID(tx, testnet)
                                 }
                             >
-                                <Text style={styles.valueWithLink}>{tx}</Text>
+                                <Text
+                                    style={{
+                                        ...styles.valueWithLink,
+                                        color: themeColor('highlight')
+                                    }}
+                                >
+                                    {tx}
+                                </Text>
                             </TouchableOpacity>
                         }
                         sensitive
@@ -146,6 +164,6 @@ const styles = StyleSheet.create({
     },
     valueWithLink: {
         paddingBottom: 5,
-        color: themeColor('highlight')
+        fontFamily: 'Lato-Regular'
     }
 });

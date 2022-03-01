@@ -7,7 +7,7 @@ import {
     View,
     ScrollView
 } from 'react-native';
-import Clipboard from '@react-native-community/clipboard';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -20,6 +20,10 @@ import Button from './../../components/Button';
 import CollapsedQR from './../../components/CollapsedQR';
 import DropdownSetting from './../../components/DropdownSetting';
 import LoadingIndicator from './../../components/LoadingIndicator';
+import {
+    SuccessMessage,
+    ErrorMessage
+} from './../../components/SuccessErrorMessage';
 import TextInput from './../../components/TextInput';
 
 import SettingsStore, { INTERFACE_KEYS } from './../../stores/SettingsStore';
@@ -167,6 +171,7 @@ export default class AddEditNode extends React.Component<
         const node = navigation.getParam('node', null);
         const index = navigation.getParam('index', null);
         const active = navigation.getParam('active', null);
+        const tor = navigation.getParam('enableTor', false);
         const saved = navigation.getParam('saved', null);
         const newEntry = navigation.getParam('newEntry', null);
 
@@ -204,7 +209,7 @@ export default class AddEditNode extends React.Component<
                 active,
                 saved,
                 newEntry,
-                enableTor
+                enableTor: tor || enableTor
             });
         } else {
             this.setState({
@@ -291,7 +296,7 @@ export default class AddEditNode extends React.Component<
             if (nodes.length === 1) {
                 navigation.navigate('Wallet', { refresh: true });
             } else {
-                navigation.navigate('Settings', { refresh: true });
+                navigation.navigate('Nodes', { refresh: true });
             }
         });
     };
@@ -322,7 +327,7 @@ export default class AddEditNode extends React.Component<
                 privacy: settings.privacy
             })
         ).then(() => {
-            navigation.navigate('Wallet', { refresh: true });
+            navigation.navigate('Nodes', { refresh: true });
         });
     };
 
@@ -389,7 +394,7 @@ export default class AddEditNode extends React.Component<
                 onPress={() =>
                     navigation.navigate('Settings', { refresh: true })
                 }
-                color="#fff"
+                color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
@@ -405,9 +410,6 @@ export default class AddEditNode extends React.Component<
                             showCertModal: false
                         });
                         navigation.navigate('CertInstallInstructions');
-                    }}
-                    titleStyle={{
-                        color: 'white'
                     }}
                     secondary
                 />
@@ -447,23 +449,31 @@ export default class AddEditNode extends React.Component<
                         text: localeString(
                             'views.Settings.AddEditNode.nodeConfig'
                         ),
-                        style: { color: '#fff' }
+                        style: { ...styles.text, color: themeColor('text') }
                     }}
-                    backgroundColor="#1f2328"
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 {!!suggestImport && (
                     <View style={styles.clipboardImport}>
-                        <Text style={{ color: 'white' }}>
+                        <Text style={styles.whiteText}>
                             {localeString(
                                 'views.Settings.AddEditNode.connectionStringClipboard'
                             )}
                         </Text>
-                        <Text style={{ color: 'white', padding: 15 }}>
+                        <Text
+                            style={{
+                                ...styles.whiteText,
+                                padding: 15
+                            }}
+                        >
                             {suggestImport.length > 100
                                 ? `${suggestImport.substring(0, 100)}...`
                                 : suggestImport}
                         </Text>
-                        <Text style={{ color: 'white' }}>
+                        <Text style={styles.whiteText}>
                             {localeString(
                                 'views.Settings.AddEditNode.importPrompt'
                             )}
@@ -504,18 +514,30 @@ export default class AddEditNode extends React.Component<
                         <View style={styles.modal}>
                             {showLndHubModal && (
                                 <>
-                                    <Text style={{ fontSize: 40 }}>
+                                    <Text
+                                        style={{
+                                            ...styles.blackText,
+                                            fontSize: 40
+                                        }}
+                                    >
                                         {localeString('general.warning')}
                                     </Text>
-                                    <Text style={{ paddingTop: 20 }}>
+                                    <Text
+                                        style={{
+                                            paddingTop: 20,
+                                            color: 'black'
+                                        }}
+                                    >
                                         {localeString(
                                             'views.Settings.AddEditNode.lndhubWarning'
                                         )}
                                     </Text>
                                     <Text
                                         style={{
+                                            ...styles.blackText,
                                             paddingTop: 20,
-                                            paddingBottom: 20
+                                            paddingBottom: 20,
+                                            color: 'black'
                                         }}
                                     >
                                         {localeString(
@@ -561,25 +583,37 @@ export default class AddEditNode extends React.Component<
                                                     showLndHubModal: false
                                                 })
                                             }
-                                            secondary
+                                            primary
                                         />
                                     </View>
                                 </>
                             )}
                             {showCertModal && (
                                 <>
-                                    <Text style={{ fontSize: 40 }}>
+                                    <Text
+                                        style={{
+                                            ...styles.blackText,
+                                            fontSize: 40
+                                        }}
+                                    >
                                         {localeString('general.warning')}
                                     </Text>
-                                    <Text style={{ paddingTop: 20 }}>
+                                    <Text
+                                        style={{
+                                            ...styles.blackText,
+                                            paddingTop: 20
+                                        }}
+                                    >
                                         {localeString(
                                             'views.Settings.AddEditNode.certificateWarning1'
                                         )}
                                     </Text>
                                     <Text
                                         style={{
+                                            ...styles.blackText,
                                             paddingTop: 20,
-                                            paddingBottom: 20
+                                            paddingBottom: 20,
+                                            color: 'black'
                                         }}
                                     >
                                         {localeString(
@@ -598,9 +632,6 @@ export default class AddEditNode extends React.Component<
                                                     showCertModal: false
                                                 });
                                             }}
-                                            buttonStyle={{
-                                                borderRadius: 30
-                                            }}
                                             tertiary
                                         />
                                     </View>
@@ -614,11 +645,7 @@ export default class AddEditNode extends React.Component<
                                                     showCertModal: false
                                                 })
                                             }
-                                            buttonStyle={{
-                                                borderRadius: 30,
-                                                backgroundColor: 'grey'
-                                            }}
-                                            secondary
+                                            primary
                                         />
                                     </View>
                                 </>
@@ -664,6 +691,7 @@ export default class AddEditNode extends React.Component<
                                 >
                                     <Text
                                         style={{
+                                            ...styles.text,
                                             color: themeColor('text'),
                                             alignSelf: 'center',
                                             padding: 2
@@ -685,6 +713,7 @@ export default class AddEditNode extends React.Component<
                                 >
                                     <Text
                                         style={{
+                                            ...styles.text,
                                             color: themeColor('text'),
                                             alignSelf: 'center',
                                             padding: 2
@@ -705,24 +734,23 @@ export default class AddEditNode extends React.Component<
                         {!!createAccountError &&
                             implementation === 'lndhub' &&
                             !loading && (
-                                <Text style={{ color: 'red', marginBottom: 5 }}>
-                                    {createAccountError}
-                                </Text>
+                                <ErrorMessage message={createAccountError} />
                             )}
 
                         {!!createAccountSuccess &&
                             implementation === 'lndhub' &&
                             !loading && (
-                                <Text
-                                    style={{ color: 'green', marginBottom: 5 }}
-                                >
-                                    {createAccountSuccess}
-                                </Text>
+                                <SuccessMessage
+                                    message={createAccountSuccess}
+                                />
                             )}
 
                         <View>
                             <Text
-                                style={{ color: themeColor('secondaryText') }}
+                                style={{
+                                    ...styles.text,
+                                    color: themeColor('text')
+                                }}
                             >
                                 {localeString(
                                     'views.Settings.AddEditNode.nickname'
@@ -748,7 +776,8 @@ export default class AddEditNode extends React.Component<
                             <>
                                 <Text
                                     style={{
-                                        color: themeColor('secondaryText')
+                                        ...styles.text,
+                                        color: themeColor('text')
                                     }}
                                 >
                                     {localeString(
@@ -765,6 +794,7 @@ export default class AddEditNode extends React.Component<
                                         })
                                     }
                                     editable={!loading}
+                                    autoCorrect={false}
                                 />
 
                                 {implementation === 'spark' && (
@@ -842,6 +872,7 @@ export default class AddEditNode extends React.Component<
                                         })
                                     }
                                     editable={!loading}
+                                    autoCorrect={false}
                                 />
 
                                 <>
@@ -1122,13 +1153,6 @@ export default class AddEditNode extends React.Component<
                                     this.saveNodeConfiguration();
                                 }
                             }}
-                            buttonStyle={{
-                                backgroundColor: saved ? '#fff' : '#261339',
-                                borderRadius: 30
-                            }}
-                            titleStyle={{
-                                color: saved ? 'black' : 'white'
-                            }}
                         />
                     </View>
 
@@ -1151,9 +1175,6 @@ export default class AddEditNode extends React.Component<
                                 onPress={() =>
                                     this.setNodeConfigurationAsActive()
                                 }
-                                titleStyle={{
-                                    color: active ? 'white' : 'purple'
-                                }}
                             />
                         </View>
                     )}
@@ -1173,9 +1194,6 @@ export default class AddEditNode extends React.Component<
                                         }
                                     )
                                 }
-                                titleStyle={{
-                                    color: themeColor('background')
-                                }}
                                 secondary
                             />
                         </View>
@@ -1212,9 +1230,6 @@ export default class AddEditNode extends React.Component<
                                         index
                                     })
                                 }
-                                buttonStyle={{
-                                    borderRadius: 30
-                                }}
                                 secondary
                             />
                         </View>
@@ -1227,6 +1242,12 @@ export default class AddEditNode extends React.Component<
                                     'views.Settings.AddEditNode.deleteNode'
                                 )}
                                 onPress={() => this.deleteNodeConfig()}
+                                containerStyle={{
+                                    borderColor: 'red'
+                                }}
+                                titleStyle={{
+                                    color: 'red'
+                                }}
                                 secondary
                             />
                         </View>
@@ -1238,8 +1259,16 @@ export default class AddEditNode extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    error: {
-        color: 'red'
+    text: {
+        fontFamily: 'Lato-Regular'
+    },
+    whiteText: {
+        color: 'white',
+        fontFamily: 'Lato-Regular'
+    },
+    blackText: {
+        color: 'black',
+        fontFamily: 'Lato-Regular'
     },
     form: {
         paddingTop: 20,

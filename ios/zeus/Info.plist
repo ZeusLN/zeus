@@ -31,7 +31,9 @@
 				<string>lightning</string>
 				<string>LIGHTNING</string>
 				<string>lnurl</string>
-				<string>LNURL</string>
+				<string>lnurlw</string>
+				<string>lnurlp</string>
+				<string>lnurlc</string>
 				<string>lndconnect</string>
 			</array>
 		</dict>
@@ -95,6 +97,8 @@
 		<string>SimpleLineIcons.ttf</string>
 		<string>Zocial.ttf</string>
 		<string>Fontisto.ttf</string>
+		<string>Lato-Regular.ttf</string>
+		<string>Lato-Bold.ttf</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
