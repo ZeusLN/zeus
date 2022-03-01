@@ -65,7 +65,10 @@ export default class Accounts extends React.Component<AccountsProps, {}> {
                         style: { color: themeColor('text') }
                     }}
                     rightComponent={<AddButton />}
-                    backgroundColor={themeColor('secondary')}
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 {loadingAccounts && <LoadingIndicator />}
                 {!loadingAccounts && (
@@ -73,6 +76,16 @@ export default class Accounts extends React.Component<AccountsProps, {}> {
                         navigation={navigation}
                         BalanceStore={BalanceStore}
                         UnitsStore={UnitsStore}
+                        onRefresh={async () =>
+                            await Promise.all([
+                                BalanceStore.getBlockchainBalance(),
+                                BalanceStore.getLightningBalance()
+                            ])
+                        }
+                        refreshing={
+                            BalanceStore.loadingLightningBalance ||
+                            BalanceStore.loadingBlockchainBalance
+                        }
                     />
                 )}
             </View>
