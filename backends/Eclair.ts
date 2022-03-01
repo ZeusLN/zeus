@@ -1,4 +1,4 @@
-import RNFetchBlob from 'rn-fetch-blob';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import querystring from 'querystring-es3';
 import stores from '../stores/Stores';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
@@ -34,7 +34,7 @@ export default class Eclair {
                 headers
             );
         } else {
-            calls[id] = RNFetchBlob.config({
+            calls[id] = ReactNativeBlobUtil.config({
                 trusty: !certVerification
             })
                 .fetch('POST', url + method, headers, body)
