@@ -1,6 +1,6 @@
 import url from 'url';
 import * as React from 'react';
-import RNFetchBlob from 'rn-fetch-blob';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Header, Icon } from 'react-native-elements';
@@ -138,7 +138,7 @@ export default class LnurlChannel extends React.Component<
         u.search = querystring.stringify(qs);
         u.query = querystring.stringify(qs);
 
-        RNFetchBlob.fetch('get', url.format(u))
+        ReactNativeBlobUtil.fetch('get', url.format(u))
             .then((response: any) => {
                 try {
                     const data = response.json();
