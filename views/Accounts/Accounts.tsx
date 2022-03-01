@@ -79,12 +79,14 @@ export default class Accounts extends React.Component<AccountsProps, {}> {
                         onRefresh={async () =>
                             await Promise.all([
                                 BalanceStore.getBlockchainBalance(),
-                                BalanceStore.getLightningBalance()
+                                BalanceStore.getLightningBalance(),
+                                UTXOsStore.listAccounts()
                             ])
                         }
                         refreshing={
                             BalanceStore.loadingLightningBalance ||
-                            BalanceStore.loadingBlockchainBalance
+                            BalanceStore.loadingBlockchainBalance ||
+                            UTXOsStore.loadingAccounts
                         }
                     />
                 )}
