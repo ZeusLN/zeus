@@ -32,6 +32,8 @@ import Privacy from './views/Settings/Privacy';
 import Security from './views/Settings/Security';
 import SetPassword from './views/Settings/SetPassword';
 import SetDuressPassword from './views/Settings/SetDuressPassword';
+import SetPin from './views/Settings/SetPin';
+import SetDuressPin from './views/Settings/SetDuressPin';
 import Language from './views/Settings/Language';
 import Currency from './views/Settings/Currency';
 import Theme from './views/Settings/Theme';
@@ -96,6 +98,12 @@ const AppScenes = {
     },
     SetDuressPassword: {
         screen: SetDuressPassword
+    },
+    SetPin: {
+        screen: SetPin
+    },
+    SetDuressPin: {
+        screen: SetDuressPin
     },
     Language: {
         screen: Language
