@@ -239,11 +239,6 @@ export default class SetPassphrase extends React.Component<
                             title={localeString(
                                 'views.Settings.SetPassword.save'
                             )}
-                            icon={{
-                                name: 'save',
-                                size: 25,
-                                color: 'white'
-                            }}
                             onPress={() => this.saveSettings()}
                         />
                     </View>
