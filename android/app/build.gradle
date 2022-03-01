@@ -200,7 +200,6 @@ android {
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
     implementation 'com.android.support:multidex:1.0.3'
-    implementation project(':rn-fetch-blob')
     implementation project(':react-native-randombytes')
     implementation project(':react-native-secure-key-store')
     implementation "androidx.core:core:1.1.0"

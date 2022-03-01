@@ -1,5 +1,5 @@
 import { action, observable } from 'mobx';
-import RNFetchBlob from 'rn-fetch-blob';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import RESTUtils from './../utils/RESTUtils';
 import Base64Utils from './../utils/Base64Utils';
 import ForwardEvent from './../models/ForwardEvent';
@@ -39,7 +39,7 @@ export default class FeeStore {
         this.loading = true;
         this.error = false;
         this.recommendedFees = {};
-        RNFetchBlob.fetch(
+        ReactNativeBlobUtil.fetch(
             'get',
             'https://mempool.space/api/v1/fees/recommended'
         )

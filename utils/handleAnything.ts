@@ -1,5 +1,5 @@
 import { getParams as getlnurlParams, findlnurl } from 'js-lnurl';
-import RNFetchBlob from 'rn-fetch-blob';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import stores from '../stores/Stores';
 import AddressUtils from './../utils/AddressUtils';
 import LndConnectUtils from './../utils/LndConnectUtils';
@@ -95,7 +95,7 @@ export default async function (data: string): Promise<any> {
         const error = localeString(
             'utils.handleAnything.lightningAddressError'
         );
-        return RNFetchBlob.fetch('get', url)
+        return ReactNativeBlobUtil.fetch('get', url)
             .then((response: any) => {
                 const status = response.info().status;
                 if (status == 200) {
