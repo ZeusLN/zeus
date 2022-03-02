@@ -32,9 +32,6 @@ export default class ChannelsPane extends React.PureComponent<
     ChannelsProps,
     {}
 > {
-    headerString = `${localeString('views.Wallet.Wallet.channels')} (${
-        this.props.ChannelsStore.channels.length
-    })`;
 
     renderItem = ({ item }) => {
         const { ChannelsStore, navigation } = this.props;
@@ -73,12 +70,15 @@ export default class ChannelsPane extends React.PureComponent<
             totalOffline,
             channels
         } = ChannelsStore;
+        const headerString = `${localeString('views.Wallet.Wallet.channels')} (${
+            channels.length
+        })`;
 
         return (
             <View style={{ flex: 1 }}>
                 <WalletHeader
                     navigation={navigation}
-                    title={this.headerString}
+                    title={headerString}
                     SettingsStore={SettingsStore}
                     channels
                 />
