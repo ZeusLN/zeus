@@ -95,26 +95,6 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         LinkingUtils.removeEventListener();
     }
 
-    async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-
-        if (settings.privacy && settings.privacy.clipboard) {
-            this.clipboard = await Clipboard.getString();
-        }
-
-        this.refresh();
-    }
-
-    UNSAFE_componentWillReceiveProps = (nextProps: any) => {
-        const { navigation } = nextProps;
-        const refresh = navigation.getParam('refresh', null);
-
-        if (refresh) {
-            this.refresh();
-        }
-    };
-
     async getSettingsAndNavigate() {
         const { SettingsStore, navigation } = this.props;
 

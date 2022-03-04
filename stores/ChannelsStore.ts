@@ -44,15 +44,6 @@ export default class ChannelsStore {
         this.settingsStore = settingsStore;
 
         reaction(
-            () => this.settingsStore.settings,
-            () => {
-                if (this.settingsStore.hasCredentials()) {
-                    this.getChannels();
-                }
-            }
-        );
-
-        reaction(
             () => this.channelRequest,
             () => {
                 if (this.channelRequest) {
