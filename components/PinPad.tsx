@@ -4,17 +4,19 @@ import { themeColor } from '../utils/ThemeUtils';
 import { Row } from './layout/Row';
 
 interface PinPadProps {
-    pin: boolean;
+    appendValue: (newValue: string) => void;
+    clearValue: () => void;
+    deleteValue: () => void;
     shuffle?: boolean;
 }
 
-export default function PinPad({ pin, shuffle = false }: PinPadProps) {
+export default function PinPad({
+    appendValue,
+    clearValue,
+    deleteValue,
+    shuffle = false
+}: PinPadProps) {
     let pinNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-    const [value, setValue] = React.useState('');
-
-    if (!pin) {
-        setValue('0');
-    }
 
     if (shuffle) {
         // shuffle the order of the numbers using schwartzian transform
@@ -23,30 +25,6 @@ export default function PinPad({ pin, shuffle = false }: PinPadProps) {
             .sort((a, b) => a.sort - b.sort)
             .map(({ value }) => value);
     }
-
-    const appendValue = (newValue: string) => {
-        if (!pin && value === '0') {
-            setValue(newValue);
-        } else {
-            setValue(`${value}${newValue}`);
-        }
-    };
-
-    const clearValue = () => {
-        if (pin) {
-            setValue('');
-        } else {
-            setValue('0');
-        }
-    };
-
-    const deleteValue = () => {
-        if (value.length === 1) {
-            clearValue();
-        } else {
-            setValue(`${value.slice(0, value.length - 1)}`);
-        }
-    };
 
     const styles = StyleSheet.create({
         pinPadRow: {

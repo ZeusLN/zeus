@@ -6,7 +6,7 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import SettingsStore from '../../stores/SettingsStore';
-import PinPad from '../../components/PinPad';
+import Pin from '../../components/Pin';
 
 interface SetDuressPinProps {
     navigation: any;
@@ -149,7 +149,7 @@ export default class SetDuressPin extends React.Component<
                             )}
                         />
                     )}
-                    <PinPad pin={true} />
+                    <Pin />
                 </View>
             </View>
         );
