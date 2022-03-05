@@ -137,6 +137,8 @@ export default class SettingsStore {
     };
     @observable public loading = false;
     @observable btcPayError: string | null;
+    @observable olympiansError: string | null;
+    @observable olympians: Array<any>;
     @observable host: string;
     @observable port: string;
     @observable url: string;
@@ -195,6 +197,55 @@ export default class SettingsStore {
                     // handle error
                     this.btcPayError = `${localeString(
                         'stores.SettingsStore.btcPayFetchConfigError'
+                    )}: ${err.toString()}`;
+                });
+        }
+    };
+
+    @action
+    public fetchOlympians = () => {
+        const olympiansRoute =
+            'https://zeusln.app/api/sponsors/getCommunitySponsors';
+        this.olympiansError = null;
+        this.olympians = [];
+        this.loading = true;
+
+        if (this.enableTor) {
+            return doTorRequest(olympiansRoute, RequestMethod.GET)
+                .then((response: any) => {
+                    this.olympians = response;
+                    this.loading = false;
+                })
+                .catch((err: any) => {
+                    // handle error
+                    this.olympians = [];
+                    this.loading = false;
+                    this.olympiansError = `${localeString(
+                        'stores.SettingsStore.olympianFetchError'
+                    )}: ${err.toString()}`;
+                });
+        } else {
+            return ReactNativeBlobUtil.fetch('get', olympiansRoute)
+                .then((response: any) => {
+                    const status = response.info().status;
+                    if (status == 200) {
+                        const data = response.json();
+                        this.olympians = data;
+                        this.loading = false;
+                    } else {
+                        this.olympians = [];
+                        this.loading = false;
+                        this.olympiansError = localeString(
+                            'stores.SettingsStore.olympianFetchError'
+                        );
+                    }
+                })
+                .catch((err: any) => {
+                    // handle error
+                    this.olympians = [];
+                    this.loading = false;
+                    this.olympiansError = `${localeString(
+                        'stores.SettingsStore.olympianFetchError'
                     )}: ${err.toString()}`;
                 });
         }

@@ -173,8 +173,7 @@ export default class SetPIN extends React.Component<SetPINProps, SetPINState> {
                             )}
                             icon={{
                                 name: 'save',
-                                size: 25,
-                                color: 'white'
+                                size: 25
                             }}
                             onPress={() => this.saveSettings()}
                         />
