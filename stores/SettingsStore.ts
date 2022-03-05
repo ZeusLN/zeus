@@ -205,7 +205,7 @@ export default class SettingsStore {
     @action
     public fetchOlympians = () => {
         const olympiansRoute =
-            'https://zeusln.app/api/sponsors/getCommunitySponsor';
+            'https://zeusln.app/api/sponsors/getCommunitySponsors';
         this.olympiansError = null;
         this.olympians = [];
         this.loading = true;

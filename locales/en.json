@@ -411,6 +411,7 @@
     "views.Routing.RoutingEvent.sourceChannel": "Source Channel",
     "views.Routing.RoutingEvent.destinationChannel": "Destination Channel",
     "views.Olympians.title": "Olympians",
+    "views.Olympians.becomeASponsor": "Become a community sponsor",
     "components.UTXOPicker.modal.title": "Select UTXOs to use",
     "components.UTXOPicker.modal.description": "Select the UTXOs to be used in this operation. You may want to only use specific UTXOs to preserve your privacy.",
     "components.UTXOPicker.modal.set": "Set UTXOs",
