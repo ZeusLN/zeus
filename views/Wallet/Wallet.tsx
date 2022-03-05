@@ -8,7 +8,6 @@ import {
 } from 'react-native';
 
 import { inject, observer } from 'mobx-react';
-import Clipboard from '@react-native-clipboard/clipboard';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import RNRestart from 'react-native-restart';
@@ -63,8 +62,6 @@ interface WalletProps {
 )
 @observer
 export default class Wallet extends React.Component<WalletProps, {}> {
-    clipboard: string;
-
     constructor(props) {
         super(props);
         this.pan = new Animated.ValueXY();
