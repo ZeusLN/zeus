@@ -49,140 +49,63 @@ export default function PinPad({ pin, shuffle = false }: PinPadProps) {
     };
 
     const styles = StyleSheet.create({
-        keypadRow: {
-            justifyContent: 'space-evenly',
-            bottom: 40
+        pinPadRow: {
+            justifyContent: 'space-between',
+            padding: 22,
+            marginLeft: 30,
+            marginRight: 30
+        },
+        pinPadNumber: {
+            color: themeColor('text'),
+            fontSize: 20,
+            fontFamily: 'Lato-Bold'
         }
     });
 
     return (
         <View>
-            <Row align="flex-end" style={styles.keypadRow}>
+            <Row align="flex-end" style={styles.pinPadRow}>
                 <TouchableOpacity onPress={() => appendValue(pinNumbers[1])}>
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            fontSize: 40
-                        }}
-                    >
-                        {pinNumbers[1]}
-                    </Text>
+                    <Text style={styles.pinPadNumber}>{pinNumbers[1]}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => appendValue(pinNumbers[2])}>
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            fontSize: 40
-                        }}
-                    >
-                        {pinNumbers[2]}
-                    </Text>
+                    <Text style={styles.pinPadNumber}>{pinNumbers[2]}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => appendValue(pinNumbers[3])}>
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            fontSize: 40
-                        }}
-                    >
-                        {pinNumbers[3]}
-                    </Text>
+                    <Text style={styles.pinPadNumber}>{pinNumbers[3]}</Text>
                 </TouchableOpacity>
             </Row>
-            <Row align="flex-end" style={styles.keypadRow}>
+            <Row align="flex-end" style={styles.pinPadRow}>
                 <TouchableOpacity onPress={() => appendValue(pinNumbers[4])}>
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            fontSize: 40
-                        }}
-                    >
-                        {pinNumbers[4]}
-                    </Text>
+                    <Text style={styles.pinPadNumber}>{pinNumbers[4]}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => appendValue(pinNumbers[5])}>
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            fontSize: 40
-                        }}
-                    >
-                        {pinNumbers[5]}
-                    </Text>
+                    <Text style={styles.pinPadNumber}>{pinNumbers[5]}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => appendValue(pinNumbers[6])}>
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            fontSize: 40
-                        }}
-                    >
-                        {pinNumbers[6]}
-                    </Text>
+                    <Text style={styles.pinPadNumber}>{pinNumbers[6]}</Text>
                 </TouchableOpacity>
             </Row>
-            <Row align="flex-end" style={styles.keypadRow}>
+            <Row align="flex-end" style={styles.pinPadRow}>
                 <TouchableOpacity onPress={() => appendValue(pinNumbers[7])}>
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            fontSize: 40
-                        }}
-                    >
-                        {pinNumbers[7]}
-                    </Text>
+                    <Text style={styles.pinPadNumber}>{pinNumbers[7]}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => appendValue(pinNumbers[8])}>
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            fontSize: 40
-                        }}
-                    >
-                        {pinNumbers[8]}
-                    </Text>
+                    <Text style={styles.pinPadNumber}>{pinNumbers[8]}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => appendValue(pinNumbers[9])}>
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            fontSize: 40
-                        }}
-                    >
-                        {pinNumbers[9]}
-                    </Text>
+                    <Text style={styles.pinPadNumber}>{pinNumbers[9]}</Text>
                 </TouchableOpacity>
             </Row>
-            <Row align="flex-end" style={styles.keypadRow}>
+            <Row align="flex-end" style={styles.pinPadRow}>
                 <TouchableOpacity onPress={() => clearValue()}>
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            fontSize: 40
-                        }}
-                    >
-                        C
-                    </Text>
+                    <Text style={styles.pinPadNumber}>C</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => appendValue(pinNumbers[0])}>
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            fontSize: 40
-                        }}
-                    >
-                        {pinNumbers[0]}
-                    </Text>
+                    <Text style={styles.pinPadNumber}>{pinNumbers[0]}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => deleteValue()}>
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            fontSize: 40
-                        }}
-                    >
-                        {'<'}
-                    </Text>
+                    <Text style={styles.pinPadNumber}>{'<'}</Text>
                 </TouchableOpacity>
             </Row>
         </View>
