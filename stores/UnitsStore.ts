@@ -62,8 +62,7 @@ export default class UnitsStore {
         const { fiat } = settings;
         const units = fixedUnits || this.units;
 
-        const [wholeSats] = value.toString().split('.');
-        const sats = (wholeSats && Number(wholeSats)) || 0;
+        const sats = Number(value);
         const negative = sats < 0;
         const absValueSats = Math.abs(sats);
 
