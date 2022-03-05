@@ -300,7 +300,7 @@
     "views.Receive.errorCreate": "Error creating invoice",
     "views.Receive.copyInvoice": "Copy Invoice",
     "views.Receive.memo": "Memo",
-    "views.Receive.memoPlaceholder": "Sent a few satoshis",
+    "views.Receive.memoPlaceholder": "A tribute to the gods",
     "views.Receive.amount": "Amount",
     "views.Receive.satoshis": "satoshis",
     "views.Receive.expiration": "Expiration (in seconds)",
