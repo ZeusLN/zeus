@@ -39,7 +39,7 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
         />
     );
 
-    onSubmit = (value: string, pinConfirm: boolean) => {
+    onSubmit = (value: string, pinConfirm?: boolean) => {
         if (!pinConfirm) {
             this.setState({
                 pin: value,
@@ -51,6 +51,13 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                 this.saveSettings();
             });
         }
+    };
+
+    onPinChange = () => {
+        this.setState({
+            pinMismatchError: false,
+            pinInvalidError: false
+        });
     };
 
     saveSettings = async () => {
@@ -141,20 +148,22 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                         flex: 1
                     }}
                 >
-                    {pinMismatchError && (
-                        <ErrorMessage
-                            message={localeString(
-                                'views.Settings.SetPin.noMatch'
-                            )}
-                        />
-                    )}
-                    {pinInvalidError && (
-                        <ErrorMessage
-                            message={localeString(
-                                'views.Settings.SetPin.invalid'
-                            )}
-                        />
-                    )}
+                    <View style={{ flex: 1 }}>
+                        {pinMismatchError && (
+                            <ErrorMessage
+                                message={localeString(
+                                    'views.Settings.SetPin.noMatch'
+                                )}
+                            />
+                        )}
+                        {pinInvalidError && (
+                            <ErrorMessage
+                                message={localeString(
+                                    'views.Settings.SetPin.invalid'
+                                )}
+                            />
+                        )}
+                    </View>
                     {!pin && (
                         <>
                             <Text
@@ -183,12 +192,13 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                             </Text>
                             <View
                                 style={{
-                                    flex: 8,
+                                    flex: 6,
                                     justifyContent: 'flex-end'
                                 }}
                             >
                                 <Pin
                                     onSubmit={this.onSubmit}
+                                    onPinChange={this.onPinChange}
                                     pinConfirm={false}
                                 />
                             </View>
@@ -222,12 +232,13 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                             </Text>
                             <View
                                 style={{
-                                    flex: 8,
+                                    flex: 6,
                                     justifyContent: 'flex-end'
                                 }}
                             >
                                 <Pin
                                     onSubmit={this.onSubmit}
+                                    onPinChange={this.onPinChange}
                                     pinConfirm={true}
                                 />
                             </View>
@@ -244,7 +255,7 @@ const styles = StyleSheet.create({
         fontFamily: 'Lato-Regular',
         fontSize: 20,
         textAlign: 'center',
-        marginTop: 100
+        marginTop: 50
     },
     secondaryText: {
         fontFamily: 'Lato-Regular',

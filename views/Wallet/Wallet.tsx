@@ -120,7 +120,9 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         // This awaits on settings, so should await on Tor being bootstrapped before making requests
         await SettingsStore.getSettings().then((settings: any) => {
             const loginRequired =
-                settings && settings.passphrase && !SettingsStore.loggedIn;
+                settings &&
+                (settings.passphrase || settings.pin) &&
+                !SettingsStore.loggedIn;
             if (loginRequired) {
                 navigation.navigate('Lockscreen');
             } else if (

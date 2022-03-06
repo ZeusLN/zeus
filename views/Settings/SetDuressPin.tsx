@@ -42,7 +42,7 @@ export default class SetDuressPin extends React.Component<
         />
     );
 
-    onSubmit = (value: string, pinConfirm: boolean) => {
+    onSubmit = (value: string, pinConfirm?: boolean) => {
         if (!pinConfirm) {
             this.setState({
                 duressPin: value,
@@ -54,6 +54,13 @@ export default class SetDuressPin extends React.Component<
                 this.saveSettings();
             });
         }
+    };
+
+    onPinChange = () => {
+        this.setState({
+            duressPinMismatchError: false,
+            duressPinInvalidError: false
+        });
     };
 
     saveSettings = async () => {
@@ -147,20 +154,22 @@ export default class SetDuressPin extends React.Component<
                         flex: 1
                     }}
                 >
-                    {duressPinMismatchError && (
-                        <ErrorMessage
-                            message={localeString(
-                                'views.Settings.SetPin.noMatch'
-                            )}
-                        />
-                    )}
-                    {duressPinInvalidError && (
-                        <ErrorMessage
-                            message={localeString(
-                                'views.Settings.SetPin.invalid'
-                            )}
-                        />
-                    )}
+                    <View style={{ flex: 1 }}>
+                        {duressPinMismatchError && (
+                            <ErrorMessage
+                                message={localeString(
+                                    'views.Settings.SetPin.noMatch'
+                                )}
+                            />
+                        )}
+                        {duressPinInvalidError && (
+                            <ErrorMessage
+                                message={localeString(
+                                    'views.Settings.SetPin.invalid'
+                                )}
+                            />
+                        )}
+                    </View>
                     {!duressPin && (
                         <>
                             <Text
@@ -189,12 +198,13 @@ export default class SetDuressPin extends React.Component<
                             </Text>
                             <View
                                 style={{
-                                    flex: 8,
+                                    flex: 6,
                                     justifyContent: 'flex-end'
                                 }}
                             >
                                 <Pin
                                     onSubmit={this.onSubmit}
+                                    onPinChange={this.onPinChange}
                                     pinConfirm={false}
                                 />
                             </View>
@@ -228,12 +238,13 @@ export default class SetDuressPin extends React.Component<
                             </Text>
                             <View
                                 style={{
-                                    flex: 8,
+                                    flex: 6,
                                     justifyContent: 'flex-end'
                                 }}
                             >
                                 <Pin
                                     onSubmit={this.onSubmit}
+                                    onPinChange={this.onPinChange}
                                     pinConfirm={true}
                                 />
                             </View>
@@ -250,7 +261,7 @@ const styles = StyleSheet.create({
         fontFamily: 'Lato-Regular',
         fontSize: 20,
         textAlign: 'center',
-        marginTop: 100
+        marginTop: 50
     },
     secondaryText: {
         fontFamily: 'Lato-Regular',

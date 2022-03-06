@@ -4,13 +4,15 @@ import PinPad from './PinPad';
 import PinCircles from './PinCircles';
 
 interface PinProps {
-    onSubmit: (value: string, pinConfirm: boolean) => void;
+    onSubmit: (value: string, pinConfirm?: boolean) => void;
+    onPinChange?: () => void;
     pinLength?: number;
     pinConfirm?: boolean;
 }
 
 export default function Pin({
     onSubmit,
+    onPinChange = () => void 0,
     pinLength = 4,
     pinConfirm = false
 }: PinProps) {
@@ -35,6 +37,9 @@ export default function Pin({
     useEffect(() => {
         if (pinValue.length === pinLength) {
             onSubmit(pinValue, pinConfirm);
+            setPinValue('');
+        } else if (pinValue !== '') {
+            onPinChange();
         }
     }, [pinValue]);
 

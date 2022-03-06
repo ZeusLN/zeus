@@ -23,7 +23,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#273832',
         borderRadius: 6,
         marginBottom: 20,
-        padding: 15
+        padding: 15,
+        textAlign: 'center'
     },
     errorField: {
         fontFamily: 'Lato-Regular',
@@ -34,7 +35,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#372C33',
         borderRadius: 6,
         marginBottom: 20,
-        padding: 15
+        padding: 15,
+        textAlign: 'center'
     }
 });
 
