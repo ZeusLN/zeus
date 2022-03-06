@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { themeColor } from '../utils/ThemeUtils';
 import { Row } from './layout/Row';
@@ -16,15 +17,20 @@ export default function PinPad({
     deleteValue,
     shuffle = false
 }: PinPadProps) {
-    let pinNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    // Sets pinNumbers before first render, and doesn't reset them on state change
+    const pinNumbers = useMemo(() => {
+        let pinNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
-    if (shuffle) {
-        // shuffle the order of the numbers using schwartzian transform
-        pinNumbers = pinNumbers
-            .map((value) => ({ value, sort: Math.random() }))
-            .sort((a, b) => a.sort - b.sort)
-            .map(({ value }) => value);
-    }
+        if (shuffle) {
+            // shuffle the order of the numbers using schwartzian transform
+            pinNumbers = pinNumbers
+                .map((value) => ({ value, sort: Math.random() }))
+                .sort((a, b) => a.sort - b.sort)
+                .map(({ value }) => value);
+        }
+
+        return pinNumbers;
+    }, []);
 
     const styles = StyleSheet.create({
         pinPadRow: {
@@ -37,11 +43,15 @@ export default function PinPad({
             color: themeColor('text'),
             fontSize: 20,
             fontFamily: 'Lato-Bold'
+        },
+        bottom: {
+            justifyContent: 'flex-end',
+            marginBottom: 75
         }
     });
 
     return (
-        <View>
+        <View style={styles.bottom}>
             <Row align="flex-end" style={styles.pinPadRow}>
                 <TouchableOpacity onPress={() => appendValue(pinNumbers[1])}>
                     <Text style={styles.pinPadNumber}>{pinNumbers[1]}</Text>

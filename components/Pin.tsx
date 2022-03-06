@@ -1,11 +1,20 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import PinPad from './PinPad';
 import PinCircles from './PinCircles';
 
-export default function Pin() {
+interface PinProps {
+    onSubmit: (value: string, pinConfirm: boolean) => void;
+    pinLength?: number;
+    pinConfirm?: boolean;
+}
+
+export default function Pin({
+    onSubmit,
+    pinLength = 4,
+    pinConfirm = false
+}: PinProps) {
     const [pinValue, setPinValue] = useState('');
-    const pinLength = 4;
 
     const appendValue = (newValue: string) => {
         setPinValue(`${pinValue}${newValue}`);
@@ -23,14 +32,40 @@ export default function Pin() {
         }
     };
 
+    useEffect(() => {
+        if (pinValue.length === pinLength) {
+            onSubmit(pinValue, pinConfirm);
+        }
+    }, [pinValue]);
+
     return (
-        <View>
-            <PinCircles pinLength={pinLength} numFilled={pinValue.length} />
-            <PinPad
-                appendValue={appendValue}
-                clearValue={clearValue}
-                deleteValue={deleteValue}
-            />
+        <View
+            style={{
+                flex: 1,
+                justifyContent: 'flex-end'
+            }}
+        >
+            <View
+                style={{
+                    flex: 1,
+                    justifyContent: 'flex-start'
+                }}
+            >
+                <PinCircles pinLength={pinLength} numFilled={pinValue.length} />
+            </View>
+            <View
+                style={{
+                    flex: 1,
+                    justifyContent: 'flex-end'
+                }}
+            >
+                <PinPad
+                    appendValue={appendValue}
+                    clearValue={clearValue}
+                    deleteValue={deleteValue}
+                    shuffle={true}
+                />
+            </View>
         </View>
     );
 }

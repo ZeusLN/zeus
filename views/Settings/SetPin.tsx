@@ -39,6 +39,20 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
         />
     );
 
+    onSubmit = (value: string, pinConfirm: boolean) => {
+        if (!pinConfirm) {
+            this.setState({
+                pin: value,
+                pinMismatchError: false,
+                pinInvalidError: false
+            });
+        } else {
+            this.setState({ pinConfirm: value }, () => {
+                this.saveSettings();
+            });
+        }
+    };
+
     saveSettings = async () => {
         const { SettingsStore, navigation } = this.props;
         const { pin, pinConfirm } = this.state;
@@ -46,7 +60,9 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
 
         if (pin !== pinConfirm) {
             this.setState({
-                pinMismatchError: true
+                pinMismatchError: true,
+                pin: '',
+                pinConfirm: ''
             });
 
             return;
@@ -56,7 +72,9 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
 
         if (pin === settings.duressPin) {
             this.setState({
-                pinInvalidError: true
+                pinInvalidError: true,
+                pin: '',
+                pinConfirm: ''
             });
 
             return;
@@ -110,13 +128,6 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
             >
                 <Header
                     leftComponent={<BackButton />}
-                    centerComponent={{
-                        text: localeString('views.Settings.SetPin.title'),
-                        style: {
-                            color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
-                        }
-                    }}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
                         borderBottomWidth: 0
@@ -126,7 +137,8 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                     style={{
                         paddingLeft: 15,
                         paddingRight: 15,
-                        paddingTop: 10
+                        paddingTop: 10,
+                        flex: 1
                     }}
                 >
                     {pinMismatchError && (
@@ -143,7 +155,84 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                             )}
                         />
                     )}
-                    <Pin />
+                    {!pin && (
+                        <>
+                            <Text
+                                style={{
+                                    ...styles.mainText,
+                                    color: themeColor('text'),
+                                    flex: 1,
+                                    justifyContent: 'flex-end'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.SetPin.createPin'
+                                )}
+                            </Text>
+                            <Text
+                                style={{
+                                    ...styles.secondaryText,
+                                    color: themeColor('secondaryText'),
+                                    flex: 1,
+                                    justifyContent: 'flex-end'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.SetPin.scramblePin'
+                                )}
+                            </Text>
+                            <View
+                                style={{
+                                    flex: 8,
+                                    justifyContent: 'flex-end'
+                                }}
+                            >
+                                <Pin
+                                    onSubmit={this.onSubmit}
+                                    pinConfirm={false}
+                                />
+                            </View>
+                        </>
+                    )}
+                    {!!pin && (
+                        <>
+                            <Text
+                                style={{
+                                    ...styles.mainText,
+                                    color: themeColor('text'),
+                                    flex: 1,
+                                    justifyContent: 'flex-end'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.SetPin.confirmPin'
+                                )}
+                            </Text>
+                            <Text
+                                style={{
+                                    ...styles.secondaryText,
+                                    color: themeColor('secondaryText'),
+                                    flex: 1,
+                                    justifyContent: 'flex-end'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.SetPin.scramblePin'
+                                )}
+                            </Text>
+                            <View
+                                style={{
+                                    flex: 8,
+                                    justifyContent: 'flex-end'
+                                }}
+                            >
+                                <Pin
+                                    onSubmit={this.onSubmit}
+                                    pinConfirm={true}
+                                />
+                            </View>
+                        </>
+                    )}
                 </View>
             </View>
         );
@@ -151,7 +240,14 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
 }
 
 const styles = StyleSheet.create({
-    text: {
-        fontFamily: 'Lato-Regular'
+    mainText: {
+        fontFamily: 'Lato-Regular',
+        fontSize: 20,
+        textAlign: 'center',
+        marginTop: 100
+    },
+    secondaryText: {
+        fontFamily: 'Lato-Regular',
+        textAlign: 'center'
     }
 });
