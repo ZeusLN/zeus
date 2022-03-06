@@ -181,7 +181,7 @@ export default class SetDuressPin extends React.Component<
                                 }}
                             >
                                 {localeString(
-                                    'views.Settings.SetPin.createPin'
+                                    'views.Settings.SetDuressPin.createDuressPin'
                                 )}
                             </Text>
                             <Text
@@ -193,7 +193,7 @@ export default class SetDuressPin extends React.Component<
                                 }}
                             >
                                 {localeString(
-                                    'views.Settings.SetPin.scramblePin'
+                                    'views.Settings.SetDuressPin.duressPinExplanation'
                                 )}
                             </Text>
                             <View
@@ -221,7 +221,7 @@ export default class SetDuressPin extends React.Component<
                                 }}
                             >
                                 {localeString(
-                                    'views.Settings.SetPin.confirmPin'
+                                    'views.Settings.SetDuressPin.confirmDuressPin'
                                 )}
                             </Text>
                             <Text
@@ -233,7 +233,7 @@ export default class SetDuressPin extends React.Component<
                                 }}
                             >
                                 {localeString(
-                                    'views.Settings.SetPin.scramblePin'
+                                    'views.Settings.SetDuressPin.duressPinExplanation'
                                 )}
                             </Text>
                             <View
