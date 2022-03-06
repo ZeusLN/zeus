@@ -10,6 +10,8 @@ import LinkingUtils from './../utils/LinkingUtils';
 import { localeString } from './../utils/LocaleUtils';
 
 import SettingsStore from './../stores/SettingsStore';
+import Pin from './../components/Pin';
+import { themeColor } from './../utils/ThemeUtils';
 
 interface LockscreenProps {
     navigation: any;
@@ -96,7 +98,10 @@ export default class Lockscreen extends React.Component<
             error: false
         });
 
-        if (passphraseAttempt === passphrase || pinAttempt === pin) {
+        if (
+            (passphraseAttempt && passphraseAttempt === passphrase) ||
+            (pinAttempt && pinAttempt === pin)
+        ) {
             SettingsStore.setLoginStatus(true);
             LinkingUtils.handleInitialUrl(navigation);
             navigation.navigate('Wallet');
@@ -107,12 +112,18 @@ export default class Lockscreen extends React.Component<
             SettingsStore.setLoginStatus(true);
             LinkingUtils.handleInitialUrl(navigation);
             this.deleteNodes();
-        } else if (passphraseAttempt || pinAttempt) {
         } else {
             this.setState({
-                error: true
+                error: true,
+                pinAttempt: ''
             });
         }
+    };
+
+    onSubmitPin = (value: string) => {
+        this.setState({ pinAttempt: value }, () => {
+            this.onAttemptLogIn();
+        });
     };
 
     deleteNodes = () => {
@@ -148,69 +159,116 @@ export default class Lockscreen extends React.Component<
         } = this.state;
 
         return (
-            <ScrollView style={styles.container}>
+            <View style={styles.container}>
                 {!!passphrase && (
-                    <View style={styles.content}>
-                        {error && (
-                            <ErrorMessage
-                                message={localeString(
-                                    'views.Lockscreen.incorrect'
-                                )}
-                            />
-                        )}
-                        <Text
-                            style={{
-                                color: '#A7A9AC',
-                                fontFamily: 'Lato-Regular'
-                            }}
-                        >
-                            {localeString('views.Lockscreen.passphrase')}
-                        </Text>
-                        <TextInput
-                            placeholder={'****************'}
-                            placeholderTextColor="darkgray"
-                            value={passphraseAttempt}
-                            onChangeText={(text: string) =>
-                                this.setState({
-                                    passphraseAttempt: text,
-                                    error: false
-                                })
-                            }
-                            numberOfLines={1}
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                            secureTextEntry={hidden}
-                            autoFocus={true}
-                            style={styles.textInput}
-                        />
-                        <View style={styles.button}>
-                            <Button
-                                title={
-                                    hidden
-                                        ? localeString('general.show')
-                                        : localeString('general.hide')
+                    <ScrollView style={styles.container}>
+                        <View style={styles.content}>
+                            {error && (
+                                <ErrorMessage
+                                    message={localeString(
+                                        'views.Lockscreen.incorrect'
+                                    )}
+                                />
+                            )}
+                            <Text
+                                style={{
+                                    color: '#A7A9AC',
+                                    fontFamily: 'Lato-Regular'
+                                }}
+                            >
+                                {localeString('views.Lockscreen.passphrase')}
+                            </Text>
+                            <TextInput
+                                placeholder={'****************'}
+                                placeholderTextColor="darkgray"
+                                value={passphraseAttempt}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        passphraseAttempt: text,
+                                        error: false
+                                    })
                                 }
-                                onPress={() => this.onInputLabelPressed()}
-                                containerStyle={{ width: 300 }}
-                                adaptiveWidth
-                                secondary
+                                numberOfLines={1}
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                secureTextEntry={hidden}
+                                autoFocus={true}
+                                style={styles.textInput}
                             />
+                            <View style={styles.button}>
+                                <Button
+                                    title={
+                                        hidden
+                                            ? localeString('general.show')
+                                            : localeString('general.hide')
+                                    }
+                                    onPress={() => this.onInputLabelPressed()}
+                                    containerStyle={{ width: 300 }}
+                                    adaptiveWidth
+                                    secondary
+                                />
+                            </View>
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString(
+                                        'views.Lockscreen.login'
+                                    )}
+                                    onPress={() => this.onAttemptLogIn()}
+                                    containerStyle={{ width: 300 }}
+                                    adaptiveWidth
+                                />
+                            </View>
                         </View>
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString('views.Lockscreen.login')}
-                                onPress={() => this.onAttemptLogIn()}
-                                containerStyle={{ width: 300 }}
-                                adaptiveWidth
-                            />
+                    </ScrollView>
+                )}
+                {!!pin && (
+                    <View style={styles.container}>
+                        <View style={{ flex: 1 }}>
+                            <>
+                                <View
+                                    style={{
+                                        flex: 1,
+                                        marginTop: 125,
+                                        marginBottom: 25
+                                    }}
+                                >
+                                    {error && (
+                                        <ErrorMessage
+                                            message={localeString(
+                                                'views.Lockscreen.incorrectPin'
+                                            )}
+                                        />
+                                    )}
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.mainText,
+                                        color: themeColor('text'),
+                                        flex: 1,
+                                        justifyContent: 'flex-end'
+                                    }}
+                                >
+                                    {localeString('views.Lockscreen.pin')}
+                                </Text>
+                                <View
+                                    style={{
+                                        flex: 8,
+                                        justifyContent: 'flex-end'
+                                    }}
+                                >
+                                    <Pin
+                                        onSubmit={this.onSubmitPin}
+                                        onPinChange={() =>
+                                            this.setState({ error: false })
+                                        }
+                                        pinLength={pin.length}
+                                    />
+                                </View>
+                            </>
                         </View>
                     </View>
                 )}
-                {!!pin && (
-                    // pin authentication using pinpad component
-                    <View></View>
-                )}
-            </ScrollView>
+            </View>
         );
     }
 }
@@ -231,6 +289,11 @@ const styles = StyleSheet.create({
         paddingBottom: 15
     },
     textInput: {
+        textAlign: 'center'
+    },
+    mainText: {
+        fontFamily: 'Lato-Regular',
+        fontSize: 20,
         textAlign: 'center'
     }
 });

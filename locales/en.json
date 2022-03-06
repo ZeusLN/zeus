@@ -218,6 +218,8 @@
     "views.Lockscreen.incorrect": "Incorrect Passphrase",
     "views.Lockscreen.passphrase": "Passphrase",
     "views.Lockscreen.login": "Log In",
+    "views.Lockscreen.pin": "Enter PIN",
+    "views.Lockscreen.incorrectPin": "Incorrect PIN",
     "views.NodeInfo.feeReport": "Fee Report",
     "views.NodeInfo.forwarding": "Forwarding",
     "views.NodeInfo.copyUri": "Copy URI",
