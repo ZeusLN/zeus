@@ -1,9 +1,15 @@
 import * as React from 'react';
 import { useMemo, useState } from 'react';
-import { StyleSheet, Text, Pressable, View } from 'react-native';
+import {
+    StyleSheet,
+    Text,
+    Pressable,
+    View
+} from 'react-native';
 import { themeColor } from '../utils/ThemeUtils';
 import { Row } from './layout/Row';
 import Success from './../assets/images/SVG/Success.svg';
+import Touchable from './Touchable';
 
 interface PinPadProps {
     appendValue: (newValue: string) => void;
@@ -14,6 +20,7 @@ interface PinPadProps {
     pinCreate?: boolean;
     minLength?: number;
     maxLength?: number;
+    numberHighlight?: boolean;
 }
 
 export default function PinPad({
@@ -24,7 +31,8 @@ export default function PinPad({
     shuffle = false,
     pinCreate = false,
     minLength = 4,
-    maxLength = 8
+    maxLength = 8,
+    numberHighlight = false
 }: PinPadProps) {
     // PinPad state only depends on pin value length, not the actual pin/amount value
     // Parent component to PinPad can store pin/amount value
@@ -87,138 +95,153 @@ export default function PinPad({
         <View style={styles.bottom}>
             <Row align="flex-end" style={styles.pinPadRow}>
                 <View style={styles.key}>
-                    <Pressable
-                        onPress={() => {
+                    <Touchable
+                        touch={() => {
                             incrementPinValueLength();
                             appendValue(pinNumbers[1]);
                         }}
+                        highlight={numberHighlight}
                     >
                         <Text style={styles.pinPadNumber}>{pinNumbers[1]}</Text>
-                    </Pressable>
+                    </Touchable>
                 </View>
                 <View style={styles.key}>
-                    <Pressable
-                        onPress={() => {
+                    <Touchable
+                        touch={() => {
                             incrementPinValueLength();
                             appendValue(pinNumbers[2]);
                         }}
+                        highlight={numberHighlight}
                     >
                         <Text style={styles.pinPadNumber}>{pinNumbers[2]}</Text>
-                    </Pressable>
+                    </Touchable>
                 </View>
                 <View style={styles.key}>
-                    <Pressable
-                        onPress={() => {
+                    <Touchable
+                        touch={() => {
                             incrementPinValueLength();
                             appendValue(pinNumbers[3]);
                         }}
+                        highlight={numberHighlight}
                     >
                         <Text style={styles.pinPadNumber}>{pinNumbers[3]}</Text>
-                    </Pressable>
+                    </Touchable>
                 </View>
             </Row>
             <Row align="flex-end" style={styles.pinPadRow}>
                 <View style={styles.key}>
-                    <Pressable
-                        onPress={() => {
+                    <Touchable
+                        touch={() => {
                             incrementPinValueLength();
                             appendValue(pinNumbers[4]);
                         }}
+                        highlight={numberHighlight}
                     >
                         <Text style={styles.pinPadNumber}>{pinNumbers[4]}</Text>
-                    </Pressable>
+                    </Touchable>
                 </View>
                 <View style={styles.key}>
-                    <Pressable
-                        onPress={() => {
+                    <Touchable
+                        touch={() => {
                             incrementPinValueLength();
                             appendValue(pinNumbers[5]);
                         }}
+                        highlight={numberHighlight}
                     >
                         <Text style={styles.pinPadNumber}>{pinNumbers[5]}</Text>
-                    </Pressable>
+                    </Touchable>
                 </View>
                 <View style={styles.key}>
-                    <Pressable
-                        onPress={() => {
+                    <Touchable
+                        touch={() => {
                             incrementPinValueLength();
                             appendValue(pinNumbers[6]);
                         }}
+                        highlight={numberHighlight}
                     >
                         <Text style={styles.pinPadNumber}>{pinNumbers[6]}</Text>
-                    </Pressable>
+                    </Touchable>
                 </View>
             </Row>
             <Row align="flex-end" style={styles.pinPadRow}>
                 <View style={styles.key}>
-                    <Pressable
-                        onPress={() => {
+                    <Touchable
+                        touch={() => {
                             incrementPinValueLength();
                             appendValue(pinNumbers[7]);
                         }}
+                        highlight={numberHighlight}
                     >
                         <Text style={styles.pinPadNumber}>{pinNumbers[7]}</Text>
-                    </Pressable>
+                    </Touchable>
                 </View>
                 <View style={styles.key}>
-                    <Pressable
-                        onPress={() => {
+                    <Touchable
+                        touch={() => {
                             incrementPinValueLength();
                             appendValue(pinNumbers[8]);
                         }}
+                        highlight={numberHighlight}
                     >
                         <Text style={styles.pinPadNumber}>{pinNumbers[8]}</Text>
-                    </Pressable>
+                    </Touchable>
                 </View>
                 <View style={styles.key}>
-                    <Pressable
-                        onPress={() => {
+                    <Touchable
+                        touch={() => {
                             incrementPinValueLength();
                             appendValue(pinNumbers[9]);
                         }}
+                        highlight={numberHighlight}
                     >
                         <Text style={styles.pinPadNumber}>{pinNumbers[9]}</Text>
-                    </Pressable>
+                    </Touchable>
                 </View>
             </Row>
             <Row align="flex-end" style={styles.pinPadRow}>
                 <View style={styles.key}>
-                    <Pressable
-                        onPress={() => {
+                    <Touchable
+                        touch={() => {
                             decrementPinValueLength();
                             deleteValue();
                         }}
+                        highlight={numberHighlight}
                     >
                         <Text style={styles.pinPadNumber}>{'<'}</Text>
-                    </Pressable>
+                    </Touchable>
                 </View>
                 <View style={styles.key}>
-                    <Pressable
-                        onPress={() => {
+                    <Touchable
+                        touch={() => {
                             incrementPinValueLength();
                             appendValue(pinNumbers[0]);
                         }}
+                        highlight={numberHighlight}
                     >
                         <Text style={styles.pinPadNumber}>{pinNumbers[0]}</Text>
-                    </Pressable>
+                    </Touchable>
                 </View>
                 {!pinCreate && (
                     <View style={styles.key}>
-                        <Pressable
-                            onPress={() => {
+                        <Touchable
+                            touch={() => {
                                 clearPinValueLength();
                                 clearValue();
                             }}
+                            highlight={numberHighlight}
                         >
                             <Text style={styles.pinPadNumber}>C</Text>
-                        </Pressable>
+                        </Touchable>
                     </View>
                 )}
                 {!!pinCreate && pinValueLength >= minLength && (
                     <View style={styles.key}>
-                        <Pressable onPress={() => submitValue()}>
+                        <Touchable
+                            touch={() => submitValue()}
+                            highlight={numberHighlight}
+                        >
                             <Success />
-                        </Pressable>
+                        </Touchable>
                     </View>
                 )}
                 {!!pinCreate && pinValueLength < minLength && (
