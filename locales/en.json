@@ -127,6 +127,8 @@
     "views.Settings.Nodes.noNodes": "No Nodes",
     "views.Settings.security": "Security",
     "views.Settings.Security.title": "Security settings",
+    "views.Settings.Security.deletePIN": "Delete PIN",
+    "views.Settings.Security.deleteDuressPIN": "Delete Duress PIN",
     "views.ImportAccount.title": "Import account",
     "views.ImportAccount.name": "Account Name",
     "views.ImportAccount.extendedPubKey": "Extended Public Key (Xpub)",

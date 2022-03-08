@@ -29,6 +29,8 @@ interface LockscreenState {
     hidden: boolean;
     error: boolean;
     modifySecurityScreen: string;
+    deletePin: boolean;
+    deleteDuressPin: boolean;
 }
 
 @inject('SettingsStore')
@@ -48,7 +50,9 @@ export default class Lockscreen extends React.Component<
             duressPin: '',
             hidden: true,
             error: false,
-            modifySecurityScreen: ''
+            modifySecurityScreen: '',
+            deletePin: false,
+            deleteDuressPin: false
         };
     }
 
@@ -59,9 +63,20 @@ export default class Lockscreen extends React.Component<
         const modifySecurityScreen: string = navigation.getParam(
             'modifySecurityScreen'
         );
+        const deletePin: boolean = navigation.getParam('deletePin');
+        const deleteDuressPin: boolean = navigation.getParam('deleteDuressPin');
+
         if (modifySecurityScreen) {
             this.setState({
                 modifySecurityScreen
+            });
+        } else if (deletePin) {
+            this.setState({
+                deletePin
+            });
+        } else if (deleteDuressPin) {
+            this.setState({
+                deleteDuressPin
             });
         }
 
@@ -105,7 +120,9 @@ export default class Lockscreen extends React.Component<
             pin,
             pinAttempt,
             duressPin,
-            modifySecurityScreen
+            modifySecurityScreen,
+            deletePin,
+            deleteDuressPin
         } = this.state;
 
         this.setState({
@@ -120,6 +137,10 @@ export default class Lockscreen extends React.Component<
             LinkingUtils.handleInitialUrl(navigation);
             if (modifySecurityScreen) {
                 navigation.navigate(modifySecurityScreen);
+            } else if (deletePin) {
+                this.deletePin();
+            } else if (deleteDuressPin) {
+                this.deleteDuressPin();
             } else {
                 navigation.navigate('Wallet');
             }
@@ -141,6 +162,51 @@ export default class Lockscreen extends React.Component<
     onSubmitPin = (value: string) => {
         this.setState({ pinAttempt: value }, () => {
             this.onAttemptLogIn();
+        });
+    };
+
+    deletePin = () => {
+        const { SettingsStore, navigation } = this.props;
+        const { setSettings, settings } = SettingsStore;
+
+        // duress pin is also deleted when pin is deleted
+        setSettings(
+            JSON.stringify({
+                nodes: settings.nodes,
+                selectedNode: settings.selectedNode,
+                theme: settings.theme,
+                passphrase: settings.passphrase,
+                duressPassphrase: settings.duressPassphrase,
+                pin: '',
+                duressPin: '',
+                fiat: settings.fiat,
+                locale: settings.locale,
+                privacy: settings.privacy
+            })
+        ).then(() => {
+            navigation.navigate('Settings');
+        });
+    };
+
+    deleteDuressPin = () => {
+        const { SettingsStore, navigation } = this.props;
+        const { setSettings, settings } = SettingsStore;
+
+        setSettings(
+            JSON.stringify({
+                nodes: settings.nodes,
+                selectedNode: settings.selectedNode,
+                theme: settings.theme,
+                passphrase: settings.passphrase,
+                duressPassphrase: settings.duressPassphrase,
+                pin: settings.pin,
+                duressPin: '',
+                fiat: settings.fiat,
+                locale: settings.locale,
+                privacy: settings.privacy
+            })
+        ).then(() => {
+            navigation.navigate('Settings');
         });
     };
 
@@ -175,7 +241,9 @@ export default class Lockscreen extends React.Component<
             pinAttempt,
             hidden,
             error,
-            modifySecurityScreen
+            modifySecurityScreen,
+            deletePin,
+            deleteDuressPin
         } = this.state;
 
         const BackButton = () => (
@@ -189,7 +257,7 @@ export default class Lockscreen extends React.Component<
 
         return (
             <View style={styles.container}>
-                {!!modifySecurityScreen && (
+                {(!!modifySecurityScreen || deletePin || deleteDuressPin) && (
                     <Header
                         leftComponent={<BackButton />}
                         backgroundColor={themeColor('background')}
@@ -263,7 +331,9 @@ export default class Lockscreen extends React.Component<
                     <View style={styles.container}>
                         <View style={{ flex: 1 }}>
                             <>
-                                {!!modifySecurityScreen && (
+                                {(!!modifySecurityScreen ||
+                                    deletePin ||
+                                    deleteDuressPin) && (
                                     <View
                                         style={{
                                             flex: 2,
@@ -280,23 +350,25 @@ export default class Lockscreen extends React.Component<
                                         )}
                                     </View>
                                 )}
-                                {!modifySecurityScreen && (
-                                    <View
-                                        style={{
-                                            flex: 2,
-                                            marginTop: 125,
-                                            marginBottom: 25
-                                        }}
-                                    >
-                                        {error && (
-                                            <ErrorMessage
-                                                message={localeString(
-                                                    'views.Lockscreen.incorrectPin'
-                                                )}
-                                            />
-                                        )}
-                                    </View>
-                                )}
+                                {!modifySecurityScreen &&
+                                    !deletePin &&
+                                    !deleteDuressPin && (
+                                        <View
+                                            style={{
+                                                flex: 2,
+                                                marginTop: 125,
+                                                marginBottom: 25
+                                            }}
+                                        >
+                                            {error && (
+                                                <ErrorMessage
+                                                    message={localeString(
+                                                        'views.Lockscreen.incorrectPin'
+                                                    )}
+                                                />
+                                            )}
+                                        </View>
+                                    )}
                                 <Text
                                     style={{
                                         ...styles.mainText,

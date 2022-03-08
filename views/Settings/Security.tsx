@@ -29,8 +29,16 @@ function Security(props: SecurityProps) {
             screen: 'SetPin'
         },
         {
+            label: localeString('views.Settings.Security.deletePIN'),
+            action: 'DeletePin'
+        },
+        {
             label: localeString('views.Settings.SetDuressPin.title'),
             screen: 'SetDuressPin'
+        },
+        {
+            label: localeString('views.Settings.Security.deleteDuressPIN'),
+            action: 'DeleteDuressPin'
         }
         // { label: 'Verify TLS Certificate', url: 'https://twitter.com/ZeusLN' }
     ];
@@ -52,8 +60,12 @@ function Security(props: SecurityProps) {
     } else if (settings.pin) {
         displaySecurityItems = [
             possibleSecurityItems[2],
-            possibleSecurityItems[3]
+            possibleSecurityItems[3],
+            possibleSecurityItems[4]
         ];
+        if (settings.duressPin) {
+            displaySecurityItems.push(possibleSecurityItems[5]);
+        }
     }
 
     const renderSeparator = () => (
@@ -74,13 +86,21 @@ function Security(props: SecurityProps) {
         />
     );
 
-    const navigateSecurity = (itemScreen: string) => {
+    const navigateSecurity = (item: any) => {
         if (!(settings.passphrase || settings.pin)) {
-            navigation.navigate(itemScreen);
+            navigation.navigate(item.screen);
+        } else if (item.action === 'DeletePin') {
+            navigation.navigate('Lockscreen', {
+                deletePin: true
+            });
+        } else if (item.action === 'DeleteDuressPin') {
+            navigation.navigate('Lockscreen', {
+                deleteDuressPin: true
+            });
         } else {
             // if we already have a pin/password set, make user authenticate in order to change
             navigation.navigate('Lockscreen', {
-                modifySecurityScreen: itemScreen
+                modifySecurityScreen: item.screen
             });
         }
     };
@@ -92,7 +112,7 @@ function Security(props: SecurityProps) {
                     borderBottomWidth: 0,
                     backgroundColor: themeColor('background')
                 }}
-                onPress={() => navigateSecurity(item.screen)}
+                onPress={() => navigateSecurity(item)}
             >
                 <ListItem.Content>
                     <ListItem.Title
