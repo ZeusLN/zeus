@@ -19,6 +19,7 @@ interface SetDuressPassphraseProps {
 interface SetDuressPassphraseState {
     duressPassphrase: string;
     duressPassphraseConfirm: string;
+    savedDuressPassphrase: string;
     duressPassphraseMismatchError: boolean;
     duressPassphraseInvalidError: boolean;
 }
@@ -32,9 +33,20 @@ export default class SetDuressPassphrase extends React.Component<
     state = {
         duressPassphrase: '',
         duressPassphraseConfirm: '',
+        savedDuressPassphrase: '',
         duressPassphraseMismatchError: false,
         duressPassphraseInvalidError: false
     };
+
+    async componentDidMount() {
+        const { SettingsStore } = this.props;
+        const { getSettings } = SettingsStore;
+        const settings = await getSettings();
+
+        if (settings.duressPassphrase) {
+            this.setState({ savedDuressPassphrase: settings.duressPassphrase });
+        }
+    }
 
     renderSeparator = () => (
         <View
@@ -91,11 +103,36 @@ export default class SetDuressPassphrase extends React.Component<
         });
     };
 
+    deleteDuressPassword = async () => {
+        const { SettingsStore, navigation } = this.props;
+        const { getSettings, setSettings } = SettingsStore;
+
+        const settings = await getSettings();
+
+        await setSettings(
+            JSON.stringify({
+                nodes: settings.nodes,
+                theme: settings.theme,
+                selectedNode: settings.selectedNode,
+                fiat: settings.fiat,
+                locale: settings.locale,
+                privacy: settings.privacy,
+                duressPassphrase: '',
+                passphrase: settings.passphrase
+            })
+        ).then(() => {
+            navigation.navigate('Settings', {
+                refresh: true
+            });
+        });
+    };
+
     render() {
         const { navigation } = this.props;
         const {
             duressPassphrase,
             duressPassphraseConfirm,
+            savedDuressPassphrase,
             duressPassphraseMismatchError,
             duressPassphraseInvalidError
         } = this.state;
@@ -118,7 +155,9 @@ export default class SetDuressPassphrase extends React.Component<
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: localeString('views.Settings.SetPassword.title'),
+                        text: localeString(
+                            'views.Settings.SetDuressPassword.title'
+                        ),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'Lato-Regular'
@@ -199,14 +238,26 @@ export default class SetDuressPassphrase extends React.Component<
                             title={localeString(
                                 'views.Settings.SetPassword.save'
                             )}
-                            icon={{
-                                name: 'save',
-                                size: 25,
-                                color: 'white'
-                            }}
                             onPress={() => this.saveSettings()}
                         />
                     </View>
+                    {!!savedDuressPassphrase && (
+                        <View style={{ paddingTop: 10, margin: 10 }}>
+                            <Button
+                                title={localeString(
+                                    'views.Settings.SetDuressPassword.deletePassword'
+                                )}
+                                onPress={() => this.deleteDuressPassword()}
+                                containerStyle={{
+                                    borderColor: 'red'
+                                }}
+                                titleStyle={{
+                                    color: 'red'
+                                }}
+                                secondary
+                            />
+                        </View>
+                    )}
                 </View>
             </View>
         );
