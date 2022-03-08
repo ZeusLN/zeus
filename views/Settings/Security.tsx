@@ -51,6 +51,17 @@ function Security(props: SecurityProps) {
         // { label: 'Verify TLS Certificate', url: 'https://twitter.com/ZeusLN' }
     ];
 
+    const navigateSecurity = (itemScreen: string) => {
+        if (!(settings.passphrase || settings.pin)) {
+            navigation.navigate(itemScreen);
+        } else {
+            // if we already have a pin/password set, make user authenticate in order to change
+            navigation.navigate('Lockscreen', {
+                modifySecurityScreen: itemScreen
+            });
+        }
+    };
+
     const renderItem = ({ item }) => {
         // Three cases:
         // 1) If no passphrase or pin is set, allow user to set passphrase or pin
@@ -75,7 +86,7 @@ function Security(props: SecurityProps) {
                         borderBottomWidth: 0,
                         backgroundColor: themeColor('background')
                     }}
-                    onPress={() => navigation.navigate(item.screen)}
+                    onPress={() => navigateSecurity(item.screen)}
                 >
                     <ListItem.Content>
                         <ListItem.Title

@@ -12,6 +12,7 @@ import { localeString } from './../utils/LocaleUtils';
 import SettingsStore from './../stores/SettingsStore';
 import Pin from './../components/Pin';
 import { themeColor } from './../utils/ThemeUtils';
+import { Header, Icon } from 'react-native-elements';
 
 interface LockscreenProps {
     navigation: any;
@@ -27,6 +28,7 @@ interface LockscreenState {
     duressPin: string;
     hidden: boolean;
     error: boolean;
+    modifySecurityScreen: string;
 }
 
 @inject('SettingsStore')
@@ -45,13 +47,24 @@ export default class Lockscreen extends React.Component<
             pinAttempt: '',
             duressPin: '',
             hidden: true,
-            error: false
+            error: false,
+            modifySecurityScreen: ''
         };
     }
 
     UNSAFE_componentWillMount() {
         const { SettingsStore, navigation } = this.props;
         const { getSettings } = SettingsStore;
+
+        const modifySecurityScreen: string = navigation.getParam(
+            'modifySecurityScreen'
+        );
+        if (modifySecurityScreen) {
+            this.setState({
+                modifySecurityScreen
+            });
+        }
+
         getSettings().then((settings: any) => {
             if (settings && settings.passphrase) {
                 this.setState({ passphrase: settings.passphrase });
@@ -91,7 +104,8 @@ export default class Lockscreen extends React.Component<
             passphraseAttempt,
             pin,
             pinAttempt,
-            duressPin
+            duressPin,
+            modifySecurityScreen
         } = this.state;
 
         this.setState({
@@ -104,7 +118,11 @@ export default class Lockscreen extends React.Component<
         ) {
             SettingsStore.setLoginStatus(true);
             LinkingUtils.handleInitialUrl(navigation);
-            navigation.navigate('Wallet');
+            if (modifySecurityScreen) {
+                navigation.navigate(modifySecurityScreen);
+            } else {
+                navigation.navigate('Wallet');
+            }
         } else if (
             (duressPassphrase && passphraseAttempt === duressPassphrase) ||
             (duressPin && pinAttempt === duressPin)
@@ -149,17 +167,37 @@ export default class Lockscreen extends React.Component<
     };
 
     render() {
+        const { navigation } = this.props;
         const {
             passphrase,
             passphraseAttempt,
             pin,
             pinAttempt,
             hidden,
-            error
+            error,
+            modifySecurityScreen
         } = this.state;
+
+        const BackButton = () => (
+            <Icon
+                name="arrow-back"
+                onPress={() => navigation.goBack()}
+                color={themeColor('text')}
+                underlayColor="transparent"
+            />
+        );
 
         return (
             <View style={styles.container}>
+                {!!modifySecurityScreen && (
+                    <Header
+                        leftComponent={<BackButton />}
+                        backgroundColor={themeColor('background')}
+                        containerStyle={{
+                            borderBottomWidth: 0
+                        }}
+                    />
+                )}
                 {!!passphrase && (
                     <ScrollView style={styles.container}>
                         <View style={styles.content}>
@@ -225,21 +263,40 @@ export default class Lockscreen extends React.Component<
                     <View style={styles.container}>
                         <View style={{ flex: 1 }}>
                             <>
-                                <View
-                                    style={{
-                                        flex: 2,
-                                        marginTop: 125,
-                                        marginBottom: 25
-                                    }}
-                                >
-                                    {error && (
-                                        <ErrorMessage
-                                            message={localeString(
-                                                'views.Lockscreen.incorrectPin'
-                                            )}
-                                        />
-                                    )}
-                                </View>
+                                {!!modifySecurityScreen && (
+                                    <View
+                                        style={{
+                                            flex: 2,
+                                            marginTop: 50,
+                                            marginBottom: 25
+                                        }}
+                                    >
+                                        {error && (
+                                            <ErrorMessage
+                                                message={localeString(
+                                                    'views.Lockscreen.incorrectPin'
+                                                )}
+                                            />
+                                        )}
+                                    </View>
+                                )}
+                                {!modifySecurityScreen && (
+                                    <View
+                                        style={{
+                                            flex: 2,
+                                            marginTop: 125,
+                                            marginBottom: 25
+                                        }}
+                                    >
+                                        {error && (
+                                            <ErrorMessage
+                                                message={localeString(
+                                                    'views.Lockscreen.incorrectPin'
+                                                )}
+                                            />
+                                        )}
+                                    </View>
+                                )}
                                 <Text
                                     style={{
                                         ...styles.mainText,

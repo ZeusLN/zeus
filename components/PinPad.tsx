@@ -55,7 +55,6 @@ export default function PinPad({
         if (pinValueLength > 0) {
             setPinValueLength(pinValueLength - 1);
         }
-        
     };
 
     const clearPinValueLength = () => {
