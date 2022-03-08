@@ -1,11 +1,6 @@
 import * as React from 'react';
 import { useMemo, useState } from 'react';
-import {
-    StyleSheet,
-    Text,
-    Pressable,
-    View
-} from 'react-native';
+import { StyleSheet, Text, Pressable, View } from 'react-native';
 import { themeColor } from '../utils/ThemeUtils';
 import { Row } from './layout/Row';
 import Success from './../assets/images/SVG/Success.svg';
