@@ -7,9 +7,14 @@ import Hollow from './../assets/images/SVG/PinHollow.svg';
 interface PinCirclesProps {
     pinLength: number;
     numFilled: number;
+    pinCreate: boolean;
 }
 
-export default function PinCircles({ pinLength, numFilled }: PinCirclesProps) {
+export default function PinCircles({
+    pinLength,
+    numFilled,
+    pinCreate
+}: PinCirclesProps) {
     const styles = StyleSheet.create({
         pinCirclesRow: {
             justifyContent: 'center'
@@ -25,8 +30,10 @@ export default function PinCircles({ pinLength, numFilled }: PinCirclesProps) {
     }
 
     let hollow = [];
-    for (let i = 0; i < pinLength - numFilled; i++) {
-        hollow.push(<Hollow style={styles.circles} />);
+    if (!pinCreate) {
+        for (let i = 0; i < pinLength - numFilled; i++) {
+            hollow.push(<Hollow style={styles.circles} />);
+        }
     }
 
     return (

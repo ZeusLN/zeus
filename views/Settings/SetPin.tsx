@@ -142,8 +142,6 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                 />
                 <View
                     style={{
-                        paddingLeft: 15,
-                        paddingRight: 15,
                         paddingTop: 10,
                         flex: 1
                     }}
@@ -199,6 +197,7 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                                 <Pin
                                     onSubmit={this.onSubmit}
                                     onPinChange={this.onPinChange}
+                                    pinCreate={true}
                                     pinConfirm={false}
                                 />
                             </View>
@@ -239,7 +238,9 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                                 <Pin
                                     onSubmit={this.onSubmit}
                                     onPinChange={this.onPinChange}
+                                    pinCreate={false}
                                     pinConfirm={true}
+                                    pinLength={pin.length}
                                 />
                             </View>
                         </>

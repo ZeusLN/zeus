@@ -227,7 +227,7 @@ export default class Lockscreen extends React.Component<
                             <>
                                 <View
                                     style={{
-                                        flex: 1,
+                                        flex: 2,
                                         marginTop: 125,
                                         marginBottom: 25
                                     }}
@@ -261,6 +261,7 @@ export default class Lockscreen extends React.Component<
                                         onPinChange={() =>
                                             this.setState({ error: false })
                                         }
+                                        pinCreate={false}
                                         pinLength={pin.length}
                                     />
                                 </View>

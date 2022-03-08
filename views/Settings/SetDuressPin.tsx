@@ -148,8 +148,6 @@ export default class SetDuressPin extends React.Component<
                 />
                 <View
                     style={{
-                        paddingLeft: 15,
-                        paddingRight: 15,
                         paddingTop: 10,
                         flex: 1
                     }}
@@ -205,6 +203,7 @@ export default class SetDuressPin extends React.Component<
                                 <Pin
                                     onSubmit={this.onSubmit}
                                     onPinChange={this.onPinChange}
+                                    pinCreate={true}
                                     pinConfirm={false}
                                 />
                             </View>
@@ -245,7 +244,9 @@ export default class SetDuressPin extends React.Component<
                                 <Pin
                                     onSubmit={this.onSubmit}
                                     onPinChange={this.onPinChange}
+                                    pinCreate={false}
                                     pinConfirm={true}
+                                    pinLength={duressPin.length}
                                 />
                             </View>
                         </>

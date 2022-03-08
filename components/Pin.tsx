@@ -6,6 +6,7 @@ import PinCircles from './PinCircles';
 interface PinProps {
     onSubmit: (value: string, pinConfirm?: boolean) => void;
     onPinChange?: () => void;
+    pinCreate: boolean;
     pinLength?: number;
     pinConfirm?: boolean;
 }
@@ -13,13 +14,18 @@ interface PinProps {
 export default function Pin({
     onSubmit,
     onPinChange = () => void 0,
+    pinCreate,
     pinLength = 4,
     pinConfirm = false
 }: PinProps) {
     const [pinValue, setPinValue] = useState('');
+    const maxLength = 8;
+    const minLength = 4;
 
     const appendValue = (newValue: string) => {
-        setPinValue(`${pinValue}${newValue}`);
+        if (pinValue.length + 1 <= maxLength) {
+            setPinValue(`${pinValue}${newValue}`);
+        }
     };
 
     const clearValue = () => {
@@ -34,8 +40,13 @@ export default function Pin({
         }
     };
 
+    const submitValue = () => {
+        onSubmit(pinValue, pinConfirm);
+        setPinValue('');
+    };
+
     useEffect(() => {
-        if (pinValue.length === pinLength) {
+        if (!pinCreate && pinValue.length === pinLength) {
             onSubmit(pinValue, pinConfirm);
             setPinValue('');
         } else if (pinValue !== '') {
@@ -56,7 +67,11 @@ export default function Pin({
                     justifyContent: 'flex-start'
                 }}
             >
-                <PinCircles pinLength={pinLength} numFilled={pinValue.length} />
+                <PinCircles
+                    pinLength={pinLength}
+                    numFilled={pinValue.length}
+                    pinCreate={pinCreate}
+                />
             </View>
             <View
                 style={{
@@ -68,7 +83,11 @@ export default function Pin({
                     appendValue={appendValue}
                     clearValue={clearValue}
                     deleteValue={deleteValue}
+                    submitValue={submitValue}
                     shuffle={true}
+                    pinCreate={pinCreate}
+                    minLength={minLength}
+                    maxLength={maxLength}
                 />
             </View>
         </View>
