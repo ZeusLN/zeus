@@ -6,7 +6,7 @@ import PinCircles from './PinCircles';
 interface PinProps {
     onSubmit: (value: string, pinConfirm?: boolean) => void;
     onPinChange?: () => void;
-    pinCreate: boolean;
+    hidePinLength: boolean;
     pinLength?: number;
     pinConfirm?: boolean;
 }
@@ -14,7 +14,7 @@ interface PinProps {
 export default function Pin({
     onSubmit,
     onPinChange = () => void 0,
-    pinCreate,
+    hidePinLength,
     pinLength = 4,
     pinConfirm = false
 }: PinProps) {
@@ -46,7 +46,7 @@ export default function Pin({
     };
 
     useEffect(() => {
-        if (!pinCreate && pinValue.length === pinLength) {
+        if (!hidePinLength && pinValue.length === pinLength) {
             onSubmit(pinValue, pinConfirm);
             setPinValue('');
         } else if (pinValue !== '') {
@@ -70,7 +70,7 @@ export default function Pin({
                 <PinCircles
                     pinLength={pinLength}
                     numFilled={pinValue.length}
-                    pinCreate={pinCreate}
+                    hidePinLength={hidePinLength}
                 />
             </View>
             <View
@@ -85,7 +85,7 @@ export default function Pin({
                     deleteValue={deleteValue}
                     submitValue={submitValue}
                     shuffle={true}
-                    pinCreate={pinCreate}
+                    hidePinLength={hidePinLength}
                     minLength={minLength}
                     maxLength={maxLength}
                 />
