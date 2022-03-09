@@ -286,6 +286,8 @@ export default class AddEditNode extends React.Component<
                           duressPassphrase: settings.duressPassphrase,
                           pin: settings.pin,
                           duressPin: settings.duressPin,
+                          authenticationAttempts:
+                              settings.authenticationAttempts,
                           privacy: settings.privacy
                       }
                     : { nodes }
@@ -328,6 +330,7 @@ export default class AddEditNode extends React.Component<
                 duressPassphrase: settings.duressPassphrase,
                 pin: settings.pin,
                 duressPin: settings.duressPin,
+                authenticationAttempts: settings.authenticationAttempts,
                 privacy: settings.privacy
             })
         ).then(() => {
@@ -352,6 +355,7 @@ export default class AddEditNode extends React.Component<
                 duressPassphrase: settings.duressPassphrase,
                 pin: settings.pin,
                 duressPin: settings.duressPin,
+                authenticationAttempts: settings.authenticationAttempts,
                 privacy: settings.privacy
             })
         );

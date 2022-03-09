@@ -90,6 +90,8 @@ export default class SetPassphrase extends React.Component<
                           fiat: settings.fiat,
                           locale: settings.locale,
                           privacy: settings.privacy,
+                          authenticationAttempts:
+                              settings.authenticationAttempts,
                           duressPassphrase: settings.duressPassphrase,
                           passphrase
                       }
@@ -121,7 +123,8 @@ export default class SetPassphrase extends React.Component<
                 locale: settings.locale,
                 privacy: settings.privacy,
                 duressPassphrase: '',
-                passphrase: ''
+                passphrase: '',
+                authenticationAttempts: settings.authenticationAttempts
             })
         ).then(() => {
             navigation.navigate('Settings', {

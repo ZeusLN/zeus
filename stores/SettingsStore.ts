@@ -37,6 +37,7 @@ interface Settings {
     duressPassphrase?: string;
     pin?: string;
     duressPin?: string;
+    authenticationAttempts?: number;
     fiat?: string;
     locale?: string;
     privacy: PrivacySettings;

@@ -90,6 +90,8 @@ export default class SetDuressPassphrase extends React.Component<
                           fiat: settings.fiat,
                           locale: settings.locale,
                           privacy: settings.privacy,
+                          authenticationAttempts:
+                              settings.authenticationAttempts,
                           passphrase: settings.passphrase,
                           duressPassphrase
                       }
@@ -117,6 +119,7 @@ export default class SetDuressPassphrase extends React.Component<
                 fiat: settings.fiat,
                 locale: settings.locale,
                 privacy: settings.privacy,
+                authenticationAttempts: settings.authenticationAttempts,
                 duressPassphrase: '',
                 passphrase: settings.passphrase
             })

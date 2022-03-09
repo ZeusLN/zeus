@@ -31,7 +31,10 @@ interface LockscreenState {
     modifySecurityScreen: string;
     deletePin: boolean;
     deleteDuressPin: boolean;
+    authenticationAttempts: number;
 }
+
+const maxAuthenticationAttempts = 5;
 
 @inject('SettingsStore')
 @observer
@@ -52,19 +55,26 @@ export default class Lockscreen extends React.Component<
             error: false,
             modifySecurityScreen: '',
             deletePin: false,
-            deleteDuressPin: false
+            deleteDuressPin: false,
+            authenticationAttempts: 0
         };
     }
 
     UNSAFE_componentWillMount() {
         const { SettingsStore, navigation } = this.props;
-        const { getSettings } = SettingsStore;
+        const { settings } = SettingsStore;
 
         const modifySecurityScreen: string = navigation.getParam(
             'modifySecurityScreen'
         );
         const deletePin: boolean = navigation.getParam('deletePin');
         const deleteDuressPin: boolean = navigation.getParam('deleteDuressPin');
+
+        if (!!settings.authenticationAttempts) {
+            this.setState({
+                authenticationAttempts: settings.authenticationAttempts
+            });
+        }
 
         if (modifySecurityScreen) {
             this.setState({
@@ -80,38 +90,32 @@ export default class Lockscreen extends React.Component<
             });
         }
 
-        getSettings().then((settings: any) => {
-            if (settings && settings.passphrase) {
-                this.setState({ passphrase: settings.passphrase });
-                if (settings.duressPassphrase) {
-                    this.setState({
-                        duressPassphrase: settings.duressPassphrase
-                    });
-                }
-            } else if (settings && settings.pin) {
-                this.setState({ pin: settings.pin });
-                if (settings.duressPin) {
-                    this.setState({
-                        duressPin: settings.duressPin
-                    });
-                }
-            } else if (
-                settings &&
-                settings.nodes &&
-                settings.nodes.length > 0
-            ) {
-                navigation.navigate('Wallet');
-            } else {
-                navigation.navigate('IntroSplash');
+        if (settings && settings.passphrase) {
+            this.setState({ passphrase: settings.passphrase });
+            if (settings.duressPassphrase) {
+                this.setState({
+                    duressPassphrase: settings.duressPassphrase
+                });
             }
-        });
+        } else if (settings && settings.pin) {
+            this.setState({ pin: settings.pin });
+            if (settings.duressPin) {
+                this.setState({
+                    duressPin: settings.duressPin
+                });
+            }
+        } else if (settings && settings.nodes && settings.nodes.length > 0) {
+            navigation.navigate('Wallet');
+        } else {
+            navigation.navigate('IntroSplash');
+        }
     }
 
     onInputLabelPressed = () => {
         this.setState({ hidden: !this.state.hidden });
     };
 
-    onAttemptLogIn = () => {
+    onAttemptLogIn = async () => {
         const { SettingsStore, navigation } = this.props;
         const {
             passphrase,
@@ -124,6 +128,7 @@ export default class Lockscreen extends React.Component<
             deletePin,
             deleteDuressPin
         } = this.state;
+        const { setSettings, getSettings } = SettingsStore;
 
         this.setState({
             error: false
@@ -136,12 +141,14 @@ export default class Lockscreen extends React.Component<
             SettingsStore.setLoginStatus(true);
             LinkingUtils.handleInitialUrl(navigation);
             if (modifySecurityScreen) {
+                this.resetAuthenticationAttempts();
                 navigation.navigate(modifySecurityScreen);
             } else if (deletePin) {
                 this.deletePin();
             } else if (deleteDuressPin) {
                 this.deleteDuressPin();
             } else {
+                this.resetAuthenticationAttempts();
                 navigation.navigate('Wallet');
             }
         } else if (
@@ -152,10 +159,44 @@ export default class Lockscreen extends React.Component<
             LinkingUtils.handleInitialUrl(navigation);
             this.deleteNodes();
         } else {
+            // need to fetch updated settings to get incremented value of
+            // authenticationAttempts, in case there are multiple failed attempts in a row
+            const updatedSettings = await getSettings();
+            let authenticationAttempts = 1;
+            if (updatedSettings?.authenticationAttempts) {
+                authenticationAttempts =
+                    updatedSettings.authenticationAttempts + 1;
+            }
             this.setState({
-                error: true,
-                pinAttempt: ''
+                authenticationAttempts
             });
+            if (authenticationAttempts >= maxAuthenticationAttempts) {
+                SettingsStore.setLoginStatus(true);
+                LinkingUtils.handleInitialUrl(navigation);
+                // wipe node configs, passwords, and pins
+                this.authenticationFailure();
+            } else {
+                await setSettings(
+                    JSON.stringify({
+                        nodes: updatedSettings?.nodes,
+                        selectedNode: updatedSettings?.selectedNode,
+                        theme: updatedSettings?.theme,
+                        passphrase: updatedSettings?.passphrase,
+                        duressPassphrase: updatedSettings?.duressPassphrase,
+                        pin: updatedSettings?.pin,
+                        duressPin: updatedSettings?.duressPin,
+                        authenticationAttempts: authenticationAttempts,
+                        fiat: updatedSettings?.fiat,
+                        locale: updatedSettings?.locale,
+                        privacy: updatedSettings?.privacy
+                    })
+                ).then(() => {
+                    this.setState({
+                        error: true,
+                        pinAttempt: ''
+                    });
+                });
+            }
         }
     };
 
@@ -179,6 +220,7 @@ export default class Lockscreen extends React.Component<
                 duressPassphrase: settings.duressPassphrase,
                 pin: '',
                 duressPin: '',
+                authenticationAttempts: 0,
                 fiat: settings.fiat,
                 locale: settings.locale,
                 privacy: settings.privacy
@@ -201,6 +243,7 @@ export default class Lockscreen extends React.Component<
                 duressPassphrase: settings.duressPassphrase,
                 pin: settings.pin,
                 duressPin: '',
+                authenticationAttempts: 0,
                 fiat: settings.fiat,
                 locale: settings.locale,
                 privacy: settings.privacy
@@ -223,6 +266,7 @@ export default class Lockscreen extends React.Component<
                 duressPassphrase: settings.duressPassphrase,
                 pin: settings.pin,
                 duressPin: settings.duressPin,
+                authenticationAttempts: 0,
                 fiat: settings.fiat,
                 locale: settings.locale,
                 privacy: settings.privacy
@@ -232,8 +276,64 @@ export default class Lockscreen extends React.Component<
         });
     };
 
+    authenticationFailure = () => {
+        const { SettingsStore, navigation } = this.props;
+        const { setSettings, settings } = SettingsStore;
+
+        setSettings(
+            JSON.stringify({
+                nodes: undefined,
+                selectedNode: undefined,
+                theme: settings.theme,
+                passphrase: '',
+                duressPassphrase: '',
+                pin: '',
+                duressPin: '',
+                authenticationAttempts: 0,
+                fiat: settings.fiat,
+                locale: settings.locale,
+                privacy: settings.privacy
+            })
+        ).then(() => {
+            navigation.navigate('Wallet');
+        });
+    };
+
+    resetAuthenticationAttempts = () => {
+        const { SettingsStore } = this.props;
+        const { setSettings, settings } = SettingsStore;
+
+        setSettings(
+            JSON.stringify({
+                nodes: settings.nodes,
+                selectedNode: settings.selectedNode,
+                theme: settings.theme,
+                passphrase: settings.passphrase,
+                duressPassphrase: settings.duressPassphrase,
+                pin: settings.pin,
+                duressPin: settings.duressPin,
+                authenticationAttempts: 0,
+                fiat: settings.fiat,
+                locale: settings.locale,
+                privacy: settings.privacy
+            })
+        );
+    };
+
+    generateErroMessage = (): string => {
+        const { authenticationAttempts } = this.state;
+
+        return (
+            localeString('views.Lockscreen.incorrectPin') +
+            '\n' +
+            (maxAuthenticationAttempts - authenticationAttempts).toString() +
+            ' ' +
+            localeString('views.Lockscreen.authenticationAttempts')
+        );
+    };
+
     render() {
-        const { navigation } = this.props;
+        const { navigation, SettingsStore } = this.props;
         const {
             passphrase,
             passphraseAttempt,
@@ -243,7 +343,8 @@ export default class Lockscreen extends React.Component<
             error,
             modifySecurityScreen,
             deletePin,
-            deleteDuressPin
+            deleteDuressPin,
+            authenticationAttempts
         } = this.state;
 
         const BackButton = () => (
@@ -343,9 +444,7 @@ export default class Lockscreen extends React.Component<
                                     >
                                         {error && (
                                             <ErrorMessage
-                                                message={localeString(
-                                                    'views.Lockscreen.incorrectPin'
-                                                )}
+                                                message={this.generateErroMessage()}
                                             />
                                         )}
                                     </View>
@@ -362,9 +461,7 @@ export default class Lockscreen extends React.Component<
                                         >
                                             {error && (
                                                 <ErrorMessage
-                                                    message={localeString(
-                                                        'views.Lockscreen.incorrectPin'
-                                                    )}
+                                                    message={this.generateErroMessage()}
                                                 />
                                             )}
                                         </View>

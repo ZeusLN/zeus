@@ -100,6 +100,8 @@ export default class SetDuressPin extends React.Component<
                           fiat: settings.fiat,
                           locale: settings.locale,
                           privacy: settings.privacy,
+                          authenticationAttempts:
+                              settings.authenticationAttempts,
                           passphrase: settings.passphrase,
                           duressPassphrase: settings.duressPassphrase,
                           pin: settings.pin,
