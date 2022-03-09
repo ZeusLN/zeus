@@ -37,6 +37,7 @@ interface InvoiceState {
     maxParts: string;
     maxShardAmt: string;
     feeLimitSat: string;
+    maxFeePercent: string;
     outgoingChanId: string | null;
     lastHopPubkey: string | null;
 }
@@ -60,6 +61,7 @@ export default class PaymentRequest extends React.Component<
         maxParts: '16',
         maxShardAmt: '',
         feeLimitSat: '10',
+        maxFeePercent: '0.5',
         outgoingChanId: null,
         lastHopPubkey: null
     };
@@ -79,6 +81,7 @@ export default class PaymentRequest extends React.Component<
             maxParts,
             maxShardAmt,
             feeLimitSat,
+            maxFeePercent,
             outgoingChanId,
             lastHopPubkey,
             customAmount
@@ -120,6 +123,7 @@ export default class PaymentRequest extends React.Component<
         const { enableTor, implementation } = SettingsStore;
 
         const isLnd: boolean = implementation === 'lnd';
+        const isCLightning: boolean = implementation === 'c-lightning-REST';
 
         const isNoAmountInvoice: boolean =
             !requestAmount || requestAmount === 0;
@@ -312,6 +316,33 @@ export default class PaymentRequest extends React.Component<
                                         onChangeText={(text: string) =>
                                             this.setState({
                                                 feeLimitSat: text
+                                            })
+                                        }
+                                    />
+                                </>
+                            )}
+
+                            {isCLightning && (
+                                <>
+                                    <Text
+                                        style={{
+                                            ...styles.label,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {`${localeString(
+                                            'views.PaymentRequest.feeLimit'
+                                        )} (${localeString(
+                                            'general.percentage'
+                                        )})`}
+                                    </Text>
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        placeholder={'0.5'}
+                                        value={maxFeePercent}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                maxFeePercent: text
                                             })
                                         }
                                     />
@@ -525,6 +556,9 @@ export default class PaymentRequest extends React.Component<
                                                     : null,
                                                 fee_limit_sat: isLnd
                                                     ? feeLimitSat
+                                                    : null,
+                                                max_fee_percent: isCLightning
+                                                    ? maxFeePercent
                                                     : null,
                                                 outgoing_chan_id:
                                                     outgoingChanId,

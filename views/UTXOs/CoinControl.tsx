@@ -10,7 +10,6 @@ import { localeString } from './../../utils/LocaleUtils';
 import RESTUtils from './../../utils/RESTUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
-import SettingsStore from './../../stores/SettingsStore';
 import UTXOsStore from './../../stores/UTXOsStore';
 
 interface CoinControlProps {

@@ -1,4 +1,4 @@
-import RNFetchBlob from 'rn-fetch-blob';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import stores from '../stores/Stores';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import TransactionRequest from './../models/TransactionRequest';
@@ -28,7 +28,7 @@ export default class Spark {
         if (enableTor === true) {
             calls[id] = doTorRequest(url, RequestMethod.POST, body, headers);
         } else {
-            calls[id] = RNFetchBlob.config({
+            calls[id] = ReactNativeBlobUtil.config({
                 trusty: !certVerification
             })
                 .fetch('POST', url, headers, body)

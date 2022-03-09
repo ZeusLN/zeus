@@ -70,14 +70,15 @@ export default class Intro extends React.Component<IntroProps, IntroState> {
                     source={item.illustration}
                     style={{
                         width: this.screenWidth,
-                        height: this.screenHeight - 200
+                        height: '65%'
                     }}
                 />
                 <View
                     style={{
                         backgroundColor: themeColor('background'),
                         width: '100%',
-                        bottom: 45
+                        flexGrow: 1,
+                        justifyContent: 'flex-end'
                     }}
                 >
                     <Text
@@ -93,14 +94,11 @@ export default class Intro extends React.Component<IntroProps, IntroState> {
                     </Text>
                     <Text
                         style={{
-                            fontSize: 18,
+                            fontSize: 20,
                             color: themeColor('secondaryText'),
                             fontFamily: 'Lato-Regular',
                             alignSelf: 'center',
-                            paddingLeft: 10,
-                            paddingRight: 10,
-                            paddingTop: 6,
-                            paddingBottom: 8
+                            padding: 10
                         }}
                     >
                         {item.text}
@@ -151,6 +149,11 @@ export default class Intro extends React.Component<IntroProps, IntroState> {
                     inactiveDotScale={0.6}
                     carouselRef={this.carousel}
                     tappableDots={!!this.carousel}
+                    containerStyle={{
+                        backgroundColor: 'transparent',
+                        marginTop: -30,
+                        marginBottom: -25
+                    }}
                 />
             </SafeAreaView>
         );

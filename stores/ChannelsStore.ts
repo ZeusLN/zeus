@@ -44,15 +44,6 @@ export default class ChannelsStore {
         this.settingsStore = settingsStore;
 
         reaction(
-            () => this.settingsStore.settings,
-            () => {
-                if (this.settingsStore.hasCredentials()) {
-                    this.getChannels();
-                }
-            }
-        );
-
-        reaction(
             () => this.channelRequest,
             () => {
                 if (this.channelRequest) {
@@ -102,12 +93,12 @@ export default class ChannelsStore {
 
     @action
     public getChannels = () => {
+        this.loading = true;
         this.channels = [];
         this.largestChannelSats = 0;
         this.totalOutbound = 0;
         this.totalInbound = 0;
         this.totalOffline = 0;
-        this.loading = true;
         RESTUtils.getChannels()
             .then((data: any) => {
                 const channels = data.channels.map(

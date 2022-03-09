@@ -39,7 +39,9 @@ import Currency from './views/Settings/Currency';
 import Theme from './views/Settings/Theme';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import SignVerifyMessage from './views/Settings/SignVerifyMessage';
+import About from './views/Settings/About';
 import Help from './views/Settings/Help';
+import Olympians from './views/Settings/Olympians';
 
 // Routing
 import Routing from './views/Routing/Routing';
@@ -114,8 +116,14 @@ const AppScenes = {
     Theme: {
         screen: Theme
     },
+    About: {
+        screen: About
+    },
     Help: {
         screen: Help
+    },
+    Olympians: {
+        screen: Olympians
     },
     CertInstallInstructions: {
         screen: CertInstallInstructions
