@@ -396,6 +396,7 @@
     "views.Settings.SetPassword.deletePassword": "Delete Password",
     "views.Settings.SetDuressPassword.title": "Set / Change Duress Password",
     "views.Settings.SetDuressPassword.deletePassword": "Delete Duress Password",
+    "views.Settings.SetDuressPassword.duressPasswordExplanation": "Once set, you can enter your duress password on the login screen to delete all of your node configurations.",
     "views.Settings.SetPin.title": "Set / Change PIN",
     "views.Settings.SetPin.noMatch": "PINs do not match. Please resubmit.",
     "views.Settings.SetPin.invalid": "PIN and Duress PIN cannot be equal.",

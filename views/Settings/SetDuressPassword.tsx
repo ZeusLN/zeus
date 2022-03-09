@@ -236,6 +236,15 @@ export default class SetDuressPassphrase extends React.Component<
                             paddingLeft: 10
                         }}
                     />
+                    <Text
+                        style={{
+                            color: themeColor('secondaryText')
+                        }}
+                    >
+                        {localeString(
+                            'views.Settings.SetDuressPassword.duressPasswordExplanation'
+                        )}
+                    </Text>
                     <View style={{ paddingTop: 10, margin: 10 }}>
                         <Button
                             title={localeString(
