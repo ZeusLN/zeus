@@ -1,6 +1,6 @@
 import url from 'url';
 import * as React from 'react';
-import RNFetchBlob from 'rn-fetch-blob';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import querystring from 'querystring-es3';
@@ -154,7 +154,7 @@ export default class LnurlAuth extends React.Component<
         u.search = querystring.stringify(qs);
         u.query = querystring.stringify(qs);
 
-        RNFetchBlob.fetch('get', url.format(u))
+        ReactNativeBlobUtil.fetch('get', url.format(u))
             .then((response: any) => {
                 try {
                     const data = response.json();

@@ -305,6 +305,63 @@ export default class AddEditNode extends React.Component<
         });
     };
 
+    copyNodeConfig = () => {
+        const { SettingsStore, navigation } = this.props;
+        const { setSettings, settings } = SettingsStore;
+        const {
+            nickname,
+            host,
+            port,
+            url,
+            enableTor,
+            lndhubUrl,
+            existingAccount,
+            macaroonHex,
+            accessKey,
+            username,
+            password,
+            implementation,
+            certVerification
+        } = this.state;
+        const { nodes, lurkerMode, passphrase, fiat, locale } = settings;
+
+        const node = {
+            nickname: `${nickname} copy`,
+            host,
+            port,
+            url,
+            lndhubUrl,
+            existingAccount,
+            macaroonHex,
+            accessKey,
+            username,
+            password,
+            implementation,
+            certVerification,
+            enableTor
+        };
+
+        setSettings(
+            JSON.stringify({
+                nodes,
+                theme: settings.theme,
+                selectedNode: settings.selectedNode,
+                fiat,
+                locale,
+                lurkerMode,
+                passphrase,
+                privacy: settings.privacy
+            })
+        ).then(() => {
+            navigation.navigate('AddEditNode', {
+                node,
+                newEntry: true,
+                saved: false,
+                index: Number(nodes.length)
+            });
+        });
+    };
+
     deleteNodeConfig = () => {
         const { SettingsStore, navigation } = this.props;
         const { setSettings, settings } = SettingsStore;
@@ -738,6 +795,7 @@ export default class AddEditNode extends React.Component<
                 )}
 
                 <ScrollView
+                    ref="_scrollView"
                     style={{ flex: 1, paddingLeft: 15, paddingRight: 15 }}
                 >
                     <View style={styles.form}>
@@ -1240,6 +1298,30 @@ export default class AddEditNode extends React.Component<
                                         index
                                     })
                                 }
+                                secondary
+                            />
+                        </View>
+                    )}
+
+                    {saved && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString(
+                                    'views.Settings.AddEditNode.copyNode'
+                                )}
+                                onPress={() => {
+                                    /**
+                                     * Scrolls to the top of the screen when going to the node config
+                                     * page for the copied node. Without this, the user would have to
+                                     * manually scroll to the top to edit the copied node properties.
+                                     */
+                                    this.refs._scrollView.scrollTo({
+                                        x: 0,
+                                        y: 0,
+                                        animated: true
+                                    });
+                                    this.copyNodeConfig();
+                                }}
                                 secondary
                             />
                         </View>

@@ -23,7 +23,7 @@ interface MainPaneProps {
     SettingsStore: SettingsStore;
 }
 
-@inject('SettingsStore')
+@inject('BalanceStore', 'SettingsStore')
 @observer
 export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
     render() {

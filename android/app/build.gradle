@@ -131,8 +131,8 @@ android {
         applicationId "app.zeusln.zeus"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 34
-        versionName "0.6.0-rc3"
+        versionCode 35
+        versionName "0.6.0"
         multiDexEnabled true
         missingDimensionStrategy 'react-native-camera', 'general'
     }
@@ -200,7 +200,6 @@ android {
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
     implementation 'com.android.support:multidex:1.0.3'
-    implementation project(':rn-fetch-blob')
     implementation project(':react-native-randombytes')
     implementation project(':react-native-secure-key-store')
     implementation "androidx.core:core:1.1.0"
@@ -208,6 +207,7 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.1.0-rc01'
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0-alpha02'
     implementation files("../../node_modules/react-native-tor/android/libs/sifir_android.aar")
+    implementation project(':react-native-restart')
     // gif
     implementation 'com.facebook.fresco:fresco:2.6.0'
     implementation 'com.facebook.fresco:animated-gif:2.6.0'

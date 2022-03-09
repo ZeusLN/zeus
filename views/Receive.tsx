@@ -60,7 +60,7 @@ export default class Receive extends React.Component<
     state = {
         selectedIndex: 0,
         memo: '',
-        value: '100',
+        value: '',
         expiry: '3600',
         ampInvoice: false,
         routeHints: false

@@ -228,7 +228,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         </View>
                     </View>
                 )}
-                {RESTUtils.supportsMessageSigning() ? (
+                {selectedNode && RESTUtils.supportsMessageSigning() ? (
                     <View
                         style={{
                             backgroundColor: themeColor('secondary'),
@@ -459,7 +459,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                 >
                     <TouchableOpacity
                         style={styles.columnField}
-                        onPress={() => navigation.navigate('Help')}
+                        onPress={() => navigation.navigate('About')}
                     >
                         <View style={{ paddingLeft: 5, paddingTop: 4 }}>
                             <HelpIcon />
@@ -470,7 +470,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                 color: themeColor('text')
                             }}
                         >
-                            {localeString('general.help')}
+                            {localeString('general.about')}
                         </Text>
                         <View style={styles.ForwardArrow}>
                             <ForwardIcon />
