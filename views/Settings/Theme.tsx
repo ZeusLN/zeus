@@ -102,6 +102,8 @@ export default class Theme extends React.Component<ThemeProps, ThemeStore> {
                                                       pin: settings.pin,
                                                       duressPin:
                                                           settings.duressPin,
+                                                      authenticationAttempts:
+                                                          settings.authenticationAttempts,
                                                       locale: settings.locale,
                                                       theme: item.value,
                                                       privacy: settings.privacy

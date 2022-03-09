@@ -97,6 +97,8 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                           fiat: settings.fiat,
                           locale: settings.locale,
                           privacy: settings.privacy,
+                          authenticationAttempts:
+                              settings.authenticationAttempts,
                           passphrase: settings.passphrase,
                           duressPassphrase: settings.duressPassphrase,
                           duressPin: settings.duressPin,

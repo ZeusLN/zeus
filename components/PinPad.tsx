@@ -232,7 +232,10 @@ export default function PinPad({
                 {!!hidePinLength && pinValueLength >= minLength && (
                     <View style={styles.key}>
                         <Touchable
-                            touch={() => submitValue()}
+                            touch={() => {
+                                submitValue();
+                                clearPinValueLength();
+                            }}
                             highlight={numberHighlight}
                         >
                             <Success />

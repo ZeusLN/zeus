@@ -222,6 +222,7 @@
     "views.Lockscreen.login": "Log In",
     "views.Lockscreen.pin": "Enter PIN",
     "views.Lockscreen.incorrectPin": "Incorrect PIN",
+    "views.Lockscreen.authenticationAttempts": "attempts remaining",
     "views.NodeInfo.feeReport": "Fee Report",
     "views.NodeInfo.forwarding": "Forwarding",
     "views.NodeInfo.copyUri": "Copy URI",
