@@ -390,7 +390,7 @@ export default class Lockscreen extends React.Component<
                                         onPinChange={() =>
                                             this.setState({ error: false })
                                         }
-                                        pinCreate={false}
+                                        hidePinLength={true}
                                         pinLength={pin.length}
                                     />
                                 </View>

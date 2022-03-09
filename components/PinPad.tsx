@@ -12,7 +12,7 @@ interface PinPadProps {
     deleteValue: () => void;
     submitValue?: () => void;
     shuffle?: boolean;
-    pinCreate?: boolean;
+    hidePinLength?: boolean;
     minLength?: number;
     maxLength?: number;
     numberHighlight?: boolean;
@@ -24,7 +24,7 @@ export default function PinPad({
     deleteValue,
     submitValue = () => void 0,
     shuffle = false,
-    pinCreate = false,
+    hidePinLength = false,
     minLength = 4,
     maxLength = 8,
     numberHighlight = false
@@ -216,7 +216,7 @@ export default function PinPad({
                         <Text style={styles.pinPadNumber}>{pinNumbers[0]}</Text>
                     </Touchable>
                 </View>
-                {!pinCreate && (
+                {!hidePinLength && (
                     <View style={styles.key}>
                         <Touchable
                             touch={() => {
@@ -229,7 +229,7 @@ export default function PinPad({
                         </Touchable>
                     </View>
                 )}
-                {!!pinCreate && pinValueLength >= minLength && (
+                {!!hidePinLength && pinValueLength >= minLength && (
                     <View style={styles.key}>
                         <Touchable
                             touch={() => submitValue()}
@@ -239,7 +239,7 @@ export default function PinPad({
                         </Touchable>
                     </View>
                 )}
-                {!!pinCreate && pinValueLength < minLength && (
+                {!!hidePinLength && pinValueLength < minLength && (
                     <View style={styles.key}>
                         <Pressable></Pressable>
                     </View>
