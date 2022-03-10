@@ -320,11 +320,18 @@ export default class Lockscreen extends React.Component<
         );
     };
 
-    generateErroMessage = (): string => {
-        const { authenticationAttempts } = this.state;
+    generateErrorMessage = (): string => {
+        const { passphrase, authenticationAttempts } = this.state;
+        let incorrect = '';
+
+        if (!!passphrase) {
+            incorrect = localeString('views.Lockscreen.incorrect');
+        } else {
+            incorrect = localeString('views.Lockscreen.incorrectPin');
+        }
 
         return (
-            localeString('views.Lockscreen.incorrectPin') +
+            incorrect +
             '\n' +
             (maxAuthenticationAttempts - authenticationAttempts).toString() +
             ' ' +
@@ -372,9 +379,7 @@ export default class Lockscreen extends React.Component<
                         <View style={styles.content}>
                             {error && (
                                 <ErrorMessage
-                                    message={localeString(
-                                        'views.Lockscreen.incorrect'
-                                    )}
+                                    message={this.generateErrorMessage()}
                                 />
                             )}
                             <Text
@@ -444,7 +449,7 @@ export default class Lockscreen extends React.Component<
                                     >
                                         {error && (
                                             <ErrorMessage
-                                                message={this.generateErroMessage()}
+                                                message={this.generateErrorMessage()}
                                             />
                                         )}
                                     </View>
@@ -461,7 +466,7 @@ export default class Lockscreen extends React.Component<
                                         >
                                             {error && (
                                                 <ErrorMessage
-                                                    message={this.generateErroMessage()}
+                                                    message={this.generateErrorMessage()}
                                                 />
                                             )}
                                         </View>
