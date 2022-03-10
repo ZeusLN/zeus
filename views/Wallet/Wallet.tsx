@@ -147,7 +147,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             setConnectingStatus
         } = SettingsStore;
         const { fiat } = settings;
-        
+
         if (!!fiat && fiat !== 'Disabled') {
             FiatStore.getFiatRates();
         }
@@ -178,7 +178,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
     }
 
     handleOpenURL = (event: any) => {
-        const {navigation} = this.props;
+        const { navigation } = this.props;
         if (event.url) {
             LinkingUtils.handleDeepLink(event.url, navigation);
         }
