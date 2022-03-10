@@ -4,7 +4,8 @@ import {
     PanResponder,
     Text,
     TouchableOpacity,
-    View
+    View,
+    Linking
 } from 'react-native';
 
 import { inject, observer } from 'mobx-react';
@@ -89,7 +90,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
     }
 
     componentWillUnmount() {
-        LinkingUtils.removeEventListener();
+        Linking.removeEventListener('url', this.handleOpenURL);
     }
 
     async getSettingsAndNavigate() {
@@ -146,7 +147,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             setConnectingStatus
         } = SettingsStore;
         const { fiat } = settings;
-
+        
         if (!!fiat && fiat !== 'Disabled') {
             FiatStore.getFiatRates();
         }
@@ -171,10 +172,17 @@ export default class Wallet extends React.Component<WalletProps, {}> {
 
         if (connecting) {
             setConnectingStatus(false);
-            LinkingUtils.addEventListener();
+            Linking.addEventListener('url', this.handleOpenURL);
             LinkingUtils.handleInitialUrl(navigation);
         }
     }
+
+    handleOpenURL = (event: any) => {
+        const {navigation} = this.props;
+        if (event.url) {
+            LinkingUtils.handleDeepLink(event.url, navigation);
+        }
+    };
 
     render() {
         const Tab = createBottomTabNavigator();
