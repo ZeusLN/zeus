@@ -24,12 +24,12 @@ export default function PinCircles({
         }
     });
 
-    let filled = [];
+    const filled = [];
     for (let i = 0; i < numFilled; i++) {
         filled.push(<Filled style={styles.circles} />);
     }
 
-    let hollow = [];
+    const hollow = [];
     if (!hidePinLength) {
         for (let i = 0; i < pinLength - numFilled; i++) {
             hollow.push(<Hollow style={styles.circles} />);
