@@ -348,7 +348,7 @@ export default class LND {
     supportsOnchainSends = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
-    supportsMPP = () => this.supports('v0.11.0', 'v0.13.0');
+    supportsMPP = () => this.supports('v0.11.0');
     supportsAMP = () => this.supports('v0.13.0');
     supportsHopPicking = () => this.supports('v0.11.0');
     supportsRouting = () => true;

@@ -56,7 +56,7 @@ export default class PaymentRequest extends React.Component<
 > {
     state = {
         customAmount: '',
-        enableMultiPathPayment: false,
+        enableMultiPathPayment: true,
         enableAtomicMultiPathPayment: false,
         maxParts: '16',
         maxShardAmt: '',
@@ -386,6 +386,43 @@ export default class PaymentRequest extends React.Component<
                                 </>
                             )}
 
+                            {!!pay_req &&
+                                RESTUtils.supportsMPP() &&
+                                !enableTor && (
+                                    <React.Fragment>
+                                        <Text
+                                            style={{
+                                                ...styles.label,
+                                                color: themeColor('text'),
+                                                top: 25
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.PaymentRequest.mpp'
+                                            )}
+                                        </Text>
+                                        <Switch
+                                            value={enableMultiPathPayment}
+                                            onValueChange={() => {
+                                                const enable =
+                                                    !enableMultiPathPayment;
+                                                this.setState({
+                                                    enableMultiPathPayment:
+                                                        enable,
+                                                    enableAtomicMultiPathPayment:
+                                                        enableMultiPathPayment
+                                                            ? false
+                                                            : true
+                                                });
+                                            }}
+                                            trackColor={{
+                                                false: '#767577',
+                                                true: themeColor('highlight')
+                                            }}
+                                        />
+                                    </React.Fragment>
+                                )}
+
                             {!!pay_req && RESTUtils.supportsAMP() && (
                                 <React.Fragment>
                                     <Text
@@ -415,12 +452,17 @@ export default class PaymentRequest extends React.Component<
                                         >
                                             <Switch
                                                 value={enableAmp}
-                                                onValueChange={() =>
+                                                onValueChange={() => {
+                                                    const enable =
+                                                        !enableAtomicMultiPathPayment;
                                                     this.setState({
                                                         enableAtomicMultiPathPayment:
-                                                            !enableAtomicMultiPathPayment
-                                                    })
-                                                }
+                                                            enable,
+                                                        enableMultiPathPayment:
+                                                            enable ||
+                                                            enableMultiPathPayment
+                                                    });
+                                                }}
                                                 trackColor={{
                                                     false: '#767577',
                                                     true: themeColor(
@@ -436,37 +478,6 @@ export default class PaymentRequest extends React.Component<
                                 </React.Fragment>
                             )}
 
-                            {!!pay_req &&
-                                RESTUtils.supportsMPP() &&
-                                !enableTor && (
-                                    <React.Fragment>
-                                        <Text
-                                            style={{
-                                                ...styles.label,
-                                                color: themeColor('text'),
-                                                top: 25
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.PaymentRequest.mpp'
-                                            )}
-                                        </Text>
-                                        <Switch
-                                            value={enableMultiPathPayment}
-                                            onValueChange={() =>
-                                                this.setState({
-                                                    enableMultiPathPayment:
-                                                        !enableMultiPathPayment
-                                                })
-                                            }
-                                            trackColor={{
-                                                false: '#767577',
-                                                true: themeColor('highlight')
-                                            }}
-                                        />
-                                    </React.Fragment>
-                                )}
-
                             {ampOrMppEnabled && (
                                 <React.Fragment>
                                     <Text
@@ -475,15 +486,9 @@ export default class PaymentRequest extends React.Component<
                                             color: themeColor('text')
                                         }}
                                     >
-                                        {enableMultiPathPayment
-                                            ? localeString(
-                                                  'views.PaymentRequest.maxParts'
-                                              )
-                                            : `${localeString(
-                                                  'views.PaymentRequest.maxParts'
-                                              )} (${localeString(
-                                                  'general.optional'
-                                              )})`}
+                                        {localeString(
+                                            'views.PaymentRequest.maxParts'
+                                        )}
                                     </Text>
                                     <TextInput
                                         keyboardType="numeric"
@@ -507,7 +512,7 @@ export default class PaymentRequest extends React.Component<
                                 </React.Fragment>
                             )}
 
-                            {enableAmp && (
+                            {ampOrMppEnabled && (
                                 <React.Fragment>
                                     <Text
                                         style={{
@@ -548,12 +553,14 @@ export default class PaymentRequest extends React.Component<
                                             TransactionsStore.sendPayment({
                                                 payment_request: paymentRequest,
                                                 amount: customAmount,
-                                                max_parts: ampOrMppEnabled
-                                                    ? maxParts
-                                                    : null,
-                                                max_shard_amt: ampOrMppEnabled
-                                                    ? maxShardAmt
-                                                    : null,
+                                                max_parts:
+                                                    enableMultiPathPayment
+                                                        ? maxParts
+                                                        : null,
+                                                max_shard_amt:
+                                                    enableMultiPathPayment
+                                                        ? maxShardAmt
+                                                        : null,
                                                 fee_limit_sat: isLnd
                                                     ? feeLimitSat
                                                     : null,
