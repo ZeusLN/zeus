@@ -1,10 +1,11 @@
 import * as React from 'react';
 import { FlatList, View } from 'react-native';
 import { Header, Icon, ListItem } from 'react-native-elements';
+
+import stores from '../../stores/Stores';
+
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
-import stores from '../../stores/Stores';
-import { useEffect, useState } from 'react';
 
 interface SecurityProps {
     navigation: any;

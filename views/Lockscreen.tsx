@@ -1,18 +1,18 @@
 import * as React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { Header, Icon } from 'react-native-elements';
 
 import Button from './../components/Button';
+import Pin from './../components/Pin';
 import { ErrorMessage } from './../components/SuccessErrorMessage';
 import TextInput from './../components/TextInput';
 
+import SettingsStore from './../stores/SettingsStore';
+
 import LinkingUtils from './../utils/LinkingUtils';
 import { localeString } from './../utils/LocaleUtils';
-
-import SettingsStore from './../stores/SettingsStore';
-import Pin from './../components/Pin';
 import { themeColor } from './../utils/ThemeUtils';
-import { Header, Icon } from 'react-native-elements';
 
 interface LockscreenProps {
     navigation: any;
@@ -70,7 +70,7 @@ export default class Lockscreen extends React.Component<
         const deletePin: boolean = navigation.getParam('deletePin');
         const deleteDuressPin: boolean = navigation.getParam('deleteDuressPin');
 
-        if (!!settings.authenticationAttempts) {
+        if (settings.authenticationAttempts) {
             this.setState({
                 authenticationAttempts: settings.authenticationAttempts
             });
@@ -185,7 +185,7 @@ export default class Lockscreen extends React.Component<
                         duressPassphrase: updatedSettings?.duressPassphrase,
                         pin: updatedSettings?.pin,
                         duressPin: updatedSettings?.duressPin,
-                        authenticationAttempts: authenticationAttempts,
+                        authenticationAttempts,
                         fiat: updatedSettings?.fiat,
                         locale: updatedSettings?.locale,
                         privacy: updatedSettings?.privacy
@@ -324,7 +324,7 @@ export default class Lockscreen extends React.Component<
         const { passphrase, authenticationAttempts } = this.state;
         let incorrect = '';
 
-        if (!!passphrase) {
+        if (passphrase) {
             incorrect = localeString('views.Lockscreen.incorrect');
         } else {
             incorrect = localeString('views.Lockscreen.incorrectPin');
@@ -340,18 +340,16 @@ export default class Lockscreen extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation } = this.props;
         const {
             passphrase,
             passphraseAttempt,
             pin,
-            pinAttempt,
             hidden,
             error,
             modifySecurityScreen,
             deletePin,
-            deleteDuressPin,
-            authenticationAttempts
+            deleteDuressPin
         } = this.state;
 
         const BackButton = () => (

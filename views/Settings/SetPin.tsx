@@ -117,8 +117,7 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
 
     render() {
         const { navigation } = this.props;
-        const { pin, pinConfirm, pinMismatchError, pinInvalidError } =
-            this.state;
+        const { pin, pinMismatchError, pinInvalidError } = this.state;
         const BackButton = () => (
             <Icon
                 name="arrow-back"
