@@ -16,18 +16,6 @@ class LinkingUtils {
             .catch((err) =>
                 console.error(localeString('views.Wallet.Wallet.error'), err)
             );
-
-    handleOpenURL = (event: any) => {
-        if (event.url) {
-            this.handleDeepLink(event.url);
-        }
-    };
-
-    addEventListener = () =>
-        Linking.addEventListener('url', this.handleOpenURL);
-
-    removeEventListener = () =>
-        Linking.removeEventListener('url', this.handleOpenURL);
 }
 
 const linkingUtils = new LinkingUtils();
