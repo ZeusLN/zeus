@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, TouchableOpacity, View } from 'react-native';
+import { Pressable, TouchableOpacity } from 'react-native';
 
 interface TouchableProps {
     touch: () => void;
