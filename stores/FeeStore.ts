@@ -1,10 +1,11 @@
 import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import BigNumber from 'bignumber.js';
+
 import RESTUtils from './../utils/RESTUtils';
 import Base64Utils from './../utils/Base64Utils';
 import ForwardEvent from './../models/ForwardEvent';
 import SettingsStore from './SettingsStore';
-import BigNumber from 'bignumber.js';
 
 export default class FeeStore {
     @observable public fees: any = {};
