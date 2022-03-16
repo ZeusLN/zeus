@@ -282,8 +282,12 @@ export default class AddEditNode extends React.Component<
                           selectedNode: settings.selectedNode,
                           fiat,
                           locale,
-                          lurkerMode,
                           passphrase,
+                          duressPassphrase: settings.duressPassphrase,
+                          pin: settings.pin,
+                          duressPin: settings.duressPin,
+                          authenticationAttempts:
+                              settings.authenticationAttempts,
                           privacy: settings.privacy
                       }
                     : { nodes }
@@ -362,7 +366,7 @@ export default class AddEditNode extends React.Component<
         const { SettingsStore, navigation } = this.props;
         const { setSettings, settings } = SettingsStore;
         const { index } = this.state;
-        const { nodes, lurkerMode, passphrase, fiat, locale } = settings;
+        const { nodes, passphrase, fiat, locale } = settings;
 
         const newNodes: any = [];
         for (let i = 0; nodes && i < nodes.length; i++) {
@@ -379,8 +383,11 @@ export default class AddEditNode extends React.Component<
                     index === settings.selectedNode ? 0 : settings.selectedNode,
                 fiat,
                 locale,
-                lurkerMode,
                 passphrase,
+                duressPassphrase: settings.duressPassphrase,
+                pin: settings.pin,
+                duressPin: settings.duressPin,
+                authenticationAttempts: settings.authenticationAttempts,
                 privacy: settings.privacy
             })
         ).then(() => {
@@ -392,7 +399,7 @@ export default class AddEditNode extends React.Component<
         const { SettingsStore, navigation } = this.props;
         const { setSettings, settings } = SettingsStore;
         const { index } = this.state;
-        const { nodes, lurkerMode, passphrase, fiat, locale } = settings;
+        const { nodes, passphrase, fiat, locale } = settings;
 
         setSettings(
             JSON.stringify({
@@ -401,8 +408,11 @@ export default class AddEditNode extends React.Component<
                 selectedNode: index,
                 fiat,
                 locale,
-                lurkerMode,
                 passphrase,
+                duressPassphrase: settings.duressPassphrase,
+                pin: settings.pin,
+                duressPin: settings.duressPin,
+                authenticationAttempts: settings.authenticationAttempts,
                 privacy: settings.privacy
             })
         );

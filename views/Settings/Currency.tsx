@@ -138,6 +138,13 @@ export default class Currency extends React.Component<
                                                       fiat: item.value,
                                                       passphrase:
                                                           settings.passphrase,
+                                                      duressPassphrase:
+                                                          settings.duressPassphrase,
+                                                      pin: settings.pin,
+                                                      duressPin:
+                                                          settings.duressPin,
+                                                      authenticationAttempts:
+                                                          settings.authenticationAttempts,
                                                       locale: settings.locale,
                                                       privacy: settings.privacy
                                                   }

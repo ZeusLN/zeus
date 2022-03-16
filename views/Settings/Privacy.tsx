@@ -143,6 +143,12 @@ export default class Privacy extends React.Component<
                                                   fiat: settings.fiat,
                                                   passphrase:
                                                       settings.passphrase,
+                                                  duressPassphrase:
+                                                      settings.duressPassphrase,
+                                                  pin: settings.pin,
+                                                  duressPin: settings.duressPin,
+                                                  authenticationAttempts:
+                                                      settings.authenticationAttempts,
                                                   locale: settings.locale,
                                                   privacy: {
                                                       defaultBlockExplorer:
@@ -200,6 +206,13 @@ export default class Privacy extends React.Component<
                                                           fiat: settings.fiat,
                                                           passphrase:
                                                               settings.passphrase,
+                                                          duressPassphrase:
+                                                              settings.duressPassphrase,
+                                                          pin: settings.pin,
+                                                          duressPin:
+                                                              settings.duressPin,
+                                                          authenticationAttempts:
+                                                              settings.authenticationAttempts,
                                                           locale: settings.locale,
                                                           privacy: {
                                                               defaultBlockExplorer,
@@ -269,6 +282,13 @@ export default class Privacy extends React.Component<
                                                           fiat: settings.fiat,
                                                           passphrase:
                                                               settings.passphrase,
+                                                          duressPassphrase:
+                                                              settings.duressPassphrase,
+                                                          pin: settings.pin,
+                                                          duressPin:
+                                                              settings.duressPin,
+                                                          authenticationAttempts:
+                                                              settings.authenticationAttempts,
                                                           locale: settings.locale,
                                                           privacy: {
                                                               defaultBlockExplorer,
@@ -341,6 +361,13 @@ export default class Privacy extends React.Component<
                                                           fiat: settings.fiat,
                                                           passphrase:
                                                               settings.passphrase,
+                                                          duressPassphrase:
+                                                              settings.duressPassphrase,
+                                                          pin: settings.pin,
+                                                          duressPin:
+                                                              settings.duressPin,
+                                                          authenticationAttempts:
+                                                              settings.authenticationAttempts,
                                                           locale: settings.locale,
                                                           privacy: {
                                                               defaultBlockExplorer,
@@ -414,6 +441,13 @@ export default class Privacy extends React.Component<
                                                           fiat: settings.fiat,
                                                           passphrase:
                                                               settings.passphrase,
+                                                          duressPassphrase:
+                                                              settings.duressPassphrase,
+                                                          pin: settings.pin,
+                                                          duressPin:
+                                                              settings.duressPin,
+                                                          authenticationAttempts:
+                                                              settings.authenticationAttempts,
                                                           locale: settings.locale,
                                                           privacy: {
                                                               defaultBlockExplorer,

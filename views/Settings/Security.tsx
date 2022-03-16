@@ -3,6 +3,8 @@ import { FlatList, View } from 'react-native';
 import { Header, Icon, ListItem } from 'react-native-elements';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
+import stores from '../../stores/Stores';
+import { useEffect, useState } from 'react';
 
 interface SecurityProps {
     navigation: any;
@@ -10,6 +12,61 @@ interface SecurityProps {
 
 function Security(props: SecurityProps) {
     const { navigation } = props;
+    const { settings } = stores.settingsStore;
+
+    let displaySecurityItems = [];
+    const possibleSecurityItems = [
+        {
+            label: localeString('views.Settings.SetPassword.title'),
+            screen: 'SetPassword'
+        },
+        {
+            label: localeString('views.Settings.SetDuressPassword.title'),
+            screen: 'SetDuressPassword'
+        },
+        {
+            label: localeString('views.Settings.SetPin.title'),
+            screen: 'SetPin'
+        },
+        {
+            label: localeString('views.Settings.Security.deletePIN'),
+            action: 'DeletePin'
+        },
+        {
+            label: localeString('views.Settings.SetDuressPin.title'),
+            screen: 'SetDuressPin'
+        },
+        {
+            label: localeString('views.Settings.Security.deleteDuressPIN'),
+            action: 'DeleteDuressPin'
+        }
+        // { label: 'Verify TLS Certificate', url: 'https://twitter.com/ZeusLN' }
+    ];
+
+    // Three cases:
+    // 1) If no passphrase or pin is set, allow user to set passphrase or pin
+    // 2) If passphrase is set, allow user to set passphrase or duress passphrase
+    // 3) If pin is set, allow user to set pin or duress pin
+    if (!settings.passphrase && !settings.pin) {
+        displaySecurityItems = [
+            possibleSecurityItems[0],
+            possibleSecurityItems[2]
+        ];
+    } else if (settings.passphrase) {
+        displaySecurityItems = [
+            possibleSecurityItems[0],
+            possibleSecurityItems[1]
+        ];
+    } else if (settings.pin) {
+        displaySecurityItems = [
+            possibleSecurityItems[2],
+            possibleSecurityItems[3],
+            possibleSecurityItems[4]
+        ];
+        if (settings.duressPin) {
+            displaySecurityItems.push(possibleSecurityItems[5]);
+        }
+    }
 
     const renderSeparator = () => (
         <View
@@ -29,13 +86,51 @@ function Security(props: SecurityProps) {
         />
     );
 
-    const SECURITY_ITEMS = [
-        {
-            label: localeString('views.Settings.SetPassword.title'),
-            screen: 'SetPassword'
+    const navigateSecurity = (item: any) => {
+        if (!(settings.passphrase || settings.pin)) {
+            navigation.navigate(item.screen);
+        } else if (item.action === 'DeletePin') {
+            navigation.navigate('Lockscreen', {
+                deletePin: true
+            });
+        } else if (item.action === 'DeleteDuressPin') {
+            navigation.navigate('Lockscreen', {
+                deleteDuressPin: true
+            });
+        } else {
+            // if we already have a pin/password set, make user authenticate in order to change
+            navigation.navigate('Lockscreen', {
+                modifySecurityScreen: item.screen
+            });
         }
-        // { label: 'Verify TLS Certificate', url: 'https://twitter.com/ZeusLN' }
-    ];
+    };
+
+    const renderItem = ({ item }) => {
+        return (
+            <ListItem
+                containerStyle={{
+                    borderBottomWidth: 0,
+                    backgroundColor: themeColor('background')
+                }}
+                onPress={() => navigateSecurity(item)}
+            >
+                <ListItem.Content>
+                    <ListItem.Title
+                        style={{
+                            color: themeColor('secondaryText'),
+                            fontFamily: 'Lato-Regular'
+                        }}
+                    >
+                        {item.label}
+                    </ListItem.Title>
+                </ListItem.Content>
+                <Icon
+                    name="keyboard-arrow-right"
+                    color={themeColor('secondaryText')}
+                />
+            </ListItem>
+        );
+    };
 
     return (
         <View
@@ -59,31 +154,8 @@ function Security(props: SecurityProps) {
                 }}
             />
             <FlatList
-                data={SECURITY_ITEMS}
-                renderItem={({ item }) => (
-                    <ListItem
-                        containerStyle={{
-                            borderBottomWidth: 0,
-                            backgroundColor: themeColor('background')
-                        }}
-                        onPress={() => navigation.navigate(item.screen)}
-                    >
-                        <ListItem.Content>
-                            <ListItem.Title
-                                style={{
-                                    color: themeColor('secondaryText'),
-                                    fontFamily: 'Lato-Regular'
-                                }}
-                            >
-                                {item.label}
-                            </ListItem.Title>
-                        </ListItem.Content>
-                        <Icon
-                            name="keyboard-arrow-right"
-                            color={themeColor('secondaryText')}
-                        />
-                    </ListItem>
-                )}
+                data={displaySecurityItems}
+                renderItem={renderItem}
                 keyExtractor={(item, index) => `${item.label}-${index}`}
                 ItemSeparatorComponent={renderSeparator}
             />

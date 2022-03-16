@@ -3,39 +3,39 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Button from './../../components/Button';
-import { ErrorMessage } from './../../components/SuccessErrorMessage';
-import TextInput from './../../components/TextInput';
+import Button from '../../components/Button';
+import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import TextInput from '../../components/TextInput';
 
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
-import SettingsStore from './../../stores/SettingsStore';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import SettingsStore from '../../stores/SettingsStore';
 
-interface SetPassphraseProps {
+interface SetDuressPassphraseProps {
     navigation: any;
     SettingsStore: SettingsStore;
 }
 
-interface SetPassphraseState {
-    passphrase: string;
-    passphraseConfirm: string;
-    savedPassphrase: string;
-    passphraseMismatchError: boolean;
-    passphraseInvalidError: boolean;
+interface SetDuressPassphraseState {
+    duressPassphrase: string;
+    duressPassphraseConfirm: string;
+    savedDuressPassphrase: string;
+    duressPassphraseMismatchError: boolean;
+    duressPassphraseInvalidError: boolean;
 }
 
 @inject('SettingsStore')
 @observer
-export default class SetPassphrase extends React.Component<
-    SetPassphraseProps,
-    SetPassphraseState
+export default class SetDuressPassphrase extends React.Component<
+    SetDuressPassphraseProps,
+    SetDuressPassphraseState
 > {
     state = {
-        passphrase: '',
-        passphraseConfirm: '',
-        savedPassphrase: '',
-        passphraseMismatchError: false,
-        passphraseInvalidError: false
+        duressPassphrase: '',
+        duressPassphraseConfirm: '',
+        savedDuressPassphrase: '',
+        duressPassphraseMismatchError: false,
+        duressPassphraseInvalidError: false
     };
 
     async componentDidMount() {
@@ -43,8 +43,8 @@ export default class SetPassphrase extends React.Component<
         const { getSettings } = SettingsStore;
         const settings = await getSettings();
 
-        if (settings.passphrase) {
-            this.setState({ savedPassphrase: settings.passphrase });
+        if (settings.duressPassphrase) {
+            this.setState({ savedDuressPassphrase: settings.duressPassphrase });
         }
     }
 
@@ -59,12 +59,12 @@ export default class SetPassphrase extends React.Component<
 
     saveSettings = async () => {
         const { SettingsStore, navigation } = this.props;
-        const { passphrase, passphraseConfirm } = this.state;
-        const { getSettings, setSettings, setLoginStatus } = SettingsStore;
+        const { duressPassphrase, duressPassphraseConfirm } = this.state;
+        const { getSettings, setSettings } = SettingsStore;
 
-        if (passphrase !== passphraseConfirm) {
+        if (duressPassphrase !== duressPassphraseConfirm) {
             this.setState({
-                passphraseMismatchError: true
+                duressPassphraseMismatchError: true
             });
 
             return;
@@ -72,9 +72,9 @@ export default class SetPassphrase extends React.Component<
 
         const settings = await getSettings();
 
-        if (passphrase === settings.duressPassphrase) {
+        if (duressPassphrase === settings.passphrase) {
             this.setState({
-                passphraseInvalidError: true
+                duressPassphraseInvalidError: true
             });
 
             return;
@@ -92,13 +92,12 @@ export default class SetPassphrase extends React.Component<
                           privacy: settings.privacy,
                           authenticationAttempts:
                               settings.authenticationAttempts,
-                          duressPassphrase: settings.duressPassphrase,
-                          passphrase
+                          passphrase: settings.passphrase,
+                          duressPassphrase
                       }
-                    : { passphrase }
+                    : { duressPassphrase }
             )
         ).then(() => {
-            setLoginStatus(false);
             getSettings();
             navigation.navigate('Settings', {
                 refresh: true
@@ -106,9 +105,7 @@ export default class SetPassphrase extends React.Component<
         });
     };
 
-    deletePassword = async () => {
-        // deletes passphrase and duress passphrase because duress
-        // passphrase should not exist if passphrase does not exist
+    deleteDuressPassword = async () => {
         const { SettingsStore, navigation } = this.props;
         const { getSettings, setSettings } = SettingsStore;
 
@@ -122,9 +119,9 @@ export default class SetPassphrase extends React.Component<
                 fiat: settings.fiat,
                 locale: settings.locale,
                 privacy: settings.privacy,
+                authenticationAttempts: settings.authenticationAttempts,
                 duressPassphrase: '',
-                passphrase: '',
-                authenticationAttempts: settings.authenticationAttempts
+                passphrase: settings.passphrase
             })
         ).then(() => {
             navigation.navigate('Settings', {
@@ -136,11 +133,11 @@ export default class SetPassphrase extends React.Component<
     render() {
         const { navigation } = this.props;
         const {
-            passphrase,
-            passphraseConfirm,
-            savedPassphrase,
-            passphraseMismatchError,
-            passphraseInvalidError
+            duressPassphrase,
+            duressPassphraseConfirm,
+            savedDuressPassphrase,
+            duressPassphraseMismatchError,
+            duressPassphraseInvalidError
         } = this.state;
         const BackButton = () => (
             <Icon
@@ -161,7 +158,9 @@ export default class SetPassphrase extends React.Component<
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: localeString('views.Settings.SetPassword.title'),
+                        text: localeString(
+                            'views.Settings.SetDuressPassword.title'
+                        ),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'Lato-Regular'
@@ -179,14 +178,14 @@ export default class SetPassphrase extends React.Component<
                         paddingTop: 10
                     }}
                 >
-                    {passphraseMismatchError && (
+                    {duressPassphraseMismatchError && (
                         <ErrorMessage
                             message={localeString(
                                 'views.Settings.SetPassword.noMatch'
                             )}
                         />
                     )}
-                    {passphraseInvalidError && (
+                    {duressPassphraseInvalidError && (
                         <ErrorMessage
                             message={localeString(
                                 'views.Settings.SetPassword.invalid'
@@ -194,17 +193,17 @@ export default class SetPassphrase extends React.Component<
                         />
                     )}
                     <Text style={{ ...styles.text, color: themeColor('text') }}>
-                        {localeString('views.Settings.newPassword')}
+                        {localeString('views.Settings.newDuressPassword')}
                     </Text>
                     <TextInput
                         placeholder={'********'}
                         placeholderTextColor="darkgray"
-                        value={passphrase}
+                        value={duressPassphrase}
                         onChangeText={(text: string) =>
                             this.setState({
-                                passphrase: text,
-                                passphraseMismatchError: false,
-                                passphraseInvalidError: false
+                                duressPassphrase: text,
+                                duressPassphraseMismatchError: false,
+                                duressPassphraseInvalidError: false
                             })
                         }
                         numberOfLines={1}
@@ -216,17 +215,17 @@ export default class SetPassphrase extends React.Component<
                         }}
                     />
                     <Text style={{ ...styles.text, color: themeColor('text') }}>
-                        {localeString('views.Settings.confirmPassword')}
+                        {localeString('views.Settings.confirmDuressPassword')}
                     </Text>
                     <TextInput
                         placeholder={'********'}
                         placeholderTextColor="darkgray"
-                        value={passphraseConfirm}
+                        value={duressPassphraseConfirm}
                         onChangeText={(text: string) =>
                             this.setState({
-                                passphraseConfirm: text,
-                                passphraseMismatchError: false,
-                                passphraseInvalidError: false
+                                duressPassphraseConfirm: text,
+                                duressPassphraseMismatchError: false,
+                                duressPassphraseInvalidError: false
                             })
                         }
                         numberOfLines={1}
@@ -237,6 +236,15 @@ export default class SetPassphrase extends React.Component<
                             paddingLeft: 10
                         }}
                     />
+                    <Text
+                        style={{
+                            color: themeColor('secondaryText')
+                        }}
+                    >
+                        {localeString(
+                            'views.Settings.SetDuressPassword.duressPasswordExplanation'
+                        )}
+                    </Text>
                     <View style={{ paddingTop: 10, margin: 10 }}>
                         <Button
                             title={localeString(
@@ -245,13 +253,13 @@ export default class SetPassphrase extends React.Component<
                             onPress={() => this.saveSettings()}
                         />
                     </View>
-                    {!!savedPassphrase && (
+                    {!!savedDuressPassphrase && (
                         <View style={{ paddingTop: 10, margin: 10 }}>
                             <Button
                                 title={localeString(
-                                    'views.Settings.SetPassword.deletePassword'
+                                    'views.Settings.SetDuressPassword.deletePassword'
                                 )}
-                                onPress={() => this.deletePassword()}
+                                onPress={() => this.deleteDuressPassword()}
                                 containerStyle={{
                                     borderColor: 'red'
                                 }}
