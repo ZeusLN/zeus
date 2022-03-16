@@ -374,7 +374,7 @@ export default class Receive extends React.Component<
                                 </TouchableOpacity>
                                 <TextInput
                                     keyboardType="numeric"
-                                    placeholder={'100'}
+                                    placeholder={'0'}
                                     value={value}
                                     onChangeText={(text: string) => {
                                         this.setState({ value: text });
@@ -524,7 +524,7 @@ export default class Receive extends React.Component<
                                         onPress={() =>
                                             createInvoice(
                                                 memo,
-                                                satAmount.toString(),
+                                                satAmount.toString() || '0',
                                                 expiry,
                                                 lnurl,
                                                 ampInvoice,
