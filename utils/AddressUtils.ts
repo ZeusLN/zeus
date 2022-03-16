@@ -75,6 +75,8 @@ class AddressUtils {
             value = input.split('lightning:')[1];
         } else if (input.includes('LIGHTNING:')) {
             value = input.split('LIGHTNING:')[1];
+        } else if (input.includes('zeusln:')) {
+            value = input.split('zeusln:')[1];
         } else {
             value = input;
         }
