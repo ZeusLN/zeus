@@ -134,9 +134,9 @@ export default class SettingsStore {
         privacy: {
             defaultBlockExplorer: 'mempool.space',
             customBlockExplorer: '',
-            clipboard: false,
+            clipboard: true,
             lurkerMode: false,
-            enableMempoolRates: false
+            enableMempoolRates: true
         }
     };
     @observable public loading = false;
@@ -305,7 +305,6 @@ export default class SettingsStore {
                     this.certVerification = node.certVerification || false;
                     this.enableTor = node.enableTor;
                 }
-                return this.settings;
             } else {
                 console.log('No credentials stored');
             }
@@ -314,6 +313,8 @@ export default class SettingsStore {
         } finally {
             this.loading = false;
         }
+
+        return this.settings;
     }
 
     @action
