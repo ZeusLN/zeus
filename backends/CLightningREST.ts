@@ -89,7 +89,7 @@ export default class CLightningREST extends LND {
                 id: data.id,
                 satoshis: data.satoshis,
                 feeRate: data.sat_per_byte,
-                annnounce: data.announce,
+                announce: !data.private ? 'true' : 'false',
                 minfConf: data.min_confs,
                 utxos: data.utxos
             };
@@ -98,7 +98,7 @@ export default class CLightningREST extends LND {
                 id: data.id,
                 satoshis: data.satoshis,
                 feeRate: data.sat_per_byte,
-                annnounce: data.announce,
+                announce: !data.private ? 'true' : 'false',
                 minfConf: data.min_confs
             };
         }

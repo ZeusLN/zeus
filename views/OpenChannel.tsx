@@ -213,11 +213,11 @@ export default class OpenChannel extends React.Component<
             host,
             sat_per_byte,
             suggestImport,
-            utxoBalance
+            utxoBalance,
+            private
         } = this.state;
         const { implementation, settings } = SettingsStore;
         const { privacy } = settings;
-        const privateChannel = this.state.private;
         const enableMempoolRates = privacy && privacy.enableMempoolRates;
 
         const {
@@ -484,10 +484,10 @@ export default class OpenChannel extends React.Component<
                             {localeString('views.OpenChannel.private')}
                         </Text>
                         <Switch
-                            value={privateChannel}
+                            value={private}
                             onValueChange={() =>
                                 this.setState({
-                                    private: !privateChannel
+                                    private: !private
                                 })
                             }
                             trackColor={{
