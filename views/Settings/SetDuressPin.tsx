@@ -119,12 +119,8 @@ export default class SetDuressPin extends React.Component<
 
     render() {
         const { navigation } = this.props;
-        const {
-            duressPin,
-            duressPinConfirm,
-            duressPinMismatchError,
-            duressPinInvalidError
-        } = this.state;
+        const { duressPin, duressPinMismatchError, duressPinInvalidError } =
+            this.state;
         const BackButton = () => (
             <Icon
                 name="arrow-back"

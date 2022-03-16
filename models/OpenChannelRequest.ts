@@ -15,13 +15,11 @@ export default class OpenChannelRequest extends BaseModel {
     public host: string;
     public id?: string;
     public satoshis?: string;
-    public announce?: boolean;
     public utxos?: string[];
 
     constructor(data?: any) {
         super(data);
         this.id = data.node_pubkey_string || data.node_pubkey;
         this.satoshis = data.local_funding_amount;
-        this.announce = !data.private;
     }
 }
