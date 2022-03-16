@@ -10,6 +10,9 @@ import LinkingUtils from './../utils/LinkingUtils';
 import { localeString } from './../utils/LocaleUtils';
 
 import SettingsStore from './../stores/SettingsStore';
+import Pin from './../components/Pin';
+import { themeColor } from './../utils/ThemeUtils';
+import { Header, Icon } from 'react-native-elements';
 
 interface LockscreenProps {
     navigation: any;
@@ -19,9 +22,19 @@ interface LockscreenProps {
 interface LockscreenState {
     passphrase: string;
     passphraseAttempt: string;
+    duressPassphrase: string;
+    pin: string;
+    pinAttempt: string;
+    duressPin: string;
     hidden: boolean;
     error: boolean;
+    modifySecurityScreen: string;
+    deletePin: boolean;
+    deleteDuressPin: boolean;
+    authenticationAttempts: number;
 }
+
+const maxAuthenticationAttempts = 5;
 
 @inject('SettingsStore')
 @observer
@@ -34,115 +47,460 @@ export default class Lockscreen extends React.Component<
         this.state = {
             passphraseAttempt: '',
             passphrase: '',
+            duressPassphrase: '',
+            pin: '',
+            pinAttempt: '',
+            duressPin: '',
             hidden: true,
-            error: false
+            error: false,
+            modifySecurityScreen: '',
+            deletePin: false,
+            deleteDuressPin: false,
+            authenticationAttempts: 0
         };
     }
 
     UNSAFE_componentWillMount() {
         const { SettingsStore, navigation } = this.props;
-        const { getSettings } = SettingsStore;
-        getSettings().then((settings: any) => {
-            if (settings && settings.passphrase) {
-                this.setState({ passphrase: settings.passphrase });
-            } else if (
-                settings &&
-                settings.nodes &&
-                settings.nodes.length > 0
-            ) {
-                navigation.navigate('Wallet');
-            } else {
-                navigation.navigate('IntroSplash');
+        const { settings } = SettingsStore;
+
+        const modifySecurityScreen: string = navigation.getParam(
+            'modifySecurityScreen'
+        );
+        const deletePin: boolean = navigation.getParam('deletePin');
+        const deleteDuressPin: boolean = navigation.getParam('deleteDuressPin');
+
+        if (!!settings.authenticationAttempts) {
+            this.setState({
+                authenticationAttempts: settings.authenticationAttempts
+            });
+        }
+
+        if (modifySecurityScreen) {
+            this.setState({
+                modifySecurityScreen
+            });
+        } else if (deletePin) {
+            this.setState({
+                deletePin
+            });
+        } else if (deleteDuressPin) {
+            this.setState({
+                deleteDuressPin
+            });
+        }
+
+        if (settings && settings.passphrase) {
+            this.setState({ passphrase: settings.passphrase });
+            if (settings.duressPassphrase) {
+                this.setState({
+                    duressPassphrase: settings.duressPassphrase
+                });
             }
-        });
+        } else if (settings && settings.pin) {
+            this.setState({ pin: settings.pin });
+            if (settings.duressPin) {
+                this.setState({
+                    duressPin: settings.duressPin
+                });
+            }
+        } else if (settings && settings.nodes && settings.nodes.length > 0) {
+            navigation.navigate('Wallet');
+        } else {
+            navigation.navigate('IntroSplash');
+        }
     }
 
     onInputLabelPressed = () => {
         this.setState({ hidden: !this.state.hidden });
     };
 
-    onAttemptLogIn = () => {
+    onAttemptLogIn = async () => {
         const { SettingsStore, navigation } = this.props;
-        const { passphrase, passphraseAttempt } = this.state;
+        const {
+            passphrase,
+            duressPassphrase,
+            passphraseAttempt,
+            pin,
+            pinAttempt,
+            duressPin,
+            modifySecurityScreen,
+            deletePin,
+            deleteDuressPin
+        } = this.state;
+        const { setSettings, getSettings } = SettingsStore;
 
         this.setState({
             error: false
         });
 
-        if (passphraseAttempt === passphrase) {
+        if (
+            (passphraseAttempt && passphraseAttempt === passphrase) ||
+            (pinAttempt && pinAttempt === pin)
+        ) {
             SettingsStore.setLoginStatus(true);
             LinkingUtils.handleInitialUrl(navigation);
-            navigation.navigate('Wallet');
+            if (modifySecurityScreen) {
+                this.resetAuthenticationAttempts();
+                navigation.navigate(modifySecurityScreen);
+            } else if (deletePin) {
+                this.deletePin();
+            } else if (deleteDuressPin) {
+                this.deleteDuressPin();
+            } else {
+                this.resetAuthenticationAttempts();
+                navigation.navigate('Wallet');
+            }
+        } else if (
+            (duressPassphrase && passphraseAttempt === duressPassphrase) ||
+            (duressPin && pinAttempt === duressPin)
+        ) {
+            SettingsStore.setLoginStatus(true);
+            LinkingUtils.handleInitialUrl(navigation);
+            this.deleteNodes();
         } else {
+            // need to fetch updated settings to get incremented value of
+            // authenticationAttempts, in case there are multiple failed attempts in a row
+            const updatedSettings = await getSettings();
+            let authenticationAttempts = 1;
+            if (updatedSettings?.authenticationAttempts) {
+                authenticationAttempts =
+                    updatedSettings.authenticationAttempts + 1;
+            }
             this.setState({
-                error: true
+                authenticationAttempts
             });
+            if (authenticationAttempts >= maxAuthenticationAttempts) {
+                SettingsStore.setLoginStatus(true);
+                LinkingUtils.handleInitialUrl(navigation);
+                // wipe node configs, passwords, and pins
+                this.authenticationFailure();
+            } else {
+                await setSettings(
+                    JSON.stringify({
+                        nodes: updatedSettings?.nodes,
+                        selectedNode: updatedSettings?.selectedNode,
+                        theme: updatedSettings?.theme,
+                        passphrase: updatedSettings?.passphrase,
+                        duressPassphrase: updatedSettings?.duressPassphrase,
+                        pin: updatedSettings?.pin,
+                        duressPin: updatedSettings?.duressPin,
+                        authenticationAttempts: authenticationAttempts,
+                        fiat: updatedSettings?.fiat,
+                        locale: updatedSettings?.locale,
+                        privacy: updatedSettings?.privacy
+                    })
+                ).then(() => {
+                    this.setState({
+                        error: true,
+                        pinAttempt: ''
+                    });
+                });
+            }
         }
     };
 
-    render() {
-        const { passphrase, passphraseAttempt, hidden, error } = this.state;
+    onSubmitPin = (value: string) => {
+        this.setState({ pinAttempt: value }, () => {
+            this.onAttemptLogIn();
+        });
+    };
+
+    deletePin = () => {
+        const { SettingsStore, navigation } = this.props;
+        const { setSettings, settings } = SettingsStore;
+
+        // duress pin is also deleted when pin is deleted
+        setSettings(
+            JSON.stringify({
+                nodes: settings.nodes,
+                selectedNode: settings.selectedNode,
+                theme: settings.theme,
+                passphrase: settings.passphrase,
+                duressPassphrase: settings.duressPassphrase,
+                pin: '',
+                duressPin: '',
+                authenticationAttempts: 0,
+                fiat: settings.fiat,
+                locale: settings.locale,
+                privacy: settings.privacy
+            })
+        ).then(() => {
+            navigation.navigate('Settings');
+        });
+    };
+
+    deleteDuressPin = () => {
+        const { SettingsStore, navigation } = this.props;
+        const { setSettings, settings } = SettingsStore;
+
+        setSettings(
+            JSON.stringify({
+                nodes: settings.nodes,
+                selectedNode: settings.selectedNode,
+                theme: settings.theme,
+                passphrase: settings.passphrase,
+                duressPassphrase: settings.duressPassphrase,
+                pin: settings.pin,
+                duressPin: '',
+                authenticationAttempts: 0,
+                fiat: settings.fiat,
+                locale: settings.locale,
+                privacy: settings.privacy
+            })
+        ).then(() => {
+            navigation.navigate('Settings');
+        });
+    };
+
+    deleteNodes = () => {
+        const { SettingsStore, navigation } = this.props;
+        const { setSettings, settings } = SettingsStore;
+
+        setSettings(
+            JSON.stringify({
+                nodes: undefined,
+                selectedNode: undefined,
+                theme: settings.theme,
+                passphrase: settings.passphrase,
+                duressPassphrase: settings.duressPassphrase,
+                pin: settings.pin,
+                duressPin: settings.duressPin,
+                authenticationAttempts: 0,
+                fiat: settings.fiat,
+                locale: settings.locale,
+                privacy: settings.privacy
+            })
+        ).then(() => {
+            navigation.navigate('Wallet');
+        });
+    };
+
+    authenticationFailure = () => {
+        const { SettingsStore, navigation } = this.props;
+        const { setSettings, settings } = SettingsStore;
+
+        setSettings(
+            JSON.stringify({
+                nodes: undefined,
+                selectedNode: undefined,
+                theme: settings.theme,
+                passphrase: '',
+                duressPassphrase: '',
+                pin: '',
+                duressPin: '',
+                authenticationAttempts: 0,
+                fiat: settings.fiat,
+                locale: settings.locale,
+                privacy: settings.privacy
+            })
+        ).then(() => {
+            navigation.navigate('Wallet');
+        });
+    };
+
+    resetAuthenticationAttempts = () => {
+        const { SettingsStore } = this.props;
+        const { setSettings, settings } = SettingsStore;
+
+        setSettings(
+            JSON.stringify({
+                nodes: settings.nodes,
+                selectedNode: settings.selectedNode,
+                theme: settings.theme,
+                passphrase: settings.passphrase,
+                duressPassphrase: settings.duressPassphrase,
+                pin: settings.pin,
+                duressPin: settings.duressPin,
+                authenticationAttempts: 0,
+                fiat: settings.fiat,
+                locale: settings.locale,
+                privacy: settings.privacy
+            })
+        );
+    };
+
+    generateErrorMessage = (): string => {
+        const { passphrase, authenticationAttempts } = this.state;
+        let incorrect = '';
+
+        if (!!passphrase) {
+            incorrect = localeString('views.Lockscreen.incorrect');
+        } else {
+            incorrect = localeString('views.Lockscreen.incorrectPin');
+        }
 
         return (
-            <ScrollView style={styles.container}>
+            incorrect +
+            '\n' +
+            (maxAuthenticationAttempts - authenticationAttempts).toString() +
+            ' ' +
+            localeString('views.Lockscreen.authenticationAttempts')
+        );
+    };
+
+    render() {
+        const { navigation, SettingsStore } = this.props;
+        const {
+            passphrase,
+            passphraseAttempt,
+            pin,
+            pinAttempt,
+            hidden,
+            error,
+            modifySecurityScreen,
+            deletePin,
+            deleteDuressPin,
+            authenticationAttempts
+        } = this.state;
+
+        const BackButton = () => (
+            <Icon
+                name="arrow-back"
+                onPress={() => navigation.goBack()}
+                color={themeColor('text')}
+                underlayColor="transparent"
+            />
+        );
+
+        return (
+            <View style={styles.container}>
+                {(!!modifySecurityScreen || deletePin || deleteDuressPin) && (
+                    <Header
+                        leftComponent={<BackButton />}
+                        backgroundColor={themeColor('background')}
+                        containerStyle={{
+                            borderBottomWidth: 0
+                        }}
+                    />
+                )}
                 {!!passphrase && (
-                    <View style={styles.content}>
-                        {error && (
-                            <ErrorMessage
-                                message={localeString(
-                                    'views.Lockscreen.incorrect'
-                                )}
-                            />
-                        )}
-                        <Text
-                            style={{
-                                color: '#A7A9AC',
-                                fontFamily: 'Lato-Regular'
-                            }}
-                        >
-                            {localeString('views.Lockscreen.passphrase')}
-                        </Text>
-                        <TextInput
-                            placeholder={'****************'}
-                            placeholderTextColor="darkgray"
-                            value={passphraseAttempt}
-                            onChangeText={(text: string) =>
-                                this.setState({
-                                    passphraseAttempt: text,
-                                    error: false
-                                })
-                            }
-                            numberOfLines={1}
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                            secureTextEntry={hidden}
-                            autoFocus={true}
-                            style={styles.textInput}
-                        />
-                        <View style={styles.button}>
-                            <Button
-                                title={
-                                    hidden
-                                        ? localeString('general.show')
-                                        : localeString('general.hide')
+                    <ScrollView style={styles.container}>
+                        <View style={styles.content}>
+                            {error && (
+                                <ErrorMessage
+                                    message={this.generateErrorMessage()}
+                                />
+                            )}
+                            <Text
+                                style={{
+                                    color: '#A7A9AC',
+                                    fontFamily: 'Lato-Regular'
+                                }}
+                            >
+                                {localeString('views.Lockscreen.passphrase')}
+                            </Text>
+                            <TextInput
+                                placeholder={'****************'}
+                                placeholderTextColor="darkgray"
+                                value={passphraseAttempt}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        passphraseAttempt: text,
+                                        error: false
+                                    })
                                 }
-                                onPress={() => this.onInputLabelPressed()}
-                                containerStyle={{ width: 300 }}
-                                adaptiveWidth
-                                secondary
+                                numberOfLines={1}
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                secureTextEntry={hidden}
+                                autoFocus={true}
+                                style={styles.textInput}
                             />
+                            <View style={styles.button}>
+                                <Button
+                                    title={
+                                        hidden
+                                            ? localeString('general.show')
+                                            : localeString('general.hide')
+                                    }
+                                    onPress={() => this.onInputLabelPressed()}
+                                    containerStyle={{ width: 300 }}
+                                    adaptiveWidth
+                                    secondary
+                                />
+                            </View>
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString(
+                                        'views.Lockscreen.login'
+                                    )}
+                                    onPress={() => this.onAttemptLogIn()}
+                                    containerStyle={{ width: 300 }}
+                                    adaptiveWidth
+                                />
+                            </View>
                         </View>
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString('views.Lockscreen.login')}
-                                onPress={() => this.onAttemptLogIn()}
-                                containerStyle={{ width: 300 }}
-                                adaptiveWidth
-                            />
+                    </ScrollView>
+                )}
+                {!!pin && (
+                    <View style={styles.container}>
+                        <View style={{ flex: 1 }}>
+                            <>
+                                {(!!modifySecurityScreen ||
+                                    deletePin ||
+                                    deleteDuressPin) && (
+                                    <View
+                                        style={{
+                                            flex: 2,
+                                            marginTop: 50,
+                                            marginBottom: 25
+                                        }}
+                                    >
+                                        {error && (
+                                            <ErrorMessage
+                                                message={this.generateErrorMessage()}
+                                            />
+                                        )}
+                                    </View>
+                                )}
+                                {!modifySecurityScreen &&
+                                    !deletePin &&
+                                    !deleteDuressPin && (
+                                        <View
+                                            style={{
+                                                flex: 2,
+                                                marginTop: 125,
+                                                marginBottom: 25
+                                            }}
+                                        >
+                                            {error && (
+                                                <ErrorMessage
+                                                    message={this.generateErrorMessage()}
+                                                />
+                                            )}
+                                        </View>
+                                    )}
+                                <Text
+                                    style={{
+                                        ...styles.mainText,
+                                        color: themeColor('text'),
+                                        flex: 1,
+                                        justifyContent: 'flex-end'
+                                    }}
+                                >
+                                    {localeString('views.Lockscreen.pin')}
+                                </Text>
+                                <View
+                                    style={{
+                                        flex: 8,
+                                        justifyContent: 'flex-end'
+                                    }}
+                                >
+                                    <Pin
+                                        onSubmit={this.onSubmitPin}
+                                        onPinChange={() =>
+                                            this.setState({ error: false })
+                                        }
+                                        hidePinLength={true}
+                                        pinLength={pin.length}
+                                    />
+                                </View>
+                            </>
                         </View>
                     </View>
                 )}
-            </ScrollView>
+            </View>
         );
     }
 }
@@ -163,6 +521,11 @@ const styles = StyleSheet.create({
         paddingBottom: 15
     },
     textInput: {
+        textAlign: 'center'
+    },
+    mainText: {
+        fontFamily: 'Lato-Regular',
+        fontSize: 20,
         textAlign: 'center'
     }
 });

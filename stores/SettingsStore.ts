@@ -34,6 +34,10 @@ interface Settings {
     theme?: string;
     selectedNode?: number;
     passphrase?: string;
+    duressPassphrase?: string;
+    pin?: string;
+    duressPin?: string;
+    authenticationAttempts?: number;
     fiat?: string;
     locale?: string;
     privacy: PrivacySettings;
