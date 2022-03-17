@@ -182,7 +182,9 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                                     ...styles.secondaryText,
                                     color: themeColor('secondaryText'),
                                     flex: 1,
-                                    justifyContent: 'flex-end'
+                                    justifyContent: 'flex-end',
+                                    marginLeft: 10,
+                                    marginRight: 10
                                 }}
                             >
                                 {localeString(
