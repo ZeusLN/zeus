@@ -128,7 +128,12 @@ export default class FiatStore {
         if (symbol in symbolPairs) {
             return symbolPairs[symbol];
         } else {
-            return { symbol, space: true, rtl: false, separatorSwap: false };
+            return {
+                symbol: symbol || 'N/A',
+                space: true,
+                rtl: false,
+                separatorSwap: false
+            };
         }
     };
 
@@ -139,7 +144,7 @@ export default class FiatStore {
             const fiatEntry = this.fiatRates.filter(
                 (entry: any) => entry.code === fiat
             )[0];
-            return this.symbolLookup(fiatEntry.code);
+            return this.symbolLookup(fiatEntry && fiatEntry.code);
         } else {
             return {
                 symbol: fiat,
@@ -158,9 +163,9 @@ export default class FiatStore {
             const fiatEntry = this.fiatRates.filter(
                 (entry: any) => entry.code === fiat
             )[0];
-            const rate = fiatEntry.rate;
+            const rate = (fiatEntry && fiatEntry.rate) || 0;
             const { symbol, space, rtl, separatorSwap } = this.symbolLookup(
-                fiatEntry.code
+                fiatEntry && fiatEntry.code
             );
 
             const formattedRate = separatorSwap
