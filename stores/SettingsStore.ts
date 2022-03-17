@@ -100,7 +100,7 @@ export const CURRENCY_KEYS = [
     { key: '🇬🇧 Great British Pound (GBP)', value: 'GBP' },
     { key: '🇩🇰 Danish Krone (DKK)', value: 'DKK' },
     { key: '🇸🇪 Swedish Krona (SEK)', value: 'SEK' },
-    { key: '🇮🇸 Icelandic Krona (ISK)', value: 'ISK' },
+    // { key: '🇮🇸 Icelandic Krona (ISK)', value: 'ISK' },
     { key: '🇨🇭 Swiss Franc (CHF)', value: 'CHF' },
     { key: '🇧🇷 Brazilian Real (BRL)', value: 'BRL' },
     { key: '🇪🇺 Eurozone Euro (EUR)', value: 'EUR' },
