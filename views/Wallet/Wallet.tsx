@@ -299,8 +299,8 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             ...DefaultTheme,
             colors: {
                 ...DefaultTheme.colors,
-                card: error ? themeColor('error') : themeColor('secondary'),
-                border: error ? themeColor('error') : themeColor('secondary')
+                card: error ? themeColor('error') : themeColor('background'),
+                border: error ? themeColor('error') : themeColor('background')
             }
         };
 
