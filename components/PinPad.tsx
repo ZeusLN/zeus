@@ -64,190 +64,176 @@ export default function PinPad({
         setPinValueLength(0);
     };
 
-    const styles = StyleSheet.create({
-        pinPadRow: {
-            justifyContent: 'space-between',
-            padding: 20
-        },
-        pinPadNumber: {
-            color: themeColor('text'),
-            fontSize: 20,
-            fontFamily: 'Lato-Bold'
-        },
-        bottom: {
-            justifyContent: 'flex-end',
-            marginBottom: 75
-        },
-        key: {
-            flex: 1,
-            justifyContent: 'center',
-            alignItems: 'center',
-            height: 30
-        }
-    });
-
     return (
         <View style={styles.bottom}>
             <Row align="flex-end" style={styles.pinPadRow}>
-                <View style={styles.key}>
-                    <Touchable
-                        touch={() => {
-                            incrementPinValueLength();
-                            appendValue(pinNumbers[1]);
-                        }}
-                        highlight={numberHighlight}
-                    >
-                        <Text style={styles.pinPadNumber}>{pinNumbers[1]}</Text>
-                    </Touchable>
-                </View>
-                <View style={styles.key}>
-                    <Touchable
-                        touch={() => {
-                            incrementPinValueLength();
-                            appendValue(pinNumbers[2]);
-                        }}
-                        highlight={numberHighlight}
-                    >
-                        <Text style={styles.pinPadNumber}>{pinNumbers[2]}</Text>
-                    </Touchable>
-                </View>
-                <View style={styles.key}>
-                    <Touchable
-                        touch={() => {
-                            incrementPinValueLength();
-                            appendValue(pinNumbers[3]);
-                        }}
-                        highlight={numberHighlight}
-                    >
-                        <Text style={styles.pinPadNumber}>{pinNumbers[3]}</Text>
-                    </Touchable>
-                </View>
+                <Touchable
+                    touch={() => {
+                        incrementPinValueLength();
+                        appendValue(pinNumbers[1]);
+                    }}
+                    highlight={numberHighlight}
+                    style={styles.key}
+                >
+                    <Text style={styles.pinPadNumber}>{pinNumbers[1]}</Text>
+                </Touchable>
+                <Touchable
+                    touch={() => {
+                        incrementPinValueLength();
+                        appendValue(pinNumbers[2]);
+                    }}
+                    highlight={numberHighlight}
+                    style={styles.key}
+                >
+                    <Text style={styles.pinPadNumber}>{pinNumbers[2]}</Text>
+                </Touchable>
+                <Touchable
+                    touch={() => {
+                        incrementPinValueLength();
+                        appendValue(pinNumbers[3]);
+                    }}
+                    highlight={numberHighlight}
+                    style={styles.key}
+                >
+                    <Text style={styles.pinPadNumber}>{pinNumbers[3]}</Text>
+                </Touchable>
             </Row>
             <Row align="flex-end" style={styles.pinPadRow}>
-                <View style={styles.key}>
-                    <Touchable
-                        touch={() => {
-                            incrementPinValueLength();
-                            appendValue(pinNumbers[4]);
-                        }}
-                        highlight={numberHighlight}
-                    >
-                        <Text style={styles.pinPadNumber}>{pinNumbers[4]}</Text>
-                    </Touchable>
-                </View>
-                <View style={styles.key}>
-                    <Touchable
-                        touch={() => {
-                            incrementPinValueLength();
-                            appendValue(pinNumbers[5]);
-                        }}
-                        highlight={numberHighlight}
-                    >
-                        <Text style={styles.pinPadNumber}>{pinNumbers[5]}</Text>
-                    </Touchable>
-                </View>
-                <View style={styles.key}>
-                    <Touchable
-                        touch={() => {
-                            incrementPinValueLength();
-                            appendValue(pinNumbers[6]);
-                        }}
-                        highlight={numberHighlight}
-                    >
-                        <Text style={styles.pinPadNumber}>{pinNumbers[6]}</Text>
-                    </Touchable>
-                </View>
+                <Touchable
+                    touch={() => {
+                        incrementPinValueLength();
+                        appendValue(pinNumbers[4]);
+                    }}
+                    highlight={numberHighlight}
+                    style={styles.key}
+                >
+                    <Text style={styles.pinPadNumber}>{pinNumbers[4]}</Text>
+                </Touchable>
+                <Touchable
+                    touch={() => {
+                        incrementPinValueLength();
+                        appendValue(pinNumbers[5]);
+                    }}
+                    highlight={numberHighlight}
+                    style={styles.key}
+                >
+                    <Text style={styles.pinPadNumber}>{pinNumbers[5]}</Text>
+                </Touchable>
+                <Touchable
+                    touch={() => {
+                        incrementPinValueLength();
+                        appendValue(pinNumbers[6]);
+                    }}
+                    highlight={numberHighlight}
+                    style={styles.key}
+                >
+                    <Text style={styles.pinPadNumber}>{pinNumbers[6]}</Text>
+                </Touchable>
             </Row>
             <Row align="flex-end" style={styles.pinPadRow}>
-                <View style={styles.key}>
-                    <Touchable
-                        touch={() => {
-                            incrementPinValueLength();
-                            appendValue(pinNumbers[7]);
-                        }}
-                        highlight={numberHighlight}
-                    >
-                        <Text style={styles.pinPadNumber}>{pinNumbers[7]}</Text>
-                    </Touchable>
-                </View>
-                <View style={styles.key}>
-                    <Touchable
-                        touch={() => {
-                            incrementPinValueLength();
-                            appendValue(pinNumbers[8]);
-                        }}
-                        highlight={numberHighlight}
-                    >
-                        <Text style={styles.pinPadNumber}>{pinNumbers[8]}</Text>
-                    </Touchable>
-                </View>
-                <View style={styles.key}>
-                    <Touchable
-                        touch={() => {
-                            incrementPinValueLength();
-                            appendValue(pinNumbers[9]);
-                        }}
-                        highlight={numberHighlight}
-                    >
-                        <Text style={styles.pinPadNumber}>{pinNumbers[9]}</Text>
-                    </Touchable>
-                </View>
+                <Touchable
+                    touch={() => {
+                        incrementPinValueLength();
+                        appendValue(pinNumbers[7]);
+                    }}
+                    highlight={numberHighlight}
+                    style={styles.key}
+                >
+                    <Text style={styles.pinPadNumber}>{pinNumbers[7]}</Text>
+                </Touchable>
+                <Touchable
+                    touch={() => {
+                        incrementPinValueLength();
+                        appendValue(pinNumbers[8]);
+                    }}
+                    highlight={numberHighlight}
+                    style={styles.key}
+                >
+                    <Text style={styles.pinPadNumber}>{pinNumbers[8]}</Text>
+                </Touchable>
+                <Touchable
+                    touch={() => {
+                        incrementPinValueLength();
+                        appendValue(pinNumbers[9]);
+                    }}
+                    highlight={numberHighlight}
+                    style={styles.key}
+                >
+                    <Text style={styles.pinPadNumber}>{pinNumbers[9]}</Text>
+                </Touchable>
             </Row>
             <Row align="flex-end" style={styles.pinPadRow}>
-                <View style={styles.key}>
-                    <Touchable
-                        touch={() => {
-                            decrementPinValueLength();
-                            deleteValue();
-                        }}
-                        highlight={numberHighlight}
-                    >
-                        <Text style={styles.pinPadNumber}>{'<'}</Text>
-                    </Touchable>
-                </View>
-                <View style={styles.key}>
-                    <Touchable
-                        touch={() => {
-                            incrementPinValueLength();
-                            appendValue(pinNumbers[0]);
-                        }}
-                        highlight={numberHighlight}
-                    >
-                        <Text style={styles.pinPadNumber}>{pinNumbers[0]}</Text>
-                    </Touchable>
-                </View>
+                <Touchable
+                    touch={() => {
+                        decrementPinValueLength();
+                        deleteValue();
+                    }}
+                    highlight={numberHighlight}
+                    style={styles.key}
+                >
+                    <Text style={styles.pinPadNumber}>{'<'}</Text>
+                </Touchable>
+                <Touchable
+                    touch={() => {
+                        incrementPinValueLength();
+                        appendValue(pinNumbers[0]);
+                    }}
+                    highlight={numberHighlight}
+                    style={styles.key}
+                >
+                    <Text style={styles.pinPadNumber}>{pinNumbers[0]}</Text>
+                </Touchable>
                 {!hidePinLength && (
-                    <View style={styles.key}>
-                        <Touchable
-                            touch={() => {
-                                clearPinValueLength();
-                                clearValue();
-                            }}
-                            highlight={numberHighlight}
-                        >
-                            <Text style={styles.pinPadNumber}>C</Text>
-                        </Touchable>
-                    </View>
+                    <Touchable
+                        touch={() => {
+                            clearPinValueLength();
+                            clearValue();
+                        }}
+                        highlight={numberHighlight}
+                        style={styles.key}
+                    >
+                        <Text style={styles.pinPadNumber}>C</Text>
+                    </Touchable>
                 )}
                 {!!hidePinLength && pinValueLength >= minLength && (
-                    <View style={styles.key}>
-                        <Touchable
-                            touch={() => {
-                                submitValue();
-                                clearPinValueLength();
-                            }}
-                            highlight={numberHighlight}
-                        >
-                            <Success />
-                        </Touchable>
-                    </View>
+                    <Touchable
+                        touch={() => {
+                            submitValue();
+                            clearPinValueLength();
+                        }}
+                        highlight={numberHighlight}
+                        style={styles.key}
+                    >
+                        <Success />
+                    </Touchable>
                 )}
                 {!!hidePinLength && pinValueLength < minLength && (
-                    <View style={styles.key}>
-                        <Pressable></Pressable>
-                    </View>
+                    <Pressable style={styles.key}></Pressable>
                 )}
             </Row>
         </View>
     );
 }
+
+const styles = StyleSheet.create({
+    pinPadRow: {
+        justifyContent: 'space-between',
+        marginTop: 10,
+        marginBottom: 10
+    },
+    pinPadNumber: {
+        color: themeColor('text'),
+        fontSize: 20,
+        fontFamily: 'Lato-Bold'
+    },
+    bottom: {
+        justifyContent: 'flex-end',
+        marginBottom: 75
+    },
+    key: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: 60
+    }
+});
