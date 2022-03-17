@@ -90,6 +90,9 @@
 		F64C923F939245A284E8D5E2 /* Refresh.svg in Resources */ = {isa = PBXBuildFile; fileRef = 58468A869AB24054A313D38E /* Refresh.svg */; };
 		F6BA97FE98FB4D8890855BEC /* Wallet.svg in Resources */ = {isa = PBXBuildFile; fileRef = CCFEAC399BB842A091ADB042 /* Wallet.svg */; };
 		FE68A5FF7AF76A7CC17F753E /* libPods-zeus.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C2E5235CC64B00DD9CAF9F8 /* libPods-zeus.a */; };
+		2E994829C4BA49738466EA86 /* PinFilled.svg in Resources */ = {isa = PBXBuildFile; fileRef = 01471298AE544A2F89251D67 /* PinFilled.svg */; };
+		E493C650358D49E193BC19D8 /* PinHollow.svg in Resources */ = {isa = PBXBuildFile; fileRef = AA4B9185A0E64EC68F5F0628 /* PinHollow.svg */; };
+		830A2C4CEE3F4349832AC893 /* Success.svg in Resources */ = {isa = PBXBuildFile; fileRef = DAB0850D6CA542288A565578 /* Success.svg */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -413,6 +416,9 @@
 		F7E8164B32C144C1970E0E8E /* AntDesign.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = AntDesign.ttf; path = "../node_modules/react-native-vector-icons/Fonts/AntDesign.ttf"; sourceTree = "<group>"; };
 		F90E2A4AC40A40CA94A1D8FE /* secondary-full.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "secondary-full.png"; path = "../assets/images/secondary-full.png"; sourceTree = "<group>"; };
 		FB2BF1C8E61649A58A6E1A61 /* Caret Right-3.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Caret Right-3.svg"; path = "../assets/images/SVG/Caret Right-3.svg"; sourceTree = "<group>"; };
+		01471298AE544A2F89251D67 /* PinFilled.svg */ = {isa = PBXFileReference; name = "PinFilled.svg"; path = "../assets/images/SVG/PinFilled.svg"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		AA4B9185A0E64EC68F5F0628 /* PinHollow.svg */ = {isa = PBXFileReference; name = "PinHollow.svg"; path = "../assets/images/SVG/PinHollow.svg"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		DAB0850D6CA542288A565578 /* Success.svg */ = {isa = PBXFileReference; name = "Success.svg"; path = "../assets/images/SVG/Success.svg"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -788,6 +794,9 @@
 				C099E154C6C8479188E39851 /* Lato-Bold.ttf */,
 				4A1152E48A5F4D359855B4D5 /* Mascot contact.svg */,
 				C1ADF2824BD24D9C8BF6039B /* ScanFrame.svg */,
+				01471298AE544A2F89251D67 /* PinFilled.svg */,
+				AA4B9185A0E64EC68F5F0628 /* PinHollow.svg */,
+				DAB0850D6CA542288A565578 /* Success.svg */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -1222,6 +1231,9 @@
 				E24CC9BAF7FF4BA6BCC7F17B /* Lato-Bold.ttf in Resources */,
 				9D2CD599CA2E484D8617C922 /* Mascot contact.svg in Resources */,
 				3D5DCA6D458145CB9735C5E3 /* ScanFrame.svg in Resources */,
+				2E994829C4BA49738466EA86 /* PinFilled.svg in Resources */,
+				E493C650358D49E193BC19D8 /* PinHollow.svg in Resources */,
+				830A2C4CEE3F4349832AC893 /* Success.svg in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
