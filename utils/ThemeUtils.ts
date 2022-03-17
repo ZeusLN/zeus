@@ -24,8 +24,8 @@ export function themeColor(themeString: string): any {
 
     const Dark: { [key: string]: any } = {
         generalStyle: 'dark',
-        background: '#1f2328',
-        secondary: '#2b3037',
+        background: '#1F242D',
+        secondary: '#31363F',
         text: 'white',
         secondaryText: '#A7A9AC',
         highlight: '#ffd24b',
