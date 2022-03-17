@@ -17,6 +17,8 @@ target 'zeus' do
 
   pod 'RNGestureHandler', :path => '../node_modules/react-native-gesture-handler'
 
+  pod 'react-native-blob-util', :path => '../node_modules/react-native-blob-util'
+
   target 'zeusTests' do
     inherit! :complete
     # Pods for testing
