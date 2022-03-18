@@ -1,6 +1,6 @@
 import url from 'url';
 import { action, observable, reaction } from 'mobx';
-import RNFetchBlob from 'rn-fetch-blob';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Alert } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import querystring from 'querystring-es3';
@@ -142,7 +142,7 @@ export default class InvoicesStore {
                     u.search = querystring.stringify(qs);
                     u.query = querystring.stringify(qs);
 
-                    RNFetchBlob.fetch('get', url.format(u))
+                    ReactNativeBlobUtil.fetch('get', url.format(u))
                         .then((response: any) => {
                             try {
                                 const data = response.json();

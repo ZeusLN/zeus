@@ -1,4 +1,4 @@
-import RNFetchBlob from 'rn-fetch-blob';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import stores from '../stores/Stores';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import OpenChannelRequest from './../models/OpenChannelRequest';
@@ -44,7 +44,7 @@ export default class LND {
                 return response;
             });
         } else {
-            calls[id] = RNFetchBlob.config({
+            calls[id] = ReactNativeBlobUtil.config({
                 trusty: !certVerification
             })
                 .fetch(method, url, headers, data ? JSON.stringify(data) : data)
@@ -348,7 +348,7 @@ export default class LND {
     supportsOnchainSends = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
-    supportsMPP = () => this.supports('v0.11.0', 'v0.13.0');
+    supportsMPP = () => this.supports('v0.10.0');
     supportsAMP = () => this.supports('v0.13.0');
     supportsHopPicking = () => this.supports('v0.11.0');
     supportsRouting = () => true;

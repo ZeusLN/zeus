@@ -68,7 +68,7 @@ export default class Routing extends React.PureComponent<
             >
                 <RoutingListItem
                     title={localeString('views.Routing.received')}
-                    fee={item.fee}
+                    fee={item.fee_msat / 1000}
                     amountOut={item.amt_out}
                     date={item.getDateShort}
                 />

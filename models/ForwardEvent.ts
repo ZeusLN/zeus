@@ -8,6 +8,7 @@ export default class ForwardEvent extends BaseModel {
     chan_id_out: string;
     chan_id_in: string;
     fee: string;
+    fee_msat: string;
     timestamp: string;
 
     @computed public get getTime(): string {

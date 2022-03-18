@@ -34,7 +34,9 @@
 				<string>lnurlw</string>
 				<string>lnurlp</string>
 				<string>lnurlc</string>
+				<string>keyauth</string>
 				<string>lndconnect</string>
+				<string>zeusln</string>
 			</array>
 		</dict>
 	</array>
