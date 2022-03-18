@@ -26,13 +26,13 @@ export default function PinCircles({
 
     const filled = [];
     for (let i = 0; i < numFilled; i++) {
-        filled.push(<Filled style={styles.circles} />);
+        filled.push(<Filled key={`filled-${i}`} style={styles.circles} />);
     }
 
     const hollow = [];
     if (!hidePinLength) {
         for (let i = 0; i < pinLength - numFilled; i++) {
-            hollow.push(<Hollow style={styles.circles} />);
+            hollow.push(<Hollow key={`hollow-${i}`} style={styles.circles} />);
         }
     }
 

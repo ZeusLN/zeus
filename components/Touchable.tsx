@@ -5,19 +5,27 @@ interface TouchableProps {
     touch: () => void;
     highlight: boolean;
     children: JSX.Element;
+    style: any;
 }
 
 export default function Touchable({
     touch,
     highlight,
-    children
+    children,
+    style
 }: TouchableProps) {
     return (
         <>
             {highlight && (
-                <TouchableOpacity onPress={touch}>{children}</TouchableOpacity>
+                <TouchableOpacity style={style} onPress={touch}>
+                    {children}
+                </TouchableOpacity>
             )}
-            {!highlight && <Pressable onPress={touch}>{children}</Pressable>}
+            {!highlight && (
+                <Pressable style={style} onPress={touch}>
+                    {children}
+                </Pressable>
+            )}
         </>
     );
 }
