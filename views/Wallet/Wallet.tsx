@@ -4,11 +4,11 @@ import {
     PanResponder,
     Text,
     TouchableOpacity,
-    View
+    View,
+    Linking
 } from 'react-native';
 
 import { inject, observer } from 'mobx-react';
-import Clipboard from '@react-native-clipboard/clipboard';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import RNRestart from 'react-native-restart';
@@ -66,8 +66,6 @@ interface WalletProps {
 )
 @observer
 export default class Wallet extends React.Component<WalletProps, {}> {
-    clipboard: string;
-
     constructor(props) {
         super(props);
         this.pan = new Animated.ValueXY();
@@ -95,28 +93,8 @@ export default class Wallet extends React.Component<WalletProps, {}> {
     }
 
     componentWillUnmount() {
-        LinkingUtils.removeEventListener();
+        Linking.removeEventListener('url', this.handleOpenURL);
     }
-
-    async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-
-        if (settings.privacy && settings.privacy.clipboard) {
-            this.clipboard = await Clipboard.getString();
-        }
-
-        this.refresh();
-    }
-
-    UNSAFE_componentWillReceiveProps = (nextProps: any) => {
-        const { navigation } = nextProps;
-        const refresh = navigation.getParam('refresh', null);
-
-        if (refresh) {
-            this.refresh();
-        }
-    };
 
     async getSettingsAndNavigate() {
         const { SettingsStore, navigation } = this.props;
@@ -124,7 +102,9 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         // This awaits on settings, so should await on Tor being bootstrapped before making requests
         await SettingsStore.getSettings().then((settings: any) => {
             const loginRequired =
-                settings && settings.passphrase && !SettingsStore.loggedIn;
+                settings &&
+                (settings.passphrase || settings.pin) &&
+                !SettingsStore.loggedIn;
             if (loginRequired) {
                 navigation.navigate('Lockscreen');
             } else if (
@@ -197,10 +177,17 @@ export default class Wallet extends React.Component<WalletProps, {}> {
 
         if (connecting) {
             setConnectingStatus(false);
-            LinkingUtils.addEventListener();
+            Linking.addEventListener('url', this.handleOpenURL);
             LinkingUtils.handleInitialUrl(navigation);
         }
     }
+
+    handleOpenURL = (event: any) => {
+        const { navigation } = this.props;
+        if (event.url) {
+            LinkingUtils.handleDeepLink(event.url, navigation);
+        }
+    };
 
     render() {
         const Tab = createBottomTabNavigator();
@@ -315,8 +302,8 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             ...DefaultTheme,
             colors: {
                 ...DefaultTheme.colors,
-                card: error ? themeColor('error') : themeColor('secondary'),
-                border: error ? themeColor('error') : themeColor('secondary')
+                card: error ? themeColor('error') : themeColor('background'),
+                border: error ? themeColor('error') : themeColor('background')
             }
         };
 

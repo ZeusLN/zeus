@@ -31,12 +31,17 @@ import Nodes from './views/Settings/Nodes';
 import Privacy from './views/Settings/Privacy';
 import Security from './views/Settings/Security';
 import SetPassword from './views/Settings/SetPassword';
+import SetDuressPassword from './views/Settings/SetDuressPassword';
+import SetPin from './views/Settings/SetPin';
+import SetDuressPin from './views/Settings/SetDuressPin';
 import Language from './views/Settings/Language';
 import Currency from './views/Settings/Currency';
 import Theme from './views/Settings/Theme';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import SignVerifyMessage from './views/Settings/SignVerifyMessage';
+import About from './views/Settings/About';
 import Help from './views/Settings/Help';
+import Olympians from './views/Settings/Olympians';
 
 // Routing
 import Routing from './views/Routing/Routing';
@@ -97,6 +102,15 @@ const AppScenes = {
     SetPassword: {
         screen: SetPassword
     },
+    SetDuressPassword: {
+        screen: SetDuressPassword
+    },
+    SetPin: {
+        screen: SetPin
+    },
+    SetDuressPin: {
+        screen: SetDuressPin
+    },
     Language: {
         screen: Language
     },
@@ -106,8 +120,14 @@ const AppScenes = {
     Theme: {
         screen: Theme
     },
+    About: {
+        screen: About
+    },
     Help: {
         screen: Help
+    },
+    Olympians: {
+        screen: Olympians
     },
     CertInstallInstructions: {
         screen: CertInstallInstructions

@@ -34,6 +34,10 @@ interface Settings {
     theme?: string;
     selectedNode?: number;
     passphrase?: string;
+    duressPassphrase?: string;
+    pin?: string;
+    duressPin?: string;
+    authenticationAttempts?: number;
     fiat?: string;
     locale?: string;
     privacy: PrivacySettings;
@@ -96,7 +100,7 @@ export const CURRENCY_KEYS = [
     { key: '🇬🇧 Great British Pound (GBP)', value: 'GBP' },
     { key: '🇩🇰 Danish Krone (DKK)', value: 'DKK' },
     { key: '🇸🇪 Swedish Krona (SEK)', value: 'SEK' },
-    { key: '🇮🇸 Icelandic Krona (ISK)', value: 'ISK' },
+    // { key: '🇮🇸 Icelandic Krona (ISK)', value: 'ISK' },
     { key: '🇨🇭 Swiss Franc (CHF)', value: 'CHF' },
     { key: '🇧🇷 Brazilian Real (BRL)', value: 'BRL' },
     { key: '🇪🇺 Eurozone Euro (EUR)', value: 'EUR' },
@@ -130,13 +134,15 @@ export default class SettingsStore {
         privacy: {
             defaultBlockExplorer: 'mempool.space',
             customBlockExplorer: '',
-            clipboard: false,
+            clipboard: true,
             lurkerMode: false,
-            enableMempoolRates: false
+            enableMempoolRates: true
         }
     };
     @observable public loading = false;
     @observable btcPayError: string | null;
+    @observable olympiansError: string | null;
+    @observable olympians: Array<any>;
     @observable host: string;
     @observable port: string;
     @observable url: string;
@@ -200,6 +206,55 @@ export default class SettingsStore {
         }
     };
 
+    @action
+    public fetchOlympians = () => {
+        const olympiansRoute =
+            'https://zeusln.app/api/sponsors/getCommunitySponsors';
+        this.olympiansError = null;
+        this.olympians = [];
+        this.loading = true;
+
+        if (this.enableTor) {
+            return doTorRequest(olympiansRoute, RequestMethod.GET)
+                .then((response: any) => {
+                    this.olympians = response;
+                    this.loading = false;
+                })
+                .catch((err: any) => {
+                    // handle error
+                    this.olympians = [];
+                    this.loading = false;
+                    this.olympiansError = `${localeString(
+                        'stores.SettingsStore.olympianFetchError'
+                    )}: ${err.toString()}`;
+                });
+        } else {
+            return ReactNativeBlobUtil.fetch('get', olympiansRoute)
+                .then((response: any) => {
+                    const status = response.info().status;
+                    if (status == 200) {
+                        const data = response.json();
+                        this.olympians = data;
+                        this.loading = false;
+                    } else {
+                        this.olympians = [];
+                        this.loading = false;
+                        this.olympiansError = localeString(
+                            'stores.SettingsStore.olympianFetchError'
+                        );
+                    }
+                })
+                .catch((err: any) => {
+                    // handle error
+                    this.olympians = [];
+                    this.loading = false;
+                    this.olympiansError = `${localeString(
+                        'stores.SettingsStore.olympianFetchError'
+                    )}: ${err.toString()}`;
+                });
+        }
+    };
+
     parseBTCPayConfig(data: any) {
         const configuration = data.configurations[0];
         const { adminMacaroon, macaroon, type, uri } = configuration;
@@ -250,7 +305,6 @@ export default class SettingsStore {
                     this.certVerification = node.certVerification || false;
                     this.enableTor = node.enableTor;
                 }
-                return this.settings;
             } else {
                 console.log('No credentials stored');
             }
@@ -259,6 +313,8 @@ export default class SettingsStore {
         } finally {
             this.loading = false;
         }
+
+        return this.settings;
     }
 
     @action

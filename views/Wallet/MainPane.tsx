@@ -23,7 +23,7 @@ interface MainPaneProps {
     SettingsStore: SettingsStore;
 }
 
-@inject('SettingsStore')
+@inject('BalanceStore', 'SettingsStore')
 @observer
 export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
     render() {
@@ -121,8 +121,8 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
             mainPane = (
                 <View
                     style={{
-                        height: 220,
                         alignItems: 'center',
+                        height: 240,
                         backgroundColor: themeColor('background')
                     }}
                 >
@@ -132,7 +132,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                     />
                     {!BalanceStore.loadingLightningBalance &&
                         !BalanceStore.loadingBlockchainBalance && (
-                            <View style={{ marginTop: 20 }}>
+                            <View style={{ marginTop: 40 }}>
                                 {implementation === 'lndhub' ? (
                                     <LightningBalance />
                                 ) : (

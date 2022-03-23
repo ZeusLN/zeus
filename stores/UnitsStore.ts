@@ -62,8 +62,7 @@ export default class UnitsStore {
         const { fiat } = settings;
         const units = fixedUnits || this.units;
 
-        const [wholeSats] = value.toString().split('.');
-        const sats = (wholeSats && Number(wholeSats)) || 0;
+        const sats = Number(value);
         const negative = sats < 0;
         const absValueSats = Math.abs(sats);
 
@@ -97,7 +96,7 @@ export default class UnitsStore {
                 const fiatEntry = this.fiatStore.fiatRates.filter(
                     (entry: any) => entry.code === fiat
                 )[0];
-                const rate = fiatEntry.rate;
+                const rate = (fiatEntry && fiatEntry.rate) || 0;
                 const { symbol, space, rtl, separatorSwap } =
                     this.fiatStore.getSymbol();
 
@@ -152,9 +151,10 @@ export default class UnitsStore {
                 const fiatEntry = this.fiatStore.fiatRates.filter(
                     (entry: any) => entry.code === fiat
                 )[0];
-                const rate = fiatEntry.rate;
+                const { code } = fiatEntry;
+                const rate = (fiatEntry && fiatEntry.rate) || 0;
                 const { symbol, space, rtl, separatorSwap } =
-                    this.fiatStore.symbolLookup(fiatEntry.code);
+                    this.fiatStore.symbolLookup(code);
 
                 const amount = (
                     FeeUtils.toFixed(Number(wholeSats || 0) / satoshisPerBTC) *
