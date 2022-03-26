@@ -11,9 +11,11 @@ import { ListItem } from 'react-native-elements';
 import remove from 'lodash/remove';
 import { inject, observer } from 'mobx-react';
 
+import AccountFilter from './../components/AccountFilter';
 import Button from './../components/Button';
 
 import { localeString } from './../utils/LocaleUtils';
+import RESTUtils from './../utils/RESTUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
 import stores from './../stores/Stores';
@@ -32,6 +34,7 @@ interface UTXOPickerState {
     showUtxoModal: boolean;
     selectedBalance: number;
     setBalance: number;
+    account: string;
 }
 
 const DEFAULT_TITLE = localeString('components.UTXOPicker.defaultTitle');
@@ -47,7 +50,8 @@ export default class UTXOPicker extends React.Component<
         utxosSet: [],
         showUtxoModal: false,
         selectedBalance: 0,
-        setBalance: 0
+        setBalance: 0,
+        account: 'default'
     };
 
     openPicker() {
@@ -100,9 +104,14 @@ export default class UTXOPicker extends React.Component<
 
     render() {
         const { title, onValueChange, UTXOsStore } = this.props;
-        const { utxosSelected, utxosSet, showUtxoModal, selectedBalance } =
-            this.state;
-        const { utxos, loading, getUTXOs } = UTXOsStore;
+        const {
+            utxosSelected,
+            utxosSet,
+            showUtxoModal,
+            selectedBalance,
+            account
+        } = this.state;
+        const { utxos, loading, getUTXOs, accounts } = UTXOsStore;
 
         const utxosPicked: string[] = [];
         utxosSelected.forEach((utxo: string) => utxosPicked.push(utxo));
@@ -160,6 +169,22 @@ export default class UTXOPicker extends React.Component<
                                             'views.Receive.satoshis'
                                         )}`}
                                     </Text>
+
+                                    {RESTUtils.supportsAccounts() && (
+                                        <AccountFilter
+                                            default={account}
+                                            items={accounts}
+                                            refresh={(newAccount: string) => {
+                                                getUTXOs({
+                                                    account: newAccount
+                                                });
+                                                this.setState({
+                                                    account: newAccount
+                                                });
+                                            }}
+                                            showAll
+                                        />
+                                    )}
 
                                     <FlatList
                                         data={utxos}

@@ -7,16 +7,17 @@ interface PillProps {
     textColor?: string;
     borderColor?: string;
     backgroundColor?: string;
+    onPress?: Function;
 }
 
 function Pill(props: PillProps) {
-    const { title, textColor, borderColor, backgroundColor } = props;
+    const { title, textColor, borderColor, backgroundColor, onPress } = props;
 
     return (
         <TouchableOpacity
             style={{
-                borderWidth: 3,
-                borderColor: borderColor || themeColor('highlight'),
+                borderWidth: borderColor ? 3 : 0,
+                borderColor: borderColor,
                 alignItems: 'center',
                 justifyContent: 'center',
                 width: 90,
@@ -24,6 +25,7 @@ function Pill(props: PillProps) {
                 backgroundColor: backgroundColor || themeColor('background'),
                 borderRadius: 50
             }}
+            onPress={onPress}
         >
             <Text
                 style={{

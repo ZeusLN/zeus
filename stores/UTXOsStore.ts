@@ -60,11 +60,21 @@ export default class UTXOsStore {
     public listAccounts = () => {
         this.errorMsg = '';
         this.loadingAccounts = true;
-        RESTUtils.listAccounts()
+        return RESTUtils.listAccounts()
             .then((data: any) => {
                 this.loadingAccounts = false;
                 this.accounts = data.accounts;
+                const accounts: any = [];
+                for (const i in data.accounts) {
+                    const account = data.accounts[i];
+                    const { name } = account;
+                    if (name && name !== 'default' && !name.includes('act:')) {
+                        accounts.push(account);
+                    }
+                }
+                this.accounts = accounts;
                 this.error = false;
+                return this.accounts;
             })
             .catch((error: any) => {
                 // handle error

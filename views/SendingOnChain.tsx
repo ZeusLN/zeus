@@ -4,6 +4,7 @@ import { inject, observer } from 'mobx-react';
 
 import Button from './../components/Button';
 import CopyButton from './../components/CopyButton';
+import CollapsedQR from './../components/CollapsedQR';
 import LoadingIndicator from './../components/LoadingIndicator';
 
 import { localeString } from './../utils/LocaleUtils';
@@ -41,7 +42,7 @@ export default class SendingOnChain extends React.Component<
 
     render() {
         const { NodeInfoStore, TransactionsStore, navigation } = this.props;
-        const { loading, publishSuccess, error, error_msg, txid } =
+        const { loading, publishSuccess, error, error_msg, txid, funded_psbt } =
             TransactionsStore;
         const { testnet } = NodeInfoStore;
 
@@ -67,6 +68,15 @@ export default class SendingOnChain extends React.Component<
                         >
                             {localeString('views.SendingOnChain.broadcasting')}
                         </Text>
+                    )}
+                    {funded_psbt && (
+                        <CollapsedQR
+                            title="Funded unsigned PSBT"
+                            value={funded_psbt}
+                            hideText
+                            copyText="Copy PSBT"
+                            bcur
+                        />
                     )}
                     {publishSuccess && (
                         <>

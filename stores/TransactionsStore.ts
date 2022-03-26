@@ -37,6 +37,7 @@ export default class TransactionsStore {
     @observable payment_error: any;
     @observable onchain_address: string;
     @observable txid: string | null;
+    @observable funded_psbt: string | null;
     // in lieu of receiving txid on LND's publishTransaction
     @observable publishSuccess = false;
     // c-lightning
@@ -71,6 +72,7 @@ export default class TransactionsStore {
         this.txid = null;
         this.publishSuccess = false;
         this.status = null;
+        this.funded_psbt = null;
     };
 
     @action
@@ -94,6 +96,7 @@ export default class TransactionsStore {
     public sendCoinsLNDCoinControl = (
         transactionRequest: TransactionRequest
     ) => {
+        console.log('sendCoinsLNDCoinControl', transactionRequest);
         const { utxos, addr, amount, sat_per_byte } = transactionRequest;
         const inputs: any = [];
         const outputs: any = {};
@@ -114,16 +117,46 @@ export default class TransactionsStore {
                 outputs,
                 inputs
             },
-            sat_per_vbyte: Number(sat_per_byte)
+            sat_per_vbyte: Number(sat_per_byte),
+            // TODO wire up account selection
+            account: 'Passport (E65423A4)'
         };
+
+        console.log('fundPsbtRequest', fundPsbtRequest);
 
         RESTUtils.fundPsbt(fundPsbtRequest)
             .then((data: any) => {
                 const funded_psbt = data.funded_psbt;
+                console.log('fundPsbt', data);
+
+                // if (externalAccount)
+                /*
+                Base64Utils.utf8ToHexString(Base64Utils.btoa(funded_psbt));
+                */
+                // this.funded_psbt = Base64Utils.bytesToHexString(
+                //     Base64Utils.btoa(funded_psbt)
+                // );
+
+                console.log('funded_psbt', funded_psbt);
+                console.log(
+                    'funded_psbt_decoded',
+                    Base64Utils.atob(funded_psbt)
+                );
+                console.log(
+                    'formatted',
+                    Base64Utils.stringToHex(Base64Utils.atob(funded_psbt))
+                );
+                this.funded_psbt = Base64Utils.stringToHex(
+                    Base64Utils.atob(funded_psbt)
+                );
+                console.log('!!!~', this.funded_psbt);
+                this.loading = false;
+                return this.funded_psbt;
 
                 RESTUtils.finalizePsbt({ funded_psbt })
                     .then((data: any) => {
                         const raw_final_tx = data.raw_final_tx;
+                        console.log('finalizePsbt', data);
 
                         RESTUtils.publishTransaction({ tx_hex: raw_final_tx })
                             .then(() => {
@@ -139,6 +172,7 @@ export default class TransactionsStore {
                             });
                     })
                     .catch((error: any) => {
+                        console.log('finalizedPsbt error', error);
                         // handle error
                         this.error_msg = error.message;
                         this.error = true;
@@ -146,6 +180,7 @@ export default class TransactionsStore {
                     });
             })
             .catch((error: any) => {
+                console.log('fundPsbt error', error);
                 // handle error
                 this.error_msg = error.message;
                 this.error = true;

@@ -197,11 +197,15 @@ export default class InvoicesStore {
     };
 
     @action
-    public getNewAddress = () => {
-        return RESTUtils.getNewAddress().then((data: any) => {
+    public getNewAddress = (account: string) => {
+        return RESTUtils.getNewAddress({ account }).then((data: any) => {
             this.onChainAddress = data.address || data[0].address;
+            return this.onChainAddress;
         });
     };
+
+    @action
+    public clearAddress = () => (this.onChainAddress = null);
 
     @action
     public getPayReq = (

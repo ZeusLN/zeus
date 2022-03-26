@@ -9,7 +9,7 @@ interface Outpoint {
 
 export default class Utxo extends BaseModel {
     @observable address: string;
-    account: string;
+    @observable account: string;
     confirmations: string;
     outpoint: Outpoint;
     txid: string;

@@ -87,6 +87,14 @@ class Base64Utils {
 
     utf8ToHexString = (hexString: string) =>
         Buffer.from(hexString, 'utf8').toString('hex');
+
+    stringToHex = (str: string) => {
+        const arr = [];
+        for (let i = 0; i < str.length; i++) {
+            arr[i] = ('0' + str.charCodeAt(i).toString(16)).slice(-2);
+        }
+        return arr.join('');
+    };
 }
 
 const base64Utils = new Base64Utils();

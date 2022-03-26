@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
+import { ButtonGroup } from 'react-native-elements';
 import QRCode from 'react-native-qrcode-svg';
 
 import HCESession, { NFCContentType, NFCTagType4 } from 'react-native-hce';
@@ -8,6 +9,8 @@ import Button from './../components/Button';
 import CopyButton from './CopyButton';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
+
+import { encodeUR } from './../zeus_modules/bc-ur';
 
 const secondaryLogo = require('../assets/images/secondary.png');
 
@@ -19,11 +22,13 @@ interface CollapsedQRProps {
     collapseText?: string;
     copyText?: string;
     hideText?: boolean;
+    bcur?: boolean;
 }
 
 interface CollapsedQRState {
     collapsed: boolean;
     nfcBroadcast: boolean;
+    selectedIndex: number;
 }
 
 export default class CollapsedQR extends React.Component<
@@ -32,7 +37,9 @@ export default class CollapsedQR extends React.Component<
 > {
     state = {
         collapsed: true,
-        nfcBroadcast: false
+        nfcBroadcast: false,
+        selectedIndex: 0,
+        fragment: ''
     };
 
     componentWillUnmount() {
@@ -40,6 +47,32 @@ export default class CollapsedQR extends React.Component<
             this.stopSimulation();
         }
     }
+
+    UNSAFE_componentWillMount = () => {
+        const { bcur, value } = this.props;
+        console.log('VALUE', value);
+        if (bcur) {
+            const fragments = encodeUR(value);
+            let i = 0;
+            let fragment = fragments[i];
+
+            this.setState({
+                fragment: fragments[i]
+            });
+
+            setInterval(() => {
+                if (i !== fragments.length - 1) {
+                    i++;
+                } else {
+                    i = 0;
+                }
+
+                this.setState({
+                    fragment: fragments[i]
+                });
+            }, 500);
+        }
+    };
 
     UNSAFE_componentWillUpdate = () => {
         if (this.state.nfcBroadcast) {
@@ -75,12 +108,67 @@ export default class CollapsedQR extends React.Component<
     };
 
     render() {
-        const { collapsed, nfcBroadcast } = this.state;
-        const { value, showText, copyText, collapseText, hideText } =
+        const { collapsed, nfcBroadcast, selectedIndex, fragment } = this.state;
+        const { value, showText, copyText, collapseText, hideText, bcur } =
             this.props;
+
+        const staticButton = () => (
+            <React.Fragment>
+                <Text
+                    style={{
+                        color:
+                            selectedIndex === 1
+                                ? themeColor('text')
+                                : themeColor('background'),
+                        fontFamily: 'Lato-Regular'
+                    }}
+                >
+                    {localeString('components.CollapsedQR.static')}
+                </Text>
+            </React.Fragment>
+        );
+
+        const bcurButton = () => (
+            <React.Fragment>
+                <Text
+                    style={{
+                        color:
+                            selectedIndex === 0
+                                ? themeColor('text')
+                                : themeColor('background'),
+                        fontFamily: 'Lato-Regular'
+                    }}
+                >
+                    {localeString('components.CollapsedQR.bcur')}
+                </Text>
+            </React.Fragment>
+        );
+
+        const buttons = [{ element: staticButton }, { element: bcurButton }];
 
         return (
             <React.Fragment>
+                {bcur && (
+                    <ButtonGroup
+                        onPress={(selectedIndex: number) =>
+                            this.setState({ selectedIndex })
+                        }
+                        selectedIndex={selectedIndex}
+                        buttons={buttons}
+                        selectedButtonStyle={{
+                            backgroundColor: themeColor('highlight'),
+                            borderRadius: 12
+                        }}
+                        containerStyle={{
+                            backgroundColor: themeColor('secondary'),
+                            borderRadius: 12,
+                            borderColor: themeColor('secondary')
+                        }}
+                        innerBorderStyle={{
+                            color: themeColor('secondary')
+                        }}
+                    />
+                )}
                 {!hideText && (
                     <Text
                         style={{
@@ -94,7 +182,11 @@ export default class CollapsedQR extends React.Component<
                 )}
                 {!collapsed && (
                     <View style={styles.qrPadding}>
-                        <QRCode value={value} size={350} logo={secondaryLogo} />
+                        <QRCode
+                            value={!this.props.bcur ? value : fragment}
+                            size={350}
+                            logo={secondaryLogo}
+                        />
                     </View>
                 )}
                 <Button

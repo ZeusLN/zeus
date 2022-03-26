@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -10,6 +16,8 @@ import TextInput from './../../components/TextInput';
 
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
+
+import Scan from './../../assets/images/SVG/Scan.svg';
 
 interface ImportAccountProps {
     exitSetup: any;
@@ -86,6 +94,14 @@ export default class ImportAccount extends React.Component<
             />
         );
 
+        const ScanBadge = ({ navigation }: { navigation: any }) => (
+            <TouchableOpacity
+                onPress={() => navigation.navigate('AddressQRCodeScanner')}
+            >
+                <Scan fill={themeColor('text')} />
+            </TouchableOpacity>
+        );
+
         return (
             <ScrollView
                 style={{
@@ -100,6 +116,7 @@ export default class ImportAccount extends React.Component<
                         text: localeString('views.ImportAccount.title'),
                         style: { color: themeColor('text') }
                     }}
+                    rightComponent={<ScanBadge navigation={navigation} />}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
                         borderBottomWidth: 0
@@ -177,15 +194,6 @@ export default class ImportAccount extends React.Component<
                                     dry_run: true
                                 })
                             }
-                        />
-                    </View>
-                    <View style={styles.button}>
-                        <Button
-                            title="Scan"
-                            onPress={() =>
-                                navigation.navigate('ImportAccountQRScanner')
-                            }
-                            secondary
                         />
                     </View>
                 </View>

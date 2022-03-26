@@ -207,7 +207,12 @@ export default class LND {
         this.getRequest('/v1/invoices?reversed=true&num_max_invoices=100');
     createInvoice = (data: any) => this.postRequest('/v1/invoices', data);
     getPayments = () => this.getRequest('/v1/payments');
-    getNewAddress = () => this.getRequest('/v1/newaddress');
+    getNewAddress = (data: any) =>
+        this.getRequest(
+            data.account
+                ? `/v1/newaddress?account=${data.account.replace(/\s/g, '+')}`
+                : '/v1/newaddress'
+        );
     openChannel = (data: OpenChannelRequest) =>
         this.postRequest('/v1/channels', {
             private: data.private,

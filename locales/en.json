@@ -38,6 +38,8 @@
     "components.CollapsedQr.hide": "Hide QR",
     "components.CollapsedQr.startNfc": "Start NFC broadcast",
     "components.CollapsedQr.stopNfc": "Stop NFC broadcast",
+    "components.CollapsedQR.static": "Static",
+    "components.CollapsedQR.bcur": "BC-UR",
     "components.CopyButton.copied": "Copied!",
     "components.CopyButton.copy": "Copy to Clipboard",
     "components.FeeBreakdown.nowClosed": "Now closed",

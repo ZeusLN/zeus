@@ -14,6 +14,7 @@ import { inject, observer } from 'mobx-react';
 
 import Success from '../assets/images/GIF/Success.gif';
 
+import AccountFilter from './../components/AccountFilter';
 import { Amount } from './../components/Amount';
 import Button from './../components/Button';
 import CollapsedQR from './../components/CollapsedQR';
@@ -28,6 +29,7 @@ import FiatStore from './../stores/FiatStore';
 import InvoicesStore from './../stores/InvoicesStore';
 import SettingsStore from './../stores/SettingsStore';
 import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
+import UTXOsStore from './../stores/UTXOsStore';
 
 import { localeString } from './../utils/LocaleUtils';
 import RESTUtils from './../utils/RESTUtils';
@@ -40,6 +42,7 @@ interface ReceiveProps {
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
     FiatStore: FiatStore;
+    UTXOsStore: UTXOsStore;
 }
 
 interface ReceiveState {
@@ -49,9 +52,16 @@ interface ReceiveState {
     expiry: string;
     ampInvoice: boolean;
     routeHints: boolean;
+    account: string;
 }
 
-@inject('InvoicesStore', 'SettingsStore', 'UnitsStore', 'FiatStore')
+@inject(
+    'InvoicesStore',
+    'SettingsStore',
+    'UnitsStore',
+    'FiatStore',
+    'UTXOsStore'
+)
 @observer
 export default class Receive extends React.Component<
     ReceiveProps,
@@ -63,7 +73,8 @@ export default class Receive extends React.Component<
         value: '',
         expiry: '3600',
         ampInvoice: false,
-        routeHints: false
+        routeHints: false,
+        account: 'default'
     };
 
     componentDidMount() {
@@ -75,6 +86,7 @@ export default class Receive extends React.Component<
             navigation.getParam('lnurlParams');
 
         const selectedIndex: number = navigation.getParam('selectedIndex');
+        const account: string = navigation.getParam('account');
 
         if (lnurl) {
             this.setState({
@@ -89,11 +101,18 @@ export default class Receive extends React.Component<
                 selectedIndex
             });
         }
+
+        if (account) {
+            this.setState({
+                account,
+                selectedIndex: 1
+            });
+        }
     }
 
     getNewAddress = () => {
         const { InvoicesStore } = this.props;
-        InvoicesStore.getNewAddress();
+        InvoicesStore.getNewAddress(this.state.account);
     };
 
     updateIndex = (selectedIndex: number) => {
@@ -118,12 +137,22 @@ export default class Receive extends React.Component<
             SettingsStore,
             UnitsStore,
             FiatStore,
+            UTXOsStore,
             navigation
         } = this.props;
-        const { selectedIndex, memo, value, expiry, ampInvoice, routeHints } =
-            this.state;
+        const {
+            selectedIndex,
+            memo,
+            value,
+            expiry,
+            ampInvoice,
+            routeHints,
+            account
+        } = this.state;
         const { units, changeUnits, getAmount } = UnitsStore;
         const { fiatRates }: any = FiatStore;
+
+        const { accounts, getUTXOs } = UTXOsStore;
 
         const {
             createInvoice,
@@ -134,7 +163,8 @@ export default class Receive extends React.Component<
             creatingInvoiceError,
             error_msg,
             watchedInvoicePaid,
-            reset
+            reset,
+            clearAddress
         } = InvoicesStore;
         const { settings, loading, implementation } = SettingsStore;
         const { fiat } = settings;
@@ -538,6 +568,19 @@ export default class Receive extends React.Component<
                     )}
                     {selectedIndex === 1 && (
                         <React.Fragment>
+                            {RESTUtils.supportsAccounts() && (
+                                <AccountFilter
+                                    default={account}
+                                    items={accounts}
+                                    refresh={(account: string) => {
+                                        clearAddress();
+
+                                        this.setState({
+                                            account
+                                        });
+                                    }}
+                                />
+                            )}
                             {!address && !loading && (
                                 <Text
                                     style={{
