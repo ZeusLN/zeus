@@ -4,7 +4,6 @@ import { FlatList, StyleSheet, Text, View, I18nManager } from 'react-native';
 import { RectButton } from 'react-native-gesture-handler';
 
 import { inject, observer } from 'mobx-react';
-import * as Animatable from 'react-native-animatable';
 import { Amount } from '../Amount';
 import { Spacer } from '../layout/Spacer';
 import OnchainSwipeableRow from './OnchainSwipeableRow';
@@ -78,7 +77,7 @@ const SwipeableRow = ({
     }
 
     return (
-        <OnchainSwipeableRow navigation={navigation}>
+        <OnchainSwipeableRow navigation={navigation} account={item.layer}>
             <Row item={item} />
         </OnchainSwipeableRow>
     );
@@ -118,21 +117,16 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                 data={DATA}
                 ItemSeparatorComponent={() => <View style={styles.separator} />}
                 renderItem={({ item, index }) => (
-                    <Animatable.View
-                        animation="slideInRight"
-                        useNativeDriver={true}
-                    >
-                        <SwipeableRow
-                            item={item}
-                            index={index}
-                            navigation={navigation}
-                        />
-                    </Animatable.View>
+                    <SwipeableRow
+                        item={item}
+                        index={index}
+                        navigation={navigation}
+                    />
                 )}
                 keyExtractor={(_item, index) => `message ${index}`}
                 style={{ top: 20 }}
                 onRefresh={() => onRefresh()}
-                refreshing={refreshing}
+                refreshing={false}
             />
         );
     }

@@ -20,6 +20,7 @@ import Send from './../../assets/images/SVG/Send.svg';
 
 interface OnchainSwipeableRowProps {
     navigation: any;
+    account?: string;
 }
 
 export default class OnchainSwipeableRow extends Component<
@@ -31,6 +32,7 @@ export default class OnchainSwipeableRow extends Component<
         x: number,
         progress: Animated.AnimatedInterpolation
     ) => {
+        const { account, navigation } = this.props;
         const trans = progress.interpolate({
             inputRange: [0.25, 1],
             outputRange: [x, 0]
@@ -39,11 +41,14 @@ export default class OnchainSwipeableRow extends Component<
             this.close();
 
             if (text === localeString('general.receive')) {
-                this.props.navigation.navigate('Receive', { selectedIndex: 1 });
+                navigation.navigate('Receive', {
+                    account: account === 'On-chain' ? 'default' : account,
+                    selectedIndex: 1
+                });
             } else if (text === localeString('general.coins')) {
-                this.props.navigation.navigate('CoinControl');
+                navigation.navigate('CoinControl', { account });
             } else if (text === localeString('general.send')) {
-                this.props.navigation.navigate('Send');
+                navigation.navigate('Send');
             }
         };
 

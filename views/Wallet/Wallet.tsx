@@ -138,6 +138,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             BalanceStore,
             ChannelsStore,
             FeeStore,
+            UTXOsStore,
             SettingsStore,
             FiatStore,
             navigation
@@ -159,13 +160,14 @@ export default class Wallet extends React.Component<WalletProps, {}> {
 
         if (implementation === 'lndhub') {
             login({ login: username, password }).then(async () => {
-                BalanceStore.getLightningBalance();
+                BalanceStore.getLightningBalance(true);
             });
         } else {
-            await Promise.all([
-                BalanceStore.getBlockchainBalance(),
-                BalanceStore.getLightningBalance()
-            ]);
+            if (RESTUtils.supportsAccounts()) {
+                UTXOsStore.listAccounts();
+            }
+
+            await BalanceStore.getCombinedBalance();
             ChannelsStore.getChannels();
             FeeStore.getFees();
             NodeInfoStore.getNodeInfo();
@@ -236,21 +238,16 @@ export default class Wallet extends React.Component<WalletProps, {}> {
 
                     {dataAvailable && (
                         <>
-                            {BalanceStore.loadingLightningBalance ||
-                            BalanceStore.loadingBlockchainBalance ? (
-                                <LoadingIndicator size={120} />
-                            ) : (
-                                <LayerBalances
-                                    navigation={navigation}
-                                    BalanceStore={BalanceStore}
-                                    UnitsStore={UnitsStore}
-                                    onRefresh={() => this.refresh()}
-                                    refreshing={
-                                        BalanceStore.loadingLightningBalance ||
-                                        BalanceStore.loadingBlockchainBalance
-                                    }
-                                />
-                            )}
+                            <LayerBalances
+                                navigation={navigation}
+                                BalanceStore={BalanceStore}
+                                UnitsStore={UnitsStore}
+                                onRefresh={() => this.refresh()}
+                                refreshing={
+                                    BalanceStore.loadingLightningBalance ||
+                                    BalanceStore.loadingBlockchainBalance
+                                }
+                            />
 
                             <Animated.View
                                 style={{
