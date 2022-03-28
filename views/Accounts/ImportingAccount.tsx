@@ -11,6 +11,7 @@ import {
 } from './../../components/SuccessErrorMessage';
 import KeyValue from './../../components/KeyValue';
 
+import Base64Utils from './../../utils/Base64Utils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -38,6 +39,12 @@ export default class ImportingAccount extends React.Component<
             derivation_path,
             watch_only
         } = account;
+
+        const mkf = master_key_fingerprint
+            ? Base64Utils.stringToHex(
+                  Base64Utils.atob(master_key_fingerprint)
+              ).toUpperCase()
+            : null;
 
         const BackButton = () => (
             <Icon
@@ -93,7 +100,7 @@ export default class ImportingAccount extends React.Component<
                             keyValue={localeString(
                                 'views.ImportAccount.masterKeyFingerprint'
                             )}
-                            value={master_key_fingerprint}
+                            value={mkf}
                         />
                     )}
 
@@ -148,7 +155,7 @@ export default class ImportingAccount extends React.Component<
                                 UTXOsStore.importAccount({
                                     name,
                                     extended_public_key,
-                                    master_key_fingerprint,
+                                    master_key_fingerprint: mkf,
                                     address_type,
                                     dry_run: false
                                 })

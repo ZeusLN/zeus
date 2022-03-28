@@ -312,8 +312,15 @@ export default class LND {
     getUTXOs = (data: any) => this.postRequest('/v2/wallet/utxos', data);
     bumpFee = (data: any) => this.postRequest('/v2/wallet/bumpfee', data);
     listAccounts = () => this.getRequest('/v2/wallet/accounts');
-    importAccount = (data: any) =>
-        this.postRequest('/v2/wallet/accounts/import', data);
+    importAccount = (data: any) => {
+        const { master_key_fingerprint, ...req } = data;
+        return this.postRequest('/v2/wallet/accounts/import', {
+            master_key_fingerprint: master_key_fingerprint
+                ? Base64Utils.hexToBase64(master_key_fingerprint)
+                : '',
+            ...req
+        });
+    };
     signMessage = (message: string) =>
         this.postRequest('/v1/signmessage', {
             msg: Base64Utils.btoa(message)

@@ -14,6 +14,7 @@ import { ErrorMessage } from './../../components/SuccessErrorMessage';
 import LoadingIndicator from './../../components/LoadingIndicator';
 import TextInput from './../../components/TextInput';
 
+import Base64Utils from './../../utils/Base64Utils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -54,19 +55,15 @@ export default class ImportAccount extends React.Component<
         const name = (parsed.keystore && parsed.keystore.label) || '';
         const extended_public_key =
             parsed.ExtPubKey || (parsed.keystore && parsed.keystore.xpub) || '';
-        // const master_key_fingerprint =
-        //     parsed.MasterFingerprint ||
-        //     (parsed.keystore && parsed.keystore.ckcc_xfp.toString()) ||
-        //     '';
-        // const master_key_fingerprint =
-        //     parsed.keystore.derivation && parsed.keystore.derivation ||
-        //     '';
+        const master_key_fingerprint =
+            parsed.MasterFingerprint ||
+            '';
         const address_type = parsed.wallet_type || '';
 
         this.setState({
             name,
             extended_public_key,
-            // master_key_fingerprint,
+            master_key_fingerprint,
             address_type
         });
     };
@@ -96,7 +93,7 @@ export default class ImportAccount extends React.Component<
 
         const ScanBadge = ({ navigation }: { navigation: any }) => (
             <TouchableOpacity
-                onPress={() => navigation.navigate('AddressQRCodeScanner')}
+                onPress={() => navigation.navigate('ImportAccountQRScanner')}
             >
                 <Scan fill={themeColor('text')} />
             </TouchableOpacity>
@@ -154,24 +151,22 @@ export default class ImportAccount extends React.Component<
                         multiline
                     />
 
-                    {false && (
-                        <>
-                            <Text style={styles.label}>
-                                {localeString(
-                                    'views.ImportAccount.masterKeyFingerprint'
-                                )}
-                            </Text>
-                            <TextInput
-                                placeholder={'2753778918'}
-                                value={master_key_fingerprint}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        master_key_fingerprint: text
-                                    })
-                                }
-                            />
-                        </>
-                    )}
+                    <>
+                        <Text style={styles.label}>
+                            {localeString(
+                                'views.ImportAccount.masterKeyFingerprint'
+                            )}
+                        </Text>
+                        <TextInput
+                            placeholder="E65423A4"
+                            value={master_key_fingerprint}
+                            onChangeText={(text: string) =>
+                                this.setState({
+                                    master_key_fingerprint: text
+                                })
+                            }
+                        />
+                    </>
 
                     <Text style={styles.label}>
                         {localeString('views.ImportAccount.addressType')}
