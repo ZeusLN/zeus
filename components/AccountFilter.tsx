@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import Pill from './Pill';
 import { themeColor } from './../utils/ThemeUtils';
@@ -89,7 +89,11 @@ function AccountFilter(props: AccountFilterProps) {
         );
     }
 
-    return <View style={{ height: 55, flexDirection: 'row' }}>{pills}</View>;
+    return (
+        <ScrollView style={{ maxHeight: 55, flexDirection: 'row' }} horizontal>
+            {pills}
+        </ScrollView>
+    );
 }
 
 export default AccountFilter;

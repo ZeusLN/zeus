@@ -182,7 +182,6 @@ export default class UTXOPicker extends React.Component<
                                                     account: newAccount
                                                 });
                                             }}
-                                            showAll
                                         />
                                     )}
 
