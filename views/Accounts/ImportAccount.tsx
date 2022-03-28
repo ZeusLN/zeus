@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -9,12 +10,15 @@ import {
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
+import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
+
 import Button from './../../components/Button';
 import { ErrorMessage } from './../../components/SuccessErrorMessage';
 import LoadingIndicator from './../../components/LoadingIndicator';
 import TextInput from './../../components/TextInput';
 
 import Base64Utils from './../../utils/Base64Utils';
+import NFCUtils from './../../utils/NFCUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -48,6 +52,12 @@ export default class ImportAccount extends React.Component<
         };
     }
 
+    async componentDidMount() {
+        if (Platform.OS === 'android') {
+            await this.enableNfc();
+        }
+    }
+
     UNSAFE_componentWillReceiveProps = (newProps: any) => {
         const { navigation } = newProps;
         const qrResponse = navigation.getParam('qrResponse', null);
@@ -63,6 +73,37 @@ export default class ImportAccount extends React.Component<
             extended_public_key,
             master_key_fingerprint,
             address_type
+        });
+    };
+
+    disableNfc = () => {
+        NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
+        NfcManager.setEventListener(NfcEvents.SessionClosed, null);
+    };
+
+    enableNfc = async () => {
+        this.disableNfc();
+        await NfcManager.start();
+
+        return new Promise((resolve: any) => {
+            let tagFound = null;
+
+            NfcManager.setEventListener(NfcEvents.DiscoverTag, (tag: any) => {
+                tagFound = tag;
+                const bytes = new Uint8Array(tagFound.ndefMessage[0].payload);
+                const str = NFCUtils.nfcUtf8ArrayToStr(bytes);
+                console.log('str', str);
+                resolve(this.setState({ extended_public_key: str }));
+                NfcManager.unregisterTagEvent().catch(() => 0);
+            });
+
+            NfcManager.setEventListener(NfcEvents.SessionClosed, () => {
+                if (!tagFound) {
+                    resolve();
+                }
+            });
+
+            NfcManager.registerTagEvent();
         });
     };
 
@@ -189,6 +230,19 @@ export default class ImportAccount extends React.Component<
                             }
                         />
                     </View>
+                    {Platform.OS === 'ios' && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString('general.enableNfc')}
+                                icon={{
+                                    name: 'nfc',
+                                    size: 25
+                                }}
+                                onPress={() => this.enableNfc()}
+                                secondary
+                            />
+                        </View>
+                    )}
                 </View>
             </ScrollView>
         );
