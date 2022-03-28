@@ -1,5 +1,12 @@
 import React, { Component } from 'react';
-import { FlatList, StyleSheet, Text, View, I18nManager } from 'react-native';
+import {
+    FlatList,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    I18nManager
+} from 'react-native';
 
 import { RectButton } from 'react-native-gesture-handler';
 
@@ -24,6 +31,7 @@ interface LayerBalancesProps {
     navigation: any;
     onRefresh?: any;
     refreshing?: boolean;
+    consolidated?: boolean;
 }
 
 //  To toggle LTR/RTL change to `true`
@@ -34,30 +42,50 @@ type DataRow = {
     balance: string | number;
 };
 
-const Row = ({ item }: { item: DataRow }) => (
-    <RectButton
-        style={{
-            ...styles.rectButton,
-            backgroundColor: themeColor('secondary')
-        }}
-    >
-        <View style={styles.left}>
-            {item.layer === 'On-chain' ? (
-                <OnChain />
-            ) : item.layer === 'Lightning' ? (
-                <Lightning />
-            ) : (
-                <Wallet />
-            )}
-            <Spacer width={5} />
-            <Text style={{ ...styles.layerText, color: themeColor('text') }}>
-                {item.layer}
-            </Text>
-        </View>
+const Row = ({ item }: { item: DataRow }) => {
+    const moreAccounts = item.layer === 'More accounts';
+    return (
+        <RectButton
+            style={
+                !moreAccounts
+                    ? {
+                          ...styles.rectButton,
+                          backgroundColor: themeColor('secondary')
+                      }
+                    : {
+                          ...styles.moreButton,
+                          backgroundColor: themeColor('secondary')
+                      }
+            }
+        >
+            <View style={styles.left}>
+                {item.layer === 'On-chain' ? (
+                    <OnChain />
+                ) : item.layer === 'Lightning' ? (
+                    <Lightning />
+                ) : moreAccounts ? null : (
+                    <Wallet />
+                )}
+                <Spacer width={5} />
+                <Text
+                    style={{ ...styles.layerText, color: themeColor('text') }}
+                >
+                    {item.layer}
+                </Text>
+            </View>
 
-        <Amount sats={item.balance} sensitive />
-    </RectButton>
-);
+            {item.layer !== 'More accounts' ? (
+                <Amount sats={item.balance} sensitive />
+            ) : (
+                <Text
+                    style={{ ...styles.layerText, color: themeColor('text') }}
+                >
+                    {`+${item.count - 1}`}
+                </Text>
+            )}
+        </RectButton>
+    );
+};
 
 const SwipeableRow = ({
     item,
@@ -76,6 +104,14 @@ const SwipeableRow = ({
         );
     }
 
+    if (item.layer === 'More accounts') {
+        return (
+            <TouchableOpacity onPress={() => navigation.navigate('Accounts')}>
+                <Row item={item} />
+            </TouchableOpacity>
+        );
+    }
+
     return (
         <OnchainSwipeableRow navigation={navigation} account={item.layer}>
             <Row item={item} />
@@ -87,7 +123,13 @@ const SwipeableRow = ({
 @observer
 export default class LayerBalances extends Component<LayerBalancesProps, {}> {
     render() {
-        const { BalanceStore, navigation, onRefresh, refreshing } = this.props;
+        const {
+            BalanceStore,
+            navigation,
+            onRefresh,
+            refreshing,
+            consolidated
+        } = this.props;
 
         const { totalBlockchainBalance, lightningBalance, otherAccounts } =
             BalanceStore;
@@ -103,13 +145,33 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
             }
         ];
 
-        if (Object.keys(otherAccounts).length > 0) {
+        if (Object.keys(otherAccounts).length > 0 && !consolidated) {
             for (const key in otherAccounts) {
                 DATA.push({
                     layer: key,
                     balance: otherAccounts[key].confirmed_balance
                 });
             }
+        }
+
+        if (Object.keys(otherAccounts).length > 0 && consolidated) {
+            let n = 0;
+            for (const key in otherAccounts) {
+                while (n < 1) {
+                    DATA.push({
+                        layer: key,
+                        balance: otherAccounts[key].confirmed_balance
+                    });
+                    n++;
+                }
+            }
+        }
+
+        if (Object.keys(otherAccounts).length > 1 && consolidated) {
+            DATA.push({
+                layer: 'More accounts',
+                count: Object.keys(otherAccounts).length
+            });
         }
 
         return (
@@ -135,6 +197,17 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
 const styles = StyleSheet.create({
     rectButton: {
         height: 80,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexDirection: 'row',
+        marginLeft: 15,
+        marginRight: 15,
+        borderRadius: 15
+    },
+    moreButton: {
+        height: 40,
         paddingVertical: 10,
         paddingHorizontal: 20,
         justifyContent: 'space-between',

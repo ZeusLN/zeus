@@ -247,6 +247,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                     BalanceStore.loadingLightningBalance ||
                                     BalanceStore.loadingBlockchainBalance
                                 }
+                                consolidated
                             />
 
                             <Animated.View
