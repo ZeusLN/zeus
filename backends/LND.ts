@@ -316,7 +316,9 @@ export default class LND {
         const { master_key_fingerprint, ...req } = data;
         return this.postRequest('/v2/wallet/accounts/import', {
             master_key_fingerprint: master_key_fingerprint
-                ? Base64Utils.hexToBase64(master_key_fingerprint)
+                ? Base64Utils.hexToBase64(
+                      Base64Utils.reverseMfpBytes(master_key_fingerprint)
+                  )
                 : '',
             ...req
         });

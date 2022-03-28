@@ -119,7 +119,7 @@ export default class TransactionsStore {
             },
             sat_per_vbyte: Number(sat_per_byte),
             // TODO wire up account selection
-            account: 'Passport (E65423A4)'
+            account: 'Passport'
         };
 
         console.log('fundPsbtRequest', fundPsbtRequest);

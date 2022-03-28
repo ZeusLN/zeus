@@ -41,9 +41,11 @@ export default class ImportingAccount extends React.Component<
         } = account;
 
         const mkf = master_key_fingerprint
-            ? Base64Utils.stringToHex(
-                  Base64Utils.atob(master_key_fingerprint)
-              ).toUpperCase()
+            ? Base64Utils.reverseMfpBytes(
+                  Base64Utils.stringToHex(
+                      Base64Utils.atob(master_key_fingerprint)
+                  ).toUpperCase()
+              )
             : null;
 
         const BackButton = () => (

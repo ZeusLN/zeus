@@ -95,6 +95,12 @@ class Base64Utils {
         }
         return arr.join('');
     };
+
+    reverseMfpBytes = (mfp: string) => {
+        // must be 8 characters
+        const byteArray = mfp.match(/.{2}/g);
+        return byteArray.reverse().join('');
+    };
 }
 
 const base64Utils = new Base64Utils();

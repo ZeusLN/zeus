@@ -55,9 +55,7 @@ export default class ImportAccount extends React.Component<
         const name = (parsed.keystore && parsed.keystore.label) || '';
         const extended_public_key =
             parsed.ExtPubKey || (parsed.keystore && parsed.keystore.xpub) || '';
-        const master_key_fingerprint =
-            parsed.MasterFingerprint ||
-            '';
+        const master_key_fingerprint = parsed.MasterFingerprint || '';
         const address_type = parsed.wallet_type || '';
 
         this.setState({
