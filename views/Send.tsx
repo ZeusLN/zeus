@@ -17,6 +17,8 @@ import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
 
 import handleAnything from './../utils/handleAnything';
 
+import Scan from './../assets/images/SVG/Scan.svg';
+
 import InvoicesStore from './../stores/InvoicesStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
 import TransactionsStore from './../stores/TransactionsStore';
@@ -225,6 +227,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             };
         }
         TransactionsStore.sendCoins(request);
+        this.disableNfc();
         navigation.navigate('SendingOnChain');
     };
 
@@ -335,6 +338,14 @@ export default class Send extends React.Component<SendProps, SendState> {
             />
         );
 
+        const ScanBadge = () => (
+            <TouchableOpacity
+                onPress={() => navigation.navigate('AddressQRCodeScanner')}
+            >
+                <Scan fill={themeColor('text')} />
+            </TouchableOpacity>
+        );
+
         const paymentOptions = [localeString('views.Send.lnPayment')];
 
         if (RESTUtils.supportsOnchainSends()) {
@@ -360,6 +371,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
+                    rightComponent={<ScanBadge />}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
                         borderBottomWidth: 0
@@ -823,19 +835,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                             />
                         </View>
                     )}
-                    <View style={styles.button}>
-                        <Button
-                            title={localeString('general.scan')}
-                            icon={{
-                                name: 'crop-free',
-                                size: 25
-                            }}
-                            onPress={() =>
-                                navigation.navigate('AddressQRCodeScanner')
-                            }
-                            secondary
-                        />
-                    </View>
 
                     {Platform.OS === 'ios' && (
                         <View style={styles.button}>
