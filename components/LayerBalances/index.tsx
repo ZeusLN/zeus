@@ -186,7 +186,7 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                     />
                 )}
                 keyExtractor={(_item, index) => `message ${index}`}
-                style={{ top: 20 }}
+                style={{ marginTop: 20 }}
                 onRefresh={() => onRefresh()}
                 refreshing={false}
             />
