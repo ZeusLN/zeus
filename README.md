@@ -91,19 +91,20 @@ Zeus is proud to be integrated on the following platforms:
 
 ### Android
 1. install and setup react-native and its related dependencies under **"Building Projects with Native Code"** on
-[react-native's Getting Started page](https://facebook.github.io/react-native/docs/getting-started.html)
+[react-native's Getting Started page](https://reactnative.dev/docs/environment-setup)
 2. if using your phone,
 [enable Developer mode and USB Debugging](https://developer.android.com/studio/debug/dev-options)
 , then make sure it is connected to your computer by running `adb devices`
 3. install node dependencies with `npm i`
-4. open up your Android simulator or connect your phone and run `react-native run-android`
+4. open up your Android simulator or connect your phone and run `npx react-native start`
+5. open a new tab and run `npx react-native run-android`
 
 ### iOS
 1. install and setup react-native and its related dependencies under **"Building Projects with Native Code"** on
-[react-native's Getting Started page](https://facebook.github.io/react-native/docs/getting-started.html)
+[react-native's Getting Started page](https://reactnative.dev/docs/environment-setup)
 2. install node dependencies with `npm i`
 3. `cd ios && pod install`
-4. open `ios/zeus.xcworkspace` in Xcode and hit Run
+4. open `ios/zeus.xcworkspace` in Xcode and hit Run. NOTE: if you're using an M1 mac, you may need to right click Xcode > get info > check `Open using Rosetta` before opening `zeus.xcworkspace`.
 
 ## Contributing
 
@@ -111,6 +112,7 @@ Please be sure to run `npm run tsc` to check for type errors, `npm run test` to 
 
 If you are making cosmetic changes please test on both Android and iOS as things don't render exactly the same on both platforms.
 
+If you're looking for a quick way to get a lightning development environment running, check out [Polar](https://github.com/jamaljsr/polar).
 
 ## Translations
 
