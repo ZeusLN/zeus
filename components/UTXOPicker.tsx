@@ -54,6 +54,10 @@ export default class UTXOPicker extends React.Component<
         account: 'default'
     };
 
+    UNSAFE_componentWillMount() {
+        if (RESTUtils.supportsAccounts()) this.props.UTXOsStore.listAccounts();
+    }
+
     openPicker() {
         stores.utxosStore.getUTXOs();
         this.setState({
