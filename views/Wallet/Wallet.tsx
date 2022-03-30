@@ -159,6 +159,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         }
 
         if (implementation === 'lndhub') {
+            BalanceStore.reset();
             login({ login: username, password }).then(async () => {
                 BalanceStore.getLightningBalance(true);
             });
@@ -221,6 +222,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                         UnitsStore={UnitsStore}
                         BalanceStore={BalanceStore}
                         SettingsStore={SettingsStore}
+                        connecting={connecting}
                     />
 
                     {error && (

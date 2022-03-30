@@ -40,11 +40,13 @@ export default class BalanceStore {
         this.confirmedBlockchainBalance = 0;
         this.totalBlockchainBalance = 0;
         this.otherAccounts = {};
+        this.loadingBlockchainBalance = false;
     };
 
     resetLightningBalance = () => {
         this.pendingOpenBalance = 0;
         this.lightningBalance = 0;
+        this.loadingLightningBalance = false;
     };
 
     balanceError = () => {
@@ -127,14 +129,17 @@ export default class BalanceStore {
         const onChain = await this.getBlockchainBalance();
 
         // LN
-        this.pendingOpenBalance = lightning.pendingOpenBalance;
-        this.lightningBalance = lightning.lightningBalance;
+        this.pendingOpenBalance =
+            (lightning && lightning.pendingOpenBalance) || 0;
+        this.lightningBalance = (lightning && lightning.lightningBalance) || 0;
         // on-chain
-        this.otherAccounts = onChain.accounts;
+        this.otherAccounts = (onChain && onChain.accounts) || [];
         this.unconfirmedBlockchainBalance =
-            onChain.unconfirmedBlockchainBalance;
-        this.confirmedBlockchainBalance = onChain.confirmedBlockchainBalance;
-        this.totalBlockchainBalance = onChain.totalBlockchainBalance;
+            (onChain && onChain.unconfirmedBlockchainBalance) || 0;
+        this.confirmedBlockchainBalance =
+            (onChain && onChain.confirmedBlockchainBalance) || 0;
+        this.totalBlockchainBalance =
+            (onChain && onChain.totalBlockchainBalance) || 0;
 
         return {
             onChain,
