@@ -21,14 +21,20 @@ interface MainPaneProps {
     NodeInfoStore: NodeInfoStore;
     BalanceStore: BalanceStore;
     SettingsStore: SettingsStore;
+    connecting?: boolean;
 }
 
 @inject('BalanceStore', 'SettingsStore')
 @observer
 export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
     render() {
-        const { NodeInfoStore, BalanceStore, SettingsStore, navigation } =
-            this.props;
+        const {
+            NodeInfoStore,
+            BalanceStore,
+            SettingsStore,
+            connecting,
+            navigation
+        } = this.props;
         const {
             totalBlockchainBalance,
             unconfirmedBlockchainBalance,
@@ -130,23 +136,25 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                         navigation={navigation}
                         SettingsStore={SettingsStore}
                     />
-                    <View style={{ marginTop: 40 }}>
-                        {implementation === 'lndhub' ? (
-                            <LightningBalance />
-                        ) : (
-                            <BalanceViewCombined />
-                        )}
-                        {infoValue !== 'ⓘ' && (
-                            <View
-                                style={{
-                                    marginTop: 5,
-                                    alignItems: 'center'
-                                }}
-                            >
-                                <NetworkBadge />
-                            </View>
-                        )}
-                    </View>
+                    {!connecting && (
+                        <View style={{ marginTop: 40 }}>
+                            {implementation === 'lndhub' ? (
+                                <LightningBalance />
+                            ) : (
+                                <BalanceViewCombined />
+                            )}
+                            {infoValue !== 'ⓘ' && (
+                                <View
+                                    style={{
+                                        marginTop: 5,
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <NetworkBadge />
+                                </View>
+                            )}
+                        </View>
+                    )}
                 </View>
             );
         } else {
