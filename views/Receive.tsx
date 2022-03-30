@@ -160,7 +160,8 @@ export default class Receive extends React.Component<
                 break;
             case 'fiat':
                 satAmount = Number(
-                    (Number(value) / Number(rate)) * Number(satoshisPerBTC)
+                    (Number(value.replace(/,/g, '.')) / Number(rate)) *
+                        Number(satoshisPerBTC)
                 ).toFixed(0);
                 break;
         }
