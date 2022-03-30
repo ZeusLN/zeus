@@ -222,7 +222,6 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                         UnitsStore={UnitsStore}
                         BalanceStore={BalanceStore}
                         SettingsStore={SettingsStore}
-                        connecting={connecting}
                     />
 
                     {error && (
