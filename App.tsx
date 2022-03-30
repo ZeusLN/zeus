@@ -8,7 +8,7 @@ export default class App extends React.PureComponent {
     render() {
         return (
             <Provider
-                BalanceStore={Stores.walletStore}
+                BalanceStore={Stores.balanceStore}
                 TransactionsStore={Stores.transactionsStore}
                 ChannelsStore={Stores.channelsStore}
                 NodeInfoStore={Stores.nodeInfoStore}

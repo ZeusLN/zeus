@@ -1,11 +1,15 @@
 import React from 'react';
 import { Button, Header } from 'react-native-elements';
-import { TouchableOpacity } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
+
+import LoadingIndicator from '../components/LoadingIndicator';
 import NodeIdenticon from '../components/NodeIdenticon';
 import { themeColor } from '../utils/ThemeUtils';
 
 import Contact from '../assets/images/SVG/Mascot contact.svg';
 import Scan from '../assets/images/SVG/Scan.svg';
+
+import stores from '../stores/Stores';
 
 import { Body } from './text/Body';
 
@@ -68,12 +72,20 @@ export function WalletHeader({
     return (
         <Header
             leftComponent={loading ? undefined : <SettingsButton />}
-            centerComponent={title ? <Body bold>{title}</Body> : undefined}
+            centerComponent={title ? <Body bold>{title}</Body> : null}
             rightComponent={
                 channels ? (
                     <OpenChannelButton navigation={navigation} />
                 ) : (
-                    <ScanBadge navigation={navigation} />
+                    <View style={{ flex: 1, flexDirection: 'row' }}>
+                        {(stores.balanceStore.loadingBlockchainBalance ||
+                            stores.balanceStore.loadingLightningBalance) && (
+                            <LoadingIndicator size={80} />
+                        )}
+                        <View style={{ marginTop: 15 }}>
+                            <ScanBadge navigation={navigation} />
+                        </View>
+                    </View>
                 )
             }
             backgroundColor="transparent"

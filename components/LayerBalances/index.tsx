@@ -4,7 +4,6 @@ import { FlatList, StyleSheet, Text, View, I18nManager } from 'react-native';
 import { RectButton } from 'react-native-gesture-handler';
 
 import { inject, observer } from 'mobx-react';
-import * as Animatable from 'react-native-animatable';
 import { Amount } from '../Amount';
 import { Spacer } from '../layout/Spacer';
 import OnchainSwipeableRow from './OnchainSwipeableRow';
@@ -23,7 +22,6 @@ interface LayerBalancesProps {
     UnitsStore: UnitsStore;
     navigation: any;
     onRefresh?: any;
-    refreshing?: boolean;
 }
 
 //  To toggle LTR/RTL change to `true`
@@ -81,7 +79,7 @@ const SwipeableRow = ({
 @observer
 export default class LayerBalances extends Component<LayerBalancesProps, {}> {
     render() {
-        const { BalanceStore, navigation, onRefresh, refreshing } = this.props;
+        const { BalanceStore, navigation, onRefresh } = this.props;
 
         const { totalBlockchainBalance, lightningBalance } = BalanceStore;
 
@@ -101,21 +99,16 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                 data={DATA}
                 ItemSeparatorComponent={() => <View style={styles.separator} />}
                 renderItem={({ item, index }) => (
-                    <Animatable.View
-                        animation="slideInRight"
-                        useNativeDriver={true}
-                    >
-                        <SwipeableRow
-                            item={item}
-                            index={index}
-                            navigation={navigation}
-                        />
-                    </Animatable.View>
+                    <SwipeableRow
+                        item={item}
+                        index={index}
+                        navigation={navigation}
+                    />
                 )}
                 keyExtractor={(_item, index) => `message ${index}`}
                 style={{ top: 20 }}
                 onRefresh={() => onRefresh()}
-                refreshing={refreshing}
+                refreshing={false}
             />
         );
     }
