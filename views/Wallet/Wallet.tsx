@@ -17,6 +17,7 @@ import ChannelsPane from '../Channels/ChannelsPane';
 import MainPane from './MainPane';
 
 import Button from './../../components/Button';
+import LayerBalances from './../../components/LayerBalances';
 import LoadingIndicator from './../../components/LoadingIndicator';
 
 import RESTUtils from './../../utils/RESTUtils';
@@ -32,7 +33,7 @@ import NodeInfoStore from './../../stores/NodeInfoStore';
 import SettingsStore from './../../stores/SettingsStore';
 import FiatStore from './../../stores/FiatStore';
 import UnitsStore from './../../stores/UnitsStore';
-import LayerBalances from './../../components/LayerBalances';
+import UTXOsStore from './../../stores/UTXOsStore';
 
 import Temple from './../../assets/images/SVG/Temple.svg';
 import ChannelsIcon from './../../assets/images/SVG/Channels.svg';
@@ -50,6 +51,7 @@ interface WalletProps {
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
     FiatStore: FiatStore;
+    UTXOsStore: UTXOsStore;
 }
 
 @inject(
@@ -59,7 +61,8 @@ interface WalletProps {
     'FeeStore',
     'SettingsStore',
     'UnitsStore',
-    'FiatStore'
+    'FiatStore',
+    'UTXOsStore'
 )
 @observer
 export default class Wallet extends React.Component<WalletProps, {}> {
@@ -135,6 +138,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             BalanceStore,
             ChannelsStore,
             FeeStore,
+            UTXOsStore,
             SettingsStore,
             FiatStore,
             navigation
@@ -156,16 +160,17 @@ export default class Wallet extends React.Component<WalletProps, {}> {
 
         if (implementation === 'lndhub') {
             login({ login: username, password }).then(async () => {
-                BalanceStore.getLightningBalance();
+                BalanceStore.getLightningBalance(true);
             });
         } else {
-            await Promise.all([
-                BalanceStore.getBlockchainBalance(),
-                BalanceStore.getLightningBalance()
-            ]);
-            NodeInfoStore.getNodeInfo();
+            if (RESTUtils.supportsAccounts()) {
+                UTXOsStore.listAccounts();
+            }
+
+            await BalanceStore.getCombinedBalance();
             ChannelsStore.getChannels();
             FeeStore.getFees();
+            NodeInfoStore.getNodeInfo();
         }
 
         if (implementation === 'lnd') {
@@ -233,21 +238,12 @@ export default class Wallet extends React.Component<WalletProps, {}> {
 
                     {dataAvailable && (
                         <>
-                            {BalanceStore.loadingLightningBalance ||
-                            BalanceStore.loadingBlockchainBalance ? (
-                                <LoadingIndicator size={120} />
-                            ) : (
-                                <LayerBalances
-                                    navigation={navigation}
-                                    BalanceStore={BalanceStore}
-                                    UnitsStore={UnitsStore}
-                                    onRefresh={() => this.refresh()}
-                                    refreshing={
-                                        BalanceStore.loadingLightningBalance ||
-                                        BalanceStore.loadingBlockchainBalance
-                                    }
-                                />
-                            )}
+                            <LayerBalances
+                                navigation={navigation}
+                                BalanceStore={BalanceStore}
+                                UnitsStore={UnitsStore}
+                                onRefresh={() => this.refresh()}
+                            />
 
                             <Animated.View
                                 style={{
