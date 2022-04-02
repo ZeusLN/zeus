@@ -395,30 +395,33 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                 </Text>
                                 <LoadingIndicator size={120} />
                             </View>
-                            {settings.nodes && (
-                                <View
-                                    style={{
-                                        bottom: 56
+                            <View
+                                style={{
+                                    bottom: 56
+                                }}
+                            >
+                                <Button
+                                    title={
+                                        settings.nodes
+                                            ? localeString(
+                                                  'views.Settings.title'
+                                              )
+                                            : null
+                                    }
+                                    containerStyle={{
+                                        width: 320
                                     }}
-                                >
-                                    <Button
-                                        title={localeString(
-                                            'views.Settings.title'
-                                        )}
-                                        containerStyle={{
-                                            width: 320
-                                        }}
-                                        titleStyle={{
-                                            color: 'white'
-                                        }}
-                                        onPress={() =>
-                                            navigation.navigate('Settings')
-                                        }
-                                        adaptiveWidth
-                                        iconOnly
-                                    />
-                                </View>
-                            )}
+                                    titleStyle={{
+                                        color: 'white'
+                                    }}
+                                    onPress={() => {
+                                        if (settings.nodes)
+                                            navigation.navigate('Settings');
+                                    }}
+                                    adaptiveWidth
+                                    iconOnly
+                                />
+                            </View>
                         </View>
                     )}
                 </View>
