@@ -20,7 +20,7 @@ class Stores {
     public settingsStore: SettingsStore;
     public fiatStore: FiatStore;
     public transactionsStore: TransactionsStore;
-    public walletStore: BalanceStore;
+    public balanceStore: BalanceStore;
     public unitsStore: UnitsStore;
     public paymentsStore: PaymentsStore;
     public feeStore: FeeStore;
@@ -36,7 +36,7 @@ class Stores {
         this.invoicesStore = new InvoicesStore(this.settingsStore);
         this.nodeInfoStore = new NodeInfoStore(this.settingsStore);
         this.transactionsStore = new TransactionsStore(this.settingsStore);
-        this.walletStore = new BalanceStore(this.settingsStore);
+        this.balanceStore = new BalanceStore(this.settingsStore);
         this.unitsStore = new UnitsStore(this.settingsStore, this.fiatStore);
         this.paymentsStore = new PaymentsStore(
             this.settingsStore,
