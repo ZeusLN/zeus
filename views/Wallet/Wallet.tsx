@@ -205,7 +205,8 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         const { implementation, settings, loggedIn, connecting } =
             SettingsStore;
         const loginRequired =
-            !settings || (settings && settings.passphrase && !loggedIn);
+            !settings ||
+            (settings && (settings.passphrase || settings.pin) && !loggedIn);
         const dataAvailable = implementation === 'lndhub' || nodeInfo.version;
 
         const WalletScreen = () => {
@@ -384,32 +385,40 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                         padding: 8
                                     }}
                                 >
-                                    {localeString(
-                                        'views.Wallet.Wallet.connecting'
-                                    )}
+                                    {settings.nodes
+                                        ? localeString(
+                                              'views.Wallet.Wallet.connecting'
+                                          )
+                                        : localeString(
+                                              'views.Wallet.Wallet.startingUp'
+                                          )}
                                 </Text>
                                 <LoadingIndicator size={120} />
                             </View>
-                            <View
-                                style={{
-                                    bottom: 56
-                                }}
-                            >
-                                <Button
-                                    title={localeString('views.Settings.title')}
-                                    containerStyle={{
-                                        width: 320
+                            {settings.nodes && (
+                                <View
+                                    style={{
+                                        bottom: 56
                                     }}
-                                    titleStyle={{
-                                        color: 'white'
-                                    }}
-                                    onPress={() =>
-                                        navigation.navigate('Settings')
-                                    }
-                                    adaptiveWidth
-                                    iconOnly
-                                />
-                            </View>
+                                >
+                                    <Button
+                                        title={localeString(
+                                            'views.Settings.title'
+                                        )}
+                                        containerStyle={{
+                                            width: 320
+                                        }}
+                                        titleStyle={{
+                                            color: 'white'
+                                        }}
+                                        onPress={() =>
+                                            navigation.navigate('Settings')
+                                        }
+                                        adaptiveWidth
+                                        iconOnly
+                                    />
+                                </View>
+                            )}
                         </View>
                     )}
                 </View>
