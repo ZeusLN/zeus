@@ -4,7 +4,9 @@ import { Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import Button from './../../components/Button';
+import LoadingIndicator from './../../components/LoadingIndicator';
 import NodeIdenticon, { NodeTitle } from './../../components/NodeIdenticon';
+
 import SettingsStore from './../../stores/SettingsStore';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -126,8 +128,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                         backgroundColor:
                                             themeColor('background')
                                     }}
-                                    onPress={() => {
-                                        setSettings(
+                                    onPress={async () => {
+                                        await setSettings(
                                             JSON.stringify({
                                                 nodes,
                                                 theme: settings.theme,
@@ -217,6 +219,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                             iconOnly
                         />
                     )}
+                    {loading && <LoadingIndicator />}
                 </View>
             </View>
         );

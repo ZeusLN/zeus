@@ -30,7 +30,6 @@ interface LayerBalancesProps {
     UnitsStore: UnitsStore;
     navigation: any;
     onRefresh?: any;
-    refreshing?: boolean;
     consolidated?: boolean;
 }
 
@@ -127,7 +126,6 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
             BalanceStore,
             navigation,
             onRefresh,
-            refreshing,
             consolidated
         } = this.props;
 

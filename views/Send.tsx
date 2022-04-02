@@ -85,15 +85,19 @@ export default class Send extends React.Component<SendProps, SendState> {
         super(props);
         const { navigation } = props;
         const destination = navigation.getParam('destination', null);
-        const amount = navigation.getParam('amount', '');
+        const amount = navigation.getParam('amount', null);
         const transactionType = navigation.getParam('transactionType', null);
-        const isValid = navigation.getParam('isValid', null);
+        const isValid = navigation.getParam('isValid', false);
+
+        if (transactionType === 'Lightning') {
+            this.props.InvoicesStore.getPayReq(destination);
+        }
 
         this.state = {
             isValid: isValid || false,
             transactionType,
             destination: destination || '',
-            amount,
+            amount: amount || '',
             fee: '2',
             utxos: [],
             utxoBalance: 0,
@@ -116,6 +120,29 @@ export default class Send extends React.Component<SendProps, SendState> {
             if (!this.state.destination) {
                 this.validateAddress(clipboard);
             }
+        }
+    }
+
+    UNSAFE_componentWillReceiveProps(nextProps: any) {
+        const { navigation } = nextProps;
+        const destination = navigation.getParam('destination', null);
+        const amount = navigation.getParam('amount', null);
+        const transactionType = navigation.getParam('transactionType', null);
+
+        if (transactionType === 'Lightning') {
+            this.props.InvoicesStore.getPayReq(destination);
+        }
+
+        this.setState({
+            transactionType,
+            destination,
+            isValid: true
+        });
+
+        if (amount) {
+            this.setState({
+                amount
+            });
         }
     }
 
@@ -170,24 +197,6 @@ export default class Send extends React.Component<SendProps, SendState> {
         }
         this.setState(newState);
     };
-
-    UNSAFE_componentWillReceiveProps(nextProps: any) {
-        const { navigation } = nextProps;
-        const destination = navigation.getParam('destination', null);
-        const amount = navigation.getParam('amount', null);
-        const transactionType = navigation.getParam('transactionType', null);
-
-        if (transactionType === 'Lightning') {
-            this.props.InvoicesStore.getPayReq(destination);
-        }
-
-        this.setState({
-            transactionType,
-            destination,
-            amount,
-            isValid: true
-        });
-    }
 
     validateAddress = (text: string) => {
         const { navigation } = this.props;
@@ -324,7 +333,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                 break;
             case 'fiat':
                 satAmount = Number(
-                    (Number(amount) / Number(rate)) * Number(satoshisPerBTC)
+                    (Number(amount.replace(/,/g, '.')) / Number(rate)) *
+                        Number(satoshisPerBTC)
                 ).toFixed(0);
                 break;
         }
