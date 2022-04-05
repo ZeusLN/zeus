@@ -86,7 +86,8 @@ export default class BalanceStore {
                 }
                 this.loadingBlockchainBalance = false;
                 return {
-                    unconfirmedBlockchainBalance: confirmedBlockchainBalance,
+                    unconfirmedBlockchainBalance,
+                    confirmedBlockchainBalance,
                     totalBlockchainBalance,
                     accounts
                 };
