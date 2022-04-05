@@ -157,6 +157,7 @@
     "views.Wallet.Wallet.invoices": "Invoices",
     "views.Wallet.Wallet.onchain": "On-chain",
     "views.Wallet.Wallet.channels": "Channels",
+    "views.Wallet.Wallet.startingUp": "Zeus is starting up.",
     "views.Wallet.Wallet.connecting": "Zeus is connecting to your node.",
     "views.Wallet.restart": "Restart",
     "views.BTCPayConfigQRScanner.text": "Scan a BTCPay Config under Settings > Services > LND Rest",

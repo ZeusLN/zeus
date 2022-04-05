@@ -205,7 +205,8 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         const { implementation, settings, loggedIn, connecting } =
             SettingsStore;
         const loginRequired =
-            !settings || (settings && settings.passphrase && !loggedIn);
+            !settings ||
+            (settings && (settings.passphrase || settings.pin) && !loggedIn);
         const dataAvailable = implementation === 'lndhub' || nodeInfo.version;
 
         const WalletScreen = () => {
@@ -384,9 +385,13 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                         padding: 8
                                     }}
                                 >
-                                    {localeString(
-                                        'views.Wallet.Wallet.connecting'
-                                    )}
+                                    {settings.nodes
+                                        ? localeString(
+                                              'views.Wallet.Wallet.connecting'
+                                          )
+                                        : localeString(
+                                              'views.Wallet.Wallet.startingUp'
+                                          )}
                                 </Text>
                                 <LoadingIndicator size={120} />
                             </View>
@@ -396,16 +401,23 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                 }}
                             >
                                 <Button
-                                    title={localeString('views.Settings.title')}
+                                    title={
+                                        settings.nodes
+                                            ? localeString(
+                                                  'views.Settings.title'
+                                              )
+                                            : null
+                                    }
                                     containerStyle={{
                                         width: 320
                                     }}
                                     titleStyle={{
                                         color: 'white'
                                     }}
-                                    onPress={() =>
-                                        navigation.navigate('Settings')
-                                    }
+                                    onPress={() => {
+                                        if (settings.nodes)
+                                            navigation.navigate('Settings');
+                                    }}
                                     adaptiveWidth
                                     iconOnly
                                 />
