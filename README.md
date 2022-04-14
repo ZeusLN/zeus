@@ -1,7 +1,7 @@
 # Zeus
 <p align="center"><img src="https://user-images.githubusercontent.com/55287964/163089394-87203617-cfd8-4227-8d00-1a11a98b04fb.png"></p>
 
-Zeus is a mobile Bitcoin/Lightning node manager and wallet application for LND, Core lightning, and Eclair. ⚡️
+Zeus is a mobile Bitcoin/Lightning node manager and wallet application for LND, Core Lightning, and Eclair. ⚡️
 
 Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 
@@ -27,7 +27,7 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 - [x] No processing fees
 - [x] No KYC
 - [x] Fully open source (APGLv3)
-- [x] Connect to LND, Core lightning (Rest + spark) or Eclair lightning node
+- [x] Connect to LND, Core Lightning (Rest + spark) or Eclair lightning node
 - [x] Manage multiple lightning nodes at once
 - [x] Connect via LNDHub instances
 - [x] Lightning accounts
@@ -65,7 +65,7 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 
 ## Connecting Zeus to your node
 
-Currently, to use Zeus, you must have a Bitcoin Lightning node running [Lightning Network Daemon (lnd)](https://github.com/LightningNetwork/lnd), [eclair](https://github.com/ACINQ/eclair), or [Core lightning](https://github.com/ElementsProject/lightning) using the [REST](https://github.com/Ride-The-Lightning/c-lightning-REST/) or [Spark](https://github.com/shesek/spark-wallet#server-installation) API.
+Currently, to use Zeus, you must have a Bitcoin Lightning node running [Lightning Network Daemon (lnd)](https://github.com/LightningNetwork/lnd), [eclair](https://github.com/ACINQ/eclair), or [Core Lightning](https://github.com/ElementsProject/lightning) using the [REST](https://github.com/Ride-The-Lightning/c-lightning-REST/) or [Spark](https://github.com/shesek/spark-wallet#server-installation) API.
 
 You must provide Zeus with your node's hostname, port number, and the macaroon you choose to use in **hex format**. If you need help converting your macaroon to hex format we wrote up a Node.js script that can use
 [here](https://github.com/ZeusLN/lnd-hex-macaroon-generator/). Alternatively, if you're running a Unix-based operating system (eg. macOS, Linux) you can run `xxd -ps -u -c 1000 /path/to/admin.macaroon` to generate your macaroon in hex format.
