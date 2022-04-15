@@ -11,6 +11,6 @@ body:
     attributes:
       label: Describe the feature
       description: A clear and concise description of what the feature is. Include images / mockups if relevant.
-      placeholder: I want Zeus to give me godly greek powers...
+      placeholder: I want Zeus to give me godly Greek powers...
     validations:
       required: true
