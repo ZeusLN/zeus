@@ -84,8 +84,8 @@ Zeus has support for connecting to you node entirely over the Tor network. You c
 Zeus is proud to be integrated on the following platforms:
 
 ### Full node solutions
-* [Nodl](https://www.nodl.it/)
-* [MyNode](https://mynodebtc.com/) ([Standard guide](https://mynodebtc.com/guide/zeus), [Tor guide](https://mynodebtc.com/guide/zeus_tor))
+* [nodl](https://www.nodl.it/)
+* [myNode](https://mynodebtc.com/) ([Standard guide](https://mynodebtc.com/guide/zeus), [Tor guide](https://mynodebtc.com/guide/zeus_tor))
 * [RaspiBlitz](https://github.com/rootzoll/raspiblitz)
 * [Umbrel](https://getumbrel.com/)
 
