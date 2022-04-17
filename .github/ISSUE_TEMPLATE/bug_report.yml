@@ -1,5 +1,5 @@
-name: Bug Report
-description: Found a bug in Zeus? Use this issue template to report it.
+name: "Bug Report"
+description: "Found a bug in Zeus? Use this issue template to report it."
 labels: ["Bug"]
 body:
   - type: markdown
