@@ -2,16 +2,21 @@ name: Bug Report
 description: Found a bug in Zeus? Use this issue template to report it.
 labels: ["Bug"]
 body:
-  - type: textarea
-    id: describe
+  - type: markdown
     attributes:
-      label: Describe
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: textarea
+    id: describe-bug
+    attributes:
+      label: Describe the bug
       description: A clear and concise description of what the bug is. Include images if relevant.
       placeholder: The bug happened when I opened the app...
+      value: "A bug happened!"
     validations:
       required: true
-  - type: textarea
-    id: reproduce
+- type: textarea
+    id: reproduce-bug
     attributes:
       label: Reproduce
       description: How do you trigger this bug? Please walk us through it step by step.
@@ -23,7 +28,7 @@ body:
       render: bash
   validations:
     required: true
-  - type: dropdown
+- type: dropdown
     id: version
     attributes:
       label: Zeus version
@@ -36,7 +41,7 @@ body:
         - v0.5.2
     validations:
       required: true
-  - type: dropdown
+- type: dropdown
     id: network
     attributes:
       label: Network
@@ -46,7 +51,7 @@ body:
         - Clearnet
     validations:
       required: true
-  - type: input
+- type: input
     id: device
     attributes:
       label: Device
@@ -54,7 +59,7 @@ body:
       placeholder: iPhone 11...
     validations:
       required: true
-  - type: input
+- type: input
     id: os
     attributes:
       label: Device operating system
@@ -62,7 +67,7 @@ body:
       placeholder: iOS 8.1...
     validations:
       required: true
-  - type: textarea
+- type: textarea
     id: logs
     attributes:
       label: Log output
