@@ -55,7 +55,7 @@ body:
     validations:
       required: true
   - type: input
-    id: os
+    id: operating-system
     attributes:
       label: Device operating system
       description: What operating system (OS) is your device using?
