@@ -223,14 +223,16 @@ export default class Send extends React.Component<SendProps, SendState> {
                 sat_per_byte: fee,
                 amount: satAmount.toString(),
                 target_conf: Number(confirmationTarget),
-                utxos
+                utxos,
+                spend_unconfirmed: true
             };
         } else {
             request = {
                 addr: destination,
                 sat_per_byte: fee,
                 amount: satAmount.toString(),
-                target_conf: Number(confirmationTarget)
+                target_conf: Number(confirmationTarget),
+                spend_unconfirmed: true
             };
         }
         TransactionsStore.sendCoins(request);
