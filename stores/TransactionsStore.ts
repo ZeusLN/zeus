@@ -114,7 +114,8 @@ export default class TransactionsStore {
                 outputs,
                 inputs
             },
-            sat_per_vbyte: Number(sat_per_byte)
+            sat_per_vbyte: Number(sat_per_byte),
+            spend_unconfirmed: true
         };
 
         RESTUtils.fundPsbt(fundPsbtRequest)
