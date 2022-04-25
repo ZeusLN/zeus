@@ -207,7 +207,9 @@ export default class Security extends React.Component<
                                 fontFamily: 'Lato-Regular'
                             }}
                         >
-                            {'Scramble PIN numbers'}
+                            {localeString(
+                                'views.Settings.Security.scramblePIN'
+                            )}
                         </ListItem.Title>
                     </ListItem.Content>
                     <Switch
