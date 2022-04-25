@@ -21,7 +21,7 @@ This pull request is categorized as a:
 
 ## Testing
 
-If you added new functionality or fixed a bug, did you add new unit tests?
+If you modified or added a utility file, did you add new unit tests?
 
 - [ ] No, I’m a fool
 - [ ] Yes
