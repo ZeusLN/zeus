@@ -285,6 +285,7 @@ export default class AddEditNode extends React.Component<
                           duressPassphrase: settings.duressPassphrase,
                           pin: settings.pin,
                           duressPin: settings.duressPin,
+                          scramblePin: settings.scramblePin,
                           authenticationAttempts:
                               settings.authenticationAttempts,
                           privacy: settings.privacy
@@ -306,7 +307,7 @@ export default class AddEditNode extends React.Component<
 
     copyNodeConfig = () => {
         const { SettingsStore, navigation } = this.props;
-        const { setSettings, settings } = SettingsStore;
+        const { settings } = SettingsStore;
         const {
             nickname,
             host,
@@ -322,7 +323,7 @@ export default class AddEditNode extends React.Component<
             implementation,
             certVerification
         } = this.state;
-        const { nodes, lurkerMode, passphrase, fiat, locale } = settings;
+        const { nodes } = settings;
 
         const node = {
             nickname: `${nickname} copy`,
@@ -340,24 +341,11 @@ export default class AddEditNode extends React.Component<
             enableTor
         };
 
-        setSettings(
-            JSON.stringify({
-                nodes,
-                theme: settings.theme,
-                selectedNode: settings.selectedNode,
-                fiat,
-                locale,
-                lurkerMode,
-                passphrase,
-                privacy: settings.privacy
-            })
-        ).then(() => {
-            navigation.navigate('AddEditNode', {
-                node,
-                newEntry: true,
-                saved: false,
-                index: Number(nodes.length)
-            });
+        navigation.navigate('AddEditNode', {
+            node,
+            newEntry: true,
+            saved: false,
+            index: Number(nodes.length)
         });
     };
 
@@ -386,6 +374,7 @@ export default class AddEditNode extends React.Component<
                 duressPassphrase: settings.duressPassphrase,
                 pin: settings.pin,
                 duressPin: settings.duressPin,
+                scramblePin: settings.scramblePin,
                 authenticationAttempts: settings.authenticationAttempts,
                 privacy: settings.privacy
             })
@@ -411,6 +400,7 @@ export default class AddEditNode extends React.Component<
                 duressPassphrase: settings.duressPassphrase,
                 pin: settings.pin,
                 duressPin: settings.duressPin,
+                scramblePin: settings.scramblePin,
                 authenticationAttempts: settings.authenticationAttempts,
                 privacy: settings.privacy
             })

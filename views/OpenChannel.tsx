@@ -48,6 +48,7 @@ interface OpenChannelState {
     node_pubkey_string: string;
     local_funding_amount: string;
     min_confs: number;
+    spend_unconfirmed: boolean;
     sat_per_byte: string;
     private: boolean;
     host: string;
@@ -68,6 +69,7 @@ export default class OpenChannel extends React.Component<
             node_pubkey_string: '',
             local_funding_amount: '',
             min_confs: 1,
+            spend_unconfirmed: true,
             sat_per_byte: '2',
             private: false,
             host: '',
