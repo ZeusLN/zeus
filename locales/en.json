@@ -131,6 +131,7 @@
     "views.Settings.Security.title": "Security settings",
     "views.Settings.Security.deletePIN": "Delete PIN",
     "views.Settings.Security.deleteDuressPIN": "Delete Duress PIN",
+    "views.Settings.Security.scramblePIN": "Scramble PIN numbers",
     "views.ImportAccount.title": "Import account",
     "views.ImportAccount.name": "Account Name",
     "views.ImportAccount.extendedPubKey": "Extended Public Key (Xpub)",
