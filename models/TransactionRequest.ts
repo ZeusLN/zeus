@@ -7,6 +7,7 @@ export default interface TransactionRequest {
     amount?: string;
     utxos?: string[];
     conf_target?: number;
+    spend_unconfirmed?: boolean;
 }
 
 export type SendPaymentRequest =

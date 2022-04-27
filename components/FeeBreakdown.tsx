@@ -26,6 +26,7 @@ interface FeeBreakdownProps {
     channelId: string;
     channelPoint: string;
     peerDisplay?: string;
+    initiator?: boolean;
 }
 
 @inject('FeeStore', 'ChannelsStore', 'NodeInfoStore', 'SettingsStore')
@@ -39,6 +40,7 @@ export default class FeeBreakdown extends React.Component<
             channelId,
             channelPoint,
             peerDisplay,
+            initiator,
             ChannelsStore,
             FeeStore,
             NodeInfoStore,
@@ -63,7 +65,16 @@ export default class FeeBreakdown extends React.Component<
                                     color: themeColor('text')
                                 }}
                             >
-                                {localeString('views.Channel.initiatingParty')}
+                                {(chanInfo[channelId].node1_pub === nodeId &&
+                                    initiator) ||
+                                (chanInfo[channelId].node1_pub !== nodeId &&
+                                    !initiator)
+                                    ? localeString(
+                                          'views.Channel.initiatingParty'
+                                      )
+                                    : localeString(
+                                          'views.Channel.counterparty'
+                                      )}
                             </Text>
                             <Text
                                 style={{
@@ -219,7 +230,17 @@ export default class FeeBreakdown extends React.Component<
                                         color: themeColor('text')
                                     }}
                                 >
-                                    {localeString('views.Channel.counterparty')}
+                                    {(chanInfo[channelId].node2_pub ===
+                                        nodeId &&
+                                        initiator) ||
+                                    (chanInfo[channelId].node2_pub !== nodeId &&
+                                        !initiator)
+                                        ? localeString(
+                                              'views.Channel.initiatingParty'
+                                          )
+                                        : localeString(
+                                              'views.Channel.counterparty'
+                                          )}
                                 </Text>
                                 <Text
                                     style={{
