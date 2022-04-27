@@ -63,7 +63,6 @@ export default class Lockscreen extends React.Component<
     UNSAFE_componentWillMount() {
         const { SettingsStore, navigation } = this.props;
         const { settings } = SettingsStore;
-
         const modifySecurityScreen: string = navigation.getParam(
             'modifySecurityScreen'
         );
@@ -185,6 +184,7 @@ export default class Lockscreen extends React.Component<
                         duressPassphrase: updatedSettings?.duressPassphrase,
                         pin: updatedSettings?.pin,
                         duressPin: updatedSettings?.duressPin,
+                        scramblePin: updatedSettings?.scramblePin,
                         authenticationAttempts,
                         fiat: updatedSettings?.fiat,
                         locale: updatedSettings?.locale,
@@ -220,6 +220,7 @@ export default class Lockscreen extends React.Component<
                 duressPassphrase: settings.duressPassphrase,
                 pin: '',
                 duressPin: '',
+                scramblePin: settings.scramblePin,
                 authenticationAttempts: 0,
                 fiat: settings.fiat,
                 locale: settings.locale,
@@ -243,6 +244,7 @@ export default class Lockscreen extends React.Component<
                 duressPassphrase: settings.duressPassphrase,
                 pin: settings.pin,
                 duressPin: '',
+                scramblePin: settings.scramblePin,
                 authenticationAttempts: 0,
                 fiat: settings.fiat,
                 locale: settings.locale,
@@ -266,6 +268,7 @@ export default class Lockscreen extends React.Component<
                 duressPassphrase: settings.duressPassphrase,
                 pin: settings.pin,
                 duressPin: settings.duressPin,
+                scramblePin: settings.scramblePin,
                 authenticationAttempts: 0,
                 fiat: settings.fiat,
                 locale: settings.locale,
@@ -289,6 +292,7 @@ export default class Lockscreen extends React.Component<
                 duressPassphrase: '',
                 pin: '',
                 duressPin: '',
+                scramblePin: settings.scramblePin,
                 authenticationAttempts: 0,
                 fiat: settings.fiat,
                 locale: settings.locale,
@@ -312,6 +316,7 @@ export default class Lockscreen extends React.Component<
                 duressPassphrase: settings.duressPassphrase,
                 pin: settings.pin,
                 duressPin: settings.duressPin,
+                scramblePin: settings.scramblePin,
                 authenticationAttempts: 0,
                 fiat: settings.fiat,
                 locale: settings.locale,
@@ -340,7 +345,8 @@ export default class Lockscreen extends React.Component<
     };
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, SettingsStore } = this.props;
+        const { settings } = SettingsStore;
         const {
             passphrase,
             passphraseAttempt,
@@ -492,6 +498,7 @@ export default class Lockscreen extends React.Component<
                                         }
                                         hidePinLength={true}
                                         pinLength={pin.length}
+                                        shuffle={settings.scramblePin}
                                     />
                                 </View>
                             </>

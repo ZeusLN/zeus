@@ -105,7 +105,8 @@ export default class SetDuressPin extends React.Component<
                           passphrase: settings.passphrase,
                           duressPassphrase: settings.duressPassphrase,
                           pin: settings.pin,
-                          duressPin
+                          duressPin,
+                          scramblePin: settings.scramblePin
                       }
                     : { duressPin }
             )
@@ -118,7 +119,8 @@ export default class SetDuressPin extends React.Component<
     };
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, SettingsStore } = this.props;
+        const { settings } = SettingsStore;
         const { duressPin, duressPinMismatchError, duressPinInvalidError } =
             this.state;
         const BackButton = () => (
@@ -203,6 +205,7 @@ export default class SetDuressPin extends React.Component<
                                     onPinChange={this.onPinChange}
                                     hidePinLength={true}
                                     pinConfirm={false}
+                                    shuffle={settings.scramblePin}
                                 />
                             </View>
                         </>
@@ -245,6 +248,7 @@ export default class SetDuressPin extends React.Component<
                                     hidePinLength={false}
                                     pinConfirm={true}
                                     pinLength={duressPin.length}
+                                    shuffle={settings.scramblePin}
                                 />
                             </View>
                         </>
