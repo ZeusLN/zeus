@@ -14,6 +14,7 @@ interface SecurityProps {
 interface SecurityState {
     scramblePin: boolean;
     displaySecurityItems: Array<any>;
+    pinExists: boolean;
 }
 
 const possibleSecurityItems = [
@@ -51,7 +52,8 @@ export default class Security extends React.Component<
 > {
     state = {
         scramblePin: true,
-        displaySecurityItems: []
+        displaySecurityItems: [],
+        pinExists: false
     };
 
     async componentDidMount() {
@@ -62,6 +64,12 @@ export default class Security extends React.Component<
         this.setState({
             scramblePin: settings.scramblePin ?? true
         });
+
+        if (settings.pin) {
+            this.setState({
+                pinExists: true
+            });
+        }
 
         // Three cases:
         // 1) If no passphrase or pin is set, allow user to set passphrase or pin
@@ -156,7 +164,7 @@ export default class Security extends React.Component<
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { scramblePin, displaySecurityItems } = this.state;
+        const { scramblePin, displaySecurityItems, pinExists } = this.state;
         const { setSettings, getSettings, settings }: any = SettingsStore;
 
         const BackButton = () => (
@@ -195,57 +203,60 @@ export default class Security extends React.Component<
                     keyExtractor={(item, index) => `${item.label}-${index}`}
                     ItemSeparatorComponent={this.renderSeparator}
                 />
-                <ListItem
-                    containerStyle={{
-                        backgroundColor: themeColor('background')
-                    }}
-                >
-                    <ListItem.Content>
-                        <ListItem.Title
-                            style={{
-                                color: themeColor('secondaryText'),
-                                fontFamily: 'Lato-Regular'
+                {pinExists && (
+                    <ListItem
+                        containerStyle={{
+                            backgroundColor: themeColor('background')
+                        }}
+                    >
+                        <ListItem.Content>
+                            <ListItem.Title
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'Lato-Regular'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Security.scramblePIN'
+                                )}
+                            </ListItem.Title>
+                        </ListItem.Content>
+                        <Switch
+                            value={scramblePin}
+                            onValueChange={async () => {
+                                this.setState({
+                                    scramblePin: !scramblePin
+                                });
+                                const settings = await getSettings();
+                                setSettings(
+                                    JSON.stringify({
+                                        nodes: settings.nodes,
+                                        theme: settings.theme,
+                                        selectedNode: settings.selectedNode,
+                                        fiat: settings.fiat,
+                                        passphrase: settings.passphrase,
+                                        duressPassphrase:
+                                            settings.duressPassphrase,
+                                        pin: settings.pin,
+                                        duressPin: settings.duressPin,
+                                        scramblePin: !scramblePin,
+                                        authenticationAttempts:
+                                            settings.authenticationAttempts,
+                                        locale: settings.locale,
+                                        privacy: settings.privacy
+                                    })
+                                );
                             }}
-                        >
-                            {localeString(
-                                'views.Settings.Security.scramblePIN'
-                            )}
-                        </ListItem.Title>
-                    </ListItem.Content>
-                    <Switch
-                        value={scramblePin}
-                        onValueChange={async () => {
-                            this.setState({
-                                scramblePin: !scramblePin
-                            });
-                            const settings = await getSettings();
-                            setSettings(
-                                JSON.stringify({
-                                    nodes: settings.nodes,
-                                    theme: settings.theme,
-                                    selectedNode: settings.selectedNode,
-                                    fiat: settings.fiat,
-                                    passphrase: settings.passphrase,
-                                    duressPassphrase: settings.duressPassphrase,
-                                    pin: settings.pin,
-                                    duressPin: settings.duressPin,
-                                    scramblePin: !scramblePin,
-                                    authenticationAttempts:
-                                        settings.authenticationAttempts,
-                                    locale: settings.locale,
-                                    privacy: settings.privacy
-                                })
-                            );
-                        }}
-                        trackColor={{
-                            false: '#767577',
-                            true: themeColor('highlight')
-                        }}
-                        style={{
-                            alignSelf: 'flex-end'
-                        }}
-                    />
-                </ListItem>
+                            trackColor={{
+                                false: '#767577',
+                                true: themeColor('highlight')
+                            }}
+                            style={{
+                                alignSelf: 'flex-end'
+                            }}
+                        />
+                    </ListItem>
+                )}
             </ScrollView>
         );
     }
