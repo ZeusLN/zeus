@@ -65,7 +65,9 @@ export default function TextInput(props: TextInputProps) {
         >
             {prefix && (
                 <TouchableOpacity onPress={() => toggleUnits()}>
-                    <Text style={styles.unit}>{prefix}</Text>
+                    <Text style={{ ...styles.unit, marginRight: 5 }}>
+                        {prefix}
+                    </Text>
                 </TouchableOpacity>
             )}
             <TextInputRN
