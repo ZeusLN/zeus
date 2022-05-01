@@ -274,7 +274,9 @@ export default class ChannelsStore {
                         outputs
                     },
                     sat_per_vbyte: Number(sat_per_byte),
-                    spend_unconfirmed: true
+                    spend_unconfirmed:
+                        openChanRequest.min_confs &&
+                        openChanRequest.min_confs === 0
                 };
 
                 RESTUtils.fundPsbt(fundPsbtRequest)
