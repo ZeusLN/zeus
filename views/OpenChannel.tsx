@@ -410,7 +410,7 @@ export default class OpenChannel extends React.Component<
                         placeholder={'1'}
                         value={min_confs.toString()}
                         onChangeText={(text: string) => {
-                            const newMinConfs = Number(text) || min_confs;
+                            const newMinConfs = Number(text);
                             this.setState({
                                 min_confs: newMinConfs,
                                 spend_unconfirmed: newMinConfs === 0
