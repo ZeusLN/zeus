@@ -69,7 +69,7 @@ export default class OpenChannel extends React.Component<
             node_pubkey_string: '',
             local_funding_amount: '',
             min_confs: 1,
-            spend_unconfirmed: true,
+            spend_unconfirmed: false,
             sat_per_byte: '2',
             private: false,
             host: '',
@@ -409,11 +409,13 @@ export default class OpenChannel extends React.Component<
                         keyboardType="numeric"
                         placeholder={'1'}
                         value={min_confs.toString()}
-                        onChangeText={(text: string) =>
+                        onChangeText={(text: string) => {
+                            const newMinConfs = Number(text) || min_confs;
                             this.setState({
-                                min_confs: Number(text) || min_confs
-                            })
-                        }
+                                min_confs: newMinConfs,
+                                spend_unconfirmed: newMinConfs === 0
+                            });
+                        }}
                         editable={!openingChannel}
                     />
 
