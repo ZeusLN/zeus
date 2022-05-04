@@ -9,7 +9,9 @@ import SettingsStore from './SettingsStore';
 import PaymentsStore from './PaymentsStore';
 import InvoicesStore from './InvoicesStore';
 import TransactionsStore from './TransactionsStore';
+
 import { localeString } from './../utils/LocaleUtils';
+import RESTUtils from './../utils/RESTUtils';
 
 interface ActivityFilter {
     [index: string]: any;
@@ -82,7 +84,8 @@ export default class ActivityStore {
         this.loading = true;
         this.activity = [];
         await this.paymentsStore.getPayments();
-        await this.transactionsStore.getTransactions();
+        if (RESTUtils.supportsOnchainSends())
+            await this.transactionsStore.getTransactions();
         await this.invoicesStore.getInvoices();
         const activity: any = [];
         const payments = this.paymentsStore.payments;
@@ -92,7 +95,9 @@ export default class ActivityStore {
         // push payments, txs, invoices to one array
         activity.push.apply(
             activity,
-            payments.concat(transactions).concat(invoices)
+            RESTUtils.supportsOnchainSends()
+                ? payments.concat(transactions).concat(invoices)
+                : payments.concat(invoices)
         );
         // sort activity by timestamp
         const sortedActivity = activity.sort((a: any, b: any) =>
