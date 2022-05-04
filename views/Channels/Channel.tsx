@@ -139,7 +139,8 @@ export default class ChannelView extends React.Component<
             remote_pubkey,
             capacity,
             alias,
-            channelId
+            channelId,
+            initiator
         } = channel;
         const privateChannel = channel.private;
 
@@ -355,6 +356,7 @@ export default class ChannelView extends React.Component<
                             channelId={channelId}
                             peerDisplay={peerDisplay}
                             channelPoint={channel_point}
+                            initiator={initiator}
                         />
                     )}
 

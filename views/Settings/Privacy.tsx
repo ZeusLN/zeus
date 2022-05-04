@@ -147,6 +147,8 @@ export default class Privacy extends React.Component<
                                                       settings.duressPassphrase,
                                                   pin: settings.pin,
                                                   duressPin: settings.duressPin,
+                                                  scramblePin:
+                                                      settings.scramblePin,
                                                   authenticationAttempts:
                                                       settings.authenticationAttempts,
                                                   locale: settings.locale,
@@ -211,6 +213,8 @@ export default class Privacy extends React.Component<
                                                           pin: settings.pin,
                                                           duressPin:
                                                               settings.duressPin,
+                                                          scramblePin:
+                                                              settings.scramblePin,
                                                           authenticationAttempts:
                                                               settings.authenticationAttempts,
                                                           locale: settings.locale,
@@ -287,6 +291,8 @@ export default class Privacy extends React.Component<
                                                           pin: settings.pin,
                                                           duressPin:
                                                               settings.duressPin,
+                                                          scramblePin:
+                                                              settings.scramblePin,
                                                           authenticationAttempts:
                                                               settings.authenticationAttempts,
                                                           locale: settings.locale,
@@ -366,6 +372,8 @@ export default class Privacy extends React.Component<
                                                           pin: settings.pin,
                                                           duressPin:
                                                               settings.duressPin,
+                                                          scramblePin:
+                                                              settings.scramblePin,
                                                           authenticationAttempts:
                                                               settings.authenticationAttempts,
                                                           locale: settings.locale,
@@ -446,6 +454,8 @@ export default class Privacy extends React.Component<
                                                           pin: settings.pin,
                                                           duressPin:
                                                               settings.duressPin,
+                                                          scramblePin:
+                                                              settings.scramblePin,
                                                           authenticationAttempts:
                                                               settings.authenticationAttempts,
                                                           locale: settings.locale,

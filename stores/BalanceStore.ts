@@ -56,24 +56,24 @@ export default class BalanceStore {
     };
 
     @action
-    public getBlockchainBalance = (set: boolean) => {
+    public getBlockchainBalance = (set: boolean, reset: boolean) => {
         this.loadingBlockchainBalance = true;
-        if (set) this.resetBlockchainBalance();
+        if (reset) this.resetBlockchainBalance();
         return RESTUtils.getBlockchainBalance()
             .then((data: any) => {
                 // process external accounts
                 const accounts = data.account_balance;
-                delete accounts.default;
+                if (accounts && accounts.default) delete accounts.default;
 
                 const unconfirmedBlockchainBalance = Number(
-                    data.unconfirmed_balance
+                    data.unconfirmed_balance || 0
                 );
 
                 const confirmedBlockchainBalance = Number(
-                    data.confirmed_balance
+                    data.confirmed_balance || 0
                 );
 
-                const totalBlockchainBalance = Number(data.total_balance);
+                const totalBlockchainBalance = Number(data.total_balance || 0);
 
                 if (set) {
                     this.otherAccounts = accounts;
@@ -98,13 +98,15 @@ export default class BalanceStore {
     };
 
     @action
-    public getLightningBalance = (set: boolean) => {
+    public getLightningBalance = (set: boolean, reset: boolean) => {
         this.loadingLightningBalance = true;
-        if (set) this.resetLightningBalance();
+        if (reset) this.resetLightningBalance();
         return RESTUtils.getLightningBalance()
             .then((data: any) => {
-                const pendingOpenBalance = Number(data.pending_open_balance);
-                const lightningBalance = Number(data.balance);
+                const pendingOpenBalance = Number(
+                    data.pending_open_balance || 0
+                );
+                const lightningBalance = Number(data.balance || 0);
 
                 if (set) {
                     this.pendingOpenBalance = pendingOpenBalance;
