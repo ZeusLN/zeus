@@ -14,6 +14,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import RNRestart from 'react-native-restart';
 
 import ChannelsPane from '../Channels/ChannelsPane';
+import DefaultPane from './DefaultPane';
 import MainPane from './MainPane';
 
 import Button from './../../components/Button';
@@ -35,6 +36,7 @@ import FiatStore from './../../stores/FiatStore';
 import UnitsStore from './../../stores/UnitsStore';
 import UTXOsStore from './../../stores/UTXOsStore';
 
+import Bitcoin from './../../assets/images/SVG/Bitcoin.svg';
 import Temple from './../../assets/images/SVG/Temple.svg';
 import ChannelsIcon from './../../assets/images/SVG/Channels.svg';
 import CaretUp from './../../assets/images/SVG/Caret Up.svg';
@@ -280,6 +282,19 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             );
         };
 
+        const DefaultScreen = () => {
+            return (
+                <View
+                    style={{
+                        backgroundColor: themeColor('background'),
+                        flex: 1
+                    }}
+                >
+                    <DefaultPane navigation={navigation} />
+                </View>
+            );
+        };
+
         const ChannelsScreen = () => {
             return (
                 <View
@@ -308,8 +323,12 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                     {!connecting && !loginRequired && (
                         <NavigationContainer theme={Theme}>
                             <Tab.Navigator
+                                initialRouteName="Default"
                                 screenOptions={({ route }) => ({
                                     tabBarIcon: ({ color }) => {
+                                        if (route.name === 'Default') {
+                                            return <Bitcoin fill={color} />;
+                                        }
                                         if (route.name === 'Wallet') {
                                             return <Temple fill={color} />;
                                         }
@@ -337,6 +356,10 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                 <Tab.Screen
                                     name="Wallet"
                                     component={WalletScreen}
+                                />
+                                <Tab.Screen
+                                    name="Default"
+                                    component={DefaultScreen}
                                 />
                                 {RESTUtils.supportsChannelManagement() &&
                                 !error ? (

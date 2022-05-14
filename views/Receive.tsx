@@ -75,6 +75,7 @@ export default class Receive extends React.Component<
             navigation.getParam('lnurlParams');
 
         const selectedIndex: number = navigation.getParam('selectedIndex');
+        const amount: string = navigation.getParam('amount');
 
         if (lnurl) {
             this.setState({
@@ -87,6 +88,12 @@ export default class Receive extends React.Component<
         if (selectedIndex) {
             this.setState({
                 selectedIndex
+            });
+        }
+
+        if (amount) {
+            this.setState({
+                value: amount
             });
         }
     }
