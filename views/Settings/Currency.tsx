@@ -143,6 +143,8 @@ export default class Currency extends React.Component<
                                                       pin: settings.pin,
                                                       duressPin:
                                                           settings.duressPin,
+                                                      scramblePin:
+                                                          settings.scramblePin,
                                                       authenticationAttempts:
                                                           settings.authenticationAttempts,
                                                       locale: settings.locale,

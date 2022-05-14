@@ -184,7 +184,7 @@ export default class CollapsedQR extends React.Component<
                     <View style={styles.qrPadding}>
                         <QRCode
                             value={!this.props.bcur ? value : fragment}
-                            size={350}
+                            size={300}
                             logo={secondaryLogo}
                         />
                     </View>

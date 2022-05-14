@@ -200,7 +200,8 @@ export default class LND {
         this.postRequest('/v1/transactions', {
             addr: data.addr,
             sat_per_byte: data.sat_per_byte,
-            amount: data.amount
+            amount: data.amount,
+            spend_unconfirmed: data.spend_unconfirmed
         });
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
     getInvoices = () =>
@@ -219,7 +220,8 @@ export default class LND {
             local_funding_amount: data.local_funding_amount,
             min_confs: data.min_confs,
             node_pubkey_string: data.node_pubkey_string,
-            sat_per_byte: data.sat_per_byte
+            sat_per_byte: data.sat_per_byte,
+            spend_unconfirmed: data.spend_unconfirmed
         });
     openChannelStream = (data: OpenChannelRequest) =>
         this.wsReq('/v1/channels/stream', 'POST', data);

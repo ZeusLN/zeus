@@ -37,6 +37,7 @@ interface Settings {
     duressPassphrase?: string;
     pin?: string;
     duressPin?: string;
+    scramblePin?: boolean;
     authenticationAttempts?: number;
     fiat?: string;
     locale?: string;
@@ -137,7 +138,8 @@ export default class SettingsStore {
             clipboard: true,
             lurkerMode: false,
             enableMempoolRates: true
-        }
+        },
+        scramblePin: true
     };
     @observable public loading = false;
     @observable btcPayError: string | null;

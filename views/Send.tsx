@@ -225,14 +225,16 @@ export default class Send extends React.Component<SendProps, SendState> {
                 sat_per_byte: fee,
                 amount: satAmount.toString(),
                 target_conf: Number(confirmationTarget),
-                utxos
+                utxos,
+                spend_unconfirmed: true
             };
         } else {
             request = {
                 addr: destination,
                 sat_per_byte: fee,
                 amount: satAmount.toString(),
-                target_conf: Number(confirmationTarget)
+                target_conf: Number(confirmationTarget),
+                spend_unconfirmed: true
             };
         }
         TransactionsStore.sendCoins(request);
@@ -311,7 +313,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         const { fiat, privacy } = settings;
         const enableMempoolRates = privacy && privacy.enableMempoolRates;
         const { units, changeUnits } = UnitsStore;
-        const { fiatRates }: any = FiatStore;
+        const { fiatRates, getSymbol }: any = FiatStore;
 
         const fiatEntry =
             fiat && fiatRates && fiatRates.filter
@@ -455,8 +457,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             color: themeColor('secondaryText')
                                         }}
                                     >
-                                        {localeString('views.Send.amount')} (
-                                        {units === 'fiat' ? fiat : units})
+                                        {localeString('views.Send.amount')}
                                     </Text>
                                 </TouchableOpacity>
                                 <TextInput
@@ -466,6 +467,22 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         this.setState({ amount: text })
                                     }
                                     style={styles.textInput}
+                                    prefix={
+                                        units !== 'sats' &&
+                                        (units === 'BTC'
+                                            ? '₿'
+                                            : !getSymbol().rtl
+                                            ? getSymbol().symbol
+                                            : null)
+                                    }
+                                    suffix={
+                                        units === 'sats'
+                                            ? units
+                                            : getSymbol().rtl &&
+                                              units === 'fiat' &&
+                                              getSymbol().symbol
+                                    }
+                                    toggleUnits={changeUnits}
                                 />
                                 <View style={{ paddingBottom: 15 }}>
                                     {units !== 'sats' && amount !== 'all' && (

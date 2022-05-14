@@ -1,0 +1,71 @@
+name: "Bug Report"
+description: "Found a bug in Zeus? Use this issue template to report it."
+labels: ["Bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: textarea
+    id: describe-bug
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is. Include images if relevant.
+      placeholder: The bug happened when I opened the app...
+      value: "A bug happened!"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce-bug
+    attributes:
+      label: Reproduce
+      description: How do you trigger this bug? Please walk us through it step by step.
+      value: "Reproduce the bug step by step."
+    validations:
+      required: true
+  - type: dropdown
+    id: version
+    attributes:
+      label: Zeus version
+      description: What version of Zeus were you running when the bug occurred?
+      options:
+        - v0.6.2
+        - v0.6.1
+        - v0.6.0
+        - v0.5.2
+    validations:
+      required: true
+  - type: dropdown
+    id: network
+    attributes:
+      label: Network
+      description: What network were you using Zeus with when the bug occurred?
+      options:
+        - Tor
+        - Clearnet
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device
+      description: What device were you using when the bug occurred?
+      placeholder: iPhone 11...
+    validations:
+      required: true
+  - type: input
+    id: operating-system
+    attributes:
+      label: Device operating system
+      description: What operating system (OS) is your device using?
+      placeholder: iOS 8.1...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log output
+      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+      render: shell
+    validations:
+      required: false

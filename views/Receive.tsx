@@ -150,7 +150,7 @@ export default class Receive extends React.Component<
             account
         } = this.state;
         const { units, changeUnits, getAmount } = UnitsStore;
-        const { fiatRates }: any = FiatStore;
+        const { fiatRates, getSymbol }: any = FiatStore;
 
         const { accounts, getUTXOs } = UTXOsStore;
 
@@ -390,8 +390,7 @@ export default class Receive extends React.Component<
                                             color: themeColor('secondaryText')
                                         }}
                                     >
-                                        {localeString('views.Receive.amount')} (
-                                        {units === 'fiat' ? fiat : units})
+                                        {localeString('views.Receive.amount')}
                                         {lnurl &&
                                         lnurl.minWithdrawable !==
                                             lnurl.maxWithdrawable
@@ -417,6 +416,22 @@ export default class Receive extends React.Component<
                                             ? false
                                             : true
                                     }
+                                    prefix={
+                                        units !== 'sats' &&
+                                        (units === 'BTC'
+                                            ? '₿'
+                                            : !getSymbol().rtl
+                                            ? getSymbol().symbol
+                                            : null)
+                                    }
+                                    suffix={
+                                        units === 'sats'
+                                            ? units
+                                            : getSymbol().rtl &&
+                                              units === 'fiat' &&
+                                              getSymbol().symbol
+                                    }
+                                    toggleUnits={changeUnits}
                                 />
                                 {units !== 'sats' && (
                                     <Amount

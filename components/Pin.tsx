@@ -9,6 +9,7 @@ interface PinProps {
     hidePinLength: boolean;
     pinLength?: number;
     pinConfirm?: boolean;
+    shuffle?: boolean;
 }
 
 export default function Pin({
@@ -16,7 +17,8 @@ export default function Pin({
     onPinChange = () => void 0,
     hidePinLength,
     pinLength = 4,
-    pinConfirm = false
+    pinConfirm = false,
+    shuffle = true
 }: PinProps) {
     const [pinValue, setPinValue] = useState('');
     const maxLength = 8;
@@ -84,7 +86,7 @@ export default function Pin({
                     clearValue={clearValue}
                     deleteValue={deleteValue}
                     submitValue={submitValue}
-                    shuffle={true}
+                    shuffle={shuffle}
                     hidePinLength={hidePinLength}
                     minLength={minLength}
                     maxLength={maxLength}
