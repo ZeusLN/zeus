@@ -144,6 +144,7 @@ export default class DefaultPane extends React.PureComponent<
                             <Button
                                 title={localeString('general.request')}
                                 quinary
+                                noUppercase
                                 onPress={() => {
                                     navigation.navigate('Receive', {
                                         amount
@@ -155,6 +156,7 @@ export default class DefaultPane extends React.PureComponent<
                             <Button
                                 title={localeString('general.send')}
                                 quinary
+                                noUppercase
                                 disabled={amount === '0'}
                                 onPress={() => {
                                     navigation.navigate('Send', {

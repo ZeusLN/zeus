@@ -30,6 +30,7 @@ export default class UnitToggle extends React.Component<UnitToggleProps, {}> {
                     }}
                     adaptiveWidth
                     quinary
+                    noUppercase
                     onPress={changeUnits}
                 />
             </React.Fragment>
