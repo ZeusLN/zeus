@@ -4,9 +4,12 @@ import { ButtonGroup } from 'react-native-elements';
 import QRCode from 'react-native-qrcode-svg';
 
 import HCESession, { NFCContentType, NFCTagType4 } from 'react-native-hce';
+import NfcManager, { NfcTech, Ndef } from 'react-native-nfc-manager';
 
 import Button from './../components/Button';
 import CopyButton from './CopyButton';
+
+import Base64Utils from './../utils/Base64Utils';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
@@ -28,6 +31,7 @@ interface CollapsedQRProps {
 interface CollapsedQRState {
     collapsed: boolean;
     nfcBroadcast: boolean;
+    nfcWrite: boolean;
     selectedIndex: number;
 }
 
@@ -38,6 +42,7 @@ export default class CollapsedQR extends React.Component<
     state = {
         collapsed: true,
         nfcBroadcast: false,
+        nfcWrite: false,
         selectedIndex: 0,
         fragment: ''
     };
@@ -86,7 +91,7 @@ export default class CollapsedQR extends React.Component<
         });
     };
 
-    toggleNfc = () => {
+    toggleNfcBroadcast = () => {
         if (this.state.nfcBroadcast) {
             this.stopSimulation();
         } else {
@@ -96,6 +101,57 @@ export default class CollapsedQR extends React.Component<
         this.setState({
             nfcBroadcast: !this.state.nfcBroadcast
         });
+    };
+
+    toggleNfcWrite = async () => {
+        // if (this.state.nfcBroadcast) {
+        //     this.stopSimulation();
+        // } else {
+        //     this.startSimulation();
+        // }
+
+        // const value = Base64Utils.hexStringToBin(this.props.value);
+
+        const value = Base64Utils.hexToAscii(this.props.value);
+        console.log('trying to write', value);
+
+        this.setState({
+            nfcWrite: !this.state.nfcWrite
+        });
+
+        let result = false;
+
+        try {
+            // STEP 1
+            await NfcManager.requestTechnology(NfcTech.Ndef);
+
+            // urn:nfc:ext:bitcoin.org:psbt
+            // TNF=4 0x04
+
+            // Ndef.createNdefRecord(0x04, 'urn:nfc:ext:bitcoin.org:psbt', value, value);
+
+            const bytes = Ndef.encodeMessage([
+                Ndef.record(0x04, 'urn:nfc:ext:bitcoin.org:psbt', '01', value)
+                // Ndef.textRecord(value)
+            ]);
+
+            console.log('bytes', bytes);
+
+            if (bytes) {
+                await NfcManager.ndefHandler // STEP 2
+                    .writeNdefMessage(bytes); // STEP 3
+                result = true;
+                console.log('write success');
+            }
+        } catch (ex) {
+            console.log('write fail');
+            console.warn(ex);
+        } finally {
+            // STEP 4
+            NfcManager.cancelTechnologyRequest();
+        }
+
+        return result;
     };
 
     startSimulation = async () => {
@@ -108,7 +164,8 @@ export default class CollapsedQR extends React.Component<
     };
 
     render() {
-        const { collapsed, nfcBroadcast, selectedIndex, fragment } = this.state;
+        const { collapsed, nfcBroadcast, nfcWrite, selectedIndex, fragment } =
+            this.state;
         const { value, showText, copyText, collapseText, hideText, bcur } =
             this.props;
 
@@ -219,13 +276,27 @@ export default class CollapsedQR extends React.Component<
                                   )
                         }
                         containerStyle={{
+                            marginTop: 20
+                        }}
+                        icon={{
+                            name: 'nfc',
+                            size: 25
+                        }}
+                        onPress={() => this.toggleNfcBroadcast()}
+                        tertiary
+                    />
+                )}
+                {Platform.OS === 'android' && (
+                    <Button
+                        title={nfcWrite ? 'Stop NFC Write' : 'Start NFC Write'}
+                        containerStyle={{
                             margin: 20
                         }}
                         icon={{
                             name: 'nfc',
                             size: 25
                         }}
-                        onPress={() => this.toggleNfc()}
+                        onPress={() => this.toggleNfcWrite()}
                         tertiary
                     />
                 )}

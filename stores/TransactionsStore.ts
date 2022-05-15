@@ -120,7 +120,7 @@ export default class TransactionsStore {
             sat_per_vbyte: Number(sat_per_byte),
             spend_unconfirmed: true,
             // TODO wire up account selection
-            account: 'Passport'
+            account: 'mk4'
         };
 
         console.log('fundPsbtRequest', fundPsbtRequest);
