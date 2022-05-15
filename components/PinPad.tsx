@@ -67,7 +67,7 @@ export default function PinPad({
     };
 
     return (
-        <View style={styles.bottom}>
+        <View style={styles.pad}>
             <Row align="flex-end" style={styles.pinPadRow}>
                 <Touchable
                     touch={() => {
@@ -252,9 +252,10 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontFamily: 'Lato-Bold'
     },
-    bottom: {
+    pad: {
         justifyContent: 'flex-end',
-        marginBottom: 75
+        marginBottom: 75,
+        left: 10
     },
     key: {
         flex: 1,
