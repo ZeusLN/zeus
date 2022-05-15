@@ -5,6 +5,7 @@ import { inject, observer } from 'mobx-react';
 
 import { Amount } from './../../components/Amount';
 import LoadingIndicator from './../../components/LoadingIndicator';
+import AccountFilter from './../../components/AccountFilter';
 
 import { localeString } from './../../utils/LocaleUtils';
 import RESTUtils from './../../utils/RESTUtils';
@@ -17,16 +18,34 @@ interface CoinControlProps {
     UTXOsStore: UTXOsStore;
 }
 
+interface CoinControlState {
+    account: string;
+}
+
 @inject('UTXOsStore')
 @observer
 export default class CoinControl extends React.Component<CoinControlProps, {}> {
-    async UNSAFE_componentWillMount() {
+    constructor(props: any) {
+        super(props);
+
+        const accountParam = props.navigation.getParam('account');
+        const account =
+            accountParam && accountParam === 'On-chain'
+                ? 'default'
+                : accountParam;
+
+        this.state = {
+            account: account || 'default'
+        };
+    }
+
+    UNSAFE_componentWillMount() {
         const { UTXOsStore } = this.props;
+        const { account } = this.state;
         const { getUTXOs, listAccounts } = UTXOsStore;
-        getUTXOs();
-        if (RESTUtils.supportsAccounts()) {
-            listAccounts();
-        }
+
+        getUTXOs({ account });
+        if (RESTUtils.supportsAccounts()) listAccounts();
     }
 
     renderSeparator = () => (
@@ -40,7 +59,8 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
 
     render() {
         const { navigation, UTXOsStore } = this.props;
-        const { loading, utxos, getUTXOs } = UTXOsStore;
+        const { account } = this.state;
+        const { loading, utxos, getUTXOs, accounts } = UTXOsStore;
 
         const CloseButton = () => (
             <Icon
@@ -78,6 +98,17 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                         borderBottomWidth: 0
                     }}
                 />
+                {RESTUtils.supportsAccounts() && (
+                    <AccountFilter
+                        default={account}
+                        items={accounts}
+                        refresh={(account: string) => {
+                            getUTXOs({ account });
+                            this.setState({ account });
+                        }}
+                        showAll
+                    />
+                )}
                 {loading ? (
                     <View style={{ padding: 50 }}>
                         <LoadingIndicator />
@@ -132,7 +163,7 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}
                         refreshing={loading}
-                        onRefresh={() => getUTXOs()}
+                        onRefresh={() => getUTXOs({ account })}
                     />
                 ) : (
                     <Button
@@ -142,7 +173,7 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
                             size: 25,
                             color: themeColor('text')
                         }}
-                        onPress={() => getUTXOs()}
+                        onPress={() => getUTXOs({ account })}
                         buttonStyle={{
                             backgroundColor: 'transparent',
                             borderRadius: 30

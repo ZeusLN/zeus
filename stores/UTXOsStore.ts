@@ -1,12 +1,12 @@
 import { action, observable } from 'mobx';
 import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
-import Base64Utils from './../utils/Base64Utils';
 import Utxo from './../models/Utxo';
 
 export default class UTXOsStore {
     // utxos
     @observable public loading = false;
+    @observable public success = false;
     @observable public error = false;
     @observable public errorMsg: string;
     @observable public utxos: Array<Utxo> = [];
@@ -14,6 +14,7 @@ export default class UTXOsStore {
     @observable public loadingAccounts = false;
     @observable public importingAccount = false;
     @observable public accounts: any = [];
+    @observable public accountToImport: any | null;
     //
     settingsStore: SettingsStore;
 
@@ -28,10 +29,20 @@ export default class UTXOsStore {
     };
 
     @action
-    public getUTXOs = () => {
+    public getUTXOs = (data: any) => {
         this.errorMsg = '';
         this.loading = true;
-        RESTUtils.getUTXOs()
+
+        const request = {
+            min_confs: 0,
+            max_confs: 200000
+        };
+
+        if (data && data.account) {
+            request.account = data.account;
+        }
+
+        RESTUtils.getUTXOs(request)
             .then((data: any) => {
                 this.loading = false;
                 const utxos = data.utxos || data.outputs;
@@ -46,14 +57,24 @@ export default class UTXOsStore {
     };
 
     @action
-    public listAccounts = (data: any) => {
+    public listAccounts = () => {
         this.errorMsg = '';
         this.loadingAccounts = true;
-        RESTUtils.listAccounts(data)
+        return RESTUtils.listAccounts()
             .then((data: any) => {
                 this.loadingAccounts = false;
                 this.accounts = data.accounts;
+                const accounts: any = [];
+                for (const i in data.accounts) {
+                    const account = data.accounts[i];
+                    const { name } = account;
+                    if (name && name !== 'default' && !name.includes('act:')) {
+                        accounts.push(account);
+                    }
+                }
+                this.accounts = accounts;
                 this.error = false;
+                return this.accounts;
             })
             .catch((error: any) => {
                 // handle error
@@ -65,22 +86,34 @@ export default class UTXOsStore {
     @action
     public importAccount = (data: any) => {
         this.errorMsg = '';
+        this.success = false;
         this.importingAccount = true;
-        const mfk = Base64Utils.hexToBase64(data.master_key_fingerprint);
-        const newData = {
+        const request = {
             name: data.name,
             extended_public_key: data.extended_public_key,
-            master_key_fingerprint: mfk,
-            dry_run: true
+            dry_run: data.dry_run
         };
-        RESTUtils.importAccount(newData)
-            .then(() => {
+
+        if (data.master_key_fingerprint) {
+            request.master_key_fingerprint = data.master_key_fingerprint;
+        }
+
+        RESTUtils.importAccount(request)
+            .then((response) => {
                 this.importingAccount = false;
                 this.error = false;
+                if (response === this.accountToImport && !data.dry_run) {
+                    this.success = true;
+                    this.accountToImport = null;
+                } else {
+                    this.accountToImport = response;
+                }
             })
             .catch((error: any) => {
                 // handle error
                 this.errorMsg = error.toString();
+                this.success = false;
+                this.importingAccount = false;
                 this.getUtxosError();
             });
     };

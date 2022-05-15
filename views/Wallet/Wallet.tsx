@@ -245,6 +245,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                 BalanceStore={BalanceStore}
                                 UnitsStore={UnitsStore}
                                 onRefresh={() => this.refresh()}
+                                consolidated
                             />
 
                             <Animated.View

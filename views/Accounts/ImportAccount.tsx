@@ -1,10 +1,28 @@
 import * as React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Button, Header, Icon } from 'react-native-elements';
+import {
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
+import { Header, Icon } from 'react-native-elements';
+import { inject, observer } from 'mobx-react';
 
+import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
+
+import Button from './../../components/Button';
+import { ErrorMessage } from './../../components/SuccessErrorMessage';
+import LoadingIndicator from './../../components/LoadingIndicator';
 import TextInput from './../../components/TextInput';
+
+import Base64Utils from './../../utils/Base64Utils';
+import NFCUtils from './../../utils/NFCUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
+
+import Scan from './../../assets/images/SVG/Scan.svg';
 
 interface ImportAccountProps {
     exitSetup: any;
@@ -18,6 +36,8 @@ interface ImportAccountState {
     address_type: string;
 }
 
+@inject('UTXOsStore')
+@observer
 export default class ImportAccount extends React.Component<
     ImportAccountProps,
     ImportAccountState
@@ -32,19 +52,20 @@ export default class ImportAccount extends React.Component<
         };
     }
 
+    async componentDidMount() {
+        if (Platform.OS === 'android') {
+            await this.enableNfc();
+        }
+    }
+
     UNSAFE_componentWillReceiveProps = (newProps: any) => {
         const { navigation } = newProps;
         const qrResponse = navigation.getParam('qrResponse', null);
-        console.log('~~~');
-        console.log(qrResponse);
         const parsed = JSON.parse(qrResponse);
         const name = (parsed.keystore && parsed.keystore.label) || '';
         const extended_public_key =
             parsed.ExtPubKey || (parsed.keystore && parsed.keystore.xpub) || '';
-        const master_key_fingerprint =
-            parsed.MasterFingerprint ||
-            (parsed.keystore && parsed.keystore.ckcc_xfp.toString()) ||
-            '';
+        const master_key_fingerprint = parsed.MasterFingerprint || '';
         const address_type = parsed.wallet_type || '';
 
         this.setState({
@@ -55,14 +76,50 @@ export default class ImportAccount extends React.Component<
         });
     };
 
+    disableNfc = () => {
+        NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
+        NfcManager.setEventListener(NfcEvents.SessionClosed, null);
+    };
+
+    enableNfc = async () => {
+        this.disableNfc();
+        await NfcManager.start();
+
+        return new Promise((resolve: any) => {
+            let tagFound = null;
+
+            NfcManager.setEventListener(NfcEvents.DiscoverTag, (tag: any) => {
+                tagFound = tag;
+                const bytes = new Uint8Array(tagFound.ndefMessage[0].payload);
+                const str = NFCUtils.nfcUtf8ArrayToStr(bytes);
+                console.log('str', str);
+                resolve(this.setState({ extended_public_key: str }));
+                NfcManager.unregisterTagEvent().catch(() => 0);
+            });
+
+            NfcManager.setEventListener(NfcEvents.SessionClosed, () => {
+                if (!tagFound) {
+                    resolve();
+                }
+            });
+
+            NfcManager.registerTagEvent();
+        });
+    };
+
     render() {
-        const { navigation } = this.props;
+        const { navigation, UTXOsStore } = this.props;
+        const { errorMsg, importingAccount, accountToImport } = UTXOsStore;
         const {
             name,
             extended_public_key,
             master_key_fingerprint,
             address_type
         } = this.state;
+
+        if (accountToImport) {
+            navigation.navigate('ImportingAccount');
+        }
 
         const BackButton = () => (
             <Icon
@@ -71,6 +128,14 @@ export default class ImportAccount extends React.Component<
                 color={themeColor('text')}
                 underlayColor="transparent"
             />
+        );
+
+        const ScanBadge = ({ navigation }: { navigation: any }) => (
+            <TouchableOpacity
+                onPress={() => navigation.navigate('ImportAccountQRScanner')}
+            >
+                <Scan fill={themeColor('text')} />
+            </TouchableOpacity>
         );
 
         return (
@@ -87,12 +152,16 @@ export default class ImportAccount extends React.Component<
                         text: localeString('views.ImportAccount.title'),
                         style: { color: themeColor('text') }
                     }}
-                    backgroundColor="grey"
+                    rightComponent={<ScanBadge navigation={navigation} />}
+                    backgroundColor={themeColor('background')}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <View style={styles.content}>
-                    <Text
-                        style={{ ...styles.label, color: themeColor('text') }}
-                    >
+                    {!!errorMsg && <ErrorMessage message={errorMsg} />}
+                    {!!importingAccount && <LoadingIndicator />}
+                    <Text style={styles.label}>
                         {localeString('views.ImportAccount.name')}
                     </Text>
                     <TextInput
@@ -104,9 +173,7 @@ export default class ImportAccount extends React.Component<
                             })
                         }
                     />
-                    <Text
-                        style={{ ...styles.label, color: themeColor('text') }}
-                    >
+                    <Text style={styles.label}>
                         {localeString('views.ImportAccount.extendedPubKey')}
                     </Text>
                     <TextInput
@@ -122,29 +189,29 @@ export default class ImportAccount extends React.Component<
                         numberOfLines={4}
                         multiline
                     />
-                    <Text
-                        style={{ ...styles.label, color: themeColor('text') }}
-                    >
-                        {localeString(
-                            'views.ImportAccount.masterKeyFingerprint'
-                        )}
-                    </Text>
-                    <TextInput
-                        placeholder={"m/44'/0'/0'/0"}
-                        value={master_key_fingerprint}
-                        onChangeText={(text: string) =>
-                            this.setState({
-                                master_key_fingerprint: text
-                            })
-                        }
-                    />
-                    <Text
-                        style={{ ...styles.label, color: themeColor('text') }}
-                    >
+
+                    <>
+                        <Text style={styles.label}>
+                            {localeString(
+                                'views.ImportAccount.masterKeyFingerprint'
+                            )}
+                        </Text>
+                        <TextInput
+                            placeholder="E65423A4"
+                            value={master_key_fingerprint}
+                            onChangeText={(text: string) =>
+                                this.setState({
+                                    master_key_fingerprint: text
+                                })
+                            }
+                        />
+                    </>
+
+                    <Text style={styles.label}>
                         {localeString('views.ImportAccount.addressType')}
                     </Text>
                     <TextInput
-                        placeholder={'mkf'}
+                        placeholder={'standard'}
                         value={address_type}
                         onChangeText={(text: string) =>
                             this.setState({
@@ -152,21 +219,30 @@ export default class ImportAccount extends React.Component<
                             })
                         }
                     />
-                    <Button
-                        title="ImportAccount"
-                        onPress={() =>
-                            this.props.UTXOsStore.importAccount({
-                                ...this.state,
-                                dry_run: true
-                            })
-                        }
-                    />
-                    <Button
-                        title="Scan"
-                        onPress={() =>
-                            navigation.navigate('ImportAccountQRScanner')
-                        }
-                    />
+                    <View style={styles.button}>
+                        <Button
+                            title="Import Account"
+                            onPress={() =>
+                                UTXOsStore.importAccount({
+                                    ...this.state,
+                                    dry_run: true
+                                })
+                            }
+                        />
+                    </View>
+                    {Platform.OS === 'ios' && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString('general.enableNfc')}
+                                icon={{
+                                    name: 'nfc',
+                                    size: 25
+                                }}
+                                onPress={() => this.enableNfc()}
+                                secondary
+                            />
+                        </View>
+                    )}
                 </View>
             </ScrollView>
         );
@@ -177,16 +253,16 @@ const styles = StyleSheet.create({
     content: {
         paddingTop: 20,
         paddingBottom: 20,
-        paddingLeft: 5,
-        paddingRight: 5
+        paddingLeft: 15,
+        paddingRight: 15
     },
     label: {
-        textDecorationLine: 'underline'
+        color: themeColor('secondaryText')
     },
     button: {
         paddingTop: 10,
         paddingBottom: 10,
-        width: 250,
+        width: '90%',
         alignSelf: 'center'
     },
     clipboardImport: {

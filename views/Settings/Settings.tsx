@@ -14,6 +14,7 @@ import BrushIcon from '../../assets/images/SVG/Brush.svg';
 import LanguageIcon from '../../assets/images/SVG/Globe.svg';
 import HelpIcon from '../../assets/images/SVG/Help Icon.svg';
 import NodeOn from '../../assets/images/SVG/Node On.svg';
+import Wallet from '../../assets/images/SVG/Wallet.svg';
 
 import NodeIdenticon, { NodeTitle } from './../../components/NodeIdenticon';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -149,36 +150,91 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     </View>
                 </TouchableOpacity>
 
-                {selectedNode && RESTUtils.supportsNodeInfo() && (
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            height: 45,
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            top: 15
-                        }}
-                    >
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() => navigation.navigate('NodeInfo')}
+                {selectedNode &&
+                    RESTUtils.supportsNodeInfo() &&
+                    !RESTUtils.supportsAccounts() && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                height: 45,
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                top: 15
+                            }}
                         >
-                            <NodeOn color={themeColor('text')} />
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() => navigation.navigate('NodeInfo')}
                             >
-                                {localeString('views.NodeInfo.title')}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-                )}
+                                <NodeOn color={themeColor('text')} />
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString('views.NodeInfo.title')}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
+                {selectedNode &&
+                    RESTUtils.supportsNodeInfo() &&
+                    RESTUtils.supportsAccounts() && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                height: 90,
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                top: 15
+                            }}
+                        >
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() => navigation.navigate('NodeInfo')}
+                            >
+                                <NodeOn color={themeColor('text')} />
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString('views.NodeInfo.title')}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon />
+                                </View>
+                            </TouchableOpacity>
+
+                            <View style={styles.separationLine} />
+
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() => navigation.navigate('Accounts')}
+                            >
+                                <Wallet color={themeColor('text')} />
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString('views.Accounts.title')}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
                 {/* Coming Soon */}
                 {false && (

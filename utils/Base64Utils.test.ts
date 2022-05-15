@@ -19,4 +19,10 @@ describe('Base64Utils', () => {
             );
         });
     });
+
+    describe('reverseMfpBytes', () => {
+        it('Reverses bytes in master key fingerprint', () => {
+            expect(Base64Utils.reverseMfpBytes('E65423A4')).toEqual('A42354E6');
+        });
+    });
 });

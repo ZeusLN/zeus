@@ -208,7 +208,12 @@ export default class LND {
         this.getRequest('/v1/invoices?reversed=true&num_max_invoices=100');
     createInvoice = (data: any) => this.postRequest('/v1/invoices', data);
     getPayments = () => this.getRequest('/v1/payments');
-    getNewAddress = () => this.getRequest('/v1/newaddress');
+    getNewAddress = (data: any) =>
+        this.getRequest(
+            data.account
+                ? `/v1/newaddress?account=${data.account.replace(/\s/g, '+')}`
+                : '/v1/newaddress'
+        );
     openChannel = (data: OpenChannelRequest) =>
         this.postRequest('/v1/channels', {
             private: data.private,
@@ -306,11 +311,20 @@ export default class LND {
     finalizePsbt = (data: any) =>
         this.postRequest('/v2/wallet/psbt/finalize', data);
     publishTransaction = (data: any) => this.postRequest('/v2/wallet/tx', data);
-    getUTXOs = () => this.getRequest('/v1/utxos?min_confs=0&max_confs=200000');
+    getUTXOs = (data: any) => this.postRequest('/v2/wallet/utxos', data);
     bumpFee = (data: any) => this.postRequest('/v2/wallet/bumpfee', data);
     listAccounts = () => this.getRequest('/v2/wallet/accounts');
-    importAccount = (data: any) =>
-        this.postRequest('/v2/wallet/accounts/import', data);
+    importAccount = (data: any) => {
+        const { master_key_fingerprint, ...req } = data;
+        return this.postRequest('/v2/wallet/accounts/import', {
+            master_key_fingerprint: master_key_fingerprint
+                ? Base64Utils.hexToBase64(
+                      Base64Utils.reverseMfpBytes(master_key_fingerprint)
+                  )
+                : '',
+            ...req
+        });
+    };
     signMessage = (message: string) =>
         this.postRequest('/v1/signmessage', {
             msg: Base64Utils.btoa(message)

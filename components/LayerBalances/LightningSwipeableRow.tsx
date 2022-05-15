@@ -39,7 +39,7 @@ export default class LightningSwipeableRow extends Component<
             this.close();
 
             if (text === localeString('general.receive')) {
-                this.props.navigation.navigate('Receive');
+                this.props.navigation.navigate('Receive', { selectedIndex: 0 });
             } else if (text === localeString('general.routing')) {
                 this.props.navigation.navigate('Routing');
             } else if (text === localeString('general.send')) {
