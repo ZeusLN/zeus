@@ -197,10 +197,21 @@ export default class InvoicesStore {
     };
 
     @action
-    public getNewAddress = () => {
-        return RESTUtils.getNewAddress().then((data: any) => {
-            this.onChainAddress = data.address || data[0].address;
-        });
+    public getNewAddress = (params: any) => {
+        this.loading = true;
+        this.error_msg = null;
+        this.onChainAddress = null;
+        return RESTUtils.getNewAddress(params)
+            .then((data: any) => {
+                this.onChainAddress = data.address || data[0].address;
+                this.loading = false;
+            })
+            .catch((error: any) => {
+                // handle error
+                this.error_msg =
+                    error.toString() || 'Error generating new address';
+                this.loading = false;
+            });
     };
 
     @action
