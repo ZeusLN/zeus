@@ -17,6 +17,7 @@ import Success from '../assets/images/GIF/Success.gif';
 import { Amount } from './../components/Amount';
 import Button from './../components/Button';
 import CollapsedQR from './../components/CollapsedQR';
+import DropdownSetting from './../components/DropdownSetting';
 import LoadingIndicator from './../components/LoadingIndicator';
 import {
     SuccessMessage,
@@ -43,6 +44,7 @@ interface ReceiveProps {
 }
 
 interface ReceiveState {
+    addressType: string;
     selectedIndex: number;
     memo: string;
     value: string;
@@ -51,6 +53,17 @@ interface ReceiveState {
     routeHints: boolean;
 }
 
+const ADDRESS_TYPES = RESTUtils.supportsTaproot()
+    ? [
+          { key: 'Witness Pubkey Hash (p2wkh)', value: '0' },
+          { key: 'Nested Pubkey Hash (np2wkh)', value: '1' },
+          { key: 'Taproot Pubkey (p2tr)', value: '4' }
+      ]
+    : [
+          { key: 'Witness Pubkey Hash (p2wkh)', value: '0' },
+          { key: 'Nested Pubkey Hash (np2wkh)', value: '1' }
+      ];
+
 @inject('InvoicesStore', 'SettingsStore', 'UnitsStore', 'FiatStore')
 @observer
 export default class Receive extends React.Component<
@@ -58,6 +71,7 @@ export default class Receive extends React.Component<
     ReceiveState
 > {
     state = {
+        addressType: '0',
         selectedIndex: 0,
         memo: '',
         value: '',
@@ -91,9 +105,9 @@ export default class Receive extends React.Component<
         }
     }
 
-    getNewAddress = () => {
+    getNewAddress = (params: any) => {
         const { InvoicesStore } = this.props;
-        InvoicesStore.getNewAddress();
+        InvoicesStore.getNewAddress(params);
     };
 
     updateIndex = (selectedIndex: number) => {
@@ -120,8 +134,15 @@ export default class Receive extends React.Component<
             FiatStore,
             navigation
         } = this.props;
-        const { selectedIndex, memo, value, expiry, ampInvoice, routeHints } =
-            this.state;
+        const {
+            addressType,
+            selectedIndex,
+            memo,
+            value,
+            expiry,
+            ampInvoice,
+            routeHints
+        } = this.state;
         const { units, changeUnits, getAmount } = UnitsStore;
         const { fiatRates, getSymbol }: any = FiatStore;
 
@@ -136,7 +157,8 @@ export default class Receive extends React.Component<
             watchedInvoicePaid,
             reset
         } = InvoicesStore;
-        const { settings, loading, implementation } = SettingsStore;
+        const { settings, implementation } = SettingsStore;
+        const loading = SettingsStore.loading || InvoicesStore.loading;
         const { fiat } = settings;
         const address = onChainAddress;
 
@@ -218,6 +240,10 @@ export default class Receive extends React.Component<
             />
         );
 
+        const addressTypeDisplay = ADDRESS_TYPES.filter(
+            (value: any) => value.value === addressType
+        )[0].value;
+
         return (
             <View
                 style={{
@@ -261,6 +287,8 @@ export default class Receive extends React.Component<
                 )}
 
                 <ScrollView style={styles.content}>
+                    {error_msg && <ErrorMessage message={error_msg} />}
+
                     {watchedInvoicePaid ? (
                         <View
                             style={{
@@ -314,17 +342,6 @@ export default class Receive extends React.Component<
                                             'views.Receive.errorCreate'
                                         )}
                                     />
-                                )}
-                                {error_msg && (
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            top: 20,
-                                            padding: 20
-                                        }}
-                                    >
-                                        {error_msg}
-                                    </Text>
                                 )}
                                 {creatingInvoice && <LoadingIndicator />}
                                 {!!payment_request && (
@@ -565,6 +582,21 @@ export default class Receive extends React.Component<
                                 </Text>
                             )}
                             {loading && <LoadingIndicator />}
+                            {!loading &&
+                                RESTUtils.supportsAddressTypeSelection() && (
+                                    <View style={{ marginTop: 10 }}>
+                                        <DropdownSetting
+                                            title={'Address Type'}
+                                            selectedValue={addressTypeDisplay}
+                                            onValueChange={(value: string) => {
+                                                this.setState({
+                                                    addressType: value
+                                                });
+                                            }}
+                                            values={ADDRESS_TYPES}
+                                        />
+                                    </View>
+                                )}
                             {address && !loading && (
                                 <CollapsedQR
                                     value={address}
@@ -588,7 +620,15 @@ export default class Receive extends React.Component<
                                                       'views.Receive.getNewAddress'
                                                   )
                                         }
-                                        onPress={() => this.getNewAddress()}
+                                        onPress={() =>
+                                            this.getNewAddress(
+                                                RESTUtils.supportsAddressTypeSelection()
+                                                    ? {
+                                                          type: addressType
+                                                      }
+                                                    : null
+                                            )
+                                        }
                                     />
                                 </View>
                             )}

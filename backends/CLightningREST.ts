@@ -157,4 +157,6 @@ export default class CLightningREST extends LND {
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
     singleFeesEarnedTotal = () => true;
+    supportsAddressTypeSelection = () => false;
+    supportsTaproot = () => false;
 }
