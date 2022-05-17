@@ -192,7 +192,9 @@ export default class InvoicesStore {
                 // handle error
                 this.creatingInvoiceError = true;
                 this.creatingInvoice = false;
-                this.error_msg = error.toString() || 'Error creating invoice';
+                this.error_msg =
+                    error.toString() ||
+                    localeString('stores.InvoicesStore.errorCreatingInvoice');
             });
     };
 
@@ -209,7 +211,8 @@ export default class InvoicesStore {
             .catch((error: any) => {
                 // handle error
                 this.error_msg =
-                    error.toString() || 'Error generating new address';
+                    error.toString() ||
+                    localeString('stores.InvoicesStore.errorGeneratingAddress');
                 this.loading = false;
             });
     };

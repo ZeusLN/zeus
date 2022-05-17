@@ -586,7 +586,9 @@ export default class Receive extends React.Component<
                                 RESTUtils.supportsAddressTypeSelection() && (
                                     <View style={{ marginTop: 10 }}>
                                         <DropdownSetting
-                                            title={'Address Type'}
+                                            title={localeString(
+                                                'view.Receive.addressType'
+                                            )}
                                             selectedValue={addressTypeDisplay}
                                             onValueChange={(value: string) => {
                                                 this.setState({
