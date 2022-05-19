@@ -450,6 +450,8 @@
     "backends.LND.wsReq.warning": "You may have to enable Certificate Verification to make these kind of calls",
     "utils.handleAnything.lightningAddressError": "Error fetching Lightning Address data",
     "utils.handleAnything.notValid": "Value provided was not a valid Bitcoin address or Lightning Invoice",
+    "utils.handleAnything.lnurlAuthNotSupported": "LnurlAuth not supported by your node implementation",
+    "utils.handleAnything.unsupportedLnurlType": "Unsupported lnurl type",
     "stores.SettingsStore.btcPayImplementationSupport": "Sorry, we currently only support BTCPay instances using lnd or c-lightning",
     "stores.SettingsStore.btcPayFetchConfigError": "Error fetching BTCPay configuration",
     "stores.SettingsStore.olympianFetchError": "Error fetching Olympians",
