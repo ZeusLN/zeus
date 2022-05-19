@@ -2,9 +2,11 @@ import { inject, observer } from 'mobx-react';
 import * as React from 'react';
 import { FlatList, View, ScrollView, Switch } from 'react-native';
 import { Header, Icon, ListItem } from 'react-native-elements';
+
+import SettingsStore from '../../stores/SettingsStore';
+
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
-import SettingsStore from '../../stores/SettingsStore';
 
 interface SecurityProps {
     navigation: any;
@@ -165,7 +167,7 @@ export default class Security extends React.Component<
     render() {
         const { navigation, SettingsStore } = this.props;
         const { scramblePin, displaySecurityItems, pinExists } = this.state;
-        const { setSettings, getSettings, settings }: any = SettingsStore;
+        const { setSettings, getSettings } = SettingsStore;
 
         const BackButton = () => (
             <Icon
