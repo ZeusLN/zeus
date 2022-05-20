@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Image, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { Image, Text, View, TouchableOpacity } from 'react-native';
 import { Badge } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Button from '../../components/Button';
@@ -90,7 +90,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
         }
 
         const NetworkBadge = () => (
-            <View style={styles.nodeInfo}>
+            <>
                 {nodeAddress && nodeAddress.includes('.onion') ? (
                     <TouchableOpacity
                         onPress={() => navigation.navigate('NodeInfo')}
@@ -101,18 +101,18 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                         />
                     </TouchableOpacity>
                 ) : null}
-                {nodeAddress && !nodeAddress.includes('.onion') ? (
+                {infoValue !== 'ⓘ' ? (
                     <Badge
                         onPress={() => navigation.navigate('NodeInfo')}
                         value={infoValue}
                         badgeStyle={{
                             backgroundColor: 'gray',
                             borderWidth: 0,
-                            marginLeft: 5
+                            marginTop: 5
                         }}
                     />
                 ) : null}
-            </View>
+            </>
         );
 
         let mainPane;
@@ -136,16 +136,14 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                         ) : (
                             <BalanceViewCombined />
                         )}
-                        {infoValue !== 'ⓘ' && (
-                            <View
-                                style={{
-                                    marginTop: 5,
-                                    alignItems: 'center'
-                                }}
-                            >
-                                <NetworkBadge />
-                            </View>
-                        )}
+                        <View
+                            style={{
+                                marginTop: 5,
+                                alignItems: 'center'
+                            }}
+                        >
+                            <NetworkBadge />
+                        </View>
                     </View>
                 </View>
             );
@@ -209,14 +207,3 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
         return <React.Fragment>{mainPane}</React.Fragment>;
     }
 }
-
-const styles = StyleSheet.create({
-    loadingContainer: {
-        height: 220,
-        paddingLeft: 10
-    },
-    nodeInfo: {
-        alignItems: 'flex-start',
-        marginLeft: -15
-    }
-});
