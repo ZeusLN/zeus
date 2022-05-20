@@ -317,4 +317,6 @@ export default class Spark {
     supportsHopPicking = () => false;
     supportsRouting = () => true;
     singleFeesEarnedTotal = () => false;
+    supportsAddressTypeSelection = () => false;
+    supportsTaproot = () => false;
 }
