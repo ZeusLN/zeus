@@ -205,7 +205,8 @@ export default class InvoicesStore {
         this.onChainAddress = null;
         return RESTUtils.getNewAddress(params)
             .then((data: any) => {
-                this.onChainAddress = data.address || data[0].address;
+                this.onChainAddress =
+                    data.address || data.bech32 || data[0].address;
                 this.loading = false;
             })
             .catch((error: any) => {
