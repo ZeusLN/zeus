@@ -319,4 +319,6 @@ export default class Spark {
     supportsNodeInfo = () => true;
     supportsAccounts = () => false;
     singleFeesEarnedTotal = () => false;
+    supportsAddressTypeSelection = () => false;
+    supportsTaproot = () => false;
 }
