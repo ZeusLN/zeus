@@ -1,3 +1,4 @@
+import { Alert } from 'react-native';
 import { getParams as getlnurlParams, findlnurl } from 'js-lnurl';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import stores from '../stores/Stores';
@@ -5,6 +6,7 @@ import AddressUtils from './../utils/AddressUtils';
 import LndConnectUtils from './../utils/LndConnectUtils';
 import NodeUriUtils from './../utils/NodeUriUtils';
 import { localeString } from './../utils/LocaleUtils';
+import RESTUtils from './../utils/RESTUtils';
 
 const { nodeInfoStore, invoicesStore } = stores;
 
@@ -143,22 +145,53 @@ export default async function (data: string): Promise<any> {
                     ];
                     break;
                 case 'login':
-                    return [
-                        'LnurlAuth',
-                        {
-                            lnurlParams: params
-                        }
-                    ];
+                    if (RESTUtils.supportsMessageSigning()) {
+                        return [
+                            'LnurlAuth',
+                            {
+                                lnurlParams: params
+                            }
+                        ];
+                    } else {
+                        Alert.alert(
+                            localeString('general.error'),
+                            localeString(
+                                'utils.handleAnything.lnurlAuthNotSupported'
+                            ),
+                            [
+                                {
+                                    text: localeString('general.ok'),
+                                    onPress: () => void 0
+                                }
+                            ],
+                            { cancelable: false }
+                        );
+                    }
                     break;
                 default:
-                    throw new Error(
+                    Alert.alert(
+                        localeString('general.error'),
                         params.status === 'ERROR'
                             ? `${params.domain} says: ${params.reason}`
-                            : `Unsupported lnurl type: ${params.tag}`
+                            : `${localeString(
+                                  'utils.handleAnything.unsupportedLnurlType'
+                              )}: ${params.tag}`,
+                        [
+                            {
+                                text: localeString('general.ok'),
+                                onPress: () => void 0
+                            }
+                        ],
+                        { cancelable: false }
                     );
             }
         });
     } else {
-        throw new Error(localeString('utils.handleAnything.notValid'));
+        Alert.alert(
+            localeString('general.error'),
+            localeString('utils.handleAnything.notValid'),
+            [{ text: localeString('general.ok'), onPress: () => void 0 }],
+            { cancelable: false }
+        );
     }
 }

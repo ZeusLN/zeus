@@ -481,6 +481,8 @@ export default class Eclair {
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
     singleFeesEarnedTotal = () => false;
+    supportsAddressTypeSelection = () => false;
+    supportsTaproot = () => false;
 }
 
 const mapInvoice =
