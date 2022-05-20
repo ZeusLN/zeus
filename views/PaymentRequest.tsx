@@ -116,7 +116,9 @@ export default class PaymentRequest extends React.Component<
 
         const enableAmp: boolean =
             enableAtomicMultiPathPayment || lockAtomicMultiPathPayment;
-        const ampOrMppEnabled: boolean = enableMultiPathPayment || enableAmp;
+        const ampOrMppEnabled: boolean =
+            (RESTUtils.supportsMPP() || RESTUtils.supportsAMP()) &&
+            (enableMultiPathPayment || enableAmp);
 
         const date = new Date(Number(timestamp) * 1000).toString();
 
