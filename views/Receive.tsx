@@ -54,37 +54,6 @@ interface ReceiveState {
     routeHints: boolean;
 }
 
-const ADDRESS_TYPES = RESTUtils.supportsTaproot()
-    ? [
-          {
-              key: localeString('views.Receive.np2wkhKey'),
-              value: '1',
-              description: localeString('views.Receive.np2wkhDescription')
-          },
-          {
-              key: localeString('views.Receive.p2wkhKey'),
-              value: '0',
-              description: localeString('views.Receive.p2wkhDescription')
-          },
-          {
-              key: localeString('views.Receive.p2trKey'),
-              value: '4',
-              description: localeString('views.Receive.p2trDescription')
-          }
-      ]
-    : [
-          {
-              key: localeString('views.Receive.np2wkhKey'),
-              value: '1',
-              description: localeString('views.Receive.np2wkhDescriptionAlt')
-          },
-          {
-              key: localeString('views.Receive.p2wkhKey'),
-              value: '0',
-              description: localeString('views.Receive.p2wkhDescription')
-          }
-      ];
-
 @inject('InvoicesStore', 'SettingsStore', 'UnitsStore', 'FiatStore')
 @observer
 export default class Receive extends React.Component<
@@ -270,6 +239,45 @@ export default class Receive extends React.Component<
             />
         );
 
+        const ADDRESS_TYPES = RESTUtils.supportsTaproot()
+            ? [
+                  {
+                      key: localeString('views.Receive.np2wkhKey'),
+                      value: '1',
+                      description: localeString(
+                          'views.Receive.np2wkhDescription'
+                      )
+                  },
+                  {
+                      key: localeString('views.Receive.p2wkhKey'),
+                      value: '0',
+                      description: localeString(
+                          'views.Receive.p2wkhDescription'
+                      )
+                  },
+                  {
+                      key: localeString('views.Receive.p2trKey'),
+                      value: '4',
+                      description: localeString('views.Receive.p2trDescription')
+                  }
+              ]
+            : [
+                  {
+                      key: localeString('views.Receive.np2wkhKey'),
+                      value: '1',
+                      description: localeString(
+                          'views.Receive.np2wkhDescriptionAlt'
+                      )
+                  },
+                  {
+                      key: localeString('views.Receive.p2wkhKey'),
+                      value: '0',
+                      description: localeString(
+                          'views.Receive.p2wkhDescription'
+                      )
+                  }
+              ];
+
         return (
             <View
                 style={{
@@ -287,7 +295,10 @@ export default class Receive extends React.Component<
                         }
                     }}
                     rightComponent={
-                        (RESTUtils.supportsAddressTypeSelection() && selectedIndex === 1) ? <SettingsButton /> : null
+                        RESTUtils.supportsAddressTypeSelection() &&
+                        selectedIndex === 1 ? (
+                            <SettingsButton />
+                        ) : null
                     }
                     backgroundColor={themeColor('background')}
                     containerStyle={{
