@@ -218,6 +218,9 @@ export default class InvoicesStore {
     };
 
     @action
+    public clearAddress = () => (this.onChainAddress = null);
+
+    @action
     public getPayReq = (
         paymentRequest: string,
         descriptionPreimage?: string
