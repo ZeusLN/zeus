@@ -46,6 +46,7 @@ interface ReceiveProps {
 
 interface ReceiveState {
     addressType: string;
+    invoiceType: string;
     selectedIndex: number;
     memo: string;
     value: string;
@@ -62,6 +63,7 @@ export default class Receive extends React.Component<
 > {
     state = {
         addressType: '0',
+        invoiceType: 'bolt11',
         selectedIndex: 0,
         memo: '',
         value: '',
@@ -126,6 +128,7 @@ export default class Receive extends React.Component<
         } = this.props;
         const {
             addressType,
+            invoiceType,
             selectedIndex,
             memo,
             value,
@@ -138,6 +141,7 @@ export default class Receive extends React.Component<
 
         const {
             createInvoice,
+            createOffer,
             onChainAddress,
             payment_request,
             payment_request_amt,
@@ -233,7 +237,11 @@ export default class Receive extends React.Component<
         const SettingsButton = () => (
             <Icon
                 name="settings"
-                onPress={() => this.refs.modal.open()}
+                onPress={() =>
+                    selectedIndex === 0
+                        ? this.refs.invoiceTypeModal.open()
+                        : this.refs.addressTypeModal.open()
+                }
                 color={themeColor('text')}
                 underlayColor="transparent"
             />
@@ -278,6 +286,19 @@ export default class Receive extends React.Component<
                   }
               ];
 
+        const INVOICE_TYPES = [
+            {
+                key: localeString('views.Receive.bolt11Key'),
+                value: 'bolt11',
+                description: localeString('views.Receive.bolt11Description')
+            },
+            {
+                key: localeString('views.Receive.bolt12Key'),
+                value: 'bolt12',
+                description: localeString('views.Receive.bolt12Description')
+            }
+        ];
+
         return (
             <View
                 style={{
@@ -295,8 +316,9 @@ export default class Receive extends React.Component<
                         }
                     }}
                     rightComponent={
-                        RESTUtils.supportsAddressTypeSelection() &&
-                        selectedIndex === 1 ? (
+                        (RESTUtils.supportsBolt12() && selectedIndex === 0) ||
+                        (RESTUtils.supportsAddressTypeSelection() &&
+                            selectedIndex === 1) ? (
                             <SettingsButton />
                         ) : null
                     }
@@ -595,14 +617,22 @@ export default class Receive extends React.Component<
                                                 : '')
                                         }
                                         onPress={() =>
-                                            createInvoice(
-                                                memo,
-                                                satAmount.toString() || '0',
-                                                expiry,
-                                                lnurl,
-                                                ampInvoice,
-                                                routeHints
-                                            )
+                                            invoiceType === 'bolt11'
+                                                ? createInvoice(
+                                                      memo,
+                                                      satAmount.toString() ||
+                                                          '0',
+                                                      expiry,
+                                                      lnurl,
+                                                      ampInvoice,
+                                                      routeHints
+                                                  )
+                                                : createOffer(
+                                                      memo,
+                                                      satAmount.toString() ||
+                                                          '0',
+                                                      expiry
+                                                  )
                                         }
                                     />
                                 </View>
@@ -666,13 +696,77 @@ export default class Receive extends React.Component<
                     style={{
                         backgroundColor: themeColor('background'),
                         borderRadius: 10,
+                        height: 280,
+                        padding: 20
+                    }}
+                    swipeToClose={true}
+                    backButtonClose={true}
+                    position="bottom"
+                    ref="invoiceTypeModal"
+                >
+                    <Text
+                        style={{
+                            color: themeColor('text'),
+                            fontSize: 25,
+                            fontWeight: 'bold',
+                            margin: 5
+                        }}
+                    >
+                        {localeString('views.Receive.invoiceType')}
+                    </Text>
+                    {_map(INVOICE_TYPES, (d) => (
+                        <TouchableOpacity
+                            onPress={() => {
+                                InvoicesStore.clearAddress();
+                                this.setState({ invoiceType: d.value });
+                                this.refs.invoiceTypeModal.close();
+                            }}
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                borderColor:
+                                    d.value === invoiceType
+                                        ? themeColor('highlight')
+                                        : themeColor('secondaryText'),
+                                borderRadius: 5,
+                                borderWidth: d.value === invoiceType ? 2 : 1,
+                                padding: 10,
+                                margin: 5,
+                                marginTop: 10,
+                                marginBottom: 10
+                            }}
+                            key={d.key}
+                        >
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontSize: 15,
+                                    fontWeight: 'bold'
+                                }}
+                            >
+                                {d.key}
+                            </Text>
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontSize: 13
+                                }}
+                            >
+                                {d.description}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </ModalBox>
+                <ModalBox
+                    style={{
+                        backgroundColor: themeColor('background'),
+                        borderRadius: 10,
                         height: RESTUtils.supportsTaproot() ? 380 : 280,
                         padding: 20
                     }}
                     swipeToClose={true}
                     backButtonClose={true}
                     position="bottom"
-                    ref="modal"
+                    ref="addressTypeModal"
                 >
                     <Text
                         style={{
@@ -689,7 +783,7 @@ export default class Receive extends React.Component<
                             onPress={() => {
                                 InvoicesStore.clearAddress();
                                 this.setState({ addressType: d.value });
-                                this.refs.modal.close();
+                                this.refs.addressTypeModal.close();
                             }}
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -704,6 +798,7 @@ export default class Receive extends React.Component<
                                 marginTop: 10,
                                 marginBottom: 10
                             }}
+                            key={d.key}
                         >
                             <Text
                                 style={{

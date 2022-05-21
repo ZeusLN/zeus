@@ -199,6 +199,37 @@ export default class InvoicesStore {
     };
 
     @action
+    public createOffer = (memo: string, value: string, expiry = '3600') => {
+        this.payment_request = null;
+        this.payment_request_amt = null;
+        this.creatingInvoice = true;
+        this.creatingInvoiceError = false;
+        this.error_msg = null;
+
+        const req: any = {
+            memo,
+            value,
+            expiry
+        };
+
+        RESTUtils.createOffer(req)
+            .then((data: any) => {
+                const invoice = new Invoice(data);
+                this.payment_request = invoice.bolt12;
+                this.payment_request_amt = value;
+                this.creatingInvoice = false;
+            })
+            .catch((error: any) => {
+                // handle error
+                this.creatingInvoiceError = true;
+                this.creatingInvoice = false;
+                this.error_msg =
+                    error.toString() ||
+                    localeString('stores.InvoicesStore.errorCreatingInvoice');
+            });
+    };
+
+    @action
     public getNewAddress = (params: any) => {
         this.loading = true;
         this.error_msg = null;
@@ -248,6 +279,28 @@ export default class InvoicesStore {
                         `wrong description_hash! got ${this.pay_req.description_hash}, needed ${needed}.`
                     );
                 }
+
+                this.loading = false;
+                this.getPayReqError = null;
+            })
+            .catch((error: any) => {
+                // handle error
+                this.loading = false;
+                this.pay_req = null;
+                this.getPayReqError = error.toString();
+            });
+    };
+
+    @action
+    public fetchInvoice = (offer: string) => {
+        this.pay_req = null;
+        this.paymentRequest = offer;
+        this.loading = true;
+        this.feeEstimate = null;
+
+        return RESTUtils.fetchInvoice(offer)
+            .then((data: any) => {
+                this.pay_req = new Invoice(data);
 
                 this.loading = false;
                 this.getPayReqError = null;

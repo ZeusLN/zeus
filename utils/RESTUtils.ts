@@ -53,6 +53,7 @@ class RESTUtils {
     getMyNodeInfo = (...args: any[]) => this.call('getMyNodeInfo', args);
     getInvoices = (...args: any[]) => this.call('getInvoices', args);
     createInvoice = (...args: any[]) => this.call('createInvoice', args);
+    createOffer = (...args: any[]) => this.call('createOffer', args);
     getPayments = (...args: any[]) => this.call('getPayments', args);
     getNewAddress = (...args: any[]) => this.call('getNewAddress', args);
     openChannel = (...args: any[]) => this.call('openChannel', args);
@@ -62,6 +63,7 @@ class RESTUtils {
     listNode = (...args: any[]) => this.call('listNode', args);
     decodePaymentRequest = (...args: any[]) =>
         this.call('decodePaymentRequest', args);
+    fetchInvoice = (...args: any[]) => this.call('fetchInvoice', args);
     payLightningInvoice = (...args: any[]) =>
         this.call('payLightningInvoice', args);
     payLightningInvoiceStreaming = (...args: any[]) =>
@@ -106,6 +108,7 @@ class RESTUtils {
     supportsAddressTypeSelection = () =>
         this.call('supportsAddressTypeSelection');
     supportsTaproot = () => this.call('supportsTaproot');
+    supportsBolt12 = () => this.call('supportsBolt12');
 }
 
 const restUtils = new RESTUtils();

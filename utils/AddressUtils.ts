@@ -4,6 +4,7 @@ const btcBech = /^(bc1|BC1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/;
 
 const lnInvoice =
     /^(lnbcrt|lntb|lnbc|LNBCRT|LNTB|LNBC)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
+const lnOffer = /^(lno|LNO)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
 const lnPubKey = /^[a-f0-9]{66}$/;
 
 /* testnet */
@@ -125,6 +126,8 @@ class AddressUtils {
     };
 
     isValidLightningPaymentRequest = (input: string) => lnInvoice.test(input);
+
+    isValidLightningOffer = (input: string) => lnOffer.test(input);
 
     isValidLightningPubKey = (input: string) => lnPubKey.test(input);
 

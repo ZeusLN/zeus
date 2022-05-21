@@ -77,8 +77,14 @@ export default class CLightningREST extends LND {
             description: data.memo,
             label: 'zeus.' + Math.random() * 1000000,
             amount: Number(data.value) * 1000,
-            expiry: data.expiry,
-            private: true
+            expiry: Math.round(Date.now() / 1000) + Number(data.expiry)
+        });
+    createOffer = (data: any) =>
+        this.postRequest('/v1/offers/offer', {
+            description: data.memo,
+            label: 'zeus.' + Math.random() * 1000000,
+            amount: Number(data.value) * 1000,
+            absolute_expiry: Math.round(Date.now() / 1000) + Number(data.expiry)
         });
     getPayments = () => this.getRequest('/v1/pay/listPays');
     getNewAddress = () => this.getRequest('/v1/newaddr');
@@ -112,6 +118,10 @@ export default class CLightningREST extends LND {
     listNode = () => this.getRequest('/v1/network/listNode');
     decodePaymentRequest = (urlParams?: Array<string>) =>
         this.getRequest(`/v1/pay/decodePay/${urlParams && urlParams[0]}`);
+    fetchInvoice = (offer: string) =>
+        this.postRequest('/v1/offers/fetchInvoice', {
+            offer
+        });
     payLightningInvoice = (data: any) =>
         this.postRequest('/v1/pay', {
             invoice: data.payment_request,
@@ -159,4 +169,5 @@ export default class CLightningREST extends LND {
     singleFeesEarnedTotal = () => true;
     supportsAddressTypeSelection = () => false;
     supportsTaproot = () => false;
+    supportsBolt12 = () => true;
 }

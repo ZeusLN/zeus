@@ -163,8 +163,16 @@ export default class Spark {
             description: data.memo,
             label: 'zeus.' + Math.random() * 1000000,
             msatoshi: Number(data.value) * 1000,
-            expiry: data.expiry,
+            expiry: Math.round(Date.now() / 1000) + Number(data.expiry),
             exposeprivatechannels: true
+        });
+    createOffer = (data: any) =>
+        this.rpc('offer', {
+            description: data.memo,
+            label: 'zeus.' + Math.random() * 1000000,
+            // quantity_min: Number(data.value) * 1000,
+            amount: Number(data.value) * 1000,
+            absolute_expiry: Math.round(Date.now() / 1000) + Number(data.expiry)
         });
     getPayments = () =>
         this.rpc('listsendpays', {}, { unit: 'payments', slice: '-100' });
@@ -181,6 +189,10 @@ export default class Spark {
     listNode = () => 'N/A';
     decodePaymentRequest = (urlParams?: Array<string>) =>
         this.rpc('decodepay', [urlParams && urlParams[0]]);
+    fetchInvoice = (offer: string) =>
+        this.rpc('fetchinvoice', {
+            offer
+        });
     payLightningInvoice = (data: any) =>
         this.rpc('pay', {
             bolt11: data.payment_request,
@@ -321,4 +333,5 @@ export default class Spark {
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => false;
     supportsTaproot = () => false;
+    supportsBolt12 = () => true;
 }
