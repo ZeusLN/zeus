@@ -139,8 +139,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             FeeStore,
             UTXOsStore,
             SettingsStore,
-            FiatStore,
-            navigation
+            FiatStore
         } = this.props;
         const {
             settings,
