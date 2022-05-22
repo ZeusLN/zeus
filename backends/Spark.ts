@@ -158,6 +158,12 @@ export default class Spark {
                 }))
             })
         );
+    getOffers = () =>
+        this.rpc('listoffers', {}, { unit: 'offers', slice: '-100' });
+    disableOffer = (offer_id: string) =>
+        this.rpc('disableoffer', {
+            offer_id
+        });
     createInvoice = (data: any) =>
         this.rpc('invoice', {
             description: data.memo,

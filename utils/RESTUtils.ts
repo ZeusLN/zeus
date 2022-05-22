@@ -52,6 +52,8 @@ class RESTUtils {
     sendCoins = (...args: any[]) => this.call('sendCoins', args);
     getMyNodeInfo = (...args: any[]) => this.call('getMyNodeInfo', args);
     getInvoices = (...args: any[]) => this.call('getInvoices', args);
+    getOffers = (...args: any[]) => this.call('getOffers', args);
+    disableOffer = (...args: any[]) => this.call('disableOffer', args);
     createInvoice = (...args: any[]) => this.call('createInvoice', args);
     createOffer = (...args: any[]) => this.call('createOffer', args);
     getPayments = (...args: any[]) => this.call('getPayments', args);

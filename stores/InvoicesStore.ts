@@ -6,6 +6,7 @@ import { LNURLWithdrawParams } from 'js-lnurl';
 import querystring from 'querystring-es3';
 import hashjs from 'hash.js';
 import Invoice from './../models/Invoice';
+import Offer from './../models/Offer';
 import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
 import { localeString } from './../utils/LocaleUtils';
@@ -17,6 +18,7 @@ export default class InvoicesStore {
     @observable error_msg: string | null;
     @observable getPayReqError: string | null = null;
     @observable invoices: Array<Invoice> = [];
+    @observable offers: Array<Offer> = [];
     @observable invoice: Invoice | null;
     @observable onChainAddress: string | null;
     @observable pay_req: Invoice | null;
@@ -84,6 +86,11 @@ export default class InvoicesStore {
         this.loading = false;
     };
 
+    resetOffers = () => {
+        this.offers = [];
+        this.loading = false;
+    };
+
     @action
     public getInvoices = async () => {
         this.loading = true;
@@ -100,6 +107,39 @@ export default class InvoicesStore {
             })
             .catch(() => {
                 this.resetInvoices();
+            });
+    };
+
+    @action
+    public getOffers = async () => {
+        this.loading = true;
+        await RESTUtils.getOffers()
+            .then((data: any) => {
+                this.offers = data.offers || data;
+                this.offers = this.offers.map((offer) => new Offer(offer));
+                this.offers = this.offers.slice().reverse();
+                this.loading = false;
+            })
+            .catch(() => {
+                this.resetOffers();
+            });
+    };
+
+    @action
+    public disableOffer = (offerId: string) => {
+        this.loading = true;
+        this.error = false;
+        return RESTUtils.disableOffer(offerId)
+            .then(() => {
+                this.loading = false;
+                return {
+                    success: true
+                };
+            })
+            .catch((error) => {
+                this.error = true;
+                this.error_msg = error.toString();
+                this.loading = false;
             });
     };
 

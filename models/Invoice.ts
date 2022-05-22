@@ -56,13 +56,6 @@ export default class Invoice extends BaseModel {
     public expire_time?: number;
     public millisatoshis?: string;
 
-    // bolt12
-    public bolt12?: string;
-    public bolt12_unsigned?: string;
-    public offer_id: string;
-    public single_use?: boolean;
-    public used?: boolean;
-
     @computed public get model(): string {
         return 'Invoice';
     }

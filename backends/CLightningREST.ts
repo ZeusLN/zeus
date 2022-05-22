@@ -72,6 +72,9 @@ export default class CLightningREST extends LND {
     };
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
     getInvoices = () => this.getRequest('/v1/invoice/listInvoices/');
+    getOffers = () => this.getRequest('/v1/offers/listoffers');
+    disableOffer = (offerId: string) =>
+        this.deleteRequest(`/v1/offers/disableOffer/${offerId}`);
     createInvoice = (data: any) =>
         this.postRequest('/v1/invoice/genInvoice/', {
             description: data.memo,
