@@ -175,10 +175,13 @@ export default class Spark {
     createOffer = (data: any) =>
         this.rpc('offer', {
             description: data.memo,
-            label: 'zeus.' + Math.random() * 1000000,
-            // quantity_min: Number(data.value) * 1000,
+            label: data.label,
+            issuer: data.issuer,
             amount: Number(data.value) * 1000,
-            absolute_expiry: Math.round(Date.now() / 1000) + Number(data.expiry)
+            absolute_expiry:
+                Math.round(Date.now() / 1000) + Number(data.expiry),
+            recurrence: data.recurrence,
+            single_use: data.single_use
         });
     getPayments = () =>
         this.rpc('listsendpays', {}, { unit: 'payments', slice: '-100' });

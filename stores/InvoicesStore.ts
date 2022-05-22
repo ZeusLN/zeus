@@ -239,7 +239,15 @@ export default class InvoicesStore {
     };
 
     @action
-    public createOffer = (memo: string, value: string, expiry = '3600') => {
+    public createOffer = (
+        memo: string,
+        value: string,
+        expiry = '3600',
+        label: string,
+        issuer: string,
+        recurrence: string,
+        single_use: boolean
+    ) => {
         this.payment_request = null;
         this.payment_request_amt = null;
         this.creatingInvoice = true;
@@ -249,7 +257,11 @@ export default class InvoicesStore {
         const req: any = {
             memo,
             value,
-            expiry
+            expiry,
+            label,
+            issuer,
+            recurrence,
+            single_use
         };
 
         RESTUtils.createOffer(req)

@@ -53,6 +53,11 @@ interface ReceiveState {
     expiry: string;
     ampInvoice: boolean;
     routeHints: boolean;
+    // bolt12
+    label: string;
+    issuer: string;
+    recurrence: string;
+    single_use: boolean;
 }
 
 @inject('InvoicesStore', 'SettingsStore', 'UnitsStore', 'FiatStore')
@@ -69,7 +74,12 @@ export default class Receive extends React.Component<
         value: '',
         expiry: '3600',
         ampInvoice: false,
-        routeHints: false
+        routeHints: false,
+        // bolt12
+        label: '',
+        issuer: '',
+        recurrence: '',
+        single_use: false
     };
 
     componentDidMount() {
@@ -142,7 +152,11 @@ export default class Receive extends React.Component<
             value,
             expiry,
             ampInvoice,
-            routeHints
+            routeHints,
+            label,
+            issuer,
+            recurrence,
+            single_use
         } = this.state;
         const { units, changeUnits, getAmount } = UnitsStore;
         const { fiatRates, getSymbol }: any = FiatStore;
@@ -546,6 +560,102 @@ export default class Receive extends React.Component<
                                     </>
                                 )}
 
+                                {invoiceType === 'bolt12' && (
+                                    <>
+                                        <Text
+                                            style={{
+                                                ...styles.secondaryText,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Receive.label'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            placeholder={localeString(
+                                                'views.Receive.labelPlaceholder'
+                                            )}
+                                            value={label}
+                                            onChangeText={(text: string) =>
+                                                this.setState({ label: text })
+                                            }
+                                        />
+
+                                        <Text
+                                            style={{
+                                                ...styles.secondaryText,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Receive.issuer'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            value={issuer}
+                                            onChangeText={(text: string) =>
+                                                this.setState({ issuer: text })
+                                            }
+                                        />
+
+                                        <Text
+                                            style={{
+                                                ...styles.secondaryText,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Receive.recurrence'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            placeholder={'4weeks'}
+                                            value={recurrence}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    recurrence: text
+                                                })
+                                            }
+                                        />
+
+                                        <Text
+                                            style={{
+                                                ...styles.secondaryText,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                top: 20
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Receive.singleUse'
+                                            )}
+                                        </Text>
+                                        <Switch
+                                            value={single_use}
+                                            onValueChange={() =>
+                                                this.setState({
+                                                    single_use: !single_use
+                                                })
+                                            }
+                                            trackColor={{
+                                                false: '#767577',
+                                                true: themeColor('highlight')
+                                            }}
+                                            style={{
+                                                alignSelf: 'flex-end'
+                                            }}
+                                        />
+                                    </>
+                                )}
+
                                 {implementation === 'lnd' && (
                                     <>
                                         <Text
@@ -639,7 +749,11 @@ export default class Receive extends React.Component<
                                                       memo,
                                                       satAmount.toString() ||
                                                           '0',
-                                                      expiry
+                                                      expiry,
+                                                      label,
+                                                      issuer,
+                                                      recurrence,
+                                                      single_use
                                                   )
                                         }
                                     />
