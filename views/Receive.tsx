@@ -665,9 +665,11 @@ export default class Receive extends React.Component<
                 <ModalBox
                     style={{
                         backgroundColor: themeColor('background'),
-                        borderRadius: 10,
-                        height: RESTUtils.supportsTaproot() ? 380 : 280,
-                        padding: 20
+                        borderTopLeftRadius: 20,
+                        borderTopRightRadius: 20,
+                        height: RESTUtils.supportsTaproot() ? 510 : 350,
+                        paddingLeft: 24,
+                        paddingRight: 24,
                     }}
                     swipeToClose={true}
                     backButtonClose={true}
@@ -677,9 +679,10 @@ export default class Receive extends React.Component<
                     <Text
                         style={{
                             color: themeColor('text'),
-                            fontSize: 25,
+                            fontSize: 24,
                             fontWeight: 'bold',
-                            margin: 5
+                            paddingTop: 24,
+                            paddingBottom: 24
                         }}
                     >
                         {localeString('views.Receive.addressType')}
@@ -697,19 +700,18 @@ export default class Receive extends React.Component<
                                     d.value === addressType
                                         ? themeColor('highlight')
                                         : themeColor('secondaryText'),
-                                borderRadius: 5,
+                                borderRadius: 4,
                                 borderWidth: d.value === addressType ? 2 : 1,
-                                padding: 10,
-                                margin: 5,
-                                marginTop: 10,
-                                marginBottom: 10
+                                padding: 16,
+                                marginBottom: 24
                             }}
                         >
                             <Text
                                 style={{
                                     color: themeColor('text'),
-                                    fontSize: 15,
-                                    fontWeight: 'bold'
+                                    fontSize: 16,
+                                    fontWeight: 'bold',
+                                    marginBottom: 4
                                 }}
                             >
                                 {d.key}
@@ -717,7 +719,8 @@ export default class Receive extends React.Component<
                             <Text
                                 style={{
                                     color: themeColor('text'),
-                                    fontSize: 13
+                                    fontSize: 16,
+                                    fontWeight: 'regular'
                                 }}
                             >
                                 {d.description}
