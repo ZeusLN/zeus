@@ -667,9 +667,9 @@ export default class Receive extends React.Component<
                         backgroundColor: themeColor('background'),
                         borderTopLeftRadius: 20,
                         borderTopRightRadius: 20,
-                        height: RESTUtils.supportsTaproot() ? 510 : 350,
+                        height: RESTUtils.supportsTaproot() ? 450 : 350,
                         paddingLeft: 24,
-                        paddingRight: 24,
+                        paddingRight: 24
                     }}
                     swipeToClose={true}
                     backButtonClose={true}
