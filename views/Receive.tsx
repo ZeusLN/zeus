@@ -46,12 +46,18 @@ interface ReceiveProps {
 
 interface ReceiveState {
     addressType: string;
+    invoiceType: string;
     selectedIndex: number;
     memo: string;
     value: string;
     expiry: string;
     ampInvoice: boolean;
     routeHints: boolean;
+    // bolt12
+    label: string;
+    issuer: string;
+    recurrence: string;
+    single_use: boolean;
 }
 
 @inject('InvoicesStore', 'SettingsStore', 'UnitsStore', 'FiatStore')
@@ -62,12 +68,18 @@ export default class Receive extends React.Component<
 > {
     state = {
         addressType: '0',
+        invoiceType: 'bolt11',
         selectedIndex: 0,
         memo: '',
         value: '',
         expiry: '3600',
         ampInvoice: false,
-        routeHints: false
+        routeHints: false,
+        // bolt12
+        label: '',
+        issuer: '',
+        recurrence: '',
+        single_use: false
     };
 
     componentDidMount() {
@@ -80,6 +92,8 @@ export default class Receive extends React.Component<
 
         const selectedIndex: number = navigation.getParam('selectedIndex');
 
+        const invoiceType: string = navigation.getParam('invoiceType');
+
         if (lnurl) {
             this.setState({
                 selectedIndex: 0,
@@ -91,6 +105,12 @@ export default class Receive extends React.Component<
         if (selectedIndex) {
             this.setState({
                 selectedIndex
+            });
+        }
+
+        if (invoiceType) {
+            this.setState({
+                invoiceType
             });
         }
     }
@@ -126,18 +146,24 @@ export default class Receive extends React.Component<
         } = this.props;
         const {
             addressType,
+            invoiceType,
             selectedIndex,
             memo,
             value,
             expiry,
             ampInvoice,
-            routeHints
+            routeHints,
+            label,
+            issuer,
+            recurrence,
+            single_use
         } = this.state;
         const { units, changeUnits, getAmount } = UnitsStore;
         const { fiatRates, getSymbol }: any = FiatStore;
 
         const {
             createInvoice,
+            createOffer,
             onChainAddress,
             payment_request,
             payment_request_amt,
@@ -233,7 +259,11 @@ export default class Receive extends React.Component<
         const SettingsButton = () => (
             <Icon
                 name="settings"
-                onPress={() => this.refs.modal.open()}
+                onPress={() =>
+                    selectedIndex === 0
+                        ? this.refs.invoiceTypeModal.open()
+                        : this.refs.addressTypeModal.open()
+                }
                 color={themeColor('text')}
                 underlayColor="transparent"
             />
@@ -278,6 +308,19 @@ export default class Receive extends React.Component<
                   }
               ];
 
+        const INVOICE_TYPES = [
+            {
+                key: localeString('views.Receive.bolt11Key'),
+                value: 'bolt11',
+                description: localeString('views.Receive.bolt11Description')
+            },
+            {
+                key: localeString('views.Receive.bolt12Key'),
+                value: 'bolt12',
+                description: localeString('views.Receive.bolt12Description')
+            }
+        ];
+
         return (
             <View
                 style={{
@@ -295,8 +338,9 @@ export default class Receive extends React.Component<
                         }
                     }}
                     rightComponent={
-                        RESTUtils.supportsAddressTypeSelection() &&
-                        selectedIndex === 1 ? (
+                        (RESTUtils.supportsBolt12() && selectedIndex === 0) ||
+                        (RESTUtils.supportsAddressTypeSelection() &&
+                            selectedIndex === 1) ? (
                             <SettingsButton />
                         ) : null
                     }
@@ -516,6 +560,102 @@ export default class Receive extends React.Component<
                                     </>
                                 )}
 
+                                {invoiceType === 'bolt12' && (
+                                    <>
+                                        <Text
+                                            style={{
+                                                ...styles.secondaryText,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Receive.label'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            placeholder={localeString(
+                                                'views.Receive.labelPlaceholder'
+                                            )}
+                                            value={label}
+                                            onChangeText={(text: string) =>
+                                                this.setState({ label: text })
+                                            }
+                                        />
+
+                                        <Text
+                                            style={{
+                                                ...styles.secondaryText,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Receive.issuer'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            value={issuer}
+                                            onChangeText={(text: string) =>
+                                                this.setState({ issuer: text })
+                                            }
+                                        />
+
+                                        <Text
+                                            style={{
+                                                ...styles.secondaryText,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Receive.recurrence'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            placeholder={'4weeks'}
+                                            value={recurrence}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    recurrence: text
+                                                })
+                                            }
+                                        />
+
+                                        <Text
+                                            style={{
+                                                ...styles.secondaryText,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                top: 20
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Receive.singleUse'
+                                            )}
+                                        </Text>
+                                        <Switch
+                                            value={single_use}
+                                            onValueChange={() =>
+                                                this.setState({
+                                                    single_use: !single_use
+                                                })
+                                            }
+                                            trackColor={{
+                                                false: '#767577',
+                                                true: themeColor('highlight')
+                                            }}
+                                            style={{
+                                                alignSelf: 'flex-end'
+                                            }}
+                                        />
+                                    </>
+                                )}
+
                                 {implementation === 'lnd' && (
                                     <>
                                         <Text
@@ -595,14 +735,26 @@ export default class Receive extends React.Component<
                                                 : '')
                                         }
                                         onPress={() =>
-                                            createInvoice(
-                                                memo,
-                                                satAmount.toString() || '0',
-                                                expiry,
-                                                lnurl,
-                                                ampInvoice,
-                                                routeHints
-                                            )
+                                            invoiceType === 'bolt11'
+                                                ? createInvoice(
+                                                      memo,
+                                                      satAmount.toString() ||
+                                                          '0',
+                                                      expiry,
+                                                      lnurl,
+                                                      ampInvoice,
+                                                      routeHints
+                                                  )
+                                                : createOffer(
+                                                      memo,
+                                                      satAmount.toString() ||
+                                                          '0',
+                                                      expiry,
+                                                      label,
+                                                      issuer,
+                                                      recurrence,
+                                                      single_use
+                                                  )
                                         }
                                     />
                                 </View>
@@ -667,6 +819,73 @@ export default class Receive extends React.Component<
                         backgroundColor: themeColor('background'),
                         borderTopLeftRadius: 20,
                         borderTopRightRadius: 20,
+                        height: 280,
+                        paddingLeft: 24,
+                        paddingRight: 24
+                    }}
+                    swipeToClose={true}
+                    backButtonClose={true}
+                    position="bottom"
+                    ref="invoiceTypeModal"
+                >
+                    <Text
+                        style={{
+                            color: themeColor('text'),
+                            fontSize: 24,
+                            fontWeight: 'bold',
+                            paddingTop: 24,
+                            paddingBottom: 24
+                        }}
+                    >
+                        {localeString('views.Receive.invoiceType')}
+                    </Text>
+                    {_map(INVOICE_TYPES, (d) => (
+                        <TouchableOpacity
+                            onPress={() => {
+                                InvoicesStore.clearAddress();
+                                this.setState({ invoiceType: d.value });
+                                this.refs.invoiceTypeModal.close();
+                            }}
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                borderColor:
+                                    d.value === invoiceType
+                                        ? themeColor('highlight')
+                                        : themeColor('secondaryText'),
+                                borderRadius: 5,
+                                borderWidth: d.value === invoiceType ? 2 : 1,
+                                padding: 10,
+                                margin: 5,
+                                marginTop: 10,
+                                marginBottom: 10
+                            }}
+                            key={d.key}
+                        >
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontSize: 15,
+                                    fontWeight: 'bold'
+                                }}
+                            >
+                                {d.key}
+                            </Text>
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontSize: 13
+                                }}
+                            >
+                                {d.description}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </ModalBox>
+                <ModalBox
+                    style={{
+                        backgroundColor: themeColor('background'),
+                        borderTopLeftRadius: 20,
+                        borderTopRightRadius: 20,
                         height: RESTUtils.supportsTaproot() ? 450 : 350,
                         paddingLeft: 24,
                         paddingRight: 24
@@ -674,7 +893,7 @@ export default class Receive extends React.Component<
                     swipeToClose={true}
                     backButtonClose={true}
                     position="bottom"
-                    ref="modal"
+                    ref="addressTypeModal"
                 >
                     <Text
                         style={{
@@ -692,7 +911,7 @@ export default class Receive extends React.Component<
                             onPress={() => {
                                 InvoicesStore.clearAddress();
                                 this.setState({ addressType: d.value });
-                                this.refs.modal.close();
+                                this.refs.addressTypeModal.close();
                             }}
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -705,6 +924,7 @@ export default class Receive extends React.Component<
                                 padding: 16,
                                 marginBottom: 24
                             }}
+                            key={d.key}
                         >
                             <Text
                                 style={{

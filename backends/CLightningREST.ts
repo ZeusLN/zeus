@@ -72,6 +72,9 @@ export default class CLightningREST extends LND {
     };
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
     getInvoices = () => this.getRequest('/v1/invoice/listInvoices/');
+    getOffers = () => this.getRequest('/v1/offers/listoffers');
+    disableOffer = (offerId: string) =>
+        this.deleteRequest(`/v1/offers/disableOffer/${offerId}`);
     createInvoice = (data: any) =>
         this.postRequest('/v1/invoice/genInvoice/', {
             description: data.memo,
@@ -79,6 +82,17 @@ export default class CLightningREST extends LND {
             amount: Number(data.value) * 1000,
             expiry: Math.round(Date.now() / 1000) + Number(data.expiry),
             private: true
+        });
+    createOffer = (data: any) =>
+        this.postRequest('/v1/offers/offer', {
+            description: data.memo,
+            label: data.label,
+            issuer: data.issuer,
+            amount: Number(data.value) * 1000,
+            absolute_expiry:
+                Math.round(Date.now() / 1000) + Number(data.expiry),
+            recurrence: data.recurrence,
+            single_use: data.single_use
         });
     getPayments = () => this.getRequest('/v1/pay/listPays');
     getNewAddress = () => this.getRequest('/v1/newaddr');
@@ -112,6 +126,10 @@ export default class CLightningREST extends LND {
     listNode = () => this.getRequest('/v1/network/listNode');
     decodePaymentRequest = (urlParams?: Array<string>) =>
         this.getRequest(`/v1/pay/decodePay/${urlParams && urlParams[0]}`);
+    fetchInvoice = (offer: string) =>
+        this.postRequest('/v1/offers/fetchInvoice', {
+            offer
+        });
     payLightningInvoice = (data: any) =>
         this.postRequest('/v1/pay', {
             invoice: data.payment_request,
@@ -159,4 +177,5 @@ export default class CLightningREST extends LND {
     singleFeesEarnedTotal = () => true;
     supportsAddressTypeSelection = () => false;
     supportsTaproot = () => false;
+    supportsBolt12 = () => true;
 }

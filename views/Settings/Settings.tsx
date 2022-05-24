@@ -14,6 +14,7 @@ import BrushIcon from '../../assets/images/SVG/Brush.svg';
 import LanguageIcon from '../../assets/images/SVG/Globe.svg';
 import HelpIcon from '../../assets/images/SVG/Help Icon.svg';
 import NodeOn from '../../assets/images/SVG/Node On.svg';
+import Offers from '../../assets/images/SVG/Offers.svg';
 
 import NodeIdenticon, { NodeTitle } from './../../components/NodeIdenticon';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -172,6 +173,38 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                 }}
                             >
                                 {localeString('views.NodeInfo.title')}
+                            </Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                {RESTUtils.supportsBolt12() && (
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            width: '90%',
+                            height: 45,
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            top: 30,
+                            marginBottom: 15
+                        }}
+                    >
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() => navigation.navigate('Offers')}
+                        >
+                            <Offers color={themeColor('text')} />
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString('views.Offers.title')}
                             </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon />

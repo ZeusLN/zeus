@@ -36,6 +36,9 @@ export default async function (data: string): Promise<any> {
                 transactionType: 'Keysend'
             }
         ];
+    } else if (!hasAt && AddressUtils.isValidLightningOffer(value)) {
+        invoicesStore.fetchInvoice(value);
+        return ['PaymentRequest', {}];
     } else if (!hasAt && AddressUtils.isValidLightningPaymentRequest(value)) {
         invoicesStore.getPayReq(value);
         return ['PaymentRequest', {}];

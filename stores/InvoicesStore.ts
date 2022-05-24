@@ -6,6 +6,7 @@ import { LNURLWithdrawParams } from 'js-lnurl';
 import querystring from 'querystring-es3';
 import hashjs from 'hash.js';
 import Invoice from './../models/Invoice';
+import Offer from './../models/Offer';
 import SettingsStore from './SettingsStore';
 import RESTUtils from './../utils/RESTUtils';
 import { localeString } from './../utils/LocaleUtils';
@@ -17,6 +18,7 @@ export default class InvoicesStore {
     @observable error_msg: string | null;
     @observable getPayReqError: string | null = null;
     @observable invoices: Array<Invoice> = [];
+    @observable offers: Array<Offer> = [];
     @observable invoice: Invoice | null;
     @observable onChainAddress: string | null;
     @observable pay_req: Invoice | null;
@@ -84,6 +86,11 @@ export default class InvoicesStore {
         this.loading = false;
     };
 
+    resetOffers = () => {
+        this.offers = [];
+        this.loading = false;
+    };
+
     @action
     public getInvoices = async () => {
         this.loading = true;
@@ -100,6 +107,39 @@ export default class InvoicesStore {
             })
             .catch(() => {
                 this.resetInvoices();
+            });
+    };
+
+    @action
+    public getOffers = async () => {
+        this.loading = true;
+        await RESTUtils.getOffers()
+            .then((data: any) => {
+                this.offers = data.offers || data;
+                this.offers = this.offers.map((offer) => new Offer(offer));
+                this.offers = this.offers.slice().reverse();
+                this.loading = false;
+            })
+            .catch(() => {
+                this.resetOffers();
+            });
+    };
+
+    @action
+    public disableOffer = (offerId: string) => {
+        this.loading = true;
+        this.error = false;
+        return RESTUtils.disableOffer(offerId)
+            .then(() => {
+                this.loading = false;
+                return {
+                    success: true
+                };
+            })
+            .catch((error) => {
+                this.error = true;
+                this.error_msg = error.toString();
+                this.loading = false;
             });
     };
 
@@ -199,6 +239,49 @@ export default class InvoicesStore {
     };
 
     @action
+    public createOffer = (
+        memo: string,
+        value: string,
+        expiry = '3600',
+        label: string,
+        issuer: string,
+        recurrence: string,
+        single_use: boolean
+    ) => {
+        this.payment_request = null;
+        this.payment_request_amt = null;
+        this.creatingInvoice = true;
+        this.creatingInvoiceError = false;
+        this.error_msg = null;
+
+        const req: any = {
+            memo,
+            value,
+            expiry,
+            label,
+            issuer,
+            recurrence,
+            single_use
+        };
+
+        RESTUtils.createOffer(req)
+            .then((data: any) => {
+                const invoice = new Invoice(data);
+                this.payment_request = invoice.bolt12;
+                this.payment_request_amt = value;
+                this.creatingInvoice = false;
+            })
+            .catch((error: any) => {
+                // handle error
+                this.creatingInvoiceError = true;
+                this.creatingInvoice = false;
+                this.error_msg =
+                    error.toString() ||
+                    localeString('stores.InvoicesStore.errorCreatingInvoice');
+            });
+    };
+
+    @action
     public getNewAddress = (params: any) => {
         this.loading = true;
         this.error_msg = null;
@@ -248,6 +331,28 @@ export default class InvoicesStore {
                         `wrong description_hash! got ${this.pay_req.description_hash}, needed ${needed}.`
                     );
                 }
+
+                this.loading = false;
+                this.getPayReqError = null;
+            })
+            .catch((error: any) => {
+                // handle error
+                this.loading = false;
+                this.pay_req = null;
+                this.getPayReqError = error.toString();
+            });
+    };
+
+    @action
+    public fetchInvoice = (offer: string) => {
+        this.pay_req = null;
+        this.paymentRequest = offer;
+        this.loading = true;
+        this.feeEstimate = null;
+
+        return RESTUtils.fetchInvoice(offer)
+            .then((data: any) => {
+                this.pay_req = new Invoice(data);
 
                 this.loading = false;
                 this.getPayReqError = null;

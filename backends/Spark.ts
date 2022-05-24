@@ -158,6 +158,12 @@ export default class Spark {
                 }))
             })
         );
+    getOffers = () =>
+        this.rpc('listoffers', {}, { unit: 'offers', slice: '-100' });
+    disableOffer = (offer_id: string) =>
+        this.rpc('disableoffer', {
+            offer_id
+        });
     createInvoice = (data: any) =>
         this.rpc('invoice', {
             description: data.memo,
@@ -165,6 +171,17 @@ export default class Spark {
             msatoshi: Number(data.value) * 1000,
             expiry: Math.round(Date.now() / 1000) + Number(data.expiry),
             exposeprivatechannels: true
+        });
+    createOffer = (data: any) =>
+        this.rpc('offer', {
+            description: data.memo,
+            label: data.label,
+            issuer: data.issuer,
+            amount: Number(data.value) * 1000,
+            absolute_expiry:
+                Math.round(Date.now() / 1000) + Number(data.expiry),
+            recurrence: data.recurrence,
+            single_use: data.single_use
         });
     getPayments = () =>
         this.rpc('listsendpays', {}, { unit: 'payments', slice: '-100' });
@@ -181,6 +198,10 @@ export default class Spark {
     listNode = () => 'N/A';
     decodePaymentRequest = (urlParams?: Array<string>) =>
         this.rpc('decodepay', [urlParams && urlParams[0]]);
+    fetchInvoice = (offer: string) =>
+        this.rpc('fetchinvoice', {
+            offer
+        });
     payLightningInvoice = (data: any) =>
         this.rpc('pay', {
             bolt11: data.payment_request,
@@ -321,4 +342,5 @@ export default class Spark {
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => false;
     supportsTaproot = () => false;
+    supportsBolt12 = () => true;
 }

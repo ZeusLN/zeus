@@ -483,6 +483,7 @@ export default class Eclair {
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => false;
     supportsTaproot = () => false;
+    supportsBolt12 = () => false;
 }
 
 const mapInvoice =

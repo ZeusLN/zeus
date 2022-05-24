@@ -23,6 +23,8 @@ import LNDConnectConfigQRScanner from './views/LNDConnectConfigQRScanner';
 import LNDHubQRScanner from './views/LNDHubQRScanner';
 import NodeInfo from './views/NodeInfo';
 import Lockscreen from './views/Lockscreen';
+import Offers from './views/Offers/Offers';
+import Offer from './views/Offers/Offer';
 
 // Settings views
 import Settings from './views/Settings/Settings';
@@ -211,6 +213,12 @@ const AppScenes = {
     },
     ImportAccountQRScanner: {
         screen: ImportAccountQRScanner
+    },
+    Offers: {
+        screen: Offers
+    },
+    Offer: {
+        screen: Offer
     }
 };
 
