@@ -163,7 +163,7 @@ export default class Spark {
             description: data.memo,
             label: 'zeus.' + Math.random() * 1000000,
             msatoshi: Number(data.value) * 1000,
-            expiry: data.expiry,
+            expiry: Math.round(Date.now() / 1000) + Number(data.expiry),
             exposeprivatechannels: true
         });
     getPayments = () =>
