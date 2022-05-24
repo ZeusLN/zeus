@@ -187,11 +187,6 @@ export default async function (data: string): Promise<any> {
             }
         });
     } else {
-        Alert.alert(
-            localeString('general.error'),
-            localeString('utils.handleAnything.notValid'),
-            [{ text: localeString('general.ok'), onPress: () => void 0 }],
-            { cancelable: false }
-        );
+        throw new Error(localeString('utils.handleAnything.notValid'));
     }
 }
