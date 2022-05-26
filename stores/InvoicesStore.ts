@@ -222,6 +222,12 @@ export default class InvoicesStore {
     public clearAddress = () => (this.onChainAddress = null);
 
     @action
+    public clearPayReq = () => {
+        this.pay_req = null;
+        this.getPayReqError = null;
+    };
+
+    @action
     public getPayReq = (
         paymentRequest: string,
         descriptionPreimage?: string

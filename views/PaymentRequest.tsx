@@ -93,7 +93,8 @@ export default class PaymentRequest extends React.Component<
             loading,
             loadingFeeEstimate,
             successProbability,
-            feeEstimate
+            feeEstimate,
+            clearPayReq
         } = InvoicesStore;
 
         const requestAmount = pay_req && pay_req.getRequestAmount;
@@ -133,7 +134,10 @@ export default class PaymentRequest extends React.Component<
         const BackButton = () => (
             <Icon
                 name="arrow-back"
-                onPress={() => navigation.navigate('Wallet', { refresh: true })}
+                onPress={() => {
+                    clearPayReq();
+                    navigation.navigate('Wallet', { refresh: true });
+                }}
                 color={themeColor('text')}
                 underlayColor="transparent"
             />
