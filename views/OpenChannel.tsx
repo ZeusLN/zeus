@@ -50,7 +50,7 @@ interface OpenChannelState {
     min_confs: number;
     spend_unconfirmed: boolean;
     sat_per_byte: string;
-    private: boolean;
+    privateChannel: boolean;
     host: string;
     suggestImport: string;
     utxos: Array<string>;
@@ -71,7 +71,7 @@ export default class OpenChannel extends React.Component<
             min_confs: 1,
             spend_unconfirmed: false,
             sat_per_byte: '2',
-            private: false,
+            privateChannel: false,
             host: '',
             suggestImport: '',
             utxos: [],
@@ -216,7 +216,7 @@ export default class OpenChannel extends React.Component<
             sat_per_byte,
             suggestImport,
             utxoBalance,
-            private
+            privateChannel
         } = this.state;
         const { implementation, settings } = SettingsStore;
         const { privacy } = settings;
@@ -488,10 +488,10 @@ export default class OpenChannel extends React.Component<
                             {localeString('views.OpenChannel.private')}
                         </Text>
                         <Switch
-                            value={private}
+                            value={privateChannel}
                             onValueChange={() =>
                                 this.setState({
-                                    private: !private
+                                    privateChannel: !privateChannel
                                 })
                             }
                             trackColor={{
