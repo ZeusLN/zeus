@@ -71,7 +71,7 @@ export default class OpenChannel extends React.Component<
             min_confs: 1,
             spend_unconfirmed: false,
             sat_per_byte: '2',
-            privateChannel: false,
+            privateChannel: true,
             host: '',
             suggestImport: '',
             utxos: [],
@@ -485,10 +485,10 @@ export default class OpenChannel extends React.Component<
                                 color: themeColor('secondaryText')
                             }}
                         >
-                            {localeString('views.OpenChannel.private')}
+                            {localeString('views.OpenChannel.announceChannel')}
                         </Text>
                         <Switch
-                            value={privateChannel}
+                            value={!privateChannel}
                             onValueChange={() =>
                                 this.setState({
                                     privateChannel: !privateChannel
