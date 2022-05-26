@@ -1,3 +1,5 @@
+// based on Blixt LNDMobileTools
+// https://github.com/hsjoberg/blixt-wallet/blob/master/android/app/src/main/java/com/blixtwallet/MainApplication.java
 package app.zeusln.zeus;
 
 import android.nfc.Tag;
