@@ -140,6 +140,7 @@
     "views.Wallet.Channels.open": "Open Channel",
     "views.Wallet.Channels.inactive": "INACTIVE",
     "views.Wallet.Channels.private": "Private",
+    "views.OpenChannel.announceChannel": "Announce channel",
     "views.Wallet.Channels.local": "Local",
     "views.Wallet.Channels.remote": "Remote",
     "views.Wallet.Channels.noChannels": "No Channels",
