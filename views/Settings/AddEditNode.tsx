@@ -1289,6 +1289,22 @@ export default class AddEditNode extends React.Component<
                         </View>
                     )}
 
+                    {implementation === 'spark' && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString(
+                                    'views.Settings.AddEditNode.scanSpark'
+                                )}
+                                onPress={() =>
+                                    navigation.navigate('SparkQRScanner', {
+                                        index
+                                    })
+                                }
+                                secondary
+                            />
+                        </View>
+                    )}
+
                     {saved && (
                         <View style={styles.button}>
                             <Button

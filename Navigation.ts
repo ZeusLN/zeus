@@ -21,6 +21,7 @@ import Invoice from './views/Invoice';
 import BTCPayConfigQRScanner from './views/BTCPayConfigQRScanner';
 import LNDConnectConfigQRScanner from './views/LNDConnectConfigQRScanner';
 import LNDHubQRScanner from './views/LNDHubQRScanner';
+import SparkQRScanner from './views/SparkQRScanner';
 import NodeInfo from './views/NodeInfo';
 import Lockscreen from './views/Lockscreen';
 
@@ -211,6 +212,9 @@ const AppScenes = {
     },
     ImportAccountQRScanner: {
         screen: ImportAccountQRScanner
+    },
+    SparkQRScanner: {
+        screen: SparkQRScanner
     }
 };
 
