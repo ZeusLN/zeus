@@ -131,8 +131,8 @@ android {
         applicationId "app.zeusln.zeus"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 40
-        versionName "0.6.4"
+        versionCode 41
+        versionName "0.6.5"
         multiDexEnabled true
         missingDimensionStrategy 'react-native-camera', 'general'
     }
@@ -211,6 +211,7 @@ dependencies {
     // gif
     implementation 'com.facebook.fresco:fresco:2.6.0'
     implementation 'com.facebook.fresco:animated-gif:2.6.0'
+    implementation "com.hypertrack:hyperlog:0.0.10"
 
     if (enableHermes) {
         def hermesPath = "../../node_modules/hermes-engine/android/";

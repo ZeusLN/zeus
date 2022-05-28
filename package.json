@@ -1,6 +1,6 @@
 {
   "name": "zeus",
-  "version": "0.6.4",
+  "version": "0.6.5-rc1",
   "private": true,
   "playStore": false,
   "jest": {
@@ -61,8 +61,8 @@
     "process": "0.11.10",
     "punycode": "1.4.1",
     "querystring-es3": "0.2.1",
-    "react": "17.0.2",
-    "react-native": "0.67.2",
+    "react": "18.1.0",
+    "react-native": "0.68.2",
     "react-native-blob-util": "0.14.0",
     "react-native-camera": "4.2.1",
     "react-native-crypto": "2.2.0",
@@ -75,7 +75,6 @@
     "react-native-os": "1.2.6",
     "react-native-qrcode-svg": "6.0.6",
     "react-native-randombytes": "3.5.3",
-    "react-native-reanimated": "2.3.1",
     "react-native-restart": "0.0.24",
     "react-native-safe-area-context": "0.6.2",
     "react-native-screens": "3.10.1",

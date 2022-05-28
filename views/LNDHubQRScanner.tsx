@@ -14,14 +14,6 @@ export default class LNDHubQRScanner extends React.Component<
     LNDHubQRProps,
     {}
 > {
-    constructor(props: any) {
-        super(props);
-
-        this.state = {
-            useInternalScanner: false
-        };
-    }
-
     handleCodeScanned = (data: string) => {
         const { navigation } = this.props;
         handleAnything(data)

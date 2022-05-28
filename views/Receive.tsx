@@ -11,6 +11,7 @@ import {
 import { LNURLWithdrawParams } from 'js-lnurl';
 import { ButtonGroup, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import _map from 'lodash/map';
 
 import Success from '../assets/images/GIF/Success.gif';
 
@@ -18,6 +19,7 @@ import { Amount } from './../components/Amount';
 import Button from './../components/Button';
 import CollapsedQR from './../components/CollapsedQR';
 import LoadingIndicator from './../components/LoadingIndicator';
+import ModalBox from './../components/ModalBox';
 import {
     SuccessMessage,
     ErrorMessage
@@ -43,6 +45,7 @@ interface ReceiveProps {
 }
 
 interface ReceiveState {
+    addressType: string;
     selectedIndex: number;
     memo: string;
     value: string;
@@ -58,6 +61,7 @@ export default class Receive extends React.Component<
     ReceiveState
 > {
     state = {
+        addressType: '0',
         selectedIndex: 0,
         memo: '',
         value: '',
@@ -91,9 +95,9 @@ export default class Receive extends React.Component<
         }
     }
 
-    getNewAddress = () => {
+    getNewAddress = (params: any) => {
         const { InvoicesStore } = this.props;
-        InvoicesStore.getNewAddress();
+        InvoicesStore.getNewAddress(params);
     };
 
     updateIndex = (selectedIndex: number) => {
@@ -120,8 +124,15 @@ export default class Receive extends React.Component<
             FiatStore,
             navigation
         } = this.props;
-        const { selectedIndex, memo, value, expiry, ampInvoice, routeHints } =
-            this.state;
+        const {
+            addressType,
+            selectedIndex,
+            memo,
+            value,
+            expiry,
+            ampInvoice,
+            routeHints
+        } = this.state;
         const { units, changeUnits, getAmount } = UnitsStore;
         const { fiatRates, getSymbol }: any = FiatStore;
 
@@ -136,7 +147,8 @@ export default class Receive extends React.Component<
             watchedInvoicePaid,
             reset
         } = InvoicesStore;
-        const { settings, loading, implementation } = SettingsStore;
+        const { settings, implementation } = SettingsStore;
+        const loading = SettingsStore.loading || InvoicesStore.loading;
         const { fiat } = settings;
         const address = onChainAddress;
 
@@ -218,6 +230,54 @@ export default class Receive extends React.Component<
             />
         );
 
+        const SettingsButton = () => (
+            <Icon
+                name="settings"
+                onPress={() => this.refs.modal.open()}
+                color={themeColor('text')}
+                underlayColor="transparent"
+            />
+        );
+
+        const ADDRESS_TYPES = RESTUtils.supportsTaproot()
+            ? [
+                  {
+                      key: localeString('views.Receive.np2wkhKey'),
+                      value: '1',
+                      description: localeString(
+                          'views.Receive.np2wkhDescription'
+                      )
+                  },
+                  {
+                      key: localeString('views.Receive.p2wkhKey'),
+                      value: '0',
+                      description: localeString(
+                          'views.Receive.p2wkhDescription'
+                      )
+                  },
+                  {
+                      key: localeString('views.Receive.p2trKey'),
+                      value: '4',
+                      description: localeString('views.Receive.p2trDescription')
+                  }
+              ]
+            : [
+                  {
+                      key: localeString('views.Receive.np2wkhKey'),
+                      value: '1',
+                      description: localeString(
+                          'views.Receive.np2wkhDescriptionAlt'
+                      )
+                  },
+                  {
+                      key: localeString('views.Receive.p2wkhKey'),
+                      value: '0',
+                      description: localeString(
+                          'views.Receive.p2wkhDescription'
+                      )
+                  }
+              ];
+
         return (
             <View
                 style={{
@@ -234,6 +294,12 @@ export default class Receive extends React.Component<
                             fontFamily: 'Lato-Regular'
                         }
                     }}
+                    rightComponent={
+                        RESTUtils.supportsAddressTypeSelection() &&
+                        selectedIndex === 1 ? (
+                            <SettingsButton />
+                        ) : null
+                    }
                     backgroundColor={themeColor('background')}
                     containerStyle={{
                         borderBottomWidth: 0
@@ -261,6 +327,8 @@ export default class Receive extends React.Component<
                 )}
 
                 <ScrollView style={styles.content}>
+                    {error_msg && <ErrorMessage message={error_msg} />}
+
                     {watchedInvoicePaid ? (
                         <View
                             style={{
@@ -282,7 +350,7 @@ export default class Receive extends React.Component<
                                 }}
                             >
                                 {`${localeString(
-                                    'view.Receive.youReceived'
+                                    'views.Receive.youReceived'
                                 )} ${getAmount(payment_request_amt)}`}
                             </Text>
                         </View>
@@ -314,17 +382,6 @@ export default class Receive extends React.Component<
                                             'views.Receive.errorCreate'
                                         )}
                                     />
-                                )}
-                                {error_msg && (
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            top: 20,
-                                            padding: 20
-                                        }}
-                                    >
-                                        {error_msg}
-                                    </Text>
                                 )}
                                 {creatingInvoice && <LoadingIndicator />}
                                 {!!payment_request && (
@@ -566,12 +623,14 @@ export default class Receive extends React.Component<
                             )}
                             {loading && <LoadingIndicator />}
                             {address && !loading && (
-                                <CollapsedQR
-                                    value={address}
-                                    copyText={localeString(
-                                        'views.Receive.copyAddress'
-                                    )}
-                                />
+                                <View style={{ marginTop: 10 }}>
+                                    <CollapsedQR
+                                        value={address}
+                                        copyText={localeString(
+                                            'views.Receive.copyAddress'
+                                        )}
+                                    />
+                                </View>
                             )}
                             {!(
                                 (implementation === 'lndhub' && address) ||
@@ -588,13 +647,87 @@ export default class Receive extends React.Component<
                                                       'views.Receive.getNewAddress'
                                                   )
                                         }
-                                        onPress={() => this.getNewAddress()}
+                                        onPress={() =>
+                                            this.getNewAddress(
+                                                RESTUtils.supportsAddressTypeSelection()
+                                                    ? {
+                                                          type: addressType
+                                                      }
+                                                    : null
+                                            )
+                                        }
                                     />
                                 </View>
                             )}
                         </React.Fragment>
                     )}
                 </ScrollView>
+                <ModalBox
+                    style={{
+                        backgroundColor: themeColor('background'),
+                        borderTopLeftRadius: 20,
+                        borderTopRightRadius: 20,
+                        height: RESTUtils.supportsTaproot() ? 450 : 350,
+                        paddingLeft: 24,
+                        paddingRight: 24
+                    }}
+                    swipeToClose={true}
+                    backButtonClose={true}
+                    position="bottom"
+                    ref="modal"
+                >
+                    <Text
+                        style={{
+                            color: themeColor('text'),
+                            fontSize: 24,
+                            fontWeight: 'bold',
+                            paddingTop: 24,
+                            paddingBottom: 24
+                        }}
+                    >
+                        {localeString('views.Receive.addressType')}
+                    </Text>
+                    {_map(ADDRESS_TYPES, (d) => (
+                        <TouchableOpacity
+                            onPress={() => {
+                                InvoicesStore.clearAddress();
+                                this.setState({ addressType: d.value });
+                                this.refs.modal.close();
+                            }}
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                borderColor:
+                                    d.value === addressType
+                                        ? themeColor('highlight')
+                                        : themeColor('secondaryText'),
+                                borderRadius: 4,
+                                borderWidth: d.value === addressType ? 2 : 1,
+                                padding: 16,
+                                marginBottom: 24
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontSize: 16,
+                                    fontWeight: 'bold',
+                                    marginBottom: 4
+                                }}
+                            >
+                                {d.key}
+                            </Text>
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontSize: 16,
+                                    fontWeight: 'regular'
+                                }}
+                            >
+                                {d.description}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </ModalBox>
             </View>
         );
     }

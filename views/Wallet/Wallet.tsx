@@ -86,14 +86,13 @@ export default class Wallet extends React.Component<WalletProps, {}> {
     }
 
     componentDidMount() {
+        Linking.addEventListener('url', this.handleOpenURL);
+        LinkingUtils.handleInitialUrl(this.props.navigation);
+
         // triggers when loaded from navigation or back action
         this.props.navigation.addListener('didFocus', () => {
             this.getSettingsAndNavigate();
         });
-    }
-
-    componentWillUnmount() {
-        Linking.removeEventListener('url', this.handleOpenURL);
     }
 
     async getSettingsAndNavigate() {
@@ -140,8 +139,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             FeeStore,
             UTXOsStore,
             SettingsStore,
-            FiatStore,
-            navigation
+            FiatStore
         } = this.props;
         const {
             settings,
@@ -180,8 +178,6 @@ export default class Wallet extends React.Component<WalletProps, {}> {
 
         if (connecting) {
             setConnectingStatus(false);
-            Linking.addEventListener('url', this.handleOpenURL);
-            LinkingUtils.handleInitialUrl(navigation);
         }
     }
 
