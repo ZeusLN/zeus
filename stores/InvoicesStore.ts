@@ -222,13 +222,19 @@ export default class InvoicesStore {
     public clearAddress = () => (this.onChainAddress = null);
 
     @action
+    public clearPayReq = () => {
+        this.pay_req = null;
+        this.getPayReqError = null;
+    };
+
+    @action
     public getPayReq = (
         paymentRequest: string,
         descriptionPreimage?: string
     ) => {
+        this.loading = true;
         this.pay_req = null;
         this.paymentRequest = paymentRequest;
-        this.loading = true;
         this.feeEstimate = null;
 
         return RESTUtils.decodePaymentRequest([paymentRequest])
@@ -249,14 +255,14 @@ export default class InvoicesStore {
                     );
                 }
 
-                this.loading = false;
                 this.getPayReqError = null;
+                this.loading = false;
             })
             .catch((error: any) => {
                 // handle error
-                this.loading = false;
                 this.pay_req = null;
                 this.getPayReqError = error.toString();
+                this.loading = false;
             });
     };
 
