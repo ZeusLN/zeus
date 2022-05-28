@@ -174,7 +174,7 @@ export default class Spark {
             id: data.node_pubkey_string,
             amount: data.satoshis,
             feerate: `${Number(data.sat_per_byte) * 1000}perkb`,
-            announce: !data.private
+            announce: !data.privateChannel
         }).then(({ txid }: any) => ({ funding_txid_str: txid }));
     connectPeer = (data: any) =>
         this.rpc('connect', [data.addr.pubkey, data.addr.host]);

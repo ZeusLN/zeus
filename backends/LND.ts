@@ -219,7 +219,7 @@ export default class LND {
     getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);
     openChannel = (data: OpenChannelRequest) =>
         this.postRequest('/v1/channels', {
-            private: data.private,
+            private: data.privateChannel,
             local_funding_amount: data.local_funding_amount,
             min_confs: data.min_confs,
             node_pubkey_string: data.node_pubkey_string,
