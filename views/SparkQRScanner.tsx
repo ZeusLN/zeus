@@ -17,7 +17,7 @@ export default class SparkQRScanner extends React.Component<SparkQRProps, {}> {
 
         if (url && accessKey) {
             navigation.navigate('AddEditNode', {
-                node: { url, accessKey },
+                node: { url, accessKey, implementation: 'spark' },
                 enableTor: url && url.includes('.onion'),
                 index
             });
