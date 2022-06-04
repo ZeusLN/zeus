@@ -105,7 +105,7 @@ class AddressUtils {
                 host = serverURL;
             } else {
                 value = input;
-                host = CUSTODIAL_LNDHUB[0];
+                host = CUSTODIAL_LNDHUBS[0];
             }
 
             const [username, password] = value.split(':');
