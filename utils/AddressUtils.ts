@@ -23,6 +23,7 @@ const lightningAddress =
 const blueWalletAddress = /^bluewallet:setlndhuburl\?url=(\S+)/;
 
 export const CUSTODIAL_LNDHUBS = [
+    'https://lndhub.io',
     'https://lndhub.herokuapp.com',
     'https://legend.lnbits.com/wallet',
     'https://infinity.lnbits.com/wallet',
@@ -105,7 +106,7 @@ class AddressUtils {
                 host = serverURL;
             } else {
                 value = input;
-                host = CUSTODIAL_LNDHUB[0];
+                host = CUSTODIAL_LNDHUBS[0];
             }
 
             const [username, password] = value.split(':');
