@@ -4,11 +4,11 @@ import { Header, Icon, ListItem } from 'react-native-elements';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
-interface AboutProps {
+interface SponsorsProps {
     navigation: any;
 }
 
-function About(props: AboutProps) {
+function Sponsors(props: SponsorsProps) {
     const { navigation } = props;
 
     const renderSeparator = () => (
@@ -30,8 +30,9 @@ function About(props: AboutProps) {
     );
 
     const ABOUT_ITEMS = [
-        { label: localeString('views.Sponsors.title'), path: 'Sponsors' },
-        { label: localeString('general.help'), path: 'Help' }
+        { label: localeString('views.Olympians.title'), path: 'Olympians' },
+        { label: localeString('views.Gods.title'), path: 'Gods' },
+        { label: localeString('views.Mortals.title'), path: 'Mortals' }
     ];
 
     return (
@@ -44,7 +45,7 @@ function About(props: AboutProps) {
             <Header
                 leftComponent={<BackButton />}
                 centerComponent={{
-                    text: localeString('general.about'),
+                    text: localeString('views.Sponsors.title'),
                     style: {
                         color: themeColor('text'),
                         fontFamily: 'Lato-Regular'
@@ -88,4 +89,4 @@ function About(props: AboutProps) {
     );
 }
 
-export default About;
+export default Sponsors;

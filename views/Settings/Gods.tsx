@@ -12,21 +12,21 @@ import UrlUtils from './../../utils/UrlUtils';
 
 import SettingsStore from './../../stores/SettingsStore';
 
-interface OlympiansProps {
+interface GodsProps {
     navigation: any;
     SettingsStore: SettingsStore;
 }
 
 @inject('SettingsStore')
 @observer
-export default class Olympians extends React.Component<OlympiansProps, {}> {
+export default class Gods extends React.Component<GodsProps, {}> {
     UNSAFE_componentWillMount() {
         this.props.SettingsStore.fetchSponsors();
     }
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { sponsorsError, olympians, loading } = SettingsStore;
+        const { sponsorsError, gods, loading } = SettingsStore;
 
         const BackButton = () => (
             <Icon
@@ -47,7 +47,7 @@ export default class Olympians extends React.Component<OlympiansProps, {}> {
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: localeString('views.Olympians.title'),
+                        text: localeString('views.Gods.title'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'Lato-Regular'
@@ -62,7 +62,7 @@ export default class Olympians extends React.Component<OlympiansProps, {}> {
                 {!loading && !sponsorsError && (
                     <>
                         <FlatList
-                            data={olympians.slice().reverse()}
+                            data={gods.slice().reverse()}
                             renderItem={({ item }) => (
                                 <ListItem
                                     containerStyle={{
@@ -77,7 +77,7 @@ export default class Olympians extends React.Component<OlympiansProps, {}> {
                                     }
                                 >
                                     <Avatar
-                                        size={100}
+                                        size={76}
                                         rounded
                                         source={{
                                             uri: `https://zeusln.app/api/twitter-images/${item.handle}.jpg`
@@ -87,7 +87,7 @@ export default class Olympians extends React.Component<OlympiansProps, {}> {
                                     />
                                 </ListItem>
                             )}
-                            numColumns={3}
+                            numColumns={4}
                             keyExtractor={(item, index) => index}
                             style={{ alignSelf: 'center' }}
                         />
