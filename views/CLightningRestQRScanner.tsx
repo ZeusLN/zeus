@@ -4,12 +4,12 @@ import QRCodeScanner from './../components/QRCodeScanner';
 import ConnectionFormatUtils from './../utils/ConnectionFormatUtils';
 import { localeString } from './../utils/LocaleUtils';
 
-interface LNDConnectConfigQRProps {
+interface CLightningRestQRScannerProps {
     navigation: any;
 }
 
-export default class LNDConnectConfigQRScanner extends React.Component<
-    LNDConnectConfigQRProps,
+export default class CLightningRestQRScanner extends React.Component<
+    CLightningRestQRScannerProps,
     {}
 > {
     handleLNDConnectConfigInvoiceScanned = (data: string) => {
@@ -17,13 +17,12 @@ export default class LNDConnectConfigQRScanner extends React.Component<
 
         const index = navigation.getParam('index', null);
 
-        const { host, port, macaroonHex } =
-            ConnectionFormatUtils.processLndConnectUrl(data);
+        const { host, port, macaroonHex, implementation, enableTor } =
+            ConnectionFormatUtils.processCLightningRestConnectUrl(data);
 
         if (host && port && macaroonHex) {
             navigation.navigate('AddEditNode', {
-                node: { host, port, macaroonHex },
-                enableTor: host && host.includes('.onion'),
+                node: { host, port, macaroonHex, implementation, enableTor },
                 index
             });
         } else {

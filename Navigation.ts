@@ -19,6 +19,7 @@ import Channel from './views/Channels/Channel';
 import Payment from './views/Payment';
 import Invoice from './views/Invoice';
 import BTCPayConfigQRScanner from './views/BTCPayConfigQRScanner';
+import CLightningRestQRScanner from './views/CLightningRestQRScanner';
 import LNDConnectConfigQRScanner from './views/LNDConnectConfigQRScanner';
 import LNDHubQRScanner from './views/LNDHubQRScanner';
 import SparkQRScanner from './views/SparkQRScanner';
@@ -218,6 +219,9 @@ const AppScenes = {
     },
     LNDConnectConfigQRScanner: {
         screen: LNDConnectConfigQRScanner
+    },
+    CLightningRestQRScanner: {
+        screen: CLightningRestQRScanner
     },
     LNDHubQRScanner: {
         screen: LNDHubQRScanner
