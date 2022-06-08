@@ -42,7 +42,10 @@ import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import SignVerifyMessage from './views/Settings/SignVerifyMessage';
 import About from './views/Settings/About';
 import Help from './views/Settings/Help';
+import Sponsors from './views/Settings/Sponsors';
 import Olympians from './views/Settings/Olympians';
+import Gods from './views/Settings/Gods';
+import Mortals from './views/Settings/Mortals';
 
 // Routing
 import Routing from './views/Routing/Routing';
@@ -123,8 +126,17 @@ const AppScenes = {
     Help: {
         screen: Help
     },
+    Sponsors: {
+        screen: Sponsors
+    },
     Olympians: {
         screen: Olympians
+    },
+    Gods: {
+        screen: Gods
+    },
+    Mortals: {
+        screen: Mortals
     },
     CertInstallInstructions: {
         screen: CertInstallInstructions
