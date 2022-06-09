@@ -3,7 +3,7 @@ import { getParams as getlnurlParams, findlnurl } from 'js-lnurl';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import stores from '../stores/Stores';
 import AddressUtils from './../utils/AddressUtils';
-import LndConnectUtils from './../utils/LndConnectUtils';
+import ConnectionFormatUtils from './../utils/ConnectionFormatUtils';
 import NodeUriUtils from './../utils/NodeUriUtils';
 import { localeString } from './../utils/LocaleUtils';
 import RESTUtils from './../utils/RESTUtils';
@@ -40,7 +40,7 @@ export default async function (data: string): Promise<any> {
         invoicesStore.getPayReq(value);
         return ['PaymentRequest', {}];
     } else if (value.includes('lndconnect')) {
-        const node = LndConnectUtils.processLndConnectUrl(value);
+        const node = ConnectionFormatUtils.processLndConnectUrl(value);
         return [
             'AddEditNode',
             {
