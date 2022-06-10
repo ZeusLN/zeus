@@ -33,9 +33,6 @@ export default class App extends React.PureComponent {
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
-        // TODO: find better workaround. Needed for Android 12 installs where
-        // top gets cut off
-        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight - 5 : 0
+        flex: 1
     }
 });
