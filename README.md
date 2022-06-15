@@ -55,7 +55,7 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 - [ ] Contact list for easier payments
 - [ ] Multiple profile types (payments, merchant etc.)
 - [ ] Lightning address receive
-- [ ] Taproot support 
+- [x] Taproot support 
 - [ ] Connect a watchtower
 - [ ] Advanced security center
 - [ ] Notifications 
