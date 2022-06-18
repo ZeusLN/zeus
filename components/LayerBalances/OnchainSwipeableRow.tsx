@@ -89,14 +89,14 @@ export default class OnchainSwipeableRow extends Component<
         >
             {this.renderAction(
                 localeString('general.receive'),
-                RESTUtils.supportsRouting() ? 200 : 135,
+                RESTUtils.supportsCoinControl() ? 200 : 135,
                 progress
             )}
             {RESTUtils.supportsCoinControl() &&
                 this.renderAction(localeString('general.coins'), 100, progress)}
             {this.renderAction(
                 localeString('general.send'),
-                RESTUtils.supportsRouting() ? 200 : 135,
+                RESTUtils.supportsCoinControl() ? 200 : 135,
                 progress
             )}
         </View>
