@@ -95,7 +95,7 @@ export default class LightningSwipeableRow extends Component<
             {RESTUtils.supportsRouting() &&
                 this.renderAction(
                     localeString('general.routing'),
-                    100,
+                    200,
                     progress
                 )}
             {this.renderAction(

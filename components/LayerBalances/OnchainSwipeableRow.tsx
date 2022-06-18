@@ -93,7 +93,7 @@ export default class OnchainSwipeableRow extends Component<
                 progress
             )}
             {RESTUtils.supportsCoinControl() &&
-                this.renderAction(localeString('general.coins'), 100, progress)}
+                this.renderAction(localeString('general.coins'), 200, progress)}
             {this.renderAction(
                 localeString('general.send'),
                 RESTUtils.supportsCoinControl() ? 200 : 135,
