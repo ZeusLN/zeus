@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Platform, View, StatusBar, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Provider } from 'mobx-react';
 import Stores from './stores/Stores';
 import Navigation from './Navigation';
