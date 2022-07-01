@@ -4,10 +4,10 @@ on:
   # but only for the main branch
   push:
     branches:
-      - main
+      - master
   pull_request:
     branches:
-      - main
+      - master
 jobs:
   run-prettier:
     name: Run prettier
