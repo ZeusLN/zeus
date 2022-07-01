@@ -1,7 +1,9 @@
 name: Prettier
+permissions:
+  checks: write
 on:
   # Trigger the workflow on push or pull request,
-  # but only for the main branch
+  # but only for the master branch
   push:
     branches:
       - master
