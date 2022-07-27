@@ -15,10 +15,15 @@ const goToBlockExplorer = (
 
     let path: string = type;
     if (type === 'block-height') {
+        // this logic fails, when running own mempool.space instance!
         path = host === 'mempool.space' ? 'block' : 'block-height';
     }
 
-    const url = `https://${host}/${testnet ? 'testnet/' : ''}${path}/${value}`;
+    let url: string = `https://${host}/${testnet ? 'testnet/' : ''}${path}/${value}`;
+    if (host.indexOf('://') !== -1)
+    {
+        url = `${host}/${testnet ? 'testnet/' : ''}${path}/${value}`;
+    }
     goToUrl(url);
 };
 
