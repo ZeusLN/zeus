@@ -21,7 +21,7 @@ const goToBlockExplorer = (
     let url: string = `https://${host}/${testnet ? 'testnet/' : ''}${path}/${value}`;
     if (custom && host.indexOf('://') !== -1)
     {
-        // handle <schema>://<ip>:<port>#mempool.space
+        // handle <scheme>://<ip>:<port>#mempool.space
         url = `${host.split('#')[0]}/${testnet ? 'testnet/' : ''}${path}/${value}`;
     }
     goToUrl(url);
