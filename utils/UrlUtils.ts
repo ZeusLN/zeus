@@ -8,21 +8,21 @@ const goToBlockExplorer = (
 ) => {
     const { settings } = stores.settingsStore;
     const { privacy } = settings;
-    const host =
-        privacy && privacy.defaultBlockExplorer === 'Custom'
+    const custom = privacy && privacy.defaultBlockExplorer === 'Custom';
+    const host = custom
             ? privacy.customBlockExplorer
             : (privacy && privacy.defaultBlockExplorer) || 'mempool.space';
 
     let path: string = type;
     if (type === 'block-height') {
-        // this logic fails, when running own mempool.space instance!
-        path = host === 'mempool.space' ? 'block' : 'block-height';
+        path = host.endsWith('mempool.space') ? 'block' : 'block-height';
     }
 
     let url: string = `https://${host}/${testnet ? 'testnet/' : ''}${path}/${value}`;
-    if (host.indexOf('://') !== -1)
+    if (custom && host.indexOf('://') !== -1)
     {
-        url = `${host}/${testnet ? 'testnet/' : ''}${path}/${value}`;
+        // handle <schema>://<ip>:<port>#mempool.space
+        url = `${host.split('#')[0]}/${testnet ? 'testnet/' : ''}${path}/${value}`;
     }
     goToUrl(url);
 };
