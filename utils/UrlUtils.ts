@@ -10,22 +10,22 @@ const goToBlockExplorer = (
     const { privacy } = settings;
     const custom = privacy && privacy.defaultBlockExplorer === 'Custom';
     const host = custom
-            ? privacy.customBlockExplorer
-            : (privacy && privacy.defaultBlockExplorer) || 'mempool.space';
+        ? privacy.customBlockExplorer
+        : (privacy && privacy.defaultBlockExplorer) || 'mempool.space';
+    const network = testnet ? 'testnet/' : '';
 
     let path: string = type;
     if (type === 'block-height') {
         path = host.endsWith('mempool.space') ? 'block' : 'block-height';
     }
 
-    let url: string = `https://${host}/${testnet ? 'testnet/' : ''}${path}/${value}`;
-    
+    let url: string = `https://${host}/${network}${path}/${value}`;
+
     // Handle url <scheme>://<ip|host_name>:<port>[#convention_hint] in host
     // Currently '...#mempool.space' is the only meaningful convention hint
-    if (custom && host.indexOf('://') !== -1)
-    {
-        const hostUrl = host.split('#')[0];  // Strip optional url convention hints
-        url = `${hostUrl}/${testnet ? 'testnet/' : ''}${path}/${value}`;
+    if (custom && host.indexOf('://') !== -1) {
+        const hostUrl = host.split('#')[0]; // Strip optional url convention hints
+        url = `${hostUrl}/${network}${path}/${value}`;
     }
     goToUrl(url);
 };
