@@ -118,6 +118,14 @@ Zeus is proud to be integrated on the following platforms:
 3. `cd ios && pod install`
 4. open `ios/zeus.xcworkspace` in Xcode and hit Run. NOTE: if you're using an M1 mac, you may need to right click Xcode > get info > check `Open using Rosetta` before opening `zeus.xcworkspace`.
 
+## Reproducible builds
+
+Reproducible builds are available for Android only right now. You'll need docker installed to be able to build the app in this way. You'll use the `build.sh` script, followed by the name of the branch or tag that you want to build the .apk for:
+
+```
+~/devel/zeus$ ./build.sh v0.6.5
+```
+
 ## Contributing
 
 Please be sure to run `npm run tsc` to check for type errors, `npm run test` to run all tests, and `npm run prettier` to run the prettier

@@ -1,5 +1,6 @@
 #!/bin/bash
 set -x
+BUILD_TAG=$1
 PASS_FILE="android/app/olympus_keystore.pass"
 KEYSTORE_FILE="android/app/olympus.pfx"
 ALIAS="olympus"
@@ -24,7 +25,7 @@ ZEUS_KEY_PASSWORD=$ZEUS_STORE_PASSWORD
 
 KEYSTORE_FILE="$ZEUS_PATH/$KEYSTORE_FILE"
 
-docker build . -t zeus_builder_image
+docker build --build-arg tag_name=${BUILD_TAG} . -t zeus_builder_image
 
 docker run --name zeus_builder_container -v `pwd`:$ZEUS_PATH zeus_builder_image bash -c \
     "cd /olympus/zeus/android && \
