@@ -1,6 +1,8 @@
 #!/bin/bash
 set -x
 BUILD_TAG=$1
+IMAGE_NAME="zeus_builder_image"
+CONTAINER_NAME="zeus_builder_container"
 PASS_FILE="android/app/olympus_keystore.pass"
 KEYSTORE_FILE="android/app/olympus.pfx"
 ALIAS="olympus"
@@ -25,9 +27,9 @@ ZEUS_KEY_PASSWORD=$ZEUS_STORE_PASSWORD
 
 KEYSTORE_FILE="$ZEUS_PATH/$KEYSTORE_FILE"
 
-docker build --build-arg tag_name=${BUILD_TAG} . -t zeus_builder_image
+docker build --build-arg tag_name=${BUILD_TAG} . -t $IMAGE_NAME
 
-docker run --name zeus_builder_container -v `pwd`:$ZEUS_PATH zeus_builder_image bash -c \
+docker run --name $CONTAINER_NAME -v `pwd`:$ZEUS_PATH $IMAGE_NAME bash -c \
     "cd /olympus/zeus/android && \
     ZEUS_KEYSTORE_PATH=$KEYSTORE_FILE \
     ZEUS_KEY_PASSWORD=$KEYSTORE_PASS \
@@ -37,5 +39,7 @@ docker run --name zeus_builder_container -v `pwd`:$ZEUS_PATH zeus_builder_image 
     ZEUS_DEBUG_STORE_PASSWORD=dummy \
     ZEUS_DEBUG_KEY_ALIAS=dummy \
     ZEUS_DEBUG_KEY_PASSWORD=dummy \
-    ./gradlew assembleDebug && \
+    ./gradlew --debug assembleDebug && \
     cp ./app/build/outputs/apk/debug/zeus-debug.apk ../";
+
+docker container rm $CONTAINER_NAME
