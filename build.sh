@@ -1,16 +1,11 @@
 #!/bin/bash
-set -x
-IMAGE_NAME="zeus_builder_image"
+BUILDER_IMAGE="reactnativecommunity/react-native-android:latest"
 CONTAINER_NAME="zeus_builder_container"
 ZEUS_PATH=/olympus/zeus
 
-docker build -t $IMAGE_NAME .
-
-docker run --name $CONTAINER_NAME -v `pwd`:$ZEUS_PATH $IMAGE_NAME bash -c \
+docker run --rm --name $CONTAINER_NAME -v `pwd`:$ZEUS_PATH $BUILDER_IMAGE bash -c \
      "cd /olympus/zeus && \
-      npm install && \
+      yarn install && \
       cd /olympus/zeus/android && \
-      ./gradlew --debug assembleRelease && \
-      cp ./app/build/outputs/apk/debug/zeus-release.apk ../";
-
-docker container rm $CONTAINER_NAME
+      ./gradlew assembleRelease && \
+      cd /olympus/zeus ; find android/app/build/outputs/apk/release | grep app-";

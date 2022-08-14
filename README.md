@@ -120,15 +120,15 @@ Zeus is proud to be integrated on the following platforms:
 
 ## Reproducible builds
 
-Reproducible builds are available for Android only right now. You'll need docker installed to be able to build the app in this way. You'll use the `build.sh` script, followed by the name of the branch or tag that you want to build the .apk for:
+Reproducible builds are available for Android only right now. You'll need docker installed to be able to build the app in this way. You'll use the `build.sh` script:
 
 1. Clone Zeus git for the branch/tag that you want to build. For example: `git clone --depth 1 --branch v0.6.5 https://github.com/ZeusLN/zeus.git`
-    You can also remove the `--branch v0.6.5` parameter to build `master`.
+    You can also remove the `--branch v0.6.5` parameter to build apks for `master`.
 2. Change to the zeus directory: `cd zeus`
 3. Execute the build script: `./build.sh`
-4. You'll have the `zeus.apk` file in the root of the `zeus` directory
-
-If you want to try and reproduce a version of Zeus prior to v0.6.6, the `build.sh` script is not going to be there, but you can download it and `Dockerfile` from master and copy them into the sources of the cloned branch, then run the `build.sh` script.
+4. If everything goes fine, the script will print a list of all the generated apk files: armv7, armv8, x86, x86_64, universal...
+5. Download the oficial apk from [github releases page](https://github.com/ZeusLN/zeus/releases) or from the [Zeus homepage](https://zeusln.app/): `wget https://zeusln.app/zeus-v0.6.5.apk`
+6. Compare the `universal` apk with the one you downloaded
 
 ## Contributing
 
