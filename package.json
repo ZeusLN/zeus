@@ -131,7 +131,7 @@
     "metro-react-native-babel-preset": "0.67.0",
     "prettier": "2.4.1",
     "react-test-renderer": "16.6.3",
-    "rn-nodeify": "10.2.0",
+    "rn-nodeify": "10.3.0",
     "typescript": "3.7.5"
   },
   "react-native": {
