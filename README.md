@@ -120,15 +120,24 @@ Zeus is proud to be integrated on the following platforms:
 
 ## Reproducible builds
 
-Reproducible builds are available for Android only right now. You'll need docker installed to be able to build the app in this way. You'll use the `build.sh` script:
+Reproducible builds are available for Android only right now. You'll need docker installed to be able to build the app in this way:
 
-1. Clone Zeus git for the branch/tag that you want to build. For example: `git clone --depth 1 --branch v0.6.5 https://github.com/ZeusLN/zeus.git`
-    You can also remove the `--branch v0.6.5` parameter to build apks for `master`.
+1. Clone Zeus git for the branch/tag that you want to build. For example: `git clone --depth 1 --branch v0.6.6 https://github.com/ZeusLN/zeus.git`
+    You can also remove the `--branch v0.6.6` parameter to build apks for `master`.
 2. Change to the zeus directory: `cd zeus`
 3. Execute the build script: `./build.sh`
-4. If everything goes fine, the script will print a list of all the generated apk files: armv7, armv8, x86, x86_64, universal...
-5. Download the oficial apk from [github releases page](https://github.com/ZeusLN/zeus/releases) or from the [Zeus homepage](https://zeusln.app/): `wget https://zeusln.app/zeus-v0.6.5.apk`
-6. Compare the `universal` apk with the one you downloaded
+4. If everything goes fine, the script will print a list of all the generated apk files and MD5 for each one of them: armv7, armv8, x86, x86_64, universal... The equivalent to the one provided in the web page is the one ending in 'universal'. You can compare MD5s with the ones provided in the [github releases page](https://github.com/ZeusLN/zeus/releases)
+5. Download the oficial apk from [github releases page](https://github.com/ZeusLN/zeus/releases) or from the [Zeus homepage](https://zeusln.app/): `wget https://zeusln.app/zeus-v0.6.6.apk`
+6. Compare both apks with a suitable utility like `diffoscope`, `apksigcopier` or by running `diff --brief --recursive ./unpacked_oficial_apk ./unpacked_built_apk`. You should only get differences for the certificates used to sign the official apk
+
+If you want to install the apk built in this way into your own smartphone, you'll need to sign it yourself (see next section). Note that the first time you install a build made using this procedure, you'll need to uninstall your current version of Zeus and then install the one built here because certificates will not match. You'll lose your connection details and you'll need to reconfigure Zeus again to connect to your nodes.
+
+### Signing APKs
+
+1. Install signing utilities: `apt-get install -y apksigner`
+2. Create your certificate if you haven't done so already. If you already have the certificate from previous builds, it's advised that you use the same one so you are able to upgrade from one apk to the next one without reinstalling first: `keytool -genkeypair -alias zeus -keystore zeus.pfx -v -storetype PKCS12 -keyalg RSA -keysize 2048 -storepass your_keystore_password -keypass your_key_password -validity 10000 -dname "cn=Unknown, ou=Unknown, o=Unknown, c=Unknown"`
+3. Sign the chosen apk file using this command: `java -jar /usr/bin/apksigner sign -v --ks zeus.pfx --ks-key-alias zeus --ks-pass pass:your_keystore_password --key-pass pass:your_key_password zeus-universal.apk`
+4. Copy the signed apk to your smartphone and install it by tapping over the file. If you get an error, you'll have to uninstall current Zeus app first. Note that you'll lose your connections and you'll need to reconfigure Zeus again to connect to your node.
 
 ## Contributing
 
