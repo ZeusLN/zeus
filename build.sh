@@ -3,10 +3,6 @@ BUILDER_IMAGE="reactnativecommunity/react-native-android:latest"
 CONTAINER_NAME="zeus_builder_container"
 ZEUS_PATH=/olympus/zeus
 
-KEYSTORE_FILE=zeus.keystore
-KEYSTORE_PASS=zeus1234
-ALIAS=zeus
-
 docker run --rm --name $CONTAINER_NAME -v `pwd`:$ZEUS_PATH $BUILDER_IMAGE bash -c \
      'echo -e "\n\n********************************\n*** Building Zeus...\n********************************\n" && \
       cd /olympus/zeus ; yarn install && \
