@@ -81,7 +81,7 @@
     "react-native-screens": "3.10.1",
     "react-native-secure-key-store": "2.0.5",
     "react-native-snap-carousel": "3.9.1",
-    "react-native-svg": "9.13.6",
+    "react-native-svg": "13.0.0",
     "react-native-svg-transformer": "1.0.0",
     "react-native-tcp": "3.3.2",
     "react-native-tor": "0.1.8",
