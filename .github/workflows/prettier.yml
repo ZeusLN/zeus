@@ -1,31 +1,13 @@
 name: Prettier
-permissions:
-  checks: write
-on:
-  # Trigger the workflow on push or pull request,
-  # but only for the master branch
-  push:
-    branches:
-      - master
-  pull_request:
-    branches:
-      - master
+on: [push]
 jobs:
-  run-prettier:
-    name: Run prettier
+  prettier:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v2
-      - name: Set up Node.js
-        uses: actions/setup-node@v1
+      - uses: actions/checkout@v3
+      - name: Use Node.js
+        uses: actions/setup-node@v3
         with:
-          node-version: 12
-      # Prettier must be in `package.json`
-      - name: Install Node.js dependencies
-        run: npm ci
-      - name: Run prettier
-        uses: wearerequired/lint-action@v2
-        with:
-          eslint: true
-          prettier: true
+          node-version: '12.x'
+      - run: npm ci
+      - run: npm run prettier

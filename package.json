@@ -15,7 +15,8 @@
     "test": "jest",
     "tsc": "tsc",
     "lint": "eslint --ext .js,.ts,.tsx '*.@(js|ts|tsx)' .",
-    "prettier": "prettier --check --write '**/*.ts*'"
+    "prettier": "prettier --check '**/*.ts*'",
+    "prettier-write": "prettier --check --write '**/*.ts*'"
   },
   "dependencies": {
     "@keystonehq/bc-ur-registry": "0.4.2",
