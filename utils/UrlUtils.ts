@@ -19,7 +19,7 @@ const goToBlockExplorer = (
         path = host.endsWith('mempool.space') ? 'block' : 'block-height';
     }
 
-    let url: string = `https://${host}/${network}${path}/${value}`;
+    let url = `https://${host}/${network}${path}/${value}`;
 
     // Handle url <scheme>://<ip|host_name>:<port>[#convention_hint] in host
     // Currently '...#mempool.space' is the only meaningful convention hint
