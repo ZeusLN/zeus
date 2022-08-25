@@ -1,15 +1,32 @@
-Zeus is a mobile Bitcoin/Lightning app for lnd, c-lightning, and Eclair node operators
+Zeus is a mobile Bitcoin/Lightning app for LND, Core Lightning, and Eclair node operators
 
 Features:
 
-* Connect to your own lnd, Eclair, and c-lightning nodes
-* Send and receive both on-chain and lightning transactions
-* Open or close your own channels (both public and private)
-* Built in Tor
-* Multi-path payment support
-* Fee reports
-* Recommended fee rates from Mempool.space
-* Connect via lndconnect
-* Connect to BTCPayServer nodes
-* Generate QRs for invoices or for peers to connect to your node
-* Supports both mainnet, testnet, and regtest
+* Bitcoin only wallet
+* Non-custodial
+* No processing fees
+* No KYC
+* Fully open source (APGLv3)
+* Connect to LND, Core Lightning (Rest + Spark) or Eclair lightning node
+* Manage multiple lightning nodes at once
+* Connect via LNDHub instances
+* Lightning accounts
+* On-chain accounts
+* Easy to use activity menu
+* NFC payments and requests
+* PIN or passphrase encryption
+* Connect over Tor (built in)
+* Privacy mode - hide your sensitive data
+* Lightning address send
+* Full LNURL support (pay, withdraw, auth, channel)
+* Lighting channel management
+* Detailed routing reports
+* Set and manage routing fees
+* MPP/AMP support
+* Keysend support
+* SegWit support
+* Sign & verify messages
+* Fiat currency integrations
+* Various language support
+* Multi-theme
+* Taproot support
