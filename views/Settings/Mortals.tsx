@@ -77,13 +77,13 @@ export default class Mortals extends React.Component<MortalsProps, {}> {
                                     }
                                 >
                                     <Avatar
-                                        size={68}
+                                        size={60}
                                         rounded
                                         source={{
                                             uri: `https://zeusln.app/api/twitter-images/${item.handle}.jpg`
                                         }}
                                         key={1}
-                                        containerStyle={{ margin: 10 }}
+                                        containerStyle={{ margin: 7 }}
                                     />
                                 </ListItem>
                             )}
