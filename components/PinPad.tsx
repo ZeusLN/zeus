@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
     },
     bottom: {
         justifyContent: 'flex-end',
-        marginBottom: 75
+        marginBottom: 25
     },
     key: {
         flex: 1,
