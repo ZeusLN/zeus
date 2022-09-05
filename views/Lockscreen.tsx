@@ -447,7 +447,7 @@ export default class Lockscreen extends React.Component<
                                     <View
                                         style={{
                                             flex: 2,
-                                            marginTop: 50,
+                                            marginTop: 25,
                                             marginBottom: 25
                                         }}
                                     >
@@ -464,7 +464,7 @@ export default class Lockscreen extends React.Component<
                                         <View
                                             style={{
                                                 flex: 2,
-                                                marginTop: 125,
+                                                marginTop: 25,
                                                 marginBottom: 25
                                             }}
                                         >
