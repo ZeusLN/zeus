@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { Dimensions, FlatList, Text, View } from 'react-native';
 import { Avatar, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -77,13 +77,16 @@ export default class Mortals extends React.Component<MortalsProps, {}> {
                                     }
                                 >
                                     <Avatar
-                                        size={60}
+                                        size={
+                                            Dimensions.get('window').width / 5 -
+                                            10
+                                        }
                                         rounded
                                         source={{
                                             uri: `https://zeusln.app/api/twitter-images/${item.handle}.jpg`
                                         }}
                                         key={1}
-                                        containerStyle={{ margin: 7 }}
+                                        containerStyle={{ margin: 5 }}
                                     />
                                 </ListItem>
                             )}
