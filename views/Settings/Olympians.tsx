@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { Dimensions, FlatList, Text, View } from 'react-native';
 import { Avatar, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -77,13 +77,16 @@ export default class Olympians extends React.Component<OlympiansProps, {}> {
                                     }
                                 >
                                     <Avatar
-                                        size={100}
+                                        size={
+                                            Dimensions.get('window').width / 3 -
+                                            20
+                                        }
                                         rounded
                                         source={{
                                             uri: `https://zeusln.app/api/twitter-images/${item.handle}.jpg`
                                         }}
                                         key={1}
-                                        containerStyle={{ margin: 10 }}
+                                        containerStyle={{ margin: 8 }}
                                     />
                                 </ListItem>
                             )}
