@@ -30,7 +30,7 @@ function About(props: AboutProps) {
     );
 
     const ABOUT_ITEMS = [
-        { label: localeString('views.Olympians.title'), path: 'Olympians' },
+        { label: localeString('views.Sponsors.title'), path: 'Sponsors' },
         { label: localeString('general.help'), path: 'Help' }
     ];
 

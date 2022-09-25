@@ -8,7 +8,6 @@ import com.facebook.react.bridge.JavaScriptExecutorFactory;
 import com.facebook.react.shell.MainReactPackage;
 
 import com.facebook.react.bridge.JSIModulePackage;
-import com.swmansion.reanimated.ReanimatedJSIModulePackage;
 
 import com.facebook.react.ReactApplication;
 import com.swmansion.gesturehandler.react.RNGestureHandlerPackage;
@@ -38,15 +37,12 @@ public class MainApplication extends Application implements ReactApplication {
         protected List<ReactPackage> getPackages() {
           @SuppressWarnings("UnnecessaryLocalVariable")
           List<ReactPackage> packages = new PackageList(this).getPackages();
+          packages.add(new MobileToolsPackage());
           return packages;
         }
         @Override
         protected String getJSMainModuleName() {
           return "index";
-        }
-        @Override
-        protected JSIModulePackage getJSIModulePackage() {
-          return new ReanimatedJSIModulePackage();
         }
       };
 

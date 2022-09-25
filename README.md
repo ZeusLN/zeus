@@ -8,7 +8,7 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 ### App Store links
 * [Google Play](https://play.google.com/store/apps/details?id=app.zeusln.zeus)
 * [Apple App Store](https://apps.apple.com/us/app/zeus-ln/id1456038895)
-* [F-Droid](https://f-droid.org/packages/app.zeusln.zeus/)
+* [F-Droid](https://zeusln.app/download)
 
 ### Get in touch with us
 * Come chat with us on
@@ -55,7 +55,7 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 - [ ] Contact list for easier payments
 - [ ] Multiple profile types (payments, merchant etc.)
 - [ ] Lightning address receive
-- [ ] Taproot support 
+- [x] Taproot support 
 - [ ] Connect a watchtower
 - [ ] Advanced security center
 - [ ] Notifications 
@@ -74,7 +74,7 @@ You must provide Zeus with your node's hostname, port number, and the macaroon y
 
 Zeus has support for connecting to you node entirely over the Tor network. You can refer to these guides to set up a Tor hidden service on your lnd node. The instructions are generally interchangable and typically only require you to change your Tor path.
 
-* [Zeus over Tor guide for RaspiBolt](https://raspibolt.org/mobile-app.html)
+* [Zeus over Tor guide for RaspiBolt](https://raspibolt.org/guide/lightning/mobile-app.html)
 * [Zeus over Tor guide for FreeNAS by Seth586](https://github.com/seth586/guides/blob/master/FreeNAS/wallets/zeusln.md)
 * [Zeus over Tor guide for RaspiBlitz by openoms](https://github.com/openoms/bitcoin-tutorials/blob/master/Zeus_to_RaspiBlitz_through_Tor.md)
 * [Tor-Only Bitcoin & Lightning Guide by Lopp](https://blog.lopp.net/tor-only-bitcoin-lightning-guide/)
@@ -88,6 +88,7 @@ Zeus is proud to be integrated on the following platforms:
 * [myNode](https://mynodebtc.com/) ([Standard guide](https://mynodebtc.com/guide/zeus), [Tor guide](https://mynodebtc.com/guide/zeus_tor))
 * [RaspiBlitz](https://github.com/rootzoll/raspiblitz)
 * [Umbrel](https://getumbrel.com/)
+* [Citadel](https://runcitadel.space/)
 
 ### Payment platforms
 * [BTCPay Server](https://btcpayserver.org/)
@@ -116,6 +117,27 @@ Zeus is proud to be integrated on the following platforms:
 2. install node dependencies with `npm i`
 3. `cd ios && pod install`
 4. open `ios/zeus.xcworkspace` in Xcode and hit Run. NOTE: if you're using an M1 mac, you may need to right click Xcode > get info > check `Open using Rosetta` before opening `zeus.xcworkspace`.
+
+## Reproducible builds
+
+Reproducible builds are available for Android only right now. You'll need Docker installed to be able to build the app this way:
+
+1. Clone Zeus git for the branch/tag that you want to build. For example: `git clone --depth 1 --branch v0.6.6 https://github.com/ZeusLN/zeus.git`
+    You can also remove the `--branch v0.6.6` parameter to build APKs for `master`.
+2. Change to the zeus directory: `cd zeus`
+3. Execute the build script: `./build.sh`
+4. If everything goes well, the script will print a list of all the generated APK files and MD5 for each one of them: armv7, armv8, x86, x86_64, universal. The equivalent to the one provided in the web page is the one ending in 'universal'. You can compare MD5s with the ones provided on the [GitHub releases page](https://github.com/ZeusLN/zeus/releases)
+5. Download the oficial apk from [GitHub releases page](https://github.com/ZeusLN/zeus/releases) or from the [Zeus homepage](https://zeusln.app/): `wget https://zeusln.app/zeus-v0.6.6.apk`
+6. Compare both APKs with a suitable utility like `diffoscope`, `apksigcopier` or by running `diff --brief --recursive ./unpacked_oficial_apk ./unpacked_built_apk`. You should only get differences for the certificates used to sign the official APK
+
+If you want to install the APK built this way onto your own smartphone, you'll need to sign it yourself (see next section). Note that the first time you install a build made using this procedure, you'll need to uninstall your current version of Zeus and then install the one built here because certificates will not match. You'll lose your connection details and you'll need to reconfigure Zeus again to connect to your nodes.
+
+### Signing APKs
+
+1. Install signing utilities: `apt-get install -y apksigner`
+2. Create your certificate, if you haven't done so already. If you already have the certificate from previous builds, it's advised that you use the same one so you are able to upgrade from one APK to the next one without reinstalling first: `keytool -genkeypair -alias zeus -keystore zeus.pfx -v -storetype PKCS12 -keyalg RSA -keysize 2048 -storepass your_keystore_password -keypass your_key_password -validity 10000 -dname "cn=Unknown, ou=Unknown, o=Unknown, c=Unknown"`
+3. Sign the chosen APK file using this command: `java -jar /usr/bin/apksigner sign -v --ks zeus.pfx --ks-key-alias zeus --ks-pass pass:your_keystore_password --key-pass pass:your_key_password zeus-universal.apk`
+4. Copy the signed APK to your smartphone and install it by tapping over the file. If you get an error, you'll have to uninstall your currently installed version of Zeus first. Note that you'll lose your connections and you'll need to reconfigure Zeus again to connect to your node.
 
 ## Contributing
 

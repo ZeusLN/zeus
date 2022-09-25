@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Alert } from 'react-native';
 import QRCodeScanner from './../components/QRCodeScanner';
-import LndConnectUtils from './../utils/LndConnectUtils';
+import ConnectionFormatUtils from './../utils/ConnectionFormatUtils';
 import { localeString } from './../utils/LocaleUtils';
 
 interface LNDConnectConfigQRProps {
@@ -18,7 +18,7 @@ export default class LNDConnectConfigQRScanner extends React.Component<
         const index = navigation.getParam('index', null);
 
         const { host, port, macaroonHex } =
-            LndConnectUtils.processLndConnectUrl(data);
+            ConnectionFormatUtils.processLndConnectUrl(data);
 
         if (host && port && macaroonHex) {
             navigation.navigate('AddEditNode', {

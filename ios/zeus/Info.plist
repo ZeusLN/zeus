@@ -28,6 +28,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>bitcoin</string>
+				<string>BITCOIN</string>
 				<string>lightning</string>
 				<string>LIGHTNING</string>
 				<string>lnurl</string>

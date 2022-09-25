@@ -158,7 +158,7 @@ export default class LND {
         return `${baseUrl}${route}`;
     };
 
-    request = (route: string, method: string, data?: any) => {
+    request = (route: string, method: string, data?: any, params?: any) => {
         const {
             host,
             lndhubUrl,
@@ -168,6 +168,13 @@ export default class LND {
             certVerification,
             enableTor
         } = stores.settingsStore;
+
+        if (params) {
+            route = `${route}?${Object.keys(params)
+                .map((key: string) => key + '=' + params[key])
+                .join('&')}`;
+        }
+
         const auth = macaroonHex || accessToken;
         const headers: any = this.getHeaders(auth);
         headers['Content-Type'] = 'application/json';
@@ -182,7 +189,8 @@ export default class LND {
         );
     };
 
-    getRequest = (route: string) => this.request(route, 'get', null);
+    getRequest = (route: string, data?: any) =>
+        this.request(route, 'get', null, data);
     postRequest = (route: string, data?: any) =>
         this.request(route, 'post', data);
     deleteRequest = (route: string) => this.request(route, 'delete', null);
@@ -208,10 +216,10 @@ export default class LND {
         this.getRequest('/v1/invoices?reversed=true&num_max_invoices=100');
     createInvoice = (data: any) => this.postRequest('/v1/invoices', data);
     getPayments = () => this.getRequest('/v1/payments');
-    getNewAddress = () => this.getRequest('/v1/newaddress');
+    getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);
     openChannel = (data: OpenChannelRequest) =>
         this.postRequest('/v1/channels', {
-            private: data.private,
+            private: data.privateChannel,
             local_funding_amount: data.local_funding_amount,
             min_confs: data.min_confs,
             node_pubkey_string: data.node_pubkey_string,
@@ -253,10 +261,14 @@ export default class LND {
         this.getRequest(`/v1/graph/node/${urlParams && urlParams[0]}`);
     getFees = () => this.getRequest('/v1/fees');
     setFees = (data: any) => {
+        // handle commas in place of decimals
+        const base_fee_msat = data.base_fee_msat.replace(/,/g, '.');
+        const fee_rate = data.fee_rate.replace(/,/g, '.');
+
         if (data.global) {
             return this.postRequest('/v1/chanpolicy', {
-                base_fee_msat: data.base_fee_msat,
-                fee_rate: `${Number(data.fee_rate) / 100}`,
+                base_fee_msat,
+                fee_rate: `${Number(fee_rate) / 100}`,
                 global: true,
                 time_lock_delta: Number(data.time_lock_delta),
                 min_htlc_msat: data.min_htlc
@@ -269,8 +281,8 @@ export default class LND {
             });
         }
         return this.postRequest('/v1/chanpolicy', {
-            base_fee_msat: data.base_fee_msat,
-            fee_rate: `${Number(data.fee_rate) / 100}`,
+            base_fee_msat,
+            fee_rate: `${Number(fee_rate) / 100}`,
             chan_point: {
                 funding_txid_str: data.chan_point.funding_txid_str,
                 output_index: data.chan_point.output_index
@@ -358,4 +370,6 @@ export default class LND {
     supportsCoinControl = () => this.supports('v0.12.0');
     supportsAccounts = () => this.supports('v0.13.0');
     singleFeesEarnedTotal = () => false;
+    supportsAddressTypeSelection = () => true;
+    supportsTaproot = () => this.supports('v0.15.0');
 }

@@ -1,6 +1,6 @@
 {
   "name": "zeus",
-  "version": "0.6.4",
+  "version": "0.6.6",
   "private": true,
   "playStore": false,
   "jest": {
@@ -15,7 +15,8 @@
     "test": "jest",
     "tsc": "tsc",
     "lint": "eslint --ext .js,.ts,.tsx '*.@(js|ts|tsx)' .",
-    "prettier": "prettier --check --write '**/*.ts*'"
+    "prettier": "prettier --check '**/*.ts*'",
+    "prettier-write": "prettier --check --write '**/*.ts*'"
   },
   "dependencies": {
     "@keystonehq/bc-ur-registry": "0.4.2",
@@ -61,8 +62,8 @@
     "process": "0.11.10",
     "punycode": "1.4.1",
     "querystring-es3": "0.2.1",
-    "react": "17.0.2",
-    "react-native": "0.67.2",
+    "react": "18.1.0",
+    "react-native": "0.68.2",
     "react-native-blob-util": "0.14.0",
     "react-native-camera": "4.2.1",
     "react-native-crypto": "2.2.0",
@@ -75,13 +76,12 @@
     "react-native-os": "1.2.6",
     "react-native-qrcode-svg": "6.0.6",
     "react-native-randombytes": "3.5.3",
-    "react-native-reanimated": "2.3.1",
     "react-native-restart": "0.0.24",
     "react-native-safe-area-context": "0.6.2",
     "react-native-screens": "3.10.1",
     "react-native-secure-key-store": "2.0.5",
     "react-native-snap-carousel": "3.9.1",
-    "react-native-svg": "9.13.6",
+    "react-native-svg": "13.0.0",
     "react-native-svg-transformer": "1.0.0",
     "react-native-tcp": "3.3.2",
     "react-native-tor": "0.1.8",
@@ -132,7 +132,7 @@
     "metro-react-native-babel-preset": "0.67.0",
     "prettier": "2.4.1",
     "react-test-renderer": "16.6.3",
-    "rn-nodeify": "10.2.0",
+    "rn-nodeify": "10.3.0",
     "typescript": "3.7.5"
   },
   "react-native": {

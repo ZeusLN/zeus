@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
         fontFamily: 'Lato-Regular',
         fontSize: 20,
         textAlign: 'center',
-        marginTop: 50
+        marginTop: 10
     },
     secondaryText: {
         fontFamily: 'Lato-Regular',

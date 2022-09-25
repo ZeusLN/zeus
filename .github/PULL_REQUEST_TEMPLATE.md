@@ -11,6 +11,7 @@ This pull request is categorized as a:
 - [ ] Code refactor
 - [ ] Configuration change
 - [ ] Locales update
+- [ ] Quality assurance 
 - [ ] Other
 
 ## Checklist
