@@ -58,6 +58,7 @@ import Activity from './views/Activity/Activity';
 import ActivityFilter from './views/Activity/ActivityFilter';
 import CoinControl from './views/UTXOs/CoinControl';
 import Utxo from './views/UTXOs/UTXO';
+import Accounts from './views/Accounts/Accounts';
 import ImportAccount from './views/Accounts/ImportAccount';
 import ImportAccountQRScanner from './views/Accounts/ImportAccountQRScanner';
 
@@ -78,6 +79,9 @@ const AppScenes = {
     },
     Lockscreen: {
         screen: Lockscreen
+    },
+    Accounts: {
+        screen: Accounts
     },
     Send: {
         screen: Send

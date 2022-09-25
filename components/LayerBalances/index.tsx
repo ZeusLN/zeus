@@ -22,6 +22,9 @@ interface LayerBalancesProps {
     UnitsStore: UnitsStore;
     navigation: any;
     onRefresh?: any;
+    value?: string;
+    amount?: string;
+    lightning?: string;
 }
 
 //  To toggle LTR/RTL change to `true`
@@ -54,22 +57,30 @@ const Row = ({ item }: { item: DataRow }) => (
 const SwipeableRow = ({
     item,
     index,
-    navigation
+    navigation,
+    value,
+    amount,
+    lightning
 }: {
     item: DataRow;
     index: number;
     navigation: any;
+    selectMode: boolean;
 }) => {
     if (index === 1) {
         return (
-            <OnchainSwipeableRow navigation={navigation}>
+            <OnchainSwipeableRow
+                navigation={navigation}
+                value={value}
+                amount={amount}
+            >
                 <Row item={item} />
             </OnchainSwipeableRow>
         );
     }
 
     return (
-        <LightningSwipeableRow navigation={navigation}>
+        <LightningSwipeableRow navigation={navigation} lightning={lightning}>
             <Row item={item} />
         </LightningSwipeableRow>
     );
@@ -79,7 +90,14 @@ const SwipeableRow = ({
 @observer
 export default class LayerBalances extends Component<LayerBalancesProps, {}> {
     render() {
-        const { BalanceStore, navigation, onRefresh } = this.props;
+        const {
+            BalanceStore,
+            navigation,
+            value,
+            amount,
+            lightning,
+            onRefresh
+        } = this.props;
 
         const { totalBlockchainBalance, lightningBalance } = BalanceStore;
 
@@ -103,6 +121,10 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                         item={item}
                         index={index}
                         navigation={navigation}
+                        // select pay method vars
+                        value={value}
+                        amount={amount}
+                        lightning={lightning}
                     />
                 )}
                 keyExtractor={(_item, index) => `message ${index}`}
