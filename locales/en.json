@@ -1,6 +1,7 @@
 {
     "general.send": "Send",
     "general.receive": "Receive",
+    "general.request": "Request",
     "general.scan": "Scan",
     "general.enableNfc": "Enable NFC",
     "general.confirm": "Confirm",
