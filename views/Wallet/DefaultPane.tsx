@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text, View } from 'react-native';
+import { Animated, Text, View } from 'react-native';
 
 import { inject, observer } from 'mobx-react';
 
@@ -9,6 +9,7 @@ import UnitToggle from '../../components/UnitToggle';
 import { WalletHeader } from '../../components/WalletHeader';
 
 import FiatStore from '../../stores/FiatStore';
+import UnitsStore from '../../stores/UnitsStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
@@ -17,6 +18,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 interface DefaultPaneProps {
     navigation: any;
     FiatStore: FiatStore;
+    UnitsStore: UnitsStore;
     SettingsStore: SettingsStore;
 }
 
@@ -26,23 +28,36 @@ interface DefaultPaneState {
 
 const MAX_LENGTH = 10;
 
-@inject('FiatStore', 'SettingsStore')
+@inject('FiatStore', 'UnitsStore', 'SettingsStore')
 @observer
 export default class DefaultPane extends React.PureComponent<
     DefaultPaneProps,
     DefaultPaneState
 > {
+    shakeAnimation = new Animated.Value(0);
     state = {
         amount: '0'
     };
 
     appendValue = (value: string) => {
         const { amount } = this.state;
+        const { units } = this.props.UnitsStore;
 
         let newAmount;
 
+        // limit decimal places depending on units
+        if (units === 'fiat') {
+            if (amount.split('.')[1] && amount.split('.')[1].length == 2)
+                return this.startShake();
+        }
+        if (units === 'sats') {
+            if (amount.split('.')[1] && amount.split('.')[1].length == 3)
+                return this.startShake();
+        }
+
         if (amount.length >= MAX_LENGTH) {
             newAmount = amount;
+            return this.startShake();
         } else if (amount === '0') {
             newAmount = value;
         } else {
@@ -101,6 +116,31 @@ export default class DefaultPane extends React.PureComponent<
         }
     };
 
+    startShake = () => {
+        Animated.sequence([
+            Animated.timing(this.shakeAnimation, {
+                toValue: 10,
+                duration: 100,
+                useNativeDriver: true
+            }),
+            Animated.timing(this.shakeAnimation, {
+                toValue: -10,
+                duration: 100,
+                useNativeDriver: true
+            }),
+            Animated.timing(this.shakeAnimation, {
+                toValue: 10,
+                duration: 100,
+                useNativeDriver: true
+            }),
+            Animated.timing(this.shakeAnimation, {
+                toValue: 0,
+                duration: 100,
+                useNativeDriver: true
+            })
+        ]).start();
+    };
+
     render() {
         const { FiatStore, SettingsStore, navigation } = this.props;
         const { amount } = this.state;
@@ -112,7 +152,7 @@ export default class DefaultPane extends React.PureComponent<
                     SettingsStore={SettingsStore}
                 />
 
-                <View
+                <Animated.View
                     style={{
                         flex: 1,
                         flexDirection: 'column',
@@ -120,7 +160,8 @@ export default class DefaultPane extends React.PureComponent<
                         textAlign: 'center',
                         justifyContent: 'center',
                         zIndex: 10,
-                        bottom: 40
+                        bottom: 40,
+                        transform: [{ translateX: this.shakeAnimation }]
                     }}
                 >
                     <Text
@@ -138,7 +179,7 @@ export default class DefaultPane extends React.PureComponent<
                     </Text>
 
                     <UnitToggle onToggle={this.clearValue} />
-                </View>
+                </Animated.View>
 
                 <View>
                     <View style={{ bottom: '10%' }}>
