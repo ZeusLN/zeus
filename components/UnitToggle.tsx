@@ -9,13 +9,14 @@ import SettingsStore from './../stores/SettingsStore';
 interface UnitToggleProps {
     UnitsStore: UnitsStore;
     SettingsStore: SettingsStore;
+    onToggle?: () => void;
 }
 
 @inject('UnitsStore', 'SettingsStore')
 @observer
 export default class UnitToggle extends React.Component<UnitToggleProps, {}> {
     render() {
-        const { UnitsStore, SettingsStore } = this.props;
+        const { UnitsStore, SettingsStore, onToggle } = this.props;
         const { changeUnits, units } = UnitsStore;
         const { settings } = SettingsStore;
         const { fiat } = settings;
@@ -31,7 +32,10 @@ export default class UnitToggle extends React.Component<UnitToggleProps, {}> {
                     adaptiveWidth
                     quinary
                     noUppercase
-                    onPress={changeUnits}
+                    onPress={() => {
+                        if (onToggle) onToggle();
+                        changeUnits();
+                    }}
                 />
             </React.Fragment>
         );

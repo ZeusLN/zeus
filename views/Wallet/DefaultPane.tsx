@@ -137,7 +137,7 @@ export default class DefaultPane extends React.PureComponent<
                         {FiatStore.numberWithCommas(amount)}
                     </Text>
 
-                    <UnitToggle />
+                    <UnitToggle onToggle={this.clearValue} />
                 </View>
 
                 <View>
