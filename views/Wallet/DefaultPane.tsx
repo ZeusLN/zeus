@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Animated, Text, View } from 'react-native';
+import { Animated, View } from 'react-native';
 
 import { inject, observer } from 'mobx-react';
 
@@ -35,6 +35,7 @@ export default class DefaultPane extends React.PureComponent<
     DefaultPaneState
 > {
     shakeAnimation = new Animated.Value(0);
+    textAnimation = new Animated.Value(0);
     state = {
         amount: '0'
     };
@@ -117,33 +118,52 @@ export default class DefaultPane extends React.PureComponent<
     };
 
     startShake = () => {
-        Animated.sequence([
-            Animated.timing(this.shakeAnimation, {
-                toValue: 10,
-                duration: 100,
-                useNativeDriver: true
-            }),
-            Animated.timing(this.shakeAnimation, {
-                toValue: -10,
-                duration: 100,
-                useNativeDriver: true
-            }),
-            Animated.timing(this.shakeAnimation, {
-                toValue: 10,
-                duration: 100,
-                useNativeDriver: true
-            }),
-            Animated.timing(this.shakeAnimation, {
-                toValue: 0,
-                duration: 100,
-                useNativeDriver: true
-            })
-        ]).start();
+        Animated.parallel([
+            Animated.sequence([
+                Animated.timing(this.textAnimation, {
+                    toValue: 1,
+                    duration: 100,
+                    useNativeDriver: false
+                }),
+                Animated.timing(this.textAnimation, {
+                    toValue: 0,
+                    duration: 1000,
+                    useNativeDriver: false
+                })
+            ]).start(),
+            Animated.sequence([
+                Animated.timing(this.shakeAnimation, {
+                    toValue: 10,
+                    duration: 100,
+                    useNativeDriver: true
+                }),
+                Animated.timing(this.shakeAnimation, {
+                    toValue: -10,
+                    duration: 100,
+                    useNativeDriver: true
+                }),
+                Animated.timing(this.shakeAnimation, {
+                    toValue: 10,
+                    duration: 100,
+                    useNativeDriver: true
+                }),
+                Animated.timing(this.shakeAnimation, {
+                    toValue: 0,
+                    duration: 100,
+                    useNativeDriver: true
+                })
+            ]).start()
+        ]);
     };
 
     render() {
         const { FiatStore, SettingsStore, navigation } = this.props;
         const { amount } = this.state;
+
+        const color = this.textAnimation.interpolate({
+            inputRange: [0, 1],
+            outputRange: [themeColor('text'), 'red']
+        });
 
         return (
             <View style={{ flex: 1 }}>
@@ -164,19 +184,19 @@ export default class DefaultPane extends React.PureComponent<
                         transform: [{ translateX: this.shakeAnimation }]
                     }}
                 >
-                    <Text
+                    <Animated.Text
                         style={{
                             color:
                                 amount === '0'
                                     ? themeColor('secondaryText')
-                                    : themeColor('text'),
+                                    : color,
                             fontSize: this.amountSize(),
                             textAlign: 'center',
                             fontFamily: 'Lato-Bold'
                         }}
                     >
                         {FiatStore.numberWithCommas(amount)}
-                    </Text>
+                    </Animated.Text>
 
                     <UnitToggle onToggle={this.clearValue} />
                 </Animated.View>
