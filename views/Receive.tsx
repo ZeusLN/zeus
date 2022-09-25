@@ -22,6 +22,7 @@ import LoadingIndicator from './../components/LoadingIndicator';
 import ModalBox from './../components/ModalBox';
 import {
     SuccessMessage,
+    WarningMessage,
     ErrorMessage
 } from './../components/SuccessErrorMessage';
 import TextInput from './../components/TextInput';
@@ -118,9 +119,7 @@ export default class Receive extends React.Component<
             expiry: '3600'
         });
 
-        if (InvoicesStore.payment_request) {
-            InvoicesStore.resetPaymentReq();
-        }
+        InvoicesStore.clearUnified();
     };
 
     render() {
@@ -145,6 +144,7 @@ export default class Receive extends React.Component<
 
         const {
             createInvoice,
+            createUnifiedInvoice,
             onChainAddress,
             payment_request,
             payment_request_amt,
@@ -152,6 +152,7 @@ export default class Receive extends React.Component<
             creatingInvoiceError,
             error_msg,
             watchedInvoicePaid,
+            clearUnified,
             reset
         } = InvoicesStore;
         const { settings, implementation } = SettingsStore;
@@ -193,9 +194,9 @@ export default class Receive extends React.Component<
                 <Text
                     style={{
                         color:
-                            selectedIndex === 1
-                                ? themeColor('text')
-                                : themeColor('background'),
+                            selectedIndex === 0
+                                ? themeColor('background')
+                                : themeColor('text'),
                         fontFamily: 'Lato-Regular'
                     }}
                 >
@@ -209,9 +210,9 @@ export default class Receive extends React.Component<
                 <Text
                     style={{
                         color:
-                            selectedIndex === 0
-                                ? themeColor('text')
-                                : themeColor('background'),
+                            selectedIndex === 1
+                                ? themeColor('background')
+                                : themeColor('text'),
                         fontFamily: 'Lato-Regular'
                     }}
                 >
@@ -220,9 +221,26 @@ export default class Receive extends React.Component<
             </React.Fragment>
         );
 
+        const unifiedButton = () => (
+            <React.Fragment>
+                <Text
+                    style={{
+                        color:
+                            selectedIndex === 2
+                                ? themeColor('background')
+                                : themeColor('text'),
+                        fontFamily: 'Lato-Regular'
+                    }}
+                >
+                    {localeString('general.unified')}
+                </Text>
+            </React.Fragment>
+        );
+
         const buttons = [
             { element: lightningButton },
-            { element: onChainButton }
+            { element: onChainButton },
+            { element: unifiedButton }
         ];
 
         const BackButton = () => (
@@ -362,7 +380,7 @@ export default class Receive extends React.Component<
                             </Text>
                         </View>
                     ) : (
-                        selectedIndex === 0 && (
+                        (selectedIndex === 0 || selectedIndex === 2) && (
                             <View>
                                 {!!payment_request && (
                                     <>
@@ -371,6 +389,13 @@ export default class Receive extends React.Component<
                                                 'views.Receive.successCreate'
                                             )}
                                         />
+                                        {implementation === 'lndhub' && (
+                                            <WarningMessage
+                                                message={localeString(
+                                                    'views.Receive.warningLndHub'
+                                                )}
+                                            />
+                                        )}
                                         {!!lnurl && (
                                             <SuccessMessage
                                                 message={
@@ -391,7 +416,7 @@ export default class Receive extends React.Component<
                                     />
                                 )}
                                 {creatingInvoice && <LoadingIndicator />}
-                                {!!payment_request && (
+                                {selectedIndex === 0 && !!payment_request && (
                                     <CollapsedQR
                                         value={payment_request.toUpperCase()}
                                         copyText={localeString(
@@ -399,6 +424,30 @@ export default class Receive extends React.Component<
                                         )}
                                     />
                                 )}
+                                {selectedIndex === 2 &&
+                                    !!payment_request &&
+                                    !!address && (
+                                        <CollapsedQR
+                                            value={`bitcoin:${address.toUpperCase()}?${
+                                                value
+                                                    ? `amount=${
+                                                          Number(satAmount) /
+                                                          satoshisPerBTC
+                                                      }&`
+                                                    : ''
+                                            }${
+                                                memo
+                                                    ? `message=${memo.replace(
+                                                          / /g,
+                                                          '%20'
+                                                      )}&`
+                                                    : ''
+                                            }lightning=${payment_request.toUpperCase()}`}
+                                            copyText={localeString(
+                                                'views.Receive.copyInvoice'
+                                            )}
+                                        />
+                                    )}
                                 <Text
                                     style={{
                                         ...styles.secondaryText,
@@ -412,9 +461,10 @@ export default class Receive extends React.Component<
                                         'views.Receive.memoPlaceholder'
                                     )}
                                     value={memo}
-                                    onChangeText={(text: string) =>
-                                        this.setState({ memo: text })
-                                    }
+                                    onChangeText={(text: string) => {
+                                        this.setState({ memo: text });
+                                        clearUnified();
+                                    }}
                                 />
 
                                 <TouchableOpacity onPress={() => changeUnits()}>
@@ -593,7 +643,9 @@ export default class Receive extends React.Component<
                                     <Button
                                         title={
                                             localeString(
-                                                'views.Receive.createInvoice'
+                                                selectedIndex === 0
+                                                    ? 'views.Receive.createInvoice'
+                                                    : 'views.Receive.createUnifiedInvoice'
                                             ) +
                                             (lnurl
                                                 ? ` ${localeString(
@@ -602,14 +654,25 @@ export default class Receive extends React.Component<
                                                 : '')
                                         }
                                         onPress={() =>
-                                            createInvoice(
-                                                memo,
-                                                satAmount.toString() || '0',
-                                                expiry,
-                                                lnurl,
-                                                ampInvoice,
-                                                routeHints
-                                            )
+                                            selectedIndex === 0
+                                                ? createInvoice(
+                                                      memo,
+                                                      satAmount.toString() ||
+                                                          '0',
+                                                      expiry,
+                                                      lnurl,
+                                                      ampInvoice,
+                                                      routeHints
+                                                  )
+                                                : createUnifiedInvoice(
+                                                      memo,
+                                                      satAmount.toString() ||
+                                                          '0',
+                                                      expiry,
+                                                      lnurl,
+                                                      ampInvoice,
+                                                      routeHints
+                                                  )
                                         }
                                     />
                                 </View>

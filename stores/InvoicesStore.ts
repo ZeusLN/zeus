@@ -73,11 +73,6 @@ export default class InvoicesStore {
         this.watchedInvoicePaid = false;
     };
 
-    @action
-    public resetPaymentReq = () => {
-        this.payment_request = '';
-    };
-
     resetInvoices = () => {
         this.invoices = [];
         this.invoicesCount = 0;
@@ -101,6 +96,19 @@ export default class InvoicesStore {
             .catch(() => {
                 this.resetInvoices();
             });
+    };
+
+    @action
+    public createUnifiedInvoice = (
+        memo: string,
+        value: string,
+        expiry = '3600',
+        lnurl?: LNURLWithdrawParams,
+        ampInvoice?: boolean,
+        routeHints?: boolean
+    ) => {
+        this.createInvoice(memo, value, expiry, lnurl, ampInvoice, routeHints);
+        this.getNewAddress();
     };
 
     @action
@@ -222,9 +230,18 @@ export default class InvoicesStore {
     public clearAddress = () => (this.onChainAddress = null);
 
     @action
+    public clearPaymentRequest = () => (this.payment_request = null);
+
+    @action
     public clearPayReq = () => {
         this.pay_req = null;
         this.getPayReqError = null;
+    };
+
+    @action
+    public clearUnified = () => {
+        this.clearAddress();
+        this.clearPaymentRequest();
     };
 
     @action
