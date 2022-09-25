@@ -84,20 +84,20 @@ export default class DefaultPane extends React.PureComponent<
                 break;
             case 3:
             case 4:
-                return 75;
+                return 65;
                 break;
             case 5:
             case 6:
-                return 70;
+                return 55;
                 break;
             case 7:
-                return 65;
+                return 50;
                 break;
             case 8:
-                return 60;
+                return 45;
                 break;
             default:
-                return 53;
+                return 35;
         }
     };
 
@@ -112,25 +112,36 @@ export default class DefaultPane extends React.PureComponent<
                     SettingsStore={SettingsStore}
                 />
 
-                <Text
+                <View
                     style={{
-                        color:
-                            amount === '0'
-                                ? themeColor('secondaryText')
-                                : themeColor('text'),
-                        fontSize: this.amountSize(),
+                        flex: 1,
+                        flexDirection: 'column',
+                        alignSelf: 'center',
                         textAlign: 'center',
-                        padding: 20,
-                        marginTop: 40,
-                        fontFamily: 'Lato-Bold'
+                        justifyContent: 'center',
+                        zIndex: 10,
+                        bottom: 40
                     }}
                 >
-                    {FiatStore.numberWithCommas(amount)}
-                </Text>
+                    <Text
+                        style={{
+                            color:
+                                amount === '0'
+                                    ? themeColor('secondaryText')
+                                    : themeColor('text'),
+                            fontSize: this.amountSize(),
+                            textAlign: 'center',
+                            fontFamily: 'Lato-Bold'
+                        }}
+                    >
+                        {FiatStore.numberWithCommas(amount)}
+                    </Text>
 
-                <View style={{ position: 'absolute', bottom: 40, right: 10 }}>
                     <UnitToggle />
-                    <View style={{ marginBottom: -60 }}>
+                </View>
+
+                <View>
+                    <View style={{ bottom: '10%' }}>
                         <PinPad
                             appendValue={this.appendValue}
                             clearValue={this.clearValue}
@@ -139,7 +150,14 @@ export default class DefaultPane extends React.PureComponent<
                             amount
                         />
                     </View>
-                    <View style={{ flex: 1, flexDirection: 'row', left: 10 }}>
+                    <View
+                        style={{
+                            flex: 1,
+                            flexDirection: 'row',
+                            position: 'absolute',
+                            bottom: 10
+                        }}
+                    >
                         <View style={{ width: '50%' }}>
                             <Button
                                 title={localeString('general.request')}
