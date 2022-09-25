@@ -254,8 +254,7 @@ const styles = StyleSheet.create({
     },
     pad: {
         justifyContent: 'flex-end',
-        marginBottom: 75,
-        left: 10
+        marginBottom: 25
     },
     key: {
         flex: 1,

@@ -357,7 +357,7 @@ describe('AddressUtils', () => {
                         'lndhub://9a1e4e972f732352c75e:4a1e4e172f732352c75e'
                     )
                 ).toEqual({
-                    host: 'https://lndhub.herokuapp.com',
+                    host: 'https://lndhub.io',
                     username: '9a1e4e972f732352c75e',
                     password: '4a1e4e172f732352c75e'
                 });

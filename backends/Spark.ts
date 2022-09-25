@@ -163,7 +163,7 @@ export default class Spark {
             description: data.memo,
             label: 'zeus.' + Math.random() * 1000000,
             msatoshi: Number(data.value) * 1000,
-            expiry: data.expiry,
+            expiry: Math.round(Date.now() / 1000) + Number(data.expiry),
             exposeprivatechannels: true
         });
     getPayments = () =>
@@ -174,7 +174,7 @@ export default class Spark {
             id: data.node_pubkey_string,
             amount: data.satoshis,
             feerate: `${Number(data.sat_per_byte) * 1000}perkb`,
-            announce: !data.private
+            announce: !data.privateChannel
         }).then(({ txid }: any) => ({ funding_txid_str: txid }));
     connectPeer = (data: any) =>
         this.rpc('connect', [data.addr.pubkey, data.addr.host]);
@@ -316,5 +316,9 @@ export default class Spark {
     supportsCoinControl = () => false;
     supportsHopPicking = () => false;
     supportsRouting = () => true;
+    supportsNodeInfo = () => true;
+    supportsAccounts = () => false;
     singleFeesEarnedTotal = () => false;
+    supportsAddressTypeSelection = () => false;
+    supportsTaproot = () => false;
 }

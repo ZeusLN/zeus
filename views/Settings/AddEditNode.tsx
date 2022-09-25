@@ -11,8 +11,8 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import AddressUtils, { DEFAULT_LNDHUB } from './../../utils/AddressUtils';
-import LndConnectUtils from './../../utils/LndConnectUtils';
+import AddressUtils, { CUSTODIAL_LNDHUBS } from './../../utils/AddressUtils';
+import ConnectionFormatUtils from './../../utils/ConnectionFormatUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -77,7 +77,7 @@ export default class AddEditNode extends React.Component<
         existingAccount: false,
         suggestImport: '',
         url: '',
-        lndhubUrl: DEFAULT_LNDHUB,
+        lndhubUrl: '',
         showLndHubModal: false,
         showCertModal: false,
         username: '',
@@ -109,7 +109,7 @@ export default class AddEditNode extends React.Component<
 
         if (suggestImport.includes('lndconnect://')) {
             const { host, port, macaroonHex } =
-                LndConnectUtils.processLndConnectUrl(suggestImport);
+                ConnectionFormatUtils.processLndConnectUrl(suggestImport);
 
             this.setState({
                 host,
@@ -920,7 +920,7 @@ export default class AddEditNode extends React.Component<
                                     )}
                                 </Text>
                                 <TextInput
-                                    placeholder={DEFAULT_LNDHUB}
+                                    placeholder={'https://'}
                                     value={lndhubUrl}
                                     onChangeText={(text: string) =>
                                         this.setState({
@@ -1019,10 +1019,7 @@ export default class AddEditNode extends React.Component<
                                                 )}
                                                 value={
                                                     `lndhub://${username}:${password}` +
-                                                    (lndhubUrl ===
-                                                    DEFAULT_LNDHUB
-                                                        ? ''
-                                                        : `@${lndhubUrl}`)
+                                                    `@${lndhubUrl}`
                                                 }
                                                 hideText
                                             />
@@ -1168,7 +1165,7 @@ export default class AddEditNode extends React.Component<
                                     'views.Settings.AddEditNode.createLndhub'
                                 )}
                                 onPress={() => {
-                                    if (lndhubUrl === DEFAULT_LNDHUB) {
+                                    if (CUSTODIAL_LNDHUBS.includes(lndhubUrl)) {
                                         this.setState({
                                             showLndHubModal: true
                                         });
@@ -1236,8 +1233,7 @@ export default class AddEditNode extends React.Component<
                         </View>
                     )}
 
-                    {(implementation === 'lnd' ||
-                        implementation === 'c-lightning-REST') && (
+                    {implementation === 'lnd' && (
                         <View style={styles.button}>
                             <Button
                                 title={localeString(
@@ -1246,6 +1242,25 @@ export default class AddEditNode extends React.Component<
                                 onPress={() =>
                                     navigation.navigate(
                                         'LNDConnectConfigQRScanner',
+                                        {
+                                            index
+                                        }
+                                    )
+                                }
+                                secondary
+                            />
+                        </View>
+                    )}
+
+                    {implementation === 'c-lightning-REST' && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString(
+                                    'views.Settings.AddEditNode.scanCLightningRest'
+                                )}
+                                onPress={() =>
+                                    navigation.navigate(
+                                        'CLightningRestQRScanner',
                                         {
                                             index
                                         }
@@ -1284,6 +1299,22 @@ export default class AddEditNode extends React.Component<
                                 )}
                                 onPress={() =>
                                     navigation.navigate('LNDHubQRScanner', {
+                                        index
+                                    })
+                                }
+                                secondary
+                            />
+                        </View>
+                    )}
+
+                    {implementation === 'spark' && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString(
+                                    'views.Settings.AddEditNode.scanSpark'
+                                )}
+                                onPress={() =>
+                                    navigation.navigate('SparkQRScanner', {
                                         index
                                     })
                                 }

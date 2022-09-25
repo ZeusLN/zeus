@@ -247,7 +247,7 @@ export default class Eclair {
             nodeId: data.node_pubkey_string,
             fundingSatoshis: data.satoshis,
             fundingFeerateSatByte: data.sat_per_byte,
-            channelFlags: data.private ? 0 : 1
+            channelFlags: data.privateChannel ? 0 : 1
         }).then(() => ({}));
     connectPeer = (data: any) =>
         this.api('connect', { uri: data.addr.pubkey + '@' + data.addr.host });
@@ -481,6 +481,8 @@ export default class Eclair {
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
     singleFeesEarnedTotal = () => false;
+    supportsAddressTypeSelection = () => false;
+    supportsTaproot = () => false;
 }
 
 const mapInvoice =

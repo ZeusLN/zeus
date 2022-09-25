@@ -56,6 +56,10 @@ interface WalletProps {
     UTXOsStore: UTXOsStore;
 }
 
+interface WalletState {
+    unlocked: boolean;
+}
+
 @inject(
     'BalanceStore',
     'ChannelsStore',
@@ -67,9 +71,12 @@ interface WalletProps {
     'UTXOsStore'
 )
 @observer
-export default class Wallet extends React.Component<WalletProps, {}> {
+export default class Wallet extends React.Component<WalletProps, WalletState> {
     constructor(props) {
         super(props);
+        this.state = {
+            unlocked: false
+        };
         this.pan = new Animated.ValueXY();
         this.panResponder = PanResponder.create({
             onMoveShouldSetPanResponder: () => true,
@@ -94,8 +101,9 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         });
     }
 
-    componentWillUnmount() {
-        Linking.removeEventListener('url', this.handleOpenURL);
+    startListeners() {
+        Linking.addEventListener('url', this.handleOpenURL);
+        LinkingUtils.handleInitialUrl(this.props.navigation);
     }
 
     async getSettingsAndNavigate() {
@@ -114,6 +122,10 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                 settings.nodes &&
                 settings.nodes.length > 0
             ) {
+                if (!this.state.unlocked) {
+                    this.startListeners();
+                    this.setState({ unlocked: true });
+                }
                 this.fetchData();
             } else {
                 navigation.navigate('IntroSplash');
@@ -142,8 +154,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             FeeStore,
             UTXOsStore,
             SettingsStore,
-            FiatStore,
-            navigation
+            FiatStore
         } = this.props;
         const {
             settings,
@@ -182,8 +193,6 @@ export default class Wallet extends React.Component<WalletProps, {}> {
 
         if (connecting) {
             setConnectingStatus(false);
-            Linking.addEventListener('url', this.handleOpenURL);
-            LinkingUtils.handleInitialUrl(navigation);
         }
     }
 

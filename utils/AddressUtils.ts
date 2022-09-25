@@ -22,7 +22,13 @@ const lightningAddress =
 
 const blueWalletAddress = /^bluewallet:setlndhuburl\?url=(\S+)/;
 
-export const DEFAULT_LNDHUB = 'https://lndhub.herokuapp.com';
+export const CUSTODIAL_LNDHUBS = [
+    'https://lndhub.io',
+    'https://lndhub.herokuapp.com',
+    'https://legend.lnbits.com/wallet',
+    'https://infinity.lnbits.com/wallet',
+    'https://ln.getalby.com'
+];
 
 const bitcoinQrParser = (input: string, prefix: string) => {
     let amount;
@@ -100,7 +106,7 @@ class AddressUtils {
                 host = serverURL;
             } else {
                 value = input;
-                host = DEFAULT_LNDHUB;
+                host = CUSTODIAL_LNDHUBS[0];
             }
 
             const [username, password] = value.split(':');
