@@ -26,6 +26,7 @@ import FeeStore from './../stores/FeeStore';
 interface EditFeeProps {
     FeeStore: FeeStore;
     navigation: any;
+    displayOnly?: boolean;
 }
 
 interface EditFeeState {
@@ -55,8 +56,9 @@ export default class EditFee extends React.Component<
     }
 
     render() {
-        const { navigation, FeeStore } = this.props;
         const { selectedFee } = this.state;
+        const { navigation, FeeStore } = this.props;
+        const displayOnly = navigation.getParam('displayOnly', null);
         const { recommendedFees, loading, error, getOnchainFeesviaMempool } =
             FeeStore;
         const BackButton = () => (
@@ -81,12 +83,17 @@ export default class EditFee extends React.Component<
             >
                 <Header
                     centerComponent={{
-                        text: 'Edit network fee',
+                        text: displayOnly
+                            ? localeString('views.EditFee.titleDisplayOnly')
+                            : localeString('views.EditFee.title'),
                         style: { color: themeColor('text') }
                     }}
                     backgroundColor={themeColor('background')}
                     leftComponent={<BackButton />}
                     rightComponent={<ReloadButton />}
+                    containerStyle={{
+                        borderBottomWidth: 0
+                    }}
                 />
                 <View
                     style={{
@@ -129,6 +136,7 @@ export default class EditFee extends React.Component<
                                     style={{
                                         ...styles.feeBox,
                                         borderColor:
+                                            !displayOnly &&
                                             selectedFee === 'fastestFee'
                                                 ? themeColor('highlight')
                                                 : '#A7A9AC',
@@ -170,6 +178,7 @@ export default class EditFee extends React.Component<
                                     style={{
                                         ...styles.feeBox,
                                         borderColor:
+                                            !displayOnly &&
                                             selectedFee === 'halfHourFee'
                                                 ? themeColor('highlight')
                                                 : '#A7A9AC',
@@ -212,6 +221,7 @@ export default class EditFee extends React.Component<
                                     style={{
                                         ...styles.feeBox,
                                         borderColor:
+                                            !displayOnly &&
                                             selectedFee === 'hourFee'
                                                 ? themeColor('highlight')
                                                 : '#A7A9AC',
@@ -251,6 +261,7 @@ export default class EditFee extends React.Component<
                                     style={{
                                         ...styles.feeBox,
                                         borderColor:
+                                            !displayOnly &&
                                             selectedFee === 'minimumFee'
                                                 ? themeColor('highlight')
                                                 : '#A7A9AC',
@@ -279,52 +290,58 @@ export default class EditFee extends React.Component<
                                 </View>
                             </TouchableWithoutFeedback>
 
-                            <Text
-                                style={{
-                                    ...styles.custom,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.EditFee.custom')}
-                            </Text>
-                            <TouchableWithoutFeedback>
-                                <TextInput
-                                    style={{
-                                        ...styles.feeBox,
-                                        paddingLeft: '85%',
-                                        borderColor:
-                                            selectedFee === 'custom'
-                                                ? themeColor('highlight')
-                                                : '#A7A9AC',
-                                        borderWidth: 3,
-                                        color: themeColor('text'),
-                                        fontSize: 18
-                                    }}
-                                    keyboardType="numeric"
-                                    defaultValue={this.state.customFee}
-                                    onChangeText={(text: string) =>
-                                        this.setState({
-                                            customFee: text,
-                                            fee: text,
-                                            selectedFee: 'custom'
-                                        })
-                                    }
-                                ></TextInput>
-                            </TouchableWithoutFeedback>
+                            {!displayOnly && (
+                                <>
+                                    <Text
+                                        style={{
+                                            ...styles.custom,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString('views.EditFee.custom')}
+                                    </Text>
+                                    <TouchableWithoutFeedback>
+                                        <TextInput
+                                            style={{
+                                                ...styles.feeBox,
+                                                paddingLeft: '85%',
+                                                borderColor:
+                                                    selectedFee === 'custom'
+                                                        ? themeColor(
+                                                              'highlight'
+                                                          )
+                                                        : '#A7A9AC',
+                                                borderWidth: 3,
+                                                color: themeColor('text'),
+                                                fontSize: 18
+                                            }}
+                                            keyboardType="numeric"
+                                            defaultValue={this.state.customFee}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    customFee: text,
+                                                    fee: text,
+                                                    selectedFee: 'custom'
+                                                })
+                                            }
+                                        ></TextInput>
+                                    </TouchableWithoutFeedback>
 
-                            <View style={styles.confirmButton}>
-                                <Button
-                                    title={localeString(
-                                        'views.EditFee.confirmFee'
-                                    )}
-                                    onPress={() => {
-                                        this.props.navigation.state.params.onNavigateBack(
-                                            this.state.fee
-                                        );
-                                        this.props.navigation.goBack();
-                                    }}
-                                />
-                            </View>
+                                    <View style={styles.confirmButton}>
+                                        <Button
+                                            title={localeString(
+                                                'views.EditFee.confirmFee'
+                                            )}
+                                            onPress={() => {
+                                                this.props.navigation.state.params.onNavigateBack(
+                                                    this.state.fee
+                                                );
+                                                this.props.navigation.goBack();
+                                            }}
+                                        />
+                                    </View>
+                                </>
+                            )}
                         </View>
                     )}
                     {error && !loading && (

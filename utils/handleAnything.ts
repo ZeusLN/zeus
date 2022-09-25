@@ -22,8 +22,14 @@ export default async function (data: string): Promise<any> {
         AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest) &&
         lightning
     ) {
-        invoicesStore.getPayReq(value);
-        return ['PaymentRequest', {}];
+        return [
+            'Accounts',
+            {
+                value,
+                amount,
+                lightning
+            }
+        ];
     } else if (
         !hasAt &&
         AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest)
