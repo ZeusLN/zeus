@@ -134,7 +134,6 @@ android {
         versionCode 43
         versionName "0.6.6"
         multiDexEnabled true
-        missingDimensionStrategy 'react-native-camera', 'general'
     }
     signingConfigs {
         release {

@@ -65,7 +65,6 @@
     "react": "18.1.0",
     "react-native": "0.68.2",
     "react-native-blob-util": "0.14.0",
-    "react-native-camera": "4.2.1",
     "react-native-crypto": "2.2.0",
     "react-native-date-picker": "3.4.0",
     "react-native-elements": "2.3.2",
@@ -76,6 +75,7 @@
     "react-native-os": "1.2.6",
     "react-native-qrcode-svg": "6.0.6",
     "react-native-randombytes": "3.5.3",
+    "react-native-reanimated": "2.10.0",
     "react-native-restart": "0.0.24",
     "react-native-safe-area-context": "0.6.2",
     "react-native-screens": "3.10.1",
@@ -89,6 +89,7 @@
     "react-native-unimodules": "0.7.0",
     "react-native-v8": "0.61.5-patch.4",
     "react-native-vector-icons": "7.1.0",
+    "react-native-vision-camera": "2.14.1",
     "react-navigation": "4.4.4",
     "react-navigation-stack": "2.0.16",
     "readable-stream": "1.0.33",
@@ -100,6 +101,7 @@
     "url": "0.10.3",
     "utf8": "3.0.0",
     "util": "0.10.4",
+    "vision-camera-code-scanner": "0.2.0",
     "vm-browserify": "0.0.4"
   },
   "devDependencies": {

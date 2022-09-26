@@ -68,4 +68,3 @@ buck-out/
 # CocoaPods
 ios/Pods
 **.swp
-yarn.lock
