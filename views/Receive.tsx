@@ -112,13 +112,10 @@ export default class Receive extends React.Component<
         const { InvoicesStore } = this.props;
 
         this.setState({
-            selectedIndex,
-            // reset LN invoice values so old invoices don't linger
-            memo: '',
-            value: '',
-            expiry: '3600'
+            selectedIndex
         });
 
+        // reset LN invoice values so old invoices don't linger
         InvoicesStore.clearUnified();
     };
 
