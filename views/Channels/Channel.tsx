@@ -276,7 +276,7 @@ export default class ChannelView extends React.Component<
 
                     <KeyValue
                         keyValue={localeString('views.Channel.private')}
-                        value={privateChannel ? 'True' : 'False'}
+                        value={privateChannel ? 'Private' : 'Public'}
                         color={privateChannel ? 'green' : '#808000'}
                     />
 
