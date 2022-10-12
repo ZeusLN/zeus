@@ -149,6 +149,8 @@ If you are making cosmetic changes please test on both Android and iOS as things
 
 If you're looking for a quick way to get a lightning development environment running, check out [Polar](https://github.com/jamaljsr/polar).
 
+NOTE: When configuring a new node on Android in dev, the `Host` field must be `10.0.2.2` - `127.0.0.1` or `localhost` won't work.
+
 ## Translations
 
 Do not directly modify the files in `/locales` unless you are adding new copy to the app in English. Instead, translators and reviewers should visit out [Transifex page](https://www.transifex.com/ZeusLN/zeus/) and request a role on the language you'd like to contribute to.
