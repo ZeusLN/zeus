@@ -366,10 +366,17 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     name="Wallet"
                                     component={WalletScreen}
                                 />
-                                <Tab.Screen
-                                    name="Default"
-                                    component={DefaultScreen}
-                                />
+                                {!error ? (
+                                    <Tab.Screen
+                                        name="Default"
+                                        component={DefaultScreen}
+                                    />
+                                ) : (
+                                    <Tab.Screen
+                                        name={'  '}
+                                        component={WalletScreen}
+                                    />
+                                )}
                                 {RESTUtils.supportsChannelManagement() &&
                                 !error ? (
                                     <Tab.Screen
