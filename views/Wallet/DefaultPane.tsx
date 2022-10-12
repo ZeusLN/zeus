@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Animated, View } from 'react-native';
 
 import { inject, observer } from 'mobx-react';
+import Clipboard from '@react-native-clipboard/clipboard';
 
 import Button from '../../components/Button';
 import PinPad from '../../components/PinPad';
@@ -24,6 +25,7 @@ interface DefaultPaneProps {
 
 interface DefaultPaneState {
     amount: string;
+    clipboard: string;
 }
 
 const MAX_LENGTH = 10;
@@ -37,8 +39,29 @@ export default class DefaultPane extends React.PureComponent<
     shakeAnimation = new Animated.Value(0);
     textAnimation = new Animated.Value(0);
     state = {
-        amount: '0'
+        amount: '0',
+        clipboard: ''
     };
+
+    async UNSAFE_componentWillMount() {
+        const { SettingsStore } = this.props;
+        const { settings } = SettingsStore;
+
+        if (settings.privacy && settings.privacy.clipboard) {
+            const clipboard = await Clipboard.getString();
+
+            // TODO add validation logic
+            // TODO investigate clipboard loop
+            // if (!this.state.destination) {
+            //     this.validateAddress(clipboard);
+            // }
+            if (!!clipboard && !this.state.clipboard) {
+                this.setState({
+                    clipboard
+                });
+            }
+        }
+    }
 
     appendValue = (value: string) => {
         const { amount } = this.state;
@@ -158,7 +181,7 @@ export default class DefaultPane extends React.PureComponent<
 
     render() {
         const { FiatStore, SettingsStore, navigation } = this.props;
-        const { amount } = this.state;
+        const { amount, clipboard } = this.state;
 
         const color = this.textAnimation.interpolate({
             inputRange: [0, 1],
@@ -170,6 +193,7 @@ export default class DefaultPane extends React.PureComponent<
                 <WalletHeader
                     navigation={navigation}
                     SettingsStore={SettingsStore}
+                    clipboard={clipboard}
                 />
 
                 <Animated.View

@@ -7,6 +7,7 @@ import NodeIdenticon from '../components/NodeIdenticon';
 import { themeColor } from '../utils/ThemeUtils';
 
 import Contact from '../assets/images/SVG/Mascot contact.svg';
+import Clipboard from '../assets/images/SVG/Clipboard.svg';
 import Scan from '../assets/images/SVG/Scan.svg';
 
 import stores from '../stores/Stores';
@@ -37,18 +38,28 @@ const ScanBadge = ({ navigation }: { navigation: any }) => (
     </TouchableOpacity>
 );
 
+const ClipboardBadge = ({ navigation, clipboard }: { navigation: any, clipboard: string }) => (
+    <TouchableOpacity
+        onPress={() => navigation.navigate('Send', { destination: clipboard })}
+    >
+        <Clipboard fill={themeColor('text')} width="27" height="27" />
+    </TouchableOpacity>
+);
+
 export function WalletHeader({
     navigation,
     SettingsStore,
     loading = false,
     title,
-    channels = false
+    channels = false,
+    clipboard
 }: {
     navigation: any;
     SettingsStore: any;
     loading?: boolean;
     title?: string;
     channels?: boolean;
+    clipboard?: string;
 }) {
     const { settings } = SettingsStore;
     const multipleNodes: boolean =
@@ -82,6 +93,9 @@ export function WalletHeader({
                             stores.balanceStore.loadingLightningBalance) && (
                             <LoadingIndicator size={80} />
                         )}
+                        {!!clipboard && <View style={{ marginTop: 14, marginRight: 20 }}>
+                            <ClipboardBadge navigation={navigation} clipboard={clipboard} />
+                        </View>}
                         <View style={{ marginTop: 15 }}>
                             <ScanBadge navigation={navigation} />
                         </View>
