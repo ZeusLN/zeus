@@ -20,6 +20,7 @@ interface ActivityFilter {
     channels: boolean;
     sent: boolean;
     received: boolean;
+    minimumAmount: number;
     startDate: any;
     endDate: any;
 }
@@ -56,6 +57,12 @@ export default class ActivityStore {
         this.transactionsStore = transactionsStore;
         this.invoicesStore = invoicesStore;
     }
+
+    @action
+    public setAmountFilter = (filter: any) => {
+        this.filters.minimumAmount = filter;
+        this.setFilters(this.filters);
+    };
 
     @action
     public setStartDateFilter = (filter: any) => {
@@ -118,6 +125,7 @@ export default class ActivityStore {
             channels: true,
             sent: true,
             received: true,
+            minimumAmount: 0,
             startDate: null,
             endDate: null
         };
@@ -184,6 +192,13 @@ export default class ActivityStore {
                             activity.getAmount > 0) ||
                         activity.model === localeString('views.Invoice.title')
                     )
+            );
+        }
+
+        if (filters.minimumAmount > 0) {
+            filteredActivity = filteredActivity.filter(
+                (activity: any) =>
+                    Math.abs(activity.getAmount) >= filters.minimumAmount
             );
         }
 
