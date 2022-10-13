@@ -60,7 +60,7 @@ export default class PaymentRequest extends React.Component<
         enableAtomicMultiPathPayment: false,
         maxParts: '16',
         maxShardAmt: '',
-        feeLimitSat: '10',
+        feeLimitSat: '100',
         maxFeePercent: '0.5',
         outgoingChanId: null,
         lastHopPubkey: null
