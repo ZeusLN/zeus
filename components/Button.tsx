@@ -72,13 +72,7 @@ function Button(props: ButtonProps) {
                               : themeColor('background'),
                           ...icon
                       }
-                    : {
-                          color: iconOnly
-                              ? themeColor('text')
-                              : secondary
-                              ? themeColor('highlight')
-                              : themeColor('background')
-                      }
+                    : null
             }
             title={title}
             buttonStyle={
