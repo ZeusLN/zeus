@@ -455,6 +455,7 @@
     "views.ActivityFilter.endDate": "End Date",
     "views.ActivityFilter.lightningPayments": "Lightning payments",
     "views.ActivityFilter.onChainPayments": "On-chain payments",
+    "views.ActivityFilter.minimumAmount": "Minimum Amount (sats)",
     "views.Routing.RoutingEvent.sourceChannel": "Source Channel",
     "views.Routing.RoutingEvent.destinationChannel": "Destination Channel",
     "views.Olympians.title": "Olympians",
