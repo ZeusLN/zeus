@@ -11,7 +11,9 @@ import LoadingIndicator from './../components/LoadingIndicator';
 import TextInput from './../components/TextInput';
 
 import InvoicesStore from './../stores/InvoicesStore';
-import TransactionsStore from './../stores/TransactionsStore';
+import TransactionsStore, {
+    SendPaymentReq
+} from './../stores/TransactionsStore';
 import UnitsStore from './../stores/UnitsStore';
 import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
@@ -66,9 +68,34 @@ export default class PaymentRequest extends React.Component<
         lastHopPubkey: null
     };
 
+    sendPayment = ({
+        payment_request,
+        amount,
+        max_parts,
+        max_shard_amt,
+        fee_limit_sat,
+        max_fee_percent,
+        outgoing_chan_id,
+        last_hop_pubkey,
+        amp
+    }: SendPaymentReq) => {
+        this.props.TransactionsStore.sendPayment({
+            payment_request,
+            amount,
+            max_parts,
+            max_shard_amt,
+            fee_limit_sat,
+            max_fee_percent,
+            outgoing_chan_id,
+            last_hop_pubkey,
+            amp
+        });
+
+        this.props.navigation.navigate('SendingLightning');
+    };
+
     render() {
         const {
-            TransactionsStore,
             InvoicesStore,
             UnitsStore,
             ChannelsStore,
@@ -555,7 +582,7 @@ export default class PaymentRequest extends React.Component<
                                             color: 'white'
                                         }}
                                         onPress={() => {
-                                            TransactionsStore.sendPayment({
+                                            this.sendPayment({
                                                 payment_request: paymentRequest,
                                                 amount: customAmount,
                                                 max_parts:
@@ -577,10 +604,6 @@ export default class PaymentRequest extends React.Component<
                                                 last_hop_pubkey: lastHopPubkey,
                                                 amp: enableAmp
                                             });
-
-                                            navigation.navigate(
-                                                'SendingLightning'
-                                            );
                                         }}
                                     />
                                 </View>
