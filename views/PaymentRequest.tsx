@@ -317,7 +317,6 @@ export default class PaymentRequest extends React.Component<
                                     </Text>
                                     <TextInput
                                         keyboardType="numeric"
-                                        placeholder={feeEstimate || '10'}
                                         value={feeLimitSat}
                                         onChangeText={(text: string) =>
                                             this.setState({
