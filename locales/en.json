@@ -78,7 +78,7 @@
     "views.LnurlChannel.nodeid": "Local Node ID",
     "views.LnurlChannel.success": "Lnurl Channel requested successfully",
     "views.LnurlAuth.loginSuccess" : "Authenticated successfully",
-    "views.Routing.received": "You received",
+    "views.Routing.received": "Fee received",
     "views.Routing.RoutingHeader.timeframeEarned": "Earned during selected timeframe",
     "views.Routing.RoutingHeader.dayEarned": "Earned today",
     "views.Routing.RoutingHeader.weekEarned": "Earned this week",
