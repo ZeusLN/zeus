@@ -82,7 +82,7 @@ export default class PaymentRequest extends React.Component<
             return (
                 <Text
                     style={{
-                        color: themeColor('warning')
+                        color: themeColor('error')
                     }}
                 >
                     {localeString(
