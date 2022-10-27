@@ -18,6 +18,7 @@ import UnitsStore from './../stores/UnitsStore';
 import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
 
+import FeeUtils from './../utils/FeeUtils';
 import { localeString } from './../utils/LocaleUtils';
 import RESTUtils from './../utils/RESTUtils';
 import { themeColor } from './../utils/ThemeUtils';
@@ -73,7 +74,11 @@ export default class PaymentRequest extends React.Component<
         const { InvoicesStore } = this.props;
         const { feeEstimate } = InvoicesStore;
 
-        if (feeEstimate && Number(feeEstimate) > Number(feeLimitSat)) {
+        if (
+            feeEstimate &&
+            feeLimitSat &&
+            Number(feeEstimate) > Number(feeLimitSat)
+        ) {
             return (
                 <Text
                     style={{
@@ -91,7 +96,7 @@ export default class PaymentRequest extends React.Component<
 
     sendPayment = ({
         payment_request,
-        amount,
+        amount, // used only for no-amount invoices
         max_parts,
         max_shard_amt,
         fee_limit_sat,
@@ -100,19 +105,33 @@ export default class PaymentRequest extends React.Component<
         last_hop_pubkey,
         amp
     }: SendPaymentReq) => {
-        this.props.TransactionsStore.sendPayment({
+        const { InvoicesStore, TransactionsStore, navigation } = this.props;
+        let feeLimitSat = fee_limit_sat;
+
+        // If the fee limit is not set, use a default routing fee calculation
+        if (!fee_limit_sat) {
+            const { pay_req } = InvoicesStore;
+            const requestAmount = pay_req && pay_req.getRequestAmount;
+            const invoiceAmount = amount || requestAmount;
+
+            feeLimitSat = FeeUtils.calculateDefaultRoutingFee(
+                Number(invoiceAmount)
+            );
+        }
+
+        TransactionsStore.sendPayment({
             payment_request,
             amount,
             max_parts,
             max_shard_amt,
-            fee_limit_sat,
+            fee_limit_sat: feeLimitSat,
             max_fee_percent,
             outgoing_chan_id,
             last_hop_pubkey,
             amp
         });
 
-        this.props.navigation.navigate('SendingLightning');
+        navigation.navigate('SendingLightning');
     };
 
     render() {
