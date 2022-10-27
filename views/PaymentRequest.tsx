@@ -68,6 +68,27 @@ export default class PaymentRequest extends React.Component<
         lastHopPubkey: null
     };
 
+    displayFeeRecommendation = () => {
+        const { feeLimitSat } = this.state;
+        const { InvoicesStore } = this.props;
+        const { feeEstimate } = InvoicesStore;
+
+        if (feeEstimate && Number(feeEstimate) > Number(feeLimitSat)) {
+            return (
+                <Text
+                    style={{
+                        color: themeColor('warning')
+                    }}
+                >
+                    {localeString(
+                        'views.PaymentRequest.feeEstimateExceedsLimit'
+                    )}
+                </Text>
+            );
+        }
+        return null;
+    };
+
     sendPayment = ({
         payment_request,
         amount,
@@ -340,8 +361,13 @@ export default class PaymentRequest extends React.Component<
                                     >
                                         {`${localeString(
                                             'views.PaymentRequest.feeLimit'
-                                        )} (${localeString('general.sats')})`}
+                                        )} (${localeString(
+                                            'general.sats'
+                                        )}) (${localeString(
+                                            'general.optional'
+                                        )})`}
                                     </Text>
+                                    {this.displayFeeRecommendation()}
                                     <TextInput
                                         keyboardType="numeric"
                                         value={feeLimitSat}
