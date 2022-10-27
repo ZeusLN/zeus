@@ -3,6 +3,19 @@ import FeeUtils from './FeeUtils';
 const satoshisPerBTC = 100000000;
 
 describe('FeeUtils', () => {
+    describe('calculateDefaultRoutingFee', () => {
+        it('Calculates a fee based on the amount', () => {
+            expect(FeeUtils.calculateDefaultRoutingFee(0)).toEqual('0');
+            expect(FeeUtils.calculateDefaultRoutingFee(999)).toEqual('999');
+            expect(FeeUtils.calculateDefaultRoutingFee(1000)).toEqual('1000');
+            expect(FeeUtils.calculateDefaultRoutingFee(1001)).toEqual('50');
+            expect(FeeUtils.calculateDefaultRoutingFee(1003)).toEqual('50');
+            expect(FeeUtils.calculateDefaultRoutingFee(1010)).toEqual('51');
+            expect(FeeUtils.calculateDefaultRoutingFee(1011)).toEqual('51');
+            expect(FeeUtils.calculateDefaultRoutingFee(10000)).toEqual('500');
+        });
+    });
+
     describe('roundFee', () => {
         it('Rounds fees', () => {
             expect(FeeUtils.roundFee('11.5')).toEqual('12');
