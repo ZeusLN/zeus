@@ -1,4 +1,13 @@
 class FeeUtils {
+    static DEFAULT_ROUTING_FEE_PERCENT = 0.05;
+
+    calculateDefaultRoutingFee = (amount: number) => {
+        if (amount > 1000) {
+            return (amount * FeeUtils.DEFAULT_ROUTING_FEE_PERCENT).toFixed(0);
+        }
+
+        return amount.toString();
+    };
     roundFee = (text: string) => {
         const split = text.split('.');
 
