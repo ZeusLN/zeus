@@ -49,7 +49,7 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 - [x] Fiat currency integrations
 - [x] [Various language support](https://www.transifex.com/ZeusLN/zeus/)
 - [x] Multi-theme
-- [ ] On-chain coin control 
+- [x] On-chain coin control 
 - [ ] External signer support
 - [ ] Watch-only accounts
 - [ ] Contact list for easier payments
