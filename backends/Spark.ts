@@ -1,4 +1,3 @@
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import stores from '../stores/Stores';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import TransactionRequest from './../models/TransactionRequest';
@@ -9,7 +8,7 @@ const calls: any = {};
 
 export default class Spark {
     rpc = (rpcmethod: string, param = {}, range: any = null) => {
-        const { accessKey, certVerification, enableTor } = stores.settingsStore;
+        const { accessKey, enableTor } = stores.settingsStore;
         let { url } = stores.settingsStore;
 
         const id = rpcmethod + JSON.stringify(param) + JSON.stringify(range);
@@ -39,17 +38,17 @@ export default class Spark {
         if (enableTor === true) {
             calls[id] = doTorRequest(url, RequestMethod.POST, body, headers);
         } else {
-            calls[id] = ReactNativeBlobUtil.config({
-                trusty: !certVerification
+            calls[id] = fetch(url, {
+                method: 'POST',
+                headers,
+                body
             })
-                .fetch('POST', url, headers, body)
-                .catch(e => {
+                .catch((e) => {
                     throw new Error(`fetching Spark ${url}, ${e.message}`);
                 })
                 .then((response: any) => {
                     delete calls[id];
-                    const status = response.info().status;
-                    if (status < 300) {
+                    if (response.status < 300) {
                         return response.json();
                     } else {
                         let errorInfo;
