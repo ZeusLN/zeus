@@ -32,6 +32,9 @@ export default class Spark {
                 trusty: !certVerification
             })
                 .fetch('POST', url, headers, body)
+                .catch(e => {
+                    throw new Error(`fetching Spark ${url}, ${e.message}`);
+                })
                 .then((response: any) => {
                     delete calls[id];
                     const status = response.info().status;
