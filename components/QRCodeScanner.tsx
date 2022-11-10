@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
-import { FlashMode, RNCamera } from 'react-native-camera';
+import { BarCodeReadEvent, FlashMode, RNCamera } from 'react-native-camera';
 
 import Button from './../components/Button';
 
@@ -27,7 +27,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
     constructor(props: QRProps) {
         super(props);
     }
-    scannedCache: any = {};
+    scannedCache: { [name: string]: number } = {};
     state = {
         cameraStatus: null,
         torch: RNCamera.Constants.FlashMode.off
@@ -83,7 +83,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                     >
                         <RNCamera
                             style={styles.preview}
-                            onBarCodeRead={(ret: any) =>
+                            onBarCodeRead={(ret: BarCodeReadEvent) =>
                                 this.handleRead(ret.data)
                             }
                             androidCameraPermissionOptions={{
