@@ -341,8 +341,11 @@ export default class ActivityFilter extends React.Component<
                                                     : String(item.value)
                                             }
                                             onChangeText={(text: string) => {
-                                                const newMinAmount =
-                                                    Number(text);
+                                                const newMinAmount = !isNaN(
+                                                    Number(text)
+                                                )
+                                                    ? Number(text)
+                                                    : 0;
                                                 setAmountFilter(newMinAmount);
                                             }}
                                         />
