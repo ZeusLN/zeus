@@ -194,31 +194,31 @@ export default class SetFeesForm extends React.Component<
                             autoCorrect={false}
                         />
 
-                        <Text
-                            style={{
-                                ...styles.text,
-                                color: themeColor('secondaryText')
-                            }}
-                        >
-                            {localeString(
-                                'components.SetFeesForm.timeLockDelta'
-                            )}
-                        </Text>
-                        <TextInput
-                            keyboardType="numeric"
-                            placeholder={timeLockDelta || '144'}
-                            value={newTimeLockDelta}
-                            onChangeText={(text: string) =>
-                                this.setState({
-                                    newTimeLockDelta: text
-                                })
-                            }
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                        />
-
                         {implementation === 'lnd' && (
                             <>
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'components.SetFeesForm.timeLockDelta'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    placeholder={timeLockDelta || '144'}
+                                    value={newTimeLockDelta}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            newTimeLockDelta: text
+                                        })
+                                    }
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                />
+
                                 <Text
                                     style={{
                                         ...styles.text,
