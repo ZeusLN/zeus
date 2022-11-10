@@ -55,6 +55,7 @@ export default class Invoice extends BaseModel {
     public ispaid?: boolean;
     public expire_time?: number;
     public millisatoshis?: string;
+    public pay_req?: string;
 
     @computed public get model(): string {
         return 'Invoice';
@@ -87,7 +88,7 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get getPaymentRequest(): string {
-        return this.bolt11 || this.payment_request;
+        return this.bolt11 || this.payment_request || this.pay_req;
     }
 
     // return amount in satoshis
