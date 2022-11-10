@@ -56,6 +56,7 @@ export default class InvoicesStore {
 
     reset = () => {
         this.paymentRequest = '';
+        this.onChainAddress = '';
         this.loading = false;
         this.error = false;
         this.error_msg = null;
@@ -105,10 +106,11 @@ export default class InvoicesStore {
         expiry = '3600',
         lnurl?: LNURLWithdrawParams,
         ampInvoice?: boolean,
-        routeHints?: boolean
+        routeHints?: boolean,
+        addressType?: string
     ) => {
         this.createInvoice(memo, value, expiry, lnurl, ampInvoice, routeHints);
-        this.getNewAddress();
+        this.getNewAddress(addressType ? { type: addressType } : null);
     };
 
     @action
@@ -137,6 +139,16 @@ export default class InvoicesStore {
 
         RESTUtils.createInvoice(req)
             .then((data: any) => {
+                if (data.error) {
+                    this.creatingInvoiceError = true;
+                    this.creatingInvoice = false;
+                    this.error_msg =
+                        data.message.toString() ||
+                        error.toString() ||
+                        localeString(
+                            'stores.InvoicesStore.errorCreatingInvoice'
+                        );
+                }
                 const invoice = new Invoice(data);
                 this.payment_request = invoice.getPaymentRequest;
                 this.payment_request_amt = value;
