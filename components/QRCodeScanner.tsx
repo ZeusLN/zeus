@@ -24,8 +24,8 @@ interface QRState {
 }
 
 export default class QRCodeScanner extends React.Component<QRProps, QRState> {
-    constructor() {
-        super();
+    constructor(props: QRProps) {
+        super(props);
         const { width } = Dimensions.get('window');
         this.maskLength = (width * 80) / 100;
     }
