@@ -173,7 +173,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     const bytes = new Uint8Array(
                         tagFound.ndefMessage[0].payload
                     );
-                    const str = NFCUtils.nfcUtf8ArrayToStr(bytes);
+                    const str = NFCUtils.nfcUtf8ArrayToStr(bytes) || '';
                     resolve(this.validateAddress(str));
                     NfcManager.unregisterTagEvent().catch(() => 0);
                 }
