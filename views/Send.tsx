@@ -192,13 +192,16 @@ export default class Send extends React.Component<SendProps, SendState> {
     selectUTXOs = (utxos: Array<string>, utxoBalance: number) => {
         const { SettingsStore } = this.props;
         const { implementation } = SettingsStore;
-        const newState: any = {};
-        newState.utxos = utxos;
-        newState.utxoBalance = utxoBalance;
-        if (implementation === 'c-lightning-REST') {
-            newState.amount = 'all';
-        }
-        this.setState(newState);
+        this.setState((prevState) => {
+            ({
+                utxos,
+                utxoBalance,
+                amount:
+                    implementation === 'c-lightning-REST'
+                        ? 'all'
+                        : prevState.amount
+            });
+        });
     };
 
     validateAddress = (text: string) => {
