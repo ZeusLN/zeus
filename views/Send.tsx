@@ -161,7 +161,7 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     enableNfc = async () => {
         this.disableNfc();
-        await NfcManager.start();
+        await NfcManager.start().catch((e) => console.warn(e.message));
 
         return new Promise((resolve: any) => {
             let tagFound = null;
