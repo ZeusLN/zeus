@@ -13,7 +13,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import { Header, Icon } from 'react-native-elements';
 
-import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
+import NfcManager, { NfcEvents, TagEvent } from 'react-native-nfc-manager';
 
 import handleAnything from './../utils/handleAnything';
 
@@ -164,15 +164,20 @@ export default class Send extends React.Component<SendProps, SendState> {
         await NfcManager.start().catch((e) => console.warn(e.message));
 
         return new Promise((resolve: any) => {
-            let tagFound = null;
+            let tagFound: TagEvent | null = null;
 
-            NfcManager.setEventListener(NfcEvents.DiscoverTag, (tag: any) => {
-                tagFound = tag;
-                const bytes = new Uint8Array(tagFound.ndefMessage[0].payload);
-                const str = NFCUtils.nfcUtf8ArrayToStr(bytes);
-                resolve(this.validateAddress(str));
-                NfcManager.unregisterTagEvent().catch(() => 0);
-            });
+            NfcManager.setEventListener(
+                NfcEvents.DiscoverTag,
+                (tag: TagEvent) => {
+                    tagFound = tag;
+                    const bytes = new Uint8Array(
+                        tagFound.ndefMessage[0].payload
+                    );
+                    const str = NFCUtils.nfcUtf8ArrayToStr(bytes);
+                    resolve(this.validateAddress(str));
+                    NfcManager.unregisterTagEvent().catch(() => 0);
+                }
+            );
 
             NfcManager.setEventListener(NfcEvents.SessionClosed, () => {
                 if (!tagFound) {
