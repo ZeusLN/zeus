@@ -79,7 +79,7 @@ interface SendState {
 )
 @observer
 export default class Send extends React.Component<SendProps, SendState> {
-    constructor(props: any) {
+    constructor(props: SendProps) {
         super(props);
         const { navigation } = props;
         const destination = navigation.getParam('destination', null);
