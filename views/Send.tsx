@@ -318,7 +318,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         const { fiat, privacy } = settings;
         const enableMempoolRates = privacy && privacy.enableMempoolRates;
         const { units, changeUnits } = UnitsStore;
-        const { fiatRates, getSymbol }: any = FiatStore;
+        const { fiatRates, getSymbol } = FiatStore;
 
         const fiatEntry =
             fiat && fiatRates && fiatRates.filter
