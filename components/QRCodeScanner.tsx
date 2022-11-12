@@ -26,12 +26,13 @@ interface QRState {
 export default class QRCodeScanner extends React.Component<QRProps, QRState> {
     constructor(props: QRProps) {
         super(props);
+
+        this.state = {
+            cameraStatus: null,
+            torch: RNCamera.Constants.FlashMode.off
+        };
     }
     scannedCache: { [name: string]: number } = {};
-    state = {
-        cameraStatus: null,
-        torch: RNCamera.Constants.FlashMode.off
-    };
     maskLength = (Dimensions.get('window').width * 80) / 100;
 
     handleCameraStatusChange = (event: any) => {
