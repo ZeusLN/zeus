@@ -21,7 +21,10 @@ interface ActivityProps {
 
 @inject('ActivityStore')
 @observer
-export default class Activity extends React.Component<ActivityProps, {}> {
+export default class Activity extends React.Component<
+    ActivityProps,
+    Record<string, never>
+> {
     async UNSAFE_componentWillMount() {
         const { ActivityStore } = this.props;
         const { getActivityAndFilter, resetFilters } = ActivityStore;

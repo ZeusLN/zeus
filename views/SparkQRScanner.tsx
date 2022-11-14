@@ -7,7 +7,10 @@ interface SparkQRProps {
     navigation: any;
 }
 
-export default class SparkQRScanner extends React.Component<SparkQRProps, {}> {
+export default class SparkQRScanner extends React.Component<
+    SparkQRProps,
+    Record<string, never>
+> {
     handleSparkInvoiceScanned = (data: string) => {
         const { navigation } = this.props;
 

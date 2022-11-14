@@ -30,7 +30,7 @@ interface ChannelsProps {
 @observer
 export default class ChannelsPane extends React.PureComponent<
     ChannelsProps,
-    {}
+    Record<string, never>
 > {
     renderItem = ({ item }) => {
         const { ChannelsStore, navigation } = this.props;

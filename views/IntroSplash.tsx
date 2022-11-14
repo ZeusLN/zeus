@@ -22,7 +22,10 @@ interface IntroSplashProps {
 
 @inject('SettingsStore')
 @observer
-export default class IntroSplash extends React.Component<IntroSplashProps, {}> {
+export default class IntroSplash extends React.Component<
+    IntroSplashProps,
+    Record<string, never>
+> {
     componentDidMount() {
         // triggers when loaded from navigation or back action
         this.props.navigation.addListener('didFocus', () => {

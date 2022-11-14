@@ -24,7 +24,7 @@ interface OnchainSwipeableRowProps {
 
 export default class OnchainSwipeableRow extends Component<
     OnchainSwipeableRowProps,
-    {}
+    Record<string, never>
 > {
     private renderAction = (
         text: string,

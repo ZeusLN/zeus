@@ -26,7 +26,7 @@ interface SendingLightningProps {
 @observer
 export default class SendingLightning extends React.Component<
     SendingLightningProps,
-    {}
+    Record<string, never>
 > {
     getBackgroundColor() {
         const { TransactionsStore } = this.props;

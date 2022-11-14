@@ -15,7 +15,10 @@ interface SetFeesProps {
 
 @inject('FeeStore')
 @observer
-export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
+export default class SetFees extends React.PureComponent<
+    SetFeesProps,
+    Record<string, never>
+> {
     render() {
         const { FeeStore, navigation } = this.props;
 

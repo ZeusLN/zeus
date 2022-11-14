@@ -15,7 +15,7 @@ interface BTCPayConfigQRProps {
 @observer
 export default class BTCPayConfigQRScanner extends React.Component<
     BTCPayConfigQRProps,
-    {}
+    Record<string, never>
 > {
     handleBTCPayConfigInvoiceScanned = (data: string) => {
         const { SettingsStore, navigation } = this.props;

@@ -20,7 +20,7 @@ interface DropdownSettingProps {
 
 export default class DropdownSetting extends React.Component<
     DropdownSettingProps,
-    {}
+    Record<string, never>
 > {
     render() {
         const { title, selectedValue, displayValue, onValueChange, values } =
