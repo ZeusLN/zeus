@@ -156,10 +156,24 @@ export default class Spark {
         this.rpc('listfunds').then(({ channels }: any) => ({
             balance: channels
                 .filter((o: any) => o.state === 'CHANNELD_NORMAL')
-                .reduce((acc: any, o: any) => acc + o.channel_sat, 0),
+                .reduce(
+                    (acc: any, o: any) =>
+                        acc +
+                        (typeof o.our_amount_msat === 'number'
+                            ? o.our_amount_msat / 1000
+                            : o.channel_sat),
+                    0
+                ),
             pending_open_balance: channels
                 .filter((o: any) => o.state === 'CHANNELD_AWAITING_LOCKIN')
-                .reduce((acc: any, o: any) => acc + o.channel_sat, 0)
+                .reduce(
+                    (acc: any, o: any) =>
+                        acc +
+                        (typeof o.our_amount_msat === 'number'
+                            ? o.our_amount_msat / 1000
+                            : o.channel_sat),
+                    0
+                )
         }));
     sendCoins = (data: TransactionRequest) =>
         this.rpc('withdraw', {
