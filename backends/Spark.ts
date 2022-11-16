@@ -90,22 +90,33 @@ export default class Spark {
                         remote_pubkey: peer.id,
                         channel_point: channel.funding_txid,
                         chan_id: channel.channel_id,
-                        capacity: Number(
-                            channel.msatoshi_total / 1000
+                        /* Since c-lightning v0.12.0, all amount fields end in _msat and (will) become
+                         * integers. We also still accept older deprecated fields from older nodes. */
+                        capacity: (typeof channel.total_msat === 'number'
+                            ? channel.total_msat / 1000
+                            : channel.msatoshi_total / 1000
                         ).toString(),
-                        local_balance: Number(
-                            channel.msatoshi_to_us / 1000
+                        local_balance: (typeof channel.to_us_msat === 'number'
+                            ? channel.to_us_msat / 1000
+                            : channel.msatoshi_to_us / 1000
                         ).toString(),
-                        remote_balance: Number(
-                            (channel.msatoshi_total - channel.msatoshi_to_us) /
-                                1000
+                        remote_balance: (typeof channel.total_msat ===
+                            'number' && typeof channel.to_us_msat === 'number'
+                            ? (channel.total_msat - channel.to_us_msat) / 1000
+                            : (channel.msatoshi_total -
+                                  channel.msatoshi_to_us) /
+                              1000
                         ).toString(),
-                        total_satoshis_sent: Number(
-                            channel.out_msatoshi_fulfilled / 1000
-                        ).toString(),
-                        total_satoshis_received: Number(
-                            channel.in_msatoshi_fulfilled / 1000
-                        ).toString(),
+                        total_satoshis_sent:
+                            (typeof channel.out_fulfilled_msat === 'number'
+                                ? channel.out_fulfilled_msat / 1000
+                                : channel.out_msatoshi_fulfilled / 1000
+                            ).toString(),
+                        total_satoshis_received:
+                            (typeof channel.in_fulfilled_msat === 'number'
+                                ? channel.in_fulfilled_msat / 1000
+                                : channel.in_msatoshi_fulfilled / 1000
+                            ).toString(),
                         num_updates: (
                             channel.in_payments_offered +
                             channel.out_payments_offered
@@ -113,9 +124,15 @@ export default class Spark {
                         csv_delay: channel.our_to_self_delay,
                         private: channel.private,
                         local_chan_reserve_sat:
-                            channel.our_channel_reserve_satoshis.toString(),
+                            (typeof channel.our_reserve_msat === 'number'
+                                ? channel.our_reserve_msat / 1000
+                                : channel.our_channel_reserve_satoshis
+                            ).toString(),
                         remote_chan_reserve_sat:
-                            channel.their_channel_reserve_satoshis.toString(),
+                            (typeof channel.their_reserve_msat === 'number'
+                                ? channel.their_reserve_msat / 1000
+                                : channel.their_channel_reserve_satoshis
+                            ).toString(),
                         close_address: channel.close_to_addr
                     };
                 })
