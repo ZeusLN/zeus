@@ -141,10 +141,24 @@ export default class Spark {
         this.rpc('listfunds').then(({ outputs }: any) => {
             const unconf = outputs
                 .filter((o: any) => o.status !== 'confirmed')
-                .reduce((acc: any, o: any) => acc + o.value, 0);
+                .reduce(
+                    (acc: any, o: any) =>
+                        acc +
+                        (typeof o.amount_msat === 'number'
+                            ? o.amount_msat / 1000
+                            : o.value),
+                    0
+                );
             const conf = outputs
                 .filter((o: any) => o.status === 'confirmed')
-                .reduce((acc: any, o: any) => acc + o.value, 0);
+                .reduce(
+                    (acc: any, o: any) =>
+                        acc +
+                        (typeof o.amount_msat === 'number'
+                            ? o.amount_msat / 1000
+                            : o.value),
+                    0
+                );
 
             return {
                 total_balance: conf + unconf,
