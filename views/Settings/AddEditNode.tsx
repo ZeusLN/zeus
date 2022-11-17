@@ -26,7 +26,10 @@ import {
 } from './../../components/SuccessErrorMessage';
 import TextInput from './../../components/TextInput';
 
-import SettingsStore, { INTERFACE_KEYS } from './../../stores/SettingsStore';
+import SettingsStore, {
+    INTERFACE_KEYS,
+    LNC_MAILBOX_KEYS
+} from './../../stores/SettingsStore';
 
 interface AddEditNodeProps {
     navigation: any;
@@ -54,6 +57,10 @@ interface AddEditNodeState {
     showLndHubModal: boolean;
     showCertModal: boolean;
     enableTor: boolean;
+    // lnc
+    pairingPhrase: string;
+    mailboxServer: string;
+    customMailboxServer: string;
 }
 
 @inject('SettingsStore')
@@ -82,7 +89,11 @@ export default class AddEditNode extends React.Component<
         showCertModal: false,
         username: '',
         password: '',
-        accessKey: ''
+        accessKey: '',
+        // lnc
+        pairingPhrase: '',
+        mailboxServer: 'mailbox.terminal.lightning.today:443',
+        customMailboxServer: ''
     };
 
     async UNSAFE_componentWillMount() {
@@ -189,7 +200,10 @@ export default class AddEditNode extends React.Component<
                 password,
                 implementation,
                 certVerification,
-                enableTor
+                enableTor,
+                pairingPhrase,
+                mailboxServer,
+                customMailboxServer
             } = node;
 
             this.setState({
@@ -209,7 +223,10 @@ export default class AddEditNode extends React.Component<
                 active,
                 saved,
                 newEntry,
-                enableTor: tor || enableTor
+                enableTor: tor || enableTor,
+                pairingPhrase,
+                mailboxServer,
+                customMailboxServer
             });
         } else {
             this.setState({
@@ -236,7 +253,10 @@ export default class AddEditNode extends React.Component<
             password,
             implementation,
             certVerification,
-            index
+            index,
+            pairingPhrase,
+            mailboxServer,
+            customMailboxServer
         } = this.state;
         const { setSettings, settings } = SettingsStore;
         const { passphrase, fiat, locale } = settings;
@@ -261,7 +281,10 @@ export default class AddEditNode extends React.Component<
             password,
             implementation,
             certVerification,
-            enableTor
+            enableTor,
+            pairingPhrase,
+            mailboxServer,
+            customMailboxServer
         };
 
         let nodes: any;
@@ -321,7 +344,10 @@ export default class AddEditNode extends React.Component<
             username,
             password,
             implementation,
-            certVerification
+            certVerification,
+            pairingPhrase,
+            mailboxServer,
+            customMailboxServer
         } = this.state;
         const { nodes } = settings;
 
@@ -338,7 +364,10 @@ export default class AddEditNode extends React.Component<
             password,
             implementation,
             certVerification,
-            enableTor
+            enableTor,
+            pairingPhrase,
+            mailboxServer,
+            customMailboxServer
         };
 
         navigation.navigate('AddEditNode', {
@@ -435,7 +464,10 @@ export default class AddEditNode extends React.Component<
             existingAccount,
             suggestImport,
             showLndHubModal,
-            showCertModal
+            showCertModal,
+            pairingPhrase,
+            mailboxServer,
+            customMailboxServer
         } = this.state;
         const {
             loading,
@@ -488,6 +520,24 @@ export default class AddEditNode extends React.Component<
                     });
                 }}
                 values={INTERFACE_KEYS}
+            />
+        );
+
+        const mailboxDisplayValue = LNC_MAILBOX_KEYS.filter(
+            (value: any) => value.value === mailboxServer
+        )[0].value;
+
+        const Mailbox = () => (
+            <DropdownSetting
+                title={localeString('views.Settings.AddEditNode.mailboxServer')}
+                selectedValue={mailboxDisplayValue}
+                onValueChange={(value: string) => {
+                    this.setState({
+                        mailboxServer: value,
+                        saved: false
+                    });
+                }}
+                values={LNC_MAILBOX_KEYS}
             />
         );
 
@@ -1097,36 +1147,64 @@ export default class AddEditNode extends React.Component<
                             </>
                         )}
 
-                        <>
-                            <Text
-                                style={{
-                                    top: 20,
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.AddEditNode.useTor'
+                        {implementation === 'lightning-node-connect' && (
+                            <>
+                                <Mailbox />
+                                {mailboxServer === 'custom-defined' && (
+                                    <>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.AddEditNode.customMailboxServer'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            placeholder={
+                                                'my-custom.lnc.server:443'
+                                            }
+                                            value={customMailboxServer}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    customMailboxServer:
+                                                        text.trim(),
+                                                    saved: false
+                                                })
+                                            }
+                                            editable={!loading}
+                                        />
+                                    </>
                                 )}
-                            </Text>
-                            <Switch
-                                value={enableTor}
-                                onValueChange={() =>
-                                    this.setState({
-                                        enableTor: !enableTor,
-                                        saved: false
-                                    })
-                                }
-                                trackColor={{
-                                    false: '#767577',
-                                    true: themeColor('highlight')
-                                }}
-                                style={{
-                                    alignSelf: 'flex-end'
-                                }}
-                            />
-                        </>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.AddEditNode.pairingPhrase'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    placeholder={
+                                        'cherry truth mask employ box silver mass bunker fiscal vote'
+                                    }
+                                    value={pairingPhrase}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            pairingPhrase: text.trim(),
+                                            saved: false
+                                        })
+                                    }
+                                    editable={!loading}
+                                />
+                            </>
+                        )}
 
-                        {!enableTor && (
+                        {implementation !== 'lightning-node-connect' && (
                             <>
                                 <Text
                                     style={{
@@ -1135,14 +1213,14 @@ export default class AddEditNode extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.Settings.AddEditNode.certificateVerification'
+                                        'views.Settings.AddEditNode.useTor'
                                     )}
                                 </Text>
                                 <Switch
-                                    value={certVerification}
+                                    value={enableTor}
                                     onValueChange={() =>
                                         this.setState({
-                                            certVerification: !certVerification,
+                                            enableTor: !enableTor,
                                             saved: false
                                         })
                                     }
@@ -1156,6 +1234,39 @@ export default class AddEditNode extends React.Component<
                                 />
                             </>
                         )}
+
+                        {implementation !== 'lightning-node-connect' &&
+                            !enableTor && (
+                                <>
+                                    <Text
+                                        style={{
+                                            top: 20,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.AddEditNode.certificateVerification'
+                                        )}
+                                    </Text>
+                                    <Switch
+                                        value={certVerification}
+                                        onValueChange={() =>
+                                            this.setState({
+                                                certVerification:
+                                                    !certVerification,
+                                                saved: false
+                                            })
+                                        }
+                                        trackColor={{
+                                            false: '#767577',
+                                            true: themeColor('highlight')
+                                        }}
+                                        style={{
+                                            alignSelf: 'flex-end'
+                                        }}
+                                    />
+                                </>
+                            )}
                     </View>
 
                     {!existingAccount && implementation === 'lndhub' && (
@@ -1201,7 +1312,12 @@ export default class AddEditNode extends React.Component<
                                       )
                             }
                             onPress={() => {
-                                if (!saved && !certVerification && !enableTor) {
+                                if (
+                                    !saved &&
+                                    !certVerification &&
+                                    !enableTor &&
+                                    implementation !== 'lightning-node-connect'
+                                ) {
                                     this.setState({ showCertModal: true });
                                 } else {
                                     this.saveNodeConfiguration();
