@@ -19,6 +19,10 @@ interface Node {
     certVerification?: boolean;
     enableTor?: boolean;
     nickname?: string;
+    // LNC
+    pairingPhrase?: string;
+    mailboxServer?: string;
+    customMailboxServer?: string;
 }
 
 interface PrivacySettings {
@@ -51,11 +55,20 @@ export const BLOCK_EXPLORER_KEYS = [
 ];
 
 export const INTERFACE_KEYS = [
-    { key: 'LND', value: 'lnd' },
+    { key: 'LND (REST)', value: 'lnd' },
+    { key: 'Lightning Node Connect', value: 'lightning-node-connect' },
     { key: 'c-lightning-REST', value: 'c-lightning-REST' },
     { key: 'Spark (c-lightning)', value: 'spark' },
     { key: 'Eclair', value: 'eclair' },
     { key: 'LNDHub', value: 'lndhub' }
+];
+
+export const LNC_MAILBOX_KEYS = [
+    {
+        key: 'mailbox.terminal.lightning.today:443',
+        value: 'mailbox.terminal.lightning.today:443'
+    },
+    { key: 'Custom defined mailbox', value: 'custom-defined' }
 ];
 
 export const LOCALE_KEYS = [
@@ -166,6 +179,10 @@ export default class SettingsStore {
     @observable public refreshToken: string;
     // Tor
     @observable public enableTor: boolean;
+    // LNC
+    @observable public pairingPhrase: string;
+    @observable public mailboxServer: string;
+    @observable public customMailboxServer: string;
 
     @action
     public changeLocale = (locale: string) => {
@@ -319,6 +336,10 @@ export default class SettingsStore {
                     this.implementation = node.implementation || 'lnd';
                     this.certVerification = node.certVerification || false;
                     this.enableTor = node.enableTor;
+                    // LNC
+                    this.pairingPhrase = node.pairingPhrase;
+                    this.mailboxServer = node.mailboxServer;
+                    this.customMailboxServer = node.customMailboxServer;
                 }
             } else {
                 console.log('No credentials stored');
@@ -401,5 +422,14 @@ export default class SettingsStore {
     @action
     public setConnectingStatus = (status = false) => {
         this.connecting = status;
+    };
+
+    // LNC
+    @action
+    public connect = async () => {
+        this.loading = true;
+        RESTUtils.initLNC();
+        await RESTUtils.connect();
+        this.loading = false;
     };
 }

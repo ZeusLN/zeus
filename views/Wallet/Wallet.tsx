@@ -163,7 +163,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             password,
             login,
             connecting,
-            setConnectingStatus
+            setConnectingStatus,
+            connect
         } = SettingsStore;
         const { fiat } = settings;
 
@@ -175,6 +176,16 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             BalanceStore.reset();
             login({ login: username, password }).then(async () => {
                 BalanceStore.getLightningBalance(true);
+            });
+        } else if (implementation === 'lightning-node-connect') {
+            connect().then(async () => {
+                UTXOsStore.listAccounts();
+
+                await BalanceStore.getCombinedBalance();
+                ChannelsStore.getChannels();
+                FeeStore.getFees();
+                NodeInfoStore.getNodeInfo();
+                FeeStore.getForwardingHistory();
             });
         } else {
             if (RESTUtils.supportsAccounts()) {
