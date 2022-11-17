@@ -523,7 +523,7 @@ export default class Receive extends React.Component<
                                     </>
                                 )}
 
-                                {implementation === 'lnd' && (
+                                {RESTUtils.isLNDBased() && (
                                     <>
                                         <Text
                                             style={{

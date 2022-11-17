@@ -111,6 +111,7 @@ class RESTUtils {
     supportsAccounts = () => this.call('supportsAccounts');
     supportsRouting = () => this.call('supportsRouting');
     supportsNodeInfo = () => this.call('supportsNodeInfo');
+    isLNDBased = () => this.call('isLNDBased');
     singleFeesEarnedTotal = () => this.call('singleFeesEarnedTotal');
     supportsAddressTypeSelection = () =>
         this.call('supportsAddressTypeSelection');

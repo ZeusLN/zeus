@@ -196,7 +196,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             NodeInfoStore.getNodeInfo();
         }
 
-        if (implementation === 'lnd') {
+        if (RESTUtils.isLNDBased()) {
             FeeStore.getForwardingHistory();
         }
 
