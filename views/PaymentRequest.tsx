@@ -152,7 +152,7 @@ export default class PaymentRequest extends React.Component<
 
         const { enableTor, implementation } = SettingsStore;
 
-        const isLnd: boolean = implementation === 'lnd';
+        const isLnd: boolean = RESTUtils.isLNDBased();
         const isCLightning: boolean = implementation === 'c-lightning-REST';
 
         const isNoAmountInvoice: boolean =

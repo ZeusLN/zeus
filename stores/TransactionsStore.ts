@@ -162,7 +162,7 @@ export default class TransactionsStore {
         this.publishSuccess = false;
         this.loading = true;
         if (
-            this.settingsStore.implementation === 'lnd' &&
+            RESTUtils.isLNDBased() &&
             transactionRequest.utxos &&
             transactionRequest.utxos.length > 0
         ) {

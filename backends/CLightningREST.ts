@@ -159,4 +159,5 @@ export default class CLightningREST extends LND {
     singleFeesEarnedTotal = () => true;
     supportsAddressTypeSelection = () => false;
     supportsTaproot = () => false;
+    isLNDBased = () => false;
 }

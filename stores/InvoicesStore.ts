@@ -42,7 +42,7 @@ export default class InvoicesStore {
                 if (
                     this.pay_req &&
                     this.pay_req.destination &&
-                    (this.settingsStore.implementation === 'lnd' ||
+                    (RESTUtils.isLNDBased() ||
                         this.settingsStore.implementation === 'spark')
                 ) {
                     this.getRoutes(
@@ -175,7 +175,7 @@ export default class InvoicesStore {
                         });
                 }
 
-                if (this.settingsStore.implementation === 'lnd') {
+                if (RESTUtils.isLNDBased()) {
                     const formattedRhash = invoice.r_hash
                         .replace(/\+/g, '-')
                         .replace(/\//g, '_');
