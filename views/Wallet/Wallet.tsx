@@ -178,15 +178,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 BalanceStore.getLightningBalance(true);
             });
         } else if (implementation === 'lightning-node-connect') {
-            connect().then(async () => {
-                UTXOsStore.listAccounts();
-
-                await BalanceStore.getCombinedBalance();
-                ChannelsStore.getChannels();
-                FeeStore.getFees();
-                NodeInfoStore.getNodeInfo();
-                FeeStore.getForwardingHistory();
-            });
+            if (connecting) await connect();
+            UTXOsStore.listAccounts();
+            await BalanceStore.getCombinedBalance();
+            ChannelsStore.getChannels();
+            FeeStore.getFees();
+            NodeInfoStore.getNodeInfo();
+            FeeStore.getForwardingHistory();
         } else {
             if (RESTUtils.supportsAccounts()) {
                 UTXOsStore.listAccounts();
