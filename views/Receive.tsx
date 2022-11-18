@@ -1,6 +1,8 @@
 import * as React from 'react';
 import {
     Image,
+    NativeEventEmitter,
+    NativeModules,
     ScrollView,
     StyleSheet,
     Switch,
@@ -60,6 +62,7 @@ export default class Receive extends React.Component<
     ReceiveProps,
     ReceiveState
 > {
+    listener: any;
     state = {
         addressType: '0',
         selectedIndex: 0,
@@ -101,6 +104,45 @@ export default class Receive extends React.Component<
             });
         }
     }
+
+    componentWillUnmount() {
+        if (this.listener && this.listener.stop) this.listener.stop();
+    }
+
+    subscribeInvoice = (rHash: string) => {
+        const { InvoicesStore, SettingsStore } = this.props;
+        const { implementation } = SettingsStore;
+        const { setWatchedInvoicePaid } = InvoicesStore;
+        if (implementation === 'lightning-node-connect') {
+            const { LncModule } = NativeModules;
+            const eventName = RESTUtils.subscribeInvoice(rHash);
+            const eventEmitter = new NativeEventEmitter(LncModule);
+            this.listener = eventEmitter.addListener(
+                eventName,
+                (event: any) => {
+                    if (event.result) {
+                        try {
+                            const result = JSON.parse(event.result);
+                            if (result.settled) {
+                                setWatchedInvoicePaid();
+                                this.listener = null;
+                            }
+                        } catch (error: Error) {
+                            console.error(error);
+                        }
+                    }
+                }
+            );
+        }
+
+        if (implementation === 'lnd') {
+            RESTUtils.subscribeInvoice(formattedRhash).then((response: any) => {
+                if (response.result && response.result.settled) {
+                    setWatchedInvoicePaid();
+                }
+            });
+        }
+    };
 
     getNewAddress = (params: any) => {
         const { InvoicesStore } = this.props;
@@ -353,7 +395,8 @@ export default class Receive extends React.Component<
                                     ...styles.text,
                                     fontSize: 20,
                                     top: -50,
-                                    alignSelf: 'center'
+                                    alignSelf: 'center',
+                                    color: themeColor('text')
                                 }}
                             >
                                 {`${localeString(
@@ -601,7 +644,7 @@ export default class Receive extends React.Component<
                                                   )} ${lnurl.domain}`
                                                 : '')
                                         }
-                                        onPress={() =>
+                                        onPress={() => {
                                             createInvoice(
                                                 memo,
                                                 satAmount.toString() || '0',
@@ -609,8 +652,10 @@ export default class Receive extends React.Component<
                                                 lnurl,
                                                 ampInvoice,
                                                 routeHints
-                                            )
-                                        }
+                                            ).then((rHash: string) =>
+                                                this.subscribeInvoice(rHash)
+                                            );
+                                        }}
                                     />
                                 </View>
                             </View>

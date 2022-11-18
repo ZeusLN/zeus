@@ -127,7 +127,7 @@ export default class InvoicesStore {
         if (ampInvoice) req.is_amp = true;
         if (routeHints) req.private = true;
 
-        RESTUtils.createInvoice(req)
+        return RESTUtils.createInvoice(req)
             .then((data: any) => {
                 const invoice = new Invoice(data);
                 this.payment_request = invoice.getPaymentRequest;
@@ -175,18 +175,11 @@ export default class InvoicesStore {
                         });
                 }
 
-                if (RESTUtils.isLNDBased()) {
-                    const formattedRhash = invoice.r_hash
-                        .replace(/\+/g, '-')
-                        .replace(/\//g, '_');
-                    RESTUtils.subscribeInvoice(formattedRhash).then(
-                        (response: any) => {
-                            if (response.result && response.result.settled) {
-                                this.watchedInvoicePaid = true;
-                            }
-                        }
-                    );
-                }
+                const formattedRhash = invoice.r_hash
+                    .replace(/\+/g, '-')
+                    .replace(/\//g, '_');
+
+                return formattedRhash;
             })
             .catch((error: any) => {
                 // handle error
@@ -196,6 +189,11 @@ export default class InvoicesStore {
                     error.toString() ||
                     localeString('stores.InvoicesStore.errorCreatingInvoice');
             });
+    };
+
+    @action
+    public setWatchedInvoicePaid = () => {
+        this.watchedInvoicePaid = true;
     };
 
     @action
