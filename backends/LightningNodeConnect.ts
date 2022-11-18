@@ -206,7 +206,7 @@ export default class LightningNodeConnect {
             end_time: Math.round(new Date().getTime() / 1000).toString()
         };
         return await lnc.lnd.lightning
-            .getInfo(req)
+            .forwardingHistory(req)
             .then((data: any) => snakeize(data));
     };
     // Coin Control
