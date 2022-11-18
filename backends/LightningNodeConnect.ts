@@ -7,6 +7,15 @@ import OpenChannelRequest from './../models/OpenChannelRequest';
 import { snakeize } from './../utils/DataFormatUtils';
 import VersionUtils from './../utils/VersionUtils';
 
+const ADDRESS_TYPES = [
+    'WITNESS_PUBKEY_HASH',
+    'NESTED_PUBKEY_HASH',
+    'UNUSED_WITNESS_PUBKEY_HASH',
+    'UNUSED_NESTED_PUBKEY_HASH',
+    'TAPROOT_PUBKEY',
+    'UNUSED_TAPROOT_PUBKEY'
+];
+
 export default class LightningNodeConnect {
     lnc: any;
 
@@ -73,10 +82,13 @@ export default class LightningNodeConnect {
         await lnc.lnd.lightning
             .listPayments({})
             .then((data: any) => snakeize(data));
-    getNewAddress = async (data: any) =>
-        await lnc.lnd.lightning
-            .newAddress(data)
+    getNewAddress = async (data: any) => {
+        console.log('!@#!', data);
+        return await lnc.lnd.lightning
+            .newAddress({ type: ADDRESS_TYPES[data.type] })
             .then((data: any) => snakeize(data));
+    };
+
     openChannel = async (data: OpenChannelRequest) =>
         await lnc.lnd.lightning
             .openChannelSync({
