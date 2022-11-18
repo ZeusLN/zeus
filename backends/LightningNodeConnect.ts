@@ -94,7 +94,7 @@ export default class LightningNodeConnect {
                 spend_unconfirmed: data.spend_unconfirmed
             })
             .then((data: any) => snakeize(data));
-    // TODO test streaming call
+    // TODO add with external accounts
     // openChannelStream = (data: OpenChannelRequest) =>
     //     this.wsReq('/v1/channels/stream', 'POST', data);
     connectPeer = async (data: any) =>
@@ -244,9 +244,8 @@ export default class LightningNodeConnect {
         await lnc.lnd.signer
             .verifyMessage({ msg: req.msg, signature: req.signature })
             .then((data: any) => snakeize(data));
-    // TODO test streaming call
-    // subscribeInvoice = (r_hash: string) =>
-    //     this.getRequest(`/v2/invoices/subscribe/${r_hash}`);
+    subscribeInvoice = (r_hash: string) =>
+        lnc.lnd.invoices.subscribeSingleInvoice({ r_hash });
 
     supports = (minVersion: string, eosVersion?: string) => {
         const { nodeInfo } = stores.nodeInfoStore;
