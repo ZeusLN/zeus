@@ -1,17 +1,11 @@
 // TODO pull in all typings
 import LNC from '@lightninglabs/lnc-rn';
-import { snakeCase, isArray, isObject, transform } from 'lodash';
+
 import stores from '../stores/Stores';
 import CredentialStore from './LNC/credentialStore';
 import OpenChannelRequest from './../models/OpenChannelRequest';
+import { snakeize } from './../utils/DataFormatUtils';
 import VersionUtils from './../utils/VersionUtils';
-
-// TODO move to utility
-const snakeize = (obj) =>
-    transform(obj, (acc, value, key, target) => {
-        const snakeKey = isArray(target) ? key : snakeCase(key);
-        acc[snakeKey] = isObject(value) ? snakeize(value) : value;
-    });
 
 export default class LightningNodeConnect {
     lnc: any;
