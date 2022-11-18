@@ -68,7 +68,6 @@ class RESTUtils {
     openChannelStream = (...args: any[]) =>
         this.call('openChannelStream', args);
     connectPeer = (...args: any[]) => this.call('connectPeer', args);
-    listNode = (...args: any[]) => this.call('listNode', args);
     decodePaymentRequest = (...args: any[]) =>
         this.call('decodePaymentRequest', args);
     payLightningInvoice = (...args: any[]) =>

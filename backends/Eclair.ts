@@ -251,7 +251,6 @@ export default class Eclair {
         }).then(() => ({}));
     connectPeer = (data: any) =>
         this.api('connect', { uri: data.addr.pubkey + '@' + data.addr.host });
-    listNode = () => 'N/A';
     decodePaymentRequest = (urlParams?: Array<string>) =>
         this.api('parseinvoice', { invoice: [urlParams && urlParams[0]] }).then(
             ({

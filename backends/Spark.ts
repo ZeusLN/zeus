@@ -178,7 +178,6 @@ export default class Spark {
         }).then(({ txid }: any) => ({ funding_txid_str: txid }));
     connectPeer = (data: any) =>
         this.rpc('connect', [data.addr.pubkey, data.addr.host]);
-    listNode = () => 'N/A';
     decodePaymentRequest = (urlParams?: Array<string>) =>
         this.rpc('decodepay', [urlParams && urlParams[0]]);
     payLightningInvoice = (data: any) =>

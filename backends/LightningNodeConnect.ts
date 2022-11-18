@@ -101,8 +101,6 @@ export default class LightningNodeConnect {
         await lnc.lnd.lightning
             .connectPeer(data)
             .then((data: any) => snakeize(data));
-    // TODO investigate removed endpoint
-    // listNode = () => this.getRequest('/v1/network/listNode');
     decodePaymentRequest = async (urlParams?: Array<string>) =>
         await lnc.lnd.lightning
             .decodePayReq({ pay_req: urlParams && urlParams[0] })

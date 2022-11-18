@@ -229,7 +229,6 @@ export default class LND {
     openChannelStream = (data: OpenChannelRequest) =>
         this.wsReq('/v1/channels/stream', 'POST', data);
     connectPeer = (data: any) => this.postRequest('/v1/peers', data);
-    listNode = () => this.getRequest('/v1/network/listNode');
     decodePaymentRequest = (urlParams?: Array<string>) =>
         this.getRequest(`/v1/payreq/${urlParams && urlParams[0]}`);
     payLightningInvoice = (data: any) => {
