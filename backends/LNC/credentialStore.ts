@@ -120,6 +120,7 @@ export default class LncCredentialStore implements CredentialStore {
             const json = await EncryptedStorage.getItem(key);
             if (!json) return this._save();
             this.persisted = JSON.parse(json);
+            console.log('@@@this.persisted', this.persisted);
             this._localKey = this.persisted.localKey;
             this._remoteKey = this.persisted.remoteKey;
         } catch (error) {
