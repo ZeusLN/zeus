@@ -116,8 +116,9 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
         );
 
         let mainPane;
+        const error = NodeInfoStore.error || SettingsStore.error;
 
-        if (!NodeInfoStore.error) {
+        if (!error) {
             mainPane = (
                 <View
                     style={{
@@ -166,7 +167,9 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                             marginBottom: 25
                         }}
                     >
-                        {NodeInfoStore.errorMsg
+                        {SettingsStore.errorMsg
+                            ? SettingsStore.errorMsg
+                            : NodeInfoStore.errorMsg
                             ? NodeInfoStore.errorMsg
                             : localeString('views.Wallet.MainPane.error')}
                     </Text>

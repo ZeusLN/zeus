@@ -119,6 +119,7 @@ class RESTUtils {
     // LNC
     initLNC = (...args: any[]) => this.call('initLNC', args);
     connect = (...args: any[]) => this.call('connect', args);
+    isConnected = (...args: any[]) => this.call('isConnected', args);
 }
 
 const restUtils = new RESTUtils();
