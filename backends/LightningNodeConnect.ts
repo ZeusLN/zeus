@@ -35,6 +35,7 @@ export default class LightningNodeConnect {
     };
 
     connect = async () => await lnc.connect();
+    isConnected = async () => await lnc.isConnected();
 
     getTransactions = async () =>
         await lnc.lnd.lightning.getTransactions({}).then((data: any) => {

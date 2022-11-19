@@ -178,13 +178,19 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 BalanceStore.getLightningBalance(true);
             });
         } else if (implementation === 'lightning-node-connect') {
-            if (connecting) await connect();
-            UTXOsStore.listAccounts();
-            await BalanceStore.getCombinedBalance();
-            ChannelsStore.getChannels();
-            FeeStore.getFees();
-            NodeInfoStore.getNodeInfo();
-            FeeStore.getForwardingHistory();
+            let error;
+            if (connecting) {
+                error = await connect();
+                console.log('###', error);
+            }
+            if (!error) {
+                UTXOsStore.listAccounts();
+                await BalanceStore.getCombinedBalance();
+                ChannelsStore.getChannels();
+                FeeStore.getFees();
+                NodeInfoStore.getNodeInfo();
+                FeeStore.getForwardingHistory();
+            }
         } else {
             if (RESTUtils.supportsAccounts()) {
                 UTXOsStore.listAccounts();
@@ -196,7 +202,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             NodeInfoStore.getNodeInfo();
         }
 
-        if (RESTUtils.isLNDBased()) {
+        if (implementation === 'lnd') {
             FeeStore.getForwardingHistory();
         }
 
@@ -221,7 +227,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             SettingsStore,
             navigation
         } = this.props;
-        const { error, nodeInfo } = NodeInfoStore;
+        const { nodeInfo } = NodeInfoStore;
+        const error = NodeInfoStore.error || SettingsStore.error;
         const { implementation, settings, loggedIn, connecting } =
             SettingsStore;
         const loginRequired =

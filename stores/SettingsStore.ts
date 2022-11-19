@@ -183,6 +183,8 @@ export default class SettingsStore {
     @observable public pairingPhrase: string;
     @observable public mailboxServer: string;
     @observable public customMailboxServer: string;
+    @observable public error = false;
+    @observable public errorMsg: string;
 
     @action
     public changeLocale = (locale: string) => {
@@ -414,6 +416,45 @@ export default class SettingsStore {
             });
     };
 
+    // LNC
+    @action
+    public connect = async () => {
+        this.loading = true;
+
+        RESTUtils.initLNC();
+
+        const error = await RESTUtils.connect();
+        if (error) {
+            this.error = true;
+            this.errorMsg = error;
+            return error;
+        }
+
+        // repeatedly check if the connection was successful
+        return new Promise<void>((resolve) => {
+            let counter = 0;
+            const interval = setInterval(async () => {
+                counter++;
+                connected = await RESTUtils.isConnected();
+                if (connected) {
+                    clearInterval(interval);
+                    this.loading = false;
+                    resolve();
+                    log.info('The LNC client is connected to the server');
+                } else if (counter > 20) {
+                    clearInterval(interval);
+                    this.error = true;
+                    this.errorMsg =
+                        'Failed to connect the LNC client to the proxy server';
+                    this.loading = false;
+                    resolve(
+                        'Failed to connect the LNC client to the proxy server'
+                    );
+                }
+            }, 500);
+        });
+    };
+
     @action
     public setLoginStatus = (status = false) => {
         this.loggedIn = status;
@@ -422,14 +463,5 @@ export default class SettingsStore {
     @action
     public setConnectingStatus = (status = false) => {
         this.connecting = status;
-    };
-
-    // LNC
-    @action
-    public connect = async () => {
-        this.loading = true;
-        RESTUtils.initLNC();
-        await RESTUtils.connect();
-        this.loading = false;
     };
 }
