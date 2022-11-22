@@ -17,6 +17,13 @@ describe('ErrorUtils', () => {
             ).toEqual(
                 'Error starting up Tor on your phone. Try restarting Zeus. If the problem persists consider reinstalling the app.'
             );
+            expect(
+                ErrorUtils.errorToUserFriendly(
+                    'Error: called `Result::unwrap()` on an `Err` value: BootStrapError("Timeout waiting for boostrap")'
+                )
+            ).toEqual(
+                'Error starting up Tor on your phone. Try restarting Zeus. If the problem persists consider reinstalling the app.'
+            );
         });
 
         it('Returns inputted error if no match found', () => {
