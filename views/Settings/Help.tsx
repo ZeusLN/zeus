@@ -31,11 +31,17 @@ function Help(props: HelpProps) {
     );
 
     const HELP_ITEMS = [
-        { label: 'Telegram Group', url: 'https://t.me/ZeusLN' },
-        { label: 'Twitter (DMs open)', url: 'https://twitter.com/ZeusLN' },
         {
-            label: 'GitHub Issues',
+            label: localeString('views.Settings.Help.github'),
             url: 'https://github.com/ZeusLN/zeus/issues'
+        },
+        {
+            label: localeString('views.Settings.Help.telegram'),
+            url: 'https://t.me/ZeusLN'
+        },
+        {
+            label: localeString('views.Settings.Help.twitter'),
+            url: 'https://twitter.com/ZeusLN'
         }
     ];
 

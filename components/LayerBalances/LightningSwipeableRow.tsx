@@ -31,9 +31,13 @@ export default class LightningSwipeableRow extends Component<
         x: number,
         progress: Animated.AnimatedInterpolation
     ) => {
-        const trans = progress.interpolate({
+        const transTranslateX = progress.interpolate({
             inputRange: [0.25, 1],
             outputRange: [x, 0]
+        });
+        const transOpacity = progress.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, 1]
         });
         const pressHandler = () => {
             this.close();
@@ -49,7 +53,11 @@ export default class LightningSwipeableRow extends Component<
 
         return (
             <Animated.View
-                style={{ flex: 1, transform: [{ translateX: trans }] }}
+                style={{
+                    flex: 1,
+                    transform: [{ translateX: transTranslateX }],
+                    opacity: transOpacity
+                }}
             >
                 <RectButton style={[styles.action]} onPress={pressHandler}>
                     {text === localeString('general.routing') && (
@@ -95,7 +103,7 @@ export default class LightningSwipeableRow extends Component<
             {RESTUtils.supportsRouting() &&
                 this.renderAction(
                     localeString('general.routing'),
-                    100,
+                    200,
                     progress
                 )}
             {this.renderAction(

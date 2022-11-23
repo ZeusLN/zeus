@@ -28,6 +28,7 @@ export default class Channel extends BaseModel {
     remote_pubkey: string;
     capacity: string;
     private: boolean;
+    initiator?: boolean;
     // c-lightning
     @observable
     state: string;

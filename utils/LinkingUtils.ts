@@ -1,12 +1,20 @@
-import { Linking } from 'react-native';
+import { Linking, NativeModules } from 'react-native';
 import { localeString } from './LocaleUtils';
 import handleAnything from './handleAnything';
 
 class LinkingUtils {
     handleInitialUrl = (navigation: any) =>
-        Linking.getInitialURL().then(
-            (url) => url && this.handleDeepLink(url, navigation)
-        );
+        Linking.getInitialURL().then(async (url) => {
+            if (url) {
+                this.handleDeepLink(url, navigation);
+                return;
+            }
+            if (Platform.OS === 'android') {
+                const nfcData =
+                    await NativeModules.MobileTools.getIntentNfcData();
+                if (nfcData) this.handleDeepLink(nfcData, navigation);
+            }
+        });
 
     handleDeepLink = (url: string, navigation: any) =>
         handleAnything(url)

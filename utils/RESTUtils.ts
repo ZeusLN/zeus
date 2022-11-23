@@ -103,6 +103,9 @@ class RESTUtils {
     supportsRouting = () => this.call('supportsRouting');
     supportsNodeInfo = () => this.call('supportsNodeInfo');
     singleFeesEarnedTotal = () => this.call('singleFeesEarnedTotal');
+    supportsAddressTypeSelection = () =>
+        this.call('supportsAddressTypeSelection');
+    supportsTaproot = () => this.call('supportsTaproot');
 }
 
 const restUtils = new RESTUtils();

@@ -37,6 +37,7 @@ interface Settings {
     duressPassphrase?: string;
     pin?: string;
     duressPin?: string;
+    scramblePin?: boolean;
     authenticationAttempts?: number;
     fiat?: string;
     locale?: string;
@@ -137,12 +138,15 @@ export default class SettingsStore {
             clipboard: true,
             lurkerMode: false,
             enableMempoolRates: true
-        }
+        },
+        scramblePin: true
     };
     @observable public loading = false;
     @observable btcPayError: string | null;
-    @observable olympiansError: string | null;
+    @observable sponsorsError: string | null;
     @observable olympians: Array<any>;
+    @observable gods: Array<any>;
+    @observable mortals: Array<any>;
     @observable host: string;
     @observable port: string;
     @observable url: string;
@@ -207,24 +211,29 @@ export default class SettingsStore {
     };
 
     @action
-    public fetchOlympians = () => {
-        const olympiansRoute =
-            'https://zeusln.app/api/sponsors/getCommunitySponsors';
-        this.olympiansError = null;
+    public fetchSponsors = () => {
+        const olympiansRoute = 'https://zeusln.app/api/sponsors/getSponsors';
+        this.sponsorsError = null;
         this.olympians = [];
+        this.gods = [];
+        this.mortals = [];
         this.loading = true;
 
         if (this.enableTor) {
             return doTorRequest(olympiansRoute, RequestMethod.GET)
                 .then((response: any) => {
-                    this.olympians = response;
+                    this.olympians = response.olympians;
+                    this.gods = response.gods;
+                    this.mortals = response.mortals;
                     this.loading = false;
                 })
                 .catch((err: any) => {
                     // handle error
                     this.olympians = [];
+                    this.gods = [];
+                    this.mortals = [];
                     this.loading = false;
-                    this.olympiansError = `${localeString(
+                    this.sponsorsError = `${localeString(
                         'stores.SettingsStore.olympianFetchError'
                     )}: ${err.toString()}`;
                 });
@@ -234,12 +243,16 @@ export default class SettingsStore {
                     const status = response.info().status;
                     if (status == 200) {
                         const data = response.json();
-                        this.olympians = data;
+                        this.olympians = data.olympians;
+                        this.gods = data.gods;
+                        this.mortals = data.mortals;
                         this.loading = false;
                     } else {
                         this.olympians = [];
+                        this.gods = [];
+                        this.mortals = [];
                         this.loading = false;
-                        this.olympiansError = localeString(
+                        this.sponsorsError = localeString(
                             'stores.SettingsStore.olympianFetchError'
                         );
                     }
@@ -247,8 +260,10 @@ export default class SettingsStore {
                 .catch((err: any) => {
                     // handle error
                     this.olympians = [];
+                    this.gods = [];
+                    this.mortals = [];
                     this.loading = false;
-                    this.olympiansError = `${localeString(
+                    this.sponsorsError = `${localeString(
                         'stores.SettingsStore.olympianFetchError'
                     )}: ${err.toString()}`;
                 });

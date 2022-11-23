@@ -9,6 +9,7 @@ import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import ActivityStore from './../../stores/ActivityStore';
+import TextInput from './../../components/TextInput';
 
 interface ActivityFilterProps {
     navigation: any;
@@ -52,6 +53,7 @@ export default class ActivityFilter extends React.Component<
             loading,
             setFilters,
             filters,
+            setAmountFilter,
             setStartDateFilter,
             setEndDateFilter,
             clearStartDateFilter,
@@ -63,6 +65,7 @@ export default class ActivityFilter extends React.Component<
             channels,
             sent,
             received,
+            minimumAmount,
             startDate,
             endDate
         } = filters;
@@ -242,6 +245,11 @@ export default class ActivityFilter extends React.Component<
                 type: 'Toggle'
             },
             {
+                label: localeString('views.ActivityFilter.minimumAmount'),
+                value: minimumAmount,
+                type: 'Amount'
+            },
+            {
                 label: localeString('general.date'),
                 value: received,
                 var: 'received',
@@ -314,6 +322,31 @@ export default class ActivityFilter extends React.Component<
                                             trackColor={{
                                                 false: '#767577',
                                                 true: themeColor('highlight')
+                                            }}
+                                        />
+                                    </View>
+                                )}
+                                {item.type === 'Amount' && (
+                                    <View
+                                        style={{
+                                            flex: 1
+                                        }}
+                                    >
+                                        <TextInput
+                                            keyboardType="numeric"
+                                            placeholder="0"
+                                            value={
+                                                item.value === 0
+                                                    ? ''
+                                                    : String(item.value)
+                                            }
+                                            onChangeText={(text: string) => {
+                                                const newMinAmount = !isNaN(
+                                                    Number(text)
+                                                )
+                                                    ? Number(text)
+                                                    : 0;
+                                                setAmountFilter(newMinAmount);
                                             }}
                                         />
                                     </View>

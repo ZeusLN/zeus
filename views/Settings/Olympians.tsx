@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { Dimensions, FlatList, Text, View } from 'react-native';
 import { Avatar, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -21,12 +21,12 @@ interface OlympiansProps {
 @observer
 export default class Olympians extends React.Component<OlympiansProps, {}> {
     UNSAFE_componentWillMount() {
-        this.props.SettingsStore.fetchOlympians();
+        this.props.SettingsStore.fetchSponsors();
     }
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { olympiansError, olympians, loading } = SettingsStore;
+        const { sponsorsError, olympians, loading } = SettingsStore;
 
         const BackButton = () => (
             <Icon
@@ -59,7 +59,7 @@ export default class Olympians extends React.Component<OlympiansProps, {}> {
                     }}
                 />
                 {loading && <LoadingIndicator />}
-                {!loading && !olympiansError && (
+                {!loading && !sponsorsError && (
                     <>
                         <FlatList
                             data={olympians.slice().reverse()}
@@ -77,17 +77,20 @@ export default class Olympians extends React.Component<OlympiansProps, {}> {
                                     }
                                 >
                                     <Avatar
-                                        size={76}
+                                        size={
+                                            Dimensions.get('window').width / 3 -
+                                            20
+                                        }
                                         rounded
                                         source={{
                                             uri: `https://zeusln.app/api/twitter-images/${item.handle}.jpg`
                                         }}
                                         key={1}
-                                        containerStyle={{ margin: 10 }}
+                                        containerStyle={{ margin: 8 }}
                                     />
                                 </ListItem>
                             )}
-                            numColumns={4}
+                            numColumns={3}
                             keyExtractor={(item, index) => index}
                             style={{ alignSelf: 'center' }}
                         />
@@ -99,14 +102,12 @@ export default class Olympians extends React.Component<OlympiansProps, {}> {
                                 margin: 10
                             }}
                             onPress={() =>
-                                UrlUtils.goToUrl(
-                                    'https://zeusln.app/about#communitySponsors'
-                                )
+                                UrlUtils.goToUrl('https://zeusln.app/sponsor')
                             }
                         />
                     </>
                 )}
-                {olympiansError && (
+                {sponsorsError && (
                     <Text
                         style={{
                             color: 'red',
@@ -115,7 +116,7 @@ export default class Olympians extends React.Component<OlympiansProps, {}> {
                             fontSize: 20
                         }}
                     >
-                        {olympiansError}
+                        {sponsorsError}
                     </Text>
                 )}
             </View>

@@ -78,4 +78,6 @@ export default class LndHub extends LND {
     supportsRouting = () => false;
     supportsNodeInfo = () => false;
     singleFeesEarnedTotal = () => false;
+    supportsAddressTypeSelection = () => false;
+    supportsTaproot = () => false;
 }

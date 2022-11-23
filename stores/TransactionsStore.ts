@@ -11,7 +11,7 @@ const keySendPreimageType = '5482373484';
 const keySendMessageType = '34349334';
 const preimageByteLength = 32;
 
-interface SendPaymentReq {
+export interface SendPaymentReq {
     payment_request?: string;
     amount?: string;
     pubkey?: string;
@@ -114,7 +114,8 @@ export default class TransactionsStore {
                 outputs,
                 inputs
             },
-            sat_per_vbyte: Number(sat_per_byte)
+            sat_per_vbyte: Number(sat_per_byte),
+            spend_unconfirmed: true
         };
 
         RESTUtils.fundPsbt(fundPsbtRequest)

@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { TextInput as TextInputRN } from 'react-native';
+import {
+    StyleSheet,
+    Text,
+    TextInput as TextInputRN,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { themeColor } from './../utils/ThemeUtils';
 
 interface TextInputProps {
@@ -16,9 +22,12 @@ interface TextInputProps {
     multiline?: boolean;
     autoFocus?: boolean;
     secureTextEntry?: boolean;
+    prefix?: string;
+    suffix?: string;
+    toggleUnits?: any;
 }
 
-function TextInput(props: TextInputProps) {
+export default function TextInput(props: TextInputProps) {
     const {
         placeholder,
         value,
@@ -32,7 +41,10 @@ function TextInput(props: TextInputProps) {
         autoCorrect,
         multiline,
         autoFocus,
-        secureTextEntry
+        secureTextEntry,
+        prefix,
+        suffix,
+        toggleUnits
     } = props;
 
     const defaultStyle = numberOfLines
@@ -44,36 +56,76 @@ function TextInput(props: TextInputProps) {
           };
 
     return (
-        <TextInputRN
-            placeholder={placeholder}
-            value={value}
-            onChangeText={onChangeText}
-            numberOfLines={numberOfLines || 1}
+        <View
             style={{
                 ...style,
                 ...defaultStyle,
-                color: themeColor('text'),
-                backgroundColor: themeColor('secondary'),
-                fontSize: 20,
-                width: '100%',
-                top: 10,
-                borderRadius: 6,
-                marginBottom: 20,
-                padding: 10,
-                fontFamily: 'Lato-Regular'
+                ...styles.wrapper
             }}
-            placeholderTextColor={
-                placeholderTextColor || themeColor('secondaryText')
-            }
-            editable={editable ? editable : true}
-            keyboardType={keyboardType}
-            autoCapitalize={autoCapitalize}
-            autoCorrect={autoCorrect}
-            multiline={multiline}
-            autoFocus={autoFocus}
-            secureTextEntry={secureTextEntry}
-        />
+        >
+            {prefix && (
+                <TouchableOpacity onPress={() => toggleUnits()}>
+                    <Text style={{ ...styles.unit, marginRight: 5 }}>
+                        {prefix}
+                    </Text>
+                </TouchableOpacity>
+            )}
+            <TextInputRN
+                placeholder={placeholder}
+                value={value}
+                onChangeText={onChangeText}
+                numberOfLines={numberOfLines || 1}
+                style={styles.input}
+                placeholderTextColor={
+                    placeholderTextColor || themeColor('secondaryText')
+                }
+                editable={editable ? editable : true}
+                keyboardType={keyboardType}
+                autoCapitalize={autoCapitalize}
+                autoCorrect={autoCorrect}
+                multiline={multiline}
+                autoFocus={autoFocus}
+                secureTextEntry={secureTextEntry}
+            />
+            {suffix && (
+                <TouchableOpacity onPress={() => toggleUnits()}>
+                    <Text
+                        style={{
+                            ...styles.unit,
+                            right: 45
+                        }}
+                    >
+                        {suffix}
+                    </Text>
+                </TouchableOpacity>
+            )}
+        </View>
     );
 }
 
-export default TextInput;
+const styles = StyleSheet.create({
+    wrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        top: 10,
+        borderRadius: 6,
+        marginBottom: 20,
+        padding: 10,
+        backgroundColor: themeColor('secondary'),
+        overflow: 'hidden'
+    },
+    unit: {
+        color: themeColor('text'),
+        backgroundColor: themeColor('background'),
+        fontSize: 20,
+        borderRadius: 6,
+        padding: 5
+    },
+    input: {
+        color: themeColor('text'),
+        fontSize: 20,
+        width: '100%',
+        fontFamily: 'Lato-Regular',
+        top: 3
+    }
+});

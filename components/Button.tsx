@@ -10,11 +10,13 @@ interface ButtonProps {
     secondary?: boolean;
     tertiary?: boolean;
     quaternary?: boolean;
+    quinary?: boolean;
     iconOnly?: boolean;
     adaptiveWidth?: boolean;
     containerStyle?: any;
     buttonStyle?: any;
     noUppercase?: boolean;
+    disabled?: boolean;
 }
 
 function Button(props: ButtonProps) {
@@ -26,11 +28,13 @@ function Button(props: ButtonProps) {
         secondary,
         tertiary,
         quaternary,
+        quinary,
         iconOnly,
         adaptiveWidth,
         containerStyle,
         buttonStyle,
-        noUppercase
+        noUppercase,
+        disabled
     } = props;
 
     const newContainerStyle: any = adaptiveWidth
@@ -68,13 +72,7 @@ function Button(props: ButtonProps) {
                               : themeColor('background'),
                           ...icon
                       }
-                    : {
-                          color: iconOnly
-                              ? themeColor('text')
-                              : secondary
-                              ? themeColor('highlight')
-                              : themeColor('background')
-                      }
+                    : null
             }
             title={title}
             buttonStyle={
@@ -83,6 +81,8 @@ function Button(props: ButtonProps) {
                     : {
                           backgroundColor: iconOnly
                               ? 'transparent'
+                              : quinary
+                              ? themeColor('secondary')
                               : quaternary
                               ? themeColor('background')
                               : tertiary
@@ -102,6 +102,8 @@ function Button(props: ButtonProps) {
                     : {
                           color: iconOnly
                               ? themeColor('text')
+                              : quinary
+                              ? themeColor('text')
                               : quaternary
                               ? themeColor('text')
                               : secondary
@@ -113,6 +115,7 @@ function Button(props: ButtonProps) {
             }
             onPress={onPress}
             containerStyle={newContainerStyle}
+            disabled={disabled}
         />
     );
 }

@@ -102,6 +102,7 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                           passphrase: settings.passphrase,
                           duressPassphrase: settings.duressPassphrase,
                           duressPin: settings.duressPin,
+                          scramblePin: settings.scramblePin,
                           pin
                       }
                     : { pin }
@@ -116,7 +117,8 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
     };
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, SettingsStore } = this.props;
+        const { settings } = SettingsStore;
         const { pin, pinMismatchError, pinInvalidError } = this.state;
         const BackButton = () => (
             <Icon
@@ -177,20 +179,24 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                                     'views.Settings.SetPin.createPin'
                                 )}
                             </Text>
-                            <Text
-                                style={{
-                                    ...styles.secondaryText,
-                                    color: themeColor('secondaryText'),
-                                    flex: 1,
-                                    justifyContent: 'flex-end',
-                                    marginLeft: 10,
-                                    marginRight: 10
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.SetPin.scramblePin'
-                                )}
-                            </Text>
+                            {(settings.scramblePin ||
+                                typeof typeof settings.scramblePin ===
+                                    'undefined') && (
+                                <Text
+                                    style={{
+                                        ...styles.secondaryText,
+                                        color: themeColor('secondaryText'),
+                                        flex: 1,
+                                        justifyContent: 'flex-end',
+                                        marginLeft: 10,
+                                        marginRight: 10
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.SetPin.scramblePin'
+                                    )}
+                                </Text>
+                            )}
                             <View
                                 style={{
                                     flex: 6,
@@ -202,6 +208,7 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                                     onPinChange={this.onPinChange}
                                     hidePinLength={true}
                                     pinConfirm={false}
+                                    shuffle={settings.scramblePin}
                                 />
                             </View>
                         </>
@@ -244,6 +251,7 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                                     hidePinLength={false}
                                     pinConfirm={true}
                                     pinLength={pin.length}
+                                    shuffle={settings.scramblePin}
                                 />
                             </View>
                         </>
@@ -259,7 +267,7 @@ const styles = StyleSheet.create({
         fontFamily: 'Lato-Regular',
         fontSize: 20,
         textAlign: 'center',
-        marginTop: 50
+        marginTop: 10
     },
     secondaryText: {
         fontFamily: 'Lato-Regular',

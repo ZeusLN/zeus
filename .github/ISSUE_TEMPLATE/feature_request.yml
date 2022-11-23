@@ -1,0 +1,16 @@
+name: Feature request
+description: Request a feature you'd like to see in Zeus!
+labels: ["Feature request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We're always looking for suggestions on how we could improve Zeus!
+  - type: textarea
+    id: describe
+    attributes:
+      label: Describe the feature
+      description: A clear and concise description of what the feature is. Include images / mockups if relevant.
+      placeholder: I want Zeus to give me godly Greek powers...
+    validations:
+      required: true

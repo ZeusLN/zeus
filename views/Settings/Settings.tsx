@@ -9,7 +9,7 @@ import ContactIcon from '../../assets/images/SVG/PeersContact.svg';
 import PrivacyIcon from '../../assets/images/SVG/Eye On.svg';
 import SecurityIcon from '../../assets/images/SVG/Lock.svg';
 import SignIcon from '../../assets/images/SVG/Pen.svg';
-import BitcoinIcon from '../../assets/images/SVG/Bitcoin.svg';
+import CurrencyIcon from '../../assets/images/SVG/Currency.svg';
 import BrushIcon from '../../assets/images/SVG/Brush.svg';
 import LanguageIcon from '../../assets/images/SVG/Globe.svg';
 import HelpIcon from '../../assets/images/SVG/Help Icon.svg';
@@ -375,7 +375,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         onPress={() => navigation.navigate('Currency')}
                     >
                         <View>
-                            <BitcoinIcon stroke={themeColor('text')} />
+                            <CurrencyIcon stroke={themeColor('text')} />
                         </View>
                         <Text
                             style={{

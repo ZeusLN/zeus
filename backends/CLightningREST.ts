@@ -77,7 +77,7 @@ export default class CLightningREST extends LND {
             description: data.memo,
             label: 'zeus.' + Math.random() * 1000000,
             amount: Number(data.value) * 1000,
-            expiry: data.expiry,
+            expiry: Math.round(Date.now() / 1000) + Number(data.expiry),
             private: true
         });
     getPayments = () => this.getRequest('/v1/pay/listPays');
@@ -89,7 +89,7 @@ export default class CLightningREST extends LND {
                 id: data.id,
                 satoshis: data.satoshis,
                 feeRate: data.sat_per_byte,
-                announce: !data.private ? 'true' : 'false',
+                announce: !data.privateChannel ? 'true' : 'false',
                 minfConf: data.min_confs,
                 utxos: data.utxos
             };
@@ -98,7 +98,7 @@ export default class CLightningREST extends LND {
                 id: data.id,
                 satoshis: data.satoshis,
                 feeRate: data.sat_per_byte,
-                announce: !data.private ? 'true' : 'false',
+                announce: !data.privateChannel ? 'true' : 'false',
                 minfConf: data.min_confs
             };
         }
@@ -157,4 +157,6 @@ export default class CLightningREST extends LND {
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
     singleFeesEarnedTotal = () => true;
+    supportsAddressTypeSelection = () => false;
+    supportsTaproot = () => false;
 }

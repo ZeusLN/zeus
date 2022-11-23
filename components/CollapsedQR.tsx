@@ -94,7 +94,7 @@ export default class CollapsedQR extends React.Component<
                 )}
                 {!collapsed && (
                     <View style={styles.qrPadding}>
-                        <QRCode value={value} size={350} logo={secondaryLogo} />
+                        <QRCode value={value} size={300} logo={secondaryLogo} />
                     </View>
                 )}
                 <Button
@@ -108,8 +108,7 @@ export default class CollapsedQR extends React.Component<
                     icon={{
                         name: 'qrcode',
                         type: 'font-awesome',
-                        size: 25,
-                        color: '#fff'
+                        size: 25
                     }}
                     containerStyle={{
                         margin: 10
