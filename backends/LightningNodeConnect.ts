@@ -23,45 +23,45 @@ export default class LightningNodeConnect {
         const { pairingPhrase, mailboxServer, customMailboxServer } =
             stores.settingsStore;
 
-        lnc = new LNC({
+        this.lnc = new LNC({
             credentialStore: new CredentialStore()
         });
 
-        lnc.credentials.pairingPhrase = pairingPhrase;
-        lnc.credentials.serverHost =
+        this.lnc.credentials.pairingPhrase = pairingPhrase;
+        this.lnc.credentials.serverHost =
             mailboxServer === 'custom-defined'
                 ? customMailboxServer
                 : mailboxServer;
     };
 
-    connect = async () => await lnc.connect();
-    isConnected = async () => await lnc.isConnected();
+    connect = async () => await this.lnc.connect();
+    isConnected = async () => await this.lnc.isConnected();
 
     getTransactions = async () =>
-        await lnc.lnd.lightning.getTransactions({}).then((data: any) => {
+        await this.lnc.lnd.lightning.getTransactions({}).then((data: any) => {
             const formatted = snakeize(data);
             return {
                 transactions: formatted.transactions.reverse()
             };
         });
     getChannels = async () =>
-        await lnc.lnd.lightning
+        await this.lnc.lnd.lightning
             .listChannels({})
             .then((data: any) => snakeize(data));
     getChannelInfo = async (chanId: string) =>
-        await lnc.lnd.lightning
+        await this.lnc.lnd.lightning
             .getChanInfo({ chanId })
             .then((data: any) => snakeize(data));
     getBlockchainBalance = async () =>
-        await lnc.lnd.lightning
+        await this.lnc.lnd.lightning
             .walletBalance({})
             .then((data: any) => snakeize(data));
     getLightningBalance = async () =>
-        await lnc.lnd.lightning
+        await this.lnc.lnd.lightning
             .channelBalance({})
             .then((data: any) => snakeize(data));
     sendCoins = async (data: any) =>
-        await lnc.lnd.lightning
+        await this.lnc.lnd.lightning
             .sendCoins({
                 addr: data.addr,
                 sat_per_byte: data.sat_per_byte,
@@ -70,28 +70,28 @@ export default class LightningNodeConnect {
             })
             .then((data: any) => snakeize(data));
     getMyNodeInfo = async () =>
-        await lnc.lnd.lightning.getInfo({}).then((data: any) => snakeize(data));
+        await this.lnc.lnd.lightning
+            .getInfo({})
+            .then((data: any) => snakeize(data));
     getInvoices = async () =>
-        await lnc.lnd.lightning
+        await this.lnc.lnd.lightning
             .listInvoices({ reversed: true, num_max_invoices: 100 })
             .then((data: any) => snakeize(data));
     createInvoice = async (data: any) =>
-        await lnc.lnd.lightning
+        await this.lnc.lnd.lightning
             .addInvoice(data)
             .then((data: any) => snakeize(data));
     getPayments = async () =>
-        await lnc.lnd.lightning
+        await this.lnc.lnd.lightning
             .listPayments({})
             .then((data: any) => snakeize(data));
-    getNewAddress = async (data: any) => {
-        console.log('!@#!', data);
-        return await lnc.lnd.lightning
+    getNewAddress = async (data: any) =>
+        await this.lnc.lnd.lightning
             .newAddress({ type: ADDRESS_TYPES[data.type] })
             .then((data: any) => snakeize(data));
-    };
 
     openChannel = async (data: OpenChannelRequest) =>
-        await lnc.lnd.lightning
+        await this.lnc.lnd.lightning
             .openChannelSync({
                 private: data.privateChannel,
                 local_funding_amount: data.local_funding_amount,
@@ -105,21 +105,20 @@ export default class LightningNodeConnect {
     // openChannelStream = (data: OpenChannelRequest) =>
     //     this.wsReq('/v1/channels/stream', 'POST', data);
     connectPeer = async (data: any) =>
-        await lnc.lnd.lightning
+        await this.lnc.lnd.lightning
             .connectPeer(data)
             .then((data: any) => snakeize(data));
     decodePaymentRequest = async (urlParams?: Array<string>) =>
-        await lnc.lnd.lightning
+        await this.lnc.lnd.lightning
             .decodePayReq({ pay_req: urlParams && urlParams[0] })
             .then((data: any) => snakeize(data));
-    payLightningInvoice = async (data: any) => {
+    payLightningInvoice = (data: any) => {
         if (data.pubkey) delete data.pubkey;
-        return await lnc.lnd.router
-            .sendPaymentV2({
-                ...data,
-                allow_self_payment: true
-            })
-            .then((data: any) => snakeize(data));
+        return this.lnc.lnd.router.sendPaymentV2({
+            ...data,
+            allow_self_payment: true,
+            timeout_seconds: 60
+        });
     };
     closeChannel = async (urlParams?: Array<string>) => {
         let params;
@@ -141,16 +140,16 @@ export default class LightningNodeConnect {
             },
             force: urlParams && urlParams[2]
         };
-        return await lnc.lnd.lightning
+        return await this.lnc.lnd.lightning
             .closeChannel(params)
             .then((data: any) => snakeize(data));
     };
     getNodeInfo = async (urlParams?: Array<string>) =>
-        await lnc.lnd.lightning
+        await this.lnc.lnd.lightning
             .getNodeInfo({ pub_key: urlParams && urlParams[0] })
             .then((data: any) => snakeize(data));
     getFees = async () =>
-        await lnc.lnd.lightning
+        await this.lnc.lnd.lightning
             .feeReport({})
             .then((data: any) => snakeize(data));
     setFees = async (data: any) => {
@@ -191,12 +190,12 @@ export default class LightningNodeConnect {
                 : null,
             min_htlc_msat_specified: data.min_htlc ? true : false
         };
-        return await lnc.lnd.lightning
+        return await this.lnc.lnd.lightning
             .updateChannelPolicy(params)
             .then((data: any) => snakeize(data));
     };
     getRoutes = async (urlParams?: Array<string>) =>
-        await lnc.lnd.lightning
+        await this.lnc.lnd.lightning
             .queryRoutes({
                 pub_key: urlParams && urlParams[0],
                 amt: urlParams && urlParams[1] && Number(urlParams[1])
@@ -210,49 +209,49 @@ export default class LightningNodeConnect {
             ).toString(),
             end_time: Math.round(new Date().getTime() / 1000).toString()
         };
-        return await lnc.lnd.lightning
+        return await this.lnc.lnd.lightning
             .forwardingHistory(req)
             .then((data: any) => snakeize(data));
     };
     // Coin Control
     fundPsbt = async (req: any) =>
-        await lnc.lnd.walletKit
+        await this.lnc.lnd.walletKit
             .fundPsbt(req)
             .then((data: any) => snakeize(data));
     finalizePsbt = async (req: any) =>
-        await lnc.lnd.walletKit
+        await this.lnc.lnd.walletKit
             .finalizePsbt(req)
             .then((data: any) => snakeize(data));
     publishTransaction = async (req: any) =>
-        await lnc.lnd.walletKit
+        await this.lnc.lnd.walletKit
             .publishTransaction(req)
             .then((data: any) => snakeize(data));
     getUTXOs = async () =>
-        await lnc.lnd.walletKit
+        await this.lnc.lnd.walletKit
             .listUnspent({ min_confs: 0, max_confs: 200000 })
             .then((data: any) => snakeize(data));
     bumpFee = async (req: any) =>
-        await lnc.lnd.walletKit
+        await this.lnc.lnd.walletKit
             .bumpFee(req)
             .then((data: any) => snakeize(data));
     listAccounts = async () =>
-        await lnc.lnd.walletKit
+        await this.lnc.lnd.walletKit
             .listAccounts({})
             .then((data: any) => snakeize(data));
     importAccount = async (req: any) =>
-        await lnc.lnd.walletKit
+        await this.lnc.lnd.walletKit
             .importAccount(req)
             .then((data: any) => snakeize(data));
     signMessage = async (message: string) =>
-        await lnc.lnd.signer
+        await this.lnc.lnd.signer
             .signMessage({ msg: message })
             .then((data: any) => snakeize(data));
     verifyMessage = async (req: any) =>
-        await lnc.lnd.signer
+        await this.lnc.lnd.signer
             .verifyMessage({ msg: req.msg, signature: req.signature })
             .then((data: any) => snakeize(data));
     subscribeInvoice = (r_hash: string) =>
-        lnc.lnd.invoices.subscribeSingleInvoice({ r_hash });
+        this.lnc.lnd.invoices.subscribeSingleInvoice({ r_hash });
 
     supports = (minVersion: string, eosVersion?: string) => {
         const { nodeInfo } = stores.nodeInfoStore;

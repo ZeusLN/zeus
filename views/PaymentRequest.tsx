@@ -1,5 +1,13 @@
 import * as React from 'react';
-import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import {
+    NativeModules,
+    NativeEventEmitter,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    View
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Header, Icon } from 'react-native-elements';
 
@@ -56,6 +64,7 @@ export default class PaymentRequest extends React.Component<
     InvoiceProps,
     InvoiceState
 > {
+    listener: any;
     state = {
         customAmount: '',
         enableMultiPathPayment: true,
@@ -66,6 +75,30 @@ export default class PaymentRequest extends React.Component<
         maxFeePercent: '0.5',
         outgoingChanId: null,
         lastHopPubkey: null
+    };
+
+    subscribePayment = (streamingCall: string) => {
+        const { handlePayment, handlePaymentError } =
+            this.props.TransactionsStore;
+        const { LncModule } = NativeModules;
+        const eventEmitter = new NativeEventEmitter(LncModule);
+        this.listener = eventEmitter.addListener(
+            streamingCall,
+            (event: any) => {
+                if (event.result) {
+                    try {
+                        const result = JSON.parse(event.result);
+                        if (result && result.status !== 'IN_FLIGHT') {
+                            handlePayment(result);
+                            this.listener = null;
+                        }
+                    } catch (error: any) {
+                        handlePaymentError(error);
+                        this.listener = null;
+                    }
+                }
+            }
+        );
     };
 
     sendPayment = ({
@@ -79,7 +112,7 @@ export default class PaymentRequest extends React.Component<
         last_hop_pubkey,
         amp
     }: SendPaymentReq) => {
-        this.props.TransactionsStore.sendPayment({
+        const streamingCall = this.props.TransactionsStore.sendPayment({
             payment_request,
             amount,
             max_parts,
@@ -90,6 +123,12 @@ export default class PaymentRequest extends React.Component<
             last_hop_pubkey,
             amp
         });
+
+        if (
+            this.props.SettingsStore.implementation === 'lightning-node-connect'
+        ) {
+            this.subscribePayment(streamingCall);
+        }
 
         this.props.navigation.navigate('SendingLightning');
     };

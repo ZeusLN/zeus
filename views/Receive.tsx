@@ -127,7 +127,7 @@ export default class Receive extends React.Component<
                                 setWatchedInvoicePaid();
                                 this.listener = null;
                             }
-                        } catch (error: Error) {
+                        } catch (error) {
                             console.error(error);
                         }
                     }
@@ -136,7 +136,7 @@ export default class Receive extends React.Component<
         }
 
         if (implementation === 'lnd') {
-            RESTUtils.subscribeInvoice(formattedRhash).then((response: any) => {
+            RESTUtils.subscribeInvoice(rHash).then((response: any) => {
                 if (response.result && response.result.settled) {
                     setWatchedInvoicePaid();
                 }
