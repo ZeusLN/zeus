@@ -21,6 +21,7 @@ import Invoice from './views/Invoice';
 import BTCPayConfigQRScanner from './views/BTCPayConfigQRScanner';
 import CLightningRestQRScanner from './views/CLightningRestQRScanner';
 import LNDConnectConfigQRScanner from './views/LNDConnectConfigQRScanner';
+import LightningNodeConnectQRScanner from './views/LightningNodeConnectQRScanner';
 import LNDHubQRScanner from './views/LNDHubQRScanner';
 import SparkQRScanner from './views/SparkQRScanner';
 import NodeInfo from './views/NodeInfo';
@@ -219,6 +220,9 @@ const AppScenes = {
     },
     LNDConnectConfigQRScanner: {
         screen: LNDConnectConfigQRScanner
+    },
+    LightningNodeConnectQRScanner: {
+        screen: LightningNodeConnectQRScanner
     },
     CLightningRestQRScanner: {
         screen: CLightningRestQRScanner

@@ -1368,6 +1368,25 @@ export default class AddEditNode extends React.Component<
                         </View>
                     )}
 
+                    {implementation === 'lightning-node-connect' && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString(
+                                    'views.Settings.AddEditNode.scanLnc'
+                                )}
+                                onPress={() =>
+                                    navigation.navigate(
+                                        'LightningNodeConnectQRScanner',
+                                        {
+                                            index
+                                        }
+                                    )
+                                }
+                                secondary
+                            />
+                        </View>
+                    )}
+
                     {implementation === 'c-lightning-REST' && (
                         <View style={styles.button}>
                             <Button
