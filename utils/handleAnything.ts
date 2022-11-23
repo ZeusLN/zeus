@@ -13,10 +13,24 @@ const { nodeInfoStore, invoicesStore } = stores;
 export default async function (data: string): Promise<any> {
     const { nodeInfo } = nodeInfoStore;
     const { isTestNet, isRegTest } = nodeInfo;
-    const { value, amount }: any = AddressUtils.processSendAddress(data);
+    const { value, amount, lightning }: any =
+        AddressUtils.processSendAddress(data);
     const hasAt: boolean = value.includes('@');
 
     if (
+        !hasAt &&
+        AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest) &&
+        lightning
+    ) {
+        return [
+            'Accounts',
+            {
+                value,
+                amount,
+                lightning
+            }
+        ];
+    } else if (
         !hasAt &&
         AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest)
     ) {
