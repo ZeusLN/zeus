@@ -14,12 +14,16 @@ import RESTUtils from './../../utils/RESTUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
+import stores from './../../stores/Stores';
+const { invoicesStore } = stores;
+
 import Receive from './../../assets/images/SVG/Receive.svg';
 import Routing from './../../assets/images/SVG/Routing.svg';
 import Send from './../../assets/images/SVG/Send.svg';
 
 interface LightningSwipeableRowProps {
     navigation: any;
+    lightning?: string;
 }
 
 export default class LightningSwipeableRow extends Component<
@@ -128,8 +132,13 @@ export default class LightningSwipeableRow extends Component<
         this.swipeableRow.openLeft();
     };
 
+    private fetchLnInvoice = () => {
+        invoicesStore.getPayReq(this.props.lightning);
+        this.props.navigation.navigate('PaymentRequest', {});
+    };
+
     render() {
-        const { children } = this.props;
+        const { children, lightning } = this.props;
         return (
             <Swipeable
                 ref={this.updateRef}
@@ -139,7 +148,12 @@ export default class LightningSwipeableRow extends Component<
                 rightThreshold={40}
                 renderLeftActions={this.renderActions}
             >
-                <TouchableOpacity onPress={() => this.open()} activeOpacity={1}>
+                <TouchableOpacity
+                    onPress={() =>
+                        lightning ? this.fetchLnInvoice() : this.open()
+                    }
+                    activeOpacity={1}
+                >
                     {children}
                 </TouchableOpacity>
             </Swipeable>

@@ -260,40 +260,37 @@ export default class LND {
         this.getRequest(`/v1/graph/node/${urlParams && urlParams[0]}`);
     getFees = () => this.getRequest('/v1/fees');
     setFees = (data: any) => {
-        // handle commas in place of decimals
-        const base_fee_msat = data.base_fee_msat.replace(/,/g, '.');
-        const fee_rate = data.fee_rate.replace(/,/g, '.');
+        const {
+            chan_point,
+            base_fee_msat,
+            fee_rate,
+            time_lock_delta,
+            min_htlc,
+            max_htlc
+        } = data;
 
         if (data.global) {
             return this.postRequest('/v1/chanpolicy', {
                 base_fee_msat,
                 fee_rate: `${Number(fee_rate) / 100}`,
                 global: true,
-                time_lock_delta: Number(data.time_lock_delta),
-                min_htlc_msat: data.min_htlc
-                    ? `${Number(data.min_htlc) * 1000}`
-                    : null,
-                max_htlc_msat: data.max_htlc
-                    ? `${Number(data.max_htlc) * 1000}`
-                    : null,
-                min_htlc_msat_specified: data.min_htlc ? true : false
+                time_lock_delta: Number(time_lock_delta),
+                min_htlc_msat: min_htlc ? `${Number(min_htlc) * 1000}` : null,
+                max_htlc_msat: max_htlc ? `${Number(max_htlc) * 1000}` : null,
+                min_htlc_msat_specified: min_htlc ? true : false
             });
         }
         return this.postRequest('/v1/chanpolicy', {
             base_fee_msat,
             fee_rate: `${Number(fee_rate) / 100}`,
             chan_point: {
-                funding_txid_str: data.chan_point.funding_txid_str,
-                output_index: data.chan_point.output_index
+                funding_txid_str: chan_point.funding_txid_str,
+                output_index: chan_point.output_index
             },
-            time_lock_delta: Number(data.time_lock_delta),
-            min_htlc_msat: data.min_htlc
-                ? `${Number(data.min_htlc) * 1000}`
-                : null,
-            max_htlc_msat: data.max_htlc
-                ? `${Number(data.max_htlc) * 1000}`
-                : null,
-            min_htlc_msat_specified: data.min_htlc ? true : false
+            time_lock_delta: Number(time_lock_delta),
+            min_htlc_msat: min_htlc ? `${Number(min_htlc) * 1000}` : null,
+            max_htlc_msat: max_htlc ? `${Number(max_htlc) * 1000}` : null,
+            min_htlc_msat_specified: min_htlc ? true : false
         });
     };
     getRoutes = (urlParams?: Array<string>) =>

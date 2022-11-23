@@ -56,6 +56,7 @@ export default class InvoicesStore {
 
     reset = () => {
         this.paymentRequest = '';
+        this.onChainAddress = '';
         this.loading = false;
         this.error = false;
         this.error_msg = null;
@@ -71,11 +72,6 @@ export default class InvoicesStore {
         this.feeEstimate = null;
         this.successProbability = null;
         this.watchedInvoicePaid = false;
-    };
-
-    @action
-    public resetPaymentReq = () => {
-        this.payment_request = '';
     };
 
     resetInvoices = () => {
@@ -104,6 +100,20 @@ export default class InvoicesStore {
     };
 
     @action
+    public createUnifiedInvoice = (
+        memo: string,
+        value: string,
+        expiry = '3600',
+        lnurl?: LNURLWithdrawParams,
+        ampInvoice?: boolean,
+        routeHints?: boolean,
+        addressType?: string
+    ) => {
+        this.createInvoice(memo, value, expiry, lnurl, ampInvoice, routeHints);
+        this.getNewAddress(addressType ? { type: addressType } : null);
+    };
+
+    @action
     public createInvoice = (
         memo: string,
         value: string,
@@ -129,6 +139,16 @@ export default class InvoicesStore {
 
         return RESTUtils.createInvoice(req)
             .then((data: any) => {
+                if (data.error) {
+                    this.creatingInvoiceError = true;
+                    this.creatingInvoice = false;
+                    this.error_msg =
+                        data.message.toString() ||
+                        error.toString() ||
+                        localeString(
+                            'stores.InvoicesStore.errorCreatingInvoice'
+                        );
+                }
                 const invoice = new Invoice(data);
                 this.payment_request = invoice.getPaymentRequest;
                 this.payment_request_amt = value;
@@ -220,9 +240,18 @@ export default class InvoicesStore {
     public clearAddress = () => (this.onChainAddress = null);
 
     @action
+    public clearPaymentRequest = () => (this.payment_request = null);
+
+    @action
     public clearPayReq = () => {
         this.pay_req = null;
         this.getPayReqError = null;
+    };
+
+    @action
+    public clearUnified = () => {
+        this.clearAddress();
+        this.clearPaymentRequest();
     };
 
     @action
