@@ -1,6 +1,7 @@
 import { action, observable, reaction } from 'mobx';
 import NodeInfo from './../models/NodeInfo';
 import SettingsStore from './SettingsStore';
+import ErrorUtils from './../utils/ErrorUtils';
 import RESTUtils from './../utils/RESTUtils';
 
 export default class NodeInfoStore {
@@ -63,7 +64,9 @@ export default class NodeInfoStore {
             })
             .catch((error: any) => {
                 // handle error
-                this.errorMsg = error.toString();
+                this.errorMsg = ErrorUtils.errorToUserFriendly(
+                    error.toString()
+                );
                 this.getNodeInfoError();
             });
     };

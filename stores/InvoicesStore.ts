@@ -192,15 +192,39 @@ export default class InvoicesStore {
                 // handle error
                 this.creatingInvoiceError = true;
                 this.creatingInvoice = false;
-                this.error_msg = error.toString() || 'Error creating invoice';
+                this.error_msg =
+                    error.toString() ||
+                    localeString('stores.InvoicesStore.errorCreatingInvoice');
             });
     };
 
     @action
-    public getNewAddress = () => {
-        return RESTUtils.getNewAddress().then((data: any) => {
-            this.onChainAddress = data.address || data[0].address;
-        });
+    public getNewAddress = (params: any) => {
+        this.loading = true;
+        this.error_msg = null;
+        this.onChainAddress = null;
+        return RESTUtils.getNewAddress(params)
+            .then((data: any) => {
+                this.onChainAddress =
+                    data.address || data.bech32 || data[0].address;
+                this.loading = false;
+            })
+            .catch((error: any) => {
+                // handle error
+                this.error_msg =
+                    error.toString() ||
+                    localeString('stores.InvoicesStore.errorGeneratingAddress');
+                this.loading = false;
+            });
+    };
+
+    @action
+    public clearAddress = () => (this.onChainAddress = null);
+
+    @action
+    public clearPayReq = () => {
+        this.pay_req = null;
+        this.getPayReqError = null;
     };
 
     @action
@@ -208,9 +232,9 @@ export default class InvoicesStore {
         paymentRequest: string,
         descriptionPreimage?: string
     ) => {
+        this.loading = true;
         this.pay_req = null;
         this.paymentRequest = paymentRequest;
-        this.loading = true;
         this.feeEstimate = null;
 
         return RESTUtils.decodePaymentRequest([paymentRequest])
@@ -231,14 +255,14 @@ export default class InvoicesStore {
                     );
                 }
 
-                this.loading = false;
                 this.getPayReqError = null;
+                this.loading = false;
             })
             .catch((error: any) => {
                 // handle error
-                this.loading = false;
                 this.pay_req = null;
                 this.getPayReqError = error.toString();
+                this.loading = false;
             });
     };
 

@@ -16,6 +16,7 @@ interface PinPadProps {
     minLength?: number;
     maxLength?: number;
     numberHighlight?: boolean;
+    amount?: boolean;
 }
 
 export default function PinPad({
@@ -27,7 +28,8 @@ export default function PinPad({
     hidePinLength = false,
     minLength = 4,
     maxLength = 8,
-    numberHighlight = false
+    numberHighlight = false,
+    amount = false
 }: PinPadProps) {
     // PinPad state only depends on pin value length, not the actual pin/amount value
     // Parent component to PinPad can store pin/amount value
@@ -65,7 +67,7 @@ export default function PinPad({
     };
 
     return (
-        <View style={styles.bottom}>
+        <View style={styles.pad}>
             <Row align="flex-end" style={styles.pinPadRow}>
                 <Touchable
                     touch={() => {
@@ -163,16 +165,28 @@ export default function PinPad({
                 </Touchable>
             </Row>
             <Row align="flex-end" style={styles.pinPadRow}>
-                <Touchable
-                    touch={() => {
-                        decrementPinValueLength();
-                        deleteValue();
-                    }}
-                    highlight={numberHighlight}
-                    style={styles.key}
-                >
-                    <Text style={styles.pinPadNumber}>{'<'}</Text>
-                </Touchable>
+                {amount ? (
+                    <Touchable
+                        touch={() => {
+                            appendValue('.');
+                        }}
+                        highlight={numberHighlight}
+                        style={styles.key}
+                    >
+                        <Text style={styles.pinPadNumber}>{'.'}</Text>
+                    </Touchable>
+                ) : (
+                    <Touchable
+                        touch={() => {
+                            decrementPinValueLength();
+                            deleteValue();
+                        }}
+                        highlight={numberHighlight}
+                        style={styles.key}
+                    >
+                        <Text style={styles.pinPadNumber}>{'<'}</Text>
+                    </Touchable>
+                )}
                 <Touchable
                     touch={() => {
                         incrementPinValueLength();
@@ -183,18 +197,30 @@ export default function PinPad({
                 >
                     <Text style={styles.pinPadNumber}>{pinNumbers[0]}</Text>
                 </Touchable>
-                {!hidePinLength && (
-                    <Touchable
-                        touch={() => {
-                            clearPinValueLength();
-                            clearValue();
-                        }}
-                        highlight={numberHighlight}
-                        style={styles.key}
-                    >
-                        <Text style={styles.pinPadNumber}>C</Text>
-                    </Touchable>
-                )}
+                {!hidePinLength &&
+                    (amount ? (
+                        <Touchable
+                            touch={() => {
+                                decrementPinValueLength();
+                                deleteValue();
+                            }}
+                            highlight={numberHighlight}
+                            style={styles.key}
+                        >
+                            <Text style={styles.pinPadNumber}>{'<'}</Text>
+                        </Touchable>
+                    ) : (
+                        <Touchable
+                            touch={() => {
+                                clearPinValueLength();
+                                clearValue();
+                            }}
+                            highlight={numberHighlight}
+                            style={styles.key}
+                        >
+                            <Text style={styles.pinPadNumber}>C</Text>
+                        </Touchable>
+                    ))}
                 {!!hidePinLength && pinValueLength >= minLength && (
                     <Touchable
                         touch={() => {
@@ -226,9 +252,9 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontFamily: 'Lato-Bold'
     },
-    bottom: {
+    pad: {
         justifyContent: 'flex-end',
-        marginBottom: 75
+        marginBottom: 25
     },
     key: {
         flex: 1,

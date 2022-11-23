@@ -31,9 +31,13 @@ export default class OnchainSwipeableRow extends Component<
         x: number,
         progress: Animated.AnimatedInterpolation
     ) => {
-        const trans = progress.interpolate({
+        const transTranslateX = progress.interpolate({
             inputRange: [0.25, 1],
             outputRange: [x, 0]
+        });
+        const transOpacity = progress.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, 1]
         });
         const pressHandler = () => {
             this.close();
@@ -49,7 +53,11 @@ export default class OnchainSwipeableRow extends Component<
 
         return (
             <Animated.View
-                style={{ flex: 1, transform: [{ translateX: trans }] }}
+                style={{
+                    flex: 1,
+                    transform: [{ translateX: transTranslateX }],
+                    opacity: transOpacity
+                }}
             >
                 <RectButton style={[styles.action]} onPress={pressHandler}>
                     {text === localeString('general.coins') && (
@@ -89,14 +97,14 @@ export default class OnchainSwipeableRow extends Component<
         >
             {this.renderAction(
                 localeString('general.receive'),
-                RESTUtils.supportsRouting() ? 200 : 135,
+                RESTUtils.supportsCoinControl() ? 200 : 135,
                 progress
             )}
             {RESTUtils.supportsCoinControl() &&
-                this.renderAction(localeString('general.coins'), 100, progress)}
+                this.renderAction(localeString('general.coins'), 200, progress)}
             {this.renderAction(
                 localeString('general.send'),
-                RESTUtils.supportsRouting() ? 200 : 135,
+                RESTUtils.supportsCoinControl() ? 200 : 135,
                 progress
             )}
         </View>

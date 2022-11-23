@@ -11,7 +11,9 @@ import LoadingIndicator from './../components/LoadingIndicator';
 import TextInput from './../components/TextInput';
 
 import InvoicesStore from './../stores/InvoicesStore';
-import TransactionsStore from './../stores/TransactionsStore';
+import TransactionsStore, {
+    SendPaymentReq
+} from './../stores/TransactionsStore';
 import UnitsStore from './../stores/UnitsStore';
 import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
@@ -60,15 +62,40 @@ export default class PaymentRequest extends React.Component<
         enableAtomicMultiPathPayment: false,
         maxParts: '16',
         maxShardAmt: '',
-        feeLimitSat: '10',
+        feeLimitSat: '100',
         maxFeePercent: '0.5',
         outgoingChanId: null,
         lastHopPubkey: null
     };
 
+    sendPayment = ({
+        payment_request,
+        amount,
+        max_parts,
+        max_shard_amt,
+        fee_limit_sat,
+        max_fee_percent,
+        outgoing_chan_id,
+        last_hop_pubkey,
+        amp
+    }: SendPaymentReq) => {
+        this.props.TransactionsStore.sendPayment({
+            payment_request,
+            amount,
+            max_parts,
+            max_shard_amt,
+            fee_limit_sat,
+            max_fee_percent,
+            outgoing_chan_id,
+            last_hop_pubkey,
+            amp
+        });
+
+        this.props.navigation.navigate('SendingLightning');
+    };
+
     render() {
         const {
-            TransactionsStore,
             InvoicesStore,
             UnitsStore,
             ChannelsStore,
@@ -93,7 +120,8 @@ export default class PaymentRequest extends React.Component<
             loading,
             loadingFeeEstimate,
             successProbability,
-            feeEstimate
+            feeEstimate,
+            clearPayReq
         } = InvoicesStore;
 
         const requestAmount = pay_req && pay_req.getRequestAmount;
@@ -116,7 +144,9 @@ export default class PaymentRequest extends React.Component<
 
         const enableAmp: boolean =
             enableAtomicMultiPathPayment || lockAtomicMultiPathPayment;
-        const ampOrMppEnabled: boolean = enableMultiPathPayment || enableAmp;
+        const ampOrMppEnabled: boolean =
+            (RESTUtils.supportsMPP() || RESTUtils.supportsAMP()) &&
+            (enableMultiPathPayment || enableAmp);
 
         const date = new Date(Number(timestamp) * 1000).toString();
 
@@ -131,7 +161,10 @@ export default class PaymentRequest extends React.Component<
         const BackButton = () => (
             <Icon
                 name="arrow-back"
-                onPress={() => navigation.navigate('Wallet', { refresh: true })}
+                onPress={() => {
+                    clearPayReq();
+                    navigation.navigate('Wallet', { refresh: true });
+                }}
                 color={themeColor('text')}
                 underlayColor="transparent"
             />
@@ -176,7 +209,7 @@ export default class PaymentRequest extends React.Component<
                         </View>
                     )}
 
-                    {!!pay_req && (
+                    {!loading && !!pay_req && (
                         <View style={styles.content}>
                             <View style={styles.center}>
                                 {isNoAmountInvoice ? (
@@ -311,7 +344,6 @@ export default class PaymentRequest extends React.Component<
                                     </Text>
                                     <TextInput
                                         keyboardType="numeric"
-                                        placeholder={feeEstimate || '10'}
                                         value={feeLimitSat}
                                         onChangeText={(text: string) =>
                                             this.setState({
@@ -401,25 +433,35 @@ export default class PaymentRequest extends React.Component<
                                                 'views.PaymentRequest.mpp'
                                             )}
                                         </Text>
-                                        <Switch
-                                            value={enableMultiPathPayment}
-                                            onValueChange={() => {
-                                                const enable =
-                                                    !enableMultiPathPayment;
-                                                this.setState({
-                                                    enableMultiPathPayment:
-                                                        enable,
-                                                    enableAtomicMultiPathPayment:
-                                                        enableMultiPathPayment
-                                                            ? false
-                                                            : true
-                                                });
+                                        <View
+                                            style={{
+                                                flex: 1,
+                                                flexDirection: 'row',
+                                                justifyContent: 'flex-end'
                                             }}
-                                            trackColor={{
-                                                false: '#767577',
-                                                true: themeColor('highlight')
-                                            }}
-                                        />
+                                        >
+                                            <Switch
+                                                value={enableMultiPathPayment}
+                                                onValueChange={() => {
+                                                    const enable =
+                                                        !enableMultiPathPayment;
+                                                    this.setState({
+                                                        enableMultiPathPayment:
+                                                            enable,
+                                                        enableAtomicMultiPathPayment:
+                                                            enableMultiPathPayment
+                                                                ? false
+                                                                : true
+                                                    });
+                                                }}
+                                                trackColor={{
+                                                    false: '#767577',
+                                                    true: themeColor(
+                                                        'highlight'
+                                                    )
+                                                }}
+                                            />
+                                        </View>
                                     </React.Fragment>
                                 )}
 
@@ -443,37 +485,27 @@ export default class PaymentRequest extends React.Component<
                                             justifyContent: 'flex-end'
                                         }}
                                     >
-                                        <View
-                                            style={{
-                                                flex: 1,
-                                                flexDirection: 'row',
-                                                justifyContent: 'flex-end'
+                                        <Switch
+                                            value={enableAmp}
+                                            onValueChange={() => {
+                                                const enable =
+                                                    !enableAtomicMultiPathPayment;
+                                                this.setState({
+                                                    enableAtomicMultiPathPayment:
+                                                        enable,
+                                                    enableMultiPathPayment:
+                                                        enable ||
+                                                        enableMultiPathPayment
+                                                });
                                             }}
-                                        >
-                                            <Switch
-                                                value={enableAmp}
-                                                onValueChange={() => {
-                                                    const enable =
-                                                        !enableAtomicMultiPathPayment;
-                                                    this.setState({
-                                                        enableAtomicMultiPathPayment:
-                                                            enable,
-                                                        enableMultiPathPayment:
-                                                            enable ||
-                                                            enableMultiPathPayment
-                                                    });
-                                                }}
-                                                trackColor={{
-                                                    false: '#767577',
-                                                    true: themeColor(
-                                                        'highlight'
-                                                    )
-                                                }}
-                                                disabled={
-                                                    lockAtomicMultiPathPayment
-                                                }
-                                            />
-                                        </View>
+                                            trackColor={{
+                                                false: '#767577',
+                                                true: themeColor('highlight')
+                                            }}
+                                            disabled={
+                                                lockAtomicMultiPathPayment
+                                            }
+                                        />
                                     </View>
                                 </React.Fragment>
                             )}
@@ -550,7 +582,7 @@ export default class PaymentRequest extends React.Component<
                                             color: 'white'
                                         }}
                                         onPress={() => {
-                                            TransactionsStore.sendPayment({
+                                            this.sendPayment({
                                                 payment_request: paymentRequest,
                                                 amount: customAmount,
                                                 max_parts:
@@ -572,10 +604,6 @@ export default class PaymentRequest extends React.Component<
                                                 last_hop_pubkey: lastHopPubkey,
                                                 amp: enableAmp
                                             });
-
-                                            navigation.navigate(
-                                                'SendingLightning'
-                                            );
                                         }}
                                     />
                                 </View>

@@ -14,6 +14,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import RNRestart from 'react-native-restart';
 
 import ChannelsPane from '../Channels/ChannelsPane';
+import DefaultPane from './DefaultPane';
 import MainPane from './MainPane';
 
 import Button from './../../components/Button';
@@ -35,6 +36,7 @@ import FiatStore from './../../stores/FiatStore';
 import UnitsStore from './../../stores/UnitsStore';
 import UTXOsStore from './../../stores/UTXOsStore';
 
+import Bitcoin from './../../assets/images/SVG/Bitcoin.svg';
 import Temple from './../../assets/images/SVG/Temple.svg';
 import ChannelsIcon from './../../assets/images/SVG/Channels.svg';
 import CaretUp from './../../assets/images/SVG/Caret Up.svg';
@@ -54,6 +56,10 @@ interface WalletProps {
     UTXOsStore: UTXOsStore;
 }
 
+interface WalletState {
+    unlocked: boolean;
+}
+
 @inject(
     'BalanceStore',
     'ChannelsStore',
@@ -65,9 +71,12 @@ interface WalletProps {
     'UTXOsStore'
 )
 @observer
-export default class Wallet extends React.Component<WalletProps, {}> {
+export default class Wallet extends React.Component<WalletProps, WalletState> {
     constructor(props) {
         super(props);
+        this.state = {
+            unlocked: false
+        };
         this.pan = new Animated.ValueXY();
         this.panResponder = PanResponder.create({
             onMoveShouldSetPanResponder: () => true,
@@ -92,8 +101,9 @@ export default class Wallet extends React.Component<WalletProps, {}> {
         });
     }
 
-    componentWillUnmount() {
-        Linking.removeEventListener('url', this.handleOpenURL);
+    startListeners() {
+        Linking.addEventListener('url', this.handleOpenURL);
+        LinkingUtils.handleInitialUrl(this.props.navigation);
     }
 
     async getSettingsAndNavigate() {
@@ -112,6 +122,10 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                 settings.nodes &&
                 settings.nodes.length > 0
             ) {
+                if (!this.state.unlocked) {
+                    this.startListeners();
+                    this.setState({ unlocked: true });
+                }
                 this.fetchData();
             } else {
                 navigation.navigate('IntroSplash');
@@ -140,8 +154,7 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             FeeStore,
             UTXOsStore,
             SettingsStore,
-            FiatStore,
-            navigation
+            FiatStore
         } = this.props;
         const {
             settings,
@@ -180,8 +193,6 @@ export default class Wallet extends React.Component<WalletProps, {}> {
 
         if (connecting) {
             setConnectingStatus(false);
-            Linking.addEventListener('url', this.handleOpenURL);
-            LinkingUtils.handleInitialUrl(navigation);
         }
     }
 
@@ -280,6 +291,19 @@ export default class Wallet extends React.Component<WalletProps, {}> {
             );
         };
 
+        const DefaultScreen = () => {
+            return (
+                <View
+                    style={{
+                        backgroundColor: themeColor('background'),
+                        flex: 1
+                    }}
+                >
+                    <DefaultPane navigation={navigation} />
+                </View>
+            );
+        };
+
         const ChannelsScreen = () => {
             return (
                 <View
@@ -308,8 +332,12 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                     {!connecting && !loginRequired && (
                         <NavigationContainer theme={Theme}>
                             <Tab.Navigator
+                                initialRouteName="Default"
                                 screenOptions={({ route }) => ({
                                     tabBarIcon: ({ color }) => {
+                                        if (route.name === 'Default') {
+                                            return <Bitcoin fill={color} />;
+                                        }
                                         if (route.name === 'Wallet') {
                                             return <Temple fill={color} />;
                                         }
@@ -338,6 +366,17 @@ export default class Wallet extends React.Component<WalletProps, {}> {
                                     name="Wallet"
                                     component={WalletScreen}
                                 />
+                                {!error ? (
+                                    <Tab.Screen
+                                        name="Default"
+                                        component={DefaultScreen}
+                                    />
+                                ) : (
+                                    <Tab.Screen
+                                        name={'  '}
+                                        component={WalletScreen}
+                                    />
+                                )}
                                 {RESTUtils.supportsChannelManagement() &&
                                 !error ? (
                                     <Tab.Screen
