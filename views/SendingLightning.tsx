@@ -219,6 +219,47 @@ export default class SendingLightning extends React.Component<
                                 containerStyle={{ width: '100%' }}
                             />
                         )}
+
+                        {payment_error == `FAILURE_REASON_NO_ROUTE` && (
+                            <>
+                                <Text
+                                    style={{
+                                        textAlign: 'center',
+                                        color: 'white',
+                                        fontFamily: 'Lato-Regular',
+                                        marginTop: 50,
+                                        padding: 20,
+                                        fontSize: 14
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.SendingLightning.lowFeeLimitMessage'
+                                    )}
+                                </Text>
+                                <Button
+                                    title={localeString(
+                                        'views.SendingLightning.tryAgain'
+                                    )}
+                                    icon={{
+                                        name: 'return-up-back',
+                                        type: 'ionicon',
+                                        size: 25,
+                                        color: 'darkred'
+                                    }}
+                                    onPress={() => navigation.goBack()}
+                                    titleStyle={{
+                                        color: 'darkred'
+                                    }}
+                                    buttonStyle={{
+                                        backgroundColor: 'white'
+                                    }}
+                                    containerStyle={{
+                                        width: '100%',
+                                        marginTop: 10
+                                    }}
+                                />
+                            </>
+                        )}
                     </View>
                 </View>
             </ScrollView>
