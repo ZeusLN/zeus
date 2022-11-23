@@ -163,7 +163,7 @@ export default class PaymentRequest extends React.Component<
                 name="arrow-back"
                 onPress={() => {
                     clearPayReq();
-                    navigation.navigate('Wallet', { refresh: true });
+                    navigation.goBack();
                 }}
                 color={themeColor('text')}
                 underlayColor="transparent"
