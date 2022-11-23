@@ -439,12 +439,11 @@ export default class SettingsStore {
             let counter = 0;
             const interval = setInterval(async () => {
                 counter++;
-                connected = await RESTUtils.isConnected();
+                const connected = await RESTUtils.isConnected();
                 if (connected) {
                     clearInterval(interval);
                     this.loading = false;
                     resolve();
-                    log.info('The LNC client is connected to the server');
                 } else if (counter > 20) {
                     clearInterval(interval);
                     this.error = true;
