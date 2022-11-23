@@ -1,3 +1,4 @@
+import Base64Utils from './Base64Utils';
 import MacaroonUtils from './MacaroonUtils';
 
 class ConnectionFormatUtils {
@@ -37,6 +38,27 @@ class ConnectionFormatUtils {
         const enableTor: boolean = host.includes('.onion');
 
         return { host, port, macaroonHex, enableTor };
+    };
+
+    processLncUrl = (input: string) => {
+        let mailboxServer, customMailboxServer;
+        const encodedParams = input.split(
+            'https://terminal.lightning.engineering#/connect/pair/'
+        )[1];
+        const decodedParams = Base64Utils.atob(encodedParams);
+        const [pairingPhrase, server] = decodedParams.split('||');
+
+        if (
+            server === 'mailbox.terminal.lightning.today:443' ||
+            server === 'lnc.zeusln.app:443'
+        ) {
+            mailboxServer = server;
+        } else {
+            mailboxServer = 'custom-defined';
+            customMailboxServer = server;
+        }
+
+        return { pairingPhrase, mailboxServer, customMailboxServer };
     };
 
     processCLightningRestConnectUrl = (input: string) => {
