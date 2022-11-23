@@ -26,6 +26,7 @@ import UnitsStore from './../stores/UnitsStore';
 import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
 
+import FeeUtils from './../utils/FeeUtils';
 import { localeString } from './../utils/LocaleUtils';
 import RESTUtils from './../utils/RESTUtils';
 import { themeColor } from './../utils/ThemeUtils';
@@ -101,9 +102,34 @@ export default class PaymentRequest extends React.Component<
         );
     };
 
+    displayFeeRecommendation = () => {
+        const { feeLimitSat } = this.state;
+        const { InvoicesStore } = this.props;
+        const { feeEstimate } = InvoicesStore;
+
+        if (
+            feeEstimate &&
+            feeLimitSat &&
+            Number(feeEstimate) > Number(feeLimitSat)
+        ) {
+            return (
+                <Text
+                    style={{
+                        color: themeColor('error')
+                    }}
+                >
+                    {localeString(
+                        'views.PaymentRequest.feeEstimateExceedsLimit'
+                    )}
+                </Text>
+            );
+        }
+        return null;
+    };
+
     sendPayment = ({
         payment_request,
-        amount,
+        amount, // used only for no-amount invoices
         max_parts,
         max_shard_amt,
         fee_limit_sat,
@@ -112,25 +138,38 @@ export default class PaymentRequest extends React.Component<
         last_hop_pubkey,
         amp
     }: SendPaymentReq) => {
-        const streamingCall = this.props.TransactionsStore.sendPayment({
+        const { InvoicesStore, TransactionsStore, SettingsStore, navigation } =
+            this.props;
+        let feeLimitSat = fee_limit_sat;
+
+        // If the fee limit is not set, use a default routing fee calculation
+        if (!fee_limit_sat) {
+            const { pay_req } = InvoicesStore;
+            const requestAmount = pay_req && pay_req.getRequestAmount;
+            const invoiceAmount = amount || requestAmount;
+
+            feeLimitSat = FeeUtils.calculateDefaultRoutingFee(
+                Number(invoiceAmount)
+            );
+        }
+
+        const streamingCall = TransactionsStore.sendPayment({
             payment_request,
             amount,
             max_parts,
             max_shard_amt,
-            fee_limit_sat,
+            fee_limit_sat: feeLimitSat,
             max_fee_percent,
             outgoing_chan_id,
             last_hop_pubkey,
             amp
         });
 
-        if (
-            this.props.SettingsStore.implementation === 'lightning-node-connect'
-        ) {
+        if (SettingsStore.implementation === 'lightning-node-connect') {
             this.subscribePayment(streamingCall);
         }
 
-        this.props.navigation.navigate('SendingLightning');
+        navigation.navigate('SendingLightning');
     };
 
     render() {
@@ -202,7 +241,7 @@ export default class PaymentRequest extends React.Component<
                 name="arrow-back"
                 onPress={() => {
                     clearPayReq();
-                    navigation.navigate('Wallet', { refresh: true });
+                    navigation.goBack();
                 }}
                 color={themeColor('text')}
                 underlayColor="transparent"
@@ -379,8 +418,13 @@ export default class PaymentRequest extends React.Component<
                                     >
                                         {`${localeString(
                                             'views.PaymentRequest.feeLimit'
-                                        )} (${localeString('general.sats')})`}
+                                        )} (${localeString(
+                                            'general.sats'
+                                        )}) (${localeString(
+                                            'general.optional'
+                                        )})`}
                                     </Text>
+                                    {this.displayFeeRecommendation()}
                                     <TextInput
                                         keyboardType="numeric"
                                         value={feeLimitSat}
