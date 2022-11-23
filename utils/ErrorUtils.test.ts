@@ -5,21 +5,24 @@ describe('ErrorUtils', () => {
         it('Turns error message to user friendly values', () => {
             expect(
                 ErrorUtils.errorToUserFriendly(
-                    'Error: SOCKS: Connection refused'
+                    'Error: SOCKS: Connection refused',
+                    false
                 )
             ).toEqual(
                 'Host unreachable. Try restarting your node or its Tor process.'
             );
             expect(
                 ErrorUtils.errorToUserFriendly(
-                    'Error: called `Result::unwrap()` on an `Err` value: BootStrapError("Timeout waiting for bootstrap")'
+                    'Error: called `Result::unwrap()` on an `Err` value: BootStrapError("Timeout waiting for bootstrap")',
+                    false
                 )
             ).toEqual(
                 'Error starting up Tor on your phone. Try restarting Zeus. If the problem persists consider reinstalling the app.'
             );
             expect(
                 ErrorUtils.errorToUserFriendly(
-                    'Error: called `Result::unwrap()` on an `Err` value: BootStrapError("Timeout waiting for boostrap")'
+                    'Error: called `Result::unwrap()` on an `Err` value: BootStrapError("Timeout waiting for boostrap")',
+                    false
                 )
             ).toEqual(
                 'Error starting up Tor on your phone. Try restarting Zeus. If the problem persists consider reinstalling the app.'
@@ -27,9 +30,9 @@ describe('ErrorUtils', () => {
         });
 
         it('Returns inputted error if no match found', () => {
-            expect(ErrorUtils.errorToUserFriendly('Random message')).toEqual(
-                'Random message'
-            );
+            expect(
+                ErrorUtils.errorToUserFriendly('Random message', false)
+            ).toEqual('Random message');
         });
     });
 });
