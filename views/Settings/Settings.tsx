@@ -20,8 +20,8 @@ import { themeColor } from './../../utils/ThemeUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import RESTUtils from './../../utils/RESTUtils';
 import { version } from './../../package.json';
-import SettingsStore from './../stores/SettingsStore';
-import UnitsStore from './../stores/UnitsStore';
+import SettingsStore, { INTERFACE_KEYS } from './../../stores/SettingsStore';
+import UnitsStore from './../../stores/UnitsStore';
 
 interface SettingsProps {
     navigation: any;
@@ -56,6 +56,11 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                 underlayColor="transparent"
             />
         );
+
+        const implementationDisplayValue = {};
+        INTERFACE_KEYS.forEach((item) => {
+            implementationDisplayValue[item.value] = item.key;
+        });
 
         return (
             <View
@@ -141,7 +146,11 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     fontFamily: 'Lato-Regular'
                                 }}
                             >
-                                {`${selectedNode.implementation}, ${
+                                {`${
+                                    implementationDisplayValue[
+                                        selectedNode.implementation
+                                    ] || 'Unknown'
+                                }, ${
                                     selectedNode.enableTor ? 'Tor' : 'clearnet'
                                 }`}
                             </Text>
