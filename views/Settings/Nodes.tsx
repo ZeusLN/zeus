@@ -7,7 +7,7 @@ import Button from './../../components/Button';
 import LoadingIndicator from './../../components/LoadingIndicator';
 import NodeIdenticon, { NodeTitle } from './../../components/NodeIdenticon';
 
-import SettingsStore from './../../stores/SettingsStore';
+import SettingsStore, { INTERFACE_KEYS } from './../../stores/SettingsStore';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -70,6 +70,11 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         const { setSettings, settings, setConnectingStatus }: any =
             SettingsStore;
         const { selectedNode } = settings;
+
+        const implementationDisplayValue = {};
+        INTERFACE_KEYS.forEach((item) => {
+            implementationDisplayValue[item.value] = item.key;
+        });
 
         const BackButton = () => (
             <Icon
@@ -178,8 +183,16 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                         >
                                             {selectedNode === index ||
                                             (!selectedNode && index === 0)
-                                                ? `Active | ${item.implementation}`
-                                                : `${item.implementation}`}
+                                                ? `Active | ${
+                                                      implementationDisplayValue[
+                                                          item.implementation
+                                                      ]
+                                                  }`
+                                                : `${
+                                                      implementationDisplayValue[
+                                                          item.implementation
+                                                      ]
+                                                  }`}
                                         </ListItem.Subtitle>
                                     </ListItem.Content>
                                     <Button
