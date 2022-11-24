@@ -167,7 +167,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         this.listener = eventEmitter.addListener(
             streamingCall,
             (event: any) => {
-                if (event.result) {
+                if (event.result && event.result !== 'EOF') {
                     try {
                         const result = JSON.parse(event.result);
                         if (result && result.status !== 'IN_FLIGHT') {

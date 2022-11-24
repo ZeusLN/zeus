@@ -181,7 +181,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             let error;
             if (connecting) {
                 error = await connect();
-                console.log('###', error);
             }
             if (!error) {
                 UTXOsStore.listAccounts();
