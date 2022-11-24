@@ -94,7 +94,7 @@ export default class PaymentRequest extends React.Component<
                             this.listener = null;
                         }
                     } catch (error: any) {
-                        handlePaymentError(error);
+                        handlePaymentError(event.result);
                         this.listener = null;
                     }
                 }

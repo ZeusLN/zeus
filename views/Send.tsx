@@ -175,7 +175,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             this.listener = null;
                         }
                     } catch (error: any) {
-                        handlePaymentError(error);
+                        handlePaymentError(event.result);
                         this.listener = null;
                     }
                 }
