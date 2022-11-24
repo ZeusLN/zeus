@@ -109,8 +109,16 @@ export default class InvoicesStore {
         routeHints?: boolean,
         addressType?: string
     ) => {
-        this.createInvoice(memo, value, expiry, lnurl, ampInvoice, routeHints);
+        const rHash = this.createInvoice(
+            memo,
+            value,
+            expiry,
+            lnurl,
+            ampInvoice,
+            routeHints
+        );
         this.getNewAddress(addressType ? { type: addressType } : null);
+        return rHash;
     };
 
     @action

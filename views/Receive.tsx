@@ -607,41 +607,6 @@ export default class Receive extends React.Component<
                                         </TouchableOpacity>
                                     )}
 
-                                    {RESTUtils.isLNDBased() && (
-                                        <>
-                                            <Text
-                                                style={{
-                                                    ...styles.secondaryText,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    ),
-                                                    top: 20
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.Receive.routeHints'
-                                                )}
-                                            </Text>
-                                            <Switch
-                                                value={routeHints}
-                                                onValueChange={() =>
-                                                    this.setState({
-                                                        routeHints: !routeHints
-                                                    })
-                                                }
-                                                trackColor={{
-                                                    false: '#767577',
-                                                    true: themeColor(
-                                                        'highlight'
-                                                    )
-                                                }}
-                                                style={{
-                                                    alignSelf: 'flex-end'
-                                                }}
-                                            />
-                                        </>
-                                    )}
-
                                     {implementation !== 'lndhub' && (
                                         <>
                                             <Text
@@ -670,7 +635,7 @@ export default class Receive extends React.Component<
                                         </>
                                     )}
 
-                                    {implementation === 'lnd' && (
+                                    {RESTUtils.isLNDBased() && (
                                         <>
                                             <Text
                                                 style={{

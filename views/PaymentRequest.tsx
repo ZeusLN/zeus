@@ -86,7 +86,7 @@ export default class PaymentRequest extends React.Component<
         this.listener = eventEmitter.addListener(
             streamingCall,
             (event: any) => {
-                if (event.result) {
+                if (event.result && event.result !== 'EOF') {
                     try {
                         const result = JSON.parse(event.result);
                         if (result && result.status !== 'IN_FLIGHT') {
