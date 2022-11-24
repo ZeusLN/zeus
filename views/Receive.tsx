@@ -340,39 +340,37 @@ export default class Receive extends React.Component<
 
         const haveInvoice = !!payment_request && !!address;
 
-        let invoiceValue;
+        let unifiedInvoice, lnInvoice, btcAddress;
         if (haveInvoice) {
-            switch (selectedIndex) {
-                case 0:
-                    invoiceValue = `bitcoin:${address.toUpperCase()}?${`lightning=${payment_request.toUpperCase()}`}${
-                        Number(satAmount) > 0
-                            ? `&amount=${new BigNumber(satAmount)
-                                  .dividedBy(satoshisPerBTC)
-                                  .toFormat()}`
-                            : ''
-                    }${memo ? `&message=${memo.replace(/ /g, '%20')}` : ''}`;
-                    break;
-                case 1:
-                    invoiceValue = `lightning:${payment_request.toUpperCase()}`;
-                    break;
-                case 2:
-                    invoiceValue = `bitcoin:${address.toUpperCase()}${
-                        (Number(satAmount) > 0 || memo) && '?'
-                    }${
-                        Number(satAmount) > 0
-                            ? `amount=${new BigNumber(satAmount)
-                                  .dividedBy(satoshisPerBTC)
-                                  .toFormat()}`
-                            : ''
-                    }${
-                        memo
-                            ? Number(satAmount) > 0
-                                ? `&message=${memo.replace(/ /g, '%20')}`
-                                : `message=${memo.replace(/ /g, '%20')}`
-                            : ''
-                    }`;
-                    break;
-            }
+            unifiedInvoice = `bitcoin:${address.toUpperCase()}?${`lightning=${payment_request.toUpperCase()}`}${
+                Number(satAmount) > 0
+                    ? `&amount=${new BigNumber(satAmount)
+                          .dividedBy(satoshisPerBTC)
+                          .toFormat()}`
+                    : ''
+            }${memo ? `&message=${memo.replace(/ /g, '%20')}` : ''}`;
+        }
+
+        if (payment_request) {
+            lnInvoice = `lightning:${payment_request.toUpperCase()}`;
+        }
+
+        if (address) {
+            btcAddress = `bitcoin:${address.toUpperCase()}${
+                (Number(satAmount) > 0 || memo) && '?'
+            }${
+                Number(satAmount) > 0
+                    ? `amount=${new BigNumber(satAmount)
+                          .dividedBy(satoshisPerBTC)
+                          .toFormat()}`
+                    : ''
+            }${
+                memo
+                    ? Number(satAmount) > 0
+                        ? `&message=${memo.replace(/ /g, '%20')}`
+                        : `message=${memo.replace(/ /g, '%20')}`
+                    : ''
+            }`;
         }
 
         return (
@@ -466,18 +464,30 @@ export default class Receive extends React.Component<
                             {creatingInvoice && <LoadingIndicator />}
                             {haveInvoice && (
                                 <View style={{ marginTop: 10 }}>
-                                    <CollapsedQR
-                                        value={invoiceValue}
-                                        copyText={
-                                            selectedIndex == 2
-                                                ? localeString(
-                                                      'views.Receive.copyAddress'
-                                                  )
-                                                : localeString(
-                                                      'views.Receive.copyInvoice'
-                                                  )
-                                        }
-                                    />
+                                    {selectedIndex == 0 && (
+                                        <CollapsedQR
+                                            value={unifiedInvoice}
+                                            copyText={localeString(
+                                                'views.Receive.copyInvoice'
+                                            )}
+                                        />
+                                    )}
+                                    {selectedIndex == 1 && (
+                                        <CollapsedQR
+                                            value={lnInvoice}
+                                            copyText={localeString(
+                                                'views.Receive.copyInvoice'
+                                            )}
+                                        />
+                                    )}
+                                    {selectedIndex == 2 && (
+                                        <CollapsedQR
+                                            value={btcAddress}
+                                            copyText={localeString(
+                                                'views.Receive.copyAddress'
+                                            )}
+                                        />
+                                    )}
                                     <ButtonGroup
                                         onPress={this.updateIndex}
                                         selectedIndex={selectedIndex}
