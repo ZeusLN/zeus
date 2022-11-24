@@ -401,5 +401,6 @@ export default class SettingsStore {
     @action
     public setConnectingStatus = (status = false) => {
         this.connecting = status;
+        return this.connecting;
     };
 }
