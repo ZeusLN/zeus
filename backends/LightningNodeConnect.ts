@@ -252,6 +252,9 @@ export default class LightningNodeConnect {
             .then((data: any) => snakeize(data));
     subscribeInvoice = (r_hash: string) =>
         this.lnc.lnd.invoices.subscribeSingleInvoice({ r_hash });
+    subscribeInvoices = () => this.lnc.lnd.lightning.subscribeInvoices();
+    subscribeTransactions = () =>
+        this.lnc.lnd.lightning.subscribeTransactions();
 
     supports = (minVersion: string, eosVersion?: string) => {
         const { nodeInfo } = stores.nodeInfoStore;
