@@ -203,9 +203,10 @@ export default class InvoicesStore {
                         });
                 }
 
-                const formattedRhash = invoice.r_hash
-                    .replace(/\+/g, '-')
-                    .replace(/\//g, '_');
+                const formattedRhash =
+                    typeof invoice.r_hash === 'string'
+                        ? invoice.r_hash.replace(/\+/g, '-').replace(/\//g, '_')
+                        : '';
 
                 return formattedRhash;
             })
