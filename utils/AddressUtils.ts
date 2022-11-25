@@ -1,3 +1,5 @@
+import BigNumber from 'bignumber.js';
+
 import { satoshisPerBTC } from './../stores/UnitsStore';
 const btcNonBech = /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
 const btcBech = /^(bc1|BC1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/;
@@ -31,7 +33,7 @@ export const CUSTODIAL_LNDHUBS = [
 ];
 
 const bitcoinQrParser = (input: string, prefix: string) => {
-    let amount;
+    let amount, lightning;
     const btcAddressAndParams = input.split(prefix)[1];
     const [btcAddress, params] = btcAddressAndParams.split('?');
 
@@ -44,38 +46,39 @@ const bitcoinQrParser = (input: string, prefix: string) => {
 
     const value = btcAddress;
     if (result.amount) {
-        amount = Number(result.amount) * satoshisPerBTC;
+        amount = new BigNumber(result.amount).multipliedBy(satoshisPerBTC);
         amount = amount.toString();
     }
 
-    return [value, amount];
+    if (result.lightning) {
+        lightning = result.lightning;
+    }
+
+    return [value, amount, lightning];
 };
 
 class AddressUtils {
     processSendAddress = (input: string) => {
-        let value, amount;
+        let value, amount, lightning;
 
         // handle addresses prefixed with 'bitcoin:' and
         // payment requests prefixed with 'lightning:'
 
         // handle BTCPay invoices with amounts embedded
-        if (input.includes('bitcoin:')) {
-            const [parsedValue, parsedAmount] = bitcoinQrParser(
-                input,
-                'bitcoin:'
-            );
+        if (input.includes('bitcoin:') || input.includes('BITCOIN:')) {
+            const [parsedValue, parsedAmount, parsedLightning] =
+                bitcoinQrParser(
+                    input,
+                    input.includes('BITCOIN:') ? 'BITCOIN:' : 'bitcoin:'
+                );
             value = parsedValue;
+
             if (parsedAmount) {
                 amount = parsedAmount;
             }
-        } else if (input.includes('BITCOIN:')) {
-            const [parsedValue, parsedAmount] = bitcoinQrParser(
-                input,
-                'BITCOIN:'
-            );
-            value = parsedValue;
-            if (parsedAmount) {
-                amount = parsedAmount;
+
+            if (parsedLightning) {
+                lightning = parsedLightning;
             }
         } else if (input.includes('lightning:')) {
             value = input.split('lightning:')[1];
@@ -87,7 +90,7 @@ class AddressUtils {
             value = input;
         }
 
-        return { value, amount };
+        return { value, amount, lightning };
     };
 
     processLNDHubAddress = (input: string) => {

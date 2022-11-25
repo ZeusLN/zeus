@@ -11,11 +11,14 @@ import LoadingIndicator from './../components/LoadingIndicator';
 import TextInput from './../components/TextInput';
 
 import InvoicesStore from './../stores/InvoicesStore';
-import TransactionsStore from './../stores/TransactionsStore';
+import TransactionsStore, {
+    SendPaymentReq
+} from './../stores/TransactionsStore';
 import UnitsStore from './../stores/UnitsStore';
 import ChannelsStore from './../stores/ChannelsStore';
 import SettingsStore from './../stores/SettingsStore';
 
+import FeeUtils from './../utils/FeeUtils';
 import { localeString } from './../utils/LocaleUtils';
 import RESTUtils from './../utils/RESTUtils';
 import { themeColor } from './../utils/ThemeUtils';
@@ -60,15 +63,79 @@ export default class PaymentRequest extends React.Component<
         enableAtomicMultiPathPayment: false,
         maxParts: '16',
         maxShardAmt: '',
-        feeLimitSat: '10',
+        feeLimitSat: '100',
         maxFeePercent: '0.5',
         outgoingChanId: null,
         lastHopPubkey: null
     };
 
+    displayFeeRecommendation = () => {
+        const { feeLimitSat } = this.state;
+        const { InvoicesStore } = this.props;
+        const { feeEstimate } = InvoicesStore;
+
+        if (
+            feeEstimate &&
+            feeLimitSat &&
+            Number(feeEstimate) > Number(feeLimitSat)
+        ) {
+            return (
+                <Text
+                    style={{
+                        color: themeColor('error')
+                    }}
+                >
+                    {localeString(
+                        'views.PaymentRequest.feeEstimateExceedsLimit'
+                    )}
+                </Text>
+            );
+        }
+        return null;
+    };
+
+    sendPayment = ({
+        payment_request,
+        amount, // used only for no-amount invoices
+        max_parts,
+        max_shard_amt,
+        fee_limit_sat,
+        max_fee_percent,
+        outgoing_chan_id,
+        last_hop_pubkey,
+        amp
+    }: SendPaymentReq) => {
+        const { InvoicesStore, TransactionsStore, navigation } = this.props;
+        let feeLimitSat = fee_limit_sat;
+
+        // If the fee limit is not set, use a default routing fee calculation
+        if (!fee_limit_sat) {
+            const { pay_req } = InvoicesStore;
+            const requestAmount = pay_req && pay_req.getRequestAmount;
+            const invoiceAmount = amount || requestAmount;
+
+            feeLimitSat = FeeUtils.calculateDefaultRoutingFee(
+                Number(invoiceAmount)
+            );
+        }
+
+        TransactionsStore.sendPayment({
+            payment_request,
+            amount,
+            max_parts,
+            max_shard_amt,
+            fee_limit_sat: feeLimitSat,
+            max_fee_percent,
+            outgoing_chan_id,
+            last_hop_pubkey,
+            amp
+        });
+
+        navigation.navigate('SendingLightning');
+    };
+
     render() {
         const {
-            TransactionsStore,
             InvoicesStore,
             UnitsStore,
             ChannelsStore,
@@ -136,7 +203,7 @@ export default class PaymentRequest extends React.Component<
                 name="arrow-back"
                 onPress={() => {
                     clearPayReq();
-                    navigation.navigate('Wallet', { refresh: true });
+                    navigation.goBack();
                 }}
                 color={themeColor('text')}
                 underlayColor="transparent"
@@ -313,11 +380,15 @@ export default class PaymentRequest extends React.Component<
                                     >
                                         {`${localeString(
                                             'views.PaymentRequest.feeLimit'
-                                        )} (${localeString('general.sats')})`}
+                                        )} (${localeString(
+                                            'general.sats'
+                                        )}) (${localeString(
+                                            'general.optional'
+                                        )})`}
                                     </Text>
+                                    {this.displayFeeRecommendation()}
                                     <TextInput
                                         keyboardType="numeric"
-                                        placeholder={feeEstimate || '10'}
                                         value={feeLimitSat}
                                         onChangeText={(text: string) =>
                                             this.setState({
@@ -407,25 +478,35 @@ export default class PaymentRequest extends React.Component<
                                                 'views.PaymentRequest.mpp'
                                             )}
                                         </Text>
-                                        <Switch
-                                            value={enableMultiPathPayment}
-                                            onValueChange={() => {
-                                                const enable =
-                                                    !enableMultiPathPayment;
-                                                this.setState({
-                                                    enableMultiPathPayment:
-                                                        enable,
-                                                    enableAtomicMultiPathPayment:
-                                                        enableMultiPathPayment
-                                                            ? false
-                                                            : true
-                                                });
+                                        <View
+                                            style={{
+                                                flex: 1,
+                                                flexDirection: 'row',
+                                                justifyContent: 'flex-end'
                                             }}
-                                            trackColor={{
-                                                false: '#767577',
-                                                true: themeColor('highlight')
-                                            }}
-                                        />
+                                        >
+                                            <Switch
+                                                value={enableMultiPathPayment}
+                                                onValueChange={() => {
+                                                    const enable =
+                                                        !enableMultiPathPayment;
+                                                    this.setState({
+                                                        enableMultiPathPayment:
+                                                            enable,
+                                                        enableAtomicMultiPathPayment:
+                                                            enableMultiPathPayment
+                                                                ? false
+                                                                : true
+                                                    });
+                                                }}
+                                                trackColor={{
+                                                    false: '#767577',
+                                                    true: themeColor(
+                                                        'highlight'
+                                                    )
+                                                }}
+                                            />
+                                        </View>
                                     </React.Fragment>
                                 )}
 
@@ -449,37 +530,27 @@ export default class PaymentRequest extends React.Component<
                                             justifyContent: 'flex-end'
                                         }}
                                     >
-                                        <View
-                                            style={{
-                                                flex: 1,
-                                                flexDirection: 'row',
-                                                justifyContent: 'flex-end'
+                                        <Switch
+                                            value={enableAmp}
+                                            onValueChange={() => {
+                                                const enable =
+                                                    !enableAtomicMultiPathPayment;
+                                                this.setState({
+                                                    enableAtomicMultiPathPayment:
+                                                        enable,
+                                                    enableMultiPathPayment:
+                                                        enable ||
+                                                        enableMultiPathPayment
+                                                });
                                             }}
-                                        >
-                                            <Switch
-                                                value={enableAmp}
-                                                onValueChange={() => {
-                                                    const enable =
-                                                        !enableAtomicMultiPathPayment;
-                                                    this.setState({
-                                                        enableAtomicMultiPathPayment:
-                                                            enable,
-                                                        enableMultiPathPayment:
-                                                            enable ||
-                                                            enableMultiPathPayment
-                                                    });
-                                                }}
-                                                trackColor={{
-                                                    false: '#767577',
-                                                    true: themeColor(
-                                                        'highlight'
-                                                    )
-                                                }}
-                                                disabled={
-                                                    lockAtomicMultiPathPayment
-                                                }
-                                            />
-                                        </View>
+                                            trackColor={{
+                                                false: '#767577',
+                                                true: themeColor('highlight')
+                                            }}
+                                            disabled={
+                                                lockAtomicMultiPathPayment
+                                            }
+                                        />
                                     </View>
                                 </React.Fragment>
                             )}
@@ -556,7 +627,7 @@ export default class PaymentRequest extends React.Component<
                                             color: 'white'
                                         }}
                                         onPress={() => {
-                                            TransactionsStore.sendPayment({
+                                            this.sendPayment({
                                                 payment_request: paymentRequest,
                                                 amount: customAmount,
                                                 max_parts:
@@ -578,10 +649,6 @@ export default class PaymentRequest extends React.Component<
                                                 last_hop_pubkey: lastHopPubkey,
                                                 amp: enableAmp
                                             });
-
-                                            navigation.navigate(
-                                                'SendingLightning'
-                                            );
                                         }}
                                     />
                                 </View>
