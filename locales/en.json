@@ -36,6 +36,7 @@
     "general.about": "About",
     "general.unified": "Unified",
     "general.percentage": "percentage",
+    "general.paste": "Paste from clipboard",
     "components.CollapsedQr.show": "Show QR",
     "components.CollapsedQr.hide": "Hide QR",
     "components.CollapsedQr.startNfc": "Start NFC broadcast",
