@@ -38,7 +38,13 @@ const ScanBadge = ({ navigation }: { navigation: any }) => (
     </TouchableOpacity>
 );
 
-const ClipboardBadge = ({ navigation, clipboard }: { navigation: any, clipboard: string }) => (
+const ClipboardBadge = ({
+    navigation,
+    clipboard
+}: {
+    navigation: any;
+    clipboard: string;
+}) => (
     <TouchableOpacity
         onPress={() => navigation.navigate('Send', { destination: clipboard })}
     >
@@ -93,9 +99,14 @@ export function WalletHeader({
                             stores.balanceStore.loadingLightningBalance) && (
                             <LoadingIndicator size={80} />
                         )}
-                        {!!clipboard && <View style={{ marginTop: 14, marginRight: 20 }}>
-                            <ClipboardBadge navigation={navigation} clipboard={clipboard} />
-                        </View>}
+                        {!!clipboard && (
+                            <View style={{ marginTop: 14, marginRight: 20 }}>
+                                <ClipboardBadge
+                                    navigation={navigation}
+                                    clipboard={clipboard}
+                                />
+                            </View>
+                        )}
                         <View style={{ marginTop: 15 }}>
                             <ScanBadge navigation={navigation} />
                         </View>

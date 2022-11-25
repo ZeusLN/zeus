@@ -10,6 +10,44 @@ import RESTUtils from './../utils/RESTUtils';
 
 const { nodeInfoStore, invoicesStore } = stores;
 
+const isClipboardValue = (data: string) => {
+    const { nodeInfo } = nodeInfoStore;
+    const { isTestNet, isRegTest } = nodeInfo;
+    const { value, lightning }: any = AddressUtils.processSendAddress(data);
+    const hasAt: boolean = value.includes('@');
+
+    if (
+        !hasAt &&
+        AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest) &&
+        lightning
+    ) {
+        return true;
+    } else if (
+        !hasAt &&
+        AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest)
+    ) {
+        return true;
+    } else if (!hasAt && AddressUtils.isValidLightningPubKey(value)) {
+        return true;
+    } else if (!hasAt && AddressUtils.isValidLightningPaymentRequest(value)) {
+        return true;
+    } else if (value.includes('lndconnect')) {
+        return true;
+    } else if (AddressUtils.isValidLNDHubAddress(value)) {
+        return true;
+    } else if (hasAt && NodeUriUtils.isValidNodeUri(value)) {
+        return true;
+    } else if (hasAt && AddressUtils.isValidLightningAddress(value)) {
+        return true;
+    } else if (findlnurl(value) !== null) {
+        return true;
+    } else {
+        return false;
+    }
+};
+
+export { isClipboardValue };
+
 export default async function (data: string): Promise<any> {
     const { nodeInfo } = nodeInfoStore;
     const { isTestNet, isRegTest } = nodeInfo;
