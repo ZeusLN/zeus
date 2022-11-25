@@ -13,7 +13,7 @@ PODS:
   - glog (0.3.5)
   - hermes-engine (0.11.0)
   - libevent (2.1.12)
-  - lnc-rn (0.1.11-alpha.1):
+  - lnc-rn (0.2.0-alpha):
     - React
   - RCT-Folly (2021.06.28.00-v2):
     - boost
@@ -545,7 +545,7 @@ SPEC CHECKSUMS:
   glog: 476ee3e89abb49e07f822b48323c51c57124b572
   hermes-engine: 84e3af1ea01dd7351ac5d8689cbbea1f9903ffc3
   libevent: 4049cae6c81cdb3654a443be001fb9bdceff7913
-  lnc-rn: 436823281176c6c5818dd249629a32318d3537d0
+  lnc-rn: 50b105a6c06cd1ff816131191cb3e1cb87b1a7aa
   RCT-Folly: 4d8508a426467c48885f1151029bc15fa5d7b3b8
   RCTRequired: 3e917ea5377751094f38145fdece525aa90545a0
   RCTTypeSafety: c43c072a4bd60feb49a9570b0517892b4305c45e
