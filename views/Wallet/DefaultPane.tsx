@@ -1,12 +1,11 @@
 import * as React from 'react';
 import { Animated, View, Text } from 'react-native';
-
 import { inject, observer } from 'mobx-react';
 
 import Button from '../../components/Button';
 import PinPad from '../../components/PinPad';
 import UnitToggle from '../../components/UnitToggle';
-import { WalletHeader } from '../../components/WalletHeader';
+import WalletHeader from '../../components/WalletHeader';
 
 import FiatStore from '../../stores/FiatStore';
 import UnitsStore from '../../stores/UnitsStore';
