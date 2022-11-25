@@ -110,9 +110,13 @@ export default class FeeStore {
         this.setFeesErrorMsg = '';
         this.setFeesSuccess = false;
 
+        // handle commas in place of decimals
+        const baseFee = newBaseFee.replace(/,/g, '.');
+        const feeRate = newFeeRate.replace(/,/g, '.');
+
         const data: any = {
-            base_fee_msat: `${Number(newBaseFee) * 1000}`,
-            fee_rate: newFeeRate,
+            base_fee_msat: `${Number(baseFee) * 1000}`,
+            fee_rate: feeRate,
             time_lock_delta: timeLockDelta
         };
 

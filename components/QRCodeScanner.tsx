@@ -1,11 +1,13 @@
 import * as React from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
-import { RNCamera } from 'react-native-camera';
+import { BarCodeReadEvent, FlashMode, RNCamera } from 'react-native-camera';
 
 import Button from './../components/Button';
 
 import { localeString } from './../utils/LocaleUtils';
 
+import FlashOffIcon from './../assets/images/SVG/Flash Off.svg';
+import FlashOnIcon from './../assets/images/SVG/Flash On.svg';
 import Scan from './../assets/images/SVG/ScanFrame.svg';
 
 const createHash = require('create-hash');
@@ -18,22 +20,39 @@ interface QRProps {
 
 interface QRState {
     cameraStatus: any;
+    torch: FlashMode;
 }
 
 export default class QRCodeScanner extends React.Component<QRProps, QRState> {
-    constructor() {
-        super();
-        const { width } = Dimensions.get('window');
-        this.maskLength = (width * 80) / 100;
+    constructor(props: QRProps) {
+        super(props);
+
+        this.state = {
+            cameraStatus: null,
+            torch: RNCamera.Constants.FlashMode.off
+        };
     }
-    scannedCache: any = {};
-    state = {
-        cameraStatus: null
-    };
+    scannedCache: { [name: string]: number } = {};
+    maskLength = (Dimensions.get('window').width * 80) / 100;
 
     handleCameraStatusChange = (event: any) => {
-        this.setState({
-            cameraStatus: event.cameraStatus
+        this.setState((state) => {
+            return {
+                ...state,
+                cameraStatus: event.cameraStatus
+            };
+        });
+    };
+
+    handleFlash = () => {
+        this.setState((state) => {
+            return {
+                ...state,
+                torch:
+                    this.state.torch === RNCamera.Constants.FlashMode.torch
+                        ? RNCamera.Constants.FlashMode.off
+                        : RNCamera.Constants.FlashMode.torch
+            };
         });
     };
 
@@ -65,7 +84,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                     >
                         <RNCamera
                             style={styles.preview}
-                            onBarCodeRead={(ret: any) =>
+                            onBarCodeRead={(ret: BarCodeReadEvent) =>
                                 this.handleRead(ret.data)
                             }
                             androidCameraPermissionOptions={{
@@ -81,8 +100,22 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                             captureAudio={false}
                             onStatusChange={this.handleCameraStatusChange}
                             barCodeTypes={[RNCamera.Constants.BarCodeType.qr]}
+                            flashMode={
+                                this.state.cameraStatus ===
+                                RNCamera.Constants.CameraStatus.READY
+                                    ? this.state.torch
+                                    : RNCamera.Constants.FlashMode.off
+                            }
                         >
                             <View style={styles.overlay} />
+                            <View style={styles.flashlightOverlay}>
+                                {this.state.torch ===
+                                RNCamera.Constants.FlashMode.torch ? (
+                                    <FlashOnIcon onPress={this.handleFlash} />
+                                ) : (
+                                    <FlashOffIcon onPress={this.handleFlash} />
+                                )}
+                            </View>
                             <Text style={styles.textOverlay}>{text}</Text>
                             <View
                                 style={[
@@ -146,6 +179,12 @@ const styles = StyleSheet.create({
     },
     scan: {
         margin: 0
+    },
+    flashlightOverlay: {
+        display: 'flex',
+        flexDirection: 'row-reverse',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        paddingLeft: 20
     },
     buttonOverlay: {
         backgroundColor: 'rgba(0,0,0,0.5)',

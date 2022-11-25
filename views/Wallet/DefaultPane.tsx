@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Animated, View } from 'react-native';
+import { Animated, View, Text } from 'react-native';
 
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -15,6 +15,7 @@ import SettingsStore from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { getDecimalPlaceholder } from '../../utils/UnitsUtils';
 
 interface DefaultPaneProps {
     navigation: any;
@@ -116,7 +117,9 @@ export default class DefaultPane extends React.PureComponent<
     };
 
     amountSize = () => {
-        switch (this.state.amount.length) {
+        const { amount } = this.state;
+        const { units } = this.props.UnitsStore;
+        switch (amount.length + getDecimalPlaceholder(amount, units).count) {
             case 1:
             case 2:
                 return 80;
@@ -180,8 +183,9 @@ export default class DefaultPane extends React.PureComponent<
     };
 
     render() {
-        const { FiatStore, SettingsStore, navigation } = this.props;
+        const { FiatStore, SettingsStore, UnitsStore, navigation } = this.props;
         const { amount, clipboard } = this.state;
+        const { units } = UnitsStore;
 
         const color = this.textAnimation.interpolate({
             inputRange: [0, 1],
@@ -220,6 +224,9 @@ export default class DefaultPane extends React.PureComponent<
                         }}
                     >
                         {FiatStore.numberWithCommas(amount)}
+                        <Text style={{ color: themeColor('secondaryText') }}>
+                            {getDecimalPlaceholder(amount, units).string}
+                        </Text>
                     </Animated.Text>
 
                     <UnitToggle onToggle={this.clearValue} />

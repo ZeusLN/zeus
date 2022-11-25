@@ -13,7 +13,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import { Header, Icon } from 'react-native-elements';
 
-import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
+import NfcManager, { NfcEvents, TagEvent } from 'react-native-nfc-manager';
 
 import handleAnything from './../utils/handleAnything';
 
@@ -79,7 +79,7 @@ interface SendState {
 )
 @observer
 export default class Send extends React.Component<SendProps, SendState> {
-    constructor(props: any) {
+    constructor(props: SendProps) {
         super(props);
         const { navigation } = props;
         const destination = navigation.getParam('destination', null);
@@ -161,18 +161,23 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     enableNfc = async () => {
         this.disableNfc();
-        await NfcManager.start();
+        await NfcManager.start().catch((e) => console.warn(e.message));
 
         return new Promise((resolve: any) => {
-            let tagFound = null;
+            let tagFound: TagEvent | null = null;
 
-            NfcManager.setEventListener(NfcEvents.DiscoverTag, (tag: any) => {
-                tagFound = tag;
-                const bytes = new Uint8Array(tagFound.ndefMessage[0].payload);
-                const str = NFCUtils.nfcUtf8ArrayToStr(bytes);
-                resolve(this.validateAddress(str));
-                NfcManager.unregisterTagEvent().catch(() => 0);
-            });
+            NfcManager.setEventListener(
+                NfcEvents.DiscoverTag,
+                (tag: TagEvent) => {
+                    tagFound = tag;
+                    const bytes = new Uint8Array(
+                        tagFound.ndefMessage[0].payload
+                    );
+                    const str = NFCUtils.nfcUtf8ArrayToStr(bytes) || '';
+                    resolve(this.validateAddress(str));
+                    NfcManager.unregisterTagEvent().catch(() => 0);
+                }
+            );
 
             NfcManager.setEventListener(NfcEvents.SessionClosed, () => {
                 if (!tagFound) {
@@ -187,13 +192,16 @@ export default class Send extends React.Component<SendProps, SendState> {
     selectUTXOs = (utxos: Array<string>, utxoBalance: number) => {
         const { SettingsStore } = this.props;
         const { implementation } = SettingsStore;
-        const newState: any = {};
-        newState.utxos = utxos;
-        newState.utxoBalance = utxoBalance;
-        if (implementation === 'c-lightning-REST') {
-            newState.amount = 'all';
-        }
-        this.setState(newState);
+        this.setState((prevState) => {
+            ({
+                utxos,
+                utxoBalance,
+                amount:
+                    implementation === 'c-lightning-REST'
+                        ? 'all'
+                        : prevState.amount
+            });
+        });
     };
 
     validateAddress = (text: string) => {
@@ -310,7 +318,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         const { fiat, privacy } = settings;
         const enableMempoolRates = privacy && privacy.enableMempoolRates;
         const { units, changeUnits } = UnitsStore;
-        const { fiatRates, getSymbol }: any = FiatStore;
+        const { fiatRates, getSymbol } = FiatStore;
 
         const fiatEntry =
             fiat && fiatRates && fiatRates.filter
@@ -417,7 +425,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                             style={{
                                 ...styles.text,
                                 color: themeColor('text'),
-                                paddingBottom: 10,
                                 marginBottom: 10,
                                 paddingBottom: 5
                             }}

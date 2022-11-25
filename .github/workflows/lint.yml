@@ -1,5 +1,11 @@
 name: Lint
-on: [push]
+on:
+  push:
+    branches:
+      - "master"
+  pull_request:
+    branches:
+      - "*"
 jobs:
   lint:
     runs-on: ubuntu-latest
