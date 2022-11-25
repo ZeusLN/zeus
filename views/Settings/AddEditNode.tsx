@@ -523,23 +523,26 @@ export default class AddEditNode extends React.Component<
             />
         );
 
-        const mailboxDisplayValue = LNC_MAILBOX_KEYS.filter(
-            (value: any) => value.value === mailboxServer
-        )[0].value;
-
-        const Mailbox = () => (
-            <DropdownSetting
-                title={localeString('views.Settings.AddEditNode.mailboxServer')}
-                selectedValue={mailboxDisplayValue}
-                onValueChange={(value: string) => {
-                    this.setState({
-                        mailboxServer: value,
-                        saved: false
-                    });
-                }}
-                values={LNC_MAILBOX_KEYS}
-            />
-        );
+        const Mailbox = () => {
+            const mailboxDisplayValue = LNC_MAILBOX_KEYS.filter(
+                (value: any) => value.value === mailboxServer
+            )[0].value;
+            return (
+                <DropdownSetting
+                    title={localeString(
+                        'views.Settings.AddEditNode.mailboxServer'
+                    )}
+                    selectedValue={mailboxDisplayValue}
+                    onValueChange={(value: string) => {
+                        this.setState({
+                            mailboxServer: value,
+                            saved: false
+                        });
+                    }}
+                    values={LNC_MAILBOX_KEYS}
+                />
+            );
+        };
 
         return (
             <View
