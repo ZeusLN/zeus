@@ -17,7 +17,7 @@ import { Header, Icon } from 'react-native-elements';
 
 import NfcManager, { NfcEvents, TagEvent } from 'react-native-nfc-manager';
 
-import handleAnything from './../utils/handleAnything';
+import handleAnything, { isClipboardValue } from './../utils/handleAnything';
 
 import InvoicesStore from './../stores/InvoicesStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
@@ -38,6 +38,8 @@ import RESTUtils from './../utils/RESTUtils';
 import NFCUtils from './../utils/NFCUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
+
+import Scan from './../assets/images/SVG/Scan.svg';
 
 interface SendProps {
     exitSetup: any;
@@ -67,6 +69,7 @@ interface SendState {
     feeLimitSat: string;
     message: string;
     enableAtomicMultiPathPayment: boolean;
+    clipboard: string;
 }
 
 @inject(
@@ -108,7 +111,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             maxShardAmt: '',
             feeLimitSat: '',
             message: '',
-            enableAtomicMultiPathPayment: false
+            enableAtomicMultiPathPayment: false,
+            clipboard: ''
         };
     }
 
@@ -118,8 +122,10 @@ export default class Send extends React.Component<SendProps, SendState> {
 
         if (settings.privacy && settings.privacy.clipboard) {
             const clipboard = await Clipboard.getString();
-            if (!this.state.destination) {
-                this.validateAddress(clipboard);
+            if (isClipboardValue(clipboard)) {
+                this.setState({
+                    clipboard
+                });
             }
         }
 
@@ -415,6 +421,15 @@ export default class Send extends React.Component<SendProps, SendState> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
+                    rightComponent={
+                        <TouchableOpacity
+                            onPress={() =>
+                                navigation.navigate('AddressQRCodeScanner')
+                            }
+                        >
+                            <Scan fill={themeColor('text')} />
+                        </TouchableOpacity>
+                    }
                     backgroundColor={themeColor('background')}
                     containerStyle={{
                         borderBottomWidth: 0
@@ -892,19 +907,18 @@ export default class Send extends React.Component<SendProps, SendState> {
                             />
                         </View>
                     )}
-                    <View style={styles.button}>
-                        <Button
-                            title={localeString('general.scan')}
-                            icon={{
-                                name: 'crop-free',
-                                size: 25
-                            }}
-                            onPress={() =>
-                                navigation.navigate('AddressQRCodeScanner')
-                            }
-                            secondary
-                        />
-                    </View>
+
+                    {!!this.state.clipboard && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString('general.paste')}
+                                onPress={() =>
+                                    this.validateAddress(this.state.clipboard)
+                                }
+                                secondary
+                            />
+                        </View>
+                    )}
 
                     {Platform.OS === 'ios' && (
                         <View style={styles.button}>

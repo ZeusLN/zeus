@@ -3,7 +3,7 @@ import { Image, Text, View, TouchableOpacity } from 'react-native';
 import { Badge } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Button from '../../components/Button';
-import { WalletHeader } from '../../components/WalletHeader';
+import WalletHeader from '../../components/WalletHeader';
 import { Amount } from '../../components/Amount';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
