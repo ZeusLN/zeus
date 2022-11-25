@@ -14,7 +14,7 @@ const btcBechPubkeyScriptHashTestnet =
 
 /* lndhub */
 const lndHubAddress =
-    /^(lndhub:\/\/)\w+(:)\w+(@https?:\/\/[\w\-_.]+(:\d{1,5})?([/\w]+)?)?$/;
+    /^(lndhub:\/\/)[\w-]+(:)\w+(@https?:\/\/[\w\-_.]+(:\d{1,5})?([\w\/-]+)?)?$/;
 
 /* lnurl */
 const lightningAddress =
