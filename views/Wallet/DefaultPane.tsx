@@ -1,13 +1,11 @@
 import * as React from 'react';
 import { Animated, View, Text } from 'react-native';
-
 import { inject, observer } from 'mobx-react';
-import Clipboard from '@react-native-clipboard/clipboard';
 
 import Button from '../../components/Button';
 import PinPad from '../../components/PinPad';
 import UnitToggle from '../../components/UnitToggle';
-import { WalletHeader } from '../../components/WalletHeader';
+import WalletHeader from '../../components/WalletHeader';
 
 import FiatStore from '../../stores/FiatStore';
 import UnitsStore from '../../stores/UnitsStore';
@@ -16,7 +14,6 @@ import SettingsStore from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { getDecimalPlaceholder } from '../../utils/UnitsUtils';
-import { isClipboardValue } from '../../utils/handleAnything';
 
 interface DefaultPaneProps {
     navigation: any;
@@ -27,7 +24,6 @@ interface DefaultPaneProps {
 
 interface DefaultPaneState {
     amount: string;
-    clipboard: string;
 }
 
 const MAX_LENGTH = 10;
@@ -41,24 +37,8 @@ export default class DefaultPane extends React.PureComponent<
     shakeAnimation = new Animated.Value(0);
     textAnimation = new Animated.Value(0);
     state = {
-        amount: '0',
-        clipboard: ''
+        amount: '0'
     };
-
-    async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-
-        if (settings.privacy && settings.privacy.clipboard) {
-            const clipboard = await Clipboard.getString();
-
-            if (!!clipboard && isClipboardValue(clipboard)) {
-                this.setState({
-                    clipboard
-                });
-            }
-        }
-    }
 
     appendValue = (value: string) => {
         const { amount } = this.state;
@@ -180,7 +160,7 @@ export default class DefaultPane extends React.PureComponent<
 
     render() {
         const { FiatStore, SettingsStore, UnitsStore, navigation } = this.props;
-        const { amount, clipboard } = this.state;
+        const { amount } = this.state;
         const { units } = UnitsStore;
 
         const color = this.textAnimation.interpolate({
@@ -193,7 +173,6 @@ export default class DefaultPane extends React.PureComponent<
                 <WalletHeader
                     navigation={navigation}
                     SettingsStore={SettingsStore}
-                    clipboard={clipboard}
                 />
 
                 <Animated.View
