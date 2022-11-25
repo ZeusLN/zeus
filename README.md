@@ -49,7 +49,7 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 - [x] Fiat currency integrations
 - [x] [Various language support](https://www.transifex.com/ZeusLN/zeus/)
 - [x] Multi-theme
-- [ ] On-chain coin control 
+- [x] On-chain coin control 
 - [ ] External signer support
 - [ ] Watch-only accounts
 - [ ] Contact list for easier payments
@@ -108,6 +108,7 @@ Zeus is proud to be integrated on the following platforms:
 [enable Developer mode and USB Debugging](https://developer.android.com/studio/debug/dev-options)
 , then make sure it is connected to your computer by running `adb devices`
 3. install node dependencies with `npm i`
+    1. if you encounter errors with this step involving conflicting react native dependencies, use the legacy peer dependencies option `npm i --legacy-peer-deps` 
 4. open up your Android simulator or connect your phone and run `npx react-native start`
 5. open a new tab and run `npx react-native run-android`
 
@@ -115,6 +116,7 @@ Zeus is proud to be integrated on the following platforms:
 1. install and setup react-native and its related dependencies under **"Building Projects with Native Code"** on
 [react-native's Getting Started page](https://reactnative.dev/docs/environment-setup)
 2. install node dependencies with `npm i`
+    1. if you encounter errors with this step involving conflicting react native dependencies, use the legacy peer dependencies option `npm i --legacy-peer-deps` 
 3. `cd ios && pod install`
 4. open `ios/zeus.xcworkspace` in Xcode and hit Run. NOTE: if you're using an M1 mac, you may need to right click Xcode > get info > check `Open using Rosetta` before opening `zeus.xcworkspace`.
 
@@ -146,6 +148,8 @@ Please be sure to run `npm run tsc` to check for type errors, `npm run test` to 
 If you are making cosmetic changes please test on both Android and iOS as things don't render exactly the same on both platforms.
 
 If you're looking for a quick way to get a lightning development environment running, check out [Polar](https://github.com/jamaljsr/polar).
+
+NOTE: When configuring a new node on Android in dev, the `Host` field must be `10.0.2.2` - `127.0.0.1` or `localhost` won't work.
 
 ## Translations
 

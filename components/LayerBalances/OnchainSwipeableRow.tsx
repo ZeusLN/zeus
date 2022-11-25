@@ -20,6 +20,8 @@ import Send from './../../assets/images/SVG/Send.svg';
 
 interface OnchainSwipeableRowProps {
     navigation: any;
+    value?: string;
+    amount?: string;
 }
 
 export default class OnchainSwipeableRow extends Component<
@@ -124,8 +126,17 @@ export default class OnchainSwipeableRow extends Component<
         this.swipeableRow.openLeft();
     };
 
+    private sendToAddress = () => {
+        const { navigation, value, amount } = this.props;
+        navigation.navigate('Send', {
+            destination: value,
+            amount,
+            transactionType: 'On-chain'
+        });
+    };
+
     render() {
-        const { children } = this.props;
+        const { children, value } = this.props;
         return (
             <Swipeable
                 ref={this.updateRef}
@@ -135,7 +146,10 @@ export default class OnchainSwipeableRow extends Component<
                 rightThreshold={40}
                 renderLeftActions={this.renderActions}
             >
-                <TouchableOpacity onPress={() => this.open()} activeOpacity={1}>
+                <TouchableOpacity
+                    onPress={() => (value ? this.sendToAddress() : this.open())}
+                    activeOpacity={1}
+                >
                     {children}
                 </TouchableOpacity>
             </Swipeable>
