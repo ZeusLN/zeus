@@ -6,7 +6,7 @@ import { inject, observer } from 'mobx-react';
 import { ChannelsHeader } from '../../components/Channels/ChannelsHeader';
 import { ChannelItem } from '../../components/Channels/ChannelItem';
 import LoadingIndicator from '../../components/LoadingIndicator';
-import { WalletHeader } from '../../components/WalletHeader';
+import WalletHeader from '../../components/WalletHeader';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { Spacer } from '../../components/layout/Spacer';
