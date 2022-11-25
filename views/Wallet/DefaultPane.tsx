@@ -16,6 +16,7 @@ import SettingsStore from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { getDecimalPlaceholder } from '../../utils/UnitsUtils';
+import { isClipboardValue } from '../../utils/handleAnything';
 
 interface DefaultPaneProps {
     navigation: any;
@@ -51,12 +52,7 @@ export default class DefaultPane extends React.PureComponent<
         if (settings.privacy && settings.privacy.clipboard) {
             const clipboard = await Clipboard.getString();
 
-            // TODO add validation logic
-            // TODO investigate clipboard loop
-            // if (!this.state.destination) {
-            //     this.validateAddress(clipboard);
-            // }
-            if (!!clipboard && !this.state.clipboard) {
+            if (!!clipboard && isClipboardValue(clipboard)) {
                 this.setState({
                     clipboard
                 });
