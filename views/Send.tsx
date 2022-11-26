@@ -352,7 +352,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             maxShardAmt,
             feeLimitSat,
             message,
-            enableAtomicMultiPathPayment
+            enableAtomicMultiPathPayment,
+            clipboard
         } = this.state;
         const { confirmedBlockchainBalance } = BalanceStore;
         const { implementation, settings } = SettingsStore;
@@ -908,13 +909,11 @@ export default class Send extends React.Component<SendProps, SendState> {
                         </View>
                     )}
 
-                    {!!this.state.clipboard && (
+                    {!!clipboard && !destination && (
                         <View style={styles.button}>
                             <Button
                                 title={localeString('general.paste')}
-                                onPress={() =>
-                                    this.validateAddress(this.state.clipboard)
-                                }
+                                onPress={() => this.validateAddress(clipboard)}
                                 secondary
                             />
                         </View>
