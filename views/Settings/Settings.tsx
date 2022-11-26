@@ -31,7 +31,10 @@ interface SettingsProps {
 
 @inject('SettingsStore', 'UnitsStore')
 @observer
-export default class Settings extends React.Component<SettingsProps, {}> {
+export default class Settings extends React.Component<
+    SettingsProps,
+    Record<string, never>
+> {
     componentDidMount() {
         // triggers when loaded from navigation or back action
         this.props.navigation.addListener('didFocus', () => {

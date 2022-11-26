@@ -28,7 +28,7 @@ interface LightningSwipeableRowProps {
 
 export default class LightningSwipeableRow extends Component<
     LightningSwipeableRowProps,
-    {}
+    Record<string, never>
 > {
     private renderAction = (
         text: string,

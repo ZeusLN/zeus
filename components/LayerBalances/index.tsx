@@ -88,7 +88,10 @@ const SwipeableRow = ({
 
 @inject()
 @observer
-export default class LayerBalances extends Component<LayerBalancesProps, {}> {
+export default class LayerBalances extends Component<
+    LayerBalancesProps,
+    Record<string, never>
+> {
     render() {
         const {
             BalanceStore,

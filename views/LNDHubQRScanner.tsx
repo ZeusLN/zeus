@@ -12,7 +12,7 @@ interface LNDHubQRProps {
 @observer
 export default class LNDHubQRScanner extends React.Component<
     LNDHubQRProps,
-    {}
+    Record<string, never>
 > {
     handleCodeScanned = (data: string) => {
         const { navigation } = this.props;

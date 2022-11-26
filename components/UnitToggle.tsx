@@ -14,7 +14,10 @@ interface UnitToggleProps {
 
 @inject('UnitsStore', 'SettingsStore')
 @observer
-export default class UnitToggle extends React.Component<UnitToggleProps, {}> {
+export default class UnitToggle extends React.Component<
+    UnitToggleProps,
+    Record<string, never>
+> {
     render() {
         const { UnitsStore, SettingsStore, onToggle } = this.props;
         const { changeUnits, units } = UnitsStore;

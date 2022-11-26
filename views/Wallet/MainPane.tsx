@@ -25,7 +25,10 @@ interface MainPaneProps {
 
 @inject('BalanceStore', 'SettingsStore')
 @observer
-export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
+export default class MainPane extends React.PureComponent<
+    MainPaneProps,
+    Record<string, never>
+> {
     render() {
         const { NodeInfoStore, BalanceStore, SettingsStore, navigation } =
             this.props;

@@ -11,7 +11,7 @@ interface BalanceSliderProps {
 
 export default class BalanceSlider extends React.Component<
     BalanceSliderProps,
-    {}
+    Record<string, never>
 > {
     render() {
         const { localBalance, remoteBalance, list } = this.props;

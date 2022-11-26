@@ -33,7 +33,7 @@ interface FeeBreakdownProps {
 @observer
 export default class FeeBreakdown extends React.Component<
     FeeBreakdownProps,
-    {}
+    Record<string, never>
 > {
     render() {
         const {

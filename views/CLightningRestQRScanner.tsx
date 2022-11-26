@@ -10,7 +10,7 @@ interface CLightningRestQRScannerProps {
 
 export default class CLightningRestQRScanner extends React.Component<
     CLightningRestQRScannerProps,
-    {}
+    Record<string, never>
 > {
     handleLNDConnectConfigInvoiceScanned = (data: string) => {
         const { navigation } = this.props;

@@ -20,7 +20,10 @@ interface NodeInfoProps {
 
 @inject('NodeInfoStore', 'SettingsStore')
 @observer
-export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
+export default class NodeInfo extends React.Component<
+    NodeInfoProps,
+    Record<string, never>
+> {
     UNSAFE_componentWillMount() {
         const { NodeInfoStore } = this.props;
         NodeInfoStore.getNodeInfo();

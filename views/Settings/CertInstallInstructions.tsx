@@ -14,7 +14,7 @@ interface CertInstallInstructionsProps {
 @observer
 export default class CertInstallInstructions extends React.Component<
     CertInstallInstructionsProps,
-    {}
+    Record<string, never>
 > {
     render() {
         const { navigation } = this.props;

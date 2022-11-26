@@ -26,7 +26,7 @@ interface SendingOnChainProps {
 @observer
 export default class SendingOnChain extends React.Component<
     SendingOnChainProps,
-    {}
+    Record<string, never>
 > {
     getBackgroundColor() {
         const { TransactionsStore } = this.props;

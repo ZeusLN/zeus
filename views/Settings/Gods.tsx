@@ -19,7 +19,10 @@ interface GodsProps {
 
 @inject('SettingsStore')
 @observer
-export default class Gods extends React.Component<GodsProps, {}> {
+export default class Gods extends React.Component<
+    GodsProps,
+    Record<string, never>
+> {
     UNSAFE_componentWillMount() {
         this.props.SettingsStore.fetchSponsors();
     }

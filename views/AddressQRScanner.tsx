@@ -14,7 +14,7 @@ interface AddressQRProps {
 @observer
 export default class AddressQRScanner extends React.Component<
     AddressQRProps,
-    {}
+    Record<string, never>
 > {
     constructor(props: any) {
         super(props);

@@ -10,7 +10,7 @@ interface LNDConnectConfigQRProps {
 
 export default class LNDConnectConfigQRScanner extends React.Component<
     LNDConnectConfigQRProps,
-    {}
+    Record<string, never>
 > {
     handleLNDConnectConfigInvoiceScanned = (data: string) => {
         const { navigation } = this.props;

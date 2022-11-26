@@ -19,7 +19,10 @@ interface CoinControlProps {
 
 @inject('UTXOsStore')
 @observer
-export default class CoinControl extends React.Component<CoinControlProps, {}> {
+export default class CoinControl extends React.Component<
+    CoinControlProps,
+    Record<string, never>
+> {
     async UNSAFE_componentWillMount() {
         const { UTXOsStore } = this.props;
         const { getUTXOs, listAccounts } = UTXOsStore;

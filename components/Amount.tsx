@@ -135,7 +135,10 @@ interface AmountProps {
 
 @inject('UnitsStore')
 @observer
-export class Amount extends React.Component<AmountProps, {}> {
+export class Amount extends React.Component<
+    AmountProps,
+    Record<string, never>
+> {
     render() {
         const {
             sats: value,

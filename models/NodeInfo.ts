@@ -48,7 +48,7 @@ export default class NodeInfo extends BaseModel {
         );
     }
 
-    @computed public get currentBlockHeight(): Number {
+    @computed public get currentBlockHeight(): number {
         return this.block_height || this.blockheight || 0;
     }
 
