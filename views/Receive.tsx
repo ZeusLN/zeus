@@ -373,6 +373,9 @@ export default class Receive extends React.Component<
             }`;
         }
 
+        const belowDustLimit: boolean =
+            Number(satAmount) !== 0 && Number(satAmount) < 546;
+
         return (
             <View
                 style={{
@@ -464,49 +467,68 @@ export default class Receive extends React.Component<
                             {creatingInvoice && <LoadingIndicator />}
                             {haveInvoice && (
                                 <View style={{ marginTop: 10 }}>
-                                    {selectedIndex == 0 && (
+                                    {selectedIndex == 0 && !belowDustLimit && (
                                         <CollapsedQR
                                             value={unifiedInvoice}
                                             copyText={localeString(
                                                 'views.Receive.copyInvoice'
                                             )}
+                                            expanded
+                                            textBottom
                                         />
                                     )}
-                                    {selectedIndex == 1 && (
+                                    {selectedIndex == 1 && !belowDustLimit && (
                                         <CollapsedQR
                                             value={lnInvoice}
                                             copyText={localeString(
                                                 'views.Receive.copyInvoice'
                                             )}
+                                            expanded
+                                            textBottom
                                         />
                                     )}
-                                    {selectedIndex == 2 && (
+                                    {selectedIndex == 2 && !belowDustLimit && (
                                         <CollapsedQR
                                             value={btcAddress}
                                             copyText={localeString(
                                                 'views.Receive.copyAddress'
                                             )}
+                                            expanded
+                                            textBottom
                                         />
                                     )}
-                                    <ButtonGroup
-                                        onPress={this.updateIndex}
-                                        selectedIndex={selectedIndex}
-                                        buttons={buttons}
-                                        selectedButtonStyle={{
-                                            backgroundColor:
-                                                themeColor('highlight'),
-                                            borderRadius: 12
-                                        }}
-                                        containerStyle={{
-                                            backgroundColor:
-                                                themeColor('secondary'),
-                                            borderRadius: 12,
-                                            borderColor: themeColor('secondary')
-                                        }}
-                                        innerBorderStyle={{
-                                            color: themeColor('secondary')
-                                        }}
-                                    />
+                                    {belowDustLimit && (
+                                        <CollapsedQR
+                                            value={lnInvoice}
+                                            copyText={localeString(
+                                                'views.Receive.copyAddress'
+                                            )}
+                                            expanded
+                                            textBottom
+                                        />
+                                    )}
+                                    {!belowDustLimit && (
+                                        <ButtonGroup
+                                            onPress={this.updateIndex}
+                                            selectedIndex={selectedIndex}
+                                            buttons={buttons}
+                                            selectedButtonStyle={{
+                                                backgroundColor:
+                                                    themeColor('highlight'),
+                                                borderRadius: 12
+                                            }}
+                                            containerStyle={{
+                                                backgroundColor:
+                                                    themeColor('secondary'),
+                                                borderRadius: 12,
+                                                borderColor:
+                                                    themeColor('secondary')
+                                            }}
+                                            innerBorderStyle={{
+                                                color: themeColor('secondary')
+                                            }}
+                                        />
+                                    )}
                                 </View>
                             )}
                             {!loading && !haveInvoice && (
