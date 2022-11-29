@@ -81,6 +81,7 @@ export default class Receive extends React.Component<
             navigation.getParam('lnurlParams');
 
         const amount: string = navigation.getParam('amount');
+        const autoGenerate: boolean = navigation.getParam('autoGenerate');
 
         if (lnurl) {
             this.setState({
@@ -94,7 +95,65 @@ export default class Receive extends React.Component<
                 value: amount
             });
         }
+
+        if (autoGenerate) this.autoGenerateInvoice();
     }
+
+    componentWillUnmount() {
+        if (this.listener && this.listener.stop) this.listener.stop();
+    }
+
+    autoGenerateInvoice = () => {
+        const { InvoicesStore } = this.props;
+        const { createUnifiedInvoice } = InvoicesStore;
+        const { memo, expiry, ampInvoice, routeHints, addressType, value } =
+            this.state;
+
+        createUnifiedInvoice(
+            memo,
+            value || '0',
+            expiry,
+            undefined,
+            ampInvoice,
+            routeHints,
+            RESTUtils.supportsAddressTypeSelection() ? addressType : null
+        ).then((rHash: string) => this.subscribeInvoice(rHash));
+    };
+
+    subscribeInvoice = (rHash: string) => {
+        const { InvoicesStore, SettingsStore } = this.props;
+        const { implementation } = SettingsStore;
+        const { setWatchedInvoicePaid } = InvoicesStore;
+        if (implementation === 'lightning-node-connect') {
+            const { LncModule } = NativeModules;
+            const eventName = RESTUtils.subscribeInvoice(rHash);
+            const eventEmitter = new NativeEventEmitter(LncModule);
+            this.listener = eventEmitter.addListener(
+                eventName,
+                (event: any) => {
+                    if (event.result) {
+                        try {
+                            const result = JSON.parse(event.result);
+                            if (result.settled) {
+                                setWatchedInvoicePaid();
+                                this.listener = null;
+                            }
+                        } catch (error) {
+                            console.error(error);
+                        }
+                    }
+                }
+            );
+        }
+
+        if (implementation === 'lnd') {
+            RESTUtils.subscribeInvoice(rHash).then((response: any) => {
+                if (response.result && response.result.settled) {
+                    setWatchedInvoicePaid();
+                }
+            });
+        }
+    };
 
     getNewAddress = (params: any) => {
         const { InvoicesStore } = this.props;
