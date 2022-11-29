@@ -148,8 +148,8 @@ export default class Spark {
     sendCoins = (data: TransactionRequest) =>
         this.rpc('withdraw', {
             desination: data.addr,
-            feerate: `${Number(data.sat_per_byte) * 1000}perkb`,
-            satoshi: data.amount
+            satoshi: data.amount,
+            feerate: `${Number(data.sat_per_byte) * 1000}perkb`
         });
     getMyNodeInfo = () => this.rpc('getinfo');
     getInvoices = () =>
@@ -174,10 +174,12 @@ export default class Spark {
         );
     createInvoice = (data: any) =>
         this.rpc('invoice', {
-            description: data.memo,
-            label: 'zeus.' + Math.random() * 1000000,
             msatoshi: Number(data.value) * 1000,
+            label: 'zeus.' + Math.random() * 1000000,
+            description: data.memo,
             expiry: Math.round(Date.now() / 1000) + Number(data.expiry),
+            fallbacks: null,
+            preimage: null,
             exposeprivatechannels: true
         });
     getPayments = () =>
@@ -191,13 +193,13 @@ export default class Spark {
             announce: !data.privateChannel
         }).then(({ txid }: any) => ({ funding_txid_str: txid }));
     connectPeer = (data: any) =>
-        this.rpc('connect', [data.addr.pubkey, data.addr.host]);
+        this.rpc('connect', { id: data.addr.pubkey, host: data.addr.host });
     decodePaymentRequest = (urlParams?: Array<string>) =>
-        this.rpc('decodepay', [urlParams && urlParams[0]]);
+        this.rpc('decodepay', {bolt11: urlParams && urlParams[0]});
     payLightningInvoice = (data: any) =>
         this.rpc('pay', {
             bolt11: data.payment_request,
-            msatoshi: data.amt ? Number(data.amt * 1000) : undefined
+            msatoshi: data.amt ? Number(data.amt * 1000) : null
         });
     closeChannel = (urlParams?: Array<string>) =>
         this.rpc('close', {
@@ -205,7 +207,7 @@ export default class Spark {
             unilateraltimeout: urlParams && urlParams[1] ? 60 : 0
         }).then(() => ({ chan_close: { success: true } }));
     getNodeInfo = (urlParams?: Array<string>) =>
-        this.rpc('listnodes', [urlParams && urlParams[0]]).then(
+        this.rpc('listnodes', { id: urlParams && urlParams[0] }).then(
             ({ nodes }: any) => {
                 const node = nodes[0];
                 return {
@@ -231,7 +233,10 @@ export default class Spark {
         const [listforwards, listpeers, listchannels] = await Promise.all([
             this.rpc('listforwards'),
             this.rpc('listpeers'),
-            this.rpc('listchannels', { source: info.id })
+            this.rpc('listchannels', {
+                short_channel_id: null,
+                source: info.id
+            })
         ]);
 
         let lastDay = 0,
