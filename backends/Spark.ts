@@ -19,11 +19,22 @@ export default class Spark {
 
         url = url.slice(-4) === '/rpc' ? url : url + '/rpc';
 
-        const headers: any = { 'X-Access': accessKey };
+        const headers: any = {
+            'Content-Type': 'application/json',
+            'X-Access': accessKey
+        };
         if (range) {
             headers.Range = `${range.unit}=${range.slice}`;
         }
-        const body = JSON.stringify({ method: rpcmethod, params: param });
+
+        /* Spark-wallet '/rpc' API (v0.3.2-rc) does not accept objects and
+         * "params" should be an array of parameter values in the correct order
+         * per the API https://lightning.readthedocs.io. Required but empty
+         * values should be set JSON null. */
+        const body = JSON.stringify({
+            method: rpcmethod,
+            params: Object.values(param)
+        });
 
         if (enableTor === true) {
             calls[id] = doTorRequest(url, RequestMethod.POST, body, headers);
