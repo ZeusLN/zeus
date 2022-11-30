@@ -465,6 +465,11 @@ export default class SettingsStore {
 
     @action
     public setConnectingStatus = (status = false) => {
+        // reset error on reconnect
+        if (status) {
+            this.error = false;
+            this.errorMsg = '';
+        }
         this.connecting = status;
         return this.connecting;
     };
