@@ -99,22 +99,22 @@ export default class Receive extends React.Component<
             });
         }
 
-        if (autoGenerate) this.autoGenerateInvoice();
+        if (autoGenerate) this.autoGenerateInvoice(amount);
     }
 
     componentWillUnmount() {
         if (this.listener && this.listener.stop) this.listener.stop();
     }
 
-    autoGenerateInvoice = () => {
+    autoGenerateInvoice = (amount: string) => {
         const { InvoicesStore } = this.props;
         const { createUnifiedInvoice } = InvoicesStore;
-        const { memo, expiry, ampInvoice, routeHints, addressType, value } =
+        const { memo, expiry, ampInvoice, routeHints, addressType } =
             this.state;
 
         createUnifiedInvoice(
             memo,
-            value || '0',
+            amount || '0',
             expiry,
             undefined,
             ampInvoice,
