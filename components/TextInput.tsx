@@ -87,7 +87,7 @@ export default function TextInput(props: TextInputProps) {
                 placeholderTextColor={
                     placeholderTextColor || themeColor('secondaryText')
                 }
-                editable={editable ? editable : true}
+                editable={editable.toString() ? editable : true}
                 keyboardType={keyboardType}
                 autoCapitalize={autoCapitalize}
                 autoCorrect={autoCorrect}
