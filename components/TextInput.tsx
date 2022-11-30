@@ -60,12 +60,20 @@ export default function TextInput(props: TextInputProps) {
             style={{
                 ...style,
                 ...defaultStyle,
-                ...styles.wrapper
+                ...styles.wrapper,
+                backgroundColor: themeColor('secondary')
             }}
         >
             {prefix && (
                 <TouchableOpacity onPress={() => toggleUnits()}>
-                    <Text style={{ ...styles.unit, marginRight: 5 }}>
+                    <Text
+                        style={{
+                            ...styles.unit,
+                            marginRight: 5,
+                            color: themeColor('text'),
+                            backgroundColor: themeColor('background')
+                        }}
+                    >
                         {prefix}
                     </Text>
                 </TouchableOpacity>
@@ -75,7 +83,7 @@ export default function TextInput(props: TextInputProps) {
                 value={value}
                 onChangeText={onChangeText}
                 numberOfLines={numberOfLines || 1}
-                style={styles.input}
+                style={{ ...styles.input, color: themeColor('text') }}
                 placeholderTextColor={
                     placeholderTextColor || themeColor('secondaryText')
                 }
@@ -92,7 +100,9 @@ export default function TextInput(props: TextInputProps) {
                     <Text
                         style={{
                             ...styles.unit,
-                            right: 45
+                            right: 45,
+                            color: themeColor('text'),
+                            backgroundColor: themeColor('background')
                         }}
                     >
                         {suffix}
@@ -111,18 +121,14 @@ const styles = StyleSheet.create({
         borderRadius: 6,
         marginBottom: 20,
         padding: 10,
-        backgroundColor: themeColor('secondary'),
         overflow: 'hidden'
     },
     unit: {
-        color: themeColor('text'),
-        backgroundColor: themeColor('background'),
         fontSize: 20,
         borderRadius: 6,
         padding: 5
     },
     input: {
-        color: themeColor('text'),
         fontSize: 20,
         width: '100%',
         fontFamily: 'Lato-Regular',
