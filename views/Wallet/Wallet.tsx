@@ -40,7 +40,7 @@ import Bitcoin from './../../assets/images/SVG/Bitcoin.svg';
 import Temple from './../../assets/images/SVG/Temple.svg';
 import ChannelsIcon from './../../assets/images/SVG/Channels.svg';
 import CaretUp from './../../assets/images/SVG/Caret Up.svg';
-import WordLogo from './../../assets/images/SVG/Word Logo - no outline.svg';
+import WordLogo from './../../assets/images/SVG/Word Logo.svg';
 
 interface WalletProps {
     enterSetup: any;
@@ -397,7 +397,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     {connecting && !loginRequired && (
                         <View
                             style={{
-                                backgroundColor: '#1F242D',
+                                backgroundColor: themeColor('background'),
                                 height: '100%'
                             }}
                         >
@@ -451,7 +451,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         width: 320
                                     }}
                                     titleStyle={{
-                                        color: 'white'
+                                        color: themeColor('text')
                                     }}
                                     onPress={() => {
                                         if (settings.nodes)
