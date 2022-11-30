@@ -10,6 +10,8 @@ import {
 import Clipboard from '@react-native-clipboard/clipboard';
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import EncryptedStorage from 'react-native-encrypted-storage';
+import { hash, STORAGE_KEY } from './../../backends/LNC/credentialStore';
 
 import AddressUtils, { CUSTODIAL_LNDHUBS } from './../../utils/AddressUtils';
 import ConnectionFormatUtils from './../../utils/ConnectionFormatUtils';
@@ -61,6 +63,8 @@ interface AddEditNodeState {
     pairingPhrase: string;
     mailboxServer: string;
     customMailboxServer: string;
+    localKey: string;
+    remoteKey: string;
 }
 
 @inject('SettingsStore')
@@ -93,7 +97,9 @@ export default class AddEditNode extends React.Component<
         // lnc
         pairingPhrase: '',
         mailboxServer: 'mailbox.terminal.lightning.today:443',
-        customMailboxServer: ''
+        customMailboxServer: '',
+        localKey: '',
+        remoteKey: ''
     };
 
     async UNSAFE_componentWillMount() {
@@ -169,14 +175,28 @@ export default class AddEditNode extends React.Component<
     };
 
     async componentDidMount() {
-        this.initFromProps(this.props);
+        await this.initFromProps(this.props);
+        const { implementation, pairingPhrase } = this.state;
+        if (implementation === 'lightning-node-connect') {
+            const key = `${STORAGE_KEY}:${hash(pairingPhrase)}`;
+            const json: any = await EncryptedStorage.getItem(key);
+            const parsed = JSON.parse(json);
+            if (parsed) {
+                if (parsed.localKey && parsed.remoteKey) {
+                    this.setState({
+                        localKey: parsed.localKey,
+                        remoteKey: parsed.remoteKey
+                    });
+                }
+            }
+        }
     }
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
         this.initFromProps(nextProps);
     }
 
-    initFromProps(props: any) {
+    async initFromProps(props: any) {
         const { navigation } = props;
 
         const node = navigation.getParam('node', null);
@@ -467,7 +487,9 @@ export default class AddEditNode extends React.Component<
             showCertModal,
             pairingPhrase,
             mailboxServer,
-            customMailboxServer
+            customMailboxServer,
+            localKey,
+            remoteKey
         } = this.state;
         const {
             loading,
@@ -1204,6 +1226,47 @@ export default class AddEditNode extends React.Component<
                                     }
                                     editable={!loading}
                                 />
+                                {!!localKey && (
+                                    <>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            🔒{' '}
+                                            {localeString(
+                                                'views.Settings.AddEditNode.localKey'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            value={localKey}
+                                            editable={false}
+                                        />
+                                    </>
+                                )}
+
+                                {!!remoteKey && (
+                                    <>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            🔒{' '}
+                                            {localeString(
+                                                'views.Settings.AddEditNode.remoteKey'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            value={remoteKey}
+                                            editable={false}
+                                        />
+                                    </>
+                                )}
                             </>
                         )}
 

@@ -118,11 +118,11 @@ export default class LncCredentialStore implements CredentialStore {
         try {
             const key = `${STORAGE_KEY}:${hash(pairingPhrase)}`;
             const json = await EncryptedStorage.getItem(key);
-            if (!json) return this._save();
-            this.persisted = JSON.parse(json);
-            console.log('@@@this.persisted', this.persisted);
-            this._localKey = this.persisted.localKey;
-            this._remoteKey = this.persisted.remoteKey;
+            if (json) {
+                this.persisted = JSON.parse(json);
+                this._localKey = this.persisted.localKey;
+                this._remoteKey = this.persisted.remoteKey;
+            }
         } catch (error) {
             const msg = (error as Error).message;
             throw new Error(`Failed to load secure data: ${msg}`);
@@ -141,3 +141,5 @@ export default class LncCredentialStore implements CredentialStore {
         EncryptedStorage.setItem(key, JSON.stringify(this.persisted));
     }
 }
+
+export { STORAGE_KEY, hash };
