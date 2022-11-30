@@ -264,7 +264,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         </View>
                     )}
 
-                    {dataAvailable && (
+                    {dataAvailable && !error && (
                         <>
                             <LayerBalances
                                 navigation={navigation}
