@@ -77,7 +77,14 @@ export default function PinPad({
                     highlight={numberHighlight}
                     style={styles.key}
                 >
-                    <Text style={styles.pinPadNumber}>{pinNumbers[1]}</Text>
+                    <Text
+                        style={{
+                            ...styles.pinPadNumber,
+                            color: themeColor('text')
+                        }}
+                    >
+                        {pinNumbers[1]}
+                    </Text>
                 </Touchable>
                 <Touchable
                     touch={() => {
@@ -87,7 +94,14 @@ export default function PinPad({
                     highlight={numberHighlight}
                     style={styles.key}
                 >
-                    <Text style={styles.pinPadNumber}>{pinNumbers[2]}</Text>
+                    <Text
+                        style={{
+                            ...styles.pinPadNumber,
+                            color: themeColor('text')
+                        }}
+                    >
+                        {pinNumbers[2]}
+                    </Text>
                 </Touchable>
                 <Touchable
                     touch={() => {
@@ -97,7 +111,14 @@ export default function PinPad({
                     highlight={numberHighlight}
                     style={styles.key}
                 >
-                    <Text style={styles.pinPadNumber}>{pinNumbers[3]}</Text>
+                    <Text
+                        style={{
+                            ...styles.pinPadNumber,
+                            color: themeColor('text')
+                        }}
+                    >
+                        {pinNumbers[3]}
+                    </Text>
                 </Touchable>
             </Row>
             <Row align="flex-end" style={styles.pinPadRow}>
@@ -109,7 +130,14 @@ export default function PinPad({
                     highlight={numberHighlight}
                     style={styles.key}
                 >
-                    <Text style={styles.pinPadNumber}>{pinNumbers[4]}</Text>
+                    <Text
+                        style={{
+                            ...styles.pinPadNumber,
+                            color: themeColor('text')
+                        }}
+                    >
+                        {pinNumbers[4]}
+                    </Text>
                 </Touchable>
                 <Touchable
                     touch={() => {
@@ -119,7 +147,14 @@ export default function PinPad({
                     highlight={numberHighlight}
                     style={styles.key}
                 >
-                    <Text style={styles.pinPadNumber}>{pinNumbers[5]}</Text>
+                    <Text
+                        style={{
+                            ...styles.pinPadNumber,
+                            color: themeColor('text')
+                        }}
+                    >
+                        {pinNumbers[5]}
+                    </Text>
                 </Touchable>
                 <Touchable
                     touch={() => {
@@ -129,7 +164,14 @@ export default function PinPad({
                     highlight={numberHighlight}
                     style={styles.key}
                 >
-                    <Text style={styles.pinPadNumber}>{pinNumbers[6]}</Text>
+                    <Text
+                        style={{
+                            ...styles.pinPadNumber,
+                            color: themeColor('text')
+                        }}
+                    >
+                        {pinNumbers[6]}
+                    </Text>
                 </Touchable>
             </Row>
             <Row align="flex-end" style={styles.pinPadRow}>
@@ -141,7 +183,14 @@ export default function PinPad({
                     highlight={numberHighlight}
                     style={styles.key}
                 >
-                    <Text style={styles.pinPadNumber}>{pinNumbers[7]}</Text>
+                    <Text
+                        style={{
+                            ...styles.pinPadNumber,
+                            color: themeColor('text')
+                        }}
+                    >
+                        {pinNumbers[7]}
+                    </Text>
                 </Touchable>
                 <Touchable
                     touch={() => {
@@ -151,7 +200,14 @@ export default function PinPad({
                     highlight={numberHighlight}
                     style={styles.key}
                 >
-                    <Text style={styles.pinPadNumber}>{pinNumbers[8]}</Text>
+                    <Text
+                        style={{
+                            ...styles.pinPadNumber,
+                            color: themeColor('text')
+                        }}
+                    >
+                        {pinNumbers[8]}
+                    </Text>
                 </Touchable>
                 <Touchable
                     touch={() => {
@@ -161,7 +217,14 @@ export default function PinPad({
                     highlight={numberHighlight}
                     style={styles.key}
                 >
-                    <Text style={styles.pinPadNumber}>{pinNumbers[9]}</Text>
+                    <Text
+                        style={{
+                            ...styles.pinPadNumber,
+                            color: themeColor('text')
+                        }}
+                    >
+                        {pinNumbers[9]}
+                    </Text>
                 </Touchable>
             </Row>
             <Row align="flex-end" style={styles.pinPadRow}>
@@ -173,7 +236,14 @@ export default function PinPad({
                         highlight={numberHighlight}
                         style={styles.key}
                     >
-                        <Text style={styles.pinPadNumber}>{'.'}</Text>
+                        <Text
+                            style={{
+                                ...styles.pinPadNumber,
+                                color: themeColor('text')
+                            }}
+                        >
+                            {'.'}
+                        </Text>
                     </Touchable>
                 ) : (
                     <Touchable
@@ -184,7 +254,14 @@ export default function PinPad({
                         highlight={numberHighlight}
                         style={styles.key}
                     >
-                        <Text style={styles.pinPadNumber}>{'<'}</Text>
+                        <Text
+                            style={{
+                                ...styles.pinPadNumber,
+                                color: themeColor('text')
+                            }}
+                        >
+                            {'<'}
+                        </Text>
                     </Touchable>
                 )}
                 <Touchable
@@ -195,7 +272,14 @@ export default function PinPad({
                     highlight={numberHighlight}
                     style={styles.key}
                 >
-                    <Text style={styles.pinPadNumber}>{pinNumbers[0]}</Text>
+                    <Text
+                        style={{
+                            ...styles.pinPadNumber,
+                            color: themeColor('text')
+                        }}
+                    >
+                        {pinNumbers[0]}
+                    </Text>
                 </Touchable>
                 {!hidePinLength &&
                     (amount ? (
@@ -207,7 +291,14 @@ export default function PinPad({
                             highlight={numberHighlight}
                             style={styles.key}
                         >
-                            <Text style={styles.pinPadNumber}>{'<'}</Text>
+                            <Text
+                                style={{
+                                    ...styles.pinPadNumber,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {'<'}
+                            </Text>
                         </Touchable>
                     ) : (
                         <Touchable
@@ -218,7 +309,14 @@ export default function PinPad({
                             highlight={numberHighlight}
                             style={styles.key}
                         >
-                            <Text style={styles.pinPadNumber}>C</Text>
+                            <Text
+                                style={{
+                                    ...styles.pinPadNumber,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                C
+                            </Text>
                         </Touchable>
                     ))}
                 {!!hidePinLength && pinValueLength >= minLength && (
