@@ -68,10 +68,10 @@ export const LNC_MAILBOX_KEYS = [
         key: 'mailbox.terminal.lightning.today:443',
         value: 'mailbox.terminal.lightning.today:443'
     },
-    {
-        key: 'lnc.zeusln.app:443',
-        value: 'lnc.zeusln.app:443'
-    },
+    // {
+    //     key: 'lnc.zeusln.app:443',
+    //     value: 'lnc.zeusln.app:443'
+    // },
     { key: 'Custom defined mailbox', value: 'custom-defined' }
 ];
 
