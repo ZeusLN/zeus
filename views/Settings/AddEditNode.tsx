@@ -897,7 +897,7 @@ export default class AddEditNode extends React.Component<
                                         saved: false
                                     })
                                 }
-                                editable={!loading}
+                                locked={loading}
                             />
                         </View>
 
@@ -925,7 +925,7 @@ export default class AddEditNode extends React.Component<
                                             saved: false
                                         })
                                     }
-                                    editable={!loading}
+                                    locked={loading}
                                     autoCorrect={false}
                                 />
 
@@ -951,7 +951,7 @@ export default class AddEditNode extends React.Component<
                                                     saved: false
                                                 });
                                             }}
-                                            editable={!loading}
+                                            locked={loading}
                                         />
                                     </>
                                 )}
@@ -977,7 +977,7 @@ export default class AddEditNode extends React.Component<
                                                     saved: false
                                                 });
                                             }}
-                                            editable={!loading}
+                                            locked={loading}
                                         />
                                     </>
                                 )}
@@ -1003,7 +1003,7 @@ export default class AddEditNode extends React.Component<
                                             saved: false
                                         })
                                     }
-                                    editable={!loading}
+                                    locked={loading}
                                     autoCorrect={false}
                                 />
 
@@ -1058,7 +1058,7 @@ export default class AddEditNode extends React.Component<
                                                     saved: false
                                                 })
                                             }
-                                            editable={!loading}
+                                            locked={loading}
                                         />
 
                                         <Text
@@ -1081,7 +1081,7 @@ export default class AddEditNode extends React.Component<
                                                     saved: false
                                                 })
                                             }
-                                            editable={!loading}
+                                            locked={loading}
                                             secureTextEntry={saved}
                                         />
                                         {saved && (
@@ -1124,7 +1124,7 @@ export default class AddEditNode extends React.Component<
                                             saved: false
                                         })
                                     }
-                                    editable={!loading}
+                                    locked={loading}
                                 />
 
                                 <Text
@@ -1146,7 +1146,7 @@ export default class AddEditNode extends React.Component<
                                             saved: false
                                         })
                                     }
-                                    editable={!loading}
+                                    locked={loading}
                                 />
 
                                 <Text
@@ -1167,7 +1167,7 @@ export default class AddEditNode extends React.Component<
                                             saved: false
                                         })
                                     }
-                                    editable={!loading}
+                                    locked={loading}
                                 />
                             </>
                         )}
@@ -1200,7 +1200,7 @@ export default class AddEditNode extends React.Component<
                                                     saved: false
                                                 })
                                             }
-                                            editable={!loading}
+                                            locked={loading}
                                         />
                                     </>
                                 )}
@@ -1224,7 +1224,7 @@ export default class AddEditNode extends React.Component<
                                             saved: false
                                         })
                                     }
-                                    editable={!loading}
+                                    locked={loading}
                                 />
                                 {!!localKey && (
                                     <>
@@ -1242,7 +1242,7 @@ export default class AddEditNode extends React.Component<
                                         </Text>
                                         <TextInput
                                             value={localKey}
-                                            editable={false}
+                                            locked={true}
                                         />
                                     </>
                                 )}
@@ -1263,7 +1263,7 @@ export default class AddEditNode extends React.Component<
                                         </Text>
                                         <TextInput
                                             value={remoteKey}
-                                            editable={false}
+                                            locked={true}
                                         />
                                     </>
                                 )}
