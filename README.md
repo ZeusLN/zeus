@@ -62,6 +62,7 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 - [ ] Batch on-chain transactions
 - [ ] Batch channel opens
 - [ ] PayJoin
+- [ ] [Lightning Node Connect](https://docs.lightning.engineering/lightning-network-tools/lightning-terminal/lightning-node-connect)
 
 ## Connecting Zeus to your node
 
