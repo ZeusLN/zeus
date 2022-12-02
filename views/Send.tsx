@@ -1,5 +1,7 @@
 import * as React from 'react';
 import {
+    NativeModules,
+    NativeEventEmitter,
     Platform,
     StyleSheet,
     Text,
@@ -82,6 +84,7 @@ interface SendState {
 )
 @observer
 export default class Send extends React.Component<SendProps, SendState> {
+    listener: any;
     constructor(props: SendProps) {
         super(props);
         const { navigation } = props;
@@ -125,6 +128,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                 });
             }
         }
+
+        if (this.listener && this.listener.stop) this.listener.stop();
     }
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
@@ -159,6 +164,30 @@ export default class Send extends React.Component<SendProps, SendState> {
             await this.enableNfc();
         }
     }
+
+    subscribePayment = (streamingCall: string) => {
+        const { handlePayment, handlePaymentError } =
+            this.props.TransactionsStore;
+        const { LncModule } = NativeModules;
+        const eventEmitter = new NativeEventEmitter(LncModule);
+        this.listener = eventEmitter.addListener(
+            streamingCall,
+            (event: any) => {
+                if (event.result && event.result !== 'EOF') {
+                    try {
+                        const result = JSON.parse(event.result);
+                        if (result && result.status !== 'IN_FLIGHT') {
+                            handlePayment(result);
+                            this.listener = null;
+                        }
+                    } catch (error: any) {
+                        handlePaymentError(event.result);
+                        this.listener = null;
+                    }
+                }
+            }
+        );
+    };
 
     disableNfc = () => {
         NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
@@ -254,7 +283,8 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     sendKeySendPayment = (satAmount: string | number) => {
-        const { TransactionsStore, navigation } = this.props;
+        const { TransactionsStore, SettingsStore, navigation } = this.props;
+        const { implementation } = SettingsStore;
         const {
             destination,
             maxParts,
@@ -264,8 +294,9 @@ export default class Send extends React.Component<SendProps, SendState> {
             enableAtomicMultiPathPayment
         } = this.state;
 
+        let streamingCall;
         if (enableAtomicMultiPathPayment) {
-            TransactionsStore.sendPayment({
+            streamingCall = TransactionsStore.sendPayment({
                 amount: satAmount.toString(),
                 pubkey: destination,
                 message,
@@ -275,11 +306,15 @@ export default class Send extends React.Component<SendProps, SendState> {
                 amp: true
             });
         } else {
-            TransactionsStore.sendPayment({
+            streamingCall = TransactionsStore.sendPayment({
                 amount: satAmount.toString(),
                 pubkey: destination,
                 message
             });
+        }
+
+        if (implementation === 'lightning-node-connect') {
+            this.subscribePayment(streamingCall);
         }
 
         navigation.navigate('SendingLightning');

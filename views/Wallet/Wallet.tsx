@@ -163,7 +163,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             password,
             login,
             connecting,
-            setConnectingStatus
+            setConnectingStatus,
+            connect
         } = SettingsStore;
         const { fiat } = settings;
 
@@ -176,6 +177,19 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             login({ login: username, password }).then(async () => {
                 BalanceStore.getLightningBalance(true);
             });
+        } else if (implementation === 'lightning-node-connect') {
+            let error;
+            if (connecting) {
+                error = await connect();
+            }
+            if (!error) {
+                UTXOsStore.listAccounts();
+                await BalanceStore.getCombinedBalance();
+                ChannelsStore.getChannels();
+                FeeStore.getFees();
+                NodeInfoStore.getNodeInfo();
+                FeeStore.getForwardingHistory();
+            }
         } else {
             if (RESTUtils.supportsAccounts()) {
                 UTXOsStore.listAccounts();
@@ -212,7 +226,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             SettingsStore,
             navigation
         } = this.props;
-        const { error, nodeInfo } = NodeInfoStore;
+        const { nodeInfo } = NodeInfoStore;
+        const error = NodeInfoStore.error || SettingsStore.error;
         const { implementation, settings, loggedIn, connecting } =
             SettingsStore;
         const loginRequired =
@@ -249,7 +264,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         </View>
                     )}
 
-                    {dataAvailable && (
+                    {dataAvailable && !error && (
                         <>
                             <LayerBalances
                                 navigation={navigation}

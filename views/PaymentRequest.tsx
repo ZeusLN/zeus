@@ -1,5 +1,13 @@
 import * as React from 'react';
-import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import {
+    NativeModules,
+    NativeEventEmitter,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    View
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Header, Icon } from 'react-native-elements';
 
@@ -57,6 +65,7 @@ export default class PaymentRequest extends React.Component<
     InvoiceProps,
     InvoiceState
 > {
+    listener: any;
     state = {
         customAmount: '',
         enableMultiPathPayment: true,
@@ -67,6 +76,30 @@ export default class PaymentRequest extends React.Component<
         maxFeePercent: '0.5',
         outgoingChanId: null,
         lastHopPubkey: null
+    };
+
+    subscribePayment = (streamingCall: string) => {
+        const { handlePayment, handlePaymentError } =
+            this.props.TransactionsStore;
+        const { LncModule } = NativeModules;
+        const eventEmitter = new NativeEventEmitter(LncModule);
+        this.listener = eventEmitter.addListener(
+            streamingCall,
+            (event: any) => {
+                if (event.result && event.result !== 'EOF') {
+                    try {
+                        const result = JSON.parse(event.result);
+                        if (result && result.status !== 'IN_FLIGHT') {
+                            handlePayment(result);
+                            this.listener = null;
+                        }
+                    } catch (error: any) {
+                        handlePaymentError(event.result);
+                        this.listener = null;
+                    }
+                }
+            }
+        );
     };
 
     displayFeeRecommendation = () => {
@@ -105,7 +138,8 @@ export default class PaymentRequest extends React.Component<
         last_hop_pubkey,
         amp
     }: SendPaymentReq) => {
-        const { InvoicesStore, TransactionsStore, navigation } = this.props;
+        const { InvoicesStore, TransactionsStore, SettingsStore, navigation } =
+            this.props;
         let feeLimitSat = fee_limit_sat;
 
         // If the fee limit is not set, use a default routing fee calculation
@@ -119,7 +153,7 @@ export default class PaymentRequest extends React.Component<
             );
         }
 
-        TransactionsStore.sendPayment({
+        const streamingCall = TransactionsStore.sendPayment({
             payment_request,
             amount,
             max_parts,
@@ -130,6 +164,10 @@ export default class PaymentRequest extends React.Component<
             last_hop_pubkey,
             amp
         });
+
+        if (SettingsStore.implementation === 'lightning-node-connect') {
+            this.subscribePayment(streamingCall);
+        }
 
         navigation.navigate('SendingLightning');
     };
@@ -192,7 +230,7 @@ export default class PaymentRequest extends React.Component<
 
         const { enableTor, implementation } = SettingsStore;
 
-        const isLnd: boolean = implementation === 'lnd';
+        const isLnd: boolean = RESTUtils.isLNDBased();
         const isCLightning: boolean = implementation === 'c-lightning-REST';
 
         const isNoAmountInvoice: boolean =

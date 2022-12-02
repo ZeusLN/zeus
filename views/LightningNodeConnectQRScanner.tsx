@@ -4,32 +4,36 @@ import QRCodeScanner from './../components/QRCodeScanner';
 import ConnectionFormatUtils from './../utils/ConnectionFormatUtils';
 import { localeString } from './../utils/LocaleUtils';
 
-interface LNDConnectConfigQRProps {
+interface LightningNodeConnectQRProps {
     navigation: any;
 }
 
-export default class LNDConnectConfigQRScanner extends React.Component<
-    LNDConnectConfigQRProps,
+export default class LightningNodeConnectQRScanner extends React.Component<
+    LightningNodeConnectQRProps,
     {}
 > {
-    handleLNDConnectConfigInvoiceScanned = (data: string) => {
+    handleLNCConfigScanned = (data: string) => {
         const { navigation } = this.props;
 
         const index = navigation.getParam('index', null);
 
-        const { host, port, macaroonHex } =
-            ConnectionFormatUtils.processLndConnectUrl(data);
+        const { pairingPhrase, mailboxServer, customMailboxServer } =
+            ConnectionFormatUtils.processLncUrl(data);
 
-        if (host && port && macaroonHex) {
+        if (pairingPhrase && mailboxServer) {
             navigation.navigate('AddEditNode', {
-                node: { host, port, macaroonHex, implementation: 'lnd' },
-                enableTor: host && host.includes('.onion'),
+                node: {
+                    pairingPhrase,
+                    mailboxServer,
+                    customMailboxServer,
+                    implementation: 'lightning-node-connect'
+                },
                 index
             });
         } else {
             Alert.alert(
                 localeString('general.error'),
-                localeString('views.LNDConnectConfigQRScanner.error'),
+                localeString('views.LncQRScanner.error'),
                 [{ text: localeString('general.ok'), onPress: () => void 0 }],
                 { cancelable: false }
             );
@@ -45,7 +49,7 @@ export default class LNDConnectConfigQRScanner extends React.Component<
 
         return (
             <QRCodeScanner
-                handleQRScanned={this.handleLNDConnectConfigInvoiceScanned}
+                handleQRScanned={this.handleLNCConfigScanned}
                 goBack={() => navigation.navigate('AddEditNode', { index })}
             />
         );

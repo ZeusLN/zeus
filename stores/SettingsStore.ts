@@ -19,6 +19,10 @@ interface Node {
     certVerification?: boolean;
     enableTor?: boolean;
     nickname?: string;
+    // LNC
+    pairingPhrase?: string;
+    mailboxServer?: string;
+    customMailboxServer?: string;
 }
 
 interface PrivacySettings {
@@ -51,11 +55,24 @@ export const BLOCK_EXPLORER_KEYS = [
 ];
 
 export const INTERFACE_KEYS = [
-    { key: 'LND', value: 'lnd' },
+    { key: 'LND (REST)', value: 'lnd' },
+    { key: 'Lightning Node Connect', value: 'lightning-node-connect' },
     { key: 'c-lightning-REST', value: 'c-lightning-REST' },
     { key: 'Spark (c-lightning)', value: 'spark' },
     { key: 'Eclair', value: 'eclair' },
     { key: 'LNDHub', value: 'lndhub' }
+];
+
+export const LNC_MAILBOX_KEYS = [
+    {
+        key: 'mailbox.terminal.lightning.today:443',
+        value: 'mailbox.terminal.lightning.today:443'
+    },
+    // {
+    //     key: 'lnc.zeusln.app:443',
+    //     value: 'lnc.zeusln.app:443'
+    // },
+    { key: 'Custom defined mailbox', value: 'custom-defined' }
 ];
 
 export const LOCALE_KEYS = [
@@ -166,6 +183,12 @@ export default class SettingsStore {
     @observable public refreshToken: string;
     // Tor
     @observable public enableTor: boolean;
+    // LNC
+    @observable public pairingPhrase: string;
+    @observable public mailboxServer: string;
+    @observable public customMailboxServer: string;
+    @observable public error = false;
+    @observable public errorMsg: string;
 
     @action
     public changeLocale = (locale: string) => {
@@ -319,6 +342,10 @@ export default class SettingsStore {
                     this.implementation = node.implementation || 'lnd';
                     this.certVerification = node.certVerification || false;
                     this.enableTor = node.enableTor;
+                    // LNC
+                    this.pairingPhrase = node.pairingPhrase;
+                    this.mailboxServer = node.mailboxServer;
+                    this.customMailboxServer = node.customMailboxServer;
                 }
             } else {
                 console.log('No credentials stored');
@@ -393,6 +420,44 @@ export default class SettingsStore {
             });
     };
 
+    // LNC
+    @action
+    public connect = async () => {
+        this.loading = true;
+
+        RESTUtils.initLNC();
+
+        const error = await RESTUtils.connect();
+        if (error) {
+            this.error = true;
+            this.errorMsg = error;
+            return error;
+        }
+
+        // repeatedly check if the connection was successful
+        return new Promise<void>((resolve) => {
+            let counter = 0;
+            const interval = setInterval(async () => {
+                counter++;
+                const connected = await RESTUtils.isConnected();
+                if (connected) {
+                    clearInterval(interval);
+                    this.loading = false;
+                    resolve();
+                } else if (counter > 20) {
+                    clearInterval(interval);
+                    this.error = true;
+                    this.errorMsg =
+                        'Failed to connect the LNC client to the proxy server';
+                    this.loading = false;
+                    resolve(
+                        'Failed to connect the LNC client to the proxy server'
+                    );
+                }
+            }, 500);
+        });
+    };
+
     @action
     public setLoginStatus = (status = false) => {
         this.loggedIn = status;
@@ -400,6 +465,11 @@ export default class SettingsStore {
 
     @action
     public setConnectingStatus = (status = false) => {
+        // reset error on reconnect
+        if (status) {
+            this.error = false;
+            this.errorMsg = '';
+        }
         this.connecting = status;
         return this.connecting;
     };

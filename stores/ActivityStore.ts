@@ -86,14 +86,7 @@ export default class ActivityStore {
         this.filters.endDate = null;
     };
 
-    @action
-    public getActivity = async () => {
-        this.loading = true;
-        this.activity = [];
-        await this.paymentsStore.getPayments();
-        if (RESTUtils.supportsOnchainSends())
-            await this.transactionsStore.getTransactions();
-        await this.invoicesStore.getInvoices();
+    getSortedActivity = () => {
         const activity: any = [];
         const payments = this.paymentsStore.payments;
         const transactions = this.transactionsStore.transactions;
@@ -111,10 +104,41 @@ export default class ActivityStore {
             a.getTimestamp < b.getTimestamp ? 1 : -1
         );
 
-        this.activity = sortedActivity;
+        return sortedActivity;
+    };
+
+    @action
+    public getActivity = async () => {
+        this.loading = true;
+        this.activity = [];
+        await this.paymentsStore.getPayments();
+        if (RESTUtils.supportsOnchainSends())
+            await this.transactionsStore.getTransactions();
+        await this.invoicesStore.getInvoices();
+
+        this.activity = this.getSortedActivity();
         this.filteredActivity = this.activity;
 
         this.loading = false;
+    };
+
+    @action
+    public updateInvoices = async () => {
+        this.activity = [];
+        await this.invoicesStore.getInvoices();
+
+        this.activity = this.getSortedActivity();
+        this.filteredActivity = this.activity;
+    };
+
+    @action
+    public updateTransactions = async () => {
+        this.activity = [];
+        if (RESTUtils.supportsOnchainSends())
+            await this.transactionsStore.getTransactions();
+
+        this.activity = this.getSortedActivity();
+        this.filteredActivity = this.activity;
     };
 
     @action

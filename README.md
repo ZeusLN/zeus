@@ -62,6 +62,7 @@ Zeus is built on TypeScript and React-Native. It runs on both iOS and Android.
 - [ ] Batch on-chain transactions
 - [ ] Batch channel opens
 - [ ] PayJoin
+- [ ] [Lightning Node Connect](https://docs.lightning.engineering/lightning-network-tools/lightning-terminal/lightning-node-connect)
 
 ## Connecting Zeus to your node
 
@@ -109,8 +110,9 @@ Zeus is proud to be integrated on the following platforms:
 , then make sure it is connected to your computer by running `adb devices`
 3. install node dependencies with `npm i`
     1. if you encounter errors with this step involving conflicting react native dependencies, use the legacy peer dependencies option `npm i --legacy-peer-deps` 
-4. open up your Android simulator or connect your phone and run `npx react-native start`
-5. open a new tab and run `npx react-native run-android`
+4. install Lightning Node Connect's libraries with `npm run install-lnc`
+5. open up your Android simulator or connect your phone and run `npx react-native start`
+6. open a new tab and run `npx react-native run-android`
 
 ### iOS
 1. install and setup react-native and its related dependencies under **"Building Projects with Native Code"** on

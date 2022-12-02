@@ -19,6 +19,7 @@ import SetFeesForm from './../../components/SetFeesForm';
 import TextInput from './../../components/TextInput';
 
 import PrivacyUtils from './../../utils/PrivacyUtils';
+import RESTUtils from './../../utils/RESTUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -56,9 +57,8 @@ export default class ChannelView extends React.Component<
 > {
     constructor(props: any) {
         super(props);
-        const { navigation, ChannelsStore, SettingsStore } = props;
+        const { navigation, ChannelsStore } = props;
         const channel: Channel = navigation.getParam('channel', null);
-        const { implementation } = SettingsStore;
 
         this.state = {
             confirmCloseChannel: false,
@@ -67,7 +67,7 @@ export default class ChannelView extends React.Component<
             channel
         };
 
-        if (implementation === 'lnd') {
+        if (RESTUtils.isLNDBased()) {
             ChannelsStore.getChannelInfo(channel.channelId);
         }
     }
@@ -351,7 +351,7 @@ export default class ChannelView extends React.Component<
 
                     <Divider orientation="horizontal" style={{ margin: 20 }} />
 
-                    {implementation === 'lnd' && (
+                    {RESTUtils.isLNDBased() && (
                         <FeeBreakdown
                             channelId={channelId}
                             peerDisplay={peerDisplay}
@@ -360,7 +360,7 @@ export default class ChannelView extends React.Component<
                         />
                     )}
 
-                    {implementation !== 'lnd' && (
+                    {!RESTUtils.isLNDBased() && (
                         <SetFeesForm
                             baseFee={
                                 channelFee &&
@@ -379,7 +379,7 @@ export default class ChannelView extends React.Component<
                         />
                     )}
 
-                    {implementation === 'lnd' && (
+                    {RESTUtils.isLNDBased() && (
                         <View style={styles.button}>
                             <Button
                                 title={localeString('views.Channel.keysend')}
@@ -418,7 +418,7 @@ export default class ChannelView extends React.Component<
 
                     {confirmCloseChannel && (
                         <React.Fragment>
-                            {(implementation === 'lnd' || !implementation) && (
+                            {(RESTUtils.isLNDBased() || !implementation) && (
                                 <React.Fragment>
                                     <Text style={styles.text}>
                                         {localeString(
@@ -437,7 +437,7 @@ export default class ChannelView extends React.Component<
                                         autoCapitalize="none"
                                         autoCorrect={false}
                                     />
-                                    {implementation === 'lnd' && (
+                                    {RESTUtils.isLNDBased() && (
                                         <>
                                             <Text
                                                 style={{
