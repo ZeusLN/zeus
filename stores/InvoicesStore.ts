@@ -42,7 +42,7 @@ export default class InvoicesStore {
                 if (
                     this.pay_req &&
                     this.pay_req.destination &&
-                    (this.settingsStore.implementation === 'lnd' ||
+                    (RESTUtils.isLNDBased() ||
                         this.settingsStore.implementation === 'spark')
                 ) {
                     this.getRoutes(
@@ -109,8 +109,16 @@ export default class InvoicesStore {
         routeHints?: boolean,
         addressType?: string
     ) => {
-        this.createInvoice(memo, value, expiry, lnurl, ampInvoice, routeHints);
+        const rHash = this.createInvoice(
+            memo,
+            value,
+            expiry,
+            lnurl,
+            ampInvoice,
+            routeHints
+        );
         this.getNewAddress(addressType ? { type: addressType } : null);
+        return rHash;
     };
 
     @action
@@ -137,7 +145,7 @@ export default class InvoicesStore {
         if (ampInvoice) req.is_amp = true;
         if (routeHints) req.private = true;
 
-        RESTUtils.createInvoice(req)
+        return RESTUtils.createInvoice(req)
             .then((data: any) => {
                 if (data.error) {
                     this.creatingInvoiceError = true;
@@ -195,18 +203,12 @@ export default class InvoicesStore {
                         });
                 }
 
-                if (this.settingsStore.implementation === 'lnd') {
-                    const formattedRhash = invoice.r_hash
-                        .replace(/\+/g, '-')
-                        .replace(/\//g, '_');
-                    RESTUtils.subscribeInvoice(formattedRhash).then(
-                        (response: any) => {
-                            if (response.result && response.result.settled) {
-                                this.watchedInvoicePaid = true;
-                            }
-                        }
-                    );
-                }
+                const formattedRhash =
+                    typeof invoice.r_hash === 'string'
+                        ? invoice.r_hash.replace(/\+/g, '-').replace(/\//g, '_')
+                        : '';
+
+                return formattedRhash;
             })
             .catch((error: any) => {
                 // handle error
@@ -216,6 +218,11 @@ export default class InvoicesStore {
                     error.toString() ||
                     localeString('stores.InvoicesStore.errorCreatingInvoice');
             });
+    };
+
+    @action
+    public setWatchedInvoicePaid = () => {
+        this.watchedInvoicePaid = true;
     };
 
     @action

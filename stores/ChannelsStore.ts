@@ -347,7 +347,7 @@ export default class ChannelsStore {
         this.openingChannel = true;
 
         if (
-            this.settingsStore.implementation === 'lnd' &&
+            RESTUtils.isLNDBased() &&
             request.utxos &&
             request.utxos.length > 0
         ) {

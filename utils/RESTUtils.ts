@@ -1,22 +1,29 @@
 import stores from '../stores/Stores';
+// LND
 import LND from '../backends/LND';
+import LightningNodeConnect from '../backends/LightningNodeConnect';
+// Core Lightning
 import CLightningREST from '../backends/CLightningREST';
-import LndHub from '../backends/LndHub';
 import Spark from '../backends/Spark';
+// Eclair
 import Eclair from '../backends/Eclair';
+// Custodial
+import LndHub from '../backends/LndHub';
 
 class RESTUtils {
-    spark: Spark;
-    clightningREST: CLightningREST;
-    lndHub: LndHub;
     lnd: LND;
+    lightningNodeConnect: LightningNodeConnect;
+    clightningREST: CLightningREST;
+    spark: Spark;
     eclair: Eclair;
+    lndHub: LndHub;
     constructor() {
-        this.spark = new Spark();
-        this.clightningREST = new CLightningREST();
-        this.lndHub = new LndHub();
         this.lnd = new LND();
+        this.lightningNodeConnect = new LightningNodeConnect();
+        this.clightningREST = new CLightningREST();
+        this.spark = new Spark();
         this.eclair = new Eclair();
+        this.lndHub = new LndHub();
     }
 
     getClass = () => {
@@ -24,14 +31,16 @@ class RESTUtils {
         switch (implementation) {
             case 'lnd':
                 return this.lnd;
-            case 'spark':
-                return this.spark;
-            case 'lndhub':
-                return this.lndHub;
-            case 'eclair':
-                return this.eclair;
+            case 'lightning-node-connect':
+                return this.lightningNodeConnect;
             case 'c-lightning-REST':
                 return this.clightningREST;
+            case 'spark':
+                return this.spark;
+            case 'eclair':
+                return this.eclair;
+            case 'lndhub':
+                return this.lndHub;
             default:
                 return this.lnd;
         }
@@ -59,7 +68,6 @@ class RESTUtils {
     openChannelStream = (...args: any[]) =>
         this.call('openChannelStream', args);
     connectPeer = (...args: any[]) => this.call('connectPeer', args);
-    listNode = (...args: any[]) => this.call('listNode', args);
     decodePaymentRequest = (...args: any[]) =>
         this.call('decodePaymentRequest', args);
     payLightningInvoice = (...args: any[]) =>
@@ -86,6 +94,10 @@ class RESTUtils {
         this.call('publishTransaction', args);
     bumpFee = (...args: any[]) => this.call('bumpFee', args);
     subscribeInvoice = (...args: any[]) => this.call('subscribeInvoice', args);
+    subscribeInvoices = (...args: any[]) =>
+        this.call('subscribeInvoices', args);
+    subscribeTransactions = (...args: any[]) =>
+        this.call('subscribeTransactions', args);
 
     // lndhub
     createAccount = (...args: any[]) => this.call('createAccount', args);
@@ -102,10 +114,16 @@ class RESTUtils {
     supportsAccounts = () => this.call('supportsAccounts');
     supportsRouting = () => this.call('supportsRouting');
     supportsNodeInfo = () => this.call('supportsNodeInfo');
+    isLNDBased = () => this.call('isLNDBased');
     singleFeesEarnedTotal = () => this.call('singleFeesEarnedTotal');
     supportsAddressTypeSelection = () =>
         this.call('supportsAddressTypeSelection');
     supportsTaproot = () => this.call('supportsTaproot');
+
+    // LNC
+    initLNC = (...args: any[]) => this.call('initLNC', args);
+    connect = (...args: any[]) => this.call('connect', args);
+    isConnected = (...args: any[]) => this.call('isConnected', args);
 }
 
 const restUtils = new RESTUtils();

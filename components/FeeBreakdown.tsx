@@ -56,7 +56,7 @@ export default class FeeBreakdown extends React.Component<
                 {!loading &&
                 chanInfo &&
                 chanInfo[channelId] &&
-                chanInfo[channelId].node1_policy ? (
+                chanInfo[channelId].node1Policy ? (
                     <React.Fragment>
                         <View style={styles.title}>
                             <Text
@@ -65,9 +65,9 @@ export default class FeeBreakdown extends React.Component<
                                     color: themeColor('text')
                                 }}
                             >
-                                {(chanInfo[channelId].node1_pub === nodeId &&
+                                {(chanInfo[channelId].node1Pub === nodeId &&
                                     initiator) ||
-                                (chanInfo[channelId].node1_pub !== nodeId &&
+                                (chanInfo[channelId].node1Pub !== nodeId &&
                                     !initiator)
                                     ? localeString(
                                           'views.Channel.initiatingParty'
@@ -82,10 +82,10 @@ export default class FeeBreakdown extends React.Component<
                                     color: themeColor('secondaryText')
                                 }}
                             >
-                                {chanInfo[channelId].node1_pub === nodeId
+                                {chanInfo[channelId].node1Pub === nodeId
                                     ? localeString('views.Channel.yourNode')
                                     : peerDisplay ||
-                                      chanInfo[channelId].node1_pub}
+                                      chanInfo[channelId].node1Pub}
                             </Text>
                         </View>
                         <KeyValue
@@ -94,7 +94,7 @@ export default class FeeBreakdown extends React.Component<
                                 <Amount
                                     sats={
                                         Number(
-                                            chanInfo[channelId].node1_policy
+                                            chanInfo[channelId].node1Policy
                                                 .fee_base_msat
                                         ) / 1000
                                     }
@@ -107,7 +107,7 @@ export default class FeeBreakdown extends React.Component<
                             keyValue={localeString('views.Channel.feeRate')}
                             value={`${
                                 Number(
-                                    chanInfo[channelId].node1_policy
+                                    chanInfo[channelId].node1Policy
                                         .fee_rate_milli_msat
                                 ) / 10000
                             }%`}
@@ -119,7 +119,7 @@ export default class FeeBreakdown extends React.Component<
                                 <Amount
                                     sats={
                                         Number(
-                                            chanInfo[channelId].node1_policy
+                                            chanInfo[channelId].node1Policy
                                                 .min_htlc
                                         ) / 1000
                                     }
@@ -134,7 +134,7 @@ export default class FeeBreakdown extends React.Component<
                                 <Amount
                                     sats={
                                         Number(
-                                            chanInfo[channelId].node1_policy
+                                            chanInfo[channelId].node1Policy
                                                 .max_htlc_msat
                                         ) / 1000
                                     }
@@ -148,41 +148,40 @@ export default class FeeBreakdown extends React.Component<
                                 'views.Channel.timeLockDelta'
                             )}
                             value={`${
-                                chanInfo[channelId].node1_policy.time_lock_delta
+                                chanInfo[channelId].node1Policy.time_lock_delta
                             } ${localeString('general.blocks')}`}
                         />
                         <KeyValue
                             keyValue={localeString('views.Channel.lastUpdate')}
                             value={DateTimeUtils.listFormattedDate(
-                                chanInfo[channelId].node1_policy.last_update
+                                chanInfo[channelId].node1Policy.last_update
                             )}
                         />
-                        {chanInfo[channelId].node1_pub === nodeId && (
+                        {chanInfo[channelId].node1Pub === nodeId && (
                             <SetFeesForm
                                 baseFee={`${
                                     Number(
-                                        chanInfo[channelId].node1_policy
+                                        chanInfo[channelId].node1Policy
                                             .fee_base_msat
                                     ) / 1000
                                 }`}
                                 feeRate={`${
                                     Number(
-                                        chanInfo[channelId].node1_policy
+                                        chanInfo[channelId].node1Policy
                                             .fee_rate_milli_msat
                                     ) / 10000
                                 }`}
                                 timeLockDelta={chanInfo[
                                     channelId
-                                ].node1_policy.time_lock_delta.toString()}
+                                ].node1Policy.time_lock_delta.toString()}
                                 minHtlc={`${
                                     Number(
-                                        chanInfo[channelId].node1_policy
-                                            .min_htlc
+                                        chanInfo[channelId].node1Policy.min_htlc
                                     ) / 1000
                                 }`}
                                 maxHtlc={`${
                                     Number(
-                                        chanInfo[channelId].node1_policy
+                                        chanInfo[channelId].node1Policy
                                             .max_htlc_msat
                                     ) / 1000
                                 }`}
@@ -221,7 +220,7 @@ export default class FeeBreakdown extends React.Component<
                 {!loading &&
                     chanInfo &&
                     chanInfo[channelId] &&
-                    chanInfo[channelId].node2_policy && (
+                    chanInfo[channelId].node2Policy && (
                         <React.Fragment>
                             <View style={styles.title}>
                                 <Text
@@ -230,10 +229,9 @@ export default class FeeBreakdown extends React.Component<
                                         color: themeColor('text')
                                     }}
                                 >
-                                    {(chanInfo[channelId].node2_pub ===
-                                        nodeId &&
+                                    {(chanInfo[channelId].node2Pub === nodeId &&
                                         initiator) ||
-                                    (chanInfo[channelId].node2_pub !== nodeId &&
+                                    (chanInfo[channelId].node2Pub !== nodeId &&
                                         !initiator)
                                         ? localeString(
                                               'views.Channel.initiatingParty'
@@ -248,10 +246,10 @@ export default class FeeBreakdown extends React.Component<
                                         color: themeColor('secondaryText')
                                     }}
                                 >
-                                    {chanInfo[channelId].node2_pub === nodeId
+                                    {chanInfo[channelId].node2Pub === nodeId
                                         ? localeString('views.Channel.yourNode')
                                         : peerDisplay ||
-                                          chanInfo[channelId].node2_pub}
+                                          chanInfo[channelId].node2Pub}
                                 </Text>
                             </View>
                             <KeyValue
@@ -260,7 +258,7 @@ export default class FeeBreakdown extends React.Component<
                                     <Amount
                                         sats={
                                             Number(
-                                                chanInfo[channelId].node2_policy
+                                                chanInfo[channelId].node2Policy
                                                     .fee_base_msat
                                             ) / 1000
                                         }
@@ -273,7 +271,7 @@ export default class FeeBreakdown extends React.Component<
                                 keyValue={localeString('views.Channel.feeRate')}
                                 value={`${
                                     Number(
-                                        chanInfo[channelId].node2_policy
+                                        chanInfo[channelId].node2Policy
                                             .fee_rate_milli_msat
                                     ) / 10000
                                 }%`}
@@ -285,7 +283,7 @@ export default class FeeBreakdown extends React.Component<
                                     <Amount
                                         sats={`${
                                             Number(
-                                                chanInfo[channelId].node2_policy
+                                                chanInfo[channelId].node2Policy
                                                     .min_htlc
                                             ) / 1000
                                         }`}
@@ -300,7 +298,7 @@ export default class FeeBreakdown extends React.Component<
                                     <Amount
                                         sats={
                                             Number(
-                                                chanInfo[channelId].node2_policy
+                                                chanInfo[channelId].node2Policy
                                                     .max_htlc_msat
                                             ) / 1000
                                         }
@@ -314,7 +312,7 @@ export default class FeeBreakdown extends React.Component<
                                     'views.Channel.timeLockDelta'
                                 )}
                                 value={`${
-                                    chanInfo[channelId].node2_policy
+                                    chanInfo[channelId].node2Policy
                                         .time_lock_delta
                                 } ${localeString('general.blocks')}`}
                             />
@@ -323,35 +321,35 @@ export default class FeeBreakdown extends React.Component<
                                     'views.Channel.lastUpdate'
                                 )}
                                 value={DateTimeUtils.listFormattedDate(
-                                    chanInfo[channelId].node2_policy.last_update
+                                    chanInfo[channelId].node2Policy.last_update
                                 )}
                             />
-                            {chanInfo[channelId].node2_pub === nodeId && (
+                            {chanInfo[channelId].node2Pub === nodeId && (
                                 <SetFeesForm
                                     baseFee={`${
                                         Number(
-                                            chanInfo[channelId].node2_policy
+                                            chanInfo[channelId].node2Policy
                                                 .fee_base_msat
                                         ) / 1000
                                     }`}
                                     feeRate={`${
                                         Number(
-                                            chanInfo[channelId].node2_policy
+                                            chanInfo[channelId].node2Policy
                                                 .fee_rate_milli_msat
                                         ) / 10000
                                     }`}
                                     timeLockDelta={chanInfo[
                                         channelId
-                                    ].node2_policy.time_lock_delta.toString()}
+                                    ].node2Policy.time_lock_delta.toString()}
                                     minHtlc={`${
                                         Number(
-                                            chanInfo[channelId].node2_policy
+                                            chanInfo[channelId].node2Policy
                                                 .min_htlc
                                         ) / 1000
                                     }`}
                                     maxHtlc={`${
                                         Number(
-                                            chanInfo[channelId].node2_policy
+                                            chanInfo[channelId].node2Policy
                                                 .max_htlc_msat
                                         ) / 1000
                                     }`}
