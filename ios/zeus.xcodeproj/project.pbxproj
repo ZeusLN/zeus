@@ -51,7 +51,7 @@
 		659C049013BD4A618AA4275C /* Temple.svg in Resources */ = {isa = PBXBuildFile; fileRef = 259ED6E1C36A4BB38A5BFB8B /* Temple.svg */; };
 		692A2B7E895144DDB6D5813C /* PeersContact.svg in Resources */ = {isa = PBXBuildFile; fileRef = 299B155651FE4C3CB3D558D1 /* PeersContact.svg */; };
 		6ACB3216EC1B40A190B0A268 /* Channels.svg in Resources */ = {isa = PBXBuildFile; fileRef = 289689C09C974491A933737A /* Channels.svg */; };
-		74D9C4BC2930746B007F1950 /* Lncmobile.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 74D9C4BB2930746B007F1950 /* Lncmobile.xcframework */; };
+		748582B6293A4E8300494AD8 /* Lncmobile.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 748582B5293A4E8300494AD8 /* Lncmobile.xcframework */; };
 		778075355FE64470901265B5 /* Lightning.svg in Resources */ = {isa = PBXBuildFile; fileRef = D17E42CE8B824083B6E4DCC4 /* Lightning.svg */; };
 		78FB5414F55B4D94804920B7 /* Caret Right-1.svg in Resources */ = {isa = PBXBuildFile; fileRef = 34845404A9F04B35ADA34F80 /* Caret Right-1.svg */; };
 		7C9A1A0DC41A4B56BC555750 /* Node On.svg in Resources */ = {isa = PBXBuildFile; fileRef = 62458EE70D8546B7AE7F87DF /* Node On.svg */; };
@@ -350,7 +350,7 @@
 		6F7490ECB1F7403FB5236410 /* FontAwesome5_Solid.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome5_Solid.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome5_Solid.ttf"; sourceTree = "<group>"; };
 		7407D2CD274E076D00850BAB /* zeus.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = zeus.entitlements; path = zeus/zeus.entitlements; sourceTree = "<group>"; };
 		7407D2CE274E079100850BAB /* zeusRelease.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = zeusRelease.entitlements; path = zeus/zeusRelease.entitlements; sourceTree = "<group>"; };
-		74D9C4BB2930746B007F1950 /* Lncmobile.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = Lncmobile.xcframework; path = "../../../lightninglabs/lnc-rn/ios/Lncmobile.xcframework"; sourceTree = "<group>"; };
+		748582B5293A4E8300494AD8 /* Lncmobile.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = Lncmobile.xcframework; path = "../node_modules/@lightninglabs/lnc-rn/ios/Lncmobile.xcframework"; sourceTree = "<group>"; };
 		77EC666A91C04742A050DEF4 /* Help Icon.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Help Icon.svg"; path = "../assets/images/SVG/Help Icon.svg"; sourceTree = "<group>"; };
 		78C398B01ACF4ADC00677621 /* RCTLinking.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTLinking.xcodeproj; path = "../node_modules/react-native/Libraries/LinkingIOS/RCTLinking.xcodeproj"; sourceTree = "<group>"; };
 		794C8E7556B54F62BEAD1975 /* 2.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = 2.png; path = ../assets/images/intro/2.png; sourceTree = "<group>"; };
@@ -440,7 +440,7 @@
 			files = (
 				ED297163215061F000B7C4FE /* JavaScriptCore.framework in Frameworks */,
 				FE68A5FF7AF76A7CC17F753E /* libPods-zeus.a in Frameworks */,
-				74D9C4BC2930746B007F1950 /* Lncmobile.xcframework in Frameworks */,
+				748582B6293A4E8300494AD8 /* Lncmobile.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -565,7 +565,7 @@
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				74D9C4BB2930746B007F1950 /* Lncmobile.xcframework */,
+				748582B5293A4E8300494AD8 /* Lncmobile.xcframework */,
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				ED2971642150620600B7C4FE /* JavaScriptCore.framework */,
 				2D16E6891FA4F8E400B85C8A /* libReact.a */,
