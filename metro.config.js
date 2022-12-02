@@ -5,9 +5,6 @@ module.exports = (async () => {
     resolver: { sourceExts, assetExts }
   } = await getDefaultConfig();
   return {
-    watchFolders: [
-      "/Users/satoshi/Repos/lightninglabs/lnc-rn"
-    ],
     transformer: {
       babelTransformerPath: require.resolve('react-native-svg-transformer')
     },
