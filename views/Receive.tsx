@@ -606,12 +606,12 @@ export default class Receive extends React.Component<
                                         onChangeText={(text: string) => {
                                             this.setState({ value: text });
                                         }}
-                                        editable={
+                                        locked={
                                             lnurl &&
                                             lnurl.minWithdrawable ===
                                                 lnurl.maxWithdrawable
-                                                ? false
-                                                : true
+                                                ? true
+                                                : false
                                         }
                                         prefix={
                                             units !== 'sats' &&

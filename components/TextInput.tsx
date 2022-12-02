@@ -15,7 +15,7 @@ interface TextInputProps {
     numberOfLines?: number;
     style?: any;
     placeholderTextColor?: string;
-    editable?: boolean;
+    locked?: boolean;
     keyboardType?: string;
     autoCapitalize?: string;
     autoCorrect?: boolean;
@@ -35,7 +35,7 @@ export default function TextInput(props: TextInputProps) {
         numberOfLines,
         style,
         placeholderTextColor,
-        editable,
+        locked,
         keyboardType,
         autoCapitalize,
         autoCorrect,
@@ -87,7 +87,7 @@ export default function TextInput(props: TextInputProps) {
                 placeholderTextColor={
                     placeholderTextColor || themeColor('secondaryText')
                 }
-                editable={editable.toString() ? editable : true}
+                editable={!locked}
                 keyboardType={keyboardType}
                 autoCapitalize={autoCapitalize}
                 autoCorrect={autoCorrect}
