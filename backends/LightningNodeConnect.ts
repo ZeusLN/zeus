@@ -1,5 +1,4 @@
-// TODO pull in all typings
-import LNC from '@lightninglabs/lnc-rn';
+import LNC, { lnrpc, walletrpc } from '@lightninglabs/lnc-rn';
 
 import stores from '../stores/Stores';
 import CredentialStore from './LNC/credentialStore';
@@ -38,28 +37,32 @@ export default class LightningNodeConnect {
     isConnected = async () => await this.lnc.isConnected();
 
     getTransactions = async () =>
-        await this.lnc.lnd.lightning.getTransactions({}).then((data: any) => {
-            const formatted = snakeize(data);
-            return {
-                transactions: formatted.transactions.reverse()
-            };
-        });
+        await this.lnc.lnd.lightning
+            .getTransactions({})
+            .then((data: lnrpc.TransactionDetails) => {
+                const formatted = snakeize(data);
+                return {
+                    transactions: formatted.transactions.reverse()
+                };
+            });
     getChannels = async () =>
         await this.lnc.lnd.lightning
             .listChannels({})
-            .then((data: any) => snakeize(data));
-    getChannelInfo = async (chanId: string) =>
-        await this.lnc.lnd.lightning
-            .getChanInfo({ chanId })
-            .then((data: any) => snakeize(data));
+            .then((data: lnrpc.ListChannelsResponse) => snakeize(data));
+    getChannelInfo = async (chanId: string) => {
+        const request: lnrpc.ChanInfoRequest = { chanId };
+        return await this.lnc.lnd.lightning
+            .getChanInfo(request)
+            .then((data: lnrpc.ChannelEdge) => snakeize(data));
+    };
     getBlockchainBalance = async () =>
         await this.lnc.lnd.lightning
             .walletBalance({})
-            .then((data: any) => snakeize(data));
+            .then((data: lnrpc.WalletBalanceResponse) => snakeize(data));
     getLightningBalance = async () =>
         await this.lnc.lnd.lightning
             .channelBalance({})
-            .then((data: any) => snakeize(data));
+            .then((data: lnrpc.ChannelBalanceResponse) => snakeize(data));
     sendCoins = async (data: any) =>
         await this.lnc.lnd.lightning
             .sendCoins({
@@ -68,27 +71,27 @@ export default class LightningNodeConnect {
                 amount: data.amount,
                 spend_unconfirmed: data.spend_unconfirmed
             })
-            .then((data: any) => snakeize(data));
+            .then((data: lnrpc.SendCoinsResponse) => snakeize(data));
     getMyNodeInfo = async () =>
         await this.lnc.lnd.lightning
             .getInfo({})
-            .then((data: any) => snakeize(data));
+            .then((data: lnrpc.GetInfoResponse) => snakeize(data));
     getInvoices = async () =>
         await this.lnc.lnd.lightning
             .listInvoices({ reversed: true, num_max_invoices: 100 })
-            .then((data: any) => snakeize(data));
+            .then((data: lnrpc.ListInvoiceResponse) => snakeize(data));
     createInvoice = async (data: any) =>
         await this.lnc.lnd.lightning
             .addInvoice(data)
-            .then((data: any) => snakeize(data));
+            .then((data: lnrpc.AddInvoiceResponse) => snakeize(data));
     getPayments = async () =>
         await this.lnc.lnd.lightning
             .listPayments({})
-            .then((data: any) => snakeize(data));
+            .then((data: lnrpc.ListPaymentsResponse) => snakeize(data));
     getNewAddress = async (data: any) =>
         await this.lnc.lnd.lightning
             .newAddress({ type: ADDRESS_TYPES[data.type] })
-            .then((data: any) => snakeize(data));
+            .then((data: lnrpc.NewAddressResponse) => snakeize(data));
 
     openChannel = async (data: OpenChannelRequest) =>
         await this.lnc.lnd.lightning
@@ -100,18 +103,18 @@ export default class LightningNodeConnect {
                 sat_per_byte: data.sat_per_byte,
                 spend_unconfirmed: data.spend_unconfirmed
             })
-            .then((data: any) => snakeize(data));
+            .then((data: lnrpc.ChannelPoint) => snakeize(data));
     // TODO add with external accounts
     // openChannelStream = (data: OpenChannelRequest) =>
     //     this.wsReq('/v1/channels/stream', 'POST', data);
     connectPeer = async (data: any) =>
         await this.lnc.lnd.lightning
             .connectPeer(data)
-            .then((data: any) => snakeize(data));
+            .then((data: lnrpc.ConnectPeerRequest) => snakeize(data));
     decodePaymentRequest = async (urlParams?: Array<string>) =>
         await this.lnc.lnd.lightning
             .decodePayReq({ pay_req: urlParams && urlParams[0] })
-            .then((data: any) => snakeize(data));
+            .then((data: lnrpc.PayReq) => snakeize(data));
     payLightningInvoice = (data: any) => {
         if (data.pubkey) delete data.pubkey;
         return this.lnc.lnd.router.sendPaymentV2({
@@ -142,16 +145,16 @@ export default class LightningNodeConnect {
         };
         return await this.lnc.lnd.lightning
             .closeChannel(params)
-            .then((data: any) => snakeize(data));
+            .then((data: lnrpc.CloseStatusUpdate) => snakeize(data));
     };
     getNodeInfo = async (urlParams?: Array<string>) =>
         await this.lnc.lnd.lightning
             .getNodeInfo({ pub_key: urlParams && urlParams[0] })
-            .then((data: any) => snakeize(data));
+            .then((data: lnrpc.NodeInfo) => snakeize(data));
     getFees = async () =>
         await this.lnc.lnd.lightning
             .feeReport({})
-            .then((data: any) => snakeize(data));
+            .then((data: lnrpc.FeeReportResponse) => snakeize(data));
     setFees = async (data: any) => {
         // handle commas in place of decimals
         const base_fee_msat = data.base_fee_msat.replace(/,/g, '.');
@@ -192,7 +195,7 @@ export default class LightningNodeConnect {
         };
         return await this.lnc.lnd.lightning
             .updateChannelPolicy(params)
-            .then((data: any) => snakeize(data));
+            .then((data: lnrpc.PolicyUpdateResponse) => snakeize(data));
     };
     getRoutes = async (urlParams?: Array<string>) =>
         await this.lnc.lnd.lightning
@@ -200,56 +203,57 @@ export default class LightningNodeConnect {
                 pub_key: urlParams && urlParams[0],
                 amt: urlParams && urlParams[1] && Number(urlParams[1])
             })
-            .then((data: any) => snakeize(data));
+            .then((data: lnrpc.QueryRoutesResponse) => snakeize(data));
     getForwardingHistory = async (hours = 24) => {
-        const req = {
-            num_max_events: 10000000,
-            start_time: Math.round(
+        const req: lnrpc.ForwardingHistoryRequest = {
+            numMaxEvents: 10000000,
+            startTime: Math.round(
                 new Date(Date.now() - hours * 60 * 60 * 1000).getTime() / 1000
             ).toString(),
-            end_time: Math.round(new Date().getTime() / 1000).toString()
+            endTime: Math.round(new Date().getTime() / 1000).toString(),
+            indexOffset: 0
         };
         return await this.lnc.lnd.lightning
             .forwardingHistory(req)
-            .then((data: any) => snakeize(data));
+            .then((data: lnrpc.ForwardingHistoryResponse) => snakeize(data));
     };
     // Coin Control
-    fundPsbt = async (req: any) =>
+    fundPsbt = async (req: walletrpc.FundPsbtRequest) =>
         await this.lnc.lnd.walletKit
             .fundPsbt(req)
-            .then((data: any) => snakeize(data));
-    finalizePsbt = async (req: any) =>
+            .then((data: walletrpc.FundPsbtResponse) => snakeize(data));
+    finalizePsbt = async (req: walletrpc.FinalizePsbtRequest) =>
         await this.lnc.lnd.walletKit
             .finalizePsbt(req)
-            .then((data: any) => snakeize(data));
-    publishTransaction = async (req: any) =>
+            .then((data: walletrpc.FinalizePsbtResponse) => snakeize(data));
+    publishTransaction = async (req: walletrpc.Transaction) =>
         await this.lnc.lnd.walletKit
             .publishTransaction(req)
-            .then((data: any) => snakeize(data));
+            .then((data: walletrpc.PublishResponse) => snakeize(data));
     getUTXOs = async () =>
         await this.lnc.lnd.walletKit
             .listUnspent({ min_confs: 0, max_confs: 200000 })
-            .then((data: any) => snakeize(data));
-    bumpFee = async (req: any) =>
+            .then((data: walletrpc.ListUnspentResponse) => snakeize(data));
+    bumpFee = async (req: walletrpc.BumpFeeRequest) =>
         await this.lnc.lnd.walletKit
             .bumpFee(req)
-            .then((data: any) => snakeize(data));
+            .then((data: walletrpc.BumpFeeResponse) => snakeize(data));
     listAccounts = async () =>
         await this.lnc.lnd.walletKit
             .listAccounts({})
-            .then((data: any) => snakeize(data));
-    importAccount = async (req: any) =>
+            .then((data: walletrpc.ListAccountsResponse) => snakeize(data));
+    importAccount = async (req: walletrpc.ImportAccountRequest) =>
         await this.lnc.lnd.walletKit
             .importAccount(req)
-            .then((data: any) => snakeize(data));
+            .then((data: walletrpc.ImportAccountResponse) => snakeize(data));
     signMessage = async (message: string) =>
         await this.lnc.lnd.signer
             .signMessage({ msg: message })
-            .then((data: any) => snakeize(data));
-    verifyMessage = async (req: any) =>
+            .then((data: lnrpc.SignMessageResponse) => snakeize(data));
+    verifyMessage = async (req: lnrpc.VerifyMessageRequest) =>
         await this.lnc.lnd.signer
             .verifyMessage({ msg: req.msg, signature: req.signature })
-            .then((data: any) => snakeize(data));
+            .then((data: lnrpc.VerifyMessageResponse) => snakeize(data));
     subscribeInvoice = (r_hash: string) =>
         this.lnc.lnd.invoices.subscribeSingleInvoice({ r_hash });
     subscribeInvoices = () => this.lnc.lnd.lightning.subscribeInvoices();
