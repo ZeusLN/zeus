@@ -199,7 +199,7 @@ export default class SignVerifyMessage extends React.Component<
                                             messageToSign: text
                                         })
                                     }
-                                    editable={!loading}
+                                    locked={loading}
                                     multiline
                                     numberOfLines={3}
                                 />
@@ -270,7 +270,7 @@ export default class SignVerifyMessage extends React.Component<
                                             messageToVerify: text
                                         })
                                     }
-                                    editable={!loading}
+                                    locked={loading}
                                     multiline
                                     numberOfLines={3}
                                 />
@@ -294,7 +294,7 @@ export default class SignVerifyMessage extends React.Component<
                                             signatureToVerify: text
                                         })
                                     }
-                                    editable={!loading}
+                                    locked={loading}
                                     multiline
                                     numberOfLines={3}
                                 />

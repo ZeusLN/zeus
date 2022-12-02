@@ -221,10 +221,10 @@ export default class LnurlPay extends React.Component<
                         onChangeText={(text: string) => {
                             this.setState({ amount: text });
                         }}
-                        editable={
+                        locked={
                             lnurl && lnurl.minSendable === lnurl.maxSendable
-                                ? false
-                                : true
+                                ? true
+                                : false
                         }
                         style={styles.textInput}
                     />
