@@ -13,7 +13,7 @@ PODS:
   - glog (0.3.5)
   - hermes-engine (0.11.0)
   - libevent (2.1.12)
-  - lnc-rn (0.2.0-alpha):
+  - lnc-rn (0.2.1-alpha.2):
     - React
   - RCT-Folly (2021.06.28.00-v2):
     - boost
@@ -365,7 +365,7 @@ DEPENDENCIES:
   - glog (from `../node_modules/react-native/third-party-podspecs/glog.podspec`)
   - hermes-engine (~> 0.11.0)
   - libevent (~> 2.1.12)
-  - lnc-rn (from `../../../lightninglabs/lnc-rn`)
+  - "lnc-rn (from `../node_modules/@lightninglabs/lnc-rn`)"
   - RCT-Folly (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
   - RCTRequired (from `../node_modules/react-native/Libraries/RCTRequired`)
   - RCTTypeSafety (from `../node_modules/react-native/Libraries/TypeSafety`)
@@ -436,7 +436,7 @@ EXTERNAL SOURCES:
   glog:
     :podspec: "../node_modules/react-native/third-party-podspecs/glog.podspec"
   lnc-rn:
-    :path: "../../../lightninglabs/lnc-rn"
+    :path: "../node_modules/@lightninglabs/lnc-rn"
   RCT-Folly:
     :podspec: "../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec"
   RCTRequired:
@@ -545,7 +545,7 @@ SPEC CHECKSUMS:
   glog: 476ee3e89abb49e07f822b48323c51c57124b572
   hermes-engine: 84e3af1ea01dd7351ac5d8689cbbea1f9903ffc3
   libevent: 4049cae6c81cdb3654a443be001fb9bdceff7913
-  lnc-rn: 50b105a6c06cd1ff816131191cb3e1cb87b1a7aa
+  lnc-rn: 4c1d7510e5b36069a993697a08468c0d2cedcdae
   RCT-Folly: 4d8508a426467c48885f1151029bc15fa5d7b3b8
   RCTRequired: 3e917ea5377751094f38145fdece525aa90545a0
   RCTTypeSafety: c43c072a4bd60feb49a9570b0517892b4305c45e
