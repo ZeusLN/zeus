@@ -78,7 +78,6 @@ export default class TransactionsStore {
         this.loading = true;
         await RESTUtils.getTransactions()
             .then((data: any) => {
-                console.log('!!!2', data);
                 this.transactions = data.transactions
                     .slice()
                     .reverse()
