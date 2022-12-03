@@ -142,7 +142,8 @@ export const THEME_KEYS = [
     { key: 'Junkie', value: 'junkie' },
     { key: 'BPM', value: 'bpm' },
     { key: 'Orange', value: 'orange' },
-    { key: 'Blacked Out', value: 'blacked-out' }
+    { key: 'Blacked Out', value: 'blacked-out' },
+    { key: 'Scarlet', value: 'scarlet' }
 ];
 
 export const DEFAULT_THEME = 'dark';

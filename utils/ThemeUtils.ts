@@ -77,16 +77,15 @@ export function themeColor(themeString: string): any {
         generalStyle: 'dark',
         background: '#000',
         secondary: '#141414',
-        text: 'white',
-        secondaryText: '#A7A9AC',
-        highlight: '#ffd24b',
-        error: '#992600',
-        separator: '#141414',
-        outbound: '#FFD93F',
-        inbound: '#FFF0CA',
-        success: '#46BE43',
-        warning: '#E14C4C',
-        bitcoin: '#FFB040'
+        separator: '#141414'
+    };
+
+    const Scarlet: { [key: string]: any } = {
+        generalStyle: 'dark',
+        background: '#56042c',
+        secondary: '#8A1538',
+        separator: '#8A1538',
+        highlight: '#8A1538'
     };
 
     switch (theme) {
@@ -100,6 +99,8 @@ export function themeColor(themeString: string): any {
             return Orange[themeString] || Light[themeString];
         case 'blacked-out':
             return BlackedOut[themeString] || Dark[themeString];
+        case 'scarlet':
+            return Scarlet[themeString] || Dark[themeString];
         default:
             return Dark[themeString];
     }
