@@ -49,7 +49,8 @@ export default class PaymentView extends React.Component<PaymentProps> {
             getFee,
             payment_hash,
             getPreimage,
-            enhancedPath
+            enhancedPath,
+            getMemo
         } = payment;
         const date = getDisplayTime;
 
@@ -118,6 +119,14 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                 />
                             }
                             toggleable
+                        />
+                    )}
+
+                    {getMemo && (
+                        <KeyValue
+                            keyValue={localeString('views.Receive.memo')}
+                            value={getMemo}
+                            sensitive
                         />
                     )}
 
