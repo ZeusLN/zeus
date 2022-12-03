@@ -24,11 +24,11 @@ export default class Theme extends React.Component<ThemeProps, ThemeStore> {
 
     async UNSAFE_componentWillMount() {
         const { SettingsStore } = this.props;
-        const { getSettings } = SettingsStore;
-        const settings = await getSettings();
+        const { getSetting } = SettingsStore;
+        const setting = await getSetting('theme');
 
         this.setState({
-            selectedTheme: settings.theme
+            selectedTheme: setting.theme
         });
     }
 
@@ -44,7 +44,7 @@ export default class Theme extends React.Component<ThemeProps, ThemeStore> {
     render() {
         const { navigation, SettingsStore } = this.props;
         const { selectedTheme } = this.state;
-        const { setSettings, getSettings }: any = SettingsStore;
+        const { setSetting }: any = SettingsStore;
 
         const BackButton = () => (
             <Icon
@@ -86,32 +86,11 @@ export default class Theme extends React.Component<ThemeProps, ThemeStore> {
                                     backgroundColor: themeColor('background')
                                 }}
                                 onPress={async () => {
-                                    const settings = await getSettings();
-                                    await setSettings(
-                                        JSON.stringify(
-                                            settings
-                                                ? {
-                                                      nodes: settings.nodes,
-                                                      selectedNode:
-                                                          settings.selectedNode,
-                                                      fiat: settings.fiat,
-                                                      passphrase:
-                                                          settings.passphrase,
-                                                      duressPassphrase:
-                                                          settings.duressPassphrase,
-                                                      pin: settings.pin,
-                                                      duressPin:
-                                                          settings.duressPin,
-                                                      scramblePin:
-                                                          settings.scramblePin,
-                                                      authenticationAttempts:
-                                                          settings.authenticationAttempts,
-                                                      locale: settings.locale,
-                                                      theme: item.value,
-                                                      privacy: settings.privacy
-                                                  }
-                                                : { theme: item.value }
-                                        )
+                                    await setSetting(
+                                        'theme',
+                                        JSON.stringify({
+                                            theme: item.value
+                                        })
                                     ).then(() => {
                                         navigation.goBack();
                                     });

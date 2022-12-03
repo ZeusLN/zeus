@@ -1,4 +1,5 @@
 import RNSecureKeyStore, { ACCESSIBLE } from 'react-native-secure-key-store';
+import EncryptedStorage from 'react-native-encrypted-storage';
 import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
@@ -8,6 +9,8 @@ import { localeString } from '../utils/LocaleUtils';
 
 // lndhub
 import LoginRequest from './../models/LoginRequest';
+
+const STORAGE_KEY = 'ZEUS';
 
 interface Node {
     host?: string;
@@ -357,6 +360,46 @@ export default class SettingsStore {
         }
 
         return this.settings;
+    }
+
+    @action
+    public async setSetting(key: string, value: string) {
+        this.loading = true;
+        try {
+            await EncryptedStorage.setItem(
+                `${STORAGE_KEY}-${key}`,
+                JSON.stringify(value)
+            );
+        } catch (error) {
+            console.log(`Error writing setting ${key}`, error);
+        }
+        this.loading = false;
+        return value;
+    }
+
+    @action
+    public async getSetting(key: string) {
+        this.loading = true;
+        let setting;
+        try {
+            const response = await EncryptedStorage.getItem(
+                `${STORAGE_KEY}-${key}`
+            );
+            if (response) {
+                setting = JSON.parse(response);
+            } else {
+                console.log(`No setting ${key} stored`);
+            }
+        } catch (error) {
+            console.log(
+                `Keychain for setting ${key} couldn't be accessed!`,
+                error
+            );
+        } finally {
+            this.loading = false;
+        }
+
+        return setting;
     }
 
     @action

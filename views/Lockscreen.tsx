@@ -305,22 +305,12 @@ export default class Lockscreen extends React.Component<
 
     resetAuthenticationAttempts = () => {
         const { SettingsStore } = this.props;
-        const { setSettings, settings } = SettingsStore;
+        const { setSetting } = SettingsStore;
 
-        setSettings(
+        setSetting(
+            'authenticationAttempts',
             JSON.stringify({
-                nodes: settings.nodes,
-                selectedNode: settings.selectedNode,
-                theme: settings.theme,
-                passphrase: settings.passphrase,
-                duressPassphrase: settings.duressPassphrase,
-                pin: settings.pin,
-                duressPin: settings.duressPin,
-                scramblePin: settings.scramblePin,
-                authenticationAttempts: 0,
-                fiat: settings.fiat,
-                locale: settings.locale,
-                privacy: settings.privacy
+                authenticationAttempts: 0
             })
         );
     };
