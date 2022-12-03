@@ -17,7 +17,7 @@
     "lint": "eslint --ext .js,.ts,.tsx '*.@(js|ts|tsx)' .",
     "prettier": "prettier --check '**/*.ts*'",
     "prettier-write": "prettier --check --write '**/*.ts*'",
-    "install-lnc": "cd node_modules/@lightninglabs/lnc-rn; npm run fetch-libraries"
+    "install-lnc": "cd node_modules/@lightninglabs/lnc-rn; yarn run fetch-libraries"
   },
   "dependencies": {
     "@keystonehq/bc-ur-registry": "0.4.2",
