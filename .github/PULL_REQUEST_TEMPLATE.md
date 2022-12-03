@@ -15,10 +15,10 @@ This pull request is categorized as a:
 - [ ] Other
 
 ## Checklist
-- [ ] I’ve run `npm run tsc` and made sure my code compiles correctly
-- [ ] I’ve run `npm run lint` and made sure my code didn’t contain any problematic patterns
-- [ ] I’ve run `npm run prettier` and made sure my code is formatted correctly
-- [ ] I’ve run `npm run test` and made sure all of the tests pass
+- [ ] I’ve run `yarn run tsc` and made sure my code compiles correctly
+- [ ] I’ve run `yarn run lint` and made sure my code didn’t contain any problematic patterns
+- [ ] I’ve run `yarn run prettier` and made sure my code is formatted correctly
+- [ ] I’ve run `yarn run test` and made sure all of the tests pass
 
 ## Testing
 
@@ -47,7 +47,7 @@ I have tested this PR with the following types of nodes (please specify node ver
 
 ### Third Party Dependencies and Packages
 
-- [ ] Contributors will need to run `npm install` after this PR is merged in
+- [ ] Contributors will need to run `yarn` after this PR is merged in
 - [ ] 3rd party dependencies have been modified:
     * verify that `package.json` and `package-lock.json` have been properly updated
     * verify that dependencies are installed for both iOS and Android platforms
