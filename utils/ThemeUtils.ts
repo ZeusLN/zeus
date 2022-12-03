@@ -73,6 +73,22 @@ export function themeColor(themeString: string): any {
         separator: '#CED0CE'
     };
 
+    const BlackedOut: { [key: string]: any } = {
+        generalStyle: 'dark',
+        background: '#000',
+        secondary: '#141414',
+        text: 'white',
+        secondaryText: '#A7A9AC',
+        highlight: '#ffd24b',
+        error: '#992600',
+        separator: '#141414',
+        outbound: '#FFD93F',
+        inbound: '#FFF0CA',
+        success: '#46BE43',
+        warning: '#E14C4C',
+        bitcoin: '#FFB040'
+    };
+
     switch (theme) {
         case 'light':
             return Light[themeString] || Dark[themeString];
@@ -82,6 +98,8 @@ export function themeColor(themeString: string): any {
             return BPM[themeString] || Light[themeString];
         case 'orange':
             return Orange[themeString] || Light[themeString];
+        case 'blacked-out':
+            return BlackedOut[themeString] || Dark[themeString];
         default:
             return Dark[themeString];
     }
