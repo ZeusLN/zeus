@@ -1,4 +1,4 @@
-platform :ios, '11.1'
+platform :ios, '12.4'
 
 require_relative '../node_modules/react-native/scripts/react_native_pods'
 require_relative '../node_modules/react-native-unimodules/cocoapods.rb'
