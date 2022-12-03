@@ -331,29 +331,6 @@ export default class LND {
     subscribeInvoice = (r_hash: string) =>
         this.getRequest(`/v2/invoices/subscribe/${r_hash}`);
 
-    // LndHub
-    createAccount = (
-        host: string,
-        certVerification: boolean,
-        useTor?: boolean
-    ) => {
-        const url = `${host}/create`;
-        return this.restReq(
-            {
-                'Access-Control-Allow-Origin': '*',
-                'Content-Type': 'application/json'
-            },
-            url,
-            'POST',
-            {
-                partnerid: 'bluewallet',
-                accounttype: 'common'
-            },
-            certVerification,
-            useTor
-        );
-    };
-
     supportsMessageSigning = () => true;
     supportsOnchainSends = () => true;
     supportsKeysend = () => true;
