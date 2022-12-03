@@ -376,27 +376,66 @@ export default class SettingsStore {
     @action
     public createAccount = (
         host: string,
-        certVerification: boolean,
+        certVerification?: boolean,
         enableTor?: boolean
     ) => {
+        const url = `${host}/create`;
+        const headers = {
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'application/json'
+        };
+
         this.createAccountSuccess = '';
         this.createAccountError = '';
         this.loading = true;
-        return RESTUtils.createAccount(host, certVerification, enableTor)
-            .then((data: any) => {
-                this.loading = false;
-                this.createAccountSuccess = localeString(
-                    'stores.SettingsStore.lndhubSuccess'
-                );
-                return data;
+        if (enableTor) {
+            return doTorRequest(url, RequestMethod.POST)
+                .then((response: any) => {
+                    this.loading = false;
+                    this.createAccountSuccess = localeString(
+                        'stores.SettingsStore.lndhubSuccess'
+                    );
+                    return response;
+                })
+                .catch((err: any) => {
+                    // handle error
+                    const errorString = err.error || err.toString();
+                    this.loading = false;
+                    this.createAccountError = `${localeString(
+                        'stores.SettingsStore.lndhubError'
+                    )}: ${errorString}`;
+                });
+        } else {
+            return ReactNativeBlobUtil.config({
+                trusty: !certVerification
             })
-            .catch(() => {
-                // handle error
-                this.loading = false;
-                this.createAccountError = localeString(
-                    'stores.SettingsStore.lndhubError'
-                );
-            });
+                .fetch('post', url, headers, '')
+                .then((response: any) => {
+                    const status = response.info().status;
+                    if (status == 200) {
+                        const data = response.json();
+                        this.loading = false;
+                        this.createAccountSuccess = localeString(
+                            'stores.SettingsStore.lndhubSuccess'
+                        );
+                        return data;
+                    } else {
+                        // handle error
+                        this.loading = false;
+                        this.createAccountError = localeString(
+                            'stores.SettingsStore.lndhubError'
+                        );
+                    }
+                })
+                .catch((err: any) => {
+                    // handle error
+                    const errorString = err.error || err.toString();
+                    this.loading = false;
+                    this.createAccountError = `${localeString(
+                        'stores.SettingsStore.lndhubError'
+                    )}: ${errorString}`;
+                });
+        }
     };
 
     // LNDHub
