@@ -214,7 +214,14 @@ export default class LND {
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
     getInvoices = () =>
         this.getRequest('/v1/invoices?reversed=true&num_max_invoices=100');
-    createInvoice = (data: any) => this.postRequest('/v1/invoices', data);
+    createInvoice = (data: any) =>
+        this.postRequest('/v1/invoices', {
+            memo: data.memo,
+            value_msat: Number(data.value) * 1000,
+            expiry: data.expiry,
+            is_amp: data.is_amp,
+            private: data.private
+        });
     getPayments = () => this.getRequest('/v1/payments');
     getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);
     openChannel = (data: OpenChannelRequest) =>

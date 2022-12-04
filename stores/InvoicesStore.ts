@@ -152,7 +152,7 @@ export default class InvoicesStore {
                     this.creatingInvoice = false;
                     this.error_msg =
                         data.message.toString() ||
-                        error.toString() ||
+                        data.error.toString() ||
                         localeString(
                             'stores.InvoicesStore.errorCreatingInvoice'
                         );
