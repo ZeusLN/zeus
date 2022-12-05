@@ -135,8 +135,9 @@ export default class LncCredentialStore implements CredentialStore {
 
     /** Saves persisted data to EncryptedStorage */
     private _save() {
-        // only save if pairingPhrase is set
-        if (!this._pairingPhrase) return;
+        // only save if localKey and remoteKey is set
+        if (!this._localKey) return;
+        if (!this._remoteKey) return;
         const key = `${STORAGE_KEY}:${hash(this._pairingPhrase)}`;
         EncryptedStorage.setItem(key, JSON.stringify(this.persisted));
     }

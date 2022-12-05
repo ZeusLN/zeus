@@ -100,7 +100,6 @@ class RESTUtils {
         this.call('subscribeTransactions', args);
 
     // lndhub
-    createAccount = (...args: any[]) => this.call('createAccount', args);
     login = (...args: any[]) => this.call('login', args);
 
     supportsMessageSigning = () => this.call('supportsMessageSigning');

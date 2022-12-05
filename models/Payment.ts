@@ -1,4 +1,6 @@
 import { computed } from 'mobx';
+import bolt11 from 'bolt11';
+
 import BaseModel from './BaseModel';
 import DateTimeUtils from './../utils/DateTimeUtils';
 import { localeString } from './../utils/LocaleUtils';
@@ -17,6 +19,7 @@ export default class Payment extends BaseModel {
     bolt: string;
     status: string;
     amount_sent_msat: string;
+    payment_request: string;
     // c-lightning
     id?: string;
     // payment_hash: string;
@@ -36,6 +39,24 @@ export default class Payment extends BaseModel {
     constructor(data?: any, nodes?: any) {
         super(data);
         this.nodes = nodes;
+    }
+
+    @computed public get getPaymentRequest(): string | undefined {
+        return this.payment_request || this.bolt11;
+    }
+
+    @computed public get getMemo(): string | undefined {
+        if (this.getPaymentRequest) {
+            const decoded: any = bolt11.decode(this.payment_request);
+            for (let i = 0; i < decoded.tags.length; i++) {
+                const tag = decoded.tags[i];
+                switch (tag.tagName) {
+                    case 'description':
+                        return tag.data;
+                }
+            }
+        }
+        return undefined;
     }
 
     @computed public get model(): string {

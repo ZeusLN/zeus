@@ -124,21 +124,17 @@ export default class ActivityStore {
 
     @action
     public updateInvoices = async () => {
-        this.activity = [];
         await this.invoicesStore.getInvoices();
-
         this.activity = this.getSortedActivity();
-        this.filteredActivity = this.activity;
+        await this.setFilters(this.filters);
     };
 
     @action
     public updateTransactions = async () => {
-        this.activity = [];
         if (RESTUtils.supportsOnchainSends())
             await this.transactionsStore.getTransactions();
-
         this.activity = this.getSortedActivity();
-        this.filteredActivity = this.activity;
+        await this.setFilters(this.filters);
     };
 
     @action

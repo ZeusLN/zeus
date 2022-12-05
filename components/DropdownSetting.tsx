@@ -41,7 +41,7 @@ export default class DropdownSetting extends React.Component<
 
         return (
             <React.Fragment>
-                {Platform.OS !== 'ios' && (
+                {Platform.OS === 'android' && (
                     <View style={{ height: 75 }}>
                         <Text
                             style={{
