@@ -98,7 +98,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             style={{
                                 flex: 1,
                                 flexDirection: 'row',
-                                margin: 10,
+                                margin: selectedNode ? 10 : 13,
                                 marginLeft: selectedNode ? 14 : 0
                             }}
                         >
