@@ -38,6 +38,19 @@ body:
         - v0.6.1
         - v0.6.0
         - v0.5.2
+  - type: dropdown
+    id: interface
+    attributes:
+      label: Node interface
+      description: Which node interfaces does this bug affect?
+      options:
+        - LND (REST)
+        - LND (Lightning Node Connect)
+        - Core Lightning (c-lightning-REST)
+        - Core Lightning (Spark)
+        - Eclair
+        - LndHub
+        - Multiple (specified in comments)
     validations:
       required: true
   - type: dropdown
