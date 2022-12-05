@@ -354,7 +354,7 @@ PODS:
     - React-Core
   - RNVectorIcons (7.1.0):
     - React
-  - TcpSockets (4.0.0):
+  - TcpSockets (3.3.1):
     - React
   - Yoga (1.14.0)
 
@@ -594,7 +594,7 @@ SPEC CHECKSUMS:
   RNScreens: 522705f2e5c9d27efb17f24aceb2bf8335bc7b8e
   RNSVG: 3a79c0c4992213e4f06c08e62730c5e7b9e4dc17
   RNVectorIcons: bc69e6a278b14842063605de32bec61f0b251a59
-  TcpSockets: 4ef55305239923b343ed0a378b1fac188b1373b0
+  TcpSockets: 6e65629a3742333f3a9165ebde4b2394407a543a
   Yoga: 99caf8d5ab45e9d637ee6e0174ec16fbbb01bcfc
 
 PODFILE CHECKSUM: 5644411d5f4fd931f08669526d5c8e8c87ab6ea0
