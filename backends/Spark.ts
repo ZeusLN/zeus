@@ -227,7 +227,27 @@ export default class Spark {
             exposeprivatechannels: true
         });
     getPayments = () =>
-        this.rpc('listsendpays', {}, { unit: 'payments', slice: '-100' });
+        this.rpc('listsendpays', {}, { unit: 'payments', slice: '-100' }).then(
+            ({ payments }: any) => ({
+                payments: payments.map((p: any) => ({
+                    id: p.id,
+                    payment_hash: p.payment_hash,
+                    destination: p.destination,
+                    // accomodate to lnd although "value" is deprecated
+                    value: (typeof p.amount_msat === 'number'
+                        ? Number(p.amount_msat) / 1000
+                        : Number(p.amount_msat.replace('msat', '')) / 1000
+                    ).toString(),
+                    fee_msat:
+                        typeof p.amount_msat === 'number'
+                            ? (p.amount_msat - p.amount_sent_msat).toString()
+                            : p.amount_msat.replace('msat', ''),
+                    creation_date: p.created_at,
+                    payment_preimage: p.payment_preimage,
+                    payment_request: p.bolt11
+                }))
+            })
+        );
     getNewAddress = () => this.rpc('newaddr');
     openChannel = (data: OpenChannelRequest) =>
         this.rpc('fundchannel', {
