@@ -56,9 +56,9 @@ export const BLOCK_EXPLORER_KEYS = [
 
 export const INTERFACE_KEYS = [
     { key: 'LND (REST)', value: 'lnd' },
-    { key: 'Lightning Node Connect', value: 'lightning-node-connect' },
-    { key: 'c-lightning-REST', value: 'c-lightning-REST' },
-    { key: 'Spark (c-lightning)', value: 'spark' },
+    { key: 'LND (Lightning Node Connect)', value: 'lightning-node-connect' },
+    { key: 'Core Lightning (c-lightning-REST)', value: 'c-lightning-REST' },
+    { key: 'Core Lightning (Spark) [Experimental]', value: 'spark' },
     { key: 'Eclair', value: 'eclair' },
     { key: 'LNDHub', value: 'lndhub' }
 ];
@@ -68,10 +68,10 @@ export const LNC_MAILBOX_KEYS = [
         key: 'mailbox.terminal.lightning.today:443',
         value: 'mailbox.terminal.lightning.today:443'
     },
-    // {
-    //     key: 'lnc.zeusln.app:443',
-    //     value: 'lnc.zeusln.app:443'
-    // },
+    {
+        key: 'lnc.zeusln.app:443',
+        value: 'lnc.zeusln.app:443'
+    },
     { key: 'Custom defined mailbox', value: 'custom-defined' }
 ];
 
@@ -101,7 +101,8 @@ export const LOCALE_KEYS = [
     { key: 'Suomen kieli', value: 'Suomen kieli' },
     { key: 'Italiano', value: 'Italiano' },
     { key: 'Tiếng Việt', value: 'Tiếng Việt' },
-    { key: '日本語', value: '日本語' }
+    { key: '日本語', value: '日本語' },
+    { key: 'עִבְרִית', value: 'עִבְרִית' }
 ];
 
 export const CURRENCY_KEYS = [
@@ -142,6 +143,8 @@ export const THEME_KEYS = [
     { key: 'Junkie', value: 'junkie' },
     { key: 'BPM', value: 'bpm' },
     { key: 'Orange', value: 'orange' },
+    { key: 'Blacked Out', value: 'blacked-out' },
+    { key: 'Scarlet', value: 'scarlet' },
     { key: 'Purple', value: 'purple' }
 ];
 
@@ -377,27 +380,66 @@ export default class SettingsStore {
     @action
     public createAccount = (
         host: string,
-        certVerification: boolean,
+        certVerification?: boolean,
         enableTor?: boolean
     ) => {
+        const url = `${host}/create`;
+        const headers = {
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'application/json'
+        };
+
         this.createAccountSuccess = '';
         this.createAccountError = '';
         this.loading = true;
-        return RESTUtils.createAccount(host, certVerification, enableTor)
-            .then((data: any) => {
-                this.loading = false;
-                this.createAccountSuccess = localeString(
-                    'stores.SettingsStore.lndhubSuccess'
-                );
-                return data;
+        if (enableTor) {
+            return doTorRequest(url, RequestMethod.POST)
+                .then((response: any) => {
+                    this.loading = false;
+                    this.createAccountSuccess = localeString(
+                        'stores.SettingsStore.lndhubSuccess'
+                    );
+                    return response;
+                })
+                .catch((err: any) => {
+                    // handle error
+                    const errorString = err.error || err.toString();
+                    this.loading = false;
+                    this.createAccountError = `${localeString(
+                        'stores.SettingsStore.lndhubError'
+                    )}: ${errorString}`;
+                });
+        } else {
+            return ReactNativeBlobUtil.config({
+                trusty: !certVerification
             })
-            .catch(() => {
-                // handle error
-                this.loading = false;
-                this.createAccountError = localeString(
-                    'stores.SettingsStore.lndhubError'
-                );
-            });
+                .fetch('post', url, headers, '')
+                .then((response: any) => {
+                    const status = response.info().status;
+                    if (status == 200) {
+                        const data = response.json();
+                        this.loading = false;
+                        this.createAccountSuccess = localeString(
+                            'stores.SettingsStore.lndhubSuccess'
+                        );
+                        return data;
+                    } else {
+                        // handle error
+                        this.loading = false;
+                        this.createAccountError = localeString(
+                            'stores.SettingsStore.lndhubError'
+                        );
+                    }
+                })
+                .catch((err: any) => {
+                    // handle error
+                    const errorString = err.error || err.toString();
+                    this.loading = false;
+                    this.createAccountError = `${localeString(
+                        'stores.SettingsStore.lndhubError'
+                    )}: ${errorString}`;
+                });
+        }
     };
 
     // LNDHub

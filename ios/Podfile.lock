@@ -347,8 +347,6 @@ PODS:
     - React-Core
   - RNGestureHandler (2.2.0):
     - React-Core
-  - RNOS (1.2.6):
-    - React
   - RNScreens (3.10.1):
     - React-Core
     - React-RCTImage
@@ -356,7 +354,7 @@ PODS:
     - React-Core
   - RNVectorIcons (7.1.0):
     - React
-  - TcpSockets (3.3.2):
+  - TcpSockets (3.3.1):
     - React
   - Yoga (1.14.0)
 
@@ -414,7 +412,6 @@ DEPENDENCIES:
   - "RNCMaskedView (from `../node_modules/@react-native-community/masked-view`)"
   - "RNCPicker (from `../node_modules/@react-native-picker/picker`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
-  - RNOS (from `../node_modules/react-native-os`)
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNSVG (from `../node_modules/react-native-svg`)
   - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
@@ -529,8 +526,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-picker/picker"
   RNGestureHandler:
     :path: "../node_modules/react-native-gesture-handler"
-  RNOS:
-    :path: "../node_modules/react-native-os"
   RNScreens:
     :path: "../node_modules/react-native-screens"
   RNSVG:
@@ -596,11 +591,10 @@ SPEC CHECKSUMS:
   RNCMaskedView: 0e1bc4bfa8365eba5fbbb71e07fbdc0555249489
   RNCPicker: 0bf8ef8f7800524f32d2bb2a8bcadd53eda0ecd1
   RNGestureHandler: bf572f552ea324acd5b5464b8d30755b2d8c1de6
-  RNOS: 6f2f9a70895bbbfbdad7196abd952e7b01d45027
   RNScreens: 522705f2e5c9d27efb17f24aceb2bf8335bc7b8e
   RNSVG: 3a79c0c4992213e4f06c08e62730c5e7b9e4dc17
   RNVectorIcons: bc69e6a278b14842063605de32bec61f0b251a59
-  TcpSockets: 14306fb79f9750ea7d2ddd02d8bed182abb01797
+  TcpSockets: 6e65629a3742333f3a9165ebde4b2394407a543a
   Yoga: 99caf8d5ab45e9d637ee6e0174ec16fbbb01bcfc
 
 PODFILE CHECKSUM: 5644411d5f4fd931f08669526d5c8e8c87ab6ea0

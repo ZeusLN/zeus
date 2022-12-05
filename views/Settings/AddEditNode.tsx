@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
     Modal,
+    Platform,
     StyleSheet,
     Switch,
     Text,
@@ -278,7 +279,7 @@ export default class AddEditNode extends React.Component<
             mailboxServer,
             customMailboxServer
         } = this.state;
-        const { setSettings, settings } = SettingsStore;
+        const { setConnectingStatus, setSettings, settings } = SettingsStore;
         const { passphrase, fiat, locale } = settings;
 
         if (
@@ -341,6 +342,7 @@ export default class AddEditNode extends React.Component<
             });
 
             if (nodes.length === 1) {
+                setConnectingStatus(true);
                 navigation.navigate('Wallet', { refresh: true });
             } else {
                 navigation.navigate('Nodes', { refresh: true });
@@ -526,9 +528,12 @@ export default class AddEditNode extends React.Component<
             </View>
         );
 
-        const displayValue = INTERFACE_KEYS.filter(
+        const displayItem = INTERFACE_KEYS.filter(
             (value: any) => value.value === implementation
-        )[0].value;
+        )[0];
+
+        const displayValue =
+            Platform.OS === 'android' ? displayItem.value : displayItem.key;
 
         const NodeInterface = () => (
             <DropdownSetting

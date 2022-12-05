@@ -98,8 +98,8 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             style={{
                                 flex: 1,
                                 flexDirection: 'row',
-                                margin: 12,
-                                marginLeft: selectedNode ? 28 : 0
+                                margin: selectedNode ? 10 : 13,
+                                marginLeft: selectedNode ? 14 : 0
                             }}
                         >
                             {selectedNode && (
@@ -115,7 +115,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                 style={{
                                     fontSize: 20,
                                     color: themeColor('text'),
-                                    paddingLeft: 30,
+                                    paddingLeft: 20,
                                     fontFamily: 'Lato-Regular'
                                 }}
                             >
@@ -142,17 +142,26 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     color: themeColor('text'),
                                     opacity: 0.6,
                                     top: -10,
-                                    paddingLeft: 109,
+                                    paddingLeft: 85,
                                     fontFamily: 'Lato-Regular'
                                 }}
                             >
-                                {`${
-                                    implementationDisplayValue[
-                                        selectedNode.implementation
-                                    ] || 'Unknown'
-                                }, ${
-                                    selectedNode.enableTor ? 'Tor' : 'clearnet'
-                                }`}
+                                {selectedNode.implementation ===
+                                'lightning-node-connect'
+                                    ? `${
+                                          implementationDisplayValue[
+                                              selectedNode.implementation
+                                          ] || 'Unknown'
+                                      }`
+                                    : `${
+                                          implementationDisplayValue[
+                                              selectedNode.implementation
+                                          ] || 'Unknown'
+                                      }, ${
+                                          selectedNode.enableTor
+                                              ? 'Tor'
+                                              : 'clearnet'
+                                      }`}
                             </Text>
                         )}
                     </View>
@@ -520,7 +529,7 @@ const styles = StyleSheet.create({
     },
     separationLine: {
         left: '30%',
-        width: 298,
+        width: '70%',
         borderColor: '#A7A9AC',
         opacity: 0.2,
         borderWidth: 0.5,
