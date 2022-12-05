@@ -101,7 +101,8 @@ export const LOCALE_KEYS = [
     { key: 'Suomen kieli', value: 'Suomen kieli' },
     { key: 'Italiano', value: 'Italiano' },
     { key: 'Tiếng Việt', value: 'Tiếng Việt' },
-    { key: '日本語', value: '日本語' }
+    { key: '日本語', value: '日本語' },
+    { key: 'עִבְרִית', value: 'עִבְרִית' }
 ];
 
 export const CURRENCY_KEYS = [
