@@ -85,7 +85,7 @@ export function themeColor(themeString: string): any {
         background: '#56042c',
         secondary: '#8A1538',
         separator: '#8A1538',
-        highlight: '#8A1538'
+        highlight: '#fff'
     };
 
     switch (theme) {
