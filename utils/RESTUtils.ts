@@ -123,6 +123,7 @@ class RESTUtils {
     initLNC = (...args: any[]) => this.call('initLNC', args);
     connect = (...args: any[]) => this.call('connect', args);
     isConnected = (...args: any[]) => this.call('isConnected', args);
+    disconnect = (...args: any[]) => this.call('disconnect', args);
 }
 
 const restUtils = new RESTUtils();
