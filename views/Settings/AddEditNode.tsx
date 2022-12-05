@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
     Modal,
+    Platform,
     StyleSheet,
     Switch,
     Text,
@@ -526,9 +527,12 @@ export default class AddEditNode extends React.Component<
             </View>
         );
 
-        const displayValue = INTERFACE_KEYS.filter(
+        const displayItem = INTERFACE_KEYS.filter(
             (value: any) => value.value === implementation
-        )[0].value;
+        )[0];
+
+        const displayValue =
+            Platform.OS === 'android' ? displayItem.value : displayItem.key;
 
         const NodeInterface = () => (
             <DropdownSetting
