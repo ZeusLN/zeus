@@ -279,7 +279,7 @@ export default class AddEditNode extends React.Component<
             mailboxServer,
             customMailboxServer
         } = this.state;
-        const { setSettings, settings } = SettingsStore;
+        const { setConnectingStatus, setSettings, settings } = SettingsStore;
         const { passphrase, fiat, locale } = settings;
 
         if (
@@ -342,6 +342,7 @@ export default class AddEditNode extends React.Component<
             });
 
             if (nodes.length === 1) {
+                setConnectingStatus(true);
                 navigation.navigate('Wallet', { refresh: true });
             } else {
                 navigation.navigate('Nodes', { refresh: true });
