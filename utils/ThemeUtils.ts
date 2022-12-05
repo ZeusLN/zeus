@@ -87,7 +87,7 @@ export function themeColor(themeString: string): any {
         separator: '#8A1538',
         highlight: '#fff'
     };
-    
+
     const Purple: { [key: string]: any } = {
         generalStyle: 'light',
         background: '#dbd0e1',
