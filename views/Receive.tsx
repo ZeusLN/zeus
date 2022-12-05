@@ -358,10 +358,11 @@ export default class Receive extends React.Component<
             { element: onChainButton }
         ];
 
-        const haveInvoice = !!payment_request && !!address;
+        const haveUnifiedInvoice = !!payment_request && !!address;
+        const haveInvoice = !!payment_request || !!address;
 
         let unifiedInvoice, lnInvoice, btcAddress;
-        if (haveInvoice) {
+        if (haveUnifiedInvoice) {
             unifiedInvoice = `bitcoin:${address.toUpperCase()}?${`lightning=${payment_request.toUpperCase()}`}${
                 Number(satAmount) > 0
                     ? `&amount=${new BigNumber(satAmount)
@@ -465,13 +466,14 @@ export default class Receive extends React.Component<
                         <View>
                             {!!payment_request && (
                                 <>
-                                    {implementation === 'lndhub' && (
-                                        <WarningMessage
-                                            message={localeString(
-                                                'views.Receive.warningLndHub'
-                                            )}
-                                        />
-                                    )}
+                                    {implementation === 'lndhub' &&
+                                        !!address && (
+                                            <WarningMessage
+                                                message={localeString(
+                                                    'views.Receive.warningLndHub'
+                                                )}
+                                            />
+                                        )}
                                     {!!lnurl && (
                                         <SuccessMessage
                                             message={
@@ -487,47 +489,54 @@ export default class Receive extends React.Component<
                             {creatingInvoice && <LoadingIndicator />}
                             {haveInvoice && (
                                 <View style={{ marginTop: 10 }}>
-                                    {selectedIndex == 0 && !belowDustLimit && (
-                                        <CollapsedQR
-                                            value={unifiedInvoice}
-                                            copyText={localeString(
-                                                'views.Receive.copyInvoice'
-                                            )}
-                                            expanded
-                                            textBottom
-                                        />
-                                    )}
-                                    {selectedIndex == 1 && !belowDustLimit && (
-                                        <CollapsedQR
-                                            value={lnInvoice}
-                                            copyText={localeString(
-                                                'views.Receive.copyInvoice'
-                                            )}
-                                            expanded
-                                            textBottom
-                                        />
-                                    )}
-                                    {selectedIndex == 2 && !belowDustLimit && (
-                                        <CollapsedQR
-                                            value={btcAddress}
-                                            copyText={localeString(
-                                                'views.Receive.copyAddress'
-                                            )}
-                                            expanded
-                                            textBottom
-                                        />
-                                    )}
-                                    {belowDustLimit && (
-                                        <CollapsedQR
-                                            value={lnInvoice}
-                                            copyText={localeString(
-                                                'views.Receive.copyAddress'
-                                            )}
-                                            expanded
-                                            textBottom
-                                        />
-                                    )}
-                                    {!belowDustLimit && (
+                                    {selectedIndex == 0 &&
+                                        !belowDustLimit &&
+                                        haveUnifiedInvoice && (
+                                            <CollapsedQR
+                                                value={unifiedInvoice}
+                                                copyText={localeString(
+                                                    'views.Receive.copyInvoice'
+                                                )}
+                                                expanded
+                                                textBottom
+                                            />
+                                        )}
+                                    {selectedIndex == 1 &&
+                                        !belowDustLimit &&
+                                        haveUnifiedInvoice && (
+                                            <CollapsedQR
+                                                value={lnInvoice}
+                                                copyText={localeString(
+                                                    'views.Receive.copyInvoice'
+                                                )}
+                                                expanded
+                                                textBottom
+                                            />
+                                        )}
+                                    {selectedIndex == 2 &&
+                                        !belowDustLimit &&
+                                        haveUnifiedInvoice && (
+                                            <CollapsedQR
+                                                value={btcAddress}
+                                                copyText={localeString(
+                                                    'views.Receive.copyAddress'
+                                                )}
+                                                expanded
+                                                textBottom
+                                            />
+                                        )}
+                                    {belowDustLimit ||
+                                        (!haveUnifiedInvoice && (
+                                            <CollapsedQR
+                                                value={lnInvoice}
+                                                copyText={localeString(
+                                                    'views.Receive.copyAddress'
+                                                )}
+                                                expanded
+                                                textBottom
+                                            />
+                                        ))}
+                                    {!belowDustLimit && haveUnifiedInvoice && (
                                         <ButtonGroup
                                             onPress={this.updateIndex}
                                             selectedIndex={selectedIndex}
