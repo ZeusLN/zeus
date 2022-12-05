@@ -146,13 +146,22 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     fontFamily: 'Lato-Regular'
                                 }}
                             >
-                                {`${
-                                    implementationDisplayValue[
-                                        selectedNode.implementation
-                                    ] || 'Unknown'
-                                }, ${
-                                    selectedNode.enableTor ? 'Tor' : 'clearnet'
-                                }`}
+                                {selectedNode.implementation ===
+                                'lightning-node-connect'
+                                    ? `${
+                                          implementationDisplayValue[
+                                              selectedNode.implementation
+                                          ] || 'Unknown'
+                                      }`
+                                    : `${
+                                          implementationDisplayValue[
+                                              selectedNode.implementation
+                                          ] || 'Unknown'
+                                      }, ${
+                                          selectedNode.enableTor
+                                              ? 'Tor'
+                                              : 'clearnet'
+                                      }`}
                             </Text>
                         )}
                     </View>
