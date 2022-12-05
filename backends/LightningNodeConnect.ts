@@ -82,7 +82,13 @@ export default class LightningNodeConnect {
             .then((data: lnrpc.ListInvoiceResponse) => snakeize(data));
     createInvoice = async (data: any) =>
         await this.lnc.lnd.lightning
-            .addInvoice(data)
+            .addInvoice({
+                memo: data.memo,
+                value_msat: Number(data.value) * 1000,
+                expiry: data.expiry,
+                is_amp: data.is_amp,
+                private: data.private
+            })
             .then((data: lnrpc.AddInvoiceResponse) => snakeize(data));
     getPayments = async () =>
         await this.lnc.lnd.lightning
