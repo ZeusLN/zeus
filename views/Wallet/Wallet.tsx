@@ -270,6 +270,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 navigation={navigation}
                                 BalanceStore={BalanceStore}
                                 UnitsStore={UnitsStore}
+                                SettingsStore={SettingsStore}
                                 onRefresh={() => this.refresh()}
                             />
 
