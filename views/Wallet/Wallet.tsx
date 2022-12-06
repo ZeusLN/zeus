@@ -40,7 +40,7 @@ import Bitcoin from './../../assets/images/SVG/Bitcoin.svg';
 import Temple from './../../assets/images/SVG/Temple.svg';
 import ChannelsIcon from './../../assets/images/SVG/Channels.svg';
 import CaretUp from './../../assets/images/SVG/Caret Up.svg';
-import WordLogo from './../../assets/images/SVG/Word Logo - no outline.svg';
+import WordLogo from './../../assets/images/SVG/Word Logo.svg';
 
 interface WalletProps {
     enterSetup: any;
@@ -163,7 +163,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             password,
             login,
             connecting,
-            setConnectingStatus
+            setConnectingStatus,
+            connect
         } = SettingsStore;
         const { fiat } = settings;
 
@@ -176,6 +177,19 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             login({ login: username, password }).then(async () => {
                 BalanceStore.getLightningBalance(true);
             });
+        } else if (implementation === 'lightning-node-connect') {
+            let error;
+            if (connecting) {
+                error = await connect();
+            }
+            if (!error) {
+                UTXOsStore.listAccounts();
+                await BalanceStore.getCombinedBalance();
+                ChannelsStore.getChannels();
+                FeeStore.getFees();
+                NodeInfoStore.getNodeInfo();
+                FeeStore.getForwardingHistory();
+            }
         } else {
             if (RESTUtils.supportsAccounts()) {
                 UTXOsStore.listAccounts();
@@ -212,7 +226,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             SettingsStore,
             navigation
         } = this.props;
-        const { error, nodeInfo } = NodeInfoStore;
+        const { nodeInfo } = NodeInfoStore;
+        const error = NodeInfoStore.error || SettingsStore.error;
         const { implementation, settings, loggedIn, connecting } =
             SettingsStore;
         const loginRequired =
@@ -249,7 +264,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         </View>
                     )}
 
-                    {dataAvailable && (
+                    {dataAvailable && !error && (
                         <>
                             <LayerBalances
                                 navigation={navigation}
@@ -397,7 +412,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     {connecting && !loginRequired && (
                         <View
                             style={{
-                                backgroundColor: '#1F242D',
+                                backgroundColor: themeColor('background'),
                                 height: '100%'
                             }}
                         >
@@ -451,7 +466,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         width: 320
                                     }}
                                     titleStyle={{
-                                        color: 'white'
+                                        color: themeColor('text')
                                     }}
                                     onPress={() => {
                                         if (settings.nodes)

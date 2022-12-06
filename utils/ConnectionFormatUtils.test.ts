@@ -68,6 +68,47 @@ describe('ConnectionFormatUtils', () => {
         });
     });
 
+    describe('processLncUrl', () => {
+        it('handles LNC configs to mailbox.terminal.lightning.today:443', () => {
+            expect(
+                ConnectionFormatUtils.processLncUrl(
+                    'https://terminal.lightning.engineering#/connect/pair/ZmluZ2VyIHBvdGF0byBnbG9yeSBtYW5zaW9uIGRhcmluZyB2aWRlbyBhbmNpZW50IGhhcnZlc3QgZGVsaXZlciBjaXZpbHx8bWFpbGJveC50ZXJtaW5hbC5saWdodG5pbmcudG9kYXk6NDQz'
+                )
+            ).toEqual({
+                pairingPhrase:
+                    'finger potato glory mansion daring video ancient harvest deliver civil',
+                mailboxServer: 'mailbox.terminal.lightning.today:443',
+                customMailboxServer: undefined
+            });
+        });
+
+        it('handles LNC configs to lnc.zeusln.app:443', () => {
+            expect(
+                ConnectionFormatUtils.processLncUrl(
+                    'https://terminal.lightning.engineering#/connect/pair/ZHVtYiBtaXN0YWtlIGxhbXAgY2hlZXNlIGNhYmxlIHNrYXRlIGZpZWxkIHRpZGUgcmV0cmVhdCBtZWF0fHxsbmMuemV1c2xuLmFwcDo0NDM='
+                )
+            ).toEqual({
+                pairingPhrase:
+                    'dumb mistake lamp cheese cable skate field tide retreat meat',
+                mailboxServer: 'lnc.zeusln.app:443',
+                customMailboxServer: undefined
+            });
+        });
+
+        it('handles LNC configs to custom mailboxes', () => {
+            expect(
+                ConnectionFormatUtils.processLncUrl(
+                    'https://terminal.lightning.engineering#/connect/pair/c2thdGUgZmllbGQgdGlkZSBjaGVlc2UgY2FibGUgc2thdGUgZmllbGQgdGlkZSByZXRyZWF0IG1lYXR8fGN1c3RvbS1sbmMuc2VydmVyLmFwcDo0NDM='
+                )
+            ).toEqual({
+                pairingPhrase:
+                    'skate field tide cheese cable skate field tide retreat meat',
+                mailboxServer: 'custom-defined',
+                customMailboxServer: 'custom-lnc.server.app:443'
+            });
+        });
+    });
+
     describe('processCLightningRestConnectUrl', () => {
         it('handles plainnet properly - w/o http forced', () => {
             expect(

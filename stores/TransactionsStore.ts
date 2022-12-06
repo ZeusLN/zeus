@@ -162,7 +162,7 @@ export default class TransactionsStore {
         this.publishSuccess = false;
         this.loading = true;
         if (
-            this.settingsStore.implementation === 'lnd' &&
+            RESTUtils.isLNDBased() &&
             transactionRequest.utxos &&
             transactionRequest.utxos.length > 0
         ) {
@@ -273,37 +273,50 @@ export default class TransactionsStore {
                 ? RESTUtils.sendKeysend
                 : RESTUtils.payLightningInvoice;
 
-        payFunc(data)
-            .then((response: any) => {
-                const result = response.result || response;
-                this.loading = false;
-                this.payment_route = result.payment_route;
-                this.payment_preimage = result.payment_preimage;
-                this.payment_hash = result.payment_hash;
-                if (
-                    result.status !== 'complete' &&
-                    result.status !== 'SUCCEEDED' &&
-                    result.payment_error !== ''
-                ) {
-                    this.error = true;
-                    this.payment_error =
-                        result.payment_error || result.failure_reason;
-                }
-                // lndhub
-                if (result.error) {
-                    this.error = true;
-                    this.error_msg = result.message;
-                } else {
-                    this.status = result.status || 'complete';
-                }
-            })
-            .catch((err: Error) => {
-                this.error = true;
-                this.loading = false;
-                this.error_msg =
-                    typeof err === 'string'
-                        ? err
-                        : err.message || 'Error sending payment';
-            });
+        if (this.settingsStore.implementation === 'lightning-node-connect') {
+            return payFunc(data);
+        } else {
+            payFunc(data)
+                .then((response: any) => {
+                    const result = response.result || response;
+                    this.handlePayment(result);
+                })
+                .catch((err: Error) => {
+                    this.handlePaymentError(err);
+                });
+        }
+    };
+
+    @action
+    public handlePayment = (result: any) => {
+        this.loading = false;
+        this.payment_route = result.payment_route;
+        this.payment_preimage = result.payment_preimage;
+        this.payment_hash = result.payment_hash;
+        if (
+            result.status !== 'complete' &&
+            result.status !== 'SUCCEEDED' &&
+            result.payment_error !== ''
+        ) {
+            this.error = true;
+            this.payment_error = result.payment_error || result.failure_reason;
+        }
+        // lndhub
+        if (result.error) {
+            this.error = true;
+            this.error_msg = result.message;
+        } else {
+            this.status = result.status || 'complete';
+        }
+    };
+
+    @action
+    public handlePaymentError = (err: Error) => {
+        this.error = true;
+        this.loading = false;
+        this.error_msg =
+            typeof err === 'string'
+                ? err
+                : err.message || 'Error sending payment';
     };
 }

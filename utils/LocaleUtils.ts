@@ -18,6 +18,8 @@ import * as UK from './../locales/uk.json';
 import * as RO from './../locales/ro.json';
 import * as PL from './../locales/pl.json';
 
+import * as HE from './../locales/he.json';
+
 // in progress
 import * as FA from './../locales/fa.json';
 import * as EL from './../locales/el.json';
@@ -54,6 +56,7 @@ const Finnish: any = FI;
 const Italian: any = IT;
 const Vietnamese: any = VI;
 const Japanese: any = JA;
+const Hebrew: any = HE;
 
 export function localeString(localeString: string): any {
     const { settings } = stores.settingsStore;
@@ -108,6 +111,8 @@ export function localeString(localeString: string): any {
             return Vietnamese[localeString] || English[localeString];
         case '日本語':
             return Japanese[localeString] || English[localeString];
+        case 'עִבְרִית':
+            return Hebrew[localeString] || English[localeString];
         default:
             return English[localeString];
     }

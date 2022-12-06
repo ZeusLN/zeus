@@ -1,12 +1,11 @@
 import * as React from 'react';
 import { Animated, View, Text } from 'react-native';
-
 import { inject, observer } from 'mobx-react';
 
 import Button from '../../components/Button';
 import PinPad from '../../components/PinPad';
 import UnitToggle from '../../components/UnitToggle';
-import { WalletHeader } from '../../components/WalletHeader';
+import WalletHeader from '../../components/WalletHeader';
 
 import FiatStore from '../../stores/FiatStore';
 import UnitsStore from '../../stores/UnitsStore';
@@ -226,9 +225,27 @@ export default class DefaultPane extends React.PureComponent<
                             bottom: 10
                         }}
                     >
-                        <View style={{ width: '50%' }}>
+                        <View style={{ width: '40%' }}>
                             <Button
                                 title={localeString('general.request')}
+                                quinary
+                                noUppercase
+                                onPress={() => {
+                                    navigation.navigate('Receive', {
+                                        amount,
+                                        autoGenerate: true
+                                    });
+                                }}
+                            />
+                        </View>
+                        <View style={{ width: '20%' }}>
+                            <Button
+                                icon={{
+                                    name: 'pencil',
+                                    type: 'font-awesome',
+                                    size: 20,
+                                    color: themeColor('text')
+                                }}
                                 quinary
                                 noUppercase
                                 onPress={() => {
@@ -238,7 +255,7 @@ export default class DefaultPane extends React.PureComponent<
                                 }}
                             />
                         </View>
-                        <View style={{ width: '50%' }}>
+                        <View style={{ width: '40%' }}>
                             <Button
                                 title={localeString('general.send')}
                                 quinary

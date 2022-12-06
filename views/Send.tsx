@@ -1,5 +1,7 @@
 import * as React from 'react';
 import {
+    NativeModules,
+    NativeEventEmitter,
     Platform,
     StyleSheet,
     Text,
@@ -15,7 +17,7 @@ import { Header, Icon } from 'react-native-elements';
 
 import NfcManager, { NfcEvents, TagEvent } from 'react-native-nfc-manager';
 
-import handleAnything from './../utils/handleAnything';
+import handleAnything, { isClipboardValue } from './../utils/handleAnything';
 
 import InvoicesStore from './../stores/InvoicesStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
@@ -36,6 +38,8 @@ import RESTUtils from './../utils/RESTUtils';
 import NFCUtils from './../utils/NFCUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
+
+import Scan from './../assets/images/SVG/Scan.svg';
 
 interface SendProps {
     exitSetup: any;
@@ -65,6 +69,7 @@ interface SendState {
     feeLimitSat: string;
     message: string;
     enableAtomicMultiPathPayment: boolean;
+    clipboard: string;
 }
 
 @inject(
@@ -79,6 +84,7 @@ interface SendState {
 )
 @observer
 export default class Send extends React.Component<SendProps, SendState> {
+    listener: any;
     constructor(props: SendProps) {
         super(props);
         const { navigation } = props;
@@ -105,7 +111,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             maxShardAmt: '',
             feeLimitSat: '',
             message: '',
-            enableAtomicMultiPathPayment: false
+            enableAtomicMultiPathPayment: false,
+            clipboard: ''
         };
     }
 
@@ -115,10 +122,14 @@ export default class Send extends React.Component<SendProps, SendState> {
 
         if (settings.privacy && settings.privacy.clipboard) {
             const clipboard = await Clipboard.getString();
-            if (!this.state.destination) {
-                this.validateAddress(clipboard);
+            if (isClipboardValue(clipboard)) {
+                this.setState({
+                    clipboard
+                });
             }
         }
+
+        if (this.listener && this.listener.stop) this.listener.stop();
     }
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
@@ -153,6 +164,30 @@ export default class Send extends React.Component<SendProps, SendState> {
             await this.enableNfc();
         }
     }
+
+    subscribePayment = (streamingCall: string) => {
+        const { handlePayment, handlePaymentError } =
+            this.props.TransactionsStore;
+        const { LncModule } = NativeModules;
+        const eventEmitter = new NativeEventEmitter(LncModule);
+        this.listener = eventEmitter.addListener(
+            streamingCall,
+            (event: any) => {
+                if (event.result && event.result !== 'EOF') {
+                    try {
+                        const result = JSON.parse(event.result);
+                        if (result && result.status !== 'IN_FLIGHT') {
+                            handlePayment(result);
+                            this.listener = null;
+                        }
+                    } catch (error: any) {
+                        handlePaymentError(event.result);
+                        this.listener = null;
+                    }
+                }
+            }
+        );
+    };
 
     disableNfc = () => {
         NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
@@ -248,7 +283,8 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     sendKeySendPayment = (satAmount: string | number) => {
-        const { TransactionsStore, navigation } = this.props;
+        const { TransactionsStore, SettingsStore, navigation } = this.props;
+        const { implementation } = SettingsStore;
         const {
             destination,
             maxParts,
@@ -258,8 +294,9 @@ export default class Send extends React.Component<SendProps, SendState> {
             enableAtomicMultiPathPayment
         } = this.state;
 
+        let streamingCall;
         if (enableAtomicMultiPathPayment) {
-            TransactionsStore.sendPayment({
+            streamingCall = TransactionsStore.sendPayment({
                 amount: satAmount.toString(),
                 pubkey: destination,
                 message,
@@ -269,11 +306,15 @@ export default class Send extends React.Component<SendProps, SendState> {
                 amp: true
             });
         } else {
-            TransactionsStore.sendPayment({
+            streamingCall = TransactionsStore.sendPayment({
                 amount: satAmount.toString(),
                 pubkey: destination,
                 message
             });
+        }
+
+        if (implementation === 'lightning-node-connect') {
+            this.subscribePayment(streamingCall);
         }
 
         navigation.navigate('SendingLightning');
@@ -311,7 +352,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             maxShardAmt,
             feeLimitSat,
             message,
-            enableAtomicMultiPathPayment
+            enableAtomicMultiPathPayment,
+            clipboard
         } = this.state;
         const { confirmedBlockchainBalance } = BalanceStore;
         const { implementation, settings } = SettingsStore;
@@ -380,6 +422,15 @@ export default class Send extends React.Component<SendProps, SendState> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
+                    rightComponent={
+                        <TouchableOpacity
+                            onPress={() =>
+                                navigation.navigate('AddressQRCodeScanner')
+                            }
+                        >
+                            <Scan fill={themeColor('text')} />
+                        </TouchableOpacity>
+                    }
                     backgroundColor={themeColor('background')}
                     containerStyle={{
                         borderBottomWidth: 0
@@ -857,19 +908,16 @@ export default class Send extends React.Component<SendProps, SendState> {
                             />
                         </View>
                     )}
-                    <View style={styles.button}>
-                        <Button
-                            title={localeString('general.scan')}
-                            icon={{
-                                name: 'crop-free',
-                                size: 25
-                            }}
-                            onPress={() =>
-                                navigation.navigate('AddressQRCodeScanner')
-                            }
-                            secondary
-                        />
-                    </View>
+
+                    {!!clipboard && !destination && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString('general.paste')}
+                                onPress={() => this.validateAddress(clipboard)}
+                                secondary
+                            />
+                        </View>
+                    )}
 
                     {Platform.OS === 'ios' && (
                         <View style={styles.button}>

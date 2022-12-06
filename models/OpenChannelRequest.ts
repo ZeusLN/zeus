@@ -16,6 +16,7 @@ export default class OpenChannelRequest extends BaseModel {
     public id?: string;
     public satoshis?: string;
     public utxos?: string[];
+    public privateChannel?: boolean;
 
     constructor(data?: any) {
         super(data);
