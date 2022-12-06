@@ -19,6 +19,8 @@ interface CollapsedQRProps {
     collapseText?: string;
     copyText?: string;
     hideText?: boolean;
+    expanded?: boolean;
+    textBottom?: boolean;
 }
 
 interface CollapsedQRState {
@@ -31,7 +33,7 @@ export default class CollapsedQR extends React.Component<
     CollapsedQRState
 > {
     state = {
-        collapsed: true,
+        collapsed: this.props.expanded ? false : true,
         nfcBroadcast: false
     };
 
@@ -76,12 +78,19 @@ export default class CollapsedQR extends React.Component<
 
     render() {
         const { collapsed, nfcBroadcast } = this.state;
-        const { value, showText, copyText, collapseText, hideText } =
-            this.props;
+        const {
+            value,
+            showText,
+            copyText,
+            collapseText,
+            hideText,
+            expanded,
+            textBottom
+        } = this.props;
 
         return (
             <React.Fragment>
-                {!hideText && (
+                {!hideText && !textBottom && (
                     <Text
                         style={{
                             ...styles.value,
@@ -92,29 +101,42 @@ export default class CollapsedQR extends React.Component<
                         {value}
                     </Text>
                 )}
-                {!collapsed && (
+                {!collapsed && value && (
                     <View style={styles.qrPadding}>
                         <QRCode value={value} size={300} logo={secondaryLogo} />
                     </View>
                 )}
-                <Button
-                    title={
-                        collapsed
-                            ? showText ||
-                              localeString('components.CollapsedQr.show')
-                            : collapseText ||
-                              localeString('components.CollapsedQr.hide')
-                    }
-                    icon={{
-                        name: 'qrcode',
-                        type: 'font-awesome',
-                        size: 25
-                    }}
-                    containerStyle={{
-                        margin: 10
-                    }}
-                    onPress={() => this.toggleCollapse()}
-                />
+                {!hideText && textBottom && (
+                    <Text
+                        style={{
+                            ...styles.value,
+                            color: themeColor('secondaryText'),
+                            fontFamily: 'Lato-Regular'
+                        }}
+                    >
+                        {value}
+                    </Text>
+                )}
+                {!expanded && (
+                    <Button
+                        title={
+                            collapsed
+                                ? showText ||
+                                  localeString('components.CollapsedQr.show')
+                                : collapseText ||
+                                  localeString('components.CollapsedQr.hide')
+                        }
+                        icon={{
+                            name: 'qrcode',
+                            type: 'font-awesome',
+                            size: 25
+                        }}
+                        containerStyle={{
+                            margin: 10
+                        }}
+                        onPress={() => this.toggleCollapse()}
+                    />
+                )}
                 <CopyButton copyValue={value} title={copyText} />
                 {Platform.OS === 'android' && (
                     <Button

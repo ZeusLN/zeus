@@ -3,7 +3,7 @@ import { Image, Text, View, TouchableOpacity } from 'react-native';
 import { Badge } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Button from '../../components/Button';
-import { WalletHeader } from '../../components/WalletHeader';
+import WalletHeader from '../../components/WalletHeader';
 import { Amount } from '../../components/Amount';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -116,8 +116,9 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
         );
 
         let mainPane;
+        const error = NodeInfoStore.error || SettingsStore.error;
 
-        if (!NodeInfoStore.error) {
+        if (!error) {
             mainPane = (
                 <View
                     style={{
@@ -166,7 +167,9 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                             marginBottom: 25
                         }}
                     >
-                        {NodeInfoStore.errorMsg
+                        {SettingsStore.errorMsg
+                            ? SettingsStore.errorMsg
+                            : NodeInfoStore.errorMsg
                             ? NodeInfoStore.errorMsg
                             : localeString('views.Wallet.MainPane.error')}
                     </Text>

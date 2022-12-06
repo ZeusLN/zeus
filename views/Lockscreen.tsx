@@ -368,7 +368,12 @@ export default class Lockscreen extends React.Component<
         );
 
         return (
-            <View style={styles.container}>
+            <View
+                style={{
+                    ...styles.container,
+                    backgroundColor: themeColor('background')
+                }}
+            >
                 {(!!modifySecurityScreen || deletePin || deleteDuressPin) && (
                     <Header
                         leftComponent={<BackButton />}
@@ -518,8 +523,7 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     container: {
-        flex: 1,
-        backgroundColor: '#1f2328'
+        flex: 1
     },
     button: {
         paddingTop: 15,

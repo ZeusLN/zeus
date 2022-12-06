@@ -109,7 +109,6 @@ export default class CLightningREST extends LND {
         this.postRequest('/v1/peer/connect', {
             id: `${data.addr.pubkey}@${data.addr.host}`
         });
-    listNode = () => this.getRequest('/v1/network/listNode');
     decodePaymentRequest = (urlParams?: Array<string>) =>
         this.getRequest(`/v1/pay/decodePay/${urlParams && urlParams[0]}`);
     payLightningInvoice = (data: any) =>
@@ -159,4 +158,5 @@ export default class CLightningREST extends LND {
     singleFeesEarnedTotal = () => true;
     supportsAddressTypeSelection = () => false;
     supportsTaproot = () => false;
+    isLNDBased = () => false;
 }
