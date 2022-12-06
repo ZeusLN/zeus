@@ -525,17 +525,17 @@ export default class Receive extends React.Component<
                                                 textBottom
                                             />
                                         )}
-                                    {belowDustLimit ||
-                                        (!haveUnifiedInvoice && (
-                                            <CollapsedQR
-                                                value={lnInvoice}
-                                                copyText={localeString(
-                                                    'views.Receive.copyAddress'
-                                                )}
-                                                expanded
-                                                textBottom
-                                            />
-                                        ))}
+                                    {(belowDustLimit ||
+                                        !haveUnifiedInvoice) && (
+                                        <CollapsedQR
+                                            value={lnInvoice}
+                                            copyText={localeString(
+                                                'views.Receive.copyAddress'
+                                            )}
+                                            expanded
+                                            textBottom
+                                        />
+                                    )}
                                     {!belowDustLimit && haveUnifiedInvoice && (
                                         <ButtonGroup
                                             onPress={this.updateIndex}
