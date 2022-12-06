@@ -12,6 +12,7 @@ import LoadingIndicator from './../../components/LoadingIndicator';
 import BalanceStore from './../../stores/BalanceStore';
 import UnitsStore from './../../stores/UnitsStore';
 import UTXOsStore from './../../stores/UTXOsStore';
+import SettingsStore from './../../stores/SettingsStore';
 
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -21,6 +22,7 @@ interface AccountsProps {
     BalanceStore: BalanceStore;
     UTXOsStore: UTXOsStore;
     UnitsStore: UnitsStore;
+    SettingsStore: SettingsStore;
 }
 
 interface AccountsState {
@@ -29,7 +31,7 @@ interface AccountsState {
     lightning: string;
 }
 
-@inject('BalanceStore', 'UTXOsStore', 'UnitsStore')
+@inject('BalanceStore', 'UTXOsStore', 'UnitsStore', 'SettingsStore')
 @observer
 export default class Accounts extends React.Component<
     AccountsProps,
@@ -72,7 +74,13 @@ export default class Accounts extends React.Component<
     }
 
     render() {
-        const { BalanceStore, UnitsStore, UTXOsStore, navigation } = this.props;
+        const {
+            BalanceStore,
+            UnitsStore,
+            UTXOsStore,
+            SettingsStore,
+            navigation
+        } = this.props;
         const { value, amount, lightning } = this.state;
         const { loadingAccounts } = UTXOsStore;
 
@@ -122,6 +130,7 @@ export default class Accounts extends React.Component<
                         navigation={navigation}
                         BalanceStore={BalanceStore}
                         UnitsStore={UnitsStore}
+                        SettingsStore={SettingsStore}
                         onRefresh={async () =>
                             await Promise.all([
                                 BalanceStore.getBlockchainBalance(),
