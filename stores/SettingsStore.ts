@@ -468,7 +468,7 @@ export default class SettingsStore {
     public connect = async () => {
         this.loading = true;
 
-        RESTUtils.initLNC();
+        await RESTUtils.initLNC();
 
         const error = await RESTUtils.connect();
         if (error) {
