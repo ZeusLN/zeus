@@ -117,7 +117,16 @@ export default class InvoicesStore {
             ampInvoice,
             routeHints
         );
-        this.getNewAddress(addressType ? { type: addressType } : null);
+        const { implementation, lndhubUrl } = this.settingsStore;
+        // do not fetch new address if using Lnbank
+        if (
+            !(
+                implementation === 'lndhub' &&
+                lndhubUrl.includes('lnbank/api/lndhub')
+            )
+        ) {
+            this.getNewAddress(addressType ? { type: addressType } : null);
+        }
         return rHash;
     };
 
