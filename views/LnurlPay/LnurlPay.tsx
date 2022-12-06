@@ -59,9 +59,10 @@ export default class LnurlPay extends React.Component<
     stateFromProps(props: LnurlPayProps) {
         const { navigation } = props;
         const lnurl = navigation.getParam('lnurlParams');
+        const amount = navigation.getParam('amount');
 
         return {
-            amount: Math.floor(lnurl.minSendable / 1000).toString(),
+            amount: amount || Math.floor(lnurl.minSendable / 1000).toString(),
             domain: lnurl.domain,
             comment: ''
         };

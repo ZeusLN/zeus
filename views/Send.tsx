@@ -241,7 +241,7 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     validateAddress = (text: string) => {
         const { navigation } = this.props;
-        handleAnything(text)
+        handleAnything(text, this.state.amount)
             .then(([route, props]) => {
                 navigation.navigate(route, props);
             })
