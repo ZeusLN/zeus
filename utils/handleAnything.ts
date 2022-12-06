@@ -48,7 +48,7 @@ const isClipboardValue = (data: string) => {
 
 export { isClipboardValue };
 
-export default async function (data: string): Promise<any> {
+export default async function (data: string, setAmount?: string): Promise<any> {
     const { nodeInfo } = nodeInfoStore;
     const { isTestNet, isRegTest } = nodeInfo;
     const { value, amount, lightning }: any =
@@ -157,7 +157,8 @@ export default async function (data: string): Promise<any> {
                     return [
                         'LnurlPay',
                         {
-                            lnurlParams: data
+                            lnurlParams: data,
+                            amount: setAmount
                         }
                     ];
                 } else {
@@ -184,7 +185,8 @@ export default async function (data: string): Promise<any> {
                     return [
                         'LnurlPay',
                         {
-                            lnurlParams: params
+                            lnurlParams: params,
+                            amount: setAmount
                         }
                     ];
                     break;
