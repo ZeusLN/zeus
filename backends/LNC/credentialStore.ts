@@ -33,8 +33,6 @@ export default class LncCredentialStore implements CredentialStore {
      */
     constructor(pairingPhrase?: string) {
         if (pairingPhrase) this.pairingPhrase = pairingPhrase;
-
-        this.load(pairingPhrase);
     }
 
     //
@@ -123,9 +121,11 @@ export default class LncCredentialStore implements CredentialStore {
                 this._localKey = this.persisted.localKey;
                 this._remoteKey = this.persisted.remoteKey;
             }
+            return;
         } catch (error) {
             const msg = (error as Error).message;
             throw new Error(`Failed to load secure data: ${msg}`);
+            return;
         }
     }
 

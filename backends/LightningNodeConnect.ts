@@ -18,7 +18,7 @@ const ADDRESS_TYPES = [
 export default class LightningNodeConnect {
     lnc: any;
 
-    initLNC = () => {
+    initLNC = async () => {
         const { pairingPhrase, mailboxServer, customMailboxServer } =
             stores.settingsStore;
 
@@ -31,6 +31,8 @@ export default class LightningNodeConnect {
             mailboxServer === 'custom-defined'
                 ? customMailboxServer
                 : mailboxServer;
+
+        return await this.lnc.credentials.load(pairingPhrase);
     };
 
     connect = async () => await this.lnc.connect();
