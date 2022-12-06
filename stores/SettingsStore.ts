@@ -144,7 +144,8 @@ export const THEME_KEYS = [
     { key: 'BPM', value: 'bpm' },
     { key: 'Orange', value: 'orange' },
     { key: 'Blacked Out', value: 'blacked-out' },
-    { key: 'Scarlet', value: 'scarlet' }
+    { key: 'Scarlet', value: 'scarlet' },
+    { key: 'Memberberry', value: 'purple' }
 ];
 
 export const DEFAULT_THEME = 'dark';

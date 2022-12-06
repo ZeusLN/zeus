@@ -88,6 +88,22 @@ export function themeColor(themeString: string): any {
         highlight: '#fff'
     };
 
+    const Purple: { [key: string]: any } = {
+        generalStyle: 'light',
+        background: '#dbd0e1',
+        secondary: '#ba9cbf',
+        text: '#776d86',
+        secondaryText: '#6f7286',
+        highlight: '#575062',
+        error: '#C9592D',
+        separator: '##9fa3bf',
+        outbound: '#FFD93F',
+        inbound: '#FFF0CA',
+        success: '#46BE43',
+        warning: '#E14C4C',
+        bitcoin: '#FFB040'
+    };
+
     switch (theme) {
         case 'light':
             return Light[themeString] || Dark[themeString];
@@ -101,6 +117,8 @@ export function themeColor(themeString: string): any {
             return BlackedOut[themeString] || Dark[themeString];
         case 'scarlet':
             return Scarlet[themeString] || Dark[themeString];
+        case 'purple':
+            return Purple[themeString] || Light[themeString];
         default:
             return Dark[themeString];
     }
