@@ -145,7 +145,7 @@ export const THEME_KEYS = [
     { key: 'Orange', value: 'orange' },
     { key: 'Blacked Out', value: 'blacked-out' },
     { key: 'Scarlet', value: 'scarlet' },
-    { key: 'Purple', value: 'purple' }
+    { key: 'Memberberry', value: 'purple' }
 ];
 
 export const DEFAULT_THEME = 'dark';
