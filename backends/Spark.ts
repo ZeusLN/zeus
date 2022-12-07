@@ -173,11 +173,11 @@ export default class Spark {
         );
     createInvoice = (data: any) =>
         this.rpc('invoice', {
-            msatoshi: Number(data.value) * 1000,
+            amount_msat: data.value !== '0' ? Number(data.value) * 1000 : 'any',
             label: 'zeus.' + Math.random() * 1000000,
             description: data.memo,
             expiry: Math.round(Date.now() / 1000) + Number(data.expiry),
-            fallbacks: null,
+            fallbacks: [],
             preimage: null,
             exposeprivatechannels: true
         });
