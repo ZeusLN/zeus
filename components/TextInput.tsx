@@ -26,7 +26,6 @@ interface TextInputProps {
     suffix?: string;
     toggleUnits?: any;
     onPressIn?: any;
-    disabled?: boolean;
 }
 
 export default function TextInput(props: TextInputProps) {
@@ -48,7 +47,6 @@ export default function TextInput(props: TextInputProps) {
         suffix,
         toggleUnits,
         onPressIn,
-        disabled
     } = props;
 
     const defaultStyle = numberOfLines
@@ -65,9 +63,7 @@ export default function TextInput(props: TextInputProps) {
                 ...style,
                 ...defaultStyle,
                 ...styles.wrapper,
-                backgroundColor: disabled
-                    ? themeColor('background')
-                    : themeColor('secondary')
+                backgroundColor: themeColor('secondary')
             }}
         >
             {prefix && (

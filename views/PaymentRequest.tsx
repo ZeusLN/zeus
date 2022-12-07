@@ -96,29 +96,38 @@ export default class PaymentRequest extends React.Component<
         return null;
     };
 
-    sendPayment = ({
-        payment_request,
-        amount, // used only for no-amount invoices
-        max_parts,
-        max_shard_amt,
-        fee_limit_sat,
-        max_fee_percent,
-        outgoing_chan_id,
-        last_hop_pubkey,
-        amp
-    }: SendPaymentReq) => {
+    sendPayment = (
+        feeOption: string,
+        {
+            payment_request,
+            amount, // used only for no-amount invoices
+            max_parts,
+            max_shard_amt,
+            fee_limit_sat,
+            max_fee_percent,
+            outgoing_chan_id,
+            last_hop_pubkey,
+            amp,
+        }: SendPaymentReq
+    ) => {
         const { InvoicesStore, TransactionsStore, navigation } = this.props;
         let feeLimitSat = fee_limit_sat;
+        let maxFeePercent = max_fee_percent;
 
-        // If the fee limit is not set, use a default routing fee calculation
-        if (!fee_limit_sat) {
-            const { pay_req } = InvoicesStore;
-            const requestAmount = pay_req && pay_req.getRequestAmount;
-            const invoiceAmount = amount || requestAmount;
-
-            feeLimitSat = FeeUtils.calculateDefaultRoutingFee(
-                Number(invoiceAmount)
-            );
+        if (feeOption == 'sats') {
+            // If the fee limit is not set, use a default routing fee calculation
+            if (!fee_limit_sat) {
+                const { pay_req } = InvoicesStore;
+                const requestAmount = pay_req && pay_req.getRequestAmount;
+                const invoiceAmount = amount || requestAmount;
+                feeLimitSat = FeeUtils.calculateDefaultRoutingFee(
+                    Number(invoiceAmount)
+                );
+            }
+        } else if (feeOption == 'percent') {
+            if (!max_fee_percent) {
+                maxFeePercent = '0.5';
+            }
         }
 
         TransactionsStore.sendPayment({
@@ -127,7 +136,7 @@ export default class PaymentRequest extends React.Component<
             max_parts,
             max_shard_amt,
             fee_limit_sat: feeLimitSat,
-            max_fee_percent,
+            max_fee_percent: maxFeePercent,
             outgoing_chan_id,
             last_hop_pubkey,
             amp
@@ -174,6 +183,9 @@ export default class PaymentRequest extends React.Component<
         const description = pay_req && pay_req.description;
         const payment_hash = pay_req && pay_req.payment_hash;
         const timestamp = pay_req && pay_req.timestamp;
+        const percentAmount = requestAmount
+            ? (requestAmount * (Number(maxFeePercent) / 100)).toFixed()
+            : 0;
 
         let lockAtomicMultiPathPayment = false;
         if (
@@ -390,13 +402,38 @@ export default class PaymentRequest extends React.Component<
                                     {this.displayFeeRecommendation()}
                                     <View
                                         style={{
+                                            flex: 1,
+                                            flexWrap: 'wrap',
+                                            flexDirection: 'row',
+                                            justifyContent: 'flex-end',
+                                            opacity:
+                                                feeOption == 'percent'
+                                                    ? 1
+                                                    : 0.25
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                ...styles.label,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            <Amount sats={percentAmount} />
+                                        </Text>
+                                    </View>
+                                    <View
+                                        style={{
                                             flexDirection: 'row'
                                         }}
                                     >
                                         <TextInput
                                             style={{
                                                 width: 170,
-                                                paddingRight: 30
+                                                paddingRight: 30,
+                                                opacity:
+                                                    feeOption == 'sats'
+                                                        ? 1
+                                                        : 0.25
                                             }}
                                             keyboardType="numeric"
                                             value={feeLimitSat}
@@ -410,18 +447,17 @@ export default class PaymentRequest extends React.Component<
                                                     feeOption: 'sats'
                                                 })
                                             }
-                                            disabled={
-                                                feeOption == 'sats'
-                                                    ? false
-                                                    : true
-                                            }
                                         />
                                         <Text
                                             style={{
                                                 ...styles.label,
                                                 color: themeColor('text'),
                                                 top: 28,
-                                                right: 30
+                                                right: 30,
+                                                opacity:
+                                                    feeOption == 'sats'
+                                                        ? 1
+                                                        : 0.25
                                             }}
                                         >
                                             {`${localeString('general.sats')}`}
@@ -430,7 +466,11 @@ export default class PaymentRequest extends React.Component<
                                             style={{
                                                 left: 10,
                                                 width: 160,
-                                                paddingRight: 20
+                                                paddingRight: 20,
+                                                opacity:
+                                                    feeOption == 'percent'
+                                                        ? 1
+                                                        : 0.25
                                             }}
                                             keyboardType="numeric"
                                             value={maxFeePercent}
@@ -444,18 +484,17 @@ export default class PaymentRequest extends React.Component<
                                                     feeOption: 'percent'
                                                 })
                                             }
-                                            disabled={
-                                                feeOption == 'percent'
-                                                    ? false
-                                                    : true
-                                            }
                                         />
                                         <Text
                                             style={{
                                                 ...styles.label,
                                                 color: themeColor('text'),
                                                 top: 28,
-                                                right: 10
+                                                right: 10,
+                                                opacity:
+                                                    feeOption == 'percent'
+                                                        ? 1
+                                                        : 0.25
                                             }}
                                         >
                                             {'%'}
@@ -692,7 +731,7 @@ export default class PaymentRequest extends React.Component<
                                             color: 'white'
                                         }}
                                         onPress={() => {
-                                            this.sendPayment({
+                                            this.sendPayment(feeOption, {
                                                 payment_request: paymentRequest,
                                                 amount: customAmount,
                                                 max_parts:
