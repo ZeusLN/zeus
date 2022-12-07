@@ -25,6 +25,8 @@ interface TextInputProps {
     prefix?: string;
     suffix?: string;
     toggleUnits?: any;
+    onPressIn?: any;
+    disabled?: boolean;
 }
 
 export default function TextInput(props: TextInputProps) {
@@ -44,7 +46,9 @@ export default function TextInput(props: TextInputProps) {
         secureTextEntry,
         prefix,
         suffix,
-        toggleUnits
+        toggleUnits,
+        onPressIn,
+        disabled
     } = props;
 
     const defaultStyle = numberOfLines
@@ -61,7 +65,9 @@ export default function TextInput(props: TextInputProps) {
                 ...style,
                 ...defaultStyle,
                 ...styles.wrapper,
-                backgroundColor: themeColor('secondary')
+                backgroundColor: disabled
+                    ? themeColor('background')
+                    : themeColor('secondary')
             }}
         >
             {prefix && (
@@ -94,6 +100,7 @@ export default function TextInput(props: TextInputProps) {
                 multiline={multiline}
                 autoFocus={autoFocus}
                 secureTextEntry={secureTextEntry}
+                onPressIn={onPressIn}
             />
             {suffix && (
                 <TouchableOpacity onPress={() => toggleUnits()}>

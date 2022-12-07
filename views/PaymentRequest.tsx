@@ -40,6 +40,7 @@ interface InvoiceState {
     maxParts: string;
     maxShardAmt: string;
     feeLimitSat: string;
+    feeOption: string;
     maxFeePercent: string;
     outgoingChanId: string | null;
     lastHopPubkey: string | null;
@@ -64,6 +65,7 @@ export default class PaymentRequest extends React.Component<
         maxParts: '16',
         maxShardAmt: '',
         feeLimitSat: '100',
+        feeOption: 'sats',
         maxFeePercent: '0.5',
         outgoingChanId: null,
         lastHopPubkey: null
@@ -148,6 +150,7 @@ export default class PaymentRequest extends React.Component<
             maxParts,
             maxShardAmt,
             feeLimitSat,
+            feeOption,
             maxFeePercent,
             outgoingChanId,
             lastHopPubkey,
@@ -381,21 +384,83 @@ export default class PaymentRequest extends React.Component<
                                         {`${localeString(
                                             'views.PaymentRequest.feeLimit'
                                         )} (${localeString(
-                                            'general.sats'
-                                        )}) (${localeString(
                                             'general.optional'
                                         )})`}
                                     </Text>
                                     {this.displayFeeRecommendation()}
-                                    <TextInput
-                                        keyboardType="numeric"
-                                        value={feeLimitSat}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                feeLimitSat: text
-                                            })
-                                        }
-                                    />
+                                    <View
+                                        style={{
+                                            flexDirection: 'row'
+                                        }}
+                                    >
+                                        <TextInput
+                                            style={{
+                                                width: 170,
+                                                paddingRight: 30
+                                            }}
+                                            keyboardType="numeric"
+                                            value={feeLimitSat}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    feeLimitSat: text
+                                                })
+                                            }
+                                            onPressIn={() =>
+                                                this.setState({
+                                                    feeOption: 'sats'
+                                                })
+                                            }
+                                            disabled={
+                                                feeOption == 'sats'
+                                                    ? false
+                                                    : true
+                                            }
+                                        />
+                                        <Text
+                                            style={{
+                                                ...styles.label,
+                                                color: themeColor('text'),
+                                                top: 28,
+                                                right: 30
+                                            }}
+                                        >
+                                            {`${localeString('general.sats')}`}
+                                        </Text>
+                                        <TextInput
+                                            style={{
+                                                left: 10,
+                                                width: 160,
+                                                paddingRight: 20
+                                            }}
+                                            keyboardType="numeric"
+                                            value={maxFeePercent}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    maxFeePercent: text
+                                                })
+                                            }
+                                            onPressIn={() =>
+                                                this.setState({
+                                                    feeOption: 'percent'
+                                                })
+                                            }
+                                            disabled={
+                                                feeOption == 'percent'
+                                                    ? false
+                                                    : true
+                                            }
+                                        />
+                                        <Text
+                                            style={{
+                                                ...styles.label,
+                                                color: themeColor('text'),
+                                                top: 28,
+                                                right: 10
+                                            }}
+                                        >
+                                            {'%'}
+                                        </Text>
+                                    </View>
                                 </>
                             )}
 
