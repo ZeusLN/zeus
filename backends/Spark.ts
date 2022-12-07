@@ -193,39 +193,37 @@ export default class Spark {
         }).then(({ txid }: any) => ({ funding_txid_str: txid }));
     connectPeer = (data: any) =>
         this.rpc('connect', { id: data.addr.pubkey, host: data.addr.host });
-    decodePaymentRequest = (urlParams?: Array<string>) =>
-        this.rpc('decodepay', {bolt11: urlParams && urlParams[0]});
+    decodePaymentRequest = (urlParams: Array<string>) =>
+        this.rpc('decodepay', { bolt11: urlParams[0] });
     payLightningInvoice = (data: any) =>
         this.rpc('pay', {
             bolt11: data.payment_request,
             msatoshi: data.amt ? Number(data.amt * 1000) : null
         });
-    closeChannel = (urlParams?: Array<string>) =>
+    closeChannel = (urlParams: Array<string>) =>
         this.rpc('close', {
-            id: urlParams && urlParams[0],
-            unilateraltimeout: urlParams && urlParams[1] ? 60 : 0
+            id: urlParams[0],
+            unilateraltimeout: urlParams[1] ? 60 : 0
         }).then(() => ({ chan_close: { success: true } }));
-    getNodeInfo = (urlParams?: Array<string>) =>
-        this.rpc('listnodes', { id: urlParams && urlParams[0] }).then(
-            ({ nodes }: any) => {
-                const node = nodes[0];
-                return {
-                    node: node && {
-                        last_update: node.last_timestamp,
-                        pub_key: node.nodeid,
-                        alias: node.alias,
-                        color: node.color,
-                        addresses: node.addresses.map((addr: any) => ({
-                            network: 'tcp',
-                            addr:
-                                addr.type === 'ipv6'
-                                    ? `[${addr.address}]:${addr.port}`
-                                    : `${addr.address}:${addr.port}`
-                        }))
-                    }
-                };
-            }
-        );
+    getNodeInfo = (urlParams: Array<string>) =>
+        this.rpc('listnodes', { id: urlParams[0] }).then(({ nodes }: any) => {
+            const node = nodes[0];
+            return {
+                node: node && {
+                    last_update: node.last_timestamp,
+                    pub_key: node.nodeid,
+                    alias: node.alias,
+                    color: node.color,
+                    addresses: node.addresses.map((addr: any) => ({
+                        network: 'tcp',
+                        addr:
+                            addr.type === 'ipv6'
+                                ? `[${addr.address}]:${addr.port}`
+                                : `${addr.address}:${addr.port}`
+                    }))
+                }
+            };
+        });
     getFees = async () => {
         const info = await this.rpc('getinfo');
 
@@ -304,11 +302,11 @@ export default class Spark {
             base: data.base_fee_msat,
             ppm: data.fee_rate * 1000000
         });
-    getRoutes = async (urlParams?: Array<string>) => {
-        const msatoshi = Number(urlParams && urlParams[1]) * 1000;
+    getRoutes = async (urlParams: Array<string>) => {
+        const msatoshi = Number(urlParams[1]) * 1000;
 
         const res = await this.rpc('getroute', {
-            id: urlParams && urlParams[0],
+            id: urlParams[0],
             msatoshi,
             riskfactor: 2
         });
