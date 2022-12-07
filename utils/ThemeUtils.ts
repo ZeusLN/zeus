@@ -73,6 +73,37 @@ export function themeColor(themeString: string): any {
         separator: '#CED0CE'
     };
 
+    const BlackedOut: { [key: string]: any } = {
+        generalStyle: 'dark',
+        background: '#000',
+        secondary: '#141414',
+        separator: '#141414'
+    };
+
+    const Scarlet: { [key: string]: any } = {
+        generalStyle: 'dark',
+        background: '#56042c',
+        secondary: '#8A1538',
+        separator: '#8A1538',
+        highlight: '#fff'
+    };
+
+    const Purple: { [key: string]: any } = {
+        generalStyle: 'light',
+        background: '#dbd0e1',
+        secondary: '#ba9cbf',
+        text: '#776d86',
+        secondaryText: '#6f7286',
+        highlight: '#575062',
+        error: '#C9592D',
+        separator: '##9fa3bf',
+        outbound: '#FFD93F',
+        inbound: '#FFF0CA',
+        success: '#46BE43',
+        warning: '#E14C4C',
+        bitcoin: '#FFB040'
+    };
+
     switch (theme) {
         case 'light':
             return Light[themeString] || Dark[themeString];
@@ -82,6 +113,12 @@ export function themeColor(themeString: string): any {
             return BPM[themeString] || Light[themeString];
         case 'orange':
             return Orange[themeString] || Light[themeString];
+        case 'blacked-out':
+            return BlackedOut[themeString] || Dark[themeString];
+        case 'scarlet':
+            return Scarlet[themeString] || Dark[themeString];
+        case 'purple':
+            return Purple[themeString] || Light[themeString];
         default:
             return Dark[themeString];
     }

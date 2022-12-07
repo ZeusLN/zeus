@@ -214,7 +214,14 @@ export default class LND {
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
     getInvoices = () =>
         this.getRequest('/v1/invoices?reversed=true&num_max_invoices=100');
-    createInvoice = (data: any) => this.postRequest('/v1/invoices', data);
+    createInvoice = (data: any) =>
+        this.postRequest('/v1/invoices', {
+            memo: data.memo,
+            value_msat: Number(data.value) * 1000,
+            expiry: data.expiry,
+            is_amp: data.is_amp,
+            private: data.private
+        });
     getPayments = () => this.getRequest('/v1/payments');
     getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);
     openChannel = (data: OpenChannelRequest) =>
@@ -229,7 +236,6 @@ export default class LND {
     openChannelStream = (data: OpenChannelRequest) =>
         this.wsReq('/v1/channels/stream', 'POST', data);
     connectPeer = (data: any) => this.postRequest('/v1/peers', data);
-    listNode = () => this.getRequest('/v1/network/listNode');
     decodePaymentRequest = (urlParams?: Array<string>) =>
         this.getRequest(`/v1/payreq/${urlParams && urlParams[0]}`);
     payLightningInvoice = (data: any) => {
@@ -332,29 +338,6 @@ export default class LND {
     subscribeInvoice = (r_hash: string) =>
         this.getRequest(`/v2/invoices/subscribe/${r_hash}`);
 
-    // LndHub
-    createAccount = (
-        host: string,
-        certVerification: boolean,
-        useTor?: boolean
-    ) => {
-        const url = `${host}/create`;
-        return this.restReq(
-            {
-                'Access-Control-Allow-Origin': '*',
-                'Content-Type': 'application/json'
-            },
-            url,
-            'POST',
-            {
-                partnerid: 'bluewallet',
-                accounttype: 'common'
-            },
-            certVerification,
-            useTor
-        );
-    };
-
     supportsMessageSigning = () => true;
     supportsOnchainSends = () => true;
     supportsKeysend = () => true;
@@ -369,4 +352,5 @@ export default class LND {
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => true;
     supportsTaproot = () => this.supports('v0.15.0');
+    isLNDBased = () => true;
 }

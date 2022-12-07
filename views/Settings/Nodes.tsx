@@ -7,7 +7,8 @@ import Button from './../../components/Button';
 import LoadingIndicator from './../../components/LoadingIndicator';
 import NodeIdenticon, { NodeTitle } from './../../components/NodeIdenticon';
 
-import SettingsStore from './../../stores/SettingsStore';
+import RESTUtils from './../../utils/RESTUtils';
+import SettingsStore, { INTERFACE_KEYS } from './../../stores/SettingsStore';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -67,9 +68,18 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
     render() {
         const { navigation, SettingsStore } = this.props;
         const { loading, nodes } = this.state;
-        const { setSettings, settings, setConnectingStatus }: any =
-            SettingsStore;
+        const {
+            setSettings,
+            settings,
+            setConnectingStatus,
+            implementation
+        }: any = SettingsStore;
         const { selectedNode } = settings;
+
+        const implementationDisplayValue = {};
+        INTERFACE_KEYS.forEach((item) => {
+            implementationDisplayValue[item.value] = item.key;
+        });
 
         const BackButton = () => (
             <Icon
@@ -129,6 +139,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                             themeColor('background')
                                     }}
                                     onPress={async () => {
+                                        const currentImplementation =
+                                            implementation;
                                         await setSettings(
                                             JSON.stringify({
                                                 nodes,
@@ -147,6 +159,12 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 privacy: settings.privacy
                                             })
                                         ).then(() => {
+                                            if (
+                                                currentImplementation ===
+                                                'lightning-node-connect'
+                                            ) {
+                                                RESTUtils.disconnect();
+                                            }
                                             setConnectingStatus(true);
                                             navigation.navigate('Wallet', {
                                                 refresh: true
@@ -178,8 +196,16 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                         >
                                             {selectedNode === index ||
                                             (!selectedNode && index === 0)
-                                                ? `Active | ${item.implementation}`
-                                                : `${item.implementation}`}
+                                                ? `Active | ${
+                                                      implementationDisplayValue[
+                                                          item.implementation
+                                                      ]
+                                                  }`
+                                                : `${
+                                                      implementationDisplayValue[
+                                                          item.implementation
+                                                      ]
+                                                  }`}
                                         </ListItem.Subtitle>
                                     </ListItem.Content>
                                     <Button

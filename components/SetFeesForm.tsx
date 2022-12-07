@@ -10,6 +10,7 @@ import {
 } from './../components/SuccessErrorMessage';
 import TextInput from './../components/TextInput';
 
+import RESTUtils from './../utils/RESTUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
@@ -194,7 +195,7 @@ export default class SetFeesForm extends React.Component<
                             autoCorrect={false}
                         />
 
-                        {implementation === 'lnd' && (
+                        {RESTUtils.isLNDBased() && (
                             <>
                                 <Text
                                     style={{
@@ -284,7 +285,7 @@ export default class SetFeesForm extends React.Component<
                                     ).then(() => {
                                         if (
                                             channelId &&
-                                            implementation === 'lnd' &&
+                                            RESTUtils.isLNDBased() &&
                                             !setFeesError
                                         ) {
                                             ChannelsStore.getChannelInfo(

@@ -10,8 +10,8 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import Pie from '../../assets/images/SVG/Pie.svg';
 
 import FeeStore from '../../stores/FeeStore';
-import SettingsStore from '../../stores/SettingsStore';
 
+import RESTUtils from '../../utils/RESTUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -21,7 +21,6 @@ import { RoutingHeader } from './RoutingHeader';
 interface RoutingProps {
     navigation: any;
     FeeStore: FeeStore;
-    SettingsStore: SettingsStore;
 }
 
 interface RoutingState {
@@ -37,7 +36,7 @@ const HOURS = {
     5: 24 * 365
 };
 
-@inject('FeeStore', 'SettingsStore')
+@inject('FeeStore')
 @observer
 export default class Routing extends React.PureComponent<
     RoutingProps,
@@ -48,10 +47,9 @@ export default class Routing extends React.PureComponent<
     };
 
     UNSAFE_componentWillMount() {
-        const { FeeStore, SettingsStore } = this.props;
-        const { implementation } = SettingsStore;
+        const { FeeStore } = this.props;
         FeeStore.getFees();
-        if (implementation === 'lnd') {
+        if (RESTUtils.isLNDBased()) {
             FeeStore.getForwardingHistory();
         }
     }
@@ -77,7 +75,7 @@ export default class Routing extends React.PureComponent<
     };
 
     render() {
-        const { FeeStore, SettingsStore, navigation } = this.props;
+        const { FeeStore, navigation } = this.props;
         const { selectedIndex } = this.state;
         const {
             dayEarned,
@@ -90,7 +88,6 @@ export default class Routing extends React.PureComponent<
             getForwardingHistory,
             loading
         } = FeeStore;
-        const { implementation } = SettingsStore;
 
         const headerString =
             forwardingEvents.length > 0
@@ -228,9 +225,9 @@ export default class Routing extends React.PureComponent<
                     monthEarned={monthEarned}
                     totalEarned={totalEarned}
                     timeframeEarned={earnedDuringTimeframe}
-                    fullSize={implementation !== 'lnd'}
+                    fullSize={!RESTUtils.isLNDBased()}
                 />
-                {implementation === 'lnd' && (
+                {RESTUtils.isLNDBased() && (
                     <View style={{ flex: 1 }}>
                         <ButtonGroup
                             onPress={(selectedIndex: number) => {
