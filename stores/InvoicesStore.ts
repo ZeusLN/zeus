@@ -42,7 +42,7 @@ export default class InvoicesStore {
                 if (
                     this.pay_req &&
                     this.pay_req.destination &&
-                    (this.settingsStore.implementation === 'lnd' ||
+                    (RESTUtils.isLNDBased() ||
                         this.settingsStore.implementation === 'spark')
                 ) {
                     this.getRoutes(
@@ -109,8 +109,25 @@ export default class InvoicesStore {
         routeHints?: boolean,
         addressType?: string
     ) => {
-        this.createInvoice(memo, value, expiry, lnurl, ampInvoice, routeHints);
-        this.getNewAddress(addressType ? { type: addressType } : null);
+        const rHash = this.createInvoice(
+            memo,
+            value,
+            expiry,
+            lnurl,
+            ampInvoice,
+            routeHints
+        );
+        const { implementation, lndhubUrl } = this.settingsStore;
+        // do not fetch new address if using Lnbank
+        if (
+            !(
+                implementation === 'lndhub' &&
+                lndhubUrl.includes('lnbank/api/lndhub')
+            )
+        ) {
+            this.getNewAddress(addressType ? { type: addressType } : null);
+        }
+        return rHash;
     };
 
     @action
@@ -137,14 +154,14 @@ export default class InvoicesStore {
         if (ampInvoice) req.is_amp = true;
         if (routeHints) req.private = true;
 
-        RESTUtils.createInvoice(req)
+        return RESTUtils.createInvoice(req)
             .then((data: any) => {
                 if (data.error) {
                     this.creatingInvoiceError = true;
                     this.creatingInvoice = false;
                     this.error_msg =
                         data.message.toString() ||
-                        error.toString() ||
+                        data.error.toString() ||
                         localeString(
                             'stores.InvoicesStore.errorCreatingInvoice'
                         );
@@ -195,18 +212,12 @@ export default class InvoicesStore {
                         });
                 }
 
-                if (this.settingsStore.implementation === 'lnd') {
-                    const formattedRhash = invoice.r_hash
-                        .replace(/\+/g, '-')
-                        .replace(/\//g, '_');
-                    RESTUtils.subscribeInvoice(formattedRhash).then(
-                        (response: any) => {
-                            if (response.result && response.result.settled) {
-                                this.watchedInvoicePaid = true;
-                            }
-                        }
-                    );
-                }
+                const formattedRhash =
+                    typeof invoice.r_hash === 'string'
+                        ? invoice.r_hash.replace(/\+/g, '-').replace(/\//g, '_')
+                        : '';
+
+                return formattedRhash;
             })
             .catch((error: any) => {
                 // handle error
@@ -219,6 +230,11 @@ export default class InvoicesStore {
     };
 
     @action
+    public setWatchedInvoicePaid = () => {
+        this.watchedInvoicePaid = true;
+    };
+
+    @action
     public getNewAddress = (params: any) => {
         this.loading = true;
         this.error_msg = null;
@@ -226,7 +242,7 @@ export default class InvoicesStore {
         return RESTUtils.getNewAddress(params)
             .then((data: any) => {
                 this.onChainAddress =
-                    data.address || data.bech32 || data[0].address;
+                    data.address || data.bech32 || (data[0] && data[0].address);
                 this.loading = false;
             })
             .catch((error: any) => {

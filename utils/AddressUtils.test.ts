@@ -52,6 +52,13 @@ describe('AddressUtils', () => {
                     false
                 )
             ).toBeFalsy();
+
+            expect(
+                AddressUtils.isValidBitcoinAddress(
+                    'lndhub://db48dd0a-a298-405f-b70e-a62d8df5ae45:85f8a5a56c547fd561f6d8902b0ca9d66fc0152a@https://mybtcpayserver.com/plugins/lnbank/api/lndhub',
+                    false
+                )
+            ).toBeFalsy();
         });
 
         it('processes all Bech32 send address variations', () => {
@@ -337,6 +344,11 @@ describe('AddressUtils', () => {
                         'bluewallet:setlndhuburl?url=http%3A%2F%2Fnaf3121nfadoxnwer1s5x2rkirdqbmvuws2ojvgood.onion'
                     )
                 ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLNDHubAddress(
+                        'lndhub://db48dd0a-a298-405f-b70e-a62d8df5ae45:85f8a5a56c547fd561f6d8902b0ca9d66fc0152a@https://mybtcpayserver.com/plugins/lnbank/api/lndhub'
+                    )
+                ).toBeTruthy();
             });
         });
 
@@ -395,6 +407,15 @@ describe('AddressUtils', () => {
                     username: '9a1e4e972f732352c75e',
                     password: '4a1e4e172f732352c75e',
                     host: 'https://test-domain.org:4324'
+                });
+                expect(
+                    AddressUtils.processLNDHubAddress(
+                        'lndhub://db48dd0a-a298-405f-b70e-a62d8df5ae45:85f8a5a56c547fd561f6d8902b0ca9d66fc0152a@https://mybtcpayserver.com/plugins/lnbank/api/lndhub'
+                    )
+                ).toEqual({
+                    username: 'db48dd0a-a298-405f-b70e-a62d8df5ae45',
+                    password: '85f8a5a56c547fd561f6d8902b0ca9d66fc0152a',
+                    host: 'https://mybtcpayserver.com/plugins/lnbank/api/lndhub'
                 });
             });
             it('processes hosts from Umbrel', () => {

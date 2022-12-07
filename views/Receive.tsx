@@ -1,6 +1,8 @@
 import * as React from 'react';
 import {
     Image,
+    NativeEventEmitter,
+    NativeModules,
     ScrollView,
     StyleSheet,
     Switch,
@@ -62,6 +64,7 @@ export default class Receive extends React.Component<
     ReceiveProps,
     ReceiveState
 > {
+    listener: any;
     state = {
         selectedIndex: 0,
         addressType: '0',
@@ -355,42 +358,44 @@ export default class Receive extends React.Component<
             { element: onChainButton }
         ];
 
-        const haveInvoice = !!payment_request && !!address;
+        const haveUnifiedInvoice = !!payment_request && !!address;
+        const haveInvoice = !!payment_request || !!address;
 
-        let invoiceValue;
-        if (haveInvoice) {
-            switch (selectedIndex) {
-                case 0:
-                    invoiceValue = `bitcoin:${address.toUpperCase()}?${`lightning=${payment_request.toUpperCase()}`}${
-                        Number(satAmount) > 0
-                            ? `&amount=${new BigNumber(satAmount)
-                                  .dividedBy(satoshisPerBTC)
-                                  .toFormat()}`
-                            : ''
-                    }${memo ? `&message=${memo.replace(/ /g, '%20')}` : ''}`;
-                    break;
-                case 1:
-                    invoiceValue = `lightning:${payment_request.toUpperCase()}`;
-                    break;
-                case 2:
-                    invoiceValue = `bitcoin:${address.toUpperCase()}${
-                        (Number(satAmount) > 0 || memo) && '?'
-                    }${
-                        Number(satAmount) > 0
-                            ? `amount=${new BigNumber(satAmount)
-                                  .dividedBy(satoshisPerBTC)
-                                  .toFormat()}`
-                            : ''
-                    }${
-                        memo
-                            ? Number(satAmount) > 0
-                                ? `&message=${memo.replace(/ /g, '%20')}`
-                                : `message=${memo.replace(/ /g, '%20')}`
-                            : ''
-                    }`;
-                    break;
-            }
+        let unifiedInvoice, lnInvoice, btcAddress;
+        if (haveUnifiedInvoice) {
+            unifiedInvoice = `bitcoin:${address.toUpperCase()}?${`lightning=${payment_request.toUpperCase()}`}${
+                Number(satAmount) > 0
+                    ? `&amount=${new BigNumber(satAmount)
+                          .dividedBy(satoshisPerBTC)
+                          .toFormat()}`
+                    : ''
+            }${memo ? `&message=${memo.replace(/ /g, '%20')}` : ''}`;
         }
+
+        if (payment_request) {
+            lnInvoice = `lightning:${payment_request.toUpperCase()}`;
+        }
+
+        if (address) {
+            btcAddress = `bitcoin:${address.toUpperCase()}${
+                (Number(satAmount) > 0 || memo) && '?'
+            }${
+                Number(satAmount) > 0
+                    ? `amount=${new BigNumber(satAmount)
+                          .dividedBy(satoshisPerBTC)
+                          .toFormat()}`
+                    : ''
+            }${
+                memo
+                    ? Number(satAmount) > 0
+                        ? `&message=${memo.replace(/ /g, '%20')}`
+                        : `message=${memo.replace(/ /g, '%20')}`
+                    : ''
+            }`;
+        }
+
+        const belowDustLimit: boolean =
+            Number(satAmount) !== 0 && Number(satAmount) < 546;
 
         return (
             <View
@@ -448,7 +453,8 @@ export default class Receive extends React.Component<
                                     ...styles.text,
                                     fontSize: 20,
                                     top: -50,
-                                    alignSelf: 'center'
+                                    alignSelf: 'center',
+                                    color: themeColor('text')
                                 }}
                             >
                                 {`${localeString(
@@ -460,13 +466,14 @@ export default class Receive extends React.Component<
                         <View>
                             {!!payment_request && (
                                 <>
-                                    {implementation === 'lndhub' && (
-                                        <WarningMessage
-                                            message={localeString(
-                                                'views.Receive.warningLndHub'
-                                            )}
-                                        />
-                                    )}
+                                    {implementation === 'lndhub' &&
+                                        !!address && (
+                                            <WarningMessage
+                                                message={localeString(
+                                                    'views.Receive.warningLndHub'
+                                                )}
+                                            />
+                                        )}
                                     {!!lnurl && (
                                         <SuccessMessage
                                             message={
@@ -482,37 +489,75 @@ export default class Receive extends React.Component<
                             {creatingInvoice && <LoadingIndicator />}
                             {haveInvoice && (
                                 <View style={{ marginTop: 10 }}>
-                                    <CollapsedQR
-                                        value={invoiceValue}
-                                        copyText={
-                                            selectedIndex == 2
-                                                ? localeString(
-                                                      'views.Receive.copyAddress'
-                                                  )
-                                                : localeString(
-                                                      'views.Receive.copyInvoice'
-                                                  )
-                                        }
-                                    />
-                                    <ButtonGroup
-                                        onPress={this.updateIndex}
-                                        selectedIndex={selectedIndex}
-                                        buttons={buttons}
-                                        selectedButtonStyle={{
-                                            backgroundColor:
-                                                themeColor('highlight'),
-                                            borderRadius: 12
-                                        }}
-                                        containerStyle={{
-                                            backgroundColor:
-                                                themeColor('secondary'),
-                                            borderRadius: 12,
-                                            borderColor: themeColor('secondary')
-                                        }}
-                                        innerBorderStyle={{
-                                            color: themeColor('secondary')
-                                        }}
-                                    />
+                                    {selectedIndex == 0 &&
+                                        !belowDustLimit &&
+                                        haveUnifiedInvoice && (
+                                            <CollapsedQR
+                                                value={unifiedInvoice}
+                                                copyText={localeString(
+                                                    'views.Receive.copyInvoice'
+                                                )}
+                                                expanded
+                                                textBottom
+                                            />
+                                        )}
+                                    {selectedIndex == 1 &&
+                                        !belowDustLimit &&
+                                        haveUnifiedInvoice && (
+                                            <CollapsedQR
+                                                value={lnInvoice}
+                                                copyText={localeString(
+                                                    'views.Receive.copyInvoice'
+                                                )}
+                                                expanded
+                                                textBottom
+                                            />
+                                        )}
+                                    {selectedIndex == 2 &&
+                                        !belowDustLimit &&
+                                        haveUnifiedInvoice && (
+                                            <CollapsedQR
+                                                value={btcAddress}
+                                                copyText={localeString(
+                                                    'views.Receive.copyAddress'
+                                                )}
+                                                expanded
+                                                textBottom
+                                            />
+                                        )}
+                                    {(belowDustLimit ||
+                                        !haveUnifiedInvoice) && (
+                                        <CollapsedQR
+                                            value={lnInvoice}
+                                            copyText={localeString(
+                                                'views.Receive.copyAddress'
+                                            )}
+                                            expanded
+                                            textBottom
+                                        />
+                                    )}
+                                    {!belowDustLimit && haveUnifiedInvoice && (
+                                        <ButtonGroup
+                                            onPress={this.updateIndex}
+                                            selectedIndex={selectedIndex}
+                                            buttons={buttons}
+                                            selectedButtonStyle={{
+                                                backgroundColor:
+                                                    themeColor('highlight'),
+                                                borderRadius: 12
+                                            }}
+                                            containerStyle={{
+                                                backgroundColor:
+                                                    themeColor('secondary'),
+                                                borderRadius: 12,
+                                                borderColor:
+                                                    themeColor('secondary')
+                                            }}
+                                            innerBorderStyle={{
+                                                color: themeColor('secondary')
+                                            }}
+                                        />
+                                    )}
                                 </View>
                             )}
                             {!loading && !haveInvoice && (
@@ -570,12 +615,12 @@ export default class Receive extends React.Component<
                                         onChangeText={(text: string) => {
                                             this.setState({ value: text });
                                         }}
-                                        editable={
+                                        locked={
                                             lnurl &&
                                             lnurl.minWithdrawable ===
                                                 lnurl.maxWithdrawable
-                                                ? false
-                                                : true
+                                                ? true
+                                                : false
                                         }
                                         prefix={
                                             units !== 'sats' &&
@@ -608,7 +653,6 @@ export default class Receive extends React.Component<
                                             toggleable
                                         />
                                     )}
-
                                     {units === 'fiat' && (
                                         <TouchableOpacity
                                             onPress={() => changeUnits()}
@@ -652,7 +696,7 @@ export default class Receive extends React.Component<
                                         </>
                                     )}
 
-                                    {implementation === 'lnd' && (
+                                    {RESTUtils.isLNDBased() && (
                                         <>
                                             <Text
                                                 style={{
@@ -745,6 +789,8 @@ export default class Receive extends React.Component<
                                                     RESTUtils.supportsAddressTypeSelection()
                                                         ? addressType
                                                         : null
+                                                ).then((rHash: string) =>
+                                                    this.subscribeInvoice(rHash)
                                                 )
                                             }
                                         />

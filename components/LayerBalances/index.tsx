@@ -11,6 +11,7 @@ import LightningSwipeableRow from './LightningSwipeableRow';
 
 import BalanceStore from './../../stores/BalanceStore';
 import UnitsStore from './../../stores/UnitsStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -19,6 +20,7 @@ import Lightning from './../../assets/images/SVG/Lightning.svg';
 
 interface LayerBalancesProps {
     BalanceStore: BalanceStore;
+    SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
     navigation: any;
     onRefresh?: any;
@@ -92,6 +94,7 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
     render() {
         const {
             BalanceStore,
+            SettingsStore,
             navigation,
             value,
             amount,
@@ -101,16 +104,33 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
 
         const { totalBlockchainBalance, lightningBalance } = BalanceStore;
 
-        const DATA: DataRow[] = [
-            {
-                layer: 'Lightning',
-                balance: lightningBalance
-            },
-            {
-                layer: 'On-chain',
-                balance: totalBlockchainBalance
-            }
-        ];
+        let DATA: DataRow[];
+
+        const { implementation, lndhubUrl } = SettingsStore;
+
+        // hide on-chain balance for Lnbank accounts
+        if (
+            implementation === 'lndhub' &&
+            lndhubUrl.includes('lnbank/api/lndhub')
+        ) {
+            DATA = [
+                {
+                    layer: 'Lightning',
+                    balance: lightningBalance
+                }
+            ];
+        } else {
+            DATA = [
+                {
+                    layer: 'Lightning',
+                    balance: lightningBalance
+                },
+                {
+                    layer: 'On-chain',
+                    balance: totalBlockchainBalance
+                }
+            ];
+        }
 
         return (
             <FlatList

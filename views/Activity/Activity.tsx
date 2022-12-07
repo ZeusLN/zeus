@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { FlatList, TouchableOpacity, View } from 'react-native';
+import {
+    FlatList,
+    NativeModules,
+    NativeEventEmitter,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -8,31 +14,66 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 
 import DateTimeUtils from './../../utils/DateTimeUtils';
 import { localeString } from './../../utils/LocaleUtils';
+import RESTUtils from './../../utils/RESTUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import ActivityStore from './../../stores/ActivityStore';
+import SettingsStore from './../../stores/SettingsStore';
 
 import Filter from './../../assets/images/SVG/Filter On.svg';
 
 interface ActivityProps {
     navigation: any;
     ActivityStore: ActivityStore;
+    SettingsStore: SettingsStore;
 }
 
-@inject('ActivityStore')
+@inject('ActivityStore', 'SettingsStore')
 @observer
 export default class Activity extends React.Component<ActivityProps, {}> {
+    transactionListener: any;
+    invoicesListener: any;
+
     async UNSAFE_componentWillMount() {
-        const { ActivityStore } = this.props;
+        const { ActivityStore, SettingsStore } = this.props;
         const { getActivityAndFilter, resetFilters } = ActivityStore;
         await resetFilters();
         getActivityAndFilter();
+        if (SettingsStore.implementation === 'lightning-node-connect') {
+            this.subscribeEvents();
+        }
     }
 
     UNSAFE_componentWillReceiveProps = (newProps: any) => {
         const { ActivityStore } = newProps;
         const { getActivityAndFilter } = ActivityStore;
         getActivityAndFilter();
+    };
+
+    componentWillUnmount() {
+        if (this.transactionListener && this.transactionListener.stop)
+            this.transactionListener.stop();
+        if (this.invoicesListener && this.invoicesListener.stop)
+            this.invoicesListener.stop();
+    }
+
+    subscribeEvents = () => {
+        const { ActivityStore } = this.props;
+        const { LncModule } = NativeModules;
+        const eventEmitter = new NativeEventEmitter(LncModule);
+        this.transactionListener = eventEmitter.addListener(
+            RESTUtils.subscribeTransactions(),
+            () => {
+                ActivityStore.updateTransactions();
+            }
+        );
+
+        this.invoicesListener = eventEmitter.addListener(
+            RESTUtils.subscribeInvoices(),
+            () => {
+                ActivityStore.updateInvoices();
+            }
+        );
     };
 
     renderSeparator = () => (
