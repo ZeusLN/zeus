@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Header } from 'react-native-elements';
-import { TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity, View, Image } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
 
@@ -12,13 +12,14 @@ import NodeIdenticon from '../components/NodeIdenticon';
 import { isClipboardValue } from '../utils/handleAnything';
 import { themeColor } from '../utils/ThemeUtils';
 
-import Contact from '../assets/images/SVG/Mascot contact.svg';
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
 import Scan from '../assets/images/SVG/Scan.svg';
 
 import stores from '../stores/Stores';
 
 import { Body } from './text/Body';
+
+const Contact = require('../assets/images/Mascot.png');
 
 const OpenChannelButton = ({ navigation }: { navigation: any }) => (
     <Button
@@ -117,7 +118,7 @@ export default class WalletHeader extends React.Component<
                         rounded
                     />
                 ) : (
-                    <Contact width={30} />
+                    <Image source={Contact} style={{ width: 30, height: 30 }} />
                 )}
             </TouchableOpacity>
         );
