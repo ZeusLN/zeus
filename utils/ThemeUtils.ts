@@ -104,6 +104,22 @@ export function themeColor(themeString: string): any {
         bitcoin: '#FFB040'
     };
 
+    const Blueberry: { [key: string]: any } = {
+        generalStyle: 'dark',
+        background: '#04235A',
+        secondary: '#064490',
+        separator: '#064490',
+        highlight: '#fff'
+    };
+
+    const DeepPurple: { [key: string]: any } = {
+        generalStyle: 'dark',
+        background: '#0a0612',
+        secondary: '#150c25',
+        separator: '#150c25',
+        highlight: '#fff'
+    };
+
     switch (theme) {
         case 'light':
             return Light[themeString] || Dark[themeString];
@@ -119,6 +135,10 @@ export function themeColor(themeString: string): any {
             return Scarlet[themeString] || Dark[themeString];
         case 'purple':
             return Purple[themeString] || Light[themeString];
+        case 'blueberry':
+            return Blueberry[themeString] || Dark[themeString];
+        case 'deep-purple':
+            return DeepPurple[themeString] || Dark[themeString];
         default:
             return Dark[themeString];
     }
