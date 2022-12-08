@@ -140,7 +140,8 @@ export default class ChannelView extends React.Component<
             capacity,
             alias,
             channelId,
-            initiator
+            initiator,
+            alias_scids
         } = channel;
         const privateChannel = channel.private;
 
@@ -279,6 +280,19 @@ export default class ChannelView extends React.Component<
                         value={privateChannel ? 'True' : 'False'}
                         color={privateChannel ? 'green' : '#808000'}
                     />
+
+                    {!!alias_scids && alias_scids.length > 0 && (
+                        <KeyValue
+                            keyValue={
+                                alias_scids.length > 1
+                                    ? localeString('views.Channel.aliasScids')
+                                    : localeString('views.Channel.aliasScid')
+                            }
+                            value={PrivacyUtils.sensitiveValue(
+                                alias_scids.join(', ')
+                            )}
+                        />
+                    )}
 
                     {total_satoshis_received && (
                         <KeyValue
