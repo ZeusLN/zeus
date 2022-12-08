@@ -29,6 +29,7 @@ export default class Channel extends BaseModel {
     capacity: string;
     private: boolean;
     initiator?: boolean;
+    alias_scids?: Array<number>; // array uint64
     // c-lightning
     @observable
     state: string;
