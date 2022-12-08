@@ -131,6 +131,7 @@ export default class PaymentRequest extends React.Component<
 
     sendPayment = (
         feeOption: string,
+        percentAmount: string,
         {
             payment_request,
             amount, // used only for no-amount invoices
@@ -146,7 +147,6 @@ export default class PaymentRequest extends React.Component<
         const { InvoicesStore, TransactionsStore, SettingsStore, navigation } =
             this.props;
         let feeLimitSat = fee_limit_sat;
-        let maxFeePercent = max_fee_percent;
 
         if (feeOption == 'sats') {
             // If the fee limit is not set, use a default routing fee calculation
@@ -159,9 +159,7 @@ export default class PaymentRequest extends React.Component<
                 );
             }
         } else if (feeOption == 'percent') {
-            if (!max_fee_percent) {
-                maxFeePercent = '0.5';
-            }
+            feeLimitSat = percentAmount;
         }
 
         const streamingCall = TransactionsStore.sendPayment({
@@ -170,7 +168,7 @@ export default class PaymentRequest extends React.Component<
             max_parts,
             max_shard_amt,
             fee_limit_sat: feeLimitSat,
-            max_fee_percent: maxFeePercent,
+            max_fee_percent,
             outgoing_chan_id,
             last_hop_pubkey,
             amp
@@ -769,28 +767,31 @@ export default class PaymentRequest extends React.Component<
                                             color: 'white'
                                         }}
                                         onPress={() => {
-                                            this.sendPayment(feeOption, {
-                                                payment_request: paymentRequest,
-                                                amount: customAmount,
-                                                max_parts:
-                                                    enableMultiPathPayment
-                                                        ? maxParts
+                                            this.sendPayment(
+                                                feeOption,
+                                                String(percentAmount),
+                                                {
+                                                    payment_request: paymentRequest,
+                                                    amount: customAmount,
+                                                    max_parts:
+                                                        enableMultiPathPayment
+                                                            ? maxParts
+                                                            : null,
+                                                    max_shard_amt:
+                                                        enableMultiPathPayment
+                                                            ? maxShardAmt
+                                                            : null,
+                                                    fee_limit_sat: isLnd
+                                                        ? feeLimitSat
                                                         : null,
-                                                max_shard_amt:
-                                                    enableMultiPathPayment
-                                                        ? maxShardAmt
+                                                    max_fee_percent: isCLightning
+                                                        ? maxFeePercent
                                                         : null,
-                                                fee_limit_sat: isLnd
-                                                    ? feeLimitSat
-                                                    : null,
-                                                max_fee_percent: isCLightning
-                                                    ? maxFeePercent
-                                                    : null,
-                                                outgoing_chan_id:
-                                                    outgoingChanId,
-                                                last_hop_pubkey: lastHopPubkey,
-                                                amp: enableAmp
-                                            });
+                                                    outgoing_chan_id:
+                                                        outgoingChanId,
+                                                    last_hop_pubkey: lastHopPubkey,
+                                                    amp: enableAmp
+                                                });
                                         }}
                                     />
                                 </View>
