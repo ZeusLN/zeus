@@ -11,7 +11,7 @@ import {
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import { Amount } from './../components/Amount';
+import Amount from './../components/Amount';
 import KeyValue from './../components/KeyValue';
 
 import UrlUtils from './../utils/UrlUtils';
