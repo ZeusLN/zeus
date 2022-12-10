@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Text, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
 import Amount from '../components/Amount';
@@ -7,6 +8,8 @@ import FiatStore from '../stores/UnitsStore';
 import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
 import SettingsStore, { DEFAULT_FIAT } from '../stores/SettingsStore';
 
+import { themeColor } from '../utils/ThemeUtils';
+
 interface ConversionProps {
     amount: string | number;
     FiatStore: FiatStore;
@@ -14,16 +17,34 @@ interface ConversionProps {
     SettingsStore: SettingsStore;
 }
 
+interface ConversionState {
+    showRate: boolean;
+}
+
 @inject('FiatStore', 'UnitsStore', 'SettingsStore')
 @observer
-export default class Conversion extends React.Component<ConversionProps, {}> {
+export default class Conversion extends React.Component<
+    ConversionProps,
+    ConversionState
+> {
+    state = {
+        showRate: false
+    };
+
+    toggleShowRate = () => {
+        this.setState({
+            showRate: !this.state.showRate
+        });
+    };
+
     render() {
         const { amount, FiatStore, UnitsStore, SettingsStore } = this.props;
+        const { showRate } = this.state;
         const { units } = UnitsStore;
         const { settings } = SettingsStore;
         const { fiat } = settings;
 
-        const { fiatRates }: any = FiatStore;
+        const { fiatRates, getRate }: any = FiatStore;
 
         // calculate fiat rate
         const fiatEntry =
@@ -60,10 +81,30 @@ export default class Conversion extends React.Component<ConversionProps, {}> {
         return (
             <>
                 {units === 'fiat' && (
-                    <Amount sats={satAmount} fixedUnits="sats" />
+                    <TouchableOpacity
+                        style={{ alignItems: 'center' }}
+                        onPress={() => this.toggleShowRate()}
+                    >
+                        <Amount sats={satAmount} fixedUnits="sats" />
+                        {showRate && (
+                            <Text style={{ color: themeColor('text') }}>
+                                {getRate()}
+                            </Text>
+                        )}
+                    </TouchableOpacity>
                 )}
                 {units !== 'fiat' && (
-                    <Amount sats={satAmount} fixedUnits="fiat" />
+                    <TouchableOpacity
+                        style={{ alignItems: 'center' }}
+                        onPress={() => this.toggleShowRate()}
+                    >
+                        <Amount sats={satAmount} fixedUnits="fiat" />
+                        {showRate && (
+                            <Text style={{ color: themeColor('text') }}>
+                                {getRate()}
+                            </Text>
+                        )}
+                    </TouchableOpacity>
                 )}
             </>
         );
