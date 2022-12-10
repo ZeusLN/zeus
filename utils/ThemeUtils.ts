@@ -52,7 +52,6 @@ export function themeColor(themeString: string): any {
         outbound: '#FFD93F',
         inbound: '#FFF0CA',
         delete: '#FFD699'
-
     };
 
     const BPM: { [key: string]: any } = {
