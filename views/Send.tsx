@@ -25,10 +25,10 @@ import TransactionsStore from './../stores/TransactionsStore';
 import BalanceStore from './../stores/BalanceStore';
 import UTXOsStore from './../stores/UTXOsStore';
 import SettingsStore from './../stores/SettingsStore';
-import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
+import UnitsStore, { SATS_PER_BTC } from './../stores/UnitsStore';
 import FiatStore from './../stores/FiatStore';
 
-import { Amount } from './../components/Amount';
+import Amount from './../components/Amount';
 import Button from './../components/Button';
 import { ErrorMessage } from './../components/SuccessErrorMessage';
 import TextInput from './../components/TextInput';
@@ -378,12 +378,12 @@ export default class Send extends React.Component<SendProps, SendState> {
                 satAmount = amount;
                 break;
             case 'BTC':
-                satAmount = Number(amount) * satoshisPerBTC;
+                satAmount = Number(amount) * SATS_PER_BTC;
                 break;
             case 'fiat':
                 satAmount = Number(
                     (Number(amount.replace(/,/g, '.')) / Number(rate)) *
-                        Number(satoshisPerBTC)
+                        Number(SATS_PER_BTC)
                 ).toFixed(0);
                 break;
         }

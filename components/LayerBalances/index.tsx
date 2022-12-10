@@ -4,7 +4,7 @@ import { FlatList, StyleSheet, Text, View, I18nManager } from 'react-native';
 import { RectButton } from 'react-native-gesture-handler';
 
 import { inject, observer } from 'mobx-react';
-import { Amount } from '../Amount';
+import Amount from '../Amount';
 import { Spacer } from '../layout/Spacer';
 import OnchainSwipeableRow from './OnchainSwipeableRow';
 import LightningSwipeableRow from './LightningSwipeableRow';

@@ -5,7 +5,7 @@ import { Body } from '../../components/text/Body';
 import { BalanceBar } from '../../components/Channels/BalanceBar';
 import { Row } from '../../components/layout/Row';
 import { Status } from '../../views/Channels/ChannelsPane';
-import { Amount } from '../Amount';
+import Amount from '../Amount';
 import { Tag } from './Tag';
 import { themeColor } from './../../utils/ThemeUtils';
 

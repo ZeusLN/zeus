@@ -2,7 +2,7 @@ import * as React from 'react';
 import { StyleSheet, ScrollView, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import Invoice from './../models/Invoice';
-import { Amount } from './../components/Amount';
+import Amount from './../components/Amount';
 import CollapsedQR from './../components/CollapsedQR';
 import KeyValue from './../components/KeyValue';
 import { localeString } from './../utils/LocaleUtils';
