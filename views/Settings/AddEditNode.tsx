@@ -1561,10 +1561,10 @@ export default class AddEditNode extends React.Component<
                                 )}
                                 onPress={() => this.deleteNodeConfig()}
                                 containerStyle={{
-                                    borderColor: 'red'
+                                    borderColor: themeColor('delete')
                                 }}
                                 titleStyle={{
-                                    color: 'red'
+                                    color: themeColor('delete')
                                 }}
                                 secondary
                             />
