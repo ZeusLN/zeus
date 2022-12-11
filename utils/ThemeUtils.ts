@@ -121,6 +121,7 @@ export function themeColor(themeString: string): any {
         secondary: '#150c25',
         separator: '#150c25',
         highlight: '#fff'
+    };
 
     const Deadpool: { [key: string]: any } = {
         generalStyle: 'dark',
