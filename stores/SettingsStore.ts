@@ -145,7 +145,10 @@ export const THEME_KEYS = [
     { key: 'Orange', value: 'orange' },
     { key: 'Blacked Out', value: 'blacked-out' },
     { key: 'Scarlet', value: 'scarlet' },
-    { key: 'Memberberry', value: 'purple' }
+    { key: 'Memberberry', value: 'purple' },
+    { key: 'Blueberry', value: 'blueberry' },
+    { key: 'Deep Purple', value: 'deep-purple' },
+    { key: 'Deadpool', value: 'deadpool' }
 ];
 
 export const DEFAULT_THEME = 'dark';
@@ -178,6 +181,7 @@ export default class SettingsStore {
     @observable certVerification: boolean | undefined;
     @observable public loggedIn = false;
     @observable public connecting = true;
+    @observable public lurkerExposed = false;
     // LNDHub
     @observable username: string;
     @observable password: string;
@@ -516,5 +520,15 @@ export default class SettingsStore {
         }
         this.connecting = status;
         return this.connecting;
+    };
+
+    @action
+    public toggleLurker = () => {
+        if (this.settings.privacy.lurkerMode) {
+            this.lurkerExposed = true;
+        } else {
+            this.lurkerExposed = false;
+        }
+        this.settings.privacy.lurkerMode = !this.settings.privacy.lurkerMode;
     };
 }

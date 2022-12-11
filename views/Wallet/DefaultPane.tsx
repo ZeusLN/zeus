@@ -243,6 +243,7 @@ export default class DefaultPane extends React.PureComponent<
                                         autoGenerate: true
                                     });
                                 }}
+                                buttonStyle={{ height: 40 }}
                             />
                         </View>
                         <View style={{ width: '20%' }}>
@@ -260,6 +261,7 @@ export default class DefaultPane extends React.PureComponent<
                                         amount
                                     });
                                 }}
+                                buttonStyle={{ height: 40 }}
                             />
                         </View>
                         <View style={{ width: '40%' }}>
@@ -273,6 +275,7 @@ export default class DefaultPane extends React.PureComponent<
                                         amount
                                     });
                                 }}
+                                buttonStyle={{ height: 40 }}
                             />
                         </View>
                     </View>

@@ -311,7 +311,7 @@ export default class AddEditNode extends React.Component<
         let nodes: any;
         if (settings.nodes) {
             nodes = settings.nodes;
-            nodes[index] = node;
+            nodes[settings.nodes.length || index] = node;
         } else {
             nodes = [node];
         }
@@ -1561,10 +1561,10 @@ export default class AddEditNode extends React.Component<
                                 )}
                                 onPress={() => this.deleteNodeConfig()}
                                 containerStyle={{
-                                    borderColor: 'red'
+                                    borderColor: themeColor('delete')
                                 }}
                                 titleStyle={{
-                                    color: 'red'
+                                    color: themeColor('delete')
                                 }}
                                 secondary
                             />
