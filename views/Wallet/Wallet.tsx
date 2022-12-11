@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
     Animated,
+    AppState,
     PanResponder,
     Text,
     TouchableOpacity,
@@ -99,7 +100,26 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         this.props.navigation.addListener('didFocus', () => {
             this.getSettingsAndNavigate();
         });
+
+        AppState.addEventListener('change', this.handleAppStateChange);
     }
+
+    componentWillUnmount() {
+        this.props.navigation.removeListener('didFocus');
+        AppState.removeEventListener('change', this.handleAppStateChange);
+    }
+
+    handleAppStateChange = (nextAppState: any) => {
+        const { SettingsStore, navigation } = this.props;
+        const { settings } = SettingsStore;
+        const loginRequired = settings && (settings.passphrase || settings.pin);
+
+        if (nextAppState.match(/inactive|background/) && loginRequired) {
+            SettingsStore.setLoginStatus(false);
+            this.setState({ unlocked: false });
+            navigation.popToTop();
+        }
+    };
 
     startListeners() {
         Linking.addEventListener('url', this.handleOpenURL);
