@@ -146,6 +146,8 @@ export const THEME_KEYS = [
     { key: 'Blacked Out', value: 'blacked-out' },
     { key: 'Scarlet', value: 'scarlet' },
     { key: 'Memberberry', value: 'purple' },
+    { key: 'Blueberry', value: 'blueberry' },
+    { key: 'Deep Purple', value: 'deep-purple' },
     { key: 'Deadpool', value: 'deadpool' }
 ];
 
