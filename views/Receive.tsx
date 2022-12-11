@@ -414,7 +414,7 @@ export default class Receive extends React.Component<
                         }
                     }}
                     rightComponent={
-                        loading ? null : haveInvoice ? (
+                        loading || watchedInvoicePaid ? null : haveInvoice ? (
                             <ClearButton />
                         ) : (
                             RESTUtils.supportsAddressTypeSelection() && (

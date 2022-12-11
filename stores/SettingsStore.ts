@@ -147,7 +147,8 @@ export const THEME_KEYS = [
     { key: 'Scarlet', value: 'scarlet' },
     { key: 'Memberberry', value: 'purple' },
     { key: 'Blueberry', value: 'blueberry' },
-    { key: 'Deep Purple', value: 'deep-purple' }
+    { key: 'Deep Purple', value: 'deep-purple' },
+    { key: 'Deadpool', value: 'deadpool' }
 ];
 
 export const DEFAULT_THEME = 'dark';

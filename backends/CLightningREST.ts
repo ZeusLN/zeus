@@ -77,7 +77,7 @@ export default class CLightningREST extends LND {
             description: data.memo,
             label: 'zeus.' + Math.random() * 1000000,
             amount: Number(data.value) * 1000,
-            expiry: Math.round(Date.now() / 1000) + Number(data.expiry),
+            expiry: Number(data.expiry),
             private: true
         });
     getPayments = () => this.getRequest('/v1/pay/listPays');

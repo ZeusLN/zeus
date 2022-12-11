@@ -106,6 +106,7 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.lightning
             .openChannelSync({
                 private: data.privateChannel,
+                scid_alias: data.scidAlias,
                 local_funding_amount: data.local_funding_amount,
                 min_confs: data.min_confs,
                 node_pubkey_string: data.node_pubkey_string,

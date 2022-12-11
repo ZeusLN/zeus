@@ -17,7 +17,8 @@ export function themeColor(themeString: string): any {
         inbound: '#FFF0CA',
         success: '#46BE43',
         warning: '#E14C4C',
-        bitcoin: '#FFB040'
+        bitcoin: '#FFB040',
+        delete: '#cc3300'
         // TODO: pick outbound and inbound colors for light and junkie themes
         // TODO: success / warning / bitcoin colors for light and junkie (are they just the same?)
     };
@@ -35,7 +36,8 @@ export function themeColor(themeString: string): any {
         inbound: '#FFF0CA',
         success: '#46BE43',
         warning: '#E14C4C',
-        bitcoin: '#FFB040'
+        bitcoin: '#FFB040',
+        delete: '#992600'
     };
 
     const Junkie: { [key: string]: any } = {
@@ -48,7 +50,8 @@ export function themeColor(themeString: string): any {
         error: '#992600',
         separator: 'darkgray',
         outbound: '#FFD93F',
-        inbound: '#FFF0CA'
+        inbound: '#FFF0CA',
+        delete: '#FFD699'
     };
 
     const BPM: { [key: string]: any } = {
@@ -118,6 +121,22 @@ export function themeColor(themeString: string): any {
         secondary: '#150c25',
         separator: '#150c25',
         highlight: '#fff'
+
+    const Deadpool: { [key: string]: any } = {
+        generalStyle: 'dark',
+        background: '#000',
+        secondary: '#D12531',
+        text: '#F4F9FF',
+        secondaryText: '#F4F9FF',
+        highlight: '#e5e4e2',
+        error: '#D12531',
+        separator: '#D12531',
+        outbound: '#D12531',
+        inbound: '#838996',
+        success: '#46BE43',
+        //warning: '#FFD699',
+        //bitcoin: '#D12531'
+        delete: '#FFD699'
     };
 
     switch (theme) {
@@ -139,6 +158,8 @@ export function themeColor(themeString: string): any {
             return Blueberry[themeString] || Dark[themeString];
         case 'deep-purple':
             return DeepPurple[themeString] || Dark[themeString];
+        case 'deadpool':
+            return Deadpool[themeString] || Dark[themeString];
         default:
             return Dark[themeString];
     }
