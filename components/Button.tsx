@@ -75,23 +75,20 @@ function Button(props: ButtonProps) {
                     : null
             }
             title={title}
-            buttonStyle={
-                buttonStyle
-                    ? buttonStyle
-                    : {
-                          backgroundColor: iconOnly
-                              ? 'transparent'
-                              : quinary
-                              ? themeColor('secondary')
-                              : quaternary
-                              ? themeColor('background')
-                              : tertiary
-                              ? themeColor('highlight')
-                              : secondary
-                              ? themeColor('secondary')
-                              : themeColor('text')
-                      }
-            }
+            buttonStyle={{
+                backgroundColor: iconOnly
+                    ? 'transparent'
+                    : quinary
+                    ? themeColor('secondary')
+                    : quaternary
+                    ? themeColor('background')
+                    : tertiary
+                    ? themeColor('highlight')
+                    : secondary
+                    ? themeColor('secondary')
+                    : themeColor('text'),
+                ...buttonStyle
+            }}
             titleStyle={
                 titleStyle
                     ? {
