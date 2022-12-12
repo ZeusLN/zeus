@@ -6,7 +6,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { Body } from '../text/Body';
 import { Row } from '../layout/Row';
 import { Spacer } from '../layout/Spacer';
-import { Amount } from '../Amount';
+import Amount from '../Amount';
 
 const outboundYellow = themeColor('outbound');
 const inboundYellow = themeColor('inbound');

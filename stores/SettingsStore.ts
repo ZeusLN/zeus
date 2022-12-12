@@ -163,7 +163,8 @@ export default class SettingsStore {
             lurkerMode: false,
             enableMempoolRates: true
         },
-        scramblePin: true
+        scramblePin: true,
+        fiat: DEFAULT_FIAT
     };
     @observable public loading = false;
     @observable btcPayError: string | null;

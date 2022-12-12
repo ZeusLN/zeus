@@ -1,6 +1,6 @@
 import FeeUtils from './FeeUtils';
 
-const satoshisPerBTC = 100000000;
+const satoshisPerBTC = 100_000_000;
 
 describe('FeeUtils', () => {
     describe('calculateDefaultRoutingFee', () => {

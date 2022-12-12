@@ -10,8 +10,6 @@ import { Spacer } from './layout/Spacer';
 import { Row } from './layout/Row';
 import { Body } from './text/Body';
 
-export const satoshisPerBTC = 100000000;
-
 type Units = 'sats' | 'BTC' | 'fiat';
 
 interface AmountDisplayProps {
@@ -137,7 +135,7 @@ interface AmountProps {
 
 @inject('UnitsStore', 'SettingsStore')
 @observer
-export class Amount extends React.Component<AmountProps, {}> {
+export default class Amount extends React.Component<AmountProps, {}> {
     render() {
         const {
             sats: value,
