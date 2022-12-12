@@ -28,39 +28,50 @@ export default function KeyValue({
     {
         /* TODO: rig up RTL */
     }
+    const isCopyable = typeof value === 'string' || typeof value === 'number';
     const rtl = false;
     const Key = <Body>{keyValue}</Body>;
-    const Value =
-        typeof value === 'string' || typeof value === 'number' ? (
-            <Text
-                style={{
-                    color: color || themeColor('secondaryText'),
-                    fontFamily: 'Lato-Regular'
-                }}
-            >
-                {sensitive ? PrivacyUtils.sensitiveValue(value) : value}
-            </Text>
-        ) : (
-            value
-        );
+    const Value = isCopyable ? (
+        <Text
+            style={{
+                color: color || themeColor('secondaryText'),
+                fontFamily: 'Lato-Regular'
+            }}
+        >
+            {sensitive ? PrivacyUtils.sensitiveValue(value) : value}
+        </Text>
+    ) : (
+        value
+    );
 
     const copyText = () => {
         Clipboard.setString(value);
         Vibration.vibrate(50);
     };
 
+    const KeyValueRow = () => (
+        <Row justify="space-between">
+            <View style={rtl ? styles.rtlValue : styles.key}>
+                {rtl ? Value : Key}
+            </View>
+            <View style={rtl ? styles.rtlKey : styles.value}>
+                {rtl ? Key : Value}
+            </View>
+        </Row>
+    );
+
+    const InteractiveKeyValueRow = () =>
+        isCopyable ? (
+            <TouchableOpacity onLongPress={() => copyText()}>
+                <KeyValueRow />
+            </TouchableOpacity>
+        ) : (
+            <KeyValueRow />
+        );
+
     return (
         <View style={{ paddingTop: 10, paddingBottom: 10 }}>
-            <TouchableOpacity onLongPress={() => copyText()}>
-                <Row justify="space-between">
-                    <View style={rtl ? styles.rtlValue : styles.key}>
-                        {rtl ? Value : Key}
-                    </View>
-                    <View style={rtl ? styles.rtlKey : styles.value}>
-                        {rtl ? Key : Value}
-                    </View>
-                </Row>
-            </TouchableOpacity>
+            <InteractiveKeyValueRow />
         </View>
     );
 }
