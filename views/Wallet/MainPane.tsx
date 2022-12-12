@@ -52,9 +52,11 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                     jumboText
                     toggleable
                 />
-                <View style={styles.conversion}>
-                    <Conversion sats={lightningBalance} sensitive />
-                </View>
+                {!(pendingOpenBalance > 0) && (
+                    <View style={styles.conversion}>
+                        <Conversion sats={lightningBalance} sensitive />
+                    </View>
+                )}
                 {pendingOpenBalance > 0 ? (
                     <>
                         <Amount
@@ -65,7 +67,11 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                             pending
                         />
                         <View style={styles.conversion}>
-                            <Conversion sats={pendingOpenBalance} sensitive />
+                            <Conversion
+                                sats={lightningBalance}
+                                satsPending={pendingOpenBalance}
+                                sensitive
+                            />
                         </View>
                     </>
                 ) : null}
@@ -79,9 +85,11 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                     jumboText
                     toggleable
                 />
-                <View style={styles.conversion}>
-                    <Conversion sats={combinedBalanceValue} sensitive />
-                </View>
+                {!(unconfirmedBlockchainBalance || pendingOpenBalance) && (
+                    <View style={styles.conversion}>
+                        <Conversion sats={combinedBalanceValue} sensitive />
+                    </View>
+                )}
                 {unconfirmedBlockchainBalance || pendingOpenBalance ? (
                     <>
                         <Amount
@@ -91,9 +99,10 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                             toggleable
                             pending
                         />
-                        <View style={styles.conversion}>
+                        <View style={styles.conversionSecondary}>
                             <Conversion
-                                sats={pendingUnconfirmedBalance}
+                                sats={combinedBalanceValue}
+                                satsPending={pendingUnconfirmedBalance}
                                 sensitive
                             />
                         </View>
@@ -237,6 +246,10 @@ const styles = StyleSheet.create({
     },
     conversion: {
         top: 10,
+        alignItems: 'center'
+    },
+    conversionSecondary: {
+        top: 3,
         alignItems: 'center'
     }
 });
