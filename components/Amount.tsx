@@ -235,7 +235,9 @@ export default class Amount extends React.Component<AmountProps, {}> {
                     }}
                     onPressOut={() => {
                         if (!lurkerMode && lurkerExposed) {
-                            SettingsStore.toggleLurker();
+                            setTimeout(() => {
+                                SettingsStore.toggleLurker();
+                            }, 3000);
                         }
                     }}
                 >
