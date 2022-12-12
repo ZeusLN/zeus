@@ -1225,7 +1225,7 @@ export default class AddEditNode extends React.Component<
                                     value={pairingPhrase}
                                     onChangeText={(text: string) =>
                                         this.setState({
-                                            pairingPhrase: text.trim(),
+                                            pairingPhrase: text,
                                             saved: false
                                         })
                                     }
