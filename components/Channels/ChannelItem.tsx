@@ -7,7 +7,11 @@ import { Row } from '../../components/layout/Row';
 import { Status } from '../../views/Channels/ChannelsPane';
 import Amount from '../Amount';
 import { Tag } from './Tag';
+
+import PrivacyUtils from './../../utils/PrivacyUtils';
 import { themeColor } from './../../utils/ThemeUtils';
+
+import Stores from '../../stores/Stores';
 
 export function ChannelItem({
     title,
@@ -22,6 +26,10 @@ export function ChannelItem({
     largestTotal?: number;
     status: Status;
 }) {
+    const { settings } = Stores.settingsStore;
+    const { privacy } = settings;
+    const lurkerMode = (privacy && privacy.lurkerMode) || false;
+
     const percentOfLargest = largestTotal
         ? (Number(inbound) + Number(outbound)) / largestTotal
         : 1.0;
@@ -37,17 +45,17 @@ export function ChannelItem({
         >
             <Row justify="space-between">
                 <View style={{ flex: 1, paddingRight: 10 }}>
-                    <Body>{title}</Body>
+                    <Body>{PrivacyUtils.sensitiveValue(title)}</Body>
                 </View>
                 <Tag status={status} />
             </Row>
             <Row>
                 <BalanceBar
-                    left={Number(outbound)}
-                    right={Number(inbound)}
+                    left={lurkerMode ? 50 : Number(outbound)}
+                    right={lurkerMode ? 50 : Number(inbound)}
                     offline={status === Status.Offline}
                     percentOfLargest={percentOfLargest}
-                    showProportionally={true}
+                    showProportionally={lurkerMode ? false : true}
                 />
             </Row>
             <Row justify="space-between">
