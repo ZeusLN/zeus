@@ -8,10 +8,6 @@ import { Row } from '../layout/Row';
 import { Spacer } from '../layout/Spacer';
 import Amount from '../Amount';
 
-const outboundYellow = themeColor('outbound');
-const inboundYellow = themeColor('inbound');
-const offlineGray = themeColor('secondaryText');
-
 function TotalRow({
     kind,
     amount,
@@ -55,17 +51,17 @@ export function ChannelsHeader(props) {
             <TotalRow
                 kind="outbound"
                 amount={totalOutbound}
-                color={outboundYellow}
+                color={themeColor('outbound')}
             />
             <TotalRow
                 kind="inbound"
                 amount={totalInbound}
-                color={inboundYellow}
+                color={themeColor('inbound')}
             />
             <TotalRow
                 kind="offline"
                 amount={totalOffline}
-                color={offlineGray}
+                color={themeColor('secondaryText')}
             />
         </View>
     );
