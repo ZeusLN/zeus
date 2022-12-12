@@ -16,6 +16,7 @@ interface ConversionProps {
     FiatStore: FiatStore;
     UnitsStore: UnitsStore;
     SettingsStore: SettingsStore;
+    sensitive?: boolean;
 }
 
 interface ConversionState {
@@ -39,8 +40,14 @@ export default class Conversion extends React.Component<
     };
 
     render() {
-        const { amount, sats, FiatStore, UnitsStore, SettingsStore } =
-            this.props;
+        const {
+            amount,
+            sats,
+            FiatStore,
+            UnitsStore,
+            SettingsStore,
+            sensitive
+        } = this.props;
         const { showRate } = this.state;
         const { units } = UnitsStore;
         const { settings } = SettingsStore;
@@ -91,7 +98,11 @@ export default class Conversion extends React.Component<
                         style={{ alignItems: 'center' }}
                         onPress={() => this.toggleShowRate()}
                     >
-                        <Amount sats={satAmount} fixedUnits="sats" />
+                        <Amount
+                            sats={satAmount}
+                            fixedUnits="sats"
+                            sensitive={sensitive}
+                        />
                         {showRate && (
                             <Text style={{ color: themeColor('text') }}>
                                 {getRate()}
@@ -104,7 +115,11 @@ export default class Conversion extends React.Component<
                         style={{ alignItems: 'center' }}
                         onPress={() => this.toggleShowRate()}
                     >
-                        <Amount sats={satAmount} fixedUnits="fiat" />
+                        <Amount
+                            sats={satAmount}
+                            fixedUnits="fiat"
+                            sensitive={sensitive}
+                        />
                         {showRate && (
                             <Text style={{ color: themeColor('text') }}>
                                 {getRate()}
