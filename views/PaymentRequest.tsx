@@ -11,7 +11,7 @@ import {
 import { inject, observer } from 'mobx-react';
 import { Header, Icon } from 'react-native-elements';
 
-import { Amount } from './../components/Amount';
+import Amount from './../components/Amount';
 import Button from './../components/Button';
 import HopPicker from './../components/HopPicker';
 import KeyValue from './../components/KeyValue';

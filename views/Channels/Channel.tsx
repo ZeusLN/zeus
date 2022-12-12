@@ -13,7 +13,7 @@ import Channel from './../../models/Channel';
 import BalanceSlider from './../../components/BalanceSlider';
 import Button from './../../components/Button';
 import KeyValue from './../../components/KeyValue';
-import { Amount } from './../../components/Amount';
+import Amount from './../../components/Amount';
 import FeeBreakdown from './../../components/FeeBreakdown';
 import SetFeesForm from './../../components/SetFeesForm';
 import TextInput from './../../components/TextInput';

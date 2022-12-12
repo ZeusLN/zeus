@@ -12,6 +12,7 @@ import { themeColor } from '../utils/ThemeUtils';
 
 interface ConversionProps {
     amount: string | number;
+    sats: string | number;
     FiatStore: FiatStore;
     UnitsStore: UnitsStore;
     SettingsStore: SettingsStore;
@@ -38,7 +39,8 @@ export default class Conversion extends React.Component<
     };
 
     render() {
-        const { amount, FiatStore, UnitsStore, SettingsStore } = this.props;
+        const { amount, sats, FiatStore, UnitsStore, SettingsStore } =
+            this.props;
         const { showRate } = this.state;
         const { units } = UnitsStore;
         const { settings } = SettingsStore;
@@ -57,24 +59,28 @@ export default class Conversion extends React.Component<
                 ? fiatEntry.rate
                 : 0;
 
-        const amountStr = amount.toString();
         let satAmount: string | number;
-        switch (units) {
-            case 'sats':
-                satAmount = amountStr;
-                break;
-            case 'BTC':
-                satAmount = Number(amountStr) * SATS_PER_BTC;
-                break;
-            case 'fiat':
-                satAmount = Number(
-                    (Number(amountStr.replace(/,/g, '.')) / Number(rate)) *
-                        Number(SATS_PER_BTC)
-                ).toFixed(0);
-                break;
+        if (amount) {
+            const amountStr = amount.toString();
+            switch (units) {
+                case 'sats':
+                    satAmount = amountStr;
+                    break;
+                case 'BTC':
+                    satAmount = Number(amountStr) * SATS_PER_BTC;
+                    break;
+                case 'fiat':
+                    satAmount = Number(
+                        (Number(amountStr.replace(/,/g, '.')) / Number(rate)) *
+                            Number(SATS_PER_BTC)
+                    ).toFixed(0);
+                    break;
+            }
+        } else if (sats) {
+            satAmount = sats;
         }
 
-        if (fiat === DEFAULT_FIAT || !amount) return;
+        if (!fiat || fiat === DEFAULT_FIAT || (!amount && !sats)) return;
 
         // TODO negative is hardcoded to false because we're inconsistent
         // an on-chain debit is a negative number, but a lightning debit isn't
