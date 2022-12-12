@@ -102,9 +102,12 @@ export default class Conversion extends React.Component<
                             sats={satAmount}
                             fixedUnits="sats"
                             sensitive={sensitive}
+                            color={themeColor('secondaryText')}
                         />
                         {showRate && (
-                            <Text style={{ color: themeColor('text') }}>
+                            <Text
+                                style={{ color: themeColor('secondaryText') }}
+                            >
                                 {getRate()}
                             </Text>
                         )}
@@ -119,9 +122,12 @@ export default class Conversion extends React.Component<
                             sats={satAmount}
                             fixedUnits="fiat"
                             sensitive={sensitive}
+                            color={themeColor('secondaryText')}
                         />
                         {showRate && (
-                            <Text style={{ color: themeColor('text') }}>
+                            <Text
+                                style={{ color: themeColor('secondaryText') }}
+                            >
                                 {getRate()}
                             </Text>
                         )}
