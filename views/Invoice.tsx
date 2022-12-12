@@ -18,14 +18,14 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
         const invoice: Invoice = navigation.getParam('invoice', null);
         const {
             fallback_addr,
-            r_hash,
+            getRHash,
             isPaid,
             getMemo,
             receipt,
             creation_date,
             description_hash,
             payment_hash,
-            r_preimage,
+            getRPreimage,
             cltv_expiry,
             expirationDate,
             payment_request,
@@ -141,18 +141,18 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                         />
                     )}
 
-                    {!!r_hash && typeof r_hash === 'string' && (
+                    {getRHash && (
                         <KeyValue
                             keyValue={localeString('views.Invoice.rHash')}
-                            value={r_hash}
+                            value={getRHash}
                             sensitive
                         />
                     )}
 
-                    {!!r_preimage && (
+                    {getRPreimage && (
                         <KeyValue
                             keyValue={localeString('views.Invoice.rPreimage')}
-                            value={r_preimage}
+                            value={getRPreimage}
                             sensitive
                         />
                     )}

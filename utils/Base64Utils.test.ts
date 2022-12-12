@@ -19,4 +19,23 @@ describe('Base64Utils', () => {
             );
         });
     });
+
+    describe('base64ToHex', () => {
+        it('Converts base64 string to hexidecimal string', () => {
+            expect(
+                Base64Utils.base64ToHex('VGhpcyBpcyB0aGUgZmlyc3QgdGVzdA==')
+            ).toEqual('54686973206973207468652066697273742074657374');
+            expect(Base64Utils.base64ToHex('RW5kIHRoZSBGZWQ=')).toEqual(
+                '456e642074686520466564'
+            );
+            expect(
+                Base64Utils.base64ToHex(
+                    'RGVjb2RpbmcgdGhpcyBCYXNlNjQ/IFF1aXRlIHNwb29reS4='
+                )
+            ).toEqual(
+                '4465636f64696e672074686973204261736536343f2051756974652073706f6f6b792e'
+            );
+            expect(Base64Utils.base64ToHex('WkVVUw==')).toEqual('5a455553');
+        });
+    });
 });

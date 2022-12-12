@@ -1,4 +1,5 @@
 import BigNumber from 'bignumber.js';
+import { SATS_PER_BTC } from '../stores/UnitsStore';
 
 const btcNonBech = /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
 const btcBech = /^(bc1|BC1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/;
@@ -45,7 +46,7 @@ const bitcoinQrParser = (input: string, prefix: string) => {
 
     const value = btcAddress;
     if (result.amount) {
-        amount = new BigNumber(result.amount).multipliedBy(satoshisPerBTC);
+        amount = new BigNumber(result.amount).multipliedBy(SATS_PER_BTC);
         amount = amount.toString();
     }
 
