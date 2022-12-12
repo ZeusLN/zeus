@@ -3,6 +3,7 @@ import { Animated, View, Text } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
 import Button from '../../components/Button';
+import Conversion from '../../components/Conversion';
 import PinPad from '../../components/PinPad';
 import UnitToggle from '../../components/UnitToggle';
 import WalletHeader from '../../components/WalletHeader';
@@ -205,6 +206,12 @@ export default class DefaultPane extends React.PureComponent<
                     </Animated.Text>
 
                     <UnitToggle onToggle={this.clearValue} />
+
+                    {amount !== '0' && (
+                        <View style={{ top: 10, alignItems: 'center' }}>
+                            <Conversion amount={amount} />
+                        </View>
+                    )}
                 </Animated.View>
 
                 <View>

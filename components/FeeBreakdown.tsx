@@ -14,7 +14,7 @@ import { themeColor } from '../utils/ThemeUtils';
 
 import LoadingIndicator from '../components/LoadingIndicator';
 
-import { Amount } from './Amount';
+import Amount from './Amount';
 import KeyValue from './KeyValue';
 import SetFeesForm from './SetFeesForm';
 

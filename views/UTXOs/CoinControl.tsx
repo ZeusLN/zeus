@@ -3,7 +3,7 @@ import { FlatList, View } from 'react-native';
 import { Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import { Amount } from './../../components/Amount';
+import Amount from './../../components/Amount';
 import LoadingIndicator from './../../components/LoadingIndicator';
 
 import { localeString } from './../../utils/LocaleUtils';

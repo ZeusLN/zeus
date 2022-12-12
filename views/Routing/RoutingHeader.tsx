@@ -9,7 +9,7 @@ import { Body } from '../../components/text/Body';
 import { Row } from '../../components/layout/Row';
 import { Spacer } from '../../components/layout/Spacer';
 import { Sats } from '../../components/Sats';
-import { Amount } from '../../components/Amount';
+import Amount from '../../components/Amount';
 
 function TotalRow({
     kind,

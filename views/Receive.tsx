@@ -18,7 +18,7 @@ import _map from 'lodash/map';
 
 import Success from '../assets/images/GIF/Success.gif';
 
-import { Amount } from './../components/Amount';
+import Amount from './../components/Amount';
 import Button from './../components/Button';
 import CollapsedQR from './../components/CollapsedQR';
 import LoadingIndicator from './../components/LoadingIndicator';
@@ -33,7 +33,7 @@ import TextInput from './../components/TextInput';
 import FiatStore from './../stores/FiatStore';
 import InvoicesStore from './../stores/InvoicesStore';
 import SettingsStore from './../stores/SettingsStore';
-import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
+import UnitsStore, { SATS_PER_BTC } from './../stores/UnitsStore';
 
 import { localeString } from './../utils/LocaleUtils';
 import RESTUtils from './../utils/RESTUtils';
@@ -222,12 +222,12 @@ export default class Receive extends React.Component<
                 satAmount = value;
                 break;
             case 'BTC':
-                satAmount = Number(value) * satoshisPerBTC;
+                satAmount = Number(value) * SATS_PER_BTC;
                 break;
             case 'fiat':
                 satAmount = Number(
                     (Number(value.replace(/,/g, '.')) / Number(rate)) *
-                        Number(satoshisPerBTC)
+                        Number(SATS_PER_BTC)
                 ).toFixed(0);
                 break;
         }
@@ -366,7 +366,7 @@ export default class Receive extends React.Component<
             unifiedInvoice = `bitcoin:${address.toUpperCase()}?${`lightning=${payment_request.toUpperCase()}`}${
                 Number(satAmount) > 0
                     ? `&amount=${new BigNumber(satAmount)
-                          .dividedBy(satoshisPerBTC)
+                          .dividedBy(SATS_PER_BTC)
                           .toFormat()}`
                     : ''
             }${memo ? `&message=${memo.replace(/ /g, '%20')}` : ''}`;
@@ -382,7 +382,7 @@ export default class Receive extends React.Component<
             }${
                 Number(satAmount) > 0
                     ? `amount=${new BigNumber(satAmount)
-                          .dividedBy(satoshisPerBTC)
+                          .dividedBy(SATS_PER_BTC)
                           .toFormat()}`
                     : ''
             }${

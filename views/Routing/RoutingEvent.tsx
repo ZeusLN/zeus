@@ -11,7 +11,7 @@ import { inject, observer } from 'mobx-react';
 import ForwardEvent from './../../models/ForwardEvent';
 
 import KeyValue from './../../components/KeyValue';
-import { Amount } from './../../components/Amount';
+import Amount from './../../components/Amount';
 import FeeBreakdown from './../../components/FeeBreakdown';
 
 import { localeString } from './../../utils/LocaleUtils';
