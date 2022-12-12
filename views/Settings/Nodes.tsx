@@ -156,7 +156,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                     settings.scramblePin,
                                                 authenticationAttempts:
                                                     settings.authenticationAttempts,
-                                                privacy: settings.privacy
+                                                privacy: settings.privacy,
+                                                locale: settings.locale
                                             })
                                         ).then(() => {
                                             if (
