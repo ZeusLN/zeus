@@ -110,14 +110,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     }
 
     handleAppStateChange = (nextAppState: any) => {
-        const { SettingsStore, navigation } = this.props;
+        const { SettingsStore } = this.props;
         const { settings } = SettingsStore;
         const loginRequired = settings && (settings.passphrase || settings.pin);
 
         if (nextAppState.match(/inactive|background/) && loginRequired) {
-            SettingsStore.setLoginStatus(false);
-            this.setState({ unlocked: false });
-            navigation.popToTop();
+            RNRestart.Restart();
         }
     };
 
