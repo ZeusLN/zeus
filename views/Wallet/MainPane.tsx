@@ -53,7 +53,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                     toggleable
                 />
                 <View style={styles.conversion}>
-                    <Conversion sats={lightningBalance} />
+                    <Conversion sats={lightningBalance} sensitive />
                 </View>
                 {pendingOpenBalance > 0 ? (
                     <>
@@ -65,7 +65,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                             pending
                         />
                         <View style={styles.conversion}>
-                            <Conversion sats={pendingOpenBalance} />
+                            <Conversion sats={pendingOpenBalance} sensitive />
                         </View>
                     </>
                 ) : null}
@@ -80,7 +80,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                     toggleable
                 />
                 <View style={styles.conversion}>
-                    <Conversion sats={combinedBalanceValue} />
+                    <Conversion sats={combinedBalanceValue} sensitive />
                 </View>
                 {unconfirmedBlockchainBalance || pendingOpenBalance ? (
                     <>
@@ -92,7 +92,10 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                             pending
                         />
                         <View style={styles.conversion}>
-                            <Conversion sats={pendingUnconfirmedBalance} />
+                            <Conversion
+                                sats={pendingUnconfirmedBalance}
+                                sensitive
+                            />
                         </View>
                     </>
                 ) : null}
