@@ -1,5 +1,13 @@
 import * as React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import {
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    Vibration,
+    View
+} from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
+
 import { Body } from './text/Body';
 import { Row } from './layout/Row';
 
@@ -35,16 +43,24 @@ export default function KeyValue({
         ) : (
             value
         );
+
+    const copyText = () => {
+        Clipboard.setString(value);
+        Vibration.vibrate(50);
+    };
+
     return (
         <View style={{ paddingTop: 10, paddingBottom: 10 }}>
-            <Row justify="space-between">
-                <View style={rtl ? styles.rtlValue : styles.key}>
-                    {rtl ? Value : Key}
-                </View>
-                <View style={rtl ? styles.rtlKey : styles.value}>
-                    {rtl ? Key : Value}
-                </View>
-            </Row>
+            <TouchableOpacity onLongPress={() => copyText()}>
+                <Row justify="space-between">
+                    <View style={rtl ? styles.rtlValue : styles.key}>
+                        {rtl ? Value : Key}
+                    </View>
+                    <View style={rtl ? styles.rtlKey : styles.value}>
+                        {rtl ? Key : Value}
+                    </View>
+                </Row>
+            </TouchableOpacity>
         </View>
     );
 }
