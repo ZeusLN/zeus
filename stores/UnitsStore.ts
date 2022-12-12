@@ -5,7 +5,8 @@ import FeeUtils from './../utils/FeeUtils';
 
 type Units = 'sats' | 'BTC' | 'fiat';
 
-export const SATS_PER_BTC = 100_000_000;
+// 100_000_000
+export const SATS_PER_BTC = 100000000;
 
 interface ValueDisplayProps {
     amount: string;
