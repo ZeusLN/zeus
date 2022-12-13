@@ -8,7 +8,7 @@ import { localeString } from './../utils/LocaleUtils';
 
 import FlashOffIcon from './../assets/images/SVG/Flash Off.svg';
 import FlashOnIcon from './../assets/images/SVG/Flash On.svg';
-import Scan from './../assets/images/SVG/ScanFrame.svg';
+import ScanFrameSvg from './../assets/images/SVG/DynamicSVG/ScanFrameSvg';
 
 const createHash = require('create-hash');
 
@@ -125,7 +125,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                             >
                                 <View style={styles.overlay} />
                                 <View style={styles.scan}>
-                                    <Scan height="100%" />
+                                    <ScanFrameSvg height="100%" />
                                 </View>
                                 <View style={styles.overlay} />
                             </View>
