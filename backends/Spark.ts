@@ -342,10 +342,10 @@ export default class Spark {
         };
     };
     setFees = (data: any) =>
-        this.rpc('setchannelfee', {
+        this.rpc('setchannel', {
             id: data.global ? 'all' : data.channelId,
-            base: data.base_fee_msat,
-            ppm: data.fee_rate * 1000000
+            feebase: data.base_fee_msat,
+            feeppm: data.fee_rate * 1000000
         });
     getRoutes = async (urlParams: Array<string>) => {
         const msatoshi = Number(urlParams[1]) * 1000;
