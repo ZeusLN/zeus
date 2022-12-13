@@ -4,15 +4,20 @@ import { inject, observer } from 'mobx-react';
 
 import Amount from '../components/Amount';
 
+import { Row } from '../components/layout/Row';
+
 import FiatStore from '../stores/UnitsStore';
 import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
 import SettingsStore, { DEFAULT_FIAT } from '../stores/SettingsStore';
 
 import { themeColor } from '../utils/ThemeUtils';
 
+import ClockIcon from '../assets/images/SVG/Clock.svg';
+
 interface ConversionProps {
     amount: string | number;
     sats: string | number;
+    satsPending: string | number;
     FiatStore: FiatStore;
     UnitsStore: UnitsStore;
     SettingsStore: SettingsStore;
@@ -43,6 +48,7 @@ export default class Conversion extends React.Component<
         const {
             amount,
             sats,
+            satsPending,
             FiatStore,
             UnitsStore,
             SettingsStore,
@@ -89,6 +95,44 @@ export default class Conversion extends React.Component<
 
         if (!fiat || fiat === DEFAULT_FIAT || (!amount && !sats)) return;
 
+        const ConversionDisplay = ({ units = 'sats' }: { units: string }) => (
+            <Amount
+                sats={satAmount}
+                fixedUnits={units}
+                sensitive={sensitive}
+                color="secondaryText"
+            />
+        );
+
+        const ConversionPendingDisplay = ({
+            units = 'sats'
+        }: {
+            units: string;
+        }) => (
+            <Row align="flex-end">
+                <Amount
+                    sats={satAmount}
+                    fixedUnits={units}
+                    sensitive={sensitive}
+                    color="secondaryText"
+                />
+                <Text style={{ color: themeColor('secondaryText') }}>
+                    {' | '}
+                </Text>
+                <ClockIcon
+                    color={themeColor('bitcoin')}
+                    width={17}
+                    height={17}
+                />
+                <Amount
+                    sats={satsPending}
+                    fixedUnits={units}
+                    sensitive={sensitive}
+                    color="secondaryText"
+                />
+            </Row>
+        );
+
         // TODO negative is hardcoded to false because we're inconsistent
         // an on-chain debit is a negative number, but a lightning debit isn't
         return (
@@ -98,12 +142,11 @@ export default class Conversion extends React.Component<
                         style={{ alignItems: 'center' }}
                         onPress={() => this.toggleShowRate()}
                     >
-                        <Amount
-                            sats={satAmount}
-                            fixedUnits="sats"
-                            sensitive={sensitive}
-                            color={themeColor('secondaryText')}
-                        />
+                        {satsPending ? (
+                            <ConversionPendingDisplay units="sats" />
+                        ) : (
+                            <ConversionDisplay units="sats" />
+                        )}
                         {showRate && (
                             <Text
                                 style={{ color: themeColor('secondaryText') }}
@@ -118,12 +161,11 @@ export default class Conversion extends React.Component<
                         style={{ alignItems: 'center' }}
                         onPress={() => this.toggleShowRate()}
                     >
-                        <Amount
-                            sats={satAmount}
-                            fixedUnits="fiat"
-                            sensitive={sensitive}
-                            color={themeColor('secondaryText')}
-                        />
+                        {satsPending ? (
+                            <ConversionPendingDisplay units="fiat" />
+                        ) : (
+                            <ConversionDisplay units="fiat" />
+                        )}
                         {showRate && (
                             <Text
                                 style={{ color: themeColor('secondaryText') }}
