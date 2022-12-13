@@ -1,5 +1,13 @@
 import * as React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import {
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    Vibration,
+    View
+} from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
+
 import { Body } from './text/Body';
 import { Row } from './layout/Row';
 
@@ -20,31 +28,50 @@ export default function KeyValue({
     {
         /* TODO: rig up RTL */
     }
+    const isCopyable = typeof value === 'string' || typeof value === 'number';
     const rtl = false;
     const Key = <Body>{keyValue}</Body>;
-    const Value =
-        typeof value === 'string' || typeof value === 'number' ? (
-            <Text
-                style={{
-                    color: color || themeColor('secondaryText'),
-                    fontFamily: 'Lato-Regular'
-                }}
-            >
-                {sensitive ? PrivacyUtils.sensitiveValue(value) : value}
-            </Text>
+    const Value = isCopyable ? (
+        <Text
+            style={{
+                color: color || themeColor('secondaryText'),
+                fontFamily: 'Lato-Regular'
+            }}
+        >
+            {sensitive ? PrivacyUtils.sensitiveValue(value) : value}
+        </Text>
+    ) : (
+        value
+    );
+
+    const copyText = () => {
+        Clipboard.setString(value);
+        Vibration.vibrate(50);
+    };
+
+    const KeyValueRow = () => (
+        <Row justify="space-between">
+            <View style={rtl ? styles.rtlValue : styles.key}>
+                {rtl ? Value : Key}
+            </View>
+            <View style={rtl ? styles.rtlKey : styles.value}>
+                {rtl ? Key : Value}
+            </View>
+        </Row>
+    );
+
+    const InteractiveKeyValueRow = () =>
+        isCopyable ? (
+            <TouchableOpacity onLongPress={() => copyText()}>
+                <KeyValueRow />
+            </TouchableOpacity>
         ) : (
-            value
+            <KeyValueRow />
         );
+
     return (
         <View style={{ paddingTop: 10, paddingBottom: 10 }}>
-            <Row justify="space-between">
-                <View style={rtl ? styles.rtlValue : styles.key}>
-                    {rtl ? Value : Key}
-                </View>
-                <View style={rtl ? styles.rtlKey : styles.value}>
-                    {rtl ? Key : Value}
-                </View>
-            </Row>
+            <InteractiveKeyValueRow />
         </View>
     );
 }
