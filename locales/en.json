@@ -447,6 +447,7 @@
     "views.Settings.SetDuressPin.duressPinExplanation": "Once set, you can enter your duress PIN on the PIN login screen to delete all of your node configurations.",
     "views.Settings.SetDuressPin.confirmDuressPin": "Confirm your Duress PIN",
     "views.Settings.connectNode": "Connect a node",
+    "views.Settings.Help.docs": "Zeus Documentation",
     "views.Settings.Help.github": "GitHub Issues",
     "views.Settings.Help.telegram": "Telegram Group",
     "views.Settings.Help.twitter": "Twitter (DMs open)",
