@@ -58,7 +58,7 @@ export const INTERFACE_KEYS = [
     { key: 'LND (REST)', value: 'lnd' },
     { key: 'LND (Lightning Node Connect)', value: 'lightning-node-connect' },
     { key: 'Core Lightning (c-lightning-REST)', value: 'c-lightning-REST' },
-    { key: 'Core Lightning (Spark) [Experimental]', value: 'spark' },
+    { key: 'Core Lightning (Sparko)', value: 'spark' },
     { key: 'Eclair', value: 'eclair' },
     { key: 'LNDHub', value: 'lndhub' }
 ];
