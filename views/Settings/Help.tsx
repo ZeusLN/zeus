@@ -32,6 +32,10 @@ function Help(props: HelpProps) {
 
     const HELP_ITEMS = [
         {
+            label: localeString('views.Settings.Help.docs'),
+            url: 'https://docs.zeusln.app'
+        },
+        {
             label: localeString('views.Settings.Help.github'),
             url: 'https://github.com/ZeusLN/zeus/issues'
         },
