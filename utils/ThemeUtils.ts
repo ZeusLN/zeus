@@ -18,7 +18,10 @@ export function themeColor(themeString: string): any {
         success: '#46BE43',
         warning: '#E14C4C',
         bitcoin: '#FFB040',
-        delete: '#cc3300'
+        delete: '#cc3300',
+        qrFrame: '#FFD93F',
+        bolt: '#FFD93F',
+        chain: '#FFD93F'
         // TODO: pick outbound and inbound colors for light and junkie themes
         // TODO: success / warning / bitcoin colors for light and junkie (are they just the same?)
     };
@@ -37,7 +40,10 @@ export function themeColor(themeString: string): any {
         success: '#46BE43',
         warning: '#E14C4C',
         bitcoin: '#FFB040',
-        delete: '#992600'
+        delete: '#992600',
+        qrFrame: '#FFD93F',
+        bolt: '#FFD93F',
+        chain: '#FFD93F'
     };
 
     const Junkie: { [key: string]: any } = {
@@ -137,7 +143,10 @@ export function themeColor(themeString: string): any {
         success: '#46BE43',
         //warning: '#FFD699',
         //bitcoin: '#D12531'
-        delete: '#FFD699'
+        delete: '#FFD699',
+        qrFrame: '#D12531',
+        bolt: '#F4F9FF',
+        chain: '#F4F9FF'
     };
 
     switch (theme) {

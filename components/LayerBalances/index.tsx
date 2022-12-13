@@ -15,8 +15,8 @@ import SettingsStore from '../../stores/SettingsStore';
 
 import { themeColor } from './../../utils/ThemeUtils';
 
-import OnChain from './../../assets/images/SVG/OnChain.svg';
-import Lightning from './../../assets/images/SVG/Lightning.svg';
+import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
+import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
 
 interface LayerBalancesProps {
     BalanceStore: BalanceStore;
@@ -45,7 +45,7 @@ const Row = ({ item }: { item: DataRow }) => (
         }}
     >
         <View style={styles.left}>
-            {item.layer === 'On-chain' ? <OnChain /> : <Lightning />}
+            {item.layer === 'On-chain' ? <OnChainSvg /> : <LightningSvg />}
             <Spacer width={5} />
             <Text style={{ ...styles.layerText, color: themeColor('text') }}>
                 {item.layer}
