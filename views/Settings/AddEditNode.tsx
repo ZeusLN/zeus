@@ -54,7 +54,7 @@ interface AddEditNodeState {
     certVerification: boolean;
     saved: boolean;
     active: boolean;
-    index: number;
+    index: number | null;
     newEntry: boolean;
     suggestImport: string;
     showLndHubModal: boolean;
@@ -80,7 +80,7 @@ export default class AddEditNode extends React.Component<
         port: '',
         macaroonHex: '',
         saved: false,
-        index: 0,
+        index: null,
         active: false,
         newEntry: false,
         implementation: 'lnd',
@@ -311,7 +311,7 @@ export default class AddEditNode extends React.Component<
         let nodes: any;
         if (settings.nodes) {
             nodes = settings.nodes;
-            nodes[settings.nodes.length || index] = node;
+            nodes[index || settings.nodes.length] = node;
         } else {
             nodes = [node];
         }
