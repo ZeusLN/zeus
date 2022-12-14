@@ -141,7 +141,7 @@ export default class PaymentRequest extends React.Component<
             max_fee_percent,
             outgoing_chan_id,
             last_hop_pubkey,
-            amp,
+            amp
         }: SendPaymentReq
     ) => {
         const { InvoicesStore, TransactionsStore, SettingsStore, navigation } =
@@ -771,7 +771,8 @@ export default class PaymentRequest extends React.Component<
                                                 feeOption,
                                                 String(percentAmount),
                                                 {
-                                                    payment_request: paymentRequest,
+                                                    payment_request:
+                                                        paymentRequest,
                                                     amount: customAmount,
                                                     max_parts:
                                                         enableMultiPathPayment
@@ -784,14 +785,17 @@ export default class PaymentRequest extends React.Component<
                                                     fee_limit_sat: isLnd
                                                         ? feeLimitSat
                                                         : null,
-                                                    max_fee_percent: isCLightning
-                                                        ? maxFeePercent
-                                                        : null,
+                                                    max_fee_percent:
+                                                        isCLightning
+                                                            ? maxFeePercent
+                                                            : null,
                                                     outgoing_chan_id:
                                                         outgoingChanId,
-                                                    last_hop_pubkey: lastHopPubkey,
+                                                    last_hop_pubkey:
+                                                        lastHopPubkey,
                                                     amp: enableAmp
-                                                });
+                                                }
+                                            );
                                         }}
                                     />
                                 </View>

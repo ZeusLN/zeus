@@ -46,7 +46,7 @@ export default function TextInput(props: TextInputProps) {
         prefix,
         suffix,
         toggleUnits,
-        onPressIn,
+        onPressIn
     } = props;
 
     const defaultStyle = numberOfLines
