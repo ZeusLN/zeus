@@ -42,6 +42,7 @@ interface Settings {
     pin?: string;
     duressPin?: string;
     scramblePin?: boolean;
+    loginBackground?: boolean;
     authenticationAttempts?: number;
     fiat?: string;
     locale?: string;
@@ -164,6 +165,7 @@ export default class SettingsStore {
             enableMempoolRates: true
         },
         scramblePin: true,
+        loginBackground: false,
         fiat: DEFAULT_FIAT
     };
     @observable public loading = false;

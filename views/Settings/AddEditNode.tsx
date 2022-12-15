@@ -330,6 +330,7 @@ export default class AddEditNode extends React.Component<
                           pin: settings.pin,
                           duressPin: settings.duressPin,
                           scramblePin: settings.scramblePin,
+                          loginBackground: settings.loginBackground,
                           authenticationAttempts:
                               settings.authenticationAttempts,
                           privacy: settings.privacy
@@ -426,6 +427,7 @@ export default class AddEditNode extends React.Component<
                 pin: settings.pin,
                 duressPin: settings.duressPin,
                 scramblePin: settings.scramblePin,
+                loginBackground: settings.loginBackground,
                 authenticationAttempts: settings.authenticationAttempts,
                 privacy: settings.privacy
             })
@@ -452,6 +454,7 @@ export default class AddEditNode extends React.Component<
                 pin: settings.pin,
                 duressPin: settings.duressPin,
                 scramblePin: settings.scramblePin,
+                loginBackground: settings.loginBackground,
                 authenticationAttempts: settings.authenticationAttempts,
                 privacy: settings.privacy
             })

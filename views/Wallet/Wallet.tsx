@@ -111,10 +111,19 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
     handleAppStateChange = (nextAppState: any) => {
         const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
+        const { settings, implementation } = SettingsStore;
+        const { loginBackground } = settings;
         const loginRequired = settings && (settings.passphrase || settings.pin);
 
-        if (nextAppState.match(/inactive|background/) && loginRequired) {
+        if (
+            nextAppState.match(/inactive|background/) &&
+            loginRequired &&
+            loginBackground
+        ) {
+            if (implementation === 'lightning-node-connect') {
+                RESTUtils.disconnect();
+            }
+
             RNRestart.Restart();
         }
     };

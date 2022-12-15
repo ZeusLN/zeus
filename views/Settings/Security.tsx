@@ -15,8 +15,10 @@ interface SecurityProps {
 
 interface SecurityState {
     scramblePin: boolean;
+    loginBackground: boolean;
     displaySecurityItems: Array<any>;
     pinExists: boolean;
+    passphraseExists: boolean;
 }
 
 const possibleSecurityItems = [
@@ -54,8 +56,10 @@ export default class Security extends React.Component<
 > {
     state = {
         scramblePin: true,
+        loginBackground: false,
         displaySecurityItems: [],
-        pinExists: false
+        pinExists: false,
+        passphraseExists: false
     };
 
     async componentDidMount() {
@@ -64,12 +68,19 @@ export default class Security extends React.Component<
         const settings = await getSettings();
 
         this.setState({
-            scramblePin: settings.scramblePin ?? true
+            scramblePin: settings.scramblePin ?? true,
+            loginBackground: settings.loginBackground ?? false
         });
 
         if (settings.pin) {
             this.setState({
                 pinExists: true
+            });
+        }
+
+        if (settings.passphrase) {
+            this.setState({
+                passphraseExists: true
             });
         }
 
@@ -166,7 +177,13 @@ export default class Security extends React.Component<
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { scramblePin, displaySecurityItems, pinExists } = this.state;
+        const {
+            scramblePin,
+            displaySecurityItems,
+            pinExists,
+            passphraseExists,
+            loginBackground
+        } = this.state;
         const { setSettings, getSettings } = SettingsStore;
 
         const BackButton = () => (
@@ -246,6 +263,61 @@ export default class Security extends React.Component<
                                             settings.authenticationAttempts,
                                         locale: settings.locale,
                                         privacy: settings.privacy
+                                    })
+                                );
+                            }}
+                            trackColor={{
+                                false: '#767577',
+                                true: themeColor('highlight')
+                            }}
+                            style={{
+                                alignSelf: 'flex-end'
+                            }}
+                        />
+                    </ListItem>
+                )}
+                {(pinExists || passphraseExists) && (
+                    <ListItem
+                        containerStyle={{
+                            backgroundColor: themeColor('background')
+                        }}
+                    >
+                        <ListItem.Content>
+                            <ListItem.Title
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'Lato-Regular'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Security.loginBackground'
+                                )}
+                            </ListItem.Title>
+                        </ListItem.Content>
+                        <Switch
+                            value={loginBackground}
+                            onValueChange={async () => {
+                                this.setState({
+                                    loginBackground: !loginBackground
+                                });
+                                const settings = await getSettings();
+                                setSettings(
+                                    JSON.stringify({
+                                        nodes: settings.nodes,
+                                        theme: settings.theme,
+                                        selectedNode: settings.selectedNode,
+                                        fiat: settings.fiat,
+                                        passphrase: settings.passphrase,
+                                        duressPassphrase:
+                                            settings.duressPassphrase,
+                                        pin: settings.pin,
+                                        duressPin: settings.duressPin,
+                                        scramblePin: settings.scramblePin,
+                                        authenticationAttempts:
+                                            settings.authenticationAttempts,
+                                        locale: settings.locale,
+                                        privacy: settings.privacy,
+                                        loginBackground: !loginBackground
                                     })
                                 );
                             }}
