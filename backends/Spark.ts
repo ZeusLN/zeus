@@ -72,7 +72,17 @@ export default class Spark {
 
     getTransactions = () =>
         this.rpc('listfunds').then(({ outputs }: any) => ({
-            transactions: outputs
+            transactions: outputs.map((o: any) => ({
+                // I guess Transaction class expects satoshi's
+                amount:
+                    typeof o.amount_msat === 'number'
+                        ? o.amount_msat / 1000
+                        : Number(o.amount_msat.replace('msat', '')) / 1000,
+                blockheight: o.blockheight,
+                status: o.status,
+                txid: o.txid,
+                address: o.address
+            }))
         }));
     getChannels = () =>
         this.rpc('listpeers').then(({ peers }: any) => ({
