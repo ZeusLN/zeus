@@ -168,7 +168,7 @@ All releases and all maintainer commits as of October 20, 2021 are signed by key
 
 ## Donations
 
-If you'd like to help us with the cost of running Zeus project (iOS developer account, Google Play developer account, hosting) you can send a payment to us via our [BTCPayServer portal](https://pay.zeusln.app/), via Lightning Address (tips@pay.zeusln.app), or via PayNym ([+holymorning7d1](http://my.paynym.is/+holymorning7d1)). You can also become an [Olympian-level community sponsor](https://zeusln.app/about#communitySponsors) and have your Twitter avatar displayed on our website and in-app.
+If you'd like to help us with the cost of running Zeus project (iOS developer account, Google Play developer account, hosting) you can send a payment to us via our [BTCPayServer portal](https://pay.zeusln.app/), via Lightning Address (tips@pay.zeusln.app), or via PayNym ([+holymorning7d1](http://my.paynym.is/+holymorning7d1)). You can also become a [community sponsor](https://zeusln.app/about#communitySponsors) and have your Twitter avatar displayed on our website and in-app.
 
 Thank you.
 
