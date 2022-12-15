@@ -1,4 +1,5 @@
 import { SafeAreaView } from 'react-native';
+import { Observer } from 'mobx-react';
 import { themeColor } from '../../utils/ThemeUtils';
 
 export function AppContainer({
@@ -9,14 +10,20 @@ export function AppContainer({
     children?: React.ReactNode;
 }) {
     return (
-        <SafeAreaView
-            style={{
-                flex: 1,
-                backgroundColor: themeColor('background'),
-                ...style
+        <Observer>
+            {() => {
+                return (
+                    <SafeAreaView
+                        style={{
+                            flex: 1,
+                            backgroundColor: themeColor('background'),
+                            ...style
+                        }}
+                    >
+                        {children}
+                    </SafeAreaView>
+                );
             }}
-        >
-            {children}
-        </SafeAreaView>
+        </Observer>
     );
 }
