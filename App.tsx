@@ -1,9 +1,8 @@
 import * as React from 'react';
-import { SafeAreaView, StyleSheet } from 'react-native';
 import { Provider } from 'mobx-react';
 import Stores from './stores/Stores';
 import Navigation from './Navigation';
-import { themeColor } from './utils/ThemeUtils';
+import { AppContainer } from './components/layout/AppContainer';
 
 export default class App extends React.PureComponent {
     render() {
@@ -24,21 +23,10 @@ export default class App extends React.PureComponent {
                 MessageSignStore={Stores.messageSignStore}
                 ActivityStore={Stores.activityStore}
             >
-                <SafeAreaView
-                    style={[
-                        styles.container,
-                        { backgroundColor: themeColor('background') }
-                    ]}
-                >
+                <AppContainer>
                     <Navigation />
-                </SafeAreaView>
+                </AppContainer>
             </Provider>
         );
     }
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1
-    }
-});
