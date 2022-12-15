@@ -84,10 +84,8 @@ export default class TransactionsStore {
                     .map((tx: any) => new Transaction(tx));
                 this.loading = false;
             })
-            .catch(() => {
-                // handle error
-                this.transactions = [];
-                this.loading = false;
+            .catch((e) => {
+                throw new Error(`RESTUtils.getTransactions, ${e.message}`);
             });
     };
 
