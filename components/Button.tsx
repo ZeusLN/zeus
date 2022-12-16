@@ -40,7 +40,6 @@ function Button(props: ButtonProps) {
     const newContainerStyle: any = adaptiveWidth
         ? {
               ...containerStyle,
-              borderWidth: secondary ? 2 : 0,
               borderColor:
                   (containerStyle && containerStyle.borderColor) ||
                   themeColor('highlight'),
@@ -49,7 +48,6 @@ function Button(props: ButtonProps) {
           }
         : {
               ...containerStyle,
-              borderWidth: secondary ? 2 : 0,
               borderColor:
                   (containerStyle && containerStyle.borderColor) ||
                   themeColor('highlight'),
