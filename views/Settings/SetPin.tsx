@@ -103,6 +103,7 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                           duressPassphrase: settings.duressPassphrase,
                           duressPin: settings.duressPin,
                           scramblePin: settings.scramblePin,
+                          loginBackground: settings.loginBackground,
                           pin
                       }
                     : { pin }
