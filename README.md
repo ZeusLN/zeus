@@ -29,7 +29,7 @@ Read more on our [documentation site](https://docs.zeusln.app/).
 - [x] No processing fees
 - [x] No KYC
 - [x] Fully open source (APGLv3)
-- [x] Connect to LND, Core Lightning (Rest + spark) or Eclair lightning node
+- [x] Connect to LND, Core Lightning (REST + Sparko), or Eclair lightning node
 - [x] Manage multiple lightning nodes at once
 - [x] Connect via LNDHub instances
 - [x] Lightning accounts
@@ -68,7 +68,7 @@ Read more on our [documentation site](https://docs.zeusln.app/).
 
 ## Connecting Zeus to your node
 
-Currently, to use Zeus, you must have a Bitcoin Lightning node running [Lightning Network Daemon (lnd)](https://github.com/LightningNetwork/lnd), [eclair](https://github.com/ACINQ/eclair), or [Core Lightning](https://github.com/ElementsProject/lightning) using the [REST](https://github.com/Ride-The-Lightning/c-lightning-REST/) or [Spark](https://github.com/shesek/spark-wallet#server-installation) API.
+Currently, to use Zeus, you must have a Bitcoin Lightning node running [Lightning Network Daemon (lnd)](https://github.com/LightningNetwork/lnd), [eclair](https://github.com/ACINQ/eclair), or [Core Lightning](https://github.com/ElementsProject/lightning) using the [REST](https://github.com/Ride-The-Lightning/c-lightning-REST/) or [Sparko](https://github.com/fiatjaf/sparko) API.
 
 You must provide Zeus with your node's hostname, port number, and the macaroon you choose to use in **hex format**. If you need help converting your macaroon to hex format we wrote up a Node.js script that can use
 [here](https://github.com/ZeusLN/lnd-hex-macaroon-generator/). Alternatively, if you're running a Unix-based operating system (eg. macOS, Linux) you can run `xxd -ps -u -c 1000 /path/to/admin.macaroon` to generate your macaroon in hex format.
