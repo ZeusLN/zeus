@@ -151,7 +151,9 @@ export default class Amount extends React.Component<AmountProps, {}> {
         } = this.props;
         const UnitsStore = this.props.UnitsStore!;
         const SettingsStore = this.props.SettingsStore!;
-        const lurkerMode = SettingsStore.settings.privacy.lurkerMode;
+        const lurkerMode =
+            SettingsStore.settings.privacy &&
+            SettingsStore.settings.privacy.lurkerMode;
         const lurkerExposed = SettingsStore.lurkerExposed;
 
         // TODO: This doesn't feel like the right place for this but it makes the component "reactive"
