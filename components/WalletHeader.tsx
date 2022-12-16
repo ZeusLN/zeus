@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Header } from 'react-native-elements';
-import { Image, Platform, TouchableOpacity, View } from 'react-native';
+import { Image, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
 
@@ -147,13 +147,7 @@ export default class WalletHeader extends React.Component<
                                     />
                                 </View>
                             )}
-                            <View
-                                style={{
-                                    marginTop: Platform.OS === 'ios' ? 9 : 15
-                                }}
-                            >
-                                <ScanBadge navigation={navigation} />
-                            </View>
+                            <ScanBadge navigation={navigation} />
                         </View>
                     )
                 }
