@@ -31,7 +31,8 @@ const OpenChannelButton = ({ navigation }: { navigation: any }) => (
         }}
         buttonStyle={{
             backgroundColor: 'transparent',
-            marginRight: -10
+            marginRight: -10,
+            marginTop: -10
         }}
         onPress={() => navigation.navigate('OpenChannel')}
     />
@@ -138,9 +139,7 @@ export default class WalletHeader extends React.Component<
                                 <LoadingIndicator size={80} />
                             )}
                             {!!clipboard && (
-                                <View
-                                    style={{ marginTop: 14, marginRight: 20 }}
-                                >
+                                <View style={{ marginRight: 20 }}>
                                     <ClipboardBadge
                                         navigation={navigation}
                                         clipboard={clipboard}
