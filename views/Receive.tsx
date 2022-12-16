@@ -99,14 +99,14 @@ export default class Receive extends React.Component<
             });
         }
 
-        if (autoGenerate) this.autoGenerateInvoice(amount);
+        if (autoGenerate) this.autoGenerateInvoice(this.getSatAmount(amount));
     }
 
     componentWillUnmount() {
         if (this.listener && this.listener.stop) this.listener.stop();
     }
 
-    autoGenerateInvoice = (amount: string) => {
+    autoGenerateInvoice = (amount?: string) => {
         const { InvoicesStore } = this.props;
         const { createUnifiedInvoice } = InvoicesStore;
         const { memo, expiry, ampInvoice, routeHints, addressType } =
@@ -169,42 +169,14 @@ export default class Receive extends React.Component<
         });
     };
 
-    render() {
-        const {
-            InvoicesStore,
-            SettingsStore,
-            UnitsStore,
-            FiatStore,
-            navigation
-        } = this.props;
-        const {
-            selectedIndex,
-            addressType,
-            memo,
-            value,
-            expiry,
-            ampInvoice,
-            routeHints
-        } = this.state;
-        const { units, changeUnits, getAmount } = UnitsStore;
-        const { fiatRates, getSymbol }: any = FiatStore;
-
-        const {
-            createUnifiedInvoice,
-            onChainAddress,
-            payment_request,
-            payment_request_amt,
-            creatingInvoice,
-            creatingInvoiceError,
-            error_msg,
-            watchedInvoicePaid,
-            clearUnified,
-            reset
-        } = InvoicesStore;
-        const { settings, implementation } = SettingsStore;
-        const loading = SettingsStore.loading || InvoicesStore.loading;
+    getSatAmount = (amount?: string) => {
+        const { FiatStore, SettingsStore, UnitsStore } = this.props;
+        const { fiatRates } = FiatStore;
+        const { settings } = SettingsStore;
         const { fiat } = settings;
-        const address = onChainAddress;
+        const { units } = UnitsStore;
+
+        const value = amount || this.state.value;
 
         const fiatEntry =
             fiat && fiatRates && fiatRates.filter
@@ -231,6 +203,47 @@ export default class Receive extends React.Component<
                 ).toFixed(0);
                 break;
         }
+
+        return satAmount;
+    };
+
+    render() {
+        const {
+            InvoicesStore,
+            SettingsStore,
+            UnitsStore,
+            FiatStore,
+            navigation
+        } = this.props;
+        const {
+            selectedIndex,
+            addressType,
+            memo,
+            value,
+            expiry,
+            ampInvoice,
+            routeHints
+        } = this.state;
+        const { units, changeUnits, getAmount } = UnitsStore;
+        const { getSymbol }: any = FiatStore;
+
+        const {
+            createUnifiedInvoice,
+            onChainAddress,
+            payment_request,
+            payment_request_amt,
+            creatingInvoice,
+            creatingInvoiceError,
+            error_msg,
+            watchedInvoicePaid,
+            clearUnified,
+            reset
+        } = InvoicesStore;
+        const { implementation } = SettingsStore;
+        const loading = SettingsStore.loading || InvoicesStore.loading;
+        const address = onChainAddress;
+
+        const satAmount = this.getSatAmount();
 
         const lnurl: LNURLWithdrawParams | undefined =
             navigation.getParam('lnurlParams');
