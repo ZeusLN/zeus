@@ -29,6 +29,7 @@ export default class BalanceStore {
     }
 
     reset = () => {
+        console.log('reset called');
         this.resetLightningBalance();
         this.resetBlockchainBalance();
         this.error = false;

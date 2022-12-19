@@ -8,6 +8,7 @@ import LoadingIndicator from './../../components/LoadingIndicator';
 import NodeIdenticon, { NodeTitle } from './../../components/NodeIdenticon';
 
 import RESTUtils from './../../utils/RESTUtils';
+import BalanceStore from './../../stores/BalanceStore';
 import SettingsStore, { INTERFACE_KEYS } from './../../stores/SettingsStore';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -18,6 +19,7 @@ interface NodesProps {
     edit?: boolean;
     loading?: boolean;
     selectedNode?: number;
+    BalanceStore: BalanceStore;
     SettingsStore: SettingsStore;
 }
 
@@ -26,7 +28,7 @@ interface NodesState {
     loading: boolean;
 }
 
-@inject('SettingsStore')
+@inject('BalanceStore', 'SettingsStore')
 @observer
 export default class Nodes extends React.Component<NodesProps, NodesState> {
     state = {
@@ -66,7 +68,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
     );
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation, BalanceStore, SettingsStore } = this.props;
         const { loading, nodes } = this.state;
         const {
             setSettings,
@@ -166,6 +168,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                             ) {
                                                 RESTUtils.disconnect();
                                             }
+                                            BalanceStore.reset();
                                             setConnectingStatus(true);
                                             navigation.navigate('Wallet', {
                                                 refresh: true
