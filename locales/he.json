@@ -498,6 +498,7 @@
     "utils.handleAnything.unsupportedLnurlType": "סוג lnurl לא נתמך",
     "stores.InvoicesStore.errorCreatingInvoice": "שגיאה ביצירת חשבונית",
     "stores.InvoicesStore.errorGeneratingAddress": "שגיאה ביצירת כתובת חדשה",
+    "stores.InvoicesStore.zeroAmountLndhub": "LNDHub instance might not support zero-amount invoices",
     "stores.SettingsStore.btcPayImplementationSupport": "מצטערים אנחנו תומכים ב BTCPay המשתמש ב lnd ו- c-lightning  בלבד",
     "stores.SettingsStore.btcPayFetchConfigError": "שגיאה באחזור הגדרות של BTCPay",
     "stores.SettingsStore.olympianFetchError": "שגיאה באחזור אולימפיים",

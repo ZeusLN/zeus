@@ -498,6 +498,7 @@
     "utils.handleAnything.unsupportedLnurlType": "Lnurl-typ stöds ej",
     "stores.InvoicesStore.errorCreatingInvoice": "Kunde inte skapa invoice",
     "stores.InvoicesStore.errorGeneratingAddress": "Fel vid generering av ny address",
+    "stores.InvoicesStore.zeroAmountLndhub": "LNDHub instance might not support zero-amount invoices",
     "stores.SettingsStore.btcPayImplementationSupport": "Tyvärr, vi stödjer endast BTCPay-instanser med lnd eller c-lightning",
     "stores.SettingsStore.btcPayFetchConfigError": "Fel vid hämtning av BTCPay-konfiguration",
     "stores.SettingsStore.olympianFetchError": "Fel vid hämtning av Olympier",

@@ -498,6 +498,7 @@
     "utils.handleAnything.unsupportedLnurlType": "Tipo de lnurl no compatible",
     "stores.InvoicesStore.errorCreatingInvoice": "Error al crear Invoice",
     "stores.InvoicesStore.errorGeneratingAddress": "Error generando nueva dirección",
+    "stores.InvoicesStore.zeroAmountLndhub": "LNDHub instance might not support zero-amount invoices",
     "stores.SettingsStore.btcPayImplementationSupport": "Lo sentimos, actualmente solo admitimos instancias de BTCPay que usan lnd o c-lightning",
     "stores.SettingsStore.btcPayFetchConfigError": "Error al obtener la configuración de BTCPay",
     "stores.SettingsStore.olympianFetchError": "Error obteniendo Dioses Olímpicos",
