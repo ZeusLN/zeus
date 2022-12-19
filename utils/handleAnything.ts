@@ -10,45 +10,14 @@ import RESTUtils from './../utils/RESTUtils';
 
 const { nodeInfoStore, invoicesStore } = stores;
 
-const isClipboardValue = (data: string) => {
-    const { nodeInfo } = nodeInfoStore;
-    const { isTestNet, isRegTest } = nodeInfo;
-    const { value, lightning }: any = AddressUtils.processSendAddress(data);
-    const hasAt: boolean = value.includes('@');
+const isClipboardValue = (data: string) =>
+    handleAnything(data, undefined, true);
 
-    if (
-        !hasAt &&
-        AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest) &&
-        lightning
-    ) {
-        return true;
-    } else if (
-        !hasAt &&
-        AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest)
-    ) {
-        return true;
-    } else if (!hasAt && AddressUtils.isValidLightningPubKey(value)) {
-        return true;
-    } else if (!hasAt && AddressUtils.isValidLightningPaymentRequest(value)) {
-        return true;
-    } else if (value.includes('lndconnect')) {
-        return true;
-    } else if (AddressUtils.isValidLNDHubAddress(value)) {
-        return true;
-    } else if (hasAt && NodeUriUtils.isValidNodeUri(value)) {
-        return true;
-    } else if (hasAt && AddressUtils.isValidLightningAddress(value)) {
-        return true;
-    } else if (findlnurl(value) !== null) {
-        return true;
-    } else {
-        return false;
-    }
-};
-
-export { isClipboardValue };
-
-export default async function (data: string, setAmount?: string): Promise<any> {
+const handleAnything = async (
+    data: string,
+    setAmount?: string,
+    isClipboardValue?: boolean
+): Promise<any> => {
     const { nodeInfo } = nodeInfoStore;
     const { isTestNet, isRegTest } = nodeInfo;
     const { value, amount, lightning }: any =
@@ -60,6 +29,7 @@ export default async function (data: string, setAmount?: string): Promise<any> {
         AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest) &&
         lightning
     ) {
+        if (isClipboardValue) return true;
         return [
             'Accounts',
             {
@@ -72,26 +42,32 @@ export default async function (data: string, setAmount?: string): Promise<any> {
         !hasAt &&
         AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest)
     ) {
+        if (isClipboardValue) return true;
         return [
             'Send',
             {
                 destination: value,
                 amount,
-                transactionType: 'On-chain'
+                transactionType: 'On-chain',
+                isValid: true
             }
         ];
     } else if (!hasAt && AddressUtils.isValidLightningPubKey(value)) {
+        if (isClipboardValue) return true;
         return [
             'Send',
             {
                 destination: value,
-                transactionType: 'Keysend'
+                transactionType: 'Keysend',
+                isValid: true
             }
         ];
     } else if (!hasAt && AddressUtils.isValidLightningPaymentRequest(value)) {
+        if (isClipboardValue) return true;
         invoicesStore.getPayReq(value);
         return ['PaymentRequest', {}];
     } else if (value.includes('lndconnect')) {
+        if (isClipboardValue) return true;
         const node = ConnectionFormatUtils.processLndConnectUrl(value);
         return [
             'AddEditNode',
@@ -102,6 +78,7 @@ export default async function (data: string, setAmount?: string): Promise<any> {
             }
         ];
     } else if (AddressUtils.isValidLNDHubAddress(value)) {
+        if (isClipboardValue) return true;
         const { username, password, host } =
             AddressUtils.processLNDHubAddress(value);
 
@@ -135,6 +112,7 @@ export default async function (data: string, setAmount?: string): Promise<any> {
             }
         ];
     } else if (hasAt && NodeUriUtils.isValidNodeUri(value)) {
+        if (isClipboardValue) return true;
         const { pubkey, host } = NodeUriUtils.processNodeUri(value);
         return [
             'OpenChannel',
@@ -144,6 +122,7 @@ export default async function (data: string, setAmount?: string): Promise<any> {
             }
         ];
     } else if (hasAt && AddressUtils.isValidLightningAddress(value)) {
+        if (isClipboardValue) return true;
         const [username, domain] = value.split('@');
         const url = `https://${domain}/.well-known/lnurlp/${username}`;
         const error = localeString(
@@ -173,6 +152,7 @@ export default async function (data: string, setAmount?: string): Promise<any> {
         return getlnurlParams(raw).then((params: any) => {
             switch (params.tag) {
                 case 'withdrawRequest':
+                    if (isClipboardValue) return true;
                     return [
                         'Receive',
                         {
@@ -181,6 +161,7 @@ export default async function (data: string, setAmount?: string): Promise<any> {
                     ];
                     break;
                 case 'payRequest':
+                    if (isClipboardValue) return true;
                     params.lnurlText = raw;
                     return [
                         'LnurlPay',
@@ -191,6 +172,7 @@ export default async function (data: string, setAmount?: string): Promise<any> {
                     ];
                     break;
                 case 'channelRequest':
+                    if (isClipboardValue) return true;
                     return [
                         'LnurlChannel',
                         {
@@ -200,6 +182,7 @@ export default async function (data: string, setAmount?: string): Promise<any> {
                     break;
                 case 'login':
                     if (RESTUtils.supportsMessageSigning()) {
+                        if (isClipboardValue) return true;
                         return [
                             'LnurlAuth',
                             {
@@ -207,6 +190,7 @@ export default async function (data: string, setAmount?: string): Promise<any> {
                             }
                         ];
                     } else {
+                        if (isClipboardValue) return false;
                         Alert.alert(
                             localeString('general.error'),
                             localeString(
@@ -223,6 +207,7 @@ export default async function (data: string, setAmount?: string): Promise<any> {
                     }
                     break;
                 default:
+                    if (isClipboardValue) return false;
                     Alert.alert(
                         localeString('general.error'),
                         params.status === 'ERROR'
@@ -241,6 +226,10 @@ export default async function (data: string, setAmount?: string): Promise<any> {
             }
         });
     } else {
+        if (isClipboardValue) return false;
         throw new Error(localeString('utils.handleAnything.notValid'));
     }
-}
+};
+
+export { isClipboardValue };
+export default handleAnything;
