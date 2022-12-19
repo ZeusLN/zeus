@@ -501,7 +501,7 @@ export default class Receive extends React.Component<
                                 </>
                             )}
                             {creatingInvoice && <LoadingIndicator />}
-                            {haveInvoice && (
+                            {haveInvoice && !creatingInvoiceError && (
                                 <View style={{ marginTop: 10 }}>
                                     {selectedIndex == 0 &&
                                         !belowDustLimit &&
