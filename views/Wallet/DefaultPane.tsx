@@ -269,7 +269,6 @@ export default class DefaultPane extends React.PureComponent<
                                 title={localeString('general.send')}
                                 quinary
                                 noUppercase
-                                disabled={amount === '0'}
                                 onPress={() => {
                                     navigation.navigate('Send', {
                                         amount
