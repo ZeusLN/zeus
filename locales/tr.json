@@ -498,6 +498,7 @@
     "utils.handleAnything.unsupportedLnurlType": "Desteklenmeyen lnurl tipi",
     "stores.InvoicesStore.errorCreatingInvoice": "Fatura oluştururken hata ile karşılaşıldı",
     "stores.InvoicesStore.errorGeneratingAddress": "Yeni adres oluşturulurken hata yaşandı",
+    "stores.InvoicesStore.zeroAmountLndhub": "LNDHub instance might not support zero-amount invoices",
     "stores.SettingsStore.btcPayImplementationSupport": "Özür dileriz, şu an için sadece lnd veya c-ligtning ile BTCPay \noluşumunu destekliyoruz.",
     "stores.SettingsStore.btcPayFetchConfigError": "BTCPay ayarlarını çekmekte hata yaşandı",
     "stores.SettingsStore.olympianFetchError": "Olimpiyalıları çekerken hata yaşandı",

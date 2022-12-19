@@ -498,6 +498,7 @@
     "utils.handleAnything.unsupportedLnurlType": "Tip lnurl nesuportat",
     "stores.InvoicesStore.errorCreatingInvoice": "Eroare la crearea facturii",
     "stores.InvoicesStore.errorGeneratingAddress": "Eroare la generarea unei adrese noi",
+    "stores.InvoicesStore.zeroAmountLndhub": "LNDHub instance might not support zero-amount invoices",
     "stores.SettingsStore.btcPayImplementationSupport": "Ne cerem scuze, dar momentan permitem doar instanțe BTCPay folosind lnd sau c-lightning",
     "stores.SettingsStore.btcPayFetchConfigError": "Eroare la obținerea configurației BTCPay",
     "stores.SettingsStore.olympianFetchError": "Eroare la obținerea Olimpicilor",

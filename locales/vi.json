@@ -498,6 +498,7 @@
     "utils.handleAnything.unsupportedLnurlType": "Loại lnurl không được hỗ trợ",
     "stores.InvoicesStore.errorCreatingInvoice": "Lỗi khi tạo hoá đơn",
     "stores.InvoicesStore.errorGeneratingAddress": "Lỗi khi tạo địa chỉ mới",
+    "stores.InvoicesStore.zeroAmountLndhub": "LNDHub instance might not support zero-amount invoices",
     "stores.SettingsStore.btcPayImplementationSupport": "Xin lỗi, chúng tôi hiện chỉ hỗ trợ các phiên bản BTCPay sử dụng lnd hoặc c-lightning ",
     "stores.SettingsStore.btcPayFetchConfigError": "Lỗi khi tìm nạp cấu hình BTCPay ",
     "stores.SettingsStore.olympianFetchError": "Lỗi khi tìm nạp Olympians",

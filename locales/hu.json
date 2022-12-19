@@ -498,6 +498,7 @@
     "utils.handleAnything.unsupportedLnurlType": "Nem támogatott lnurl típus",
     "stores.InvoicesStore.errorCreatingInvoice": "Hibetörtént a számlakészítésnél",
     "stores.InvoicesStore.errorGeneratingAddress": "Hiba történt új cím generálásakor",
+    "stores.InvoicesStore.zeroAmountLndhub": "LNDHub instance might not support zero-amount invoices",
     "stores.SettingsStore.btcPayImplementationSupport": "Bocsánat, jelenleg csak only BTCPay servert támogatunk amely lnd vagy c-lightning-ot használ",
     "stores.SettingsStore.btcPayFetchConfigError": "Hiba történt a BTCPay configuráció betöltésekor",
     "stores.SettingsStore.olympianFetchError": "Hiba az olympikonok betöltésekor",
