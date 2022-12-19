@@ -159,12 +159,19 @@ export default class InvoicesStore {
                 if (data.error) {
                     this.creatingInvoiceError = true;
                     this.creatingInvoice = false;
+                    const errString =
+                        data.message.toString() || data.error.toString();
                     this.error_msg =
-                        data.message.toString() ||
-                        data.error.toString() ||
-                        localeString(
-                            'stores.InvoicesStore.errorCreatingInvoice'
-                        );
+                        errString === 'Bad arguments' &&
+                        this.settingsStore.implementation === 'lndhub' &&
+                        req.value === '0'
+                            ? localeString(
+                                  'stores.InvoicesStore.zeroAmountLndhub'
+                              )
+                            : errString ||
+                              localeString(
+                                  'stores.InvoicesStore.errorCreatingInvoice'
+                              );
                 }
                 const invoice = new Invoice(data);
                 this.payment_request = invoice.getPaymentRequest;
