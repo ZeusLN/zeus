@@ -95,19 +95,36 @@ export default class Conversion extends React.Component<
 
         if (!fiat || fiat === DEFAULT_FIAT || (!amount && !sats)) return;
 
-        const ConversionDisplay = ({ units = 'sats' }: { units: string }) => (
-            <Amount
-                sats={satAmount}
-                fixedUnits={units}
-                sensitive={sensitive}
-                color="secondaryText"
-            />
+        const ConversionDisplay = ({
+            units = 'sats',
+            showRate
+        }: {
+            units: string;
+            showRate: boolean;
+        }) => (
+            <Row align="flex-end">
+                <Amount
+                    sats={satAmount}
+                    fixedUnits={units}
+                    sensitive={sensitive}
+                    color="secondaryText"
+                />
+                {showRate && (
+                    <>
+                        <Text style={{ color: themeColor('secondaryText') }}>
+                            {` | ${getRate()}`}
+                        </Text>
+                    </>
+                )}
+            </Row>
         );
 
         const ConversionPendingDisplay = ({
-            units = 'sats'
+            units = 'sats',
+            showRate
         }: {
             units: string;
+            showRate: boolean;
         }) => (
             <Row align="flex-end">
                 <Amount
@@ -130,6 +147,13 @@ export default class Conversion extends React.Component<
                     sensitive={sensitive}
                     color="secondaryText"
                 />
+                {showRate && (
+                    <>
+                        <Text style={{ color: themeColor('secondaryText') }}>
+                            {` | ${getRate()}`}
+                        </Text>
+                    </>
+                )}
             </Row>
         );
 
@@ -143,16 +167,15 @@ export default class Conversion extends React.Component<
                         onPress={() => this.toggleShowRate()}
                     >
                         {satsPending ? (
-                            <ConversionPendingDisplay units="sats" />
+                            <ConversionPendingDisplay
+                                units="sats"
+                                showRate={showRate}
+                            />
                         ) : (
-                            <ConversionDisplay units="sats" />
-                        )}
-                        {showRate && (
-                            <Text
-                                style={{ color: themeColor('secondaryText') }}
-                            >
-                                {getRate()}
-                            </Text>
+                            <ConversionDisplay
+                                units="sats"
+                                showRate={showRate}
+                            />
                         )}
                     </TouchableOpacity>
                 )}
@@ -162,16 +185,15 @@ export default class Conversion extends React.Component<
                         onPress={() => this.toggleShowRate()}
                     >
                         {satsPending ? (
-                            <ConversionPendingDisplay units="fiat" />
+                            <ConversionPendingDisplay
+                                units="fiat"
+                                showRate={showRate}
+                            />
                         ) : (
-                            <ConversionDisplay units="fiat" />
-                        )}
-                        {showRate && (
-                            <Text
-                                style={{ color: themeColor('secondaryText') }}
-                            >
-                                {getRate()}
-                            </Text>
+                            <ConversionDisplay
+                                units="fiat"
+                                showRate={showRate}
+                            />
                         )}
                     </TouchableOpacity>
                 )}
