@@ -480,7 +480,8 @@ export default class Receive extends React.Component<
                             {!!payment_request && (
                                 <>
                                     {implementation === 'lndhub' &&
-                                        !!address && (
+                                        !!address &&
+                                        !belowDustLimit && (
                                             <WarningMessage
                                                 message={localeString(
                                                     'views.Receive.warningLndHub'
