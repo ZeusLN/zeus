@@ -311,7 +311,7 @@ export default class AddEditNode extends React.Component<
         let nodes: any;
         if (settings.nodes) {
             nodes = settings.nodes;
-            nodes[index || settings.nodes.length] = node;
+            nodes[index !== null ? index : settings.nodes.length] = node;
         } else {
             nodes = [node];
         }
