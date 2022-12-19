@@ -162,10 +162,7 @@ export default class Conversion extends React.Component<
         return (
             <>
                 {units === 'fiat' && (
-                    <TouchableOpacity
-                        style={{ alignItems: 'center' }}
-                        onPress={() => this.toggleShowRate()}
-                    >
+                    <TouchableOpacity onPress={() => this.toggleShowRate()}>
                         {satsPending ? (
                             <ConversionPendingDisplay
                                 units="sats"
@@ -180,10 +177,7 @@ export default class Conversion extends React.Component<
                     </TouchableOpacity>
                 )}
                 {units !== 'fiat' && (
-                    <TouchableOpacity
-                        style={{ alignItems: 'center' }}
-                        onPress={() => this.toggleShowRate()}
-                    >
+                    <TouchableOpacity onPress={() => this.toggleShowRate()}>
                         {satsPending ? (
                             <ConversionPendingDisplay
                                 units="fiat"

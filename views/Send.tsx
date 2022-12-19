@@ -29,6 +29,7 @@ import UnitsStore, { SATS_PER_BTC } from './../stores/UnitsStore';
 import FiatStore from './../stores/FiatStore';
 
 import Amount from './../components/Amount';
+import Conversion from './../components/Conversion';
 import Button from './../components/Button';
 import { ErrorMessage } from './../components/SuccessErrorMessage';
 import TextInput from './../components/TextInput';
@@ -531,20 +532,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     toggleUnits={changeUnits}
                                 />
                                 <View style={{ paddingBottom: 15 }}>
-                                    {units !== 'sats' && amount !== 'all' && (
-                                        <Amount
-                                            sats={satAmount}
-                                            fixedUnits="sats"
-                                            toggleable
-                                        />
-                                    )}
-                                    {units !== 'BTC' && amount !== 'all' && (
-                                        <Amount
-                                            sats={satAmount}
-                                            fixedUnits="BTC"
-                                            toggleable
-                                        />
-                                    )}
+                                    <Conversion amount={amount} />
                                     {amount === 'all' && (
                                         <>
                                             <Amount
@@ -566,20 +554,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 toggleable
                                             />
                                         </>
-                                    )}
-                                    {units === 'fiat' && (
-                                        <TouchableOpacity
-                                            onPress={() => changeUnits()}
-                                        >
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    color: themeColor('text')
-                                                }}
-                                            >
-                                                {FiatStore.getRate()}
-                                            </Text>
-                                        </TouchableOpacity>
                                     )}
                                 </View>
 
