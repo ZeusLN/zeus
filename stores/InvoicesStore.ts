@@ -277,6 +277,8 @@ export default class InvoicesStore {
     public clearUnified = () => {
         this.clearAddress();
         this.clearPaymentRequest();
+        this.error_msg = null;
+        this.creatingInvoiceError = false;
     };
 
     @action
