@@ -16,29 +16,29 @@ interface RouteHint {
 }
 
 export default class Invoice extends BaseModel {
-    public route_hints: Array<RouteHint>;
-    public fallback_addr: string;
+    public route_hints?: Array<RouteHint>;
+    public fallback_addr?: string;
     public r_hash: string;
     public settle_date: string;
     public expiry: string;
     public memo: string;
-    public receipt: string;
-    public settle_index: string;
-    public add_index: string;
-    public payment_request: string;
-    public value: string;
+    public receipt?: string;
+    public settle_index?: string;
+    public add_index?: string;
+    public payment_request?: string;
+    public value?: string;
     public settled: boolean;
-    public amt_paid_msat: string;
-    public amt_paid: string;
+    public amt_paid_msat?: string;
+    public amt_paid?: string;
     public amt_paid_sat: string;
-    public private: boolean;
+    public private?: boolean;
     public creation_date: string;
-    public description_hash: string;
-    public r_preimage: string;
-    public cltv_expiry: string;
+    public description_hash?: string;
+    public r_preimage?: string;
+    public cltv_expiry?: string;
     // c-lightning, eclair
     public bolt11: string;
-    public label: string;
+    public label?: string;
     public description: string;
     public msatoshi: number;
     @observable public payment_hash: string;
@@ -46,16 +46,16 @@ export default class Invoice extends BaseModel {
     public expires_at: number;
     public status: string;
     // pay req
-    public timestamp?: string | number;
+    public timestamp: string | number;
     public destination?: string;
     public num_satoshis?: string | number;
     public features?: any;
     // lndhub
-    public amt?: number;
-    public ispaid?: boolean;
-    public expire_time?: number;
-    public millisatoshis?: string;
-    public pay_req?: string;
+    public amt: number;
+    public ispaid: boolean;
+    public expire_time: number;
+    public millisatoshis: string;
+    public pay_req: string;
 
     @computed public get model(): string {
         return 'Invoice';
