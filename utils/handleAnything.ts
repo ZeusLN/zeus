@@ -30,6 +30,10 @@ const handleAnything = async (
         lightning
     ) {
         if (isClipboardValue) return true;
+        if (!RESTUtils.supportsOnchainSends()) {
+            invoicesStore.getPayReq(lightning);
+            return ['PaymentRequest', {}];
+        }
         return [
             'Accounts',
             {
