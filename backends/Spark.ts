@@ -213,16 +213,15 @@ export default class Spark {
                     memo: inv.description,
                     r_preimage: inv.payment_preimage,
                     r_hash: inv.payment_hash,
-                    value: inv.msatoshi / 1000,
-                    value_msat: inv.msatoshi,
+                    amt_paid_sat: (typeof inv.amount_msat === 'number'
+                        ? Number(inv.amount_msat) / 1000
+                        : Number(inv.amount_msat.replace('msat', '')) / 1000
+                    ).toString(),
                     settled: inv.status === 'paid',
                     creation_date: inv.expires_at,
                     settle_date: inv.paid_at,
                     payment_request: inv.bolt11,
                     expiry: inv.expires_at,
-                    amt_paid: inv.msatoshi_received / 1000,
-                    amt_paid_sat: inv.msatoshi_received / 1000,
-                    amt_paid_msat: inv.msatoshi_received
                 }))
             })
         );
