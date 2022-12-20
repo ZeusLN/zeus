@@ -45,13 +45,15 @@ const bitcoinQrParser = (input: string, prefix: string) => {
         });
 
     const value = btcAddress;
-    if (result.amount) {
-        amount = new BigNumber(result.amount).multipliedBy(SATS_PER_BTC);
+    if (result.amount || result.AMOUNT) {
+        amount = new BigNumber(result.amount || result.AMOUNT).multipliedBy(
+            SATS_PER_BTC
+        );
         amount = amount.toString();
     }
 
-    if (result.lightning) {
-        lightning = result.lightning;
+    if (result.lightning || result.LIGHTNING) {
+        lightning = result.lightning || result.LIGHTNING;
     }
 
     return [value, amount, lightning];
