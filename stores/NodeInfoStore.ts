@@ -55,10 +55,8 @@ export default class NodeInfoStore {
             .then((data: any) => {
                 const nodeInfo = new NodeInfo(data);
                 this.nodeInfo = nodeInfo;
-                this.testnet =
-                    nodeInfo.network === 'testnet' || nodeInfo.testnet || false;
-                this.regtest =
-                    nodeInfo.network === 'regtest' || nodeInfo.regtest || false;
+                this.testnet = nodeInfo.isTestNet;
+                this.regtest = nodeInfo.isRegTest;
                 this.loading = false;
                 this.error = false;
             })
