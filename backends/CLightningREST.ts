@@ -80,7 +80,10 @@ export default class CLightningREST extends LND {
             expiry: Number(data.expiry),
             private: true
         });
-    getPayments = () => this.getRequest('/v1/pay/listPays');
+    getPayments = () =>
+        this.getRequest('/v1/pay/listPays').then((data: any) => ({
+            payments: data.pays
+        }));
     getNewAddress = () => this.getRequest('/v1/newaddr');
     openChannel = (data: OpenChannelRequest) => {
         let request: any;
