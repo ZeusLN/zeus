@@ -138,6 +138,14 @@ export default class Invoice extends BaseModel {
               );
     }
 
+    @computed public get getDisplayTimeShort(): string {
+        return this.isPaid
+            ? this.settleDate
+            : DateTimeUtils.listFormattedDateShort(
+                  this.expires_at || this.creation_date || this.timestamp || 0
+              );
+    }
+
     @computed public get getDate(): string | number | Date {
         return this.isPaid
             ? this.settleDate
