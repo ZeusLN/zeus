@@ -25,6 +25,7 @@ interface TextInputProps {
     prefix?: string;
     suffix?: string;
     toggleUnits?: any;
+    onPressIn?: any;
 }
 
 export default function TextInput(props: TextInputProps) {
@@ -44,7 +45,8 @@ export default function TextInput(props: TextInputProps) {
         secureTextEntry,
         prefix,
         suffix,
-        toggleUnits
+        toggleUnits,
+        onPressIn
     } = props;
 
     const defaultStyle = numberOfLines
@@ -94,6 +96,7 @@ export default function TextInput(props: TextInputProps) {
                 multiline={multiline}
                 autoFocus={autoFocus}
                 secureTextEntry={secureTextEntry}
+                onPressIn={onPressIn}
             />
             {suffix && (
                 <TouchableOpacity onPress={() => toggleUnits()}>
