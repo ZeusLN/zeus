@@ -8,29 +8,23 @@ import { localeString } from './../utils/LocaleUtils';
 export default class Payment extends BaseModel {
     payment_hash: string;
     creation_date?: string;
-    value: string;
-    // fee?: string; DEPRECATED
+    value: string | number;
     fee_sat?: string;
     fee_msat?: string;
-    value_sat: string;
     payment_preimage: string;
-    value_msat: string;
     path: Array<string>;
     bolt: string;
     status: string;
-    amount_sent_msat: string;
     payment_request: string;
     // c-lightning
     id?: string;
-    // payment_hash: string;
     destination?: string;
     amount_msat?: string;
-    // amount_sent_msat?: string;
+    amount_sent_msat?: string;
     msatoshi_sent?: string;
     msatoshi?: string;
     created_at?: string;
     timestamp?: string;
-    // status: string;
     preimage: string;
     bolt11?: string;
     htlcs?: Array<any>;
