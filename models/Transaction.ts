@@ -29,7 +29,13 @@ export default class Transaction extends BaseModel {
     }
 
     @computed public get getDisplayTime(): string {
-        return DateTimeUtils.listFormattedDate(this.time_stamp);
+        return DateTimeUtils.listFormattedDate(this.getTimestamp);
+    }
+
+    @computed public get getDisplayTimeShort(): string {
+        return this.getTimestamp === 0
+            ? this.getBlockHeight
+            : DateTimeUtils.listFormattedDateShort(this.getTimestamp);
     }
 
     @computed public get getDate(): string | Date {

@@ -72,15 +72,15 @@ export default class Payment extends BaseModel {
     }
 
     @computed public get getDate(): string | Date {
-        return DateTimeUtils.listDate(
-            this.creation_date || this.created_at || this.timestamp || 0
-        );
+        return DateTimeUtils.listDate(this.getTimestamp);
     }
 
     @computed public get getDisplayTime(): string {
-        return DateTimeUtils.listFormattedDate(
-            this.creation_date || this.created_at || this.timestamp || 0
-        );
+        return DateTimeUtils.listFormattedDate(this.getTimestamp);
+    }
+
+    @computed public get getDisplayTimeShort(): string {
+        return DateTimeUtils.listFormattedDateShort(this.getTimestamp);
     }
 
     @computed public get getAmount(): number | string {
