@@ -64,7 +64,7 @@ Read more on our [documentation site](https://docs.zeusln.app/).
 - [ ] Batch on-chain transactions
 - [ ] Batch channel opens
 - [ ] PayJoin
-- [ ] [Lightning Node Connect](https://docs.lightning.engineering/lightning-network-tools/lightning-terminal/lightning-node-connect)
+- [x] [Lightning Node Connect](https://docs.lightning.engineering/lightning-network-tools/lightning-terminal/lightning-node-connect)
 
 ## Connecting Zeus to your node
 
