@@ -1,5 +1,5 @@
 import { Alert } from 'react-native';
-import { getParams as getlnurlParams, findlnurl } from 'js-lnurl';
+import { getParams as getlnurlParams, findlnurl, decodelnurl } from 'js-lnurl';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import stores from '../stores/Stores';
 import AddressUtils from './../utils/AddressUtils';
@@ -23,6 +23,10 @@ const handleAnything = async (
     const { value, amount, lightning }: any =
         AddressUtils.processSendAddress(data);
     const hasAt: boolean = value.includes('@');
+    let lnurl;
+    try {
+        lnurl = decodelnurl(data);
+    } catch (e) {}
 
     if (
         !hasAt &&
@@ -151,8 +155,8 @@ const handleAnything = async (
             .catch(() => {
                 throw new Error(error);
             });
-    } else if (findlnurl(value) !== null) {
-        const raw: string = findlnurl(value) || '';
+    } else if (findlnurl(value) !== null || lnurl !== null) {
+        const raw: string = findlnurl(value) || lnurl || '';
         return getlnurlParams(raw).then((params: any) => {
             switch (params.tag) {
                 case 'withdrawRequest':
