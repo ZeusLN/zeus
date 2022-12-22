@@ -35,11 +35,11 @@ export default class Activity extends React.Component<ActivityProps, {}> {
     invoicesListener: any;
 
     async UNSAFE_componentWillMount() {
-        const { ActivityStore, SettingsStore } = this.props;
+        const { ActivityStore } = this.props;
         const { getActivityAndFilter, resetFilters } = ActivityStore;
         await resetFilters();
         getActivityAndFilter();
-        if (SettingsStore.implementation === 'lightning-node-connect') {
+        if (RESTUtils.isLNDBased()) {
             this.subscribeEvents();
         }
     }
@@ -58,22 +58,36 @@ export default class Activity extends React.Component<ActivityProps, {}> {
     }
 
     subscribeEvents = () => {
-        const { ActivityStore } = this.props;
-        const { LncModule } = NativeModules;
-        const eventEmitter = new NativeEventEmitter(LncModule);
-        this.transactionListener = eventEmitter.addListener(
-            RESTUtils.subscribeTransactions(),
-            () => {
-                ActivityStore.updateTransactions();
-            }
-        );
+        const { ActivityStore, SettingsStore } = this.props;
+        const { implementation } = SettingsStore;
 
-        this.invoicesListener = eventEmitter.addListener(
-            RESTUtils.subscribeInvoices(),
-            () => {
-                ActivityStore.updateInvoices();
-            }
-        );
+        if (implementation === 'lightning-node-connect') {
+            const { LncModule } = NativeModules;
+            const eventEmitter = new NativeEventEmitter(LncModule);
+            this.transactionListener = eventEmitter.addListener(
+                RESTUtils.subscribeTransactions(),
+                () => {
+                    ActivityStore.updateTransactions();
+                }
+            );
+
+            this.invoicesListener = eventEmitter.addListener(
+                RESTUtils.subscribeInvoices(),
+                () => {
+                    ActivityStore.updateInvoices();
+                }
+            );
+        }
+
+        if (implementation === 'lnd') {
+            RESTUtils.subscribeTransactions().then(() =>
+                ActivityStore.updateTransactions()
+            );
+
+            RESTUtils.subscribeInvoices().then(() =>
+                ActivityStore.updateInvoices()
+            );
+        }
     };
 
     renderSeparator = () => (
