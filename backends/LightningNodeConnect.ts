@@ -3,6 +3,7 @@ import LNC, { lnrpc, walletrpc } from '@lightninglabs/lnc-rn';
 import stores from '../stores/Stores';
 import CredentialStore from './LNC/credentialStore';
 import OpenChannelRequest from './../models/OpenChannelRequest';
+import Base64Utils from './../utils/Base64Utils';
 import { snakeize } from './../utils/DataFormatUtils';
 import VersionUtils from './../utils/VersionUtils';
 
@@ -257,12 +258,18 @@ export default class LightningNodeConnect {
             .importAccount(req)
             .then((data: walletrpc.ImportAccountResponse) => snakeize(data));
     signMessage = async (message: string) =>
-        await this.lnc.lnd.signer
-            .signMessage({ msg: message })
+        await this.lnc.lnd.lightning
+            .signMessage({ msg: Base64Utils.btoa(message) })
             .then((data: lnrpc.SignMessageResponse) => snakeize(data));
     verifyMessage = async (req: lnrpc.VerifyMessageRequest) =>
-        await this.lnc.lnd.signer
-            .verifyMessage({ msg: req.msg, signature: req.signature })
+        await this.lnc.lnd.lightning
+            .verifyMessage({
+                msg:
+                    typeof req.msg === 'string'
+                        ? Base64Utils.btoa(req.msg)
+                        : req.msg,
+                signature: req.signature
+            })
             .then((data: lnrpc.VerifyMessageResponse) => snakeize(data));
     subscribeInvoice = (r_hash: string) =>
         this.lnc.lnd.invoices.subscribeSingleInvoice({ r_hash });
