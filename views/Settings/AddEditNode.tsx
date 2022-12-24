@@ -17,6 +17,7 @@ import { hash, STORAGE_KEY } from './../../backends/LNC/credentialStore';
 import AddressUtils, { CUSTODIAL_LNDHUBS } from './../../utils/AddressUtils';
 import ConnectionFormatUtils from './../../utils/ConnectionFormatUtils';
 import { localeString } from './../../utils/LocaleUtils';
+import RESTUtils from './../../utils/RESTUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import Button from './../../components/Button';
@@ -343,6 +344,9 @@ export default class AddEditNode extends React.Component<
             });
 
             if (nodes.length === 1) {
+                if (implementation === 'lightning-node-connect') {
+                    RESTUtils.disconnect();
+                }
                 setConnectingStatus(true);
                 navigation.navigate('Wallet', { refresh: true });
             } else {
