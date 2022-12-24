@@ -89,7 +89,7 @@ export default class Receive extends React.Component<
         if (lnurl) {
             this.setState({
                 memo: lnurl.defaultDescription,
-                value: Math.floor(lnurl.maxWithdrawable / 1000).toString()
+                value: (lnurl.maxWithdrawable / 1000).toString()
             });
         }
 
