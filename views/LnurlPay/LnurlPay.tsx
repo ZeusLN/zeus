@@ -74,7 +74,7 @@ export default class LnurlPay extends React.Component<
         const lnurl = navigation.getParam('lnurlParams');
         const u = url.parse(lnurl.callback);
         const qs = querystring.parse(u.query);
-        qs.amount = parseInt((parseFloat(amount) * 1000).toString());
+        qs.amount = Number((parseFloat(amount) * 1000).toString());
         qs.comment = comment;
         u.search = querystring.stringify(qs);
         u.query = querystring.stringify(qs);
