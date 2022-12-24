@@ -8,6 +8,10 @@ import { Hash as sha256Hash, HMAC as sha256HMAC } from 'fast-sha256';
 
 import Button from './../components/Button';
 import LoadingIndicator from './../components/LoadingIndicator';
+import {
+    SuccessMessage,
+    ErrorMessage
+} from './../components/SuccessErrorMessage';
 
 import { themeColor } from './../utils/ThemeUtils';
 import { localeString } from './../utils/LocaleUtils';
@@ -280,28 +284,22 @@ export default class LnurlAuth extends React.Component<
                             <LoadingIndicator />
                         )}
                         {lnurlAuthSuccess && (
-                            <Text
-                                style={{
-                                    color: 'green',
-                                    fontFamily: 'Lato-Regular'
-                                }}
-                            >
-                                {localeString('views.LnurlAuth.loginSuccess')}
-                            </Text>
+                            <SuccessMessage
+                                message={localeString(
+                                    'views.LnurlAuth.loginSuccess'
+                                )}
+                            />
                         )}
                         {!preparingSignature &&
                             !signatureSuccess &&
                             !authenticating &&
                             !lnurlAuthSuccess && (
-                                <Text
-                                    style={{
-                                        color: 'red',
-                                        fontFamily: 'Lato-Regular'
-                                    }}
-                                >
-                                    {errorMsgAuth ||
-                                        localeString('general.error')}
-                                </Text>
+                                <ErrorMessage
+                                    message={
+                                        errorMsgAuth ||
+                                        localeString('general.error')
+                                    }
+                                />
                             )}
                     </View>
                 </View>
