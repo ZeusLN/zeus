@@ -492,7 +492,9 @@ export default class Receive extends React.Component<
                                         <SuccessMessage
                                             message={
                                                 !!lnurl &&
-                                                ` ${localeString(
+                                                `${localeString(
+                                                    'views.Receive.successCreate'
+                                                )} ${localeString(
                                                     'views.Receive.andSentTo'
                                                 )} ${lnurl.domain}`
                                             }
