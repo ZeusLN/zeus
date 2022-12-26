@@ -165,12 +165,9 @@ export default class UTXOPicker extends React.Component<
                                         data={utxos}
                                         renderItem={({ item }: any) => (
                                             <ListItem
-                                                key={item.txid}
-                                                title={item.getOutpoint}
-                                                subtitle={`${item.getAmount.toString()} ${localeString(
-                                                    'views.Send.satoshis'
-                                                )}`}
                                                 containerStyle={{
+                                                    flex: 1,
+                                                    flexDirection: 'column',
                                                     borderBottomWidth: 0,
                                                     backgroundColor:
                                                         themeColor('background')
@@ -178,25 +175,39 @@ export default class UTXOPicker extends React.Component<
                                                 onPress={() =>
                                                     this.toggleItem(item)
                                                 }
-                                                titleStyle={{
-                                                    color: utxosPicked.includes(
-                                                        item.getOutpoint
-                                                    )
-                                                        ? 'orange'
-                                                        : themeColor('text')
-                                                }}
-                                                subtitleStyle={{
-                                                    color: utxosPicked.includes(
-                                                        item.getOutpoint
-                                                    )
-                                                        ? 'orange'
-                                                        : themeColor(
-                                                              'secondaryText'
-                                                          )
-                                                }}
-                                            />
+                                            >
+                                                <Text
+                                                    style={{
+                                                        alignSelf: 'flex-start',
+                                                        color: utxosPicked.includes(
+                                                            item.getOutpoint
+                                                        )
+                                                            ? 'orange'
+                                                            : themeColor('text')
+                                                    }}
+                                                >
+                                                    {item.getOutpoint}
+                                                </Text>
+                                                <Text
+                                                    style={{
+                                                        alignSelf: 'flex-start',
+                                                        color: utxosPicked.includes(
+                                                            item.getOutpoint
+                                                        )
+                                                            ? 'orange'
+                                                            : themeColor(
+                                                                  'secondaryText'
+                                                              )
+                                                    }}
+                                                >{`${item.getAmount.toString()} ${localeString(
+                                                    'views.Send.satoshis'
+                                                )}`}</Text>
+                                            </ListItem>
                                         )}
-                                        keyExtractor={(item: any) => item.txid}
+                                        keyExtractor={(
+                                            item: any,
+                                            index: number
+                                        ) => `${item.txid}-${index}`}
                                         onEndReachedThreshold={50}
                                         refreshing={loading}
                                         onRefresh={() => getUTXOs()}
