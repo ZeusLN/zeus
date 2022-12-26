@@ -47,7 +47,7 @@ export default class Payment extends BaseModel {
 
     @computed public get getMemo(): string | undefined {
         if (this.getPaymentRequest) {
-            const decoded: any = bolt11.decode(this.payment_request);
+            const decoded: any = bolt11.decode(this.getPaymentRequest);
             for (let i = 0; i < decoded.tags.length; i++) {
                 const tag = decoded.tags[i];
                 switch (tag.tagName) {
