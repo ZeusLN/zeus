@@ -11,6 +11,7 @@ import { ListItem } from 'react-native-elements';
 import remove from 'lodash/remove';
 import { inject, observer } from 'mobx-react';
 
+import Amount from './Amount';
 import Button from './../components/Button';
 
 import { localeString } from './../utils/LocaleUtils';
@@ -147,19 +148,18 @@ export default class UTXOPicker extends React.Component<
                                         )}
                                     </Text>
 
-                                    <Text
+                                    <View
                                         style={{
-                                            ...styles.text,
-                                            color: themeColor('text'),
-                                            fontSize: 20,
-                                            paddingTop: 20,
-                                            paddingBottom: 20
+                                            paddingBottom: 10
                                         }}
                                     >
-                                        {`${selectedBalance} ${localeString(
-                                            'views.Receive.satoshis'
-                                        )}`}
-                                    </Text>
+                                        <Amount
+                                            sats={selectedBalance}
+                                            sensitive={true}
+                                            toggleable
+                                            jumboText
+                                        />
+                                    </View>
 
                                     <FlatList
                                         data={utxos}
@@ -182,26 +182,31 @@ export default class UTXOPicker extends React.Component<
                                                         color: utxosPicked.includes(
                                                             item.getOutpoint
                                                         )
-                                                            ? 'orange'
+                                                            ? themeColor(
+                                                                  'highlight'
+                                                              )
                                                             : themeColor('text')
                                                     }}
                                                 >
                                                     {item.getOutpoint}
                                                 </Text>
-                                                <Text
+                                                <View
                                                     style={{
-                                                        alignSelf: 'flex-start',
-                                                        color: utxosPicked.includes(
-                                                            item.getOutpoint
-                                                        )
-                                                            ? 'orange'
-                                                            : themeColor(
-                                                                  'secondaryText'
-                                                              )
+                                                        alignSelf: 'flex-start'
                                                     }}
-                                                >{`${item.getAmount.toString()} ${localeString(
-                                                    'views.Send.satoshis'
-                                                )}`}</Text>
+                                                >
+                                                    <Amount
+                                                        sats={item.getAmount}
+                                                        sensitive={true}
+                                                        color={
+                                                            utxosPicked.includes(
+                                                                item.getOutpoint
+                                                            )
+                                                                ? 'highlight'
+                                                                : 'secondaryText'
+                                                        }
+                                                    />
+                                                </View>
                                             </ListItem>
                                         )}
                                         keyExtractor={(
