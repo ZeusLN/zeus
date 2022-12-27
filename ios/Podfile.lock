@@ -265,8 +265,6 @@ PODS:
     - React-Core
   - react-native-safe-area-context (0.6.2):
     - React
-  - react-native-secure-key-store (2.0.10):
-    - React-Core
   - react-native-tor (0.1.8):
     - React
   - react-native-udp (2.7.0):
@@ -392,7 +390,6 @@ DEPENDENCIES:
   - react-native-randombytes (from `../node_modules/react-native-randombytes`)
   - react-native-restart (from `../node_modules/react-native-restart`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
-  - react-native-secure-key-store (from `../node_modules/react-native-secure-key-store`)
   - react-native-tor (from `../node_modules/react-native-tor`)
   - react-native-udp (from `../node_modules/react-native-udp`)
   - React-perflogger (from `../node_modules/react-native/ReactCommon/reactperflogger`)
@@ -486,8 +483,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-restart"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
-  react-native-secure-key-store:
-    :path: "../node_modules/react-native-secure-key-store"
   react-native-tor:
     :path: "../node_modules/react-native-tor"
   react-native-udp:
@@ -571,7 +566,6 @@ SPEC CHECKSUMS:
   react-native-randombytes: 3638d24759d67c68f6ccba60c52a7a8a8faa6a23
   react-native-restart: 45c8dca02491980f2958595333cbccd6877cb57e
   react-native-safe-area-context: 25260c5d0b9c53fd7aa88e569e2edae72af1f6a3
-  react-native-secure-key-store: 910e6df6bc33cb790aba6ee24bc7818df1fe5898
   react-native-tor: 3b14e9160b2eb7fa3f310921b2dee71a5171e5b7
   react-native-udp: ff9d13e523f2b58e6bc5d4d32321ac60671b5dc9
   React-perflogger: 8c79399b0500a30ee8152d0f9f11beae7fc36595

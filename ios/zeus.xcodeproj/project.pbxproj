@@ -255,20 +255,6 @@
 			remoteGlobalIDString = 163CDE4E2087CAD3001065FB;
 			remoteInfo = "RNRandomBytes-tvOS";
 		};
-		971EAC8C23DCF75600DB5FB3 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 971EAC8723DCF75600DB5FB3 /* RNSecureKeyStore.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = 134814201AA4EA6300B7C361;
-			remoteInfo = RNSecureKeyStore;
-		};
-		971EAC8E23DCF75600DB5FB3 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 971EAC8723DCF75600DB5FB3 /* RNSecureKeyStore.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = 465057B52107394900FD399B;
-			remoteInfo = "RNSecureKeyStore-tvOS";
-		};
 		ADBDB9261DFEBF0700ED6528 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = ADBDB91F1DFEBF0600ED6528 /* RCTBlob.xcodeproj */;
@@ -360,7 +346,6 @@
 		8F0CAEBF09CC44E0A55DFB2A /* Coins.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Coins.svg; path = ../assets/images/SVG/Coins.svg; sourceTree = "<group>"; };
 		904B772D015A42D58EF60A9A /* Word Logo - no outline.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Word Logo - no outline.svg"; path = "../assets/images/SVG/Word Logo - no outline.svg"; sourceTree = "<group>"; };
 		970050862460D71500AA6E33 /* RNRandomBytes.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RNRandomBytes.xcodeproj; path = "../node_modules/react-native-randombytes/RNRandomBytes.xcodeproj"; sourceTree = "<group>"; };
-		971EAC8723DCF75600DB5FB3 /* RNSecureKeyStore.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RNSecureKeyStore.xcodeproj; path = "../node_modules/react-native-secure-key-store/ios/RNSecureKeyStore.xcodeproj"; sourceTree = "<group>"; };
 		97D6EB5926C47CF5002ADC8C /* ioslauncher.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = ioslauncher.png; sourceTree = "<group>"; };
 		97D9A8F5652E4AC580E97DEF /* Mempool.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Mempool.svg; path = ../assets/images/affiliates/Mempool.svg; sourceTree = "<group>"; };
 		97F6D46922054E640030F13B /* Octicons.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Octicons.ttf; sourceTree = "<group>"; };
@@ -589,7 +574,6 @@
 			isa = PBXGroup;
 			children = (
 				970050862460D71500AA6E33 /* RNRandomBytes.xcodeproj */,
-				971EAC8723DCF75600DB5FB3 /* RNSecureKeyStore.xcodeproj */,
 				5E91572D1DD0AC6500FF2AA8 /* RCTAnimation.xcodeproj */,
 				00C302A71ABCB8CE00DB3ED1 /* RCTActionSheet.xcodeproj */,
 				ADBDB91F1DFEBF0600ED6528 /* RCTBlob.xcodeproj */,
@@ -659,15 +643,6 @@
 			children = (
 				9700508C2460D71600AA6E33 /* libRNRandomBytes.a */,
 				9700508E2460D71600AA6E33 /* libRNRandomBytes-tvOS.a */,
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
-		971EAC8823DCF75600DB5FB3 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				971EAC8D23DCF75600DB5FB3 /* libRNSecureKeyStore.a */,
-				971EAC8F23DCF75600DB5FB3 /* libRNSecureKeyStore-tvOS.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -965,10 +940,6 @@
 					ProductGroup = 970050872460D71500AA6E33 /* Products */;
 					ProjectRef = 970050862460D71500AA6E33 /* RNRandomBytes.xcodeproj */;
 				},
-				{
-					ProductGroup = 971EAC8823DCF75600DB5FB3 /* Products */;
-					ProjectRef = 971EAC8723DCF75600DB5FB3 /* RNSecureKeyStore.xcodeproj */;
-				},
 			);
 			projectRoot = "";
 			targets = (
@@ -1126,20 +1097,6 @@
 			fileType = archive.ar;
 			path = "libRNRandomBytes-tvOS.a";
 			remoteRef = 9700508D2460D71600AA6E33 /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		971EAC8D23DCF75600DB5FB3 /* libRNSecureKeyStore.a */ = {
-			isa = PBXReferenceProxy;
-			fileType = archive.ar;
-			path = libRNSecureKeyStore.a;
-			remoteRef = 971EAC8C23DCF75600DB5FB3 /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		971EAC8F23DCF75600DB5FB3 /* libRNSecureKeyStore-tvOS.a */ = {
-			isa = PBXReferenceProxy;
-			fileType = archive.ar;
-			path = "libRNSecureKeyStore-tvOS.a";
-			remoteRef = 971EAC8E23DCF75600DB5FB3 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 		ADBDB9271DFEBF0700ED6528 /* libRCTBlob.a */ = {
