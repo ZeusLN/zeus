@@ -42,7 +42,7 @@ export default class DropdownSetting extends React.Component<
         return (
             <React.Fragment>
                 {Platform.OS === 'android' && (
-                    <View style={{ height: 75 }}>
+                    <View>
                         <Text
                             style={{
                                 ...styles.secondaryText,
@@ -57,8 +57,11 @@ export default class DropdownSetting extends React.Component<
                                 onValueChange(itemValue)
                             }
                             style={{
-                                color: themeColor('text')
+                                color: themeColor('text'),
+                                backgroundColor: themeColor('secondary'),
+                                ...styles.field
                             }}
+                            dropdownIconColor={themeColor('text')}
                         >
                             {pickerValuesAndroid}
                         </Picker>
