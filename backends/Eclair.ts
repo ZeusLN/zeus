@@ -471,6 +471,7 @@ export default class Eclair {
 
     supportsMessageSigning = () => true;
     supportsOnchainSends = () => true;
+    supportsOnchainReceiving = () => true;
     supportsKeysend = () => false;
     supportsChannelManagement = () => true;
     supportsMPP = () => false;

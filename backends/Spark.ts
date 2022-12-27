@@ -308,15 +308,16 @@ export default class Spark {
 
     supportsMessageSigning = () => false;
     supportsOnchainSends = () => true;
+    supportsOnchainReceiving = () => true;
     supportsKeysend = () => false;
     supportsChannelManagement = () => true;
     supportsMPP = () => false;
     supportsAMP = () => false;
     supportsCoinControl = () => false;
     supportsHopPicking = () => false;
+    supportsAccounts = () => false;
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
-    supportsAccounts = () => false;
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => false;
     supportsTaproot = () => false;
