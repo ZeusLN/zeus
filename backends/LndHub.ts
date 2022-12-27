@@ -1,5 +1,7 @@
 import bolt11 from 'bolt11';
 
+import stores from '../stores/Stores';
+
 import LND from './LND';
 import LoginRequest from './../models/LoginRequest';
 
@@ -69,12 +71,18 @@ export default class LndHub extends LND {
 
     supportsMessageSigning = () => false;
     supportsOnchainSends = () => false;
+    supportsOnchainReceiving = () =>
+        !(
+            stores.settingsStore.lndhubUrl.includes('lnbank/api/lndhub') ||
+            stores.settingsStore.lndhubUrl.includes('lntxbot')
+        );
     supportsKeysend = () => false;
     supportsChannelManagement = () => false;
     supportsMPP = () => false;
     supportsAMP = () => false;
     supportsCoinControl = () => false;
     supportsHopPicking = () => false;
+    supportsAccounts = () => false;
     supportsRouting = () => false;
     supportsNodeInfo = () => false;
     singleFeesEarnedTotal = () => false;

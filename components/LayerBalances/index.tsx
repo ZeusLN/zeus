@@ -11,8 +11,8 @@ import LightningSwipeableRow from './LightningSwipeableRow';
 
 import BalanceStore from './../../stores/BalanceStore';
 import UnitsStore from './../../stores/UnitsStore';
-import SettingsStore from '../../stores/SettingsStore';
 
+import RESTUtils from '../../utils/RESTUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
@@ -20,7 +20,6 @@ import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
 
 interface LayerBalancesProps {
     BalanceStore: BalanceStore;
-    SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
     navigation: any;
     onRefresh?: any;
@@ -94,7 +93,6 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
     render() {
         const {
             BalanceStore,
-            SettingsStore,
             navigation,
             value,
             amount,
@@ -106,13 +104,8 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
 
         let DATA: DataRow[];
 
-        const { implementation, lndhubUrl } = SettingsStore;
-
         // hide on-chain balance for Lnbank accounts
-        if (
-            implementation === 'lndhub' &&
-            lndhubUrl.includes('lnbank/api/lndhub')
-        ) {
+        if (!RESTUtils.supportsOnchainReceiving()) {
             DATA = [
                 {
                     layer: 'Lightning',

@@ -279,15 +279,16 @@ export default class LightningNodeConnect {
 
     supportsMessageSigning = () => true;
     supportsOnchainSends = () => true;
+    supportsOnchainReceiving = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
     supportsMPP = () => this.supports('v0.10.0');
     supportsAMP = () => this.supports('v0.13.0');
+    supportsCoinControl = () => this.supports('v0.12.0');
     supportsHopPicking = () => this.supports('v0.11.0');
+    supportsAccounts = () => this.supports('v0.13.0');
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
-    supportsCoinControl = () => this.supports('v0.12.0');
-    supportsAccounts = () => this.supports('v0.13.0');
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => true;
     supportsTaproot = () => this.supports('v0.15.0');
