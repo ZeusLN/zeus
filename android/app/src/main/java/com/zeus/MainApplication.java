@@ -16,8 +16,6 @@ import com.facebook.react.ReactNativeHost;
 import com.facebook.react.ReactPackage;
 import android.content.Context;
 
-import com.reactlibrary.securekeystore.RNSecureKeyStorePackage;
-
 import com.facebook.soloader.SoLoader;
 
 import java.lang.reflect.InvocationTargetException;

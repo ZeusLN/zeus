@@ -80,7 +80,7 @@ export default class Privacy extends React.Component<
             lurkerMode,
             enableMempoolRates
         } = this.state;
-        const { setSettings, getSettings, loading }: any = SettingsStore;
+        const { updateSettings, loading }: any = SettingsStore;
 
         const BackButton = () => (
             <Icon
@@ -131,48 +131,15 @@ export default class Privacy extends React.Component<
                                 this.setState({
                                     defaultBlockExplorer: value
                                 });
-                                const settings = await getSettings();
-                                await setSettings(
-                                    JSON.stringify(
-                                        settings
-                                            ? {
-                                                  nodes: settings.nodes,
-                                                  theme: settings.theme,
-                                                  selectedNode:
-                                                      settings.selectedNode,
-                                                  fiat: settings.fiat,
-                                                  passphrase:
-                                                      settings.passphrase,
-                                                  duressPassphrase:
-                                                      settings.duressPassphrase,
-                                                  pin: settings.pin,
-                                                  duressPin: settings.duressPin,
-                                                  scramblePin:
-                                                      settings.scramblePin,
-                                                  authenticationAttempts:
-                                                      settings.authenticationAttempts,
-                                                  locale: settings.locale,
-                                                  privacy: {
-                                                      defaultBlockExplorer:
-                                                          value,
-                                                      customBlockExplorer,
-                                                      clipboard,
-                                                      lurkerMode,
-                                                      enableMempoolRates
-                                                  }
-                                              }
-                                            : {
-                                                  privacy: {
-                                                      defaultBlockExplorer:
-                                                          value,
-                                                      customBlockExplorer,
-                                                      clipboard,
-                                                      lurkerMode,
-                                                      enableMempoolRates
-                                                  }
-                                              }
-                                    )
-                                );
+                                await updateSettings({
+                                    privacy: {
+                                        defaultBlockExplorer: value,
+                                        customBlockExplorer,
+                                        clipboard,
+                                        lurkerMode,
+                                        enableMempoolRates
+                                    }
+                                });
                             }}
                             values={BLOCK_EXPLORER_KEYS}
                         />
@@ -196,49 +163,15 @@ export default class Privacy extends React.Component<
                                             customBlockExplorer: text
                                         });
 
-                                        const settings = await getSettings();
-                                        await setSettings(
-                                            JSON.stringify(
-                                                settings
-                                                    ? {
-                                                          nodes: settings.nodes,
-                                                          theme: settings.theme,
-                                                          selectedNode:
-                                                              settings.selectedNode,
-                                                          fiat: settings.fiat,
-                                                          passphrase:
-                                                              settings.passphrase,
-                                                          duressPassphrase:
-                                                              settings.duressPassphrase,
-                                                          pin: settings.pin,
-                                                          duressPin:
-                                                              settings.duressPin,
-                                                          scramblePin:
-                                                              settings.scramblePin,
-                                                          authenticationAttempts:
-                                                              settings.authenticationAttempts,
-                                                          locale: settings.locale,
-                                                          privacy: {
-                                                              defaultBlockExplorer,
-                                                              customBlockExplorer:
-                                                                  text,
-                                                              clipboard,
-                                                              lurkerMode,
-                                                              enableMempoolRates
-                                                          }
-                                                      }
-                                                    : {
-                                                          privacy: {
-                                                              defaultBlockExplorer,
-                                                              customBlockExplorer:
-                                                                  text,
-                                                              clipboard,
-                                                              lurkerMode,
-                                                              enableMempoolRates
-                                                          }
-                                                      }
-                                            )
-                                        );
+                                        await updateSettings({
+                                            privacy: {
+                                                defaultBlockExplorer,
+                                                customBlockExplorer: text,
+                                                clipboard,
+                                                lurkerMode,
+                                                enableMempoolRates
+                                            }
+                                        });
                                     }}
                                 />
                             </>
@@ -274,49 +207,15 @@ export default class Privacy extends React.Component<
                                         this.setState({
                                             clipboard: !clipboard
                                         });
-                                        const settings = await getSettings();
-                                        await setSettings(
-                                            JSON.stringify(
-                                                settings
-                                                    ? {
-                                                          nodes: settings.nodes,
-                                                          theme: settings.theme,
-                                                          selectedNode:
-                                                              settings.selectedNode,
-                                                          fiat: settings.fiat,
-                                                          passphrase:
-                                                              settings.passphrase,
-                                                          duressPassphrase:
-                                                              settings.duressPassphrase,
-                                                          pin: settings.pin,
-                                                          duressPin:
-                                                              settings.duressPin,
-                                                          scramblePin:
-                                                              settings.scramblePin,
-                                                          authenticationAttempts:
-                                                              settings.authenticationAttempts,
-                                                          locale: settings.locale,
-                                                          privacy: {
-                                                              defaultBlockExplorer,
-                                                              customBlockExplorer,
-                                                              clipboard:
-                                                                  !clipboard,
-                                                              lurkerMode,
-                                                              enableMempoolRates
-                                                          }
-                                                      }
-                                                    : {
-                                                          privacy: {
-                                                              defaultBlockExplorer,
-                                                              customBlockExplorer,
-                                                              clipboard:
-                                                                  !clipboard,
-                                                              lurkerMode,
-                                                              enableMempoolRates
-                                                          }
-                                                      }
-                                            )
-                                        );
+                                        await updateSettings({
+                                            privacy: {
+                                                defaultBlockExplorer,
+                                                customBlockExplorer,
+                                                clipboard: !clipboard,
+                                                lurkerMode,
+                                                enableMempoolRates
+                                            }
+                                        });
                                     }}
                                     trackColor={{
                                         false: '#767577',
@@ -355,49 +254,15 @@ export default class Privacy extends React.Component<
                                         this.setState({
                                             lurkerMode: !lurkerMode
                                         });
-                                        const settings = await getSettings();
-                                        await setSettings(
-                                            JSON.stringify(
-                                                settings
-                                                    ? {
-                                                          nodes: settings.nodes,
-                                                          theme: settings.theme,
-                                                          selectedNode:
-                                                              settings.selectedNode,
-                                                          fiat: settings.fiat,
-                                                          passphrase:
-                                                              settings.passphrase,
-                                                          duressPassphrase:
-                                                              settings.duressPassphrase,
-                                                          pin: settings.pin,
-                                                          duressPin:
-                                                              settings.duressPin,
-                                                          scramblePin:
-                                                              settings.scramblePin,
-                                                          authenticationAttempts:
-                                                              settings.authenticationAttempts,
-                                                          locale: settings.locale,
-                                                          privacy: {
-                                                              defaultBlockExplorer,
-                                                              customBlockExplorer,
-                                                              clipboard,
-                                                              lurkerMode:
-                                                                  !lurkerMode,
-                                                              enableMempoolRates
-                                                          }
-                                                      }
-                                                    : {
-                                                          privacy: {
-                                                              defaultBlockExplorer,
-                                                              customBlockExplorer,
-                                                              clipboard,
-                                                              lurkerMode:
-                                                                  !lurkerMode,
-                                                              enableMempoolRates
-                                                          }
-                                                      }
-                                            )
-                                        );
+                                        await updateSettings({
+                                            privacy: {
+                                                defaultBlockExplorer,
+                                                customBlockExplorer,
+                                                clipboard,
+                                                lurkerMode: !lurkerMode,
+                                                enableMempoolRates
+                                            }
+                                        });
                                     }}
                                     trackColor={{
                                         false: '#767577',
@@ -437,49 +302,16 @@ export default class Privacy extends React.Component<
                                             enableMempoolRates:
                                                 !enableMempoolRates
                                         });
-                                        const settings = await getSettings();
-                                        await setSettings(
-                                            JSON.stringify(
-                                                settings
-                                                    ? {
-                                                          nodes: settings.nodes,
-                                                          theme: settings.theme,
-                                                          selectedNode:
-                                                              settings.selectedNode,
-                                                          fiat: settings.fiat,
-                                                          passphrase:
-                                                              settings.passphrase,
-                                                          duressPassphrase:
-                                                              settings.duressPassphrase,
-                                                          pin: settings.pin,
-                                                          duressPin:
-                                                              settings.duressPin,
-                                                          scramblePin:
-                                                              settings.scramblePin,
-                                                          authenticationAttempts:
-                                                              settings.authenticationAttempts,
-                                                          locale: settings.locale,
-                                                          privacy: {
-                                                              defaultBlockExplorer,
-                                                              customBlockExplorer,
-                                                              clipboard,
-                                                              lurkerMode,
-                                                              enableMempoolRates:
-                                                                  !enableMempoolRates
-                                                          }
-                                                      }
-                                                    : {
-                                                          privacy: {
-                                                              defaultBlockExplorer,
-                                                              customBlockExplorer,
-                                                              clipboard,
-                                                              lurkerMode,
-                                                              enableMempoolRates:
-                                                                  !enableMempoolRates
-                                                          }
-                                                      }
-                                            )
-                                        );
+                                        await updateSettings({
+                                            privacy: {
+                                                defaultBlockExplorer,
+                                                customBlockExplorer,
+                                                clipboard,
+                                                lurkerMode,
+                                                enableMempoolRates:
+                                                    !enableMempoolRates
+                                            }
+                                        });
                                     }}
                                     trackColor={{
                                         false: '#767577',

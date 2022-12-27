@@ -71,7 +71,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         const { navigation, BalanceStore, SettingsStore } = this.props;
         const { loading, nodes } = this.state;
         const {
-            setSettings,
+            updateSettings,
             settings,
             setConnectingStatus,
             implementation
@@ -143,25 +143,10 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                     onPress={async () => {
                                         const currentImplementation =
                                             implementation;
-                                        await setSettings(
-                                            JSON.stringify({
-                                                nodes,
-                                                theme: settings.theme,
-                                                selectedNode: index,
-                                                fiat: settings.fiat,
-                                                locale: settings.locale,
-                                                passphrase: settings.passphrase,
-                                                duressPassphrase:
-                                                    settings.duressPassphrase,
-                                                pin: settings.pin,
-                                                duressPin: settings.duressPin,
-                                                scramblePin:
-                                                    settings.scramblePin,
-                                                authenticationAttempts:
-                                                    settings.authenticationAttempts,
-                                                privacy: settings.privacy
-                                            })
-                                        ).then(() => {
+                                        await updateSettings({
+                                            nodes,
+                                            selectedNode: index
+                                        }).then(() => {
                                             if (
                                                 currentImplementation ===
                                                 'lightning-node-connect'

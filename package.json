@@ -82,7 +82,6 @@
     "react-native-restart": "0.0.24",
     "react-native-safe-area-context": "0.6.2",
     "react-native-screens": "3.10.1",
-    "react-native-secure-key-store": "2.0.10",
     "react-native-snap-carousel": "meliorence/react-native-snap-carousel#962/head",
     "react-native-svg": "13.6.0",
     "react-native-svg-transformer": "1.0.0",
