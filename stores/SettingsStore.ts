@@ -155,6 +155,9 @@ export const THEME_KEYS = [
 export const DEFAULT_THEME = 'dark';
 export const DEFAULT_FIAT = 'Disabled';
 export const DEFAULT_LOCALE = 'English';
+
+const STORAGE_KEY = 'zeus-settings';
+
 export default class SettingsStore {
     @observable settings: Settings = {
         privacy: {
@@ -334,7 +337,7 @@ export default class SettingsStore {
         try {
             // Retrieve the credentials
             const credentials: any = await EncryptedStorage.getItem(
-                'zeus-settings'
+                STORAGE_KEY
             );
             if (credentials) {
                 this.settings = JSON.parse(credentials);
@@ -373,7 +376,7 @@ export default class SettingsStore {
     @action
     public async setSettings(settings: string) {
         this.loading = true;
-        await EncryptedStorage.setItem('zeus-settings', settings);
+        await EncryptedStorage.setItem(STORAGE_KEY, settings);
         this.loading = false;
         return settings;
     }
