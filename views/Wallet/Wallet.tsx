@@ -374,10 +374,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     {!connecting && !loginRequired && (
                         <NavigationContainer theme={Theme}>
                             <Tab.Navigator
-                                initialRouteName="Default"
+                                initialRouteName={
+                                    (settings.display &&
+                                        settings.display.defaultView) ||
+                                    'Keypad'
+                                }
                                 screenOptions={({ route }) => ({
                                     tabBarIcon: ({ color }) => {
-                                        if (route.name === 'Default') {
+                                        if (route.name === 'Keypad') {
                                             return <Bitcoin fill={color} />;
                                         }
                                         if (route.name === 'Wallet') {
@@ -410,7 +414,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 />
                                 {!error ? (
                                     <Tab.Screen
-                                        name="Default"
+                                        name="Keypad"
                                         component={DefaultScreen}
                                     />
                                 ) : (
