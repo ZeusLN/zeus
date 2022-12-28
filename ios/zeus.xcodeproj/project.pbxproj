@@ -50,6 +50,7 @@
 		659C049013BD4A618AA4275C /* Temple.svg in Resources */ = {isa = PBXBuildFile; fileRef = 259ED6E1C36A4BB38A5BFB8B /* Temple.svg */; };
 		692A2B7E895144DDB6D5813C /* PeersContact.svg in Resources */ = {isa = PBXBuildFile; fileRef = 299B155651FE4C3CB3D558D1 /* PeersContact.svg */; };
 		6ACB3216EC1B40A190B0A268 /* Channels.svg in Resources */ = {isa = PBXBuildFile; fileRef = 289689C09C974491A933737A /* Channels.svg */; };
+		745E06AA295CB0E500597EE8 /* Caret Down.svg in Resources */ = {isa = PBXBuildFile; fileRef = 745E06A9295CB0E500597EE8 /* Caret Down.svg */; };
 		748582B6293A4E8300494AD8 /* Lncmobile.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 748582B5293A4E8300494AD8 /* Lncmobile.xcframework */; };
 		78FB5414F55B4D94804920B7 /* Caret Right-1.svg in Resources */ = {isa = PBXBuildFile; fileRef = 34845404A9F04B35ADA34F80 /* Caret Right-1.svg */; };
 		7C9A1A0DC41A4B56BC555750 /* Node On.svg in Resources */ = {isa = PBXBuildFile; fileRef = 62458EE70D8546B7AE7F87DF /* Node On.svg */; };
@@ -344,6 +345,7 @@
 		6F7490ECB1F7403FB5236410 /* FontAwesome5_Solid.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome5_Solid.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome5_Solid.ttf"; sourceTree = "<group>"; };
 		7407D2CD274E076D00850BAB /* zeus.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = zeus.entitlements; path = zeus/zeus.entitlements; sourceTree = "<group>"; };
 		7407D2CE274E079100850BAB /* zeusRelease.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = zeusRelease.entitlements; path = zeus/zeusRelease.entitlements; sourceTree = "<group>"; };
+		745E06A9295CB0E500597EE8 /* Caret Down.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = "Caret Down.svg"; path = "../assets/images/SVG/Caret Down.svg"; sourceTree = "<group>"; };
 		748582B5293A4E8300494AD8 /* Lncmobile.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = Lncmobile.xcframework; path = "../node_modules/@lightninglabs/lnc-rn/ios/Lncmobile.xcframework"; sourceTree = "<group>"; };
 		77EC666A91C04742A050DEF4 /* Help Icon.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Help Icon.svg"; path = "../assets/images/SVG/Help Icon.svg"; sourceTree = "<group>"; };
 		78C398B01ACF4ADC00677621 /* RCTLinking.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTLinking.xcodeproj; path = "../node_modules/react-native/Libraries/LinkingIOS/RCTLinking.xcodeproj"; sourceTree = "<group>"; };
@@ -746,6 +748,7 @@
 				C8B74E7F5FE74AB1B75DD331 /* Backspace.svg */,
 				291FF6091426421DB569BEC4 /* Bitcoin.svg */,
 				5CC0E65B8E6447A38BD1EE91 /* Brush.svg */,
+				745E06A9295CB0E500597EE8 /* Caret Down.svg */,
 				571E23F345EB49B99F8150D2 /* Caret Left.svg */,
 				34845404A9F04B35ADA34F80 /* Caret Right-1.svg */,
 				FB2BF1C8E61649A58A6E1A61 /* Caret Right-3.svg */,
@@ -1214,6 +1217,7 @@
 				BFEB12685B664218922995B1 /* Scan.svg in Resources */,
 				A79D6320396A4D6AA420E33C /* Send.svg in Resources */,
 				0EB04476647C460EA1358028 /* Switch.svg in Resources */,
+				745E06AA295CB0E500597EE8 /* Caret Down.svg in Resources */,
 				659C049013BD4A618AA4275C /* Temple.svg in Resources */,
 				F6BA97FE98FB4D8890855BEC /* Wallet.svg in Resources */,
 				395880B8BA0647E3908DBD6A /* Wallet2.svg in Resources */,
