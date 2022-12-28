@@ -184,7 +184,7 @@ export default class Security extends React.Component<
             passphraseExists,
             loginBackground
         } = this.state;
-        const { setSettings, getSettings } = SettingsStore;
+        const { updateSettings } = SettingsStore;
 
         const BackButton = () => (
             <Icon
@@ -246,25 +246,7 @@ export default class Security extends React.Component<
                                 this.setState({
                                     scramblePin: !scramblePin
                                 });
-                                const settings = await getSettings();
-                                setSettings(
-                                    JSON.stringify({
-                                        nodes: settings.nodes,
-                                        theme: settings.theme,
-                                        selectedNode: settings.selectedNode,
-                                        fiat: settings.fiat,
-                                        passphrase: settings.passphrase,
-                                        duressPassphrase:
-                                            settings.duressPassphrase,
-                                        pin: settings.pin,
-                                        duressPin: settings.duressPin,
-                                        scramblePin: !scramblePin,
-                                        authenticationAttempts:
-                                            settings.authenticationAttempts,
-                                        locale: settings.locale,
-                                        privacy: settings.privacy
-                                    })
-                                );
+                                updateSettings({ scramblePin: !scramblePin });
                             }}
                             trackColor={{
                                 false: '#767577',
@@ -300,26 +282,9 @@ export default class Security extends React.Component<
                                 this.setState({
                                     loginBackground: !loginBackground
                                 });
-                                const settings = await getSettings();
-                                setSettings(
-                                    JSON.stringify({
-                                        nodes: settings.nodes,
-                                        theme: settings.theme,
-                                        selectedNode: settings.selectedNode,
-                                        fiat: settings.fiat,
-                                        passphrase: settings.passphrase,
-                                        duressPassphrase:
-                                            settings.duressPassphrase,
-                                        pin: settings.pin,
-                                        duressPin: settings.duressPin,
-                                        scramblePin: settings.scramblePin,
-                                        authenticationAttempts:
-                                            settings.authenticationAttempts,
-                                        locale: settings.locale,
-                                        privacy: settings.privacy,
-                                        loginBackground: !loginBackground
-                                    })
-                                );
+                                updateSettings({
+                                    loginBackground: !loginBackground
+                                });
                             }}
                             trackColor={{
                                 false: '#767577',
