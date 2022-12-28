@@ -444,7 +444,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                 >
                     <TouchableOpacity
                         style={styles.columnField}
-                        onPress={() => navigation.navigate('Theme')}
+                        onPress={() => navigation.navigate('Display')}
                     >
                         <View style={{ paddingLeft: 5, paddingTop: 2 }}>
                             <BrushIcon
@@ -458,7 +458,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                 color: themeColor('text')
                             }}
                         >
-                            {localeString('views.Settings.Theme.title')}
+                            {localeString('views.Settings.Display.title')}
                         </Text>
                         <View style={styles.ForwardArrow}>
                             <ForwardIcon />
