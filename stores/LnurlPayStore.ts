@@ -1,6 +1,6 @@
 import { action } from 'mobx';
 import { LNURLPaySuccessAction } from 'js-lnurl';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import EncryptedStorage from 'react-native-encrypted-storage';
 import SettingsStore from './SettingsStore';
 import NodeInfoStore from './NodeInfoStore';
 
@@ -11,21 +11,12 @@ export interface LnurlPayTransaction {
     metadata_hash: string;
     successAction: LNURLPaySuccessAction;
     time: number;
-    metadata?: Metadata; // only after an independent load from AsyncStorage.
+    metadata?: Metadata; // only after an independent load from EncryptedStorage.
 }
 
 interface Metadata {
     metadata: string;
 }
-
-// interface LnurlPaySuccessAction {
-//     tag: string;
-//     description?: string;
-//     url: string;
-//     message: string;
-//     iv: string;
-//     ciphertext: string;
-// }
 
 interface LnurlPayMetadataEntry {
     metadata: string;
@@ -42,44 +33,16 @@ export default class LnurlPayStore {
     constructor(settingsStore: SettingsStore, nodeInfoStore: NodeInfoStore) {
         this.settingsStore = settingsStore;
         this.nodeInfoStore = nodeInfoStore;
-
-        if (Math.random() < 0.1) {
-            setTimeout(() => {
-                this.deleteOld();
-            }, 100000);
-        }
     }
-
-    deleteOld = async () => {
-        // delete all lnurlpay keys older than 30 days
-        const daysago30 = new Date().getTime() - 1000 * 60 * 60 * 24 * 30;
-        const allKeys = await AsyncStorage.getAllKeys();
-        const toRemove = [];
-        for (let i = 0; i < allKeys.length; i++) {
-            const key = allKeys[i];
-            if (key.slice(0, 9) === 'lnurlpay:') {
-                const itemString = await AsyncStorage.getItem(key);
-                const item = JSON.parse(itemString || '');
-                if (
-                    (item.last_stored && item.last_stored < daysago30) ||
-                    (item.time && item.time < daysago30)
-                ) {
-                    toRemove.push(key);
-                }
-            }
-        }
-
-        AsyncStorage.multiRemove(toRemove);
-    };
 
     @action
     public load = async (paymentHash: string): Promise<LnurlPayTransaction> => {
-        let lnurlpaytx: any = await AsyncStorage.getItem(
+        let lnurlpaytx: any = await EncryptedStorage.getItem(
             'lnurlpay:' + paymentHash
         );
         if (lnurlpaytx) {
             lnurlpaytx = JSON.parse(lnurlpaytx);
-            const metadata: any = await AsyncStorage.getItem(
+            const metadata: any = await EncryptedStorage.getItem(
                 'lnurlpay:' + lnurlpaytx.metadata_hash
             );
             if (metadata) {
@@ -91,7 +54,7 @@ export default class LnurlPayStore {
     };
 
     @action
-    public keep = (
+    public keep = async (
         paymentHash: string,
         domain: string,
         lnurl: string,
@@ -115,10 +78,14 @@ export default class LnurlPayStore {
             last_stored: now
         };
 
-        AsyncStorage.multiSet([
-            ['lnurlpay:' + paymentHash, JSON.stringify(transactionData)],
-            ['lnurlpay:' + descriptionHash, JSON.stringify(metadataEntry)]
-        ]);
+        await EncryptedStorage.setItem(
+            'lnurlpay:' + paymentHash,
+            JSON.stringify(transactionData)
+        );
+        await EncryptedStorage.setItem(
+            'lnurlpay:' + descriptionHash,
+            JSON.stringify(metadataEntry)
+        );
 
         this.paymentHash = paymentHash;
         this.successAction = successAction;
