@@ -1271,13 +1271,6 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
-"@react-native-async-storage/async-storage@1.15.17":
-  version "1.15.17"
-  resolved "https://registry.npmjs.org/@react-native-async-storage/async-storage/-/async-storage-1.15.17.tgz"
-  integrity sha512-NQCFs47aFEch9kya/bqwdpvSdZaVRtzU7YB02L8VrmLSLpKgQH/1VwzFUBPcc1/JI1s3GU4yOLVrEbwxq+Fqcw==
-  dependencies:
-    merge-options "^3.0.4"
-
 "@react-native-clipboard/clipboard@1.9.0":
   version "1.9.0"
   resolved "https://registry.npmjs.org/@react-native-clipboard/clipboard/-/clipboard-1.9.0.tgz"
@@ -5163,11 +5156,6 @@ is-object@~0.1.2:
   resolved "https://registry.npmjs.org/is-object/-/is-object-0.1.2.tgz"
   integrity sha1-AO+8CIFsM8/ErIJR0TLhDcZQmNc=
 
-is-plain-obj@^2.1.0:
-  version "2.1.0"
-  resolved "https://registry.npmjs.org/is-plain-obj/-/is-plain-obj-2.1.0.tgz"
-  integrity sha512-YWnfyRwxL/+SsrWYfOpUtz5b3YD+nyfkHvjbcanzk8zgyO4ASD67uVMRt8k5bM4lLMDnXfriRhOpemw+NfT1eA==
-
 is-plain-object@^2.0.3, is-plain-object@^2.0.4:
   version "2.0.4"
   resolved "https://registry.npmjs.org/is-plain-object/-/is-plain-object-2.0.4.tgz"
@@ -6340,13 +6328,6 @@ memoize-one@^5.0.0:
   version "5.2.1"
   resolved "https://registry.yarnpkg.com/memoize-one/-/memoize-one-5.2.1.tgz#8337aa3c4335581839ec01c3d594090cebe8f00e"
   integrity sha512-zYiwtZUcYyXKo/np96AGZAckk+FWWsUdJ3cHGGmld7+AhvcWmQyGCYUh1hc4Q/pkOhb65dQR/pqCyK0cOaHz4Q==
-
-merge-options@^3.0.4:
-  version "3.0.4"
-  resolved "https://registry.npmjs.org/merge-options/-/merge-options-3.0.4.tgz"
-  integrity sha512-2Sug1+knBjkaMsMgf1ctR1Ujx+Ayku4EdJN4Z+C2+JzoeF7A3OZ9KM2GY0CpQS51NR61LTurMJrRKPhSs3ZRTQ==
-  dependencies:
-    is-plain-obj "^2.1.0"
 
 merge-stream@^2.0.0:
   version "2.0.0"
@@ -7753,11 +7734,6 @@ react-native-screens@3.10.1:
   dependencies:
     react-freeze "^1.0.0"
     warn-once "^0.1.0"
-
-react-native-secure-key-store@2.0.10:
-  version "2.0.10"
-  resolved "https://registry.yarnpkg.com/react-native-secure-key-store/-/react-native-secure-key-store-2.0.10.tgz#a5050075d4381991d83812ee09993a5dfffcf66e"
-  integrity sha512-K7aVlIGxyklnjhCidVexVgZF3LsgUD9GIxMy2NB/xkQsS9E2SJWkD/fJ56e25L2I6a9Mp1zuJrKnCtfBs1CvAw==
 
 react-native-size-matters@^0.3.1:
   version "0.3.1"

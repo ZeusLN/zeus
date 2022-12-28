@@ -1,4 +1,4 @@
-import RNSecureKeyStore, { ACCESSIBLE } from 'react-native-secure-key-store';
+import EncryptedStorage from 'react-native-encrypted-storage';
 import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
@@ -155,6 +155,9 @@ export const THEME_KEYS = [
 export const DEFAULT_THEME = 'dark';
 export const DEFAULT_FIAT = 'Disabled';
 export const DEFAULT_LOCALE = 'English';
+
+const STORAGE_KEY = 'zeus-settings';
+
 export default class SettingsStore {
     @observable settings: Settings = {
         privacy: {
@@ -333,8 +336,8 @@ export default class SettingsStore {
         this.loading = true;
         try {
             // Retrieve the credentials
-            const credentials: any = await RNSecureKeyStore.get(
-                'zeus-settings'
+            const credentials: any = await EncryptedStorage.getItem(
+                STORAGE_KEY
             );
             if (credentials) {
                 this.settings = JSON.parse(credentials);
@@ -373,15 +376,21 @@ export default class SettingsStore {
     @action
     public async setSettings(settings: string) {
         this.loading = true;
-
-        // Store the credentials
-        await RNSecureKeyStore.set('zeus-settings', settings, {
-            accessible: ACCESSIBLE.WHEN_UNLOCKED
-        }).then(() => {
-            this.loading = false;
-            return settings;
-        });
+        await EncryptedStorage.setItem(STORAGE_KEY, settings);
+        this.loading = false;
+        return settings;
     }
+
+    @action
+    public updateSettings = async (newSetting: any) => {
+        const newSettings = {
+            ...this.settings,
+            ...newSetting
+        };
+
+        await this.setSettings(JSON.stringify(newSettings));
+        return newSettings;
+    };
 
     // LNDHub
     @action

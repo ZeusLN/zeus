@@ -61,7 +61,7 @@ export default class Language extends React.Component<
     render() {
         const { navigation, SettingsStore } = this.props;
         const { locales, selectedLocale, search } = this.state;
-        const { setSettings, getSettings }: any = SettingsStore;
+        const { updateSettings }: any = SettingsStore;
 
         const BackButton = () => (
             <Icon
@@ -118,33 +118,9 @@ export default class Language extends React.Component<
                                     backgroundColor: themeColor('background')
                                 }}
                                 onPress={async () => {
-                                    const settings = await getSettings();
-                                    await setSettings(
-                                        JSON.stringify(
-                                            settings
-                                                ? {
-                                                      nodes: settings.nodes,
-                                                      theme: settings.theme,
-                                                      selectedNode:
-                                                          settings.selectedNode,
-                                                      fiat: settings.fiat,
-                                                      passphrase:
-                                                          settings.passphrase,
-                                                      duressPassphrase:
-                                                          settings.duressPassphrase,
-                                                      pin: settings.pin,
-                                                      duressPin:
-                                                          settings.duressPin,
-                                                      scramblePin:
-                                                          settings.scramblePin,
-                                                      authenticationAttempts:
-                                                          settings.authenticationAttempts,
-                                                      locale: item.value,
-                                                      privacy: settings.privacy
-                                                  }
-                                                : { locale: item.value }
-                                        )
-                                    ).then(() => {
+                                    await updateSettings({
+                                        locale: item.value
+                                    }).then(() => {
                                         navigation.goBack();
                                     });
                                 }}

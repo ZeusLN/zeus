@@ -60,7 +60,7 @@ export default class SetDuressPassphrase extends React.Component<
     saveSettings = async () => {
         const { SettingsStore, navigation } = this.props;
         const { duressPassphrase, duressPassphraseConfirm } = this.state;
-        const { getSettings, setSettings } = SettingsStore;
+        const { getSettings, updateSettings } = SettingsStore;
 
         if (duressPassphrase !== duressPassphraseConfirm) {
             this.setState({
@@ -80,24 +80,7 @@ export default class SetDuressPassphrase extends React.Component<
             return;
         }
 
-        await setSettings(
-            JSON.stringify(
-                settings
-                    ? {
-                          nodes: settings.nodes,
-                          theme: settings.theme,
-                          selectedNode: settings.selectedNode,
-                          fiat: settings.fiat,
-                          locale: settings.locale,
-                          privacy: settings.privacy,
-                          authenticationAttempts:
-                              settings.authenticationAttempts,
-                          passphrase: settings.passphrase,
-                          duressPassphrase
-                      }
-                    : { duressPassphrase }
-            )
-        ).then(() => {
+        await updateSettings({ duressPassphrase }).then(() => {
             getSettings();
             navigation.navigate('Settings', {
                 refresh: true
@@ -107,23 +90,9 @@ export default class SetDuressPassphrase extends React.Component<
 
     deleteDuressPassword = async () => {
         const { SettingsStore, navigation } = this.props;
-        const { getSettings, setSettings } = SettingsStore;
+        const { updateSettings } = SettingsStore;
 
-        const settings = await getSettings();
-
-        await setSettings(
-            JSON.stringify({
-                nodes: settings.nodes,
-                theme: settings.theme,
-                selectedNode: settings.selectedNode,
-                fiat: settings.fiat,
-                locale: settings.locale,
-                privacy: settings.privacy,
-                authenticationAttempts: settings.authenticationAttempts,
-                duressPassphrase: '',
-                passphrase: settings.passphrase
-            })
-        ).then(() => {
+        await updateSettings({ duressPassphrase: '' }).then(() => {
             navigation.navigate('Settings', {
                 refresh: true
             });
