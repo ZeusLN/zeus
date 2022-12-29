@@ -33,8 +33,7 @@ export default class PaymentsStore {
         this.loading = true;
         await RESTUtils.getPayments()
             .then((data: any) => {
-                const payments =
-                    data.transaction || data.payments || data.pays || data;
+                const payments = data.payments;
                 this.payments = payments
                     .slice()
                     .reverse()

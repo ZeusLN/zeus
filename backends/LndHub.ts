@@ -26,12 +26,18 @@ export default class LndHub extends LND {
             password: data.password
         });
 
-    getPayments = () => this.getRequest('/gettxs');
+    getPayments = () =>
+        this.getRequest('/gettxs').then((data: any) => ({
+            payments: data
+        }));
     getLightningBalance = () =>
         this.getRequest('/balance').then(({ BTC }: any) => ({
             balance: BTC.AvailableBalance
         }));
-    getInvoices = () => this.getRequest('/getuserinvoices?limit=200');
+    getInvoices = () =>
+        this.getRequest('/getuserinvoices?limit=200').then((data: any) => ({
+            invoices: data
+        }));
 
     createInvoice = (data: any) =>
         this.postRequest('/addinvoice', {
