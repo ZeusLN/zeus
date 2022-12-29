@@ -38,12 +38,12 @@ import SettingsStore, {
 
 import Scan from './../../assets/images/SVG/Scan.svg';
 
-interface AddEditNodeProps {
+interface NodeConfigurationProps {
     navigation: any;
     SettingsStore: SettingsStore;
 }
 
-interface AddEditNodeState {
+interface NodeConfigurationState {
     nickname: string; //
     host: string; // lnd
     port: string | number; // lnd
@@ -82,9 +82,9 @@ const ScanBadge = ({ navigation }: { navigation: any }) => (
 
 @inject('SettingsStore')
 @observer
-export default class AddEditNode extends React.Component<
-    AddEditNodeProps,
-    AddEditNodeState
+export default class NodeConfiguration extends React.Component<
+    NodeConfigurationProps,
+    NodeConfigurationState
 > {
     state = {
         nickname: '',
@@ -386,7 +386,7 @@ export default class AddEditNode extends React.Component<
             customMailboxServer
         };
 
-        navigation.navigate('AddEditNode', {
+        navigation.navigate('NodeConfiguration', {
             node,
             newEntry: true,
             saved: false,

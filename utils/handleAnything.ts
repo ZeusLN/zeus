@@ -94,7 +94,7 @@ const handleAnything = async (
                     );
                 }
                 return [
-                    'AddEditNode',
+                    'NodeConfiguration',
                     {
                         node,
                         enableTor: node.host && node.host.includes('.onion'),
@@ -122,7 +122,7 @@ const handleAnything = async (
 
         if (host && port && macaroonHex) {
             return [
-                'AddEditNode',
+                'NodeConfiguration',
                 {
                     node: {
                         host,
@@ -151,7 +151,7 @@ const handleAnything = async (
 
         if (pairingPhrase && mailboxServer) {
             return [
-                'AddEditNode',
+                'NodeConfiguration',
                 {
                     node: {
                         pairingPhrase,
@@ -174,7 +174,7 @@ const handleAnything = async (
         if (isClipboardValue) return true;
         const node = ConnectionFormatUtils.processLndConnectUrl(value);
         return [
-            'AddEditNode',
+            'NodeConfiguration',
             {
                 node,
                 enableTor: node.host && node.host.includes('.onion'),
@@ -209,7 +209,7 @@ const handleAnything = async (
             };
         }
         return [
-            'AddEditNode',
+            'NodeConfiguration',
             {
                 node,
                 newEntry: true

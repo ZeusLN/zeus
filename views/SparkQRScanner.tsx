@@ -16,7 +16,7 @@ export default class SparkQRScanner extends React.Component<SparkQRProps, {}> {
         const [url, accessKey] = data.split('?access-key=');
 
         if (url && accessKey) {
-            navigation.navigate('AddEditNode', {
+            navigation.navigate('NodeConfiguration', {
                 node: { url, accessKey, implementation: 'spark' },
                 enableTor: url && url.includes('.onion'),
                 index
@@ -42,7 +42,9 @@ export default class SparkQRScanner extends React.Component<SparkQRProps, {}> {
             <QRCodeScanner
                 text={localeString('views.SparkQRScanner.text')}
                 handleQRScanned={this.handleSparkInvoiceScanned}
-                goBack={() => navigation.navigate('AddEditNode', { index })}
+                goBack={() =>
+                    navigation.navigate('NodeConfiguration', { index })
+                }
             />
         );
     }

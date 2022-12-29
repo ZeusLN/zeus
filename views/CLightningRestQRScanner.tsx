@@ -21,7 +21,7 @@ export default class CLightningRestQRScanner extends React.Component<
             ConnectionFormatUtils.processCLightningRestConnectUrl(data);
 
         if (host && port && macaroonHex) {
-            navigation.navigate('AddEditNode', {
+            navigation.navigate('NodeConfiguration', {
                 node: { host, port, macaroonHex, implementation, enableTor },
                 index
             });
@@ -45,7 +45,9 @@ export default class CLightningRestQRScanner extends React.Component<
         return (
             <QRCodeScanner
                 handleQRScanned={this.handleLNDConnectConfigInvoiceScanned}
-                goBack={() => navigation.navigate('AddEditNode', { index })}
+                goBack={() =>
+                    navigation.navigate('NodeConfiguration', { index })
+                }
             />
         );
     }

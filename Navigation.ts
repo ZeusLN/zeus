@@ -29,7 +29,7 @@ import Lockscreen from './views/Lockscreen';
 
 // Settings views
 import Settings from './views/Settings/Settings';
-import AddEditNode from './views/Settings/AddEditNode';
+import NodeConfiguration from './views/Settings/NodeConfiguration';
 import Nodes from './views/Settings/Nodes';
 import Privacy from './views/Settings/Privacy';
 import Security from './views/Settings/Security';
@@ -93,8 +93,8 @@ const AppScenes = {
     Settings: {
         screen: Settings
     },
-    AddEditNode: {
-        screen: AddEditNode
+    NodeConfiguration: {
+        screen: NodeConfiguration
     },
     Nodes: {
         screen: Nodes
