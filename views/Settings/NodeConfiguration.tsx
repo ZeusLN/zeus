@@ -74,7 +74,7 @@ interface NodeConfigurationState {
 
 const ScanBadge = ({ navigation }: { navigation: any }) => (
     <TouchableOpacity
-        onPress={() => navigation.navigate('AddressQRCodeScanner')}
+        onPress={() => navigation.navigate('HandleAnythingQRScanner')}
     >
         <Scan fill={themeColor('text')} />
     </TouchableOpacity>
