@@ -162,7 +162,7 @@ export default class BalancePane extends React.PureComponent<
                 </View>
             );
         } else {
-            mainPane = (
+            balancePane = (
                 <View
                     style={{
                         backgroundColor: themeColor('error'),
