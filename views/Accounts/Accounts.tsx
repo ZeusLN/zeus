@@ -90,7 +90,7 @@ export default class Accounts extends React.Component<
                 onPress={() =>
                     value
                         ? navigation.goBack()
-                        : navigate('Settings', { refresh: true })
+                        : navigation.navigate('Settings', { refresh: true })
                 }
                 color={themeColor('text')}
                 underlayColor="transparent"

@@ -2,6 +2,7 @@ import * as React from 'react';
 import {
     FlatList,
     Modal,
+    Platform,
     StyleSheet,
     View,
     Text,

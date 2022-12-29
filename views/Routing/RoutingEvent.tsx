@@ -17,6 +17,8 @@ import FeeBreakdown from './../../components/FeeBreakdown';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
+import ChannelsStore from './../../stores/ChannelsStore';
+
 interface RoutingEventProps {
     navigation: any;
     ChannelsStore: ChannelsStore;

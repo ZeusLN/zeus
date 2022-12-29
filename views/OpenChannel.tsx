@@ -23,6 +23,8 @@ import {
 import TextInput from './../components/TextInput';
 import UTXOPicker from './../components/UTXOPicker';
 
+import handleAnything from './../utils/handleAnything';
+import NFCUtils from './../utils/NFCUtils';
 import NodeUriUtils from './../utils/NodeUriUtils';
 import BackendUtils from './../utils/BackendUtils';
 import { localeString } from './../utils/LocaleUtils';

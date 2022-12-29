@@ -1,4 +1,4 @@
-import { Linking, NativeModules } from 'react-native';
+import { Linking, Platform, NativeModules } from 'react-native';
 import { localeString } from './LocaleUtils';
 import handleAnything from './handleAnything';
 
