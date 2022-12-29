@@ -10,7 +10,7 @@ import LnurlChannel from './views/LnurlChannel';
 import LnurlAuth from './views/LnurlAuth';
 import Receive from './views/Receive';
 import PaymentRequest from './views/PaymentRequest';
-import AddressQRScanner from './views/AddressQRScanner';
+import HandleAnythingQRScanner from './views/handleAnythingQRScanner';
 import NodeQRScanner from './views/NodeQRScanner';
 import OpenChannel from './views/OpenChannel';
 import SendingOnChain from './views/SendingOnChain';
@@ -213,8 +213,8 @@ const AppScenes = {
     ImportAccount: {
         screen: ImportAccount
     },
-    AddressQRCodeScanner: {
-        screen: AddressQRScanner
+    HandleAnythingQRCodeScanner: {
+        screen: HandleAnythingQRScanner
     },
     NodeQRCodeScanner: {
         screen: NodeQRScanner
