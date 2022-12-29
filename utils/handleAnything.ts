@@ -74,48 +74,7 @@ const handleAnything = async (
         if (isClipboardValue) return true;
         invoicesStore.getPayReq(value);
         return ['PaymentRequest', {}];
-    } else if (value.includes('config=')) {
-        if (isClipboardValue) return true;
-        // BTCPay pairing QR
-        settingsStore
-            .fetchBTCPayConfig(value)
-            .then((node: any) => {
-                if (settingsStore.btcPayError) {
-                    Alert.alert(
-                        localeString('general.error'),
-                        settingsStore.btcPayError,
-                        [
-                            {
-                                text: localeString('general.ok'),
-                                onPress: () => void 0
-                            }
-                        ],
-                        { cancelable: false }
-                    );
-                }
-                return [
-                    'NodeConfiguration',
-                    {
-                        node,
-                        enableTor: node.host && node.host.includes('.onion'),
-                        isValid: true
-                    }
-                ];
-            })
-            .catch(() => {
-                Alert.alert(
-                    localeString('general.error'),
-                    localeString('views.BTCPayConfigQRScanner.error'),
-                    [
-                        {
-                            text: localeString('general.ok'),
-                            onPress: () => void 0
-                        }
-                    ],
-                    { cancelable: false }
-                );
-            });
-    } else if (value.includes('c-lightning-rest')) {
+    } else if (value.includes('c-lightning-rest://')) {
         if (isClipboardValue) return true;
         const { host, port, macaroonHex, implementation, enableTor } =
             ConnectionFormatUtils.processCLightningRestConnectUrl(value);
@@ -329,6 +288,47 @@ const handleAnything = async (
                     );
             }
         });
+        // BTCPay pairing QR
+    } else if (value.includes('config=')) {
+        if (isClipboardValue) return true;
+        settingsStore
+            .fetchBTCPayConfig(value)
+            .then((node: any) => {
+                if (settingsStore.btcPayError) {
+                    Alert.alert(
+                        localeString('general.error'),
+                        settingsStore.btcPayError,
+                        [
+                            {
+                                text: localeString('general.ok'),
+                                onPress: () => void 0
+                            }
+                        ],
+                        { cancelable: false }
+                    );
+                }
+                return [
+                    'NodeConfiguration',
+                    {
+                        node,
+                        enableTor: node.host && node.host.includes('.onion'),
+                        isValid: true
+                    }
+                ];
+            })
+            .catch(() => {
+                Alert.alert(
+                    localeString('general.error'),
+                    localeString('views.BTCPayConfigQRScanner.error'),
+                    [
+                        {
+                            text: localeString('general.ok'),
+                            onPress: () => void 0
+                        }
+                    ],
+                    { cancelable: false }
+                );
+            });
     } else {
         if (isClipboardValue) return false;
         throw new Error(localeString('utils.handleAnything.notValid'));
