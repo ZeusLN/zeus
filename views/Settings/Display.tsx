@@ -177,7 +177,7 @@ export default class Display extends React.Component<
                                             displayNickname: !displayNickname
                                         });
                                         await updateSettings({
-                                            privacy: {
+                                            display: {
                                                 defaultView,
                                                 displayNickname:
                                                     !displayNickname
