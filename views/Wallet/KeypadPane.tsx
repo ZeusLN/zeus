@@ -16,14 +16,14 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { getDecimalPlaceholder } from '../../utils/UnitsUtils';
 
-interface DefaultPaneProps {
+interface KeypadPaneProps {
     navigation: any;
     FiatStore: FiatStore;
     UnitsStore: UnitsStore;
     SettingsStore: SettingsStore;
 }
 
-interface DefaultPaneState {
+interface KeypadPaneState {
     amount: string;
 }
 
@@ -31,9 +31,9 @@ const MAX_LENGTH = 10;
 
 @inject('FiatStore', 'UnitsStore', 'SettingsStore')
 @observer
-export default class DefaultPane extends React.PureComponent<
-    DefaultPaneProps,
-    DefaultPaneState
+export default class KeypadPane extends React.PureComponent<
+    KeypadPaneProps,
+    KeypadPaneState
 > {
     shakeAnimation = new Animated.Value(0);
     textAnimation = new Animated.Value(0);

@@ -1,15 +1,17 @@
 import React from 'react';
-import { Button, Header } from 'react-native-elements';
+import { Badge, Button, Header } from 'react-native-elements';
 import { Image, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
 
 import SettingsStore from '../stores/SettingsStore';
+import NodeInfoStore from '../stores/NodeInfoStore';
 
 import LoadingIndicator from '../components/LoadingIndicator';
 import NodeIdenticon from '../components/NodeIdenticon';
 
 import { isClipboardValue } from '../utils/handleAnything';
+import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
@@ -18,6 +20,7 @@ import Scan from '../assets/images/SVG/Scan.svg';
 import stores from '../stores/Stores';
 
 import { Body } from './text/Body';
+import { Row } from '../components/layout/Row';
 
 const Contact = require('../assets/images/Mascot.png');
 
@@ -62,6 +65,7 @@ const ClipboardBadge = ({
 
 interface WalletHeaderProps {
     SettingsStore: SettingsStore;
+    NodeInfoStore: NodeInfoStore;
     navigation: any;
     loading: boolean;
     title: string;
@@ -72,7 +76,7 @@ interface WalletHeaderState {
     clipboard: string;
 }
 
-@inject('SettingsStore')
+@inject('SettingsStore', 'NodeInfoStore')
 @observer
 export default class WalletHeader extends React.Component<
     WalletHeaderProps,
@@ -89,9 +93,7 @@ export default class WalletHeader extends React.Component<
         if (settings.privacy && settings.privacy.clipboard) {
             const clipboard = await Clipboard.getString();
 
-            const isValidValue = await isClipboardValue(clipboard);
-
-            if (!!clipboard && isValidValue) {
+            if (!!clipboard && isClipboardValue(clipboard)) {
                 this.setState({
                     clipboard
                 });
@@ -101,8 +103,14 @@ export default class WalletHeader extends React.Component<
 
     render() {
         const { clipboard } = this.state;
-        const { navigation, loading, title, channels, SettingsStore } =
-            this.props;
+        const {
+            navigation,
+            loading,
+            title,
+            channels,
+            SettingsStore,
+            NodeInfoStore
+        } = this.props;
         const { settings } = SettingsStore;
         const multipleNodes: boolean =
             (settings && settings.nodes && settings.nodes.length > 1) || false;
@@ -126,10 +134,49 @@ export default class WalletHeader extends React.Component<
             </TouchableOpacity>
         );
 
+        const displayName = selectedNode && selectedNode.nickname;
+
+        let infoValue: string;
+        if (NodeInfoStore.nodeInfo.isTestNet) {
+            infoValue = localeString('views.Wallet.MainPane.testnet');
+        } else if (NodeInfoStore.nodeInfo.isRegTest) {
+            infoValue = localeString('views.Wallet.MainPane.regnet');
+        }
+
+        const NetworkBadge = () => {
+            return infoValue ? (
+                <Badge
+                    onPress={() => navigation.navigate('NodeInfo')}
+                    value={infoValue}
+                    badgeStyle={{
+                        backgroundColor: 'gray',
+                        borderWidth: 0,
+                        marginLeft: 8,
+                        marginRight: 8
+                    }}
+                />
+            ) : null;
+        };
+
         return (
             <Header
                 leftComponent={loading ? undefined : <SettingsButton />}
-                centerComponent={title ? <Body bold>{title}</Body> : null}
+                centerComponent={
+                    title ? (
+                        <View style={{ top: 5 }}>
+                            <Body bold>{title}</Body>
+                        </View>
+                    ) : settings.display && settings.display.displayNickname ? (
+                        <View style={{ top: 5 }}>
+                            <Row>
+                                <Body>{displayName}</Body>
+                                <NetworkBadge />
+                            </Row>
+                        </View>
+                    ) : (
+                        <NetworkBadge />
+                    )
+                }
                 rightComponent={
                     channels ? (
                         <OpenChannelButton navigation={navigation} />
@@ -141,7 +188,9 @@ export default class WalletHeader extends React.Component<
                                 <LoadingIndicator size={80} />
                             )}
                             {!!clipboard && (
-                                <View style={{ marginRight: 20 }}>
+                                <View
+                                    style={{ marginTop: 14, marginRight: 20 }}
+                                >
                                     <ClipboardBadge
                                         navigation={navigation}
                                         clipboard={clipboard}

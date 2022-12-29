@@ -280,8 +280,7 @@ export default class AddEditNode extends React.Component<
             mailboxServer,
             customMailboxServer
         } = this.state;
-        const { setConnectingStatus, setSettings, settings } = SettingsStore;
-        const { passphrase, fiat, locale } = settings;
+        const { setConnectingStatus, updateSettings, settings } = SettingsStore;
 
         if (
             implementation === 'lndhub' &&
@@ -317,28 +316,7 @@ export default class AddEditNode extends React.Component<
             nodes = [node];
         }
 
-        setSettings(
-            JSON.stringify(
-                settings
-                    ? {
-                          nodes,
-                          theme: settings.theme,
-                          selectedNode: settings.selectedNode,
-                          fiat,
-                          locale,
-                          passphrase,
-                          duressPassphrase: settings.duressPassphrase,
-                          pin: settings.pin,
-                          duressPin: settings.duressPin,
-                          scramblePin: settings.scramblePin,
-                          loginBackground: settings.loginBackground,
-                          authenticationAttempts:
-                              settings.authenticationAttempts,
-                          privacy: settings.privacy
-                      }
-                    : { nodes }
-            )
-        ).then(() => {
+        updateSettings({ nodes }).then(() => {
             this.setState({
                 saved: true
             });
@@ -407,9 +385,9 @@ export default class AddEditNode extends React.Component<
 
     deleteNodeConfig = () => {
         const { SettingsStore, navigation } = this.props;
-        const { setSettings, settings } = SettingsStore;
+        const { updateSettings, settings } = SettingsStore;
         const { index } = this.state;
-        const { nodes, passphrase, fiat, locale } = settings;
+        const { nodes } = settings;
 
         const newNodes: any = [];
         for (let i = 0; nodes && i < nodes.length; i++) {
@@ -418,51 +396,23 @@ export default class AddEditNode extends React.Component<
             }
         }
 
-        setSettings(
-            JSON.stringify({
-                nodes: newNodes,
-                theme: settings.theme,
-                selectedNode:
-                    index === settings.selectedNode ? 0 : settings.selectedNode,
-                fiat,
-                locale,
-                passphrase,
-                duressPassphrase: settings.duressPassphrase,
-                pin: settings.pin,
-                duressPin: settings.duressPin,
-                scramblePin: settings.scramblePin,
-                loginBackground: settings.loginBackground,
-                authenticationAttempts: settings.authenticationAttempts,
-                privacy: settings.privacy
-            })
-        ).then(() => {
+        updateSettings({
+            nodes: newNodes,
+            selectedNode:
+                index === settings.selectedNode ? 0 : settings.selectedNode
+        }).then(() => {
             navigation.navigate('Nodes', { refresh: true });
         });
     };
 
     setNodeConfigurationAsActive = () => {
         const { SettingsStore, navigation } = this.props;
-        const { setSettings, settings } = SettingsStore;
+        const { updateSettings } = SettingsStore;
         const { index } = this.state;
-        const { nodes, passphrase, fiat, locale } = settings;
 
-        setSettings(
-            JSON.stringify({
-                nodes,
-                theme: settings.theme,
-                selectedNode: index,
-                fiat,
-                locale,
-                passphrase,
-                duressPassphrase: settings.duressPassphrase,
-                pin: settings.pin,
-                duressPin: settings.duressPin,
-                scramblePin: settings.scramblePin,
-                loginBackground: settings.loginBackground,
-                authenticationAttempts: settings.authenticationAttempts,
-                privacy: settings.privacy
-            })
-        );
+        updateSettings({
+            selectedNode: index
+        });
 
         this.setState({
             active: true

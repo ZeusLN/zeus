@@ -33,9 +33,14 @@ interface PrivacySettings {
     enableMempoolRates?: boolean;
 }
 
+interface DisplaySettings {
+    theme?: string;
+    defaultView?: string;
+    displayNickname?: boolean;
+}
+
 interface Settings {
     nodes?: Array<Node>;
-    theme?: string;
     selectedNode?: number;
     passphrase?: string;
     duressPassphrase?: string;
@@ -47,6 +52,7 @@ interface Settings {
     fiat?: string;
     locale?: string;
     privacy: PrivacySettings;
+    display: DisplaySettings;
 }
 
 export const BLOCK_EXPLORER_KEYS = [
@@ -152,6 +158,11 @@ export const THEME_KEYS = [
     { key: 'Deadpool', value: 'deadpool' }
 ];
 
+export const DEFAULT_VIEW_KEYS = [
+    { key: 'Balance', value: 'Balance' },
+    { key: 'Keypad', value: 'Keypad' }
+];
+
 export const DEFAULT_THEME = 'dark';
 export const DEFAULT_FIAT = 'Disabled';
 export const DEFAULT_LOCALE = 'English';
@@ -166,6 +177,11 @@ export default class SettingsStore {
             clipboard: true,
             lurkerMode: false,
             enableMempoolRates: true
+        },
+        display: {
+            theme: DEFAULT_THEME,
+            defaultView: 'Keypad',
+            displayNickname: false
         },
         scramblePin: true,
         loginBackground: false,
