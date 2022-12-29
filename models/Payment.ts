@@ -8,29 +8,23 @@ import { localeString } from './../utils/LocaleUtils';
 export default class Payment extends BaseModel {
     payment_hash: string;
     creation_date?: string;
-    value: string;
-    // fee?: string; DEPRECATED
+    value: string | number;
     fee_sat?: string;
     fee_msat?: string;
-    value_sat: string;
     payment_preimage: string;
-    value_msat: string;
     path: Array<string>;
     bolt: string;
     status: string;
-    amount_sent_msat: string;
     payment_request: string;
     // c-lightning
     id?: string;
-    // payment_hash: string;
     destination?: string;
     amount_msat?: string;
-    // amount_sent_msat?: string;
+    amount_sent_msat?: string;
     msatoshi_sent?: string;
     msatoshi?: string;
     created_at?: string;
     timestamp?: string;
-    // status: string;
     preimage: string;
     bolt11?: string;
     htlcs?: Array<any>;
@@ -72,15 +66,15 @@ export default class Payment extends BaseModel {
     }
 
     @computed public get getDate(): string | Date {
-        return DateTimeUtils.listDate(
-            this.creation_date || this.created_at || this.timestamp || 0
-        );
+        return DateTimeUtils.listDate(this.getTimestamp);
     }
 
     @computed public get getDisplayTime(): string {
-        return DateTimeUtils.listFormattedDate(
-            this.creation_date || this.created_at || this.timestamp || 0
-        );
+        return DateTimeUtils.listFormattedDate(this.getTimestamp);
+    }
+
+    @computed public get getDisplayTimeShort(): string {
+        return DateTimeUtils.listFormattedDateShort(this.getTimestamp);
     }
 
     @computed public get getAmount(): number | string {
