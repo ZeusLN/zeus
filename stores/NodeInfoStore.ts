@@ -1,4 +1,4 @@
-import { action, observable, reaction } from 'mobx';
+import { action, observable } from 'mobx';
 import NodeInfo from './../models/NodeInfo';
 import SettingsStore from './SettingsStore';
 import ErrorUtils from './../utils/ErrorUtils';

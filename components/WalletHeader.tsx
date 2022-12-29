@@ -144,7 +144,7 @@ export default class WalletHeader extends React.Component<
         }
 
         const NetworkBadge = () => {
-            return !!infoValue ? (
+            return infoValue ? (
                 <Badge
                     onPress={() => navigation.navigate('NodeInfo')}
                     value={infoValue}
