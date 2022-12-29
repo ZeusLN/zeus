@@ -6,7 +6,8 @@ import {
     Switch,
     Text,
     View,
-    ScrollView
+    ScrollView,
+    TouchableOpacity
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { Header, Icon } from 'react-native-elements';
@@ -34,6 +35,8 @@ import SettingsStore, {
     INTERFACE_KEYS,
     LNC_MAILBOX_KEYS
 } from './../../stores/SettingsStore';
+
+import Scan from './../../assets/images/SVG/Scan.svg';
 
 interface AddEditNodeProps {
     navigation: any;
@@ -68,6 +71,14 @@ interface AddEditNodeState {
     localKey: string;
     remoteKey: string;
 }
+
+const ScanBadge = ({ navigation }: { navigation: any }) => (
+    <TouchableOpacity
+        onPress={() => navigation.navigate('AddressQRCodeScanner')}
+    >
+        <Scan fill={themeColor('text')} />
+    </TouchableOpacity>
+);
 
 @inject('SettingsStore')
 @observer
@@ -544,6 +555,7 @@ export default class AddEditNode extends React.Component<
                         ),
                         style: { ...styles.text, color: themeColor('text') }
                     }}
+                    rightComponent={<ScanBadge navigation={navigation} />}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
                         borderBottomWidth: 0
