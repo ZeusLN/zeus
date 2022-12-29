@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { Image, Text, View, StyleSheet, TouchableOpacity } from 'react-native';
-import { Badge } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Button from '../../components/Button';
 import WalletHeader from '../../components/WalletHeader';
@@ -111,13 +110,6 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
             </View>
         );
 
-        let infoValue = 'ⓘ';
-        if (NodeInfoStore.nodeInfo.isTestNet) {
-            infoValue = localeString('views.Wallet.MainPane.testnet');
-        } else if (NodeInfoStore.nodeInfo.isRegTest) {
-            infoValue = localeString('views.Wallet.MainPane.regnet');
-        }
-
         const NetworkBadge = () => (
             <>
                 {nodeAddress && nodeAddress.includes('.onion') ? (
@@ -129,17 +121,6 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                             source={TorIcon}
                         />
                     </TouchableOpacity>
-                ) : null}
-                {infoValue !== 'ⓘ' ? (
-                    <Badge
-                        onPress={() => navigation.navigate('NodeInfo')}
-                        value={infoValue}
-                        badgeStyle={{
-                            backgroundColor: 'gray',
-                            borderWidth: 0,
-                            marginTop: 5
-                        }}
-                    />
                 ) : null}
             </>
         );
