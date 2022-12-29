@@ -119,9 +119,7 @@ export default class Privacy extends React.Component<
                 {loading ? (
                     <LoadingIndicator />
                 ) : (
-                    <ScrollView
-                        style={{ flex: 1, paddingLeft: 10, paddingTop: 15 }}
-                    >
+                    <ScrollView style={{ flex: 1, padding: 15 }}>
                         <DropdownSetting
                             title={localeString(
                                 'views.Settings.Privacy.blockExplorer'
