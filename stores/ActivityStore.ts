@@ -11,7 +11,7 @@ import InvoicesStore from './InvoicesStore';
 import TransactionsStore from './TransactionsStore';
 
 import { localeString } from './../utils/LocaleUtils';
-import RESTUtils from './../utils/RESTUtils';
+import BackendUtils from './../utils/BackendUtils';
 
 interface ActivityFilter {
     [index: string]: any;
@@ -95,7 +95,7 @@ export default class ActivityStore {
         // push payments, txs, invoices to one array
         activity.push.apply(
             activity,
-            RESTUtils.supportsOnchainSends()
+            BackendUtils.supportsOnchainSends()
                 ? payments.concat(transactions).concat(invoices)
                 : payments.concat(invoices)
         );
@@ -112,7 +112,7 @@ export default class ActivityStore {
         this.loading = true;
         this.activity = [];
         await this.paymentsStore.getPayments();
-        if (RESTUtils.supportsOnchainSends())
+        if (BackendUtils.supportsOnchainSends())
             await this.transactionsStore.getTransactions();
         await this.invoicesStore.getInvoices();
 
@@ -131,7 +131,7 @@ export default class ActivityStore {
 
     @action
     public updateTransactions = async () => {
-        if (RESTUtils.supportsOnchainSends())
+        if (BackendUtils.supportsOnchainSends())
             await this.transactionsStore.getTransactions();
         this.activity = this.getSortedActivity();
         await this.setFilters(this.filters);

@@ -1,6 +1,6 @@
 import { action, reaction, observable } from 'mobx';
 import SettingsStore from './SettingsStore';
-import RESTUtils from './../utils/RESTUtils';
+import BackendUtils from './../utils/BackendUtils';
 
 export default class BalanceStore {
     @observable public totalBlockchainBalance: number | string;
@@ -60,7 +60,7 @@ export default class BalanceStore {
     public getBlockchainBalance = (set: boolean, reset: boolean) => {
         this.loadingBlockchainBalance = true;
         if (reset) this.resetBlockchainBalance();
-        return RESTUtils.getBlockchainBalance()
+        return BackendUtils.getBlockchainBalance()
             .then((data: any) => {
                 // process external accounts
                 const accounts = data.account_balance;
@@ -102,7 +102,7 @@ export default class BalanceStore {
     public getLightningBalance = (set: boolean, reset: boolean) => {
         this.loadingLightningBalance = true;
         if (reset) this.resetLightningBalance();
-        return RESTUtils.getLightningBalance()
+        return BackendUtils.getLightningBalance()
             .then((data: any) => {
                 const pendingOpenBalance = Number(
                     data.pending_open_balance || 0

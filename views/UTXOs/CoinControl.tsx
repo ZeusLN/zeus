@@ -7,7 +7,7 @@ import Amount from './../../components/Amount';
 import LoadingIndicator from './../../components/LoadingIndicator';
 
 import { localeString } from './../../utils/LocaleUtils';
-import RESTUtils from './../../utils/RESTUtils';
+import BackendUtils from './../../utils/BackendUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import UTXOsStore from './../../stores/UTXOsStore';
@@ -24,7 +24,7 @@ export default class CoinControl extends React.Component<CoinControlProps, {}> {
         const { UTXOsStore } = this.props;
         const { getUTXOs, listAccounts } = UTXOsStore;
         getUTXOs();
-        if (RESTUtils.supportsAccounts()) {
+        if (BackendUtils.supportsAccounts()) {
             listAccounts();
         }
     }

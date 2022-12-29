@@ -12,7 +12,7 @@ import LightningSwipeableRow from './LightningSwipeableRow';
 import BalanceStore from './../../stores/BalanceStore';
 import UnitsStore from './../../stores/UnitsStore';
 
-import RESTUtils from '../../utils/RESTUtils';
+import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
@@ -105,7 +105,7 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
         let DATA: DataRow[];
 
         // hide on-chain balance for Lnbank accounts
-        if (!RESTUtils.supportsOnchainReceiving()) {
+        if (!BackendUtils.supportsOnchainReceiving()) {
             DATA = [
                 {
                     layer: 'Lightning',
