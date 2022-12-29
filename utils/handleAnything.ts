@@ -8,7 +8,7 @@ import NodeUriUtils from './../utils/NodeUriUtils';
 import { localeString } from './../utils/LocaleUtils';
 import BackendUtils from './../utils/BackendUtils';
 
-const { nodeInfoStore, invoicesStore } = stores;
+const { nodeInfoStore, invoicesStore, settingsStore } = stores;
 
 const isClipboardValue = (data: string) =>
     handleAnything(data, undefined, true);
@@ -74,11 +74,66 @@ const handleAnything = async (
         if (isClipboardValue) return true;
         invoicesStore.getPayReq(value);
         return ['PaymentRequest', {}];
+    } else if (value.includes('c-lightning-rest://')) {
+        if (isClipboardValue) return true;
+        const { host, port, macaroonHex, implementation, enableTor } =
+            ConnectionFormatUtils.processCLightningRestConnectUrl(value);
+
+        if (host && port && macaroonHex) {
+            return [
+                'NodeConfiguration',
+                {
+                    node: {
+                        host,
+                        port,
+                        macaroonHex,
+                        implementation,
+                        enableTor
+                    },
+                    isValid: true
+                }
+            ];
+        } else {
+            Alert.alert(
+                localeString('general.error'),
+                localeString('views.LNDConnectConfigQRScanner.error'),
+                [{ text: localeString('general.ok'), onPress: () => void 0 }],
+                { cancelable: false }
+            );
+        }
+    } else if (
+        value.includes('https://terminal.lightning.engineering#/connect/pair/')
+    ) {
+        if (isClipboardValue) return true;
+        const { pairingPhrase, mailboxServer, customMailboxServer } =
+            ConnectionFormatUtils.processLncUrl(value);
+
+        if (pairingPhrase && mailboxServer) {
+            return [
+                'NodeConfiguration',
+                {
+                    node: {
+                        pairingPhrase,
+                        mailboxServer,
+                        customMailboxServer,
+                        implementation: 'lightning-node-connect'
+                    },
+                    isValid: true
+                }
+            ];
+        } else {
+            Alert.alert(
+                localeString('general.error'),
+                localeString('views.LncQRScanner.error'),
+                [{ text: localeString('general.ok'), onPress: () => void 0 }],
+                { cancelable: false }
+            );
+        }
     } else if (value.includes('lndconnect')) {
         if (isClipboardValue) return true;
         const node = ConnectionFormatUtils.processLndConnectUrl(value);
         return [
-            'AddEditNode',
+            'NodeConfiguration',
             {
                 node,
                 enableTor: node.host && node.host.includes('.onion'),
@@ -113,7 +168,7 @@ const handleAnything = async (
             };
         }
         return [
-            'AddEditNode',
+            'NodeConfiguration',
             {
                 node,
                 newEntry: true
@@ -154,6 +209,48 @@ const handleAnything = async (
             })
             .catch(() => {
                 throw new Error(error);
+            });
+        // BTCPay pairing QR
+    } else if (value.includes('config=') && value.includes('lnd.config')) {
+        if (isClipboardValue) return true;
+        return settingsStore
+            .fetchBTCPayConfig(value)
+            .then((node: any) => {
+                if (settingsStore.btcPayError) {
+                    Alert.alert(
+                        localeString('general.error'),
+                        settingsStore.btcPayError,
+                        [
+                            {
+                                text: localeString('general.ok'),
+                                onPress: () => void 0
+                            }
+                        ],
+                        { cancelable: false }
+                    );
+                }
+
+                return [
+                    'NodeConfiguration',
+                    {
+                        node,
+                        enableTor: node.host && node.host.includes('.onion'),
+                        isValid: true
+                    }
+                ];
+            })
+            .catch(() => {
+                Alert.alert(
+                    localeString('general.error'),
+                    localeString('views.BTCPayConfigQRScanner.error'),
+                    [
+                        {
+                            text: localeString('general.ok'),
+                            onPress: () => void 0
+                        }
+                    ],
+                    { cancelable: false }
+                );
             });
     } else if (findlnurl(value) !== null || lnurl !== null) {
         const raw: string = findlnurl(value) || lnurl || '';

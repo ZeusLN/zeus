@@ -7,13 +7,13 @@ import QRCodeScanner from './../components/QRCodeScanner';
 import handleAnything from './../utils/handleAnything';
 import { localeString } from './../utils/LocaleUtils';
 
-interface AddressQRProps {
+interface handleAnythingQRProps {
     navigation: any;
 }
 
 @observer
-export default class AddressQRScanner extends React.Component<
-    AddressQRProps,
+export default class handleAnythingQRScanner extends React.Component<
+    handleAnythingQRProps,
     {}
 > {
     constructor(props: any) {
@@ -24,7 +24,7 @@ export default class AddressQRScanner extends React.Component<
         };
     }
 
-    handleAddressInvoiceScanned = (data: string) => {
+    handleAnythingScanned = (data: string) => {
         const { navigation } = this.props;
         handleAnything(data)
             .then(([route, props]) => {
@@ -52,7 +52,7 @@ export default class AddressQRScanner extends React.Component<
 
         return (
             <QRCodeScanner
-                handleQRScanned={this.handleAddressInvoiceScanned}
+                handleQRScanned={this.handleAnythingScanned}
                 goBack={() => navigation.goBack()}
             />
         );

@@ -21,7 +21,7 @@ export default class LNDConnectConfigQRScanner extends React.Component<
             ConnectionFormatUtils.processLndConnectUrl(data);
 
         if (host && port && macaroonHex) {
-            navigation.navigate('AddEditNode', {
+            navigation.navigate('NodeConfiguration', {
                 node: { host, port, macaroonHex, implementation: 'lnd' },
                 enableTor: host && host.includes('.onion'),
                 index
@@ -46,7 +46,9 @@ export default class LNDConnectConfigQRScanner extends React.Component<
         return (
             <QRCodeScanner
                 handleQRScanned={this.handleLNDConnectConfigInvoiceScanned}
-                goBack={() => navigation.navigate('AddEditNode', { index })}
+                goBack={() =>
+                    navigation.navigate('NodeConfiguration', { index })
+                }
             />
         );
     }
