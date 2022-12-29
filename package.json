@@ -32,6 +32,7 @@
     "@types/react-native-snap-carousel": "3.8.5",
     "assert": "1.5.0",
     "base-64": "0.1.0",
+    "base-x": "4.0.0",
     "bc-ur": "0.1.6",
     "bignumber.js": "9.0.2",
     "bitcoinjs-lib": "3.3.2",

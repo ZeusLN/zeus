@@ -1,3 +1,4 @@
+import React from 'react';
 import { SafeAreaView } from 'react-native';
 import { Observer } from 'mobx-react';
 import { themeColor } from '../../utils/ThemeUtils';
