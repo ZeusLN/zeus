@@ -34,13 +34,13 @@ interface PrivacySettings {
 }
 
 interface DisplaySettings {
+    theme?: string;
     defaultView?: string;
     displayNickname?: boolean;
 }
 
 interface Settings {
     nodes?: Array<Node>;
-    theme?: string;
     selectedNode?: number;
     passphrase?: string;
     duressPassphrase?: string;
@@ -179,7 +179,8 @@ export default class SettingsStore {
             enableMempoolRates: true
         },
         display: {
-            defaultView: 'keypad',
+            theme: DEFAULT_THEME,
+            defaultView: 'Keypad',
             displayNickname: false
         },
         scramblePin: true,

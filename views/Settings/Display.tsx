@@ -2,7 +2,10 @@ import * as React from 'react';
 import { ScrollView, Switch, View } from 'react-native';
 import { Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import SettingsStore, { DEFAULT_VIEW_KEYS } from './../../stores/SettingsStore';
+import SettingsStore, {
+    DEFAULT_VIEW_KEYS,
+    THEME_KEYS
+} from './../../stores/SettingsStore';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -15,6 +18,7 @@ interface DisplayProps {
 }
 
 interface DisplayState {
+    theme: string;
     defaultView: string;
     displayNickname: boolean;
 }
@@ -26,16 +30,10 @@ export default class Display extends React.Component<
     DisplayState
 > {
     state = {
+        theme: 'Dark',
         defaultView: 'Keypad',
         displayNickname: false
     };
-
-    componentDidMount() {
-        // triggers when loaded from navigation or back action
-        this.props.navigation.addListener('didFocus', () => {
-            this.props.SettingsStore.getSettings();
-        });
-    }
 
     async UNSAFE_componentWillMount() {
         const { SettingsStore } = this.props;
@@ -43,10 +41,11 @@ export default class Display extends React.Component<
         const settings = await getSettings();
 
         this.setState({
+            theme: (settings.display && settings.display.theme) || 'Dark',
             defaultView:
                 (settings.display && settings.display.defaultView) || 'Keypad',
             displayNickname:
-                settings.display && settings.display.displayNickname
+                (settings.display && settings.display.displayNickname) || false
         });
     }
 
@@ -61,7 +60,7 @@ export default class Display extends React.Component<
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { defaultView, displayNickname } = this.state;
+        const { defaultView, displayNickname, theme } = this.state;
         const { updateSettings, loading }: any = SettingsStore;
 
         const BackButton = () => (
@@ -104,28 +103,23 @@ export default class Display extends React.Component<
                     <ScrollView
                         style={{ flex: 1, paddingLeft: 10, paddingTop: 15 }}
                     >
-                        <ListItem
-                            containerStyle={{
-                                borderBottomWidth: 0,
-                                backgroundColor: themeColor('background')
+                        <DropdownSetting
+                            title={localeString('views.Settings.Theme.title')}
+                            selectedValue={theme}
+                            onValueChange={async (value: string) => {
+                                this.setState({
+                                    theme: value
+                                });
+                                await updateSettings({
+                                    display: {
+                                        theme: value,
+                                        displayNickname,
+                                        defaultView
+                                    }
+                                });
                             }}
-                            onPress={() => navigation.navigate('Theme')}
-                        >
-                            <ListItem.Content>
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'Lato-Regular'
-                                    }}
-                                >
-                                    {localeString('views.Settings.Theme.title')}
-                                </ListItem.Title>
-                            </ListItem.Content>
-                            <Icon
-                                name="keyboard-arrow-right"
-                                color={themeColor('secondaryText')}
-                            />
-                        </ListItem>
+                            values={THEME_KEYS}
+                        />
 
                         <DropdownSetting
                             title={localeString(
@@ -139,7 +133,8 @@ export default class Display extends React.Component<
                                 await updateSettings({
                                     display: {
                                         defaultView: value,
-                                        displayNickname
+                                        displayNickname,
+                                        theme
                                     }
                                 });
                             }}
@@ -179,6 +174,7 @@ export default class Display extends React.Component<
                                         await updateSettings({
                                             display: {
                                                 defaultView,
+                                                theme,
                                                 displayNickname:
                                                     !displayNickname
                                             }
