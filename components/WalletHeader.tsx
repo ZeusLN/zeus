@@ -143,18 +143,20 @@ export default class WalletHeader extends React.Component<
             infoValue = localeString('views.Wallet.MainPane.regnet');
         }
 
-        const NetworkBadge = () => (
-            <Badge
-                onPress={() => navigation.navigate('NodeInfo')}
-                value={infoValue}
-                badgeStyle={{
-                    backgroundColor: 'gray',
-                    borderWidth: 0,
-                    marginLeft: 8,
-                    marginRight: 8
-                }}
-            />
-        );
+        const NetworkBadge = () => {
+            return !!infoValue ? (
+                <Badge
+                    onPress={() => navigation.navigate('NodeInfo')}
+                    value={infoValue}
+                    badgeStyle={{
+                        backgroundColor: 'gray',
+                        borderWidth: 0,
+                        marginLeft: 8,
+                        marginRight: 8
+                    }}
+                />
+            ) : null;
+        };
 
         return (
             <Header

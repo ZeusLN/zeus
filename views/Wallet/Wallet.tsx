@@ -209,14 +209,15 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 error = await connect();
             }
             if (!error) {
+                NodeInfoStore.getNodeInfo();
                 UTXOsStore.listAccounts();
                 await BalanceStore.getCombinedBalance();
                 ChannelsStore.getChannels();
                 FeeStore.getFees();
-                NodeInfoStore.getNodeInfo();
                 FeeStore.getForwardingHistory();
             }
         } else {
+            NodeInfoStore.getNodeInfo();
             if (RESTUtils.supportsAccounts()) {
                 UTXOsStore.listAccounts();
             }
@@ -224,7 +225,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             await BalanceStore.getCombinedBalance();
             ChannelsStore.getChannels();
             FeeStore.getFees();
-            NodeInfoStore.getNodeInfo();
         }
 
         if (implementation === 'lnd') {
