@@ -1,6 +1,6 @@
 import { action, observable } from 'mobx';
 import SettingsStore from './SettingsStore';
-import RESTUtils from './../utils/RESTUtils';
+import BackendUtils from './../utils/BackendUtils';
 import Base64Utils from './../utils/Base64Utils';
 import Utxo from './../models/Utxo';
 
@@ -31,7 +31,7 @@ export default class UTXOsStore {
     public getUTXOs = () => {
         this.errorMsg = '';
         this.loading = true;
-        RESTUtils.getUTXOs()
+        BackendUtils.getUTXOs()
             .then((data: any) => {
                 this.loading = false;
                 const utxos = data.utxos || data.outputs;
@@ -49,7 +49,7 @@ export default class UTXOsStore {
     public listAccounts = (data: any) => {
         this.errorMsg = '';
         this.loadingAccounts = true;
-        RESTUtils.listAccounts(data)
+        BackendUtils.listAccounts(data)
             .then((data: any) => {
                 this.loadingAccounts = false;
                 this.accounts = data.accounts;
@@ -73,7 +73,7 @@ export default class UTXOsStore {
             master_key_fingerprint: mfk,
             dry_run: true
         };
-        RESTUtils.importAccount(newData)
+        BackendUtils.importAccount(newData)
             .then(() => {
                 this.importingAccount = false;
                 this.error = false;

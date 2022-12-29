@@ -24,7 +24,7 @@ import TextInput from './../components/TextInput';
 import UTXOPicker from './../components/UTXOPicker';
 
 import NodeUriUtils from './../utils/NodeUriUtils';
-import RESTUtils from './../utils/RESTUtils';
+import BackendUtils from './../utils/BackendUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
@@ -473,7 +473,7 @@ export default class OpenChannel extends React.Component<
                         )}
                     </>
 
-                    {RESTUtils.supportsCoinControl() &&
+                    {BackendUtils.supportsCoinControl() &&
                         implementation !== 'lnd' && (
                             <UTXOPicker
                                 onValueChange={this.selectUTXOs}
@@ -507,7 +507,7 @@ export default class OpenChannel extends React.Component<
                         />
                     </>
 
-                    {RESTUtils.isLNDBased() && (
+                    {BackendUtils.isLNDBased() && (
                         <>
                             <Text
                                 style={{

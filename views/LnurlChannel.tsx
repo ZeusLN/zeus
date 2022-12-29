@@ -15,7 +15,7 @@ import NodeInfoStore from './../stores/NodeInfoStore';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 import NodeUriUtils from './../utils/NodeUriUtils';
-import RESTUtils from './../utils/RESTUtils';
+import BackendUtils from './../utils/BackendUtils';
 
 interface LnurlChannelProps {
     navigation: any;
@@ -93,7 +93,7 @@ export default class LnurlChannel extends React.Component<
         const { node_pubkey_string, host } = this.state;
         this.setState({ connectingToPeer: true });
 
-        RESTUtils.connectPeer({
+        BackendUtils.connectPeer({
             addr: {
                 pubkey: node_pubkey_string,
                 host

@@ -10,7 +10,7 @@ import Eclair from '../backends/Eclair';
 // Custodial
 import LndHub from '../backends/LndHub';
 
-class RESTUtils {
+class BackendUtils {
     lnd: LND;
     lightningNodeConnect: LightningNodeConnect;
     clightningREST: CLightningREST;
@@ -128,5 +128,5 @@ class RESTUtils {
     disconnect = (...args: any[]) => this.call('disconnect', args);
 }
 
-const restUtils = new RESTUtils();
-export default restUtils;
+const backendUtils = new BackendUtils();
+export default backendUtils;
