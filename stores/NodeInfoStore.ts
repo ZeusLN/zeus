@@ -15,15 +15,6 @@ export default class NodeInfoStore {
 
     constructor(settingsStore: SettingsStore) {
         this.settingsStore = settingsStore;
-
-        reaction(
-            () => this.settingsStore.settings,
-            () => {
-                if (this.settingsStore.hasCredentials()) {
-                    this.getNodeInfo();
-                }
-            }
-        );
     }
 
     reset = () => {
