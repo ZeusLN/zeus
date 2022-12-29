@@ -6,7 +6,8 @@ import {
     Switch,
     Text,
     View,
-    ScrollView
+    ScrollView,
+    TouchableOpacity
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { Header, Icon } from 'react-native-elements';
@@ -35,12 +36,14 @@ import SettingsStore, {
     LNC_MAILBOX_KEYS
 } from './../../stores/SettingsStore';
 
-interface AddEditNodeProps {
+import Scan from './../../assets/images/SVG/Scan.svg';
+
+interface NodeConfigurationProps {
     navigation: any;
     SettingsStore: SettingsStore;
 }
 
-interface AddEditNodeState {
+interface NodeConfigurationState {
     nickname: string; //
     host: string; // lnd
     port: string | number; // lnd
@@ -69,11 +72,19 @@ interface AddEditNodeState {
     remoteKey: string;
 }
 
+const ScanBadge = ({ navigation }: { navigation: any }) => (
+    <TouchableOpacity
+        onPress={() => navigation.navigate('HandleAnythingQRScanner')}
+    >
+        <Scan fill={themeColor('text')} />
+    </TouchableOpacity>
+);
+
 @inject('SettingsStore')
 @observer
-export default class AddEditNode extends React.Component<
-    AddEditNodeProps,
-    AddEditNodeState
+export default class NodeConfiguration extends React.Component<
+    NodeConfigurationProps,
+    NodeConfigurationState
 > {
     state = {
         nickname: '',
@@ -375,7 +386,7 @@ export default class AddEditNode extends React.Component<
             customMailboxServer
         };
 
-        navigation.navigate('AddEditNode', {
+        navigation.navigate('NodeConfiguration', {
             node,
             newEntry: true,
             saved: false,
@@ -544,6 +555,7 @@ export default class AddEditNode extends React.Component<
                         ),
                         style: { ...styles.text, color: themeColor('text') }
                     }}
+                    rightComponent={<ScanBadge navigation={navigation} />}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
                         borderBottomWidth: 0

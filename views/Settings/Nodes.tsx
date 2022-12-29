@@ -99,7 +99,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             <Icon
                 name="add"
                 onPress={() =>
-                    navigation.navigate('AddEditNode', {
+                    navigation.navigate('NodeConfiguration', {
                         newEntry: true,
                         index:
                             (nodes && nodes.length && Number(nodes.length)) || 0
@@ -209,12 +209,16 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                             color: themeColor('text')
                                         }}
                                         onPress={() =>
-                                            navigation.navigate('AddEditNode', {
-                                                node: item,
-                                                index,
-                                                active: selectedNode === index,
-                                                saved: true
-                                            })
+                                            navigation.navigate(
+                                                'NodeConfiguration',
+                                                {
+                                                    node: item,
+                                                    index,
+                                                    active:
+                                                        selectedNode === index,
+                                                    saved: true
+                                                }
+                                            )
                                         }
                                         iconOnly
                                         adaptiveWidth

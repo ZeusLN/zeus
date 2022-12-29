@@ -437,7 +437,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     rightComponent={
                         <TouchableOpacity
                             onPress={() =>
-                                navigation.navigate('AddressQRCodeScanner')
+                                navigation.navigate('HandleAnythingQRScanner')
                             }
                         >
                             <Scan fill={themeColor('text')} />

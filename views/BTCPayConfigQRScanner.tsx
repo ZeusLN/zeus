@@ -38,7 +38,7 @@ export default class BTCPayConfigQRScanner extends React.Component<
                         { cancelable: false }
                     );
                 }
-                navigation.navigate('AddEditNode', {
+                navigation.navigate('NodeConfiguration', {
                     node,
                     enableTor: node.host && node.host.includes('.onion'),
                     index
@@ -70,7 +70,9 @@ export default class BTCPayConfigQRScanner extends React.Component<
             <QRCodeScanner
                 text={localeString('views.BTCPayConfigQRScanner.text')}
                 handleQRScanned={this.handleBTCPayConfigInvoiceScanned}
-                goBack={() => navigation.navigate('AddEditNode', { index })}
+                goBack={() =>
+                    navigation.navigate('NodeConfiguration', { index })
+                }
             />
         );
     }
