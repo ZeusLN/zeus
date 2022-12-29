@@ -20,6 +20,7 @@ import Scan from '../assets/images/SVG/Scan.svg';
 import stores from '../stores/Stores';
 
 import { Body } from './text/Body';
+import { Row } from '../components/layout/Row';
 
 const Contact = require('../assets/images/Mascot.png');
 
@@ -149,7 +150,8 @@ export default class WalletHeader extends React.Component<
                 badgeStyle={{
                     backgroundColor: 'gray',
                     borderWidth: 0,
-                    marginTop: 5
+                    marginLeft: 8,
+                    marginRight: 8
                 }}
             />
         );
@@ -164,8 +166,10 @@ export default class WalletHeader extends React.Component<
                         </View>
                     ) : settings.display && settings.display.displayNickname ? (
                         <View style={{ top: 5 }}>
-                            <Body>{displayName}</Body>
-                            <NetworkBadge />
+                            <Row>
+                                <Body>{displayName}</Body>
+                                <NetworkBadge />
+                            </Row>
                         </View>
                     ) : (
                         <NetworkBadge />
