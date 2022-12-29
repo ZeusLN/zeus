@@ -157,10 +157,6 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                           implementationDisplayValue[
                                               selectedNode.implementation
                                           ] || 'Unknown'
-                                      }, ${
-                                          selectedNode.enableTor
-                                              ? 'Tor'
-                                              : 'clearnet'
                                       }`}
                             </Text>
                         )}
