@@ -6,7 +6,7 @@ import AddressUtils from './../utils/AddressUtils';
 import ConnectionFormatUtils from './../utils/ConnectionFormatUtils';
 import NodeUriUtils from './../utils/NodeUriUtils';
 import { localeString } from './../utils/LocaleUtils';
-import RESTUtils from './../utils/RESTUtils';
+import BackendUtils from './../utils/BackendUtils';
 
 const { nodeInfoStore, invoicesStore } = stores;
 
@@ -34,7 +34,7 @@ const handleAnything = async (
         lightning
     ) {
         if (isClipboardValue) return true;
-        if (!RESTUtils.supportsOnchainSends()) {
+        if (!BackendUtils.supportsOnchainSends()) {
             invoicesStore.getPayReq(lightning);
             return ['PaymentRequest', {}];
         }
@@ -189,7 +189,7 @@ const handleAnything = async (
                     ];
                     break;
                 case 'login':
-                    if (RESTUtils.supportsMessageSigning()) {
+                    if (BackendUtils.supportsMessageSigning()) {
                         if (isClipboardValue) return true;
                         return [
                             'LnurlAuth',

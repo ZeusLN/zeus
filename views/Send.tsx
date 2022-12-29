@@ -39,7 +39,7 @@ import { ErrorMessage } from './../components/SuccessErrorMessage';
 import TextInput from './../components/TextInput';
 import UTXOPicker from './../components/UTXOPicker';
 
-import RESTUtils from './../utils/RESTUtils';
+import BackendUtils from './../utils/BackendUtils';
 import NFCUtils from './../utils/NFCUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
@@ -411,10 +411,10 @@ export default class Send extends React.Component<SendProps, SendState> {
 
         const paymentOptions = [localeString('views.Send.lnPayment')];
 
-        if (RESTUtils.supportsOnchainSends()) {
+        if (BackendUtils.supportsOnchainSends()) {
             paymentOptions.push(localeString('views.Send.btcAddress'));
         }
-        if (RESTUtils.supportsKeysend()) {
+        if (BackendUtils.supportsKeysend()) {
             paymentOptions.push(localeString('views.Send.keysendAddress'));
         }
 
@@ -494,7 +494,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         >{`${transactionType} Transaction`}</Text>
                     )}
                     {transactionType === 'On-chain' &&
-                        !RESTUtils.supportsOnchainSends() && (
+                        !BackendUtils.supportsOnchainSends() && (
                             <Text
                                 style={{
                                     ...styles.secondaryText,
@@ -506,7 +506,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             </Text>
                         )}
                     {transactionType === 'On-chain' &&
-                        RESTUtils.supportsOnchainSends() && (
+                        BackendUtils.supportsOnchainSends() && (
                             <React.Fragment>
                                 <TouchableOpacity onPress={() => changeUnits()}>
                                     <Text
@@ -616,7 +616,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     />
                                 )}
 
-                                {RESTUtils.supportsCoinControl() && (
+                                {BackendUtils.supportsCoinControl() && (
                                     <UTXOPicker
                                         onValueChange={this.selectUTXOs}
                                         UTXOsStore={UTXOsStore}
@@ -639,7 +639,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             </React.Fragment>
                         )}
                     {transactionType === 'Keysend' &&
-                        RESTUtils.supportsKeysend() && (
+                        BackendUtils.supportsKeysend() && (
                             <React.Fragment>
                                 <TouchableOpacity onPress={() => changeUnits()}>
                                     <Text
@@ -679,7 +679,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         </Text>
                                     </TouchableOpacity>
                                 )}
-                                {RESTUtils.supportsAMP() && (
+                                {BackendUtils.supportsAMP() && (
                                     <React.Fragment>
                                         <Text
                                             style={{
@@ -752,7 +752,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         </View>
                                     </React.Fragment>
                                 )}
-                                {RESTUtils.supportsAMP() &&
+                                {BackendUtils.supportsAMP() &&
                                     enableAtomicMultiPathPayment && (
                                         <React.Fragment>
                                             <Text
@@ -863,7 +863,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             </React.Fragment>
                         )}
                     {transactionType === 'Keysend' &&
-                        !RESTUtils.supportsKeysend() && (
+                        !BackendUtils.supportsKeysend() && (
                             <React.Fragment>
                                 <Text
                                     style={{

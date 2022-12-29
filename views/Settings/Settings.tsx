@@ -18,7 +18,7 @@ import NodeOn from '../../assets/images/SVG/Node On.svg';
 import NodeIdenticon, { NodeTitle } from './../../components/NodeIdenticon';
 import { themeColor } from './../../utils/ThemeUtils';
 import { localeString } from './../../utils/LocaleUtils';
-import RESTUtils from './../../utils/RESTUtils';
+import BackendUtils from './../../utils/BackendUtils';
 import { version } from './../../package.json';
 import SettingsStore, { INTERFACE_KEYS } from './../../stores/SettingsStore';
 import UnitsStore from './../../stores/UnitsStore';
@@ -163,7 +163,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     </View>
                 </TouchableOpacity>
 
-                {selectedNode && RESTUtils.supportsNodeInfo() && (
+                {selectedNode && BackendUtils.supportsNodeInfo() && (
                     <View
                         style={{
                             backgroundColor: themeColor('secondary'),
@@ -242,7 +242,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         </View>
                     </View>
                 )}
-                {selectedNode && RESTUtils.supportsMessageSigning() ? (
+                {selectedNode && BackendUtils.supportsMessageSigning() ? (
                     <View
                         style={{
                             backgroundColor: themeColor('secondary'),

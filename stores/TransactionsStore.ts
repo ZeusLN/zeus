@@ -4,7 +4,7 @@ import { sha256 } from 'js-sha256';
 import Transaction from './../models/Transaction';
 import TransactionRequest from './../models/TransactionRequest';
 import SettingsStore from './SettingsStore';
-import RESTUtils from './../utils/RESTUtils';
+import BackendUtils from './../utils/BackendUtils';
 import Base64Utils from './../utils/Base64Utils';
 
 const keySendPreimageType = '5482373484';
@@ -76,7 +76,7 @@ export default class TransactionsStore {
     @action
     public getTransactions = async () => {
         this.loading = true;
-        await RESTUtils.getTransactions()
+        await BackendUtils.getTransactions()
             .then((data: any) => {
                 this.transactions = data.transactions
                     .slice()
@@ -118,15 +118,17 @@ export default class TransactionsStore {
             spend_unconfirmed: true
         };
 
-        RESTUtils.fundPsbt(fundPsbtRequest)
+        BackendUtils.fundPsbt(fundPsbtRequest)
             .then((data: any) => {
                 const funded_psbt = data.funded_psbt;
 
-                RESTUtils.finalizePsbt({ funded_psbt })
+                BackendUtils.finalizePsbt({ funded_psbt })
                     .then((data: any) => {
                         const raw_final_tx = data.raw_final_tx;
 
-                        RESTUtils.publishTransaction({ tx_hex: raw_final_tx })
+                        BackendUtils.publishTransaction({
+                            tx_hex: raw_final_tx
+                        })
                             .then(() => {
                                 this.publishSuccess = true;
                                 this.loading = false;
@@ -162,13 +164,13 @@ export default class TransactionsStore {
         this.publishSuccess = false;
         this.loading = true;
         if (
-            RESTUtils.isLNDBased() &&
+            BackendUtils.isLNDBased() &&
             transactionRequest.utxos &&
             transactionRequest.utxos.length > 0
         ) {
             return this.sendCoinsLNDCoinControl(transactionRequest);
         }
-        RESTUtils.sendCoins(transactionRequest)
+        BackendUtils.sendCoins(transactionRequest)
             .then((data: any) => {
                 this.txid = data.txid;
                 this.publishSuccess = true;
@@ -270,8 +272,8 @@ export default class TransactionsStore {
 
         const payFunc =
             this.settingsStore.implementation === 'c-lightning-REST' && pubkey
-                ? RESTUtils.sendKeysend
-                : RESTUtils.payLightningInvoice;
+                ? BackendUtils.sendKeysend
+                : BackendUtils.payLightningInvoice;
 
         if (this.settingsStore.implementation === 'lightning-node-connect') {
             return payFunc(data);

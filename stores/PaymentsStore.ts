@@ -2,7 +2,7 @@ import { action, observable } from 'mobx';
 import Payment from './../models/Payment';
 import SettingsStore from './SettingsStore';
 import ChannelsStore from './ChannelsStore';
-import RESTUtils from './../utils/RESTUtils';
+import BackendUtils from './../utils/BackendUtils';
 
 export default class PaymentsStore {
     @observable loading = false;
@@ -31,7 +31,7 @@ export default class PaymentsStore {
     @action
     public getPayments = async () => {
         this.loading = true;
-        await RESTUtils.getPayments()
+        await BackendUtils.getPayments()
             .then((data: any) => {
                 const payments = data.payments;
                 this.payments = payments

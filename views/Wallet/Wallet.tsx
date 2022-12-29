@@ -22,7 +22,7 @@ import Button from './../../components/Button';
 import LayerBalances from './../../components/LayerBalances';
 import LoadingIndicator from './../../components/LoadingIndicator';
 
-import RESTUtils from './../../utils/RESTUtils';
+import BackendUtils from './../../utils/BackendUtils';
 import LinkingUtils from './../../utils/LinkingUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -121,7 +121,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             loginBackground
         ) {
             if (implementation === 'lightning-node-connect') {
-                RESTUtils.disconnect();
+                BackendUtils.disconnect();
             }
 
             RNRestart.Restart();
@@ -218,7 +218,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         } else {
             NodeInfoStore.getNodeInfo();
-            if (RESTUtils.supportsAccounts()) {
+            if (BackendUtils.supportsAccounts()) {
                 UTXOsStore.listAccounts();
             }
 
@@ -388,7 +388,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             return <Temple fill={color} />;
                                         }
                                         if (
-                                            RESTUtils.supportsChannelManagement()
+                                            BackendUtils.supportsChannelManagement()
                                         ) {
                                             return (
                                                 <ChannelsIcon fill={color} />
@@ -402,7 +402,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         : themeColor('text'),
                                     inactiveTintColor: error
                                         ? themeColor('error')
-                                        : RESTUtils.supportsChannelManagement()
+                                        : BackendUtils.supportsChannelManagement()
                                         ? 'gray'
                                         : themeColor('secondaryText'),
                                     showLabel: false
@@ -423,7 +423,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         component={BalanceScreen}
                                     />
                                 )}
-                                {RESTUtils.supportsChannelManagement() &&
+                                {BackendUtils.supportsChannelManagement() &&
                                 !error ? (
                                     <Tab.Screen
                                         name={localeString(

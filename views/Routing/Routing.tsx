@@ -11,7 +11,7 @@ import Pie from '../../assets/images/SVG/Pie.svg';
 
 import FeeStore from '../../stores/FeeStore';
 
-import RESTUtils from '../../utils/RESTUtils';
+import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -49,7 +49,7 @@ export default class Routing extends React.PureComponent<
     UNSAFE_componentWillMount() {
         const { FeeStore } = this.props;
         FeeStore.getFees();
-        if (RESTUtils.isLNDBased()) {
+        if (BackendUtils.isLNDBased()) {
             FeeStore.getForwardingHistory();
         }
     }
@@ -225,9 +225,9 @@ export default class Routing extends React.PureComponent<
                     monthEarned={monthEarned}
                     totalEarned={totalEarned}
                     timeframeEarned={earnedDuringTimeframe}
-                    fullSize={!RESTUtils.isLNDBased()}
+                    fullSize={!BackendUtils.isLNDBased()}
                 />
-                {RESTUtils.isLNDBased() && (
+                {BackendUtils.isLNDBased() && (
                     <View style={{ flex: 1 }}>
                         <ButtonGroup
                             onPress={(selectedIndex: number) => {

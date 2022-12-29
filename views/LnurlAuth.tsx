@@ -15,7 +15,7 @@ import {
 
 import { themeColor } from './../utils/ThemeUtils';
 import { localeString } from './../utils/LocaleUtils';
-import RESTUtils from './../utils/RESTUtils';
+import BackendUtils from './../utils/BackendUtils';
 import Base64Utils from './../utils/Base64Utils';
 
 const EC = require('elliptic').ec;
@@ -96,7 +96,7 @@ export default class LnurlAuth extends React.Component<
 
         const body = LNURLAUTH_CANONICAL_PHRASE;
 
-        RESTUtils.signMessage(body)
+        BackendUtils.signMessage(body)
             .then((signature: any) => {
                 // got the signed message, now build linkingkey
 
