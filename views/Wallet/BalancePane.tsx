@@ -16,7 +16,7 @@ import { version, playStore } from './../../package.json';
 
 const TorIcon = require('./../../assets/images/tor.png');
 
-interface MainPaneProps {
+interface BalancePaneProps {
     navigation: any;
     BalanceStore: BalanceStore;
     NodeInfoStore: NodeInfoStore;
@@ -25,7 +25,10 @@ interface MainPaneProps {
 
 @inject('BalanceStore', 'NodeInfoStore', 'SettingsStore')
 @observer
-export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
+export default class BalancePane extends React.PureComponent<
+    BalancePaneProps,
+    {}
+> {
     render() {
         const { NodeInfoStore, BalanceStore, SettingsStore, navigation } =
             this.props;
@@ -125,11 +128,11 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
             </>
         );
 
-        let mainPane;
+        let balancePane;
         const error = NodeInfoStore.error || SettingsStore.error;
 
         if (!error) {
-            mainPane = (
+            balancePane = (
                 <View
                     style={{
                         alignItems: 'center',
@@ -217,7 +220,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
             );
         }
 
-        return <React.Fragment>{mainPane}</React.Fragment>;
+        return <React.Fragment>{balancePane}</React.Fragment>;
     }
 }
 

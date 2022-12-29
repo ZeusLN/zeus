@@ -16,7 +16,7 @@ import RNRestart from 'react-native-restart';
 
 import ChannelsPane from '../Channels/ChannelsPane';
 import DefaultPane from './DefaultPane';
-import MainPane from './MainPane';
+import BalancePane from './BalancePane';
 
 import Button from './../../components/Button';
 import LayerBalances from './../../components/LayerBalances';
@@ -261,7 +261,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             (settings && (settings.passphrase || settings.pin) && !loggedIn);
         const dataAvailable = implementation === 'lndhub' || nodeInfo.version;
 
-        const WalletScreen = () => {
+        const BalanceScreen = () => {
             return (
                 <View
                     style={{
@@ -269,7 +269,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         flex: 1
                     }}
                 >
-                    <MainPane
+                    <BalancePane
                         navigation={navigation}
                         NodeInfoStore={NodeInfoStore}
                         UnitsStore={UnitsStore}
@@ -384,7 +384,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         if (route.name === 'Keypad') {
                                             return <Bitcoin fill={color} />;
                                         }
-                                        if (route.name === 'Wallet') {
+                                        if (route.name === 'Balance') {
                                             return <Temple fill={color} />;
                                         }
                                         if (
@@ -409,8 +409,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 }}
                             >
                                 <Tab.Screen
-                                    name="Wallet"
-                                    component={WalletScreen}
+                                    name="Balance"
+                                    component={BalanceScreen}
                                 />
                                 {!error ? (
                                     <Tab.Screen
@@ -420,7 +420,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 ) : (
                                     <Tab.Screen
                                         name={'  '}
-                                        component={WalletScreen}
+                                        component={BalanceScreen}
                                     />
                                 )}
                                 {RESTUtils.supportsChannelManagement() &&
@@ -434,7 +434,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 ) : (
                                     <Tab.Screen
                                         name={' '}
-                                        component={WalletScreen}
+                                        component={BalanceScreen}
                                     />
                                 )}
                             </Tab.Navigator>
