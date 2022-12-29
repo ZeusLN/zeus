@@ -141,7 +141,7 @@ export default class Invoice extends BaseModel {
     @computed public get getDisplayTimeShort(): string {
         return this.isPaid
             ? DateTimeUtils.listFormattedDateShort(
-                  this.expires_at || this.creation_date || this.timestamp || 0
+                  this.settle_date || this.paid_at || this.timestamp || 0
               )
             : DateTimeUtils.listFormattedDateShort(
                   this.expires_at || this.creation_date || this.timestamp || 0
