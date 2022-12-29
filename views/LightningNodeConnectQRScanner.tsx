@@ -21,7 +21,7 @@ export default class LightningNodeConnectQRScanner extends React.Component<
             ConnectionFormatUtils.processLncUrl(data);
 
         if (pairingPhrase && mailboxServer) {
-            navigation.navigate('AddEditNode', {
+            navigation.navigate('NodeConfiguration', {
                 node: {
                     pairingPhrase,
                     mailboxServer,
@@ -50,7 +50,9 @@ export default class LightningNodeConnectQRScanner extends React.Component<
         return (
             <QRCodeScanner
                 handleQRScanned={this.handleLNCConfigScanned}
-                goBack={() => navigation.navigate('AddEditNode', { index })}
+                goBack={() =>
+                    navigation.navigate('NodeConfiguration', { index })
+                }
             />
         );
     }
