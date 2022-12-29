@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { themeColor } from './../utils/ThemeUtils';
+import CaretDown from './../assets/images/SVG/Caret Down.svg';
 
 interface DropdownSettingProps {
     title: string;
@@ -42,7 +43,7 @@ export default class DropdownSetting extends React.Component<
         return (
             <React.Fragment>
                 {Platform.OS === 'android' && (
-                    <View style={{ height: 75 }}>
+                    <View>
                         <Text
                             style={{
                                 ...styles.secondaryText,
@@ -57,8 +58,11 @@ export default class DropdownSetting extends React.Component<
                                 onValueChange(itemValue)
                             }
                             style={{
-                                color: themeColor('text')
+                                color: themeColor('text'),
+                                backgroundColor: themeColor('secondary'),
+                                ...styles.field
                             }}
+                            dropdownIconColor={themeColor('text')}
                         >
                             {pickerValuesAndroid}
                         </Picker>
@@ -101,6 +105,18 @@ export default class DropdownSetting extends React.Component<
                             >
                                 {displayValue ? displayValue : selectedValue}
                             </Text>
+                            <View
+                                style={{
+                                    position: 'absolute',
+                                    right: 10,
+                                    top: '33%'
+                                }}
+                            >
+                                <CaretDown
+                                    stroke={themeColor('text')}
+                                    fill={themeColor('text')}
+                                />
+                            </View>
                         </TouchableOpacity>
                     </View>
                 )}
