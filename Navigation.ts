@@ -213,7 +213,7 @@ const AppScenes = {
     ImportAccount: {
         screen: ImportAccount
     },
-    HandleAnythingQRCodeScanner: {
+    HandleAnythingQRScanner: {
         screen: HandleAnythingQRScanner
     },
     NodeQRCodeScanner: {
