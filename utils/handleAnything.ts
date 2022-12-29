@@ -213,7 +213,7 @@ const handleAnything = async (
         // BTCPay pairing QR
     } else if (value.includes('config=') && value.includes('lnd.config')) {
         if (isClipboardValue) return true;
-        settingsStore
+        return settingsStore
             .fetchBTCPayConfig(value)
             .then((node: any) => {
                 if (settingsStore.btcPayError) {
@@ -229,6 +229,7 @@ const handleAnything = async (
                         { cancelable: false }
                     );
                 }
+
                 return [
                     'NodeConfiguration',
                     {
