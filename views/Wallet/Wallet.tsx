@@ -15,7 +15,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import RNRestart from 'react-native-restart';
 
 import ChannelsPane from '../Channels/ChannelsPane';
-import DefaultPane from './DefaultPane';
+import KeypadPane from './KeypadPane';
 import BalancePane from './BalancePane';
 
 import Button from './../../components/Button';
@@ -333,7 +333,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             );
         };
 
-        const DefaultScreen = () => {
+        const KeypadScreen = () => {
             return (
                 <View
                     style={{
@@ -341,7 +341,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         flex: 1
                     }}
                 >
-                    <DefaultPane navigation={navigation} />
+                    <KeypadPane navigation={navigation} />
                 </View>
             );
         };
@@ -415,7 +415,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 {!error ? (
                                     <Tab.Screen
                                         name="Keypad"
-                                        component={DefaultScreen}
+                                        component={KeypadScreen}
                                     />
                                 ) : (
                                     <Tab.Screen
