@@ -4,7 +4,7 @@ class DateTimeUtils {
     listDate = (timestamp: number | string | Date) =>
         new Date(Number(timestamp) * 1000);
     listFormattedDate = (
-        timestamp: number | string | Date,
+        timestamp: number | string,
         format = "ddd, mmm d 'yy, HH:MM:ss Z"
     ) => {
         try {
