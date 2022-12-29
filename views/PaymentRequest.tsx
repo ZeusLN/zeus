@@ -28,7 +28,7 @@ import SettingsStore from './../stores/SettingsStore';
 
 import FeeUtils from './../utils/FeeUtils';
 import { localeString } from './../utils/LocaleUtils';
-import RESTUtils from './../utils/RESTUtils';
+import BackendUtils from './../utils/BackendUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
 interface InvoiceProps {
@@ -236,14 +236,14 @@ export default class PaymentRequest extends React.Component<
         const enableAmp: boolean =
             enableAtomicMultiPathPayment || lockAtomicMultiPathPayment;
         const ampOrMppEnabled: boolean =
-            (RESTUtils.supportsMPP() || RESTUtils.supportsAMP()) &&
+            (BackendUtils.supportsMPP() || BackendUtils.supportsAMP()) &&
             (enableMultiPathPayment || enableAmp);
 
         const date = new Date(Number(timestamp) * 1000).toString();
 
         const { enableTor, implementation } = SettingsStore;
 
-        const isLnd: boolean = RESTUtils.isLNDBased();
+        const isLnd: boolean = BackendUtils.isLNDBased();
         const isCLightning: boolean = implementation === 'c-lightning-REST';
 
         const isNoAmountInvoice: boolean =
@@ -566,7 +566,7 @@ export default class PaymentRequest extends React.Component<
                                 </>
                             )}
 
-                            {!!pay_req && RESTUtils.supportsHopPicking() && (
+                            {!!pay_req && BackendUtils.supportsHopPicking() && (
                                 <>
                                     {
                                         <HopPicker
@@ -604,7 +604,7 @@ export default class PaymentRequest extends React.Component<
                             )}
 
                             {!!pay_req &&
-                                RESTUtils.supportsMPP() &&
+                                BackendUtils.supportsMPP() &&
                                 !enableTor && (
                                     <React.Fragment>
                                         <Text
@@ -650,7 +650,7 @@ export default class PaymentRequest extends React.Component<
                                     </React.Fragment>
                                 )}
 
-                            {!!pay_req && RESTUtils.supportsAMP() && (
+                            {!!pay_req && BackendUtils.supportsAMP() && (
                                 <React.Fragment>
                                     <Text
                                         style={{

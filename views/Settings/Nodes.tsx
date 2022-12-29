@@ -7,7 +7,7 @@ import Button from './../../components/Button';
 import LoadingIndicator from './../../components/LoadingIndicator';
 import NodeIdenticon, { NodeTitle } from './../../components/NodeIdenticon';
 
-import RESTUtils from './../../utils/RESTUtils';
+import BackendUtils from './../../utils/BackendUtils';
 import BalanceStore from './../../stores/BalanceStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore, { INTERFACE_KEYS } from './../../stores/SettingsStore';
@@ -154,7 +154,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 currentImplementation ===
                                                 'lightning-node-connect'
                                             ) {
-                                                RESTUtils.disconnect();
+                                                BackendUtils.disconnect();
                                             }
                                             BalanceStore.reset();
                                             NodeInfoStore.reset();

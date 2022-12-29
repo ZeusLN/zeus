@@ -7,7 +7,7 @@ import querystring from 'querystring-es3';
 import hashjs from 'hash.js';
 import Invoice from './../models/Invoice';
 import SettingsStore from './SettingsStore';
-import RESTUtils from './../utils/RESTUtils';
+import BackendUtils from './../utils/BackendUtils';
 import { localeString } from './../utils/LocaleUtils';
 
 export default class InvoicesStore {
@@ -42,7 +42,7 @@ export default class InvoicesStore {
                 if (
                     this.pay_req &&
                     this.pay_req.destination &&
-                    (RESTUtils.isLNDBased() ||
+                    (BackendUtils.isLNDBased() ||
                         this.settingsStore.implementation === 'spark')
                 ) {
                     this.getRoutes(
@@ -83,7 +83,7 @@ export default class InvoicesStore {
     @action
     public getInvoices = async () => {
         this.loading = true;
-        await RESTUtils.getInvoices()
+        await BackendUtils.getInvoices()
             .then((data: any) => {
                 this.invoices = data.invoices;
                 this.invoices = this.invoices.map(
@@ -118,7 +118,7 @@ export default class InvoicesStore {
             routeHints
         );
 
-        if (RESTUtils.supportsOnchainReceiving()) {
+        if (BackendUtils.supportsOnchainReceiving()) {
             this.getNewAddress(addressType ? { type: addressType } : null);
         }
 
@@ -149,7 +149,7 @@ export default class InvoicesStore {
         if (ampInvoice) req.is_amp = true;
         if (routeHints) req.private = true;
 
-        return RESTUtils.createInvoice(req)
+        return BackendUtils.createInvoice(req)
             .then((data: any) => {
                 if (data.error) {
                     this.creatingInvoiceError = true;
@@ -241,7 +241,7 @@ export default class InvoicesStore {
         this.loading = true;
         this.error_msg = null;
         this.onChainAddress = null;
-        return RESTUtils.getNewAddress(params)
+        return BackendUtils.getNewAddress(params)
             .then((data: any) => {
                 this.onChainAddress =
                     data.address || data.bech32 || (data[0] && data[0].address);
@@ -286,7 +286,7 @@ export default class InvoicesStore {
         this.paymentRequest = paymentRequest;
         this.feeEstimate = null;
 
-        return RESTUtils.decodePaymentRequest([paymentRequest])
+        return BackendUtils.decodePaymentRequest([paymentRequest])
             .then((data: any) => {
                 this.pay_req = new Invoice(data);
 
@@ -327,7 +327,7 @@ export default class InvoicesStore {
         this.feeEstimate = null;
         this.successProbability = null;
 
-        return RESTUtils.getRoutes([destination, amount])
+        return BackendUtils.getRoutes([destination, amount])
             .then((data: any) => {
                 this.loadingFeeEstimate = false;
                 this.successProbability = data.success_prob

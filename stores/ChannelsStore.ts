@@ -7,7 +7,7 @@ import CloseChannelRequest from './../models/CloseChannelRequest';
 import SettingsStore from './SettingsStore';
 
 import Base64Utils from './../utils/Base64Utils';
-import RESTUtils from './../utils/RESTUtils';
+import BackendUtils from './../utils/BackendUtils';
 
 interface ChannelInfoIndex {
     [key: string]: ChannelInfo;
@@ -80,7 +80,7 @@ export default class ChannelsStore {
     @action
     getNodeInfo = (pubkey: string) => {
         this.loading = true;
-        return RESTUtils.getNodeInfo([pubkey]).then((data: any) => {
+        return BackendUtils.getNodeInfo([pubkey]).then((data: any) => {
             return data.node;
         });
     };
@@ -99,7 +99,7 @@ export default class ChannelsStore {
         this.totalOutbound = 0;
         this.totalInbound = 0;
         this.totalOffline = 0;
-        RESTUtils.getChannels()
+        BackendUtils.getChannels()
             .then((data: any) => {
                 const channels = data.channels.map(
                     (channel: any) => new Channel(channel)
@@ -173,7 +173,7 @@ export default class ChannelsStore {
             }
         }
 
-        RESTUtils.closeChannel(urlParams)
+        BackendUtils.closeChannel(urlParams)
             .then((data: any) => {
                 const { chan_close } = data;
                 this.closeChannelSuccess = chan_close.success;
@@ -189,7 +189,7 @@ export default class ChannelsStore {
     public connectPeer = (request: OpenChannelRequest) => {
         this.connectingToPeer = true;
 
-        RESTUtils.connectPeer({
+        BackendUtils.connectPeer({
             addr: {
                 pubkey: request.node_pubkey_string,
                 host: request.host
@@ -257,7 +257,7 @@ export default class ChannelsStore {
 
         console.log(openChanRequest);
 
-        RESTUtils.openChannelStream(openChanRequest)
+        BackendUtils.openChannelStream(openChanRequest)
             .then((data: any) => {
                 console.log('stream');
                 console.log(data);
@@ -279,7 +279,7 @@ export default class ChannelsStore {
                         openChanRequest.min_confs === 0
                 };
 
-                RESTUtils.fundPsbt(fundPsbtRequest)
+                BackendUtils.fundPsbt(fundPsbtRequest)
                     .then((data: any) => {
                         console.log('fund');
                         console.log(data);
@@ -294,7 +294,7 @@ export default class ChannelsStore {
                             ...request
                         };
 
-                        RESTUtils.openChannel(openChanRequest)
+                        BackendUtils.openChannel(openChanRequest)
                             .then((data: any) => {
                                 console.log('chan2 data');
                                 console.log(data);
@@ -347,14 +347,14 @@ export default class ChannelsStore {
         this.openingChannel = true;
 
         if (
-            RESTUtils.isLNDBased() &&
+            BackendUtils.isLNDBased() &&
             request.utxos &&
             request.utxos.length > 0
         ) {
             return this.openChannelLNDCoinControl(request);
         }
 
-        RESTUtils.openChannel(request)
+        BackendUtils.openChannel(request)
             .then((data: any) => {
                 this.output_index = data.output_index;
                 this.funding_txid_str = data.funding_txid_str;
@@ -380,7 +380,7 @@ export default class ChannelsStore {
     public getChannelInfo = (chanId: string) => {
         this.loading = true;
         if (this.chanInfo[chanId]) delete this.chanInfo[chanId];
-        RESTUtils.getChannelInfo(chanId)
+        BackendUtils.getChannelInfo(chanId)
             .then((data: any) => {
                 this.chanInfo[chanId] = new ChannelInfo(data);
                 this.loading = false;

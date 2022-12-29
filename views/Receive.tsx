@@ -36,7 +36,7 @@ import SettingsStore from './../stores/SettingsStore';
 import UnitsStore, { SATS_PER_BTC } from './../stores/UnitsStore';
 
 import { localeString } from './../utils/LocaleUtils';
-import RESTUtils from './../utils/RESTUtils';
+import BackendUtils from './../utils/BackendUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
 interface ReceiveProps {
@@ -119,7 +119,7 @@ export default class Receive extends React.Component<
             undefined,
             ampInvoice,
             routeHints,
-            RESTUtils.supportsAddressTypeSelection() ? addressType : null
+            BackendUtils.supportsAddressTypeSelection() ? addressType : null
         ).then((rHash: string) => this.subscribeInvoice(rHash));
     };
 
@@ -129,7 +129,7 @@ export default class Receive extends React.Component<
         const { setWatchedInvoicePaid } = InvoicesStore;
         if (implementation === 'lightning-node-connect') {
             const { LncModule } = NativeModules;
-            const eventName = RESTUtils.subscribeInvoice(rHash);
+            const eventName = BackendUtils.subscribeInvoice(rHash);
             const eventEmitter = new NativeEventEmitter(LncModule);
             this.listener = eventEmitter.addListener(
                 eventName,
@@ -150,7 +150,7 @@ export default class Receive extends React.Component<
         }
 
         if (implementation === 'lnd') {
-            RESTUtils.subscribeInvoice(rHash).then((response: any) => {
+            BackendUtils.subscribeInvoice(rHash).then((response: any) => {
                 if (response.result && response.result.settled) {
                     setWatchedInvoicePaid();
                 }
@@ -278,7 +278,7 @@ export default class Receive extends React.Component<
             />
         );
 
-        const ADDRESS_TYPES = RESTUtils.supportsTaproot()
+        const ADDRESS_TYPES = BackendUtils.supportsTaproot()
             ? [
                   {
                       key: localeString('views.Receive.np2wkhKey'),
@@ -430,7 +430,7 @@ export default class Receive extends React.Component<
                         loading || watchedInvoicePaid ? null : haveInvoice ? (
                             <ClearButton />
                         ) : (
-                            RESTUtils.supportsAddressTypeSelection() && (
+                            BackendUtils.supportsAddressTypeSelection() && (
                                 <SettingsButton />
                             )
                         )
@@ -712,7 +712,7 @@ export default class Receive extends React.Component<
                                         </>
                                     )}
 
-                                    {RESTUtils.isLNDBased() && (
+                                    {BackendUtils.isLNDBased() && (
                                         <>
                                             <Text
                                                 style={{
@@ -747,7 +747,7 @@ export default class Receive extends React.Component<
                                         </>
                                     )}
 
-                                    {RESTUtils.supportsAMP() && (
+                                    {BackendUtils.supportsAMP() && (
                                         <>
                                             <Text
                                                 style={{
@@ -802,7 +802,7 @@ export default class Receive extends React.Component<
                                                     lnurl,
                                                     ampInvoice,
                                                     routeHints,
-                                                    RESTUtils.supportsAddressTypeSelection()
+                                                    BackendUtils.supportsAddressTypeSelection()
                                                         ? addressType
                                                         : null
                                                 ).then((rHash: string) =>
@@ -821,7 +821,7 @@ export default class Receive extends React.Component<
                         backgroundColor: themeColor('background'),
                         borderTopLeftRadius: 20,
                         borderTopRightRadius: 20,
-                        height: RESTUtils.supportsTaproot() ? 450 : 350,
+                        height: BackendUtils.supportsTaproot() ? 450 : 350,
                         paddingLeft: 24,
                         paddingRight: 24
                     }}

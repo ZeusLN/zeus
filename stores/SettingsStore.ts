@@ -2,7 +2,7 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
-import RESTUtils from '../utils/RESTUtils';
+import BackendUtils from '../utils/BackendUtils';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import { localeString } from '../utils/LocaleUtils';
 
@@ -480,7 +480,7 @@ export default class SettingsStore {
         this.createAccountSuccess = '';
         this.createAccountError = '';
         this.loading = true;
-        return RESTUtils.login({
+        return BackendUtils.login({
             login: request.login,
             password: request.password
         })
@@ -500,9 +500,9 @@ export default class SettingsStore {
     public connect = async () => {
         this.loading = true;
 
-        await RESTUtils.initLNC();
+        await BackendUtils.initLNC();
 
-        const error = await RESTUtils.connect();
+        const error = await BackendUtils.connect();
         if (error) {
             this.error = true;
             this.errorMsg = error;
@@ -514,7 +514,7 @@ export default class SettingsStore {
             let counter = 0;
             const interval = setInterval(async () => {
                 counter++;
-                const connected = await RESTUtils.isConnected();
+                const connected = await BackendUtils.isConnected();
                 if (connected) {
                     clearInterval(interval);
                     this.loading = false;
