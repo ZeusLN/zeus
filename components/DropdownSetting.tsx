@@ -14,7 +14,6 @@ import CaretDown from './../assets/images/SVG/Caret Down.svg';
 interface DropdownSettingProps {
     title: string;
     selectedValue: string | boolean;
-    displayValue?: string;
     onValueChange: (value: any) => void;
     values: Array<any>;
 }
@@ -24,8 +23,7 @@ export default class DropdownSetting extends React.Component<
     {}
 > {
     render() {
-        const { title, selectedValue, displayValue, onValueChange, values } =
-            this.props;
+        const { title, selectedValue, onValueChange, values } = this.props;
 
         const pickerValuesAndroid: Array<any> = [];
         const pickerValuesIOS: Array<string> = ['Cancel'];
@@ -39,6 +37,12 @@ export default class DropdownSetting extends React.Component<
             );
             pickerValuesIOS.push(value.key);
         });
+
+        const displayItem = values.filter(
+            (value: any) => value.value === selectedValue
+        )[0];
+
+        const display = displayItem ? displayItem.key : null;
 
         return (
             <React.Fragment>
@@ -103,7 +107,7 @@ export default class DropdownSetting extends React.Component<
                                     ...styles.field
                                 }}
                             >
-                                {displayValue ? displayValue : selectedValue}
+                                {display ? display : selectedValue}
                             </Text>
                             <View
                                 style={{
