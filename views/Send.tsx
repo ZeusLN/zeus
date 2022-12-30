@@ -648,8 +648,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             color: themeColor('secondaryText')
                                         }}
                                     >
-                                        {localeString('views.Send.amount')} (
-                                        {units === 'fiat' ? fiat : units})
+                                        {localeString('views.Send.amount')}
                                     </Text>
                                 </TouchableOpacity>
                                 <TextInput
@@ -659,31 +658,58 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         this.setState({ amount: text })
                                     }
                                     style={styles.textInput}
+                                    prefix={
+                                        units !== 'sats' &&
+                                        (units === 'BTC'
+                                            ? '₿'
+                                            : !getSymbol().rtl
+                                            ? getSymbol().symbol
+                                            : null)
+                                    }
+                                    suffix={
+                                        units === 'sats'
+                                            ? units
+                                            : getSymbol().rtl &&
+                                              units === 'fiat' &&
+                                              getSymbol().symbol
+                                    }
+                                    toggleUnits={changeUnits}
                                 />
                                 {units !== 'sats' && (
+                                    <Amount
+                                        sats={satAmount}
+                                        fixedUnits="sats"
+                                        toggleable
+                                    />
+                                )}
+                                {units !== 'BTC' && (
+                                    <Amount
+                                        sats={satAmount}
+                                        fixedUnits="BTC"
+                                        toggleable
+                                    />
+                                )}
+                                {units === 'fiat' && (
                                     <TouchableOpacity
                                         onPress={() => changeUnits()}
                                     >
                                         <Text
                                             style={{
-                                                ...styles.secondaryText,
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
+                                                ...styles.text,
+                                                color: themeColor('text')
                                             }}
                                         >
-                                            {satAmount}{' '}
-                                            {localeString(
-                                                'views.Send.satoshis'
-                                            )}
+                                            {FiatStore.getRate()}
                                         </Text>
                                     </TouchableOpacity>
                                 )}
+
                                 {BackendUtils.supportsAMP() && (
                                     <React.Fragment>
                                         <Text
                                             style={{
                                                 ...styles.secondaryText,
+                                                marginTop: 10,
                                                 color: themeColor(
                                                     'secondaryText'
                                                 )
