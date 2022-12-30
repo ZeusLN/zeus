@@ -2,8 +2,7 @@ import stores from '../stores/Stores';
 
 export function themeColor(themeString: string): any {
     const { settings } = stores.settingsStore;
-    const { display } = settings;
-    const { theme } = display;
+    const theme = settings.display && settings.display.theme;
 
     const Light: { [key: string]: any } = {
         generalStyle: 'light',
