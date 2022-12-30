@@ -1,7 +1,6 @@
 import * as React from 'react';
 import {
     Modal,
-    Platform,
     StyleSheet,
     Switch,
     Text,
@@ -496,17 +495,10 @@ export default class NodeConfiguration extends React.Component<
             </View>
         );
 
-        const displayItem = INTERFACE_KEYS.filter(
-            (value: any) => value.value === implementation
-        )[0];
-
-        const displayValue =
-            Platform.OS === 'android' ? displayItem.value : displayItem.key;
-
         const NodeInterface = () => (
             <DropdownSetting
                 title={localeString('views.Settings.AddEditNode.nodeInterface')}
-                selectedValue={displayValue}
+                selectedValue={implementation}
                 onValueChange={(value: string) => {
                     this.setState({
                         implementation: value,
@@ -519,15 +511,12 @@ export default class NodeConfiguration extends React.Component<
         );
 
         const Mailbox = () => {
-            const mailboxDisplayValue = LNC_MAILBOX_KEYS.filter(
-                (value: any) => value.value === mailboxServer
-            )[0].value;
             return (
                 <DropdownSetting
                     title={localeString(
                         'views.Settings.AddEditNode.mailboxServer'
                     )}
-                    selectedValue={mailboxDisplayValue}
+                    selectedValue={mailboxServer}
                     onValueChange={(value: string) => {
                         this.setState({
                             mailboxServer: value,
