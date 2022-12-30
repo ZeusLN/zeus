@@ -188,16 +188,16 @@ export default class WalletHeader extends React.Component<
                                 <LoadingIndicator size={80} />
                             )}
                             {!!clipboard && (
-                                <View
-                                    style={{ marginTop: 14, marginRight: 20 }}
-                                >
+                                <View style={{ marginRight: 20 }}>
                                     <ClipboardBadge
                                         navigation={navigation}
                                         clipboard={clipboard}
                                     />
                                 </View>
                             )}
-                            <ScanBadge navigation={navigation} />
+                            <View style={{ marginTop: 1 }}>
+                                <ScanBadge navigation={navigation} />
+                            </View>
                         </View>
                     )
                 }
