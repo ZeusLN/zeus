@@ -41,7 +41,7 @@ Read more on our [documentation site](https://docs.zeusln.app/).
 - [x] Privacy mode - hide your sensitive data
 - [x] Lightning address send
 - [x] Full LNURL support (pay, withdraw, auth, channel)
-- [x] Lighting channel management
+- [x] Lightning channel management
 - [x] Detailed routing reports
 - [x] Set and manage routing fees
 - [x] MPP/AMP support
