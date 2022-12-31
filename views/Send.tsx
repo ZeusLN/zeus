@@ -254,14 +254,21 @@ export default class Send extends React.Component<SendProps, SendState> {
     validateAddress = (text: string) => {
         const { navigation } = this.props;
         handleAnything(text, this.state.amount)
-            .then(([route, props]) => {
-                navigation.navigate(route, props);
+            .then((response) => {
+                try {
+                    const [route, props] = response;
+                    navigation.navigate(route, props);
+                } catch {
+                    this.setState({
+                        transactionType: null,
+                        isValid: false
+                    });
+                }
             })
             .catch((err) => {
                 this.setState({
                     transactionType: null,
                     isValid: false,
-                    destination: text,
                     error_msg: err.message
                 });
             });
@@ -461,6 +468,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                         placeholder={'lnbc1...'}
                         value={destination}
                         onChangeText={(text: string) => {
+                            this.setState({
+                                destination: text
+                            });
                             this.validateAddress(text);
                         }}
                         style={styles.textInput}

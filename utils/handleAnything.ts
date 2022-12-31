@@ -252,7 +252,7 @@ const handleAnything = async (
                     { cancelable: false }
                 );
             });
-    } else if (findlnurl(value) !== null || lnurl !== null) {
+    } else if (!!findlnurl(value) || !!lnurl) {
         const raw: string = findlnurl(value) || lnurl || '';
         return getlnurlParams(raw).then((params: any) => {
             switch (params.tag) {
