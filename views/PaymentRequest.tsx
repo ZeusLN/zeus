@@ -4,7 +4,6 @@ import {
     NativeEventEmitter,
     ScrollView,
     StyleSheet,
-    Switch,
     Text,
     View
 } from 'react-native';
@@ -16,6 +15,7 @@ import Button from './../components/Button';
 import HopPicker from './../components/HopPicker';
 import KeyValue from './../components/KeyValue';
 import LoadingIndicator from './../components/LoadingIndicator';
+import Switch from './../components/Switch';
 import TextInput from './../components/TextInput';
 
 import InvoicesStore from './../stores/InvoicesStore';
@@ -639,12 +639,6 @@ export default class PaymentRequest extends React.Component<
                                                                 : true
                                                     });
                                                 }}
-                                                trackColor={{
-                                                    false: '#767577',
-                                                    true: themeColor(
-                                                        'highlight'
-                                                    )
-                                                }}
                                             />
                                         </View>
                                     </React.Fragment>
@@ -682,10 +676,6 @@ export default class PaymentRequest extends React.Component<
                                                         enable ||
                                                         enableMultiPathPayment
                                                 });
-                                            }}
-                                            trackColor={{
-                                                false: '#767577',
-                                                true: themeColor('highlight')
                                             }}
                                             disabled={
                                                 lockAtomicMultiPathPayment

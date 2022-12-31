@@ -21,7 +21,8 @@ export function themeColor(themeString: string): any {
         delete: '#cc3300',
         qrFrame: '#FFD93F',
         bolt: '#FFD93F',
-        chain: '#FFD93F'
+        chain: '#FFD93F',
+        disabled: '#767577'
         // TODO: pick outbound and inbound colors for light and junkie themes
         // TODO: success / warning / bitcoin colors for light and junkie (are they just the same?)
     };
@@ -43,7 +44,8 @@ export function themeColor(themeString: string): any {
         delete: '#992600',
         qrFrame: '#FFD93F',
         bolt: '#FFD93F',
-        chain: '#FFD93F'
+        chain: '#FFD93F',
+        disabled: '#767577'
     };
 
     const Junkie: { [key: string]: any } = {

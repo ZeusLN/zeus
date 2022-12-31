@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ScrollView, Switch, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import SettingsStore, {
@@ -11,6 +11,7 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import DropdownSetting from './../../components/DropdownSetting';
 import LoadingIndicator from './../../components/LoadingIndicator';
+import Switch from './../../components/Switch';
 
 interface DisplayProps {
     navigation: any;
@@ -177,10 +178,6 @@ export default class Display extends React.Component<
                                                     !displayNickname
                                             }
                                         });
-                                    }}
-                                    trackColor={{
-                                        false: '#767577',
-                                        true: themeColor('highlight')
                                     }}
                                 />
                             </View>

@@ -2,7 +2,6 @@ import * as React from 'react';
 import {
     ScrollView,
     StyleSheet,
-    Switch,
     Text,
     TouchableOpacity,
     View
@@ -10,12 +9,14 @@ import {
 import { Divider, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Channel from './../../models/Channel';
+
 import BalanceSlider from './../../components/BalanceSlider';
 import Button from './../../components/Button';
 import KeyValue from './../../components/KeyValue';
 import Amount from './../../components/Amount';
 import FeeBreakdown from './../../components/FeeBreakdown';
 import SetFeesForm from './../../components/SetFeesForm';
+import Switch from './../../components/Switch';
 import TextInput from './../../components/TextInput';
 
 import PrivacyUtils from './../../utils/PrivacyUtils';
@@ -470,15 +471,6 @@ export default class ChannelView extends React.Component<
                                                         forceClose: !forceClose
                                                     })
                                                 }
-                                                trackColor={{
-                                                    false: '#767577',
-                                                    true: themeColor(
-                                                        'highlight'
-                                                    )
-                                                }}
-                                                style={{
-                                                    alignSelf: 'flex-end'
-                                                }}
                                             />
                                         </>
                                     )}
