@@ -105,8 +105,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     }
 
     componentWillUnmount() {
-        this.props.navigation.removeListener('didFocus');
-        AppState.removeEventListener('change', this.handleAppStateChange);
+        this.props.navigation.removeListener &&
+            this.props.navigation.removeListener('didFocus');
+        AppState.removeEventListener &&
+            AppState.removeEventListener('change', this.handleAppStateChange);
     }
 
     handleAppStateChange = (nextAppState: any) => {
