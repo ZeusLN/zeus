@@ -76,7 +76,7 @@
     "views.EditFee.title": "Edit network fee",
     "views.EditFee.titleDisplayOnly": "Transaction fees",
     "views.CLightningRestQRScanner.error": "Error fetching c-lightning-REST config",
-    "views.LnurlPay.LnurlPay.amount": "Amount to pay (in Satoshis)",
+    "views.LnurlPay.LnurlPay.amount": "Amount to pay",
     "views.LnurlPay.LnurlPay.comment": "Comment",
     "views.LnurlPay.LnurlPay.invalidParams": "Invalid lnurl params!",
     "views.LnurlPay.LnurlPay.invalidInvoice": "Got an invalid invoice!",

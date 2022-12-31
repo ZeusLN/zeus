@@ -75,6 +75,7 @@ export default function TextInput(props: TextInputProps) {
                             color: themeColor('text'),
                             backgroundColor: themeColor('background')
                         }}
+                        onPress={() => toggleUnits()}
                     >
                         {prefix}
                     </Text>
@@ -107,6 +108,7 @@ export default function TextInput(props: TextInputProps) {
                             color: themeColor('text'),
                             backgroundColor: themeColor('background')
                         }}
+                        onPress={() => toggleUnits()}
                     >
                         {suffix}
                     </Text>
