@@ -5,7 +5,6 @@ import {
     NativeModules,
     ScrollView,
     StyleSheet,
-    Switch,
     Text,
     TouchableOpacity,
     View
@@ -28,6 +27,7 @@ import {
     WarningMessage,
     ErrorMessage
 } from './../components/SuccessErrorMessage';
+import Switch from './../components/Switch';
 import TextInput from './../components/TextInput';
 
 import FiatStore from './../stores/FiatStore';
@@ -734,15 +734,6 @@ export default class Receive extends React.Component<
                                                         routeHints: !routeHints
                                                     })
                                                 }
-                                                trackColor={{
-                                                    false: '#767577',
-                                                    true: themeColor(
-                                                        'highlight'
-                                                    )
-                                                }}
-                                                style={{
-                                                    alignSelf: 'flex-end'
-                                                }}
                                             />
                                         </>
                                     )}
@@ -769,15 +760,6 @@ export default class Receive extends React.Component<
                                                         ampInvoice: !ampInvoice
                                                     })
                                                 }
-                                                trackColor={{
-                                                    false: '#767577',
-                                                    true: themeColor(
-                                                        'highlight'
-                                                    )
-                                                }}
-                                                style={{
-                                                    alignSelf: 'flex-end'
-                                                }}
                                             />
                                         </>
                                     )}

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ScrollView, Switch, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import SettingsStore, {
@@ -10,6 +10,7 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import DropdownSetting from './../../components/DropdownSetting';
 import LoadingIndicator from './../../components/LoadingIndicator';
+import Switch from './../../components/Switch';
 import TextInput from './../../components/TextInput';
 
 interface PrivacyProps {
@@ -215,10 +216,6 @@ export default class Privacy extends React.Component<
                                             }
                                         });
                                     }}
-                                    trackColor={{
-                                        false: '#767577',
-                                        true: themeColor('highlight')
-                                    }}
                                 />
                             </View>
                         </ListItem>
@@ -261,10 +258,6 @@ export default class Privacy extends React.Component<
                                                 enableMempoolRates
                                             }
                                         });
-                                    }}
-                                    trackColor={{
-                                        false: '#767577',
-                                        true: themeColor('highlight')
                                     }}
                                 />
                             </View>
@@ -310,10 +303,6 @@ export default class Privacy extends React.Component<
                                                     !enableMempoolRates
                                             }
                                         });
-                                    }}
-                                    trackColor={{
-                                        false: '#767577',
-                                        true: themeColor('highlight')
                                     }}
                                 />
                             </View>
