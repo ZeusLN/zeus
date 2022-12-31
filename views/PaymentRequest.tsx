@@ -219,7 +219,9 @@ export default class PaymentRequest extends React.Component<
         const description = pay_req && pay_req.description;
         const payment_hash = pay_req && pay_req.payment_hash;
         const timestamp = pay_req && pay_req.timestamp;
-        const percentAmount = requestAmount
+        const percentAmount = customAmount
+            ? (Number(customAmount) * (Number(maxFeePercent) / 100)).toFixed()
+            : requestAmount
             ? (requestAmount * (Number(maxFeePercent) / 100)).toFixed()
             : 0;
 
@@ -459,13 +461,13 @@ export default class PaymentRequest extends React.Component<
                                     </View>
                                     <View
                                         style={{
-                                            flexDirection: 'row'
+                                            flexDirection: 'row',
+                                            width: '95%'
                                         }}
                                     >
                                         <TextInput
                                             style={{
-                                                width: 170,
-                                                paddingRight: 30,
+                                                width: '50%',
                                                 opacity:
                                                     feeOption == 'sats'
                                                         ? 1
@@ -500,9 +502,7 @@ export default class PaymentRequest extends React.Component<
                                         </Text>
                                         <TextInput
                                             style={{
-                                                left: 10,
-                                                width: 160,
-                                                paddingRight: 20,
+                                                width: '50%',
                                                 opacity:
                                                     feeOption == 'percent'
                                                         ? 1
@@ -526,7 +526,7 @@ export default class PaymentRequest extends React.Component<
                                                 ...styles.label,
                                                 color: themeColor('text'),
                                                 top: 28,
-                                                right: 10,
+                                                right: 18,
                                                 opacity:
                                                     feeOption == 'percent'
                                                         ? 1
