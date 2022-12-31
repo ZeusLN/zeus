@@ -488,6 +488,7 @@
     "views.Sponsors.title": "Sponsors",
     "views.Gods.title": "Gods",
     "views.Mortals.title": "Mortals",
+    "views.Splash.scanConfig": "Scan node config",
     "components.UTXOPicker.modal.title": "Select UTXOs to use",
     "components.UTXOPicker.modal.description": "Select the UTXOs to be used in this operation. You may want to only use specific UTXOs to preserve your privacy.",
     "components.UTXOPicker.modal.set": "Set UTXOs",
