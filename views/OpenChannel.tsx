@@ -3,7 +3,6 @@ import {
     Platform,
     ScrollView,
     StyleSheet,
-    Switch,
     Text,
     View,
     TouchableOpacity,
@@ -20,6 +19,7 @@ import {
     SuccessMessage,
     ErrorMessage
 } from './../components/SuccessErrorMessage';
+import Switch from './../components/Switch';
 import TextInput from './../components/TextInput';
 import UTXOPicker from './../components/UTXOPicker';
 
@@ -499,13 +499,6 @@ export default class OpenChannel extends React.Component<
                                     privateChannel: !privateChannel
                                 })
                             }
-                            trackColor={{
-                                false: '#767577',
-                                true: themeColor('highlight')
-                            }}
-                            style={{
-                                alignSelf: 'flex-end'
-                            }}
                         />
                     </>
 
@@ -526,13 +519,6 @@ export default class OpenChannel extends React.Component<
                                         scidAlias: !scidAlias
                                     })
                                 }
-                                trackColor={{
-                                    false: '#767577',
-                                    true: themeColor('highlight')
-                                }}
-                                style={{
-                                    alignSelf: 'flex-end'
-                                }}
                             />
                         </>
                     )}

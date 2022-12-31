@@ -8,8 +8,7 @@ import {
     View,
     ScrollView,
     TouchableOpacity,
-    TouchableWithoutFeedback,
-    Switch
+    TouchableWithoutFeedback
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
@@ -36,6 +35,7 @@ import Amount from './../components/Amount';
 import Conversion from './../components/Conversion';
 import Button from './../components/Button';
 import { ErrorMessage } from './../components/SuccessErrorMessage';
+import Switch from './../components/Switch';
 import TextInput from './../components/TextInput';
 import UTXOPicker from './../components/UTXOPicker';
 
@@ -741,12 +741,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                                 !enableAtomicMultiPathPayment
                                                         })
                                                     }
-                                                    trackColor={{
-                                                        false: '#767577',
-                                                        true: themeColor(
-                                                            'highlight'
-                                                        )
-                                                    }}
                                                 />
                                             </View>
                                         </View>
