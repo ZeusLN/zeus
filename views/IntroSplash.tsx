@@ -88,13 +88,26 @@ export default class IntroSplash extends React.Component<IntroSplashProps, {}> {
                     </View>
                     <View
                         style={{
-                            padding: 10,
-                            marginBottom: 40
+                            padding: 10
                         }}
                     >
                         <Button
                             title={localeString('views.Intro.getStarted')}
                             onPress={() => navigation.navigate('Settings')}
+                        />
+                    </View>
+                    <View
+                        style={{
+                            padding: 10,
+                            marginBottom: 40
+                        }}
+                    >
+                        <Button
+                            title={localeString('views.Splash.scanConfig')}
+                            onPress={() =>
+                                navigation.navigate('HandleAnythingQRScanner')
+                            }
+                            secondary
                         />
                     </View>
                 </SafeAreaView>
