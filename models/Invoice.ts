@@ -42,6 +42,7 @@ export default class Invoice extends BaseModel {
     public label: string;
     public description: string;
     public msatoshi: number;
+    public msatoshi_received: number;
     @observable public payment_hash: string;
     public paid_at: number;
     public expires_at: number;
@@ -108,6 +109,10 @@ export default class Invoice extends BaseModel {
 
     // return amount in satoshis
     @computed public get getAmount(): number {
+        if (this.msatoshi_received) {
+            const msatoshi = this.msatoshi_received.toString();
+            return Number(msatoshi.replace('msat', '')) / 1000;
+        }
         if (this.msatoshi) {
             const msatoshi = this.msatoshi.toString();
             return Number(msatoshi.replace('msat', '')) / 1000;
