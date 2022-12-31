@@ -83,7 +83,14 @@ export default class OnchainSwipeableRow extends Component<
                             height={30}
                         />
                     )}
-                    <Text style={styles.actionText}>{text}</Text>
+                    <Text
+                        style={{
+                            ...styles.actionText,
+                            color: themeColor('text')
+                        }}
+                    >
+                        {text}
+                    </Text>
                 </RectButton>
             </Animated.View>
         );
@@ -159,7 +166,6 @@ export default class OnchainSwipeableRow extends Component<
 
 const styles = StyleSheet.create({
     actionText: {
-        color: 'gray',
         fontSize: 12,
         backgroundColor: 'transparent',
         padding: 10,

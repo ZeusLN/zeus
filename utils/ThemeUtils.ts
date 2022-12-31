@@ -151,6 +151,27 @@ export function themeColor(themeString: string): any {
         chain: '#F4F9FF'
     };
 
+    const Mighty: { [key: string]: any } = {
+        generalStyle: 'dark',
+        background: '#472243',
+        secondary: '#006a65',
+        separator: '#006a65',
+        highlight: '#fdb827',
+        bolt: '#fdb827',
+        chain: '#fdb827'
+    };
+
+    const Green: { [key: string]: any } = {
+        generalStyle: 'dark',
+        background: '#00793f',
+        text: '#fff',
+        secondary: '#204c39',
+        separator: '#204c39',
+        highlight: '#fff',
+        bolt: '#fff',
+        chain: '#fff'
+    };
+
     switch (theme) {
         case 'light':
             return Light[themeString] || Dark[themeString];
@@ -172,6 +193,10 @@ export function themeColor(themeString: string): any {
             return DeepPurple[themeString] || Dark[themeString];
         case 'deadpool':
             return Deadpool[themeString] || Dark[themeString];
+        case 'mighty':
+            return Mighty[themeString] || Dark[themeString];
+        case 'green':
+            return Green[themeString] || Dark[themeString];
         default:
             return Dark[themeString];
     }
