@@ -405,7 +405,8 @@ export default class SettingsStore {
         };
 
         await this.setSettings(JSON.stringify(newSettings));
-        return newSettings;
+        this.settings = newSettings;
+        return this.settings;
     };
 
     // LNDHub
