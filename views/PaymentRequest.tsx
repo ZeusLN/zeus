@@ -219,7 +219,9 @@ export default class PaymentRequest extends React.Component<
         const description = pay_req && pay_req.description;
         const payment_hash = pay_req && pay_req.payment_hash;
         const timestamp = pay_req && pay_req.timestamp;
-        const percentAmount = requestAmount
+        const percentAmount = customAmount
+            ? (Number(customAmount) * (Number(maxFeePercent) / 100)).toFixed()
+            : requestAmount
             ? (requestAmount * (Number(maxFeePercent) / 100)).toFixed()
             : 0;
 
