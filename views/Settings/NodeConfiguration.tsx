@@ -3,7 +3,6 @@ import {
     Modal,
     Platform,
     StyleSheet,
-    Switch,
     Text,
     View,
     ScrollView,
@@ -29,6 +28,7 @@ import {
     SuccessMessage,
     ErrorMessage
 } from './../../components/SuccessErrorMessage';
+import Switch from './../../components/Switch';
 import TextInput from './../../components/TextInput';
 
 import SettingsStore, {
@@ -1000,13 +1000,6 @@ export default class NodeConfiguration extends React.Component<
                                                     !existingAccount
                                             })
                                         }
-                                        trackColor={{
-                                            false: '#767577',
-                                            true: themeColor('highlight')
-                                        }}
-                                        style={{
-                                            alignSelf: 'flex-end'
-                                        }}
                                     />
                                 </>
 
@@ -1264,13 +1257,6 @@ export default class NodeConfiguration extends React.Component<
                                             saved: false
                                         })
                                     }
-                                    trackColor={{
-                                        false: '#767577',
-                                        true: themeColor('highlight')
-                                    }}
-                                    style={{
-                                        alignSelf: 'flex-end'
-                                    }}
                                 />
                             </>
                         )}
@@ -1297,13 +1283,6 @@ export default class NodeConfiguration extends React.Component<
                                                 saved: false
                                             })
                                         }
-                                        trackColor={{
-                                            false: '#767577',
-                                            true: themeColor('highlight')
-                                        }}
-                                        style={{
-                                            alignSelf: 'flex-end'
-                                        }}
                                     />
                                 </>
                             )}

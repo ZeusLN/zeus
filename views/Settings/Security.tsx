@@ -1,7 +1,9 @@
 import { inject, observer } from 'mobx-react';
 import * as React from 'react';
-import { FlatList, View, ScrollView, Switch } from 'react-native';
+import { FlatList, View, ScrollView } from 'react-native';
 import { Header, Icon, ListItem } from 'react-native-elements';
+
+import Switch from './../../components/Switch';
 
 import SettingsStore from '../../stores/SettingsStore';
 
@@ -248,13 +250,6 @@ export default class Security extends React.Component<
                                 });
                                 updateSettings({ scramblePin: !scramblePin });
                             }}
-                            trackColor={{
-                                false: '#767577',
-                                true: themeColor('highlight')
-                            }}
-                            style={{
-                                alignSelf: 'flex-end'
-                            }}
                         />
                     </ListItem>
                 )}
@@ -285,13 +280,6 @@ export default class Security extends React.Component<
                                 updateSettings({
                                     loginBackground: !loginBackground
                                 });
-                            }}
-                            trackColor={{
-                                false: '#767577',
-                                true: themeColor('highlight')
-                            }}
-                            style={{
-                                alignSelf: 'flex-end'
                             }}
                         />
                     </ListItem>
