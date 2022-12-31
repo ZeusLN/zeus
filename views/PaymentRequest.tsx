@@ -461,13 +461,13 @@ export default class PaymentRequest extends React.Component<
                                     </View>
                                     <View
                                         style={{
-                                            flexDirection: 'row'
+                                            flexDirection: 'row',
+                                            width: '95%'
                                         }}
                                     >
                                         <TextInput
                                             style={{
-                                                width: 170,
-                                                paddingRight: 30,
+                                                width: '50%',
                                                 opacity:
                                                     feeOption == 'sats'
                                                         ? 1
@@ -502,9 +502,7 @@ export default class PaymentRequest extends React.Component<
                                         </Text>
                                         <TextInput
                                             style={{
-                                                left: 10,
-                                                width: 160,
-                                                paddingRight: 20,
+                                                width: '50%',
                                                 opacity:
                                                     feeOption == 'percent'
                                                         ? 1
@@ -528,7 +526,7 @@ export default class PaymentRequest extends React.Component<
                                                 ...styles.label,
                                                 color: themeColor('text'),
                                                 top: 28,
-                                                right: 10,
+                                                right: 18,
                                                 opacity:
                                                     feeOption == 'percent'
                                                         ? 1
