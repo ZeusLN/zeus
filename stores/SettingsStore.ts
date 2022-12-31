@@ -155,7 +155,9 @@ export const THEME_KEYS = [
     { key: 'Memberberry', value: 'purple' },
     { key: 'Blueberry', value: 'blueberry' },
     { key: 'Deep Purple', value: 'deep-purple' },
-    { key: 'Deadpool', value: 'deadpool' }
+    { key: 'Deadpool', value: 'deadpool' },
+    { key: 'Mighty', value: 'mighty' },
+    { key: 'Green', value: 'green' }
 ];
 
 export const DEFAULT_VIEW_KEYS = [
