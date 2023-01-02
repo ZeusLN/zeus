@@ -69,9 +69,9 @@ export function localeString(localeString: string): any {
             return BrazilianPortuguese[localeString] || English[localeString];
         case 'Türkçe':
             return Turkish[localeString] || English[localeString];
-        case 'Slovák':
+        case 'Slovenčina':
             return Slovak[localeString] || English[localeString];
-        case 'Češka':
+        case 'Čeština':
             return Czech[localeString] || English[localeString];
         case 'Deutsch':
             return German[localeString] || English[localeString];
