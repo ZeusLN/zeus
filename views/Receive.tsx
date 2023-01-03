@@ -477,6 +477,21 @@ export default class Receive extends React.Component<
                                     watchedInvoicePaidAmt || payment_request_amt
                                 )}`}
                             </Text>
+                            <Button
+                                title={localeString(
+                                    'views.SendingLightning.goToWallet'
+                                )}
+                                icon={{
+                                    name: 'list',
+                                    size: 25
+                                }}
+                                onPress={() =>
+                                    navigation.navigate('Wallet', {
+                                        refresh: true
+                                    })
+                                }
+                                containerStyle={{ width: '100%' }}
+                            />
                         </View>
                     ) : (
                         <View>
