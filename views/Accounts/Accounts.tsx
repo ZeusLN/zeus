@@ -14,6 +14,7 @@ import UnitsStore from './../../stores/UnitsStore';
 import UTXOsStore from './../../stores/UTXOsStore';
 import SettingsStore from './../../stores/SettingsStore';
 
+import BackendUtils from './../../utils/BackendUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -45,7 +46,7 @@ export default class Accounts extends React.Component<
 
     UNSAFE_componentWillMount() {
         const { UTXOsStore } = this.props;
-        UTXOsStore.listAccounts();
+        if (BackendUtils.supportsAccounts()) UTXOsStore.listAccounts();
     }
 
     componentDidMount() {
