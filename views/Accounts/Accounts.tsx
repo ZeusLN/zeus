@@ -133,11 +133,18 @@ export default class Accounts extends React.Component<
                         UnitsStore={UnitsStore}
                         SettingsStore={SettingsStore}
                         onRefresh={async () =>
-                            await Promise.all([
-                                BalanceStore.getBlockchainBalance(),
-                                BalanceStore.getLightningBalance(),
-                                UTXOsStore.listAccounts()
-                            ])
+                            await Promise.all(
+                                BackendUtils.supportsAccounts()
+                                    ? [
+                                          BalanceStore.getBlockchainBalance(),
+                                          BalanceStore.getLightningBalance(),
+                                          UTXOsStore.listAccounts()
+                                      ]
+                                    : [
+                                          BalanceStore.getBlockchainBalance(),
+                                          BalanceStore.getLightningBalance()
+                                      ]
+                            )
                         }
                         refreshing={
                             BalanceStore.loadingLightningBalance ||
