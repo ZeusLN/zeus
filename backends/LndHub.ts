@@ -72,7 +72,7 @@ export default class LndHub extends LND {
     payLightningInvoice = (data: any) =>
         this.postRequest('/payinvoice', {
             invoice: data.payment_request,
-            amount: Number(data.amt && data.amt * 1000)
+            amount: data.amt
         });
 
     supportsMessageSigning = () => false;
