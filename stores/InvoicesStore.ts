@@ -26,6 +26,7 @@ export default class InvoicesStore {
     @observable creatingInvoiceError = false;
     @observable invoicesCount: number;
     @observable watchedInvoicePaid = false;
+    @observable watchedInvoicePaidAmt: number | string | null = null;
     settingsStore: SettingsStore;
 
     // lnd
@@ -72,6 +73,7 @@ export default class InvoicesStore {
         this.feeEstimate = null;
         this.successProbability = null;
         this.watchedInvoicePaid = false;
+        this.watchedInvoicePaidAmt = null;
     };
 
     resetInvoices = () => {
@@ -232,8 +234,9 @@ export default class InvoicesStore {
     };
 
     @action
-    public setWatchedInvoicePaid = () => {
+    public setWatchedInvoicePaid = (amount?: string | number) => {
         this.watchedInvoicePaid = true;
+        if (amount) this.watchedInvoicePaidAmt = amount;
     };
 
     @action
