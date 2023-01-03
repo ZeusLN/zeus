@@ -138,7 +138,7 @@ export default class Receive extends React.Component<
                         try {
                             const result = JSON.parse(event.result);
                             if (result.settled) {
-                                setWatchedInvoicePaid();
+                                setWatchedInvoicePaid(result.amt_paid_sat);
                                 this.listener = null;
                             }
                         } catch (error) {
@@ -152,7 +152,7 @@ export default class Receive extends React.Component<
         if (implementation === 'lnd') {
             BackendUtils.subscribeInvoice(rHash).then((response: any) => {
                 if (response.result && response.result.settled) {
-                    setWatchedInvoicePaid();
+                    setWatchedInvoicePaid(response.result.amt_paid_sat);
                 }
             });
         }
@@ -236,6 +236,7 @@ export default class Receive extends React.Component<
             creatingInvoiceError,
             error_msg,
             watchedInvoicePaid,
+            watchedInvoicePaidAmt,
             clearUnified,
             reset
         } = InvoicesStore;
@@ -472,7 +473,9 @@ export default class Receive extends React.Component<
                             >
                                 {`${localeString(
                                     'views.Receive.youReceived'
-                                )} ${getAmount(payment_request_amt)}`}
+                                )} ${getAmount(
+                                    watchedInvoicePaidAmt || payment_request_amt
+                                )}`}
                             </Text>
                         </View>
                     ) : (
