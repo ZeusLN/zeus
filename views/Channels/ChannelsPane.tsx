@@ -1,5 +1,10 @@
 import * as React from 'react';
-import { FlatList, View, TouchableHighlight } from 'react-native';
+import {
+    FlatList,
+    View,
+    TouchableHighlight,
+    TouchableOpacity
+} from 'react-native';
 
 import { inject, observer } from 'mobx-react';
 
@@ -26,12 +31,20 @@ interface ChannelsProps {
     ChannelsStore: ChannelsStore;
 }
 
+interface ChannelsState {
+    channelsType: number;
+}
+
 @inject('ChannelsStore', 'SettingsStore')
 @observer
 export default class ChannelsPane extends React.PureComponent<
     ChannelsProps,
-    {}
+    ChannelsState
 > {
+    state = {
+        channelsType: 0
+    };
+
     renderItem = ({ item }) => {
         const { ChannelsStore, navigation } = this.props;
         const { nodes, largestChannelSats } = ChannelsStore;
@@ -40,6 +53,27 @@ export default class ChannelsPane extends React.PureComponent<
             (nodes[item.remote_pubkey] && nodes[item.remote_pubkey].alias) ||
             item.remote_pubkey ||
             item.channelId;
+
+        if (this.state.channelsType === 0) {
+            return (
+                <TouchableHighlight
+                    onPress={() =>
+                        navigation.navigate('Channel', {
+                            channel: item
+                        })
+                    }
+                >
+                    <ChannelItem
+                        title={displayName}
+                        status={item.isActive ? Status.Good : Status.Offline}
+                        inbound={item.remoteBalance}
+                        outbound={item.localBalance}
+                        largestTotal={largestChannelSats}
+                    />
+                </TouchableHighlight>
+            );
+        }
+
         return (
             <TouchableHighlight
                 onPress={() =>
@@ -50,37 +84,70 @@ export default class ChannelsPane extends React.PureComponent<
             >
                 <ChannelItem
                     title={displayName}
-                    status={item.isActive ? Status.Good : Status.Offline}
                     inbound={item.remoteBalance}
                     outbound={item.localBalance}
-                    largestTotal={largestChannelSats}
+                    status={item.isActive ? Status.Good : Status.Offline}
                 />
             </TouchableHighlight>
         );
     };
 
+    toggleChannelsType = () => {
+        const { channelsType } = this.state;
+        if (channelsType === 2) {
+            this.setState({
+                channelsType: 0
+            });
+        } else {
+            this.setState({
+                channelsType: channelsType + 1
+            });
+        }
+    };
+
     render() {
         const { ChannelsStore, SettingsStore, navigation } = this.props;
+        const { channelsType } = this.state;
         const {
             loading,
             getChannels,
             totalInbound,
             totalOutbound,
             totalOffline,
-            channels
+            channels,
+            pendingChannels,
+            closedChannels
         } = ChannelsStore;
-        const headerString = `${localeString(
-            'views.Wallet.Wallet.channels'
-        )} (${channels.length})`;
+
+        let headerString;
+        let channelsData;
+        switch (channelsType) {
+            case 0:
+                headerString = `${localeString(
+                    'views.Wallet.Wallet.channels'
+                )} (${channels.length})`;
+                channelsData = channels;
+                break;
+            case 1:
+                headerString = `Pending Channels (${pendingChannels.length})`;
+                channelsData = pendingChannels;
+                break;
+            case 2:
+                headerString = `Closed Channels (${closedChannels.length})`;
+                channelsData = closedChannels;
+                break;
+        }
 
         return (
             <View style={{ flex: 1 }}>
-                <WalletHeader
-                    navigation={navigation}
-                    title={headerString}
-                    SettingsStore={SettingsStore}
-                    channels
-                />
+                <TouchableOpacity onPress={() => this.toggleChannelsType()}>
+                    <WalletHeader
+                        navigation={navigation}
+                        title={headerString}
+                        SettingsStore={SettingsStore}
+                        channels
+                    />
+                </TouchableOpacity>
                 <ChannelsHeader
                     totalInbound={totalInbound}
                     totalOutbound={totalOutbound}
@@ -90,7 +157,7 @@ export default class ChannelsPane extends React.PureComponent<
                     <LoadingIndicator />
                 ) : (
                     <FlatList
-                        data={channels}
+                        data={channelsData}
                         renderItem={this.renderItem}
                         ListFooterComponent={<Spacer height={100} />}
                         onRefresh={() => getChannels()}

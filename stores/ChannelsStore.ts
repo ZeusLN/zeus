@@ -1,6 +1,7 @@
 import { action, observable, reaction } from 'mobx';
 import { randomBytes } from 'react-native-randombytes';
 import Channel from './../models/Channel';
+import ChannelClose from './../models/ChannelClose';
 import ChannelInfo from './../models/ChannelInfo';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import CloseChannelRequest from './../models/CloseChannelRequest';
@@ -22,6 +23,8 @@ export default class ChannelsStore {
     @observable public nodes: any = {};
     @observable public aliasesById: any = {};
     @observable public channels: Array<Channel> = [];
+    @observable public pendingChannels: Array<Channel> = [];
+    @observable public closedChannels: Array<Channel> = [];
     @observable public output_index: number | null;
     @observable public funding_txid_str: string | null;
     @observable public openingChannel = false;
@@ -136,6 +139,36 @@ export default class ChannelsStore {
                     }
                 });
                 this.channels = channels;
+                this.error = false;
+            })
+            .catch(() => {
+                this.getChannelsError();
+            });
+
+        BackendUtils.getPendingChannels()
+            .then((data: any) => {
+                // TODO parse out
+                //    "total_limbo_balance": <int64>,
+                //    "pending_open_channels": <PendingOpenChannel>,
+                //    "pending_closing_channels": <ClosedChannel>,
+                //    "pending_force_closing_channels": <ForceClosedChannel>,
+                //    "waiting_close_channels": <WaitingCloseChannel>,
+                const pendingChannels = data.pending_open_channels.map(
+                    (channel: any) => new Channel(channel)
+                );
+                this.pendingChannels = pendingChannels;
+                this.error = false;
+            })
+            .catch(() => {
+                this.getChannelsError();
+            });
+
+        BackendUtils.getClosedChannels()
+            .then((data: any) => {
+                const closedChannels = data.channels.map(
+                    (channel: any) => new ChannelClose(channel)
+                );
+                this.closedChannels = closedChannels;
                 this.error = false;
                 this.loading = false;
             })

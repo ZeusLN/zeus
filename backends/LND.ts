@@ -200,6 +200,8 @@ export default class LND {
             transactions: data.transactions.reverse()
         }));
     getChannels = () => this.getRequest('/v1/channels');
+    getPendingChannels = () => this.getRequest('/v1/channels/pending');
+    getClosedChannels = () => this.getRequest('/v1/channels/closed');
     getChannelInfo = (chanId: string) =>
         this.getRequest(`/v1/graph/edge/${chanId}`);
     getBlockchainBalance = () => this.getRequest('/v1/balance/blockchain');

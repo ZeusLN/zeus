@@ -49,15 +49,17 @@ export function ChannelItem({
                 </View>
                 <Tag status={status} />
             </Row>
-            <Row>
-                <BalanceBar
-                    left={lurkerMode ? 50 : Number(outbound)}
-                    right={lurkerMode ? 50 : Number(inbound)}
-                    offline={status === Status.Offline}
-                    percentOfLargest={percentOfLargest}
-                    showProportionally={lurkerMode ? false : true}
-                />
-            </Row>
+            {inbound && outbound && (
+                <Row>
+                    <BalanceBar
+                        left={lurkerMode ? 50 : Number(outbound)}
+                        right={lurkerMode ? 50 : Number(inbound)}
+                        offline={status === Status.Offline}
+                        percentOfLargest={percentOfLargest}
+                        showProportionally={lurkerMode ? false : true}
+                    />
+                </Row>
+            )}
             <Row justify="space-between">
                 <Amount sats={outbound} sensitive />
                 <Amount sats={inbound} sensitive />
