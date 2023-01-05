@@ -53,6 +53,14 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.lightning
             .listChannels({})
             .then((data: lnrpc.ListChannelsResponse) => snakeize(data));
+    getPendingChannels = async () =>
+        await this.lnc.lnd.lightning
+            .pendingChannels({})
+            .then((data: lnrpc.PendingChannelsResponse) => snakeize(data));
+    getClosedChannels = async () =>
+        await this.lnc.lnd.lightning
+            .closedChannels({})
+            .then((data: lnrpc.ClosedChannelsResponse) => snakeize(data));
     getChannelInfo = async (chanId: string) => {
         const request: lnrpc.ChanInfoRequest = { chanId };
         return await this.lnc.lnd.lightning
