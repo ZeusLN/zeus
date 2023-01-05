@@ -336,10 +336,12 @@ export default class LND {
             msg: Base64Utils.btoa(data.msg),
             signature: data.signature
         });
+    lnurlAuth = (r_hash: string) => this.signMessage(r_hash);
     subscribeInvoice = (r_hash: string) =>
         this.getRequest(`/v2/invoices/subscribe/${r_hash}`);
 
     supportsMessageSigning = () => true;
+    supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;
     supportsOnchainReceiving = () => true;
     supportsKeysend = () => true;

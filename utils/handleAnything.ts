@@ -286,7 +286,7 @@ const handleAnything = async (
                     ];
                     break;
                 case 'login':
-                    if (BackendUtils.supportsMessageSigning()) {
+                    if (BackendUtils.supportsLnurlAuth()) {
                         if (isClipboardValue) return true;
                         return [
                             'LnurlAuth',
