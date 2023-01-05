@@ -466,8 +466,10 @@ export default class Eclair {
             msg: Base64Utils.btoa(data.msg),
             sig: data.signature
         });
+    lnurlAuth = (message: string) => this.signMessage(message);
 
     supportsMessageSigning = () => true;
+    supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;
     supportsOnchainReceiving = () => true;
     supportsKeysend = () => false;

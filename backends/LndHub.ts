@@ -74,8 +74,13 @@ export default class LndHub extends LND {
             invoice: data.payment_request,
             amount: Number(data.amt && data.amt * 1000)
         });
+    lnurlAuth = () =>
+        Promise.resolve({
+            signature: `lndhub://${stores.settingsStore.username}:${stores.settingsStore.password}`
+        });
 
     supportsMessageSigning = () => false;
+    supportsLnurlAuth = () => true;
     supportsOnchainSends = () => false;
     supportsOnchainReceiving = () =>
         !(
