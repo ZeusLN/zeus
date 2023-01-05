@@ -670,7 +670,7 @@ export default class Receive extends React.Component<
                                         >
                                             <Button
                                                 title={localeString(
-                                                    'general.enableNfc'
+                                                    'general.receiveNfc'
                                                 )}
                                                 icon={{
                                                     name: 'nfc',
