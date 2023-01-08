@@ -207,6 +207,9 @@ export default class Receive extends React.Component<
                     const { lnurlParams } = props;
                     const { memo } = lnurlParams.defaultDescription;
 
+                    // if an amount was entered on the keypad screen before scanning
+                    // we will automatically create an invoice and attempt to withdraw
+                    // otherwise we present the user with the create invoice screen
                     if (Number(amount) > 0) {
                         createUnifiedInvoice(
                             memo,
