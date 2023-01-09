@@ -41,8 +41,8 @@ interface DisplaySettings {
 
 interface PaymentSettings {
     defaultFeeMethod?: string;
-    defaultFeePercentage?: number;
-    defaultFeeFixed?: number;
+    defaultFeePercentage?: string;
+    defaultFeeFixed?: string;
 }
 
 interface Settings {
@@ -194,8 +194,8 @@ export default class SettingsStore {
         },
         payments: {
             defaultFeeMethod: 'fixed',
-            defaultFeePercentage: 1,
-            defaultFeeFixed: 100,
+            defaultFeePercentage: '0.5',
+            defaultFeeFixed: '100'
         },
         scramblePin: true,
         loginBackground: false,
