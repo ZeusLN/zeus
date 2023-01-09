@@ -8,7 +8,6 @@ import { themeColor } from '../../utils/ThemeUtils';
 
 import LoadingIndicator from '../../components/LoadingIndicator';
 import TextInput from '../../components/TextInput';
-import Button from '../../components/Button';
 
 interface PaymentsSettingsProps {
     navigation: any;
@@ -48,7 +47,7 @@ export default class PaymentsSettings extends React.Component<
     handleSave = async () => {
         const { feeLimitMethod, feeLimit, feePercentage } = this.state;
         const { SettingsStore } = this.props;
-        const { updateSettings, settings } = SettingsStore;
+        const { updateSettings } = SettingsStore;
         await updateSettings({
             payments: {
                 defaultFeeMethod: feeLimitMethod,
