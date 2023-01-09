@@ -56,7 +56,6 @@ export default class PaymentsSettings extends React.Component<
                 defaultFeeFixed: feeLimit
             }
         });
-        console.log(settings.payments);
     };
 
     renderSeparator = () => (
