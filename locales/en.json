@@ -429,7 +429,7 @@
     "views.Settings.payments": "Payments",
     "views.Settings.Privacy.title": "Privacy settings",
     "views.Settings.Payments.title": "Payments settings",
-    "views.Settings.Payments.defaultFeeLimit": "Default Fee Limit (sats)",
+    "views.Settings.Payments.defaultFeeLimit": "Default Fee Limit",
     "views.Settings.Privacy.blockExplorer": "Default Block explorer",
     "views.Settings.Privacy.customBlockExplorer": "Custom Block explorer",
     "views.Settings.Privacy.lurkerMode": "Lurker mode",
