@@ -17,8 +17,8 @@ interface PaymentsSettingsProps {
 
 interface PaymentsSettingsState {
     feeLimitMethod: string;
-    feeLimit: number;
-    feePercentage: number;
+    feeLimit: string;
+    feePercentage: string;
 }
 
 @inject('SettingsStore')
@@ -28,40 +28,35 @@ export default class PaymentsSettings extends React.Component<
     PaymentsSettingsState
 > {
     state = {
-        feeLimitMethod: '',
-        feeLimit: 0,
-        feePercentage: 0,
+        feeLimitMethod: 'fixed',
+        feeLimit: '100',
+        feePercentage: '0.5'
     };
 
     async UNSAFE_componentWillMount() {
         const { SettingsStore } = this.props;
         const { getSettings } = SettingsStore;
         const settings = await getSettings();
-        console.log(settings);
 
         this.setState({
-            feeLimitMethod: settings.payments.defaultFeeMethod,
-            feeLimit: settings.payments.defaultFeeFixed,
-            feePercentage: settings.payments.defaultFeePercentage
-            // defaultBlockExplorer:
-            //     (settings.privacy && settings.privacy.defaultBlockExplorer) ||
-            //     'mempool.space',
-            // customBlockExplorer:
-            //     (settings.privacy && settings.privacy.customBlockExplorer) ||
-            //     '',
-            // clipboard: settings.privacy && settings.privacy.clipboard,
-            // lurkerMode: settings.privacy && settings.privacy.lurkerMode,
-            // enableMempoolRates:
-            //     settings.privacy && settings.privacy.enableMempoolRates
+            feeLimitMethod: settings.payments.defaultFeeMethod || 'fixed',
+            feeLimit: settings.payments.defaultFeeFixed || '100',
+            feePercentage: settings.payments.defaultFeePercentage || '0.5'
         });
     }
 
     handleSave = async () => {
+        const { feeLimitMethod, feeLimit, feePercentage } = this.state;
         const { SettingsStore } = this.props;
-        const { getSettings } = SettingsStore;
-        const settings = await getSettings();
+        const { updateSettings, settings } = SettingsStore;
+        await updateSettings({
+            payments: {
+                defaultFeeMethod: feeLimitMethod,
+                defaultFeePercentage: feePercentage,
+                defaultFeeFixed: feeLimit
+            }
+        });
         console.log(settings.payments);
-        // await updateSettings
     };
 
     renderSeparator = () => (
@@ -75,17 +70,18 @@ export default class PaymentsSettings extends React.Component<
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { feeLimit } = this.state;
+        const { feeLimit, feeLimitMethod, feePercentage } = this.state;
         const { loading }: any = SettingsStore;
 
         const BackButton = () => (
             <Icon
                 name="arrow-back"
-                onPress={() =>
+                onPress={() => {
+                    this.handleSave();
                     navigation.navigate('Settings', {
                         refresh: true
-                    })
-                }
+                    });
+                }}
                 color={themeColor('text')}
                 underlayColor="transparent"
             />
@@ -122,46 +118,94 @@ export default class PaymentsSettings extends React.Component<
                     >
                         <Text
                             style={{
-                                color: themeColor('secondaryText'),
                                 fontFamily: 'Lato-Regular',
-                                paddingTop: 5
-                            }}
-                        >
-                            {localeString(
-                                'views.Settings.Payments.defaultFeeLimit'
-                            )}
-                        </Text>
-                        <TextInput
-                            keyboardType="numeric"
-                            value={feeLimit}
-                            onChangeText={(text: string) =>
-                                this.setState({
-                                    feeLimit: text
-                                })
-                            }
-                            style={{
+                                paddingTop: 5,
                                 color: themeColor('text')
                             }}
-                            placeholderTextColor="gray"
-                        />
+                        >
+                            {`${localeString(
+                                'views.Settings.Payments.defaultFeeLimit'
+                            )}`}
+                        </Text>
                         <View
                             style={{
-                                paddingTop: 480,
-                                paddingBottom: 15,
-                                paddingLeft: 5,
-                                paddingRight: 5
-                        }}>
-                            <Button
-                                title="Save"
-                                icon={{
-                                    name: 'save',
-                                    size: 1,
-                                    color: 'white'
+                                flex: 1,
+                                flexWrap: 'wrap',
+                                flexDirection: 'row',
+                                justifyContent: 'flex-end',
+                                opacity: feeLimitMethod == 'percent' ? 1 : 0.25
+                            }}
+                        ></View>
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                width: '95%'
+                            }}
+                        >
+                            <TextInput
+                                style={{
+                                    width: '50%',
+                                    opacity:
+                                        feeLimitMethod == 'fixed' ? 1 : 0.25
                                 }}
-                                onPress={() => {
-                                    this.handleSave();
-                                }}
+                                keyboardType="numeric"
+                                value={feeLimit}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        feeLimit: text
+                                    })
+                                }
+                                onPressIn={() =>
+                                    this.setState({
+                                        feeLimitMethod: 'fixed'
+                                    })
+                                }
                             />
+                            <Text
+                                style={{
+                                    fontFamily: 'Lato-Regular',
+                                    paddingTop: 5,
+                                    color: themeColor('text'),
+                                    top: 28,
+                                    right: 30,
+                                    opacity:
+                                        feeLimitMethod == 'fixed' ? 1 : 0.25
+                                }}
+                            >
+                                {`${localeString('general.sats')}`}
+                            </Text>
+                            <TextInput
+                                style={{
+                                    width: '50%',
+                                    opacity:
+                                        feeLimitMethod == 'percent' ? 1 : 0.25
+                                }}
+                                keyboardType="numeric"
+                                value={feePercentage}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        feePercentage: text
+                                    })
+                                }
+                                onPressIn={() =>
+                                    this.setState({
+                                        feeLimitMethod: 'percent'
+                                    })
+                                }
+                            />
+                            <Text
+                                style={{
+                                    fontFamily: 'Lato-Regular',
+                                    paddingTop: 5,
+                                    color: themeColor('text'),
+                                    top: 28,
+                                    right: 18,
+                                    opacity:
+                                        feeLimitMethod == 'percent' ? 1 : 0.25
+                                }}
+                            >
+                                {'%'}
+                            </Text>
                         </View>
                     </View>
                 )}
