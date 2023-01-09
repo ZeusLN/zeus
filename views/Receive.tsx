@@ -5,7 +5,6 @@ import {
     NativeModules,
     ScrollView,
     StyleSheet,
-    Switch,
     Text,
     TouchableOpacity,
     View
@@ -18,7 +17,7 @@ import _map from 'lodash/map';
 
 import Success from '../assets/images/GIF/Success.gif';
 
-import { Amount } from './../components/Amount';
+import Amount from './../components/Amount';
 import Button from './../components/Button';
 import CollapsedQR from './../components/CollapsedQR';
 import LoadingIndicator from './../components/LoadingIndicator';
@@ -28,15 +27,16 @@ import {
     WarningMessage,
     ErrorMessage
 } from './../components/SuccessErrorMessage';
+import Switch from './../components/Switch';
 import TextInput from './../components/TextInput';
 
 import FiatStore from './../stores/FiatStore';
 import InvoicesStore from './../stores/InvoicesStore';
 import SettingsStore from './../stores/SettingsStore';
-import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
+import UnitsStore, { SATS_PER_BTC } from './../stores/UnitsStore';
 
 import { localeString } from './../utils/LocaleUtils';
-import RESTUtils from './../utils/RESTUtils';
+import BackendUtils from './../utils/BackendUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
 interface ReceiveProps {
@@ -89,7 +89,7 @@ export default class Receive extends React.Component<
         if (lnurl) {
             this.setState({
                 memo: lnurl.defaultDescription,
-                value: Math.floor(lnurl.maxWithdrawable / 1000).toString()
+                value: (lnurl.maxWithdrawable / 1000).toString()
             });
         }
 
@@ -99,14 +99,14 @@ export default class Receive extends React.Component<
             });
         }
 
-        if (autoGenerate) this.autoGenerateInvoice(amount);
+        if (autoGenerate) this.autoGenerateInvoice(this.getSatAmount(amount));
     }
 
     componentWillUnmount() {
         if (this.listener && this.listener.stop) this.listener.stop();
     }
 
-    autoGenerateInvoice = (amount: string) => {
+    autoGenerateInvoice = (amount?: string) => {
         const { InvoicesStore } = this.props;
         const { createUnifiedInvoice } = InvoicesStore;
         const { memo, expiry, ampInvoice, routeHints, addressType } =
@@ -119,7 +119,7 @@ export default class Receive extends React.Component<
             undefined,
             ampInvoice,
             routeHints,
-            RESTUtils.supportsAddressTypeSelection() ? addressType : null
+            BackendUtils.supportsAddressTypeSelection() ? addressType : null
         ).then((rHash: string) => this.subscribeInvoice(rHash));
     };
 
@@ -129,7 +129,7 @@ export default class Receive extends React.Component<
         const { setWatchedInvoicePaid } = InvoicesStore;
         if (implementation === 'lightning-node-connect') {
             const { LncModule } = NativeModules;
-            const eventName = RESTUtils.subscribeInvoice(rHash);
+            const eventName = BackendUtils.subscribeInvoice(rHash);
             const eventEmitter = new NativeEventEmitter(LncModule);
             this.listener = eventEmitter.addListener(
                 eventName,
@@ -138,7 +138,7 @@ export default class Receive extends React.Component<
                         try {
                             const result = JSON.parse(event.result);
                             if (result.settled) {
-                                setWatchedInvoicePaid();
+                                setWatchedInvoicePaid(result.amt_paid_sat);
                                 this.listener = null;
                             }
                         } catch (error) {
@@ -150,9 +150,9 @@ export default class Receive extends React.Component<
         }
 
         if (implementation === 'lnd') {
-            RESTUtils.subscribeInvoice(rHash).then((response: any) => {
+            BackendUtils.subscribeInvoice(rHash).then((response: any) => {
                 if (response.result && response.result.settled) {
-                    setWatchedInvoicePaid();
+                    setWatchedInvoicePaid(response.result.amt_paid_sat);
                 }
             });
         }
@@ -167,6 +167,44 @@ export default class Receive extends React.Component<
         this.setState({
             selectedIndex
         });
+    };
+
+    getSatAmount = (amount?: string) => {
+        const { FiatStore, SettingsStore, UnitsStore } = this.props;
+        const { fiatRates } = FiatStore;
+        const { settings } = SettingsStore;
+        const { fiat } = settings;
+        const { units } = UnitsStore;
+
+        const value = amount || this.state.value;
+
+        const fiatEntry =
+            fiat && fiatRates && fiatRates.filter
+                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+                : null;
+
+        const rate =
+            fiat && fiat !== 'Disabled' && fiatRates && fiatEntry
+                ? fiatEntry.rate
+                : 0;
+
+        let satAmount: string | number;
+        switch (units) {
+            case 'sats':
+                satAmount = value;
+                break;
+            case 'BTC':
+                satAmount = Number(value) * SATS_PER_BTC;
+                break;
+            case 'fiat':
+                satAmount = Number(
+                    (Number(value.replace(/,/g, '.')) / Number(rate)) *
+                        Number(SATS_PER_BTC)
+                ).toFixed(0);
+                break;
+        }
+
+        return satAmount;
     };
 
     render() {
@@ -187,7 +225,7 @@ export default class Receive extends React.Component<
             routeHints
         } = this.state;
         const { units, changeUnits, getAmount } = UnitsStore;
-        const { fiatRates, getSymbol }: any = FiatStore;
+        const { getSymbol }: any = FiatStore;
 
         const {
             createUnifiedInvoice,
@@ -198,39 +236,15 @@ export default class Receive extends React.Component<
             creatingInvoiceError,
             error_msg,
             watchedInvoicePaid,
+            watchedInvoicePaidAmt,
             clearUnified,
             reset
         } = InvoicesStore;
-        const { settings, implementation } = SettingsStore;
+        const { implementation } = SettingsStore;
         const loading = SettingsStore.loading || InvoicesStore.loading;
-        const { fiat } = settings;
         const address = onChainAddress;
 
-        const fiatEntry =
-            fiat && fiatRates && fiatRates.filter
-                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
-                : null;
-
-        const rate =
-            fiat && fiat !== 'Disabled' && fiatRates && fiatEntry
-                ? fiatEntry.rate
-                : 0;
-
-        let satAmount: string | number;
-        switch (units) {
-            case 'sats':
-                satAmount = value;
-                break;
-            case 'BTC':
-                satAmount = Number(value) * satoshisPerBTC;
-                break;
-            case 'fiat':
-                satAmount = Number(
-                    (Number(value.replace(/,/g, '.')) / Number(rate)) *
-                        Number(satoshisPerBTC)
-                ).toFixed(0);
-                break;
-        }
+        const satAmount = this.getSatAmount();
 
         const lnurl: LNURLWithdrawParams | undefined =
             navigation.getParam('lnurlParams');
@@ -265,7 +279,7 @@ export default class Receive extends React.Component<
             />
         );
 
-        const ADDRESS_TYPES = RESTUtils.supportsTaproot()
+        const ADDRESS_TYPES = BackendUtils.supportsTaproot()
             ? [
                   {
                       key: localeString('views.Receive.np2wkhKey'),
@@ -366,7 +380,7 @@ export default class Receive extends React.Component<
             unifiedInvoice = `bitcoin:${address.toUpperCase()}?${`lightning=${payment_request.toUpperCase()}`}${
                 Number(satAmount) > 0
                     ? `&amount=${new BigNumber(satAmount)
-                          .dividedBy(satoshisPerBTC)
+                          .dividedBy(SATS_PER_BTC)
                           .toFormat()}`
                     : ''
             }${memo ? `&message=${memo.replace(/ /g, '%20')}` : ''}`;
@@ -382,7 +396,7 @@ export default class Receive extends React.Component<
             }${
                 Number(satAmount) > 0
                     ? `amount=${new BigNumber(satAmount)
-                          .dividedBy(satoshisPerBTC)
+                          .dividedBy(SATS_PER_BTC)
                           .toFormat()}`
                     : ''
             }${
@@ -414,10 +428,10 @@ export default class Receive extends React.Component<
                         }
                     }}
                     rightComponent={
-                        loading ? null : haveInvoice ? (
+                        loading || watchedInvoicePaid ? null : haveInvoice ? (
                             <ClearButton />
                         ) : (
-                            RESTUtils.supportsAddressTypeSelection() && (
+                            BackendUtils.supportsAddressTypeSelection() && (
                                 <SettingsButton />
                             )
                         )
@@ -459,15 +473,33 @@ export default class Receive extends React.Component<
                             >
                                 {`${localeString(
                                     'views.Receive.youReceived'
-                                )} ${getAmount(payment_request_amt)}`}
+                                )} ${getAmount(
+                                    watchedInvoicePaidAmt || payment_request_amt
+                                )}`}
                             </Text>
+                            <Button
+                                title={localeString(
+                                    'views.SendingLightning.goToWallet'
+                                )}
+                                icon={{
+                                    name: 'list',
+                                    size: 25
+                                }}
+                                onPress={() =>
+                                    navigation.navigate('Wallet', {
+                                        refresh: true
+                                    })
+                                }
+                                containerStyle={{ width: '100%' }}
+                            />
                         </View>
                     ) : (
                         <View>
                             {!!payment_request && (
                                 <>
                                     {implementation === 'lndhub' &&
-                                        !!address && (
+                                        !!address &&
+                                        !belowDustLimit && (
                                             <WarningMessage
                                                 message={localeString(
                                                     'views.Receive.warningLndHub'
@@ -478,7 +510,9 @@ export default class Receive extends React.Component<
                                         <SuccessMessage
                                             message={
                                                 !!lnurl &&
-                                                ` ${localeString(
+                                                `${localeString(
+                                                    'views.Receive.successCreate'
+                                                )} ${localeString(
                                                     'views.Receive.andSentTo'
                                                 )} ${lnurl.domain}`
                                             }
@@ -487,7 +521,7 @@ export default class Receive extends React.Component<
                                 </>
                             )}
                             {creatingInvoice && <LoadingIndicator />}
-                            {haveInvoice && (
+                            {haveInvoice && !creatingInvoiceError && (
                                 <View style={{ marginTop: 10 }}>
                                     {selectedIndex == 0 &&
                                         !belowDustLimit &&
@@ -696,7 +730,7 @@ export default class Receive extends React.Component<
                                         </>
                                     )}
 
-                                    {RESTUtils.isLNDBased() && (
+                                    {BackendUtils.isLNDBased() && (
                                         <>
                                             <Text
                                                 style={{
@@ -718,20 +752,11 @@ export default class Receive extends React.Component<
                                                         routeHints: !routeHints
                                                     })
                                                 }
-                                                trackColor={{
-                                                    false: '#767577',
-                                                    true: themeColor(
-                                                        'highlight'
-                                                    )
-                                                }}
-                                                style={{
-                                                    alignSelf: 'flex-end'
-                                                }}
                                             />
                                         </>
                                     )}
 
-                                    {RESTUtils.supportsAMP() && (
+                                    {BackendUtils.supportsAMP() && (
                                         <>
                                             <Text
                                                 style={{
@@ -753,15 +778,6 @@ export default class Receive extends React.Component<
                                                         ampInvoice: !ampInvoice
                                                     })
                                                 }
-                                                trackColor={{
-                                                    false: '#767577',
-                                                    true: themeColor(
-                                                        'highlight'
-                                                    )
-                                                }}
-                                                style={{
-                                                    alignSelf: 'flex-end'
-                                                }}
                                             />
                                         </>
                                     )}
@@ -786,7 +802,7 @@ export default class Receive extends React.Component<
                                                     lnurl,
                                                     ampInvoice,
                                                     routeHints,
-                                                    RESTUtils.supportsAddressTypeSelection()
+                                                    BackendUtils.supportsAddressTypeSelection()
                                                         ? addressType
                                                         : null
                                                 ).then((rHash: string) =>
@@ -805,7 +821,7 @@ export default class Receive extends React.Component<
                         backgroundColor: themeColor('background'),
                         borderTopLeftRadius: 20,
                         borderTopRightRadius: 20,
-                        height: RESTUtils.supportsTaproot() ? 450 : 350,
+                        height: BackendUtils.supportsTaproot() ? 450 : 350,
                         paddingLeft: 24,
                         paddingRight: 24
                     }}

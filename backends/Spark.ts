@@ -167,7 +167,11 @@ export default class Spark {
             exposeprivatechannels: true
         });
     getPayments = () =>
-        this.rpc('listsendpays', {}, { unit: 'payments', slice: '-100' });
+        this.rpc('listsendpays', {}, { unit: 'payments', slice: '-100' }).then(
+            ({ pays }: any) => ({
+                payments: pays
+            })
+        );
     getNewAddress = () => this.rpc('newaddr');
     openChannel = (data: OpenChannelRequest) =>
         this.rpc('fundchannel', {
@@ -308,15 +312,16 @@ export default class Spark {
 
     supportsMessageSigning = () => false;
     supportsOnchainSends = () => true;
+    supportsOnchainReceiving = () => true;
     supportsKeysend = () => false;
     supportsChannelManagement = () => true;
     supportsMPP = () => false;
     supportsAMP = () => false;
     supportsCoinControl = () => false;
     supportsHopPicking = () => false;
+    supportsAccounts = () => false;
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
-    supportsAccounts = () => false;
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => false;
     supportsTaproot = () => false;

@@ -1,5 +1,5 @@
 import { action, observable } from 'mobx';
-import RESTUtils from './../utils/RESTUtils';
+import BackendUtils from './../utils/BackendUtils';
 
 interface VerificationRequest {
     msg: string;
@@ -26,7 +26,7 @@ export default class MessageSignStore {
     public signMessage = (text: string) => {
         this.loading = true;
 
-        RESTUtils.signMessage(text)
+        BackendUtils.signMessage(text)
             .then((data: any) => {
                 this.signature = data.zbase || data.signature;
                 this.error = false;
@@ -44,7 +44,7 @@ export default class MessageSignStore {
     public verifyMessage = (data: VerificationRequest) => {
         this.loading = true;
 
-        RESTUtils.verifyMessage({ msg: data.msg, signature: data.signature })
+        BackendUtils.verifyMessage({ msg: data.msg, signature: data.signature })
             .then((data: any) => {
                 this.valid = data.valid || data.verified || false;
                 this.pubkey = data.pubkey || data.publicKey;

@@ -4,18 +4,18 @@ import {
     NativeEventEmitter,
     ScrollView,
     StyleSheet,
-    Switch,
     Text,
     View
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Header, Icon } from 'react-native-elements';
 
-import { Amount } from './../components/Amount';
+import Amount from './../components/Amount';
 import Button from './../components/Button';
 import HopPicker from './../components/HopPicker';
 import KeyValue from './../components/KeyValue';
 import LoadingIndicator from './../components/LoadingIndicator';
+import Switch from './../components/Switch';
 import TextInput from './../components/TextInput';
 
 import InvoicesStore from './../stores/InvoicesStore';
@@ -28,7 +28,7 @@ import SettingsStore from './../stores/SettingsStore';
 
 import FeeUtils from './../utils/FeeUtils';
 import { localeString } from './../utils/LocaleUtils';
-import RESTUtils from './../utils/RESTUtils';
+import BackendUtils from './../utils/BackendUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
 interface InvoiceProps {
@@ -48,6 +48,7 @@ interface InvoiceState {
     maxParts: string;
     maxShardAmt: string;
     feeLimitSat: string;
+    feeOption: string;
     maxFeePercent: string;
     outgoingChanId: string | null;
     lastHopPubkey: string | null;
@@ -73,6 +74,7 @@ export default class PaymentRequest extends React.Component<
         maxParts: '16',
         maxShardAmt: '',
         feeLimitSat: '100',
+        feeOption: 'sats',
         maxFeePercent: '0.5',
         outgoingChanId: null,
         lastHopPubkey: null
@@ -127,30 +129,37 @@ export default class PaymentRequest extends React.Component<
         return null;
     };
 
-    sendPayment = ({
-        payment_request,
-        amount, // used only for no-amount invoices
-        max_parts,
-        max_shard_amt,
-        fee_limit_sat,
-        max_fee_percent,
-        outgoing_chan_id,
-        last_hop_pubkey,
-        amp
-    }: SendPaymentReq) => {
+    sendPayment = (
+        feeOption: string,
+        percentAmount: string,
+        {
+            payment_request,
+            amount, // used only for no-amount invoices
+            max_parts,
+            max_shard_amt,
+            fee_limit_sat,
+            max_fee_percent,
+            outgoing_chan_id,
+            last_hop_pubkey,
+            amp
+        }: SendPaymentReq
+    ) => {
         const { InvoicesStore, TransactionsStore, SettingsStore, navigation } =
             this.props;
         let feeLimitSat = fee_limit_sat;
 
-        // If the fee limit is not set, use a default routing fee calculation
-        if (!fee_limit_sat) {
-            const { pay_req } = InvoicesStore;
-            const requestAmount = pay_req && pay_req.getRequestAmount;
-            const invoiceAmount = amount || requestAmount;
-
-            feeLimitSat = FeeUtils.calculateDefaultRoutingFee(
-                Number(invoiceAmount)
-            );
+        if (feeOption == 'sats') {
+            // If the fee limit is not set, use a default routing fee calculation
+            if (!fee_limit_sat) {
+                const { pay_req } = InvoicesStore;
+                const requestAmount = pay_req && pay_req.getRequestAmount;
+                const invoiceAmount = amount || requestAmount;
+                feeLimitSat = FeeUtils.calculateDefaultRoutingFee(
+                    Number(invoiceAmount)
+                );
+            }
+        } else if (feeOption == 'percent') {
+            feeLimitSat = percentAmount;
         }
 
         const streamingCall = TransactionsStore.sendPayment({
@@ -186,6 +195,7 @@ export default class PaymentRequest extends React.Component<
             maxParts,
             maxShardAmt,
             feeLimitSat,
+            feeOption,
             maxFeePercent,
             outgoingChanId,
             lastHopPubkey,
@@ -209,6 +219,11 @@ export default class PaymentRequest extends React.Component<
         const description = pay_req && pay_req.description;
         const payment_hash = pay_req && pay_req.payment_hash;
         const timestamp = pay_req && pay_req.timestamp;
+        const percentAmount = customAmount
+            ? (Number(customAmount) * (Number(maxFeePercent) / 100)).toFixed()
+            : requestAmount
+            ? (requestAmount * (Number(maxFeePercent) / 100)).toFixed()
+            : 0;
 
         let lockAtomicMultiPathPayment = false;
         if (
@@ -223,14 +238,14 @@ export default class PaymentRequest extends React.Component<
         const enableAmp: boolean =
             enableAtomicMultiPathPayment || lockAtomicMultiPathPayment;
         const ampOrMppEnabled: boolean =
-            (RESTUtils.supportsMPP() || RESTUtils.supportsAMP()) &&
+            (BackendUtils.supportsMPP() || BackendUtils.supportsAMP()) &&
             (enableMultiPathPayment || enableAmp);
 
         const date = new Date(Number(timestamp) * 1000).toString();
 
         const { enableTor, implementation } = SettingsStore;
 
-        const isLnd: boolean = RESTUtils.isLNDBased();
+        const isLnd: boolean = BackendUtils.isLNDBased();
         const isCLightning: boolean = implementation === 'c-lightning-REST';
 
         const isNoAmountInvoice: boolean =
@@ -419,21 +434,108 @@ export default class PaymentRequest extends React.Component<
                                         {`${localeString(
                                             'views.PaymentRequest.feeLimit'
                                         )} (${localeString(
-                                            'general.sats'
-                                        )}) (${localeString(
                                             'general.optional'
                                         )})`}
                                     </Text>
                                     {this.displayFeeRecommendation()}
-                                    <TextInput
-                                        keyboardType="numeric"
-                                        value={feeLimitSat}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                feeLimitSat: text
-                                            })
-                                        }
-                                    />
+                                    <View
+                                        style={{
+                                            flex: 1,
+                                            flexWrap: 'wrap',
+                                            flexDirection: 'row',
+                                            justifyContent: 'flex-end',
+                                            opacity:
+                                                feeOption == 'percent'
+                                                    ? 1
+                                                    : 0.25
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                ...styles.label,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            <Amount sats={percentAmount} />
+                                        </Text>
+                                    </View>
+                                    <View
+                                        style={{
+                                            flexDirection: 'row',
+                                            width: '95%'
+                                        }}
+                                    >
+                                        <TextInput
+                                            style={{
+                                                width: '50%',
+                                                opacity:
+                                                    feeOption == 'sats'
+                                                        ? 1
+                                                        : 0.25
+                                            }}
+                                            keyboardType="numeric"
+                                            value={feeLimitSat}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    feeLimitSat: text
+                                                })
+                                            }
+                                            onPressIn={() =>
+                                                this.setState({
+                                                    feeOption: 'sats'
+                                                })
+                                            }
+                                        />
+                                        <Text
+                                            style={{
+                                                ...styles.label,
+                                                color: themeColor('text'),
+                                                top: 28,
+                                                right: 30,
+                                                opacity:
+                                                    feeOption == 'sats'
+                                                        ? 1
+                                                        : 0.25
+                                            }}
+                                        >
+                                            {`${localeString('general.sats')}`}
+                                        </Text>
+                                        <TextInput
+                                            style={{
+                                                width: '50%',
+                                                opacity:
+                                                    feeOption == 'percent'
+                                                        ? 1
+                                                        : 0.25
+                                            }}
+                                            keyboardType="numeric"
+                                            value={maxFeePercent}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    maxFeePercent: text
+                                                })
+                                            }
+                                            onPressIn={() =>
+                                                this.setState({
+                                                    feeOption: 'percent'
+                                                })
+                                            }
+                                        />
+                                        <Text
+                                            style={{
+                                                ...styles.label,
+                                                color: themeColor('text'),
+                                                top: 28,
+                                                right: 18,
+                                                opacity:
+                                                    feeOption == 'percent'
+                                                        ? 1
+                                                        : 0.25
+                                            }}
+                                        >
+                                            {'%'}
+                                        </Text>
+                                    </View>
                                 </>
                             )}
 
@@ -464,7 +566,7 @@ export default class PaymentRequest extends React.Component<
                                 </>
                             )}
 
-                            {!!pay_req && RESTUtils.supportsHopPicking() && (
+                            {!!pay_req && BackendUtils.supportsHopPicking() && (
                                 <>
                                     {
                                         <HopPicker
@@ -502,7 +604,7 @@ export default class PaymentRequest extends React.Component<
                             )}
 
                             {!!pay_req &&
-                                RESTUtils.supportsMPP() &&
+                                BackendUtils.supportsMPP() &&
                                 !enableTor && (
                                     <React.Fragment>
                                         <Text
@@ -537,18 +639,12 @@ export default class PaymentRequest extends React.Component<
                                                                 : true
                                                     });
                                                 }}
-                                                trackColor={{
-                                                    false: '#767577',
-                                                    true: themeColor(
-                                                        'highlight'
-                                                    )
-                                                }}
                                             />
                                         </View>
                                     </React.Fragment>
                                 )}
 
-                            {!!pay_req && RESTUtils.supportsAMP() && (
+                            {!!pay_req && BackendUtils.supportsAMP() && (
                                 <React.Fragment>
                                     <Text
                                         style={{
@@ -580,10 +676,6 @@ export default class PaymentRequest extends React.Component<
                                                         enable ||
                                                         enableMultiPathPayment
                                                 });
-                                            }}
-                                            trackColor={{
-                                                false: '#767577',
-                                                true: themeColor('highlight')
                                             }}
                                             disabled={
                                                 lockAtomicMultiPathPayment
@@ -665,28 +757,35 @@ export default class PaymentRequest extends React.Component<
                                             color: 'white'
                                         }}
                                         onPress={() => {
-                                            this.sendPayment({
-                                                payment_request: paymentRequest,
-                                                amount: customAmount,
-                                                max_parts:
-                                                    enableMultiPathPayment
-                                                        ? maxParts
+                                            this.sendPayment(
+                                                feeOption,
+                                                String(percentAmount),
+                                                {
+                                                    payment_request:
+                                                        paymentRequest,
+                                                    amount: customAmount,
+                                                    max_parts:
+                                                        enableMultiPathPayment
+                                                            ? maxParts
+                                                            : null,
+                                                    max_shard_amt:
+                                                        enableMultiPathPayment
+                                                            ? maxShardAmt
+                                                            : null,
+                                                    fee_limit_sat: isLnd
+                                                        ? feeLimitSat
                                                         : null,
-                                                max_shard_amt:
-                                                    enableMultiPathPayment
-                                                        ? maxShardAmt
-                                                        : null,
-                                                fee_limit_sat: isLnd
-                                                    ? feeLimitSat
-                                                    : null,
-                                                max_fee_percent: isCLightning
-                                                    ? maxFeePercent
-                                                    : null,
-                                                outgoing_chan_id:
-                                                    outgoingChanId,
-                                                last_hop_pubkey: lastHopPubkey,
-                                                amp: enableAmp
-                                            });
+                                                    max_fee_percent:
+                                                        isCLightning
+                                                            ? maxFeePercent
+                                                            : null,
+                                                    outgoing_chan_id:
+                                                        outgoingChanId,
+                                                    last_hop_pubkey:
+                                                        lastHopPubkey,
+                                                    amp: enableAmp
+                                                }
+                                            );
                                         }}
                                     />
                                 </View>

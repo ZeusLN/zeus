@@ -9,12 +9,11 @@ import {
 import { Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import { Amount } from '../../components/Amount';
+import Amount from '../../components/Amount';
 import LoadingIndicator from '../../components/LoadingIndicator';
 
-import DateTimeUtils from './../../utils/DateTimeUtils';
 import { localeString } from './../../utils/LocaleUtils';
-import RESTUtils from './../../utils/RESTUtils';
+import BackendUtils from './../../utils/BackendUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import ActivityStore from './../../stores/ActivityStore';
@@ -62,14 +61,14 @@ export default class Activity extends React.Component<ActivityProps, {}> {
         const { LncModule } = NativeModules;
         const eventEmitter = new NativeEventEmitter(LncModule);
         this.transactionListener = eventEmitter.addListener(
-            RESTUtils.subscribeTransactions(),
+            BackendUtils.subscribeTransactions(),
             () => {
                 ActivityStore.updateTransactions();
             }
         );
 
         this.invoicesListener = eventEmitter.addListener(
-            RESTUtils.subscribeInvoices(),
+            BackendUtils.subscribeInvoices(),
             () => {
                 ActivityStore.updateInvoices();
             }
@@ -312,11 +311,7 @@ export default class Activity extends React.Component<ActivityProps, {}> {
                                                     fontFamily: 'Lato-Regular'
                                                 }}
                                             >
-                                                {item.getTimestamp === 0
-                                                    ? item.getBlockHeight
-                                                    : DateTimeUtils.listFormattedDateShort(
-                                                          item.getTimestamp
-                                                      )}
+                                                {item.getDisplayTimeShort}
                                             </ListItem.Subtitle>
                                         </ListItem.Content>
                                     </ListItem>

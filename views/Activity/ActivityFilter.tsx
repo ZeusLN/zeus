@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, StyleSheet, Switch, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { Button, Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -9,6 +9,8 @@ import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import ActivityStore from './../../stores/ActivityStore';
+
+import Switch from './../../components/Switch';
 import TextInput from './../../components/TextInput';
 
 interface ActivityFilterProps {
@@ -318,10 +320,6 @@ export default class ActivityFilter extends React.Component<
                                                 newFilters[index] =
                                                     !filters[index];
                                                 setFilters(newFilters);
-                                            }}
-                                            trackColor={{
-                                                false: '#767577',
-                                                true: themeColor('highlight')
                                             }}
                                         />
                                     </View>

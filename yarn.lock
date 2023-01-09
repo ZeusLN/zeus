@@ -1271,13 +1271,6 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
-"@react-native-async-storage/async-storage@1.15.17":
-  version "1.15.17"
-  resolved "https://registry.npmjs.org/@react-native-async-storage/async-storage/-/async-storage-1.15.17.tgz"
-  integrity sha512-NQCFs47aFEch9kya/bqwdpvSdZaVRtzU7YB02L8VrmLSLpKgQH/1VwzFUBPcc1/JI1s3GU4yOLVrEbwxq+Fqcw==
-  dependencies:
-    merge-options "^3.0.4"
-
 "@react-native-clipboard/clipboard@1.9.0":
   version "1.9.0"
   resolved "https://registry.npmjs.org/@react-native-clipboard/clipboard/-/clipboard-1.9.0.tgz"
@@ -1848,10 +1841,18 @@
     "@types/react" "*"
     "@types/react-native" "*"
 
-"@types/react-native-vector-icons@6.4.5", "@types/react-native-vector-icons@^6.4.5":
+"@types/react-native-vector-icons@6.4.5":
   version "6.4.5"
   resolved "https://registry.npmjs.org/@types/react-native-vector-icons/-/react-native-vector-icons-6.4.5.tgz"
   integrity sha512-JBpcjWQE4n0GlE0p6HpDDclT+uXpFC453T5k4h+B38q0utlGJhvgNr8899BoJGc1xOktA2cgqFKmFMJd0h7YaA==
+  dependencies:
+    "@types/react" "*"
+    "@types/react-native" "*"
+
+"@types/react-native-vector-icons@^6.4.6":
+  version "6.4.12"
+  resolved "https://registry.yarnpkg.com/@types/react-native-vector-icons/-/react-native-vector-icons-6.4.12.tgz#4b9c63bf85eb42fca7c5b0a55ec317900e4fb427"
+  integrity sha512-gSXtv3NMOsRwSXJ/gvGebm7CNjHbkeFKCse9h/Pvi+x2yjCLOkJR1FBfec06DhaFJpsK7Y8WRQpwOS0eLqx5Rg==
   dependencies:
     "@types/react" "*"
     "@types/react-native" "*"
@@ -2518,6 +2519,11 @@ base-64@0.1.0:
   resolved "https://registry.npmjs.org/base-64/-/base-64-0.1.0.tgz"
   integrity sha1-eAqZyE59YAJgNhURxId2E78k9rs=
 
+base-x@4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/base-x/-/base-x-4.0.0.tgz#d0e3b7753450c73f8ad2389b5c018a4af7b2224a"
+  integrity sha512-FuwxlW4H5kh37X/oW59pwTzzTKRzfrrQwhmyspRM7swOEZcHtDZSCt45U6oKgtuFE+WYPblePMVIPR4RZrh/hw==
+
 base-x@^1.1.0:
   version "1.1.0"
   resolved "https://registry.npmjs.org/base-x/-/base-x-1.1.0.tgz"
@@ -3100,7 +3106,7 @@ color-string@^1.6.0:
     color-name "^1.0.0"
     simple-swizzle "^0.2.2"
 
-color@^3.1.0, color@^3.1.2, color@^3.1.3:
+color@^3.1.2, color@^3.1.3:
   version "3.2.1"
   resolved "https://registry.npmjs.org/color/-/color-3.2.1.tgz"
   integrity sha512-aBl7dZI9ENN6fUGC7mWpMTPNHmWUSNan9tuWN6ahh5ZLNk9baLJOnSMlrQkHcrfFgz2/RigjUVAjdx36VcemKA==
@@ -4768,7 +4774,7 @@ hoist-non-react-statics@^2.3.1:
   resolved "https://registry.yarnpkg.com/hoist-non-react-statics/-/hoist-non-react-statics-2.5.5.tgz#c5903cf409c0dfd908f388e619d86b9c1174cb47"
   integrity sha512-rqcy4pJo55FTTLWt+bU8ukscqHeE/e9KWvsOW2b/a3afxQZhwkQdT1rPPCJ0rYXdj4vNcasY8zHTH+jF/qStxw==
 
-hoist-non-react-statics@^3.1.0, hoist-non-react-statics@^3.3.0, hoist-non-react-statics@^3.3.2:
+hoist-non-react-statics@^3.3.0, hoist-non-react-statics@^3.3.2:
   version "3.3.2"
   resolved "https://registry.npmjs.org/hoist-non-react-statics/-/hoist-non-react-statics-3.3.2.tgz"
   integrity sha512-/gGivxi8JPKWNm/W0jSmzcMPpfpPLc3dY/6GxhX2hQ9iGj3aDfklV4ET7NjKpSinLpJ5vafa9iiGIEZg10SfBw==
@@ -5154,11 +5160,6 @@ is-object@~0.1.2:
   version "0.1.2"
   resolved "https://registry.npmjs.org/is-object/-/is-object-0.1.2.tgz"
   integrity sha1-AO+8CIFsM8/ErIJR0TLhDcZQmNc=
-
-is-plain-obj@^2.1.0:
-  version "2.1.0"
-  resolved "https://registry.npmjs.org/is-plain-obj/-/is-plain-obj-2.1.0.tgz"
-  integrity sha512-YWnfyRwxL/+SsrWYfOpUtz5b3YD+nyfkHvjbcanzk8zgyO4ASD67uVMRt8k5bM4lLMDnXfriRhOpemw+NfT1eA==
 
 is-plain-object@^2.0.3, is-plain-object@^2.0.4:
   version "2.0.4"
@@ -6333,13 +6334,6 @@ memoize-one@^5.0.0:
   resolved "https://registry.yarnpkg.com/memoize-one/-/memoize-one-5.2.1.tgz#8337aa3c4335581839ec01c3d594090cebe8f00e"
   integrity sha512-zYiwtZUcYyXKo/np96AGZAckk+FWWsUdJ3cHGGmld7+AhvcWmQyGCYUh1hc4Q/pkOhb65dQR/pqCyK0cOaHz4Q==
 
-merge-options@^3.0.4:
-  version "3.0.4"
-  resolved "https://registry.npmjs.org/merge-options/-/merge-options-3.0.4.tgz"
-  integrity sha512-2Sug1+knBjkaMsMgf1ctR1Ujx+Ayku4EdJN4Z+C2+JzoeF7A3OZ9KM2GY0CpQS51NR61LTurMJrRKPhSs3ZRTQ==
-  dependencies:
-    is-plain-obj "^2.1.0"
-
 merge-stream@^2.0.0:
   version "2.0.0"
   resolved "https://registry.npmjs.org/merge-stream/-/merge-stream-2.0.0.tgz"
@@ -7065,9 +7059,9 @@ open@^6.2.0:
   dependencies:
     is-wsl "^1.1.0"
 
-opencollective-postinstall@^2.0.0:
+opencollective-postinstall@^2.0.3:
   version "2.0.3"
-  resolved "https://registry.npmjs.org/opencollective-postinstall/-/opencollective-postinstall-2.0.3.tgz"
+  resolved "https://registry.yarnpkg.com/opencollective-postinstall/-/opencollective-postinstall-2.0.3.tgz#7a0fff978f6dbfa4d006238fbac98ed4198c3259"
   integrity sha512-8AV/sCtuzUeTo8gQK5qDZzARrulB3egtLzFgteqB2tcT4Mw7B8Kt7JcDHmltjz6FOAHsvTevk70gZEbhM4ZS9Q==
 
 optionator@^0.8.1:
@@ -7629,20 +7623,19 @@ react-native-date-picker@4.2.6:
   dependencies:
     prop-types "^15.8.1"
 
-react-native-elements@2.3.2:
-  version "2.3.2"
-  resolved "https://registry.npmjs.org/react-native-elements/-/react-native-elements-2.3.2.tgz"
-  integrity sha512-HygYYmq8JYjk/YYiUwr/64qT64H2xlPBz0JnkGTQwvnnyXZrfkHFopw8rLWCupv3iLLPDzVohvPs0Z5HLdonSQ==
+react-native-elements@3.4.2:
+  version "3.4.2"
+  resolved "https://registry.yarnpkg.com/react-native-elements/-/react-native-elements-3.4.2.tgz#66602be9c5e0e0a2a831913adec80ff6518d1ee2"
+  integrity sha512-m0eAWOn7JuR1wNTNY0WHuaqst4LI/gFE4N5Bbyfsc4DiryWsMST7aAg5w/Gos4IexWIzhLKCIkPxthND1m/8Xg==
   dependencies:
-    "@types/react-native-vector-icons" "^6.4.5"
-    color "^3.1.0"
+    "@types/react-native-vector-icons" "^6.4.6"
+    color "^3.1.2"
     deepmerge "^4.2.2"
-    hoist-non-react-statics "^3.1.0"
+    hoist-non-react-statics "^3.3.2"
     lodash.isequal "^4.5.0"
-    opencollective-postinstall "^2.0.0"
-    prop-types "^15.7.2"
-    react-native-ratings "^7.2.0"
-    react-native-status-bar-height "^2.5.0"
+    opencollective-postinstall "^2.0.3"
+    react-native-ratings "8.0.4"
+    react-native-size-matters "^0.3.1"
 
 react-native-encrypted-storage@4.0.2:
   version "4.0.2"
@@ -7715,13 +7708,12 @@ react-native-randombytes@3.5.3:
     buffer "^4.9.1"
     sjcl "^1.0.3"
 
-react-native-ratings@^7.2.0:
-  version "7.6.1"
-  resolved "https://registry.npmjs.org/react-native-ratings/-/react-native-ratings-7.6.1.tgz"
-  integrity sha512-V3y19iIifwemMr87KfovFIIzy/Rotqcds9k+ECaayQvrlucm/mXFC69R8xl/NivEdnxX7K87iurigByhpE37EQ==
+react-native-ratings@8.0.4:
+  version "8.0.4"
+  resolved "https://registry.yarnpkg.com/react-native-ratings/-/react-native-ratings-8.0.4.tgz#efd5ebad8acc08bf98d34d39b18fb7a6813ef991"
+  integrity sha512-Xczu5lskIIRD6BEdz9A0jDRpEck/SFxRqiglkXi0u67yAtI1/pcJC76P4MukCbT8K4BPVl+42w83YqXBoBRl7A==
   dependencies:
     lodash "^4.17.15"
-    prop-types "^15.7.2"
 
 react-native-restart@0.0.24:
   version "0.0.24"
@@ -7748,10 +7740,10 @@ react-native-screens@3.10.1:
     react-freeze "^1.0.0"
     warn-once "^0.1.0"
 
-react-native-secure-key-store@2.0.10:
-  version "2.0.10"
-  resolved "https://registry.yarnpkg.com/react-native-secure-key-store/-/react-native-secure-key-store-2.0.10.tgz#a5050075d4381991d83812ee09993a5dfffcf66e"
-  integrity sha512-K7aVlIGxyklnjhCidVexVgZF3LsgUD9GIxMy2NB/xkQsS9E2SJWkD/fJ56e25L2I6a9Mp1zuJrKnCtfBs1CvAw==
+react-native-size-matters@^0.3.1:
+  version "0.3.1"
+  resolved "https://registry.yarnpkg.com/react-native-size-matters/-/react-native-size-matters-0.3.1.tgz#24d0cfc335a2c730f6d58bd7b43ea5a41be4b49f"
+  integrity sha512-mKOfBLIBFBcs9br1rlZDvxD5+mAl8Gfr5CounwJtxI6Z82rGrMO+Kgl9EIg3RMVf3G855a85YVqHJL2f5EDRlw==
 
 react-native-snap-carousel@meliorence/react-native-snap-carousel#962/head:
   version "3.9.1"
@@ -7760,11 +7752,6 @@ react-native-snap-carousel@meliorence/react-native-snap-carousel#962/head:
     deprecated-react-native-prop-types "^2.3.0"
     prop-types "^15.6.1"
     react-addons-shallow-compare "15.6.2"
-
-react-native-status-bar-height@^2.5.0:
-  version "2.6.0"
-  resolved "https://registry.npmjs.org/react-native-status-bar-height/-/react-native-status-bar-height-2.6.0.tgz"
-  integrity sha512-z3SGLF0mHT+OlJDq7B7h/jXPjWcdBT3V14Le5L2PjntjjWM3+EJzq2BcXDwV+v67KFNJic5pgA26cCmseYek6w==
 
 react-native-svg-transformer@1.0.0:
   version "1.0.0"

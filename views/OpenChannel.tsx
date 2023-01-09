@@ -3,7 +3,6 @@ import {
     Platform,
     ScrollView,
     StyleSheet,
-    Switch,
     Text,
     View,
     TouchableOpacity,
@@ -20,11 +19,14 @@ import {
     SuccessMessage,
     ErrorMessage
 } from './../components/SuccessErrorMessage';
+import Switch from './../components/Switch';
 import TextInput from './../components/TextInput';
 import UTXOPicker from './../components/UTXOPicker';
 
+import handleAnything from './../utils/handleAnything';
+import NFCUtils from './../utils/NFCUtils';
 import NodeUriUtils from './../utils/NodeUriUtils';
-import RESTUtils from './../utils/RESTUtils';
+import BackendUtils from './../utils/BackendUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
@@ -51,6 +53,7 @@ interface OpenChannelState {
     spend_unconfirmed: boolean;
     sat_per_byte: string;
     privateChannel: boolean;
+    scidAlias: boolean;
     host: string;
     suggestImport: string;
     utxos: Array<string>;
@@ -72,6 +75,7 @@ export default class OpenChannel extends React.Component<
             spend_unconfirmed: false,
             sat_per_byte: '2',
             privateChannel: true,
+            scidAlias: true,
             host: '',
             suggestImport: '',
             utxos: [],
@@ -216,7 +220,8 @@ export default class OpenChannel extends React.Component<
             sat_per_byte,
             suggestImport,
             utxoBalance,
-            privateChannel
+            privateChannel,
+            scidAlias
         } = this.state;
         const { implementation, settings } = SettingsStore;
         const { privacy } = settings;
@@ -343,7 +348,7 @@ export default class OpenChannel extends React.Component<
                         onChangeText={(text: string) =>
                             this.setState({ node_pubkey_string: text })
                         }
-                        editable={!openingChannel}
+                        locked={openingChannel}
                     />
 
                     <Text
@@ -360,7 +365,7 @@ export default class OpenChannel extends React.Component<
                         onChangeText={(text: string) =>
                             this.setState({ host: text })
                         }
-                        editable={!openingChannel}
+                        locked={openingChannel}
                     />
 
                     <Text
@@ -380,7 +385,7 @@ export default class OpenChannel extends React.Component<
                         onChangeText={(text: string) =>
                             this.setState({ local_funding_amount: text })
                         }
-                        editable={!openingChannel}
+                        locked={openingChannel}
                     />
                     {local_funding_amount === 'all' && (
                         <Text
@@ -416,7 +421,7 @@ export default class OpenChannel extends React.Component<
                                 spend_unconfirmed: newMinConfs === 0
                             });
                         }}
-                        editable={!openingChannel}
+                        locked={openingChannel}
                     />
 
                     <>
@@ -470,7 +475,7 @@ export default class OpenChannel extends React.Component<
                         )}
                     </>
 
-                    {RESTUtils.supportsCoinControl() &&
+                    {BackendUtils.supportsCoinControl() &&
                         implementation !== 'lnd' && (
                             <UTXOPicker
                                 onValueChange={this.selectUTXOs}
@@ -494,15 +499,29 @@ export default class OpenChannel extends React.Component<
                                     privateChannel: !privateChannel
                                 })
                             }
-                            trackColor={{
-                                false: '#767577',
-                                true: themeColor('highlight')
-                            }}
-                            style={{
-                                alignSelf: 'flex-end'
-                            }}
                         />
                     </>
+
+                    {BackendUtils.isLNDBased() && (
+                        <>
+                            <Text
+                                style={{
+                                    top: 20,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString('views.OpenChannel.scidAlias')}
+                            </Text>
+                            <Switch
+                                value={scidAlias}
+                                onValueChange={() =>
+                                    this.setState({
+                                        scidAlias: !scidAlias
+                                    })
+                                }
+                            />
+                        </>
+                    )}
 
                     <View style={{ ...styles.button, paddingTop: 20 }}>
                         <Button

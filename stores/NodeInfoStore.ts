@@ -1,8 +1,8 @@
-import { action, observable, reaction } from 'mobx';
+import { action, observable } from 'mobx';
 import NodeInfo from './../models/NodeInfo';
 import SettingsStore from './SettingsStore';
 import ErrorUtils from './../utils/ErrorUtils';
-import RESTUtils from './../utils/RESTUtils';
+import BackendUtils from './../utils/BackendUtils';
 
 export default class NodeInfoStore {
     @observable public loading = false;
@@ -15,15 +15,6 @@ export default class NodeInfoStore {
 
     constructor(settingsStore: SettingsStore) {
         this.settingsStore = settingsStore;
-
-        reaction(
-            () => this.settingsStore.settings,
-            () => {
-                if (this.settingsStore.hasCredentials()) {
-                    this.getNodeInfo();
-                }
-            }
-        );
     }
 
     reset = () => {
@@ -51,14 +42,12 @@ export default class NodeInfoStore {
     public getNodeInfo = () => {
         this.errorMsg = '';
         this.loading = true;
-        RESTUtils.getMyNodeInfo()
+        BackendUtils.getMyNodeInfo()
             .then((data: any) => {
                 const nodeInfo = new NodeInfo(data);
                 this.nodeInfo = nodeInfo;
-                this.testnet =
-                    nodeInfo.network === 'testnet' || nodeInfo.testnet || false;
-                this.regtest =
-                    nodeInfo.network === 'regtest' || nodeInfo.regtest || false;
+                this.testnet = nodeInfo.isTestNet;
+                this.regtest = nodeInfo.isRegTest;
                 this.loading = false;
                 this.error = false;
             })

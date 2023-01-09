@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ScrollView, Switch, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import SettingsStore, {
@@ -10,6 +10,7 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import DropdownSetting from './../../components/DropdownSetting';
 import LoadingIndicator from './../../components/LoadingIndicator';
+import Switch from './../../components/Switch';
 import TextInput from './../../components/TextInput';
 
 interface PrivacyProps {
@@ -80,7 +81,7 @@ export default class Privacy extends React.Component<
             lurkerMode,
             enableMempoolRates
         } = this.state;
-        const { setSettings, getSettings, loading }: any = SettingsStore;
+        const { updateSettings, loading }: any = SettingsStore;
 
         const BackButton = () => (
             <Icon
@@ -119,9 +120,7 @@ export default class Privacy extends React.Component<
                 {loading ? (
                     <LoadingIndicator />
                 ) : (
-                    <ScrollView
-                        style={{ flex: 1, paddingLeft: 10, paddingTop: 15 }}
-                    >
+                    <ScrollView style={{ flex: 1, padding: 15 }}>
                         <DropdownSetting
                             title={localeString(
                                 'views.Settings.Privacy.blockExplorer'
@@ -131,48 +130,15 @@ export default class Privacy extends React.Component<
                                 this.setState({
                                     defaultBlockExplorer: value
                                 });
-                                const settings = await getSettings();
-                                await setSettings(
-                                    JSON.stringify(
-                                        settings
-                                            ? {
-                                                  nodes: settings.nodes,
-                                                  theme: settings.theme,
-                                                  selectedNode:
-                                                      settings.selectedNode,
-                                                  fiat: settings.fiat,
-                                                  passphrase:
-                                                      settings.passphrase,
-                                                  duressPassphrase:
-                                                      settings.duressPassphrase,
-                                                  pin: settings.pin,
-                                                  duressPin: settings.duressPin,
-                                                  scramblePin:
-                                                      settings.scramblePin,
-                                                  authenticationAttempts:
-                                                      settings.authenticationAttempts,
-                                                  locale: settings.locale,
-                                                  privacy: {
-                                                      defaultBlockExplorer:
-                                                          value,
-                                                      customBlockExplorer,
-                                                      clipboard,
-                                                      lurkerMode,
-                                                      enableMempoolRates
-                                                  }
-                                              }
-                                            : {
-                                                  privacy: {
-                                                      defaultBlockExplorer:
-                                                          value,
-                                                      customBlockExplorer,
-                                                      clipboard,
-                                                      lurkerMode,
-                                                      enableMempoolRates
-                                                  }
-                                              }
-                                    )
-                                );
+                                await updateSettings({
+                                    privacy: {
+                                        defaultBlockExplorer: value,
+                                        customBlockExplorer,
+                                        clipboard,
+                                        lurkerMode,
+                                        enableMempoolRates
+                                    }
+                                });
                             }}
                             values={BLOCK_EXPLORER_KEYS}
                         />
@@ -196,49 +162,15 @@ export default class Privacy extends React.Component<
                                             customBlockExplorer: text
                                         });
 
-                                        const settings = await getSettings();
-                                        await setSettings(
-                                            JSON.stringify(
-                                                settings
-                                                    ? {
-                                                          nodes: settings.nodes,
-                                                          theme: settings.theme,
-                                                          selectedNode:
-                                                              settings.selectedNode,
-                                                          fiat: settings.fiat,
-                                                          passphrase:
-                                                              settings.passphrase,
-                                                          duressPassphrase:
-                                                              settings.duressPassphrase,
-                                                          pin: settings.pin,
-                                                          duressPin:
-                                                              settings.duressPin,
-                                                          scramblePin:
-                                                              settings.scramblePin,
-                                                          authenticationAttempts:
-                                                              settings.authenticationAttempts,
-                                                          locale: settings.locale,
-                                                          privacy: {
-                                                              defaultBlockExplorer,
-                                                              customBlockExplorer:
-                                                                  text,
-                                                              clipboard,
-                                                              lurkerMode,
-                                                              enableMempoolRates
-                                                          }
-                                                      }
-                                                    : {
-                                                          privacy: {
-                                                              defaultBlockExplorer,
-                                                              customBlockExplorer:
-                                                                  text,
-                                                              clipboard,
-                                                              lurkerMode,
-                                                              enableMempoolRates
-                                                          }
-                                                      }
-                                            )
-                                        );
+                                        await updateSettings({
+                                            privacy: {
+                                                defaultBlockExplorer,
+                                                customBlockExplorer: text,
+                                                clipboard,
+                                                lurkerMode,
+                                                enableMempoolRates
+                                            }
+                                        });
                                     }}
                                 />
                             </>
@@ -274,53 +206,15 @@ export default class Privacy extends React.Component<
                                         this.setState({
                                             clipboard: !clipboard
                                         });
-                                        const settings = await getSettings();
-                                        await setSettings(
-                                            JSON.stringify(
-                                                settings
-                                                    ? {
-                                                          nodes: settings.nodes,
-                                                          theme: settings.theme,
-                                                          selectedNode:
-                                                              settings.selectedNode,
-                                                          fiat: settings.fiat,
-                                                          passphrase:
-                                                              settings.passphrase,
-                                                          duressPassphrase:
-                                                              settings.duressPassphrase,
-                                                          pin: settings.pin,
-                                                          duressPin:
-                                                              settings.duressPin,
-                                                          scramblePin:
-                                                              settings.scramblePin,
-                                                          authenticationAttempts:
-                                                              settings.authenticationAttempts,
-                                                          locale: settings.locale,
-                                                          privacy: {
-                                                              defaultBlockExplorer,
-                                                              customBlockExplorer,
-                                                              clipboard:
-                                                                  !clipboard,
-                                                              lurkerMode,
-                                                              enableMempoolRates
-                                                          }
-                                                      }
-                                                    : {
-                                                          privacy: {
-                                                              defaultBlockExplorer,
-                                                              customBlockExplorer,
-                                                              clipboard:
-                                                                  !clipboard,
-                                                              lurkerMode,
-                                                              enableMempoolRates
-                                                          }
-                                                      }
-                                            )
-                                        );
-                                    }}
-                                    trackColor={{
-                                        false: '#767577',
-                                        true: themeColor('highlight')
+                                        await updateSettings({
+                                            privacy: {
+                                                defaultBlockExplorer,
+                                                customBlockExplorer,
+                                                clipboard: !clipboard,
+                                                lurkerMode,
+                                                enableMempoolRates
+                                            }
+                                        });
                                     }}
                                 />
                             </View>
@@ -355,53 +249,15 @@ export default class Privacy extends React.Component<
                                         this.setState({
                                             lurkerMode: !lurkerMode
                                         });
-                                        const settings = await getSettings();
-                                        await setSettings(
-                                            JSON.stringify(
-                                                settings
-                                                    ? {
-                                                          nodes: settings.nodes,
-                                                          theme: settings.theme,
-                                                          selectedNode:
-                                                              settings.selectedNode,
-                                                          fiat: settings.fiat,
-                                                          passphrase:
-                                                              settings.passphrase,
-                                                          duressPassphrase:
-                                                              settings.duressPassphrase,
-                                                          pin: settings.pin,
-                                                          duressPin:
-                                                              settings.duressPin,
-                                                          scramblePin:
-                                                              settings.scramblePin,
-                                                          authenticationAttempts:
-                                                              settings.authenticationAttempts,
-                                                          locale: settings.locale,
-                                                          privacy: {
-                                                              defaultBlockExplorer,
-                                                              customBlockExplorer,
-                                                              clipboard,
-                                                              lurkerMode:
-                                                                  !lurkerMode,
-                                                              enableMempoolRates
-                                                          }
-                                                      }
-                                                    : {
-                                                          privacy: {
-                                                              defaultBlockExplorer,
-                                                              customBlockExplorer,
-                                                              clipboard,
-                                                              lurkerMode:
-                                                                  !lurkerMode,
-                                                              enableMempoolRates
-                                                          }
-                                                      }
-                                            )
-                                        );
-                                    }}
-                                    trackColor={{
-                                        false: '#767577',
-                                        true: themeColor('highlight')
+                                        await updateSettings({
+                                            privacy: {
+                                                defaultBlockExplorer,
+                                                customBlockExplorer,
+                                                clipboard,
+                                                lurkerMode: !lurkerMode,
+                                                enableMempoolRates
+                                            }
+                                        });
                                     }}
                                 />
                             </View>
@@ -437,53 +293,16 @@ export default class Privacy extends React.Component<
                                             enableMempoolRates:
                                                 !enableMempoolRates
                                         });
-                                        const settings = await getSettings();
-                                        await setSettings(
-                                            JSON.stringify(
-                                                settings
-                                                    ? {
-                                                          nodes: settings.nodes,
-                                                          theme: settings.theme,
-                                                          selectedNode:
-                                                              settings.selectedNode,
-                                                          fiat: settings.fiat,
-                                                          passphrase:
-                                                              settings.passphrase,
-                                                          duressPassphrase:
-                                                              settings.duressPassphrase,
-                                                          pin: settings.pin,
-                                                          duressPin:
-                                                              settings.duressPin,
-                                                          scramblePin:
-                                                              settings.scramblePin,
-                                                          authenticationAttempts:
-                                                              settings.authenticationAttempts,
-                                                          locale: settings.locale,
-                                                          privacy: {
-                                                              defaultBlockExplorer,
-                                                              customBlockExplorer,
-                                                              clipboard,
-                                                              lurkerMode,
-                                                              enableMempoolRates:
-                                                                  !enableMempoolRates
-                                                          }
-                                                      }
-                                                    : {
-                                                          privacy: {
-                                                              defaultBlockExplorer,
-                                                              customBlockExplorer,
-                                                              clipboard,
-                                                              lurkerMode,
-                                                              enableMempoolRates:
-                                                                  !enableMempoolRates
-                                                          }
-                                                      }
-                                            )
-                                        );
-                                    }}
-                                    trackColor={{
-                                        false: '#767577',
-                                        true: themeColor('highlight')
+                                        await updateSettings({
+                                            privacy: {
+                                                defaultBlockExplorer,
+                                                customBlockExplorer,
+                                                clipboard,
+                                                lurkerMode,
+                                                enableMempoolRates:
+                                                    !enableMempoolRates
+                                            }
+                                        });
                                     }}
                                 />
                             </View>

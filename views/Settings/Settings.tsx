@@ -19,7 +19,7 @@ import SendIcon from '../../assets/images/SVG/Send';
 import NodeIdenticon, { NodeTitle } from './../../components/NodeIdenticon';
 import { themeColor } from './../../utils/ThemeUtils';
 import { localeString } from './../../utils/LocaleUtils';
-import RESTUtils from './../../utils/RESTUtils';
+import BackendUtils from './../../utils/BackendUtils';
 import { version } from './../../package.json';
 import SettingsStore, { INTERFACE_KEYS } from './../../stores/SettingsStore';
 import UnitsStore from './../../stores/UnitsStore';
@@ -158,17 +158,13 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                           implementationDisplayValue[
                                               selectedNode.implementation
                                           ] || 'Unknown'
-                                      }, ${
-                                          selectedNode.enableTor
-                                              ? 'Tor'
-                                              : 'clearnet'
                                       }`}
                             </Text>
                         )}
                     </View>
                 </TouchableOpacity>
 
-                {selectedNode && RESTUtils.supportsNodeInfo() && (
+                {selectedNode && BackendUtils.supportsNodeInfo() && (
                     <View
                         style={{
                             backgroundColor: themeColor('secondary'),
@@ -283,7 +279,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     </View>
                 )}
 
-                {selectedNode && RESTUtils.supportsMessageSigning() ? (
+                {selectedNode && BackendUtils.supportsMessageSigning() ? (
                     <View
                         style={{
                             backgroundColor: themeColor('secondary'),
@@ -481,7 +477,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                 >
                     <TouchableOpacity
                         style={styles.columnField}
-                        onPress={() => navigation.navigate('Theme')}
+                        onPress={() => navigation.navigate('Display')}
                     >
                         <View style={{ paddingLeft: 5, paddingTop: 2 }}>
                             <BrushIcon
@@ -495,7 +491,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                 color: themeColor('text')
                             }}
                         >
-                            {localeString('views.Settings.Theme.title')}
+                            {localeString('views.Settings.Display.title')}
                         </Text>
                         <View style={styles.ForwardArrow}>
                             <ForwardIcon />

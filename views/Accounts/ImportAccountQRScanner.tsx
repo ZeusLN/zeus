@@ -9,13 +9,27 @@ import {
     BlueURDecoder
 } from './../../zeus_modules/ur';
 const createHash = require('create-hash');
+const base = require('base-x');
+const bitcoin = require('bitcoinjs-lib');
 
 interface ImportAccountQRScannerProps {
     navigation: any;
     route: any;
 }
 
+const Base43 = {
+    encode() {
+        throw new Error('not implemented');
+    },
+
+    decode(input) {
+        const x = base('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$*+-./:');
+        return x.decode(input).toString('hex');
+    }
+};
+
 const ImportAccountQRScanner = (props: ImportAccountQRScannerProps) => {
+    let decoder, launchedBy;
     const scannedCache = {};
     // const [urTotal, setUrTotal] = React.useState(0);
     // const [urHave, setUrHave] = React.useState(0);
@@ -127,7 +141,7 @@ const ImportAccountQRScanner = (props: ImportAccountQRScannerProps) => {
             });
             return;
         } catch (err) {
-            console.warn(error);
+            console.warn(err);
         }
 
         if (!isLoading) {

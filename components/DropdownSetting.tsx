@@ -9,11 +9,11 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { themeColor } from './../utils/ThemeUtils';
+import CaretDown from './../assets/images/SVG/Caret Down.svg';
 
 interface DropdownSettingProps {
     title: string;
     selectedValue: string | boolean;
-    displayValue?: string;
     onValueChange: (value: any) => void;
     values: Array<any>;
 }
@@ -23,8 +23,7 @@ export default class DropdownSetting extends React.Component<
     {}
 > {
     render() {
-        const { title, selectedValue, displayValue, onValueChange, values } =
-            this.props;
+        const { title, selectedValue, onValueChange, values } = this.props;
 
         const pickerValuesAndroid: Array<any> = [];
         const pickerValuesIOS: Array<string> = ['Cancel'];
@@ -39,10 +38,16 @@ export default class DropdownSetting extends React.Component<
             pickerValuesIOS.push(value.key);
         });
 
+        const displayItem = values.filter(
+            (value: any) => value.value === selectedValue
+        )[0];
+
+        const display = displayItem ? displayItem.key : null;
+
         return (
             <React.Fragment>
                 {Platform.OS === 'android' && (
-                    <View style={{ height: 75 }}>
+                    <View>
                         <Text
                             style={{
                                 ...styles.secondaryText,
@@ -57,8 +62,11 @@ export default class DropdownSetting extends React.Component<
                                 onValueChange(itemValue)
                             }
                             style={{
-                                color: themeColor('text')
+                                color: themeColor('text'),
+                                backgroundColor: themeColor('secondary'),
+                                ...styles.field
                             }}
+                            dropdownIconColor={themeColor('text')}
                         >
                             {pickerValuesAndroid}
                         </Picker>
@@ -99,8 +107,20 @@ export default class DropdownSetting extends React.Component<
                                     ...styles.field
                                 }}
                             >
-                                {displayValue ? displayValue : selectedValue}
+                                {display ? display : selectedValue}
                             </Text>
+                            <View
+                                style={{
+                                    position: 'absolute',
+                                    right: 10,
+                                    top: '33%'
+                                }}
+                            >
+                                <CaretDown
+                                    stroke={themeColor('text')}
+                                    fill={themeColor('text')}
+                                />
+                            </View>
                         </TouchableOpacity>
                     </View>
                 )}

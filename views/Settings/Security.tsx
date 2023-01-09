@@ -1,7 +1,9 @@
 import { inject, observer } from 'mobx-react';
 import * as React from 'react';
-import { FlatList, View, ScrollView, Switch } from 'react-native';
+import { FlatList, View, ScrollView } from 'react-native';
 import { Header, Icon, ListItem } from 'react-native-elements';
+
+import Switch from './../../components/Switch';
 
 import SettingsStore from '../../stores/SettingsStore';
 
@@ -15,8 +17,10 @@ interface SecurityProps {
 
 interface SecurityState {
     scramblePin: boolean;
+    loginBackground: boolean;
     displaySecurityItems: Array<any>;
     pinExists: boolean;
+    passphraseExists: boolean;
 }
 
 const possibleSecurityItems = [
@@ -54,8 +58,10 @@ export default class Security extends React.Component<
 > {
     state = {
         scramblePin: true,
+        loginBackground: false,
         displaySecurityItems: [],
-        pinExists: false
+        pinExists: false,
+        passphraseExists: false
     };
 
     async componentDidMount() {
@@ -64,12 +70,19 @@ export default class Security extends React.Component<
         const settings = await getSettings();
 
         this.setState({
-            scramblePin: settings.scramblePin ?? true
+            scramblePin: settings.scramblePin ?? true,
+            loginBackground: settings.loginBackground ?? false
         });
 
         if (settings.pin) {
             this.setState({
                 pinExists: true
+            });
+        }
+
+        if (settings.passphrase) {
+            this.setState({
+                passphraseExists: true
             });
         }
 
@@ -166,8 +179,14 @@ export default class Security extends React.Component<
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { scramblePin, displaySecurityItems, pinExists } = this.state;
-        const { setSettings, getSettings } = SettingsStore;
+        const {
+            scramblePin,
+            displaySecurityItems,
+            pinExists,
+            passphraseExists,
+            loginBackground
+        } = this.state;
+        const { updateSettings } = SettingsStore;
 
         const BackButton = () => (
             <Icon
@@ -229,32 +248,38 @@ export default class Security extends React.Component<
                                 this.setState({
                                     scramblePin: !scramblePin
                                 });
-                                const settings = await getSettings();
-                                setSettings(
-                                    JSON.stringify({
-                                        nodes: settings.nodes,
-                                        theme: settings.theme,
-                                        selectedNode: settings.selectedNode,
-                                        fiat: settings.fiat,
-                                        passphrase: settings.passphrase,
-                                        duressPassphrase:
-                                            settings.duressPassphrase,
-                                        pin: settings.pin,
-                                        duressPin: settings.duressPin,
-                                        scramblePin: !scramblePin,
-                                        authenticationAttempts:
-                                            settings.authenticationAttempts,
-                                        locale: settings.locale,
-                                        privacy: settings.privacy
-                                    })
-                                );
+                                updateSettings({ scramblePin: !scramblePin });
                             }}
-                            trackColor={{
-                                false: '#767577',
-                                true: themeColor('highlight')
-                            }}
-                            style={{
-                                alignSelf: 'flex-end'
+                        />
+                    </ListItem>
+                )}
+                {(pinExists || passphraseExists) && (
+                    <ListItem
+                        containerStyle={{
+                            backgroundColor: themeColor('background')
+                        }}
+                    >
+                        <ListItem.Content>
+                            <ListItem.Title
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'Lato-Regular'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Security.loginBackground'
+                                )}
+                            </ListItem.Title>
+                        </ListItem.Content>
+                        <Switch
+                            value={loginBackground}
+                            onValueChange={async () => {
+                                this.setState({
+                                    loginBackground: !loginBackground
+                                });
+                                updateSettings({
+                                    loginBackground: !loginBackground
+                                });
                             }}
                         />
                     </ListItem>

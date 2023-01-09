@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
     Animated,
+    AppState,
     PanResponder,
     Text,
     TouchableOpacity,
@@ -14,14 +15,14 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import RNRestart from 'react-native-restart';
 
 import ChannelsPane from '../Channels/ChannelsPane';
-import DefaultPane from './DefaultPane';
-import MainPane from './MainPane';
+import KeypadPane from './KeypadPane';
+import BalancePane from './BalancePane';
 
 import Button from './../../components/Button';
 import LayerBalances from './../../components/LayerBalances';
 import LoadingIndicator from './../../components/LoadingIndicator';
 
-import RESTUtils from './../../utils/RESTUtils';
+import BackendUtils from './../../utils/BackendUtils';
 import LinkingUtils from './../../utils/LinkingUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -99,7 +100,35 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         this.props.navigation.addListener('didFocus', () => {
             this.getSettingsAndNavigate();
         });
+
+        AppState.addEventListener('change', this.handleAppStateChange);
     }
+
+    componentWillUnmount() {
+        this.props.navigation.removeListener &&
+            this.props.navigation.removeListener('didFocus');
+        AppState.removeEventListener &&
+            AppState.removeEventListener('change', this.handleAppStateChange);
+    }
+
+    handleAppStateChange = (nextAppState: any) => {
+        const { SettingsStore } = this.props;
+        const { settings, implementation } = SettingsStore;
+        const { loginBackground } = settings;
+        const loginRequired = settings && (settings.passphrase || settings.pin);
+
+        if (
+            nextAppState.match(/inactive|background/) &&
+            loginRequired &&
+            loginBackground
+        ) {
+            if (implementation === 'lightning-node-connect') {
+                BackendUtils.disconnect();
+            }
+
+            RNRestart.Restart();
+        }
+    };
 
     startListeners() {
         Linking.addEventListener('url', this.handleOpenURL);
@@ -173,7 +202,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
 
         if (implementation === 'lndhub') {
-            BalanceStore.reset();
             login({ login: username, password }).then(async () => {
                 BalanceStore.getLightningBalance(true);
             });
@@ -183,22 +211,22 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 error = await connect();
             }
             if (!error) {
+                NodeInfoStore.getNodeInfo();
                 UTXOsStore.listAccounts();
                 await BalanceStore.getCombinedBalance();
                 ChannelsStore.getChannels();
                 FeeStore.getFees();
-                NodeInfoStore.getNodeInfo();
                 FeeStore.getForwardingHistory();
             }
         } else {
-            if (RESTUtils.supportsAccounts()) {
+            NodeInfoStore.getNodeInfo();
+            if (BackendUtils.supportsAccounts()) {
                 UTXOsStore.listAccounts();
             }
 
             await BalanceStore.getCombinedBalance();
             ChannelsStore.getChannels();
             FeeStore.getFees();
-            NodeInfoStore.getNodeInfo();
         }
 
         if (implementation === 'lnd') {
@@ -235,7 +263,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             (settings && (settings.passphrase || settings.pin) && !loggedIn);
         const dataAvailable = implementation === 'lndhub' || nodeInfo.version;
 
-        const WalletScreen = () => {
+        const BalanceScreen = () => {
             return (
                 <View
                     style={{
@@ -243,7 +271,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         flex: 1
                     }}
                 >
-                    <MainPane
+                    <BalancePane
                         navigation={navigation}
                         NodeInfoStore={NodeInfoStore}
                         UnitsStore={UnitsStore}
@@ -307,7 +335,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             );
         };
 
-        const DefaultScreen = () => {
+        const KeypadScreen = () => {
             return (
                 <View
                     style={{
@@ -315,7 +343,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         flex: 1
                     }}
                 >
-                    <DefaultPane navigation={navigation} />
+                    <KeypadPane navigation={navigation} />
                 </View>
             );
         };
@@ -348,17 +376,21 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     {!connecting && !loginRequired && (
                         <NavigationContainer theme={Theme}>
                             <Tab.Navigator
-                                initialRouteName="Default"
+                                initialRouteName={
+                                    (settings.display &&
+                                        settings.display.defaultView) ||
+                                    'Keypad'
+                                }
                                 screenOptions={({ route }) => ({
                                     tabBarIcon: ({ color }) => {
-                                        if (route.name === 'Default') {
+                                        if (route.name === 'Keypad') {
                                             return <Bitcoin fill={color} />;
                                         }
-                                        if (route.name === 'Wallet') {
+                                        if (route.name === 'Balance') {
                                             return <Temple fill={color} />;
                                         }
                                         if (
-                                            RESTUtils.supportsChannelManagement()
+                                            BackendUtils.supportsChannelManagement()
                                         ) {
                                             return (
                                                 <ChannelsIcon fill={color} />
@@ -372,28 +404,28 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         : themeColor('text'),
                                     inactiveTintColor: error
                                         ? themeColor('error')
-                                        : RESTUtils.supportsChannelManagement()
+                                        : BackendUtils.supportsChannelManagement()
                                         ? 'gray'
                                         : themeColor('secondaryText'),
                                     showLabel: false
                                 }}
                             >
                                 <Tab.Screen
-                                    name="Wallet"
-                                    component={WalletScreen}
+                                    name="Balance"
+                                    component={BalanceScreen}
                                 />
                                 {!error ? (
                                     <Tab.Screen
-                                        name="Default"
-                                        component={DefaultScreen}
+                                        name="Keypad"
+                                        component={KeypadScreen}
                                     />
                                 ) : (
                                     <Tab.Screen
                                         name={'  '}
-                                        component={WalletScreen}
+                                        component={BalanceScreen}
                                     />
                                 )}
-                                {RESTUtils.supportsChannelManagement() &&
+                                {BackendUtils.supportsChannelManagement() &&
                                 !error ? (
                                     <Tab.Screen
                                         name={localeString(
@@ -404,7 +436,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 ) : (
                                     <Tab.Screen
                                         name={' '}
-                                        component={WalletScreen}
+                                        component={BalanceScreen}
                                     />
                                 )}
                             </Tab.Navigator>

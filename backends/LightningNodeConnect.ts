@@ -3,6 +3,7 @@ import LNC, { lnrpc, walletrpc } from '@lightninglabs/lnc-rn';
 import stores from '../stores/Stores';
 import CredentialStore from './LNC/credentialStore';
 import OpenChannelRequest from './../models/OpenChannelRequest';
+import Base64Utils from './../utils/Base64Utils';
 import { snakeize } from './../utils/DataFormatUtils';
 import VersionUtils from './../utils/VersionUtils';
 
@@ -106,6 +107,7 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.lightning
             .openChannelSync({
                 private: data.privateChannel,
+                scid_alias: data.scidAlias,
                 local_funding_amount: data.local_funding_amount,
                 min_confs: data.min_confs,
                 node_pubkey_string: data.node_pubkey_string,
@@ -256,12 +258,18 @@ export default class LightningNodeConnect {
             .importAccount(req)
             .then((data: walletrpc.ImportAccountResponse) => snakeize(data));
     signMessage = async (message: string) =>
-        await this.lnc.lnd.signer
-            .signMessage({ msg: message })
+        await this.lnc.lnd.lightning
+            .signMessage({ msg: Base64Utils.btoa(message) })
             .then((data: lnrpc.SignMessageResponse) => snakeize(data));
     verifyMessage = async (req: lnrpc.VerifyMessageRequest) =>
-        await this.lnc.lnd.signer
-            .verifyMessage({ msg: req.msg, signature: req.signature })
+        await this.lnc.lnd.lightning
+            .verifyMessage({
+                msg:
+                    typeof req.msg === 'string'
+                        ? Base64Utils.btoa(req.msg)
+                        : req.msg,
+                signature: req.signature
+            })
             .then((data: lnrpc.VerifyMessageResponse) => snakeize(data));
     subscribeInvoice = (r_hash: string) =>
         this.lnc.lnd.invoices.subscribeSingleInvoice({ r_hash });
@@ -278,15 +286,16 @@ export default class LightningNodeConnect {
 
     supportsMessageSigning = () => true;
     supportsOnchainSends = () => true;
+    supportsOnchainReceiving = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
     supportsMPP = () => this.supports('v0.10.0');
     supportsAMP = () => this.supports('v0.13.0');
+    supportsCoinControl = () => this.supports('v0.12.0');
     supportsHopPicking = () => this.supports('v0.11.0');
+    supportsAccounts = () => this.supports('v0.13.0');
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
-    supportsCoinControl = () => this.supports('v0.12.0');
-    supportsAccounts = () => this.supports('v0.13.0');
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => true;
     supportsTaproot = () => this.supports('v0.15.0');

@@ -131,8 +131,8 @@ android {
         applicationId "app.zeusln.zeus"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 45
-        versionName "0.7.0-alpha3"
+        versionCode 56
+        versionName "0.7.1"
         multiDexEnabled true
         missingDimensionStrategy 'react-native-camera', 'general'
     }
@@ -201,7 +201,6 @@ dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
     implementation 'com.android.support:multidex:1.0.3'
     implementation project(':react-native-randombytes')
-    implementation project(':react-native-secure-key-store')
     implementation "androidx.core:core:1.1.0"
     implementation "com.facebook.react:react-native:+"  // From node_modules
     implementation 'androidx.appcompat:appcompat:1.1.0-rc01'

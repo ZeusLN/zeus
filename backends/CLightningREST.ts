@@ -77,10 +77,13 @@ export default class CLightningREST extends LND {
             description: data.memo,
             label: 'zeus.' + Math.random() * 1000000,
             amount: Number(data.value) * 1000,
-            expiry: Math.round(Date.now() / 1000) + Number(data.expiry),
+            expiry: Number(data.expiry),
             private: true
         });
-    getPayments = () => this.getRequest('/v1/pay/listPays');
+    getPayments = () =>
+        this.getRequest('/v1/pay/listPays').then((data: any) => ({
+            payments: data.pays
+        }));
     getNewAddress = () => this.getRequest('/v1/newaddr');
     openChannel = (data: OpenChannelRequest) => {
         let request: any;
@@ -149,10 +152,15 @@ export default class CLightningREST extends LND {
         );
 
     supportsMessageSigning = () => true;
+    supportsOnchainSends = () => true;
+    supportsOnchainReceiving = () => true;
+    supportsKeysend = () => true;
+    supportsChannelManagement = () => true;
     supportsMPP = () => false;
     supportsAMP = () => false;
     supportsCoinControl = () => this.supports('v0.8.2', undefined, 'v0.4.0');
     supportsHopPicking = () => false;
+    supportsAccounts = () => false;
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
     singleFeesEarnedTotal = () => true;

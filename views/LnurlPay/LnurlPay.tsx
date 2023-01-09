@@ -1,16 +1,21 @@
 import url from 'url';
 import * as React from 'react';
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Header, Icon } from 'react-native-elements';
 import querystring from 'querystring-es3';
 
+import Amount from './../../components/Amount';
 import Button from './../../components/Button';
 import TextInput from './../../components/TextInput';
+import { Row } from './../..//components/layout/Row';
 
 import InvoicesStore from './../../stores/InvoicesStore';
 import LnurlPayStore from './../../stores/LnurlPayStore';
+import SettingsStore from './../../stores/SettingsStore';
+import FiatStore from './../../stores/FiatStore';
+import UnitsStore, { SATS_PER_BTC } from './../../stores/UnitsStore';
 
 import LnurlPayMetadata from './Metadata';
 
@@ -21,6 +26,9 @@ interface LnurlPayProps {
     navigation: any;
     InvoicesStore: InvoicesStore;
     LnurlPayStore: LnurlPayStore;
+    FiatStore: FiatStore;
+    UnitsStore: UnitsStore;
+    SettingsStore: SettingsStore;
 }
 
 interface LnurlPayState {
@@ -29,7 +37,13 @@ interface LnurlPayState {
     comment: string;
 }
 
-@inject('InvoicesStore', 'SettingsStore', 'LnurlPayStore')
+@inject(
+    'FiatStore',
+    'InvoicesStore',
+    'SettingsStore',
+    'LnurlPayStore',
+    'UnitsStore'
+)
 @observer
 export default class LnurlPay extends React.Component<
     LnurlPayProps,
@@ -68,13 +82,13 @@ export default class LnurlPay extends React.Component<
         };
     }
 
-    sendValues() {
+    sendValues(satAmount: string | number) {
         const { navigation, InvoicesStore, LnurlPayStore } = this.props;
-        const { domain, amount, comment } = this.state;
+        const { domain, comment } = this.state;
         const lnurl = navigation.getParam('lnurlParams');
         const u = url.parse(lnurl.callback);
         const qs = querystring.parse(u.query);
-        qs.amount = parseInt((parseFloat(amount) * 1000).toString());
+        qs.amount = Number((parseFloat(satAmount) * 1000).toString());
         qs.comment = comment;
         u.search = querystring.stringify(qs);
         u.query = querystring.stringify(qs);
@@ -154,8 +168,39 @@ export default class LnurlPay extends React.Component<
     }
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, SettingsStore, UnitsStore, FiatStore } = this.props;
         const { amount, domain, comment } = this.state;
+        const { settings } = SettingsStore;
+        const { fiat } = settings;
+        const { units, changeUnits } = UnitsStore;
+        const { fiatRates, getSymbol } = FiatStore;
+
+        const fiatEntry =
+            fiat && fiatRates && fiatRates.filter
+                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+                : null;
+
+        const rate =
+            fiat && fiat !== 'Disabled' && fiatRates && fiatEntry
+                ? fiatEntry.rate
+                : 0;
+
+        let satAmount: string | number;
+        switch (units) {
+            case 'sats':
+                satAmount = amount;
+                break;
+            case 'BTC':
+                satAmount = Number(amount) * SATS_PER_BTC;
+                break;
+            case 'fiat':
+                satAmount = Number(
+                    (Number(amount.replace(/,/g, '.')) / Number(rate)) *
+                        Number(SATS_PER_BTC)
+                ).toFixed(0);
+                break;
+        }
+
         const lnurl = navigation.getParam('lnurlParams');
 
         const BackButton = () => (
@@ -203,20 +248,52 @@ export default class LnurlPay extends React.Component<
                     </Text>
                 </View>
                 <View style={styles.content}>
-                    <Text
-                        style={{
-                            ...styles.text,
-                            color: themeColor('secondaryText')
-                        }}
-                    >
-                        {localeString('views.LnurlPay.LnurlPay.amount')}
-                        {lnurl && lnurl.minSendable !== lnurl.maxSendable
-                            ? ` (${Math.ceil(
-                                  lnurl.minSendable / 1000
-                              )}--${Math.floor(lnurl.maxSendable / 1000)})`
-                            : ''}
-                        {':'}
-                    </Text>
+                    <Row align="flex-end">
+                        <Text
+                            style={{
+                                ...styles.text,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {localeString('views.LnurlPay.LnurlPay.amount')}
+                        </Text>
+                        {lnurl && lnurl.minSendable !== lnurl.maxSendable && (
+                            <>
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {' ('}
+                                </Text>
+                                <Amount
+                                    color="secondaryText"
+                                    sats={Math.ceil(lnurl.minSendable / 1000)}
+                                />
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {' - '}
+                                </Text>
+                                <Amount
+                                    color="secondaryText"
+                                    sats={Math.floor(lnurl.maxSendable / 1000)}
+                                />
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {'):'}
+                                </Text>
+                            </>
+                        )}
+                    </Row>
                     <TextInput
                         value={amount}
                         onChangeText={(text: string) => {
@@ -228,12 +305,47 @@ export default class LnurlPay extends React.Component<
                                 : false
                         }
                         style={styles.textInput}
+                        prefix={
+                            units !== 'sats' &&
+                            (units === 'BTC'
+                                ? '₿'
+                                : !getSymbol().rtl
+                                ? getSymbol().symbol
+                                : null)
+                        }
+                        suffix={
+                            units === 'sats'
+                                ? units
+                                : getSymbol().rtl &&
+                                  units === 'fiat' &&
+                                  getSymbol().symbol
+                        }
+                        toggleUnits={changeUnits}
                     />
+                    {units !== 'sats' && (
+                        <Amount sats={satAmount} fixedUnits="sats" toggleable />
+                    )}
+                    {units !== 'BTC' && (
+                        <Amount sats={satAmount} fixedUnits="BTC" toggleable />
+                    )}
+                    {units === 'fiat' && (
+                        <TouchableOpacity onPress={() => changeUnits()}>
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {FiatStore.getRate()}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
                     {lnurl.commentAllowed > 0 ? (
                         <>
                             <Text
                                 style={{
                                     ...styles.text,
+                                    marginTop: 10,
                                     color: themeColor('secondaryText')
                                 }}
                             >
@@ -260,7 +372,7 @@ export default class LnurlPay extends React.Component<
                                 color: 'white'
                             }}
                             onPress={() => {
-                                this.sendValues();
+                                this.sendValues(satAmount);
                             }}
                             style={styles.button}
                             buttonStyle={{

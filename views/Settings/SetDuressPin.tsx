@@ -66,7 +66,7 @@ export default class SetDuressPin extends React.Component<
     saveSettings = async () => {
         const { SettingsStore, navigation } = this.props;
         const { duressPin, duressPinConfirm } = this.state;
-        const { getSettings, setSettings } = SettingsStore;
+        const { getSettings, updateSettings } = SettingsStore;
 
         if (duressPin !== duressPinConfirm) {
             this.setState({
@@ -90,27 +90,7 @@ export default class SetDuressPin extends React.Component<
             return;
         }
 
-        await setSettings(
-            JSON.stringify(
-                settings
-                    ? {
-                          nodes: settings.nodes,
-                          theme: settings.theme,
-                          selectedNode: settings.selectedNode,
-                          fiat: settings.fiat,
-                          locale: settings.locale,
-                          privacy: settings.privacy,
-                          authenticationAttempts:
-                              settings.authenticationAttempts,
-                          passphrase: settings.passphrase,
-                          duressPassphrase: settings.duressPassphrase,
-                          pin: settings.pin,
-                          duressPin,
-                          scramblePin: settings.scramblePin
-                      }
-                    : { duressPin }
-            )
-        ).then(() => {
+        await updateSettings({ duressPin }).then(() => {
             getSettings();
             navigation.navigate('Settings', {
                 refresh: true

@@ -1,5 +1,7 @@
 import bolt11 from 'bolt11';
 
+import stores from '../stores/Stores';
+
 import LND from './LND';
 import LoginRequest from './../models/LoginRequest';
 
@@ -24,12 +26,18 @@ export default class LndHub extends LND {
             password: data.password
         });
 
-    getPayments = () => this.getRequest('/gettxs');
+    getPayments = () =>
+        this.getRequest('/gettxs').then((data: any) => ({
+            payments: data
+        }));
     getLightningBalance = () =>
         this.getRequest('/balance').then(({ BTC }: any) => ({
             balance: BTC.AvailableBalance
         }));
-    getInvoices = () => this.getRequest('/getuserinvoices?limit=200');
+    getInvoices = () =>
+        this.getRequest('/getuserinvoices?limit=200').then((data: any) => ({
+            invoices: data
+        }));
 
     createInvoice = (data: any) =>
         this.postRequest('/addinvoice', {
@@ -64,17 +72,23 @@ export default class LndHub extends LND {
     payLightningInvoice = (data: any) =>
         this.postRequest('/payinvoice', {
             invoice: data.payment_request,
-            amount: Number(data.amt && data.amt * 1000)
+            amount: data.amt
         });
 
     supportsMessageSigning = () => false;
     supportsOnchainSends = () => false;
+    supportsOnchainReceiving = () =>
+        !(
+            stores.settingsStore.lndhubUrl.includes('lnbank/api/lndhub') ||
+            stores.settingsStore.lndhubUrl.includes('lntxbot')
+        );
     supportsKeysend = () => false;
     supportsChannelManagement = () => false;
     supportsMPP = () => false;
     supportsAMP = () => false;
     supportsCoinControl = () => false;
     supportsHopPicking = () => false;
+    supportsAccounts = () => false;
     supportsRouting = () => false;
     supportsNodeInfo = () => false;
     singleFeesEarnedTotal = () => false;

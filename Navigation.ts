@@ -10,7 +10,7 @@ import LnurlChannel from './views/LnurlChannel';
 import LnurlAuth from './views/LnurlAuth';
 import Receive from './views/Receive';
 import PaymentRequest from './views/PaymentRequest';
-import AddressQRScanner from './views/AddressQRScanner';
+import HandleAnythingQRScanner from './views/handleAnythingQRScanner';
 import NodeQRScanner from './views/NodeQRScanner';
 import OpenChannel from './views/OpenChannel';
 import SendingOnChain from './views/SendingOnChain';
@@ -29,7 +29,7 @@ import Lockscreen from './views/Lockscreen';
 
 // Settings views
 import Settings from './views/Settings/Settings';
-import AddEditNode from './views/Settings/AddEditNode';
+import NodeConfiguration from './views/Settings/NodeConfiguration';
 import Nodes from './views/Settings/Nodes';
 import Privacy from './views/Settings/Privacy';
 import Security from './views/Settings/Security';
@@ -39,7 +39,7 @@ import SetPin from './views/Settings/SetPin';
 import SetDuressPin from './views/Settings/SetDuressPin';
 import Language from './views/Settings/Language';
 import Currency from './views/Settings/Currency';
-import Theme from './views/Settings/Theme';
+import Display from './views/Settings/Display';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import SignVerifyMessage from './views/Settings/SignVerifyMessage';
 import About from './views/Settings/About';
@@ -94,8 +94,8 @@ const AppScenes = {
     Settings: {
         screen: Settings
     },
-    AddEditNode: {
-        screen: AddEditNode
+    NodeConfiguration: {
+        screen: NodeConfiguration
     },
     Nodes: {
         screen: Nodes
@@ -124,8 +124,8 @@ const AppScenes = {
     Currency: {
         screen: Currency
     },
-    Theme: {
-        screen: Theme
+    Display: {
+        screen: Display
     },
     About: {
         screen: About
@@ -214,8 +214,8 @@ const AppScenes = {
     ImportAccount: {
         screen: ImportAccount
     },
-    AddressQRCodeScanner: {
-        screen: AddressQRScanner
+    HandleAnythingQRScanner: {
+        screen: HandleAnythingQRScanner
     },
     NodeQRCodeScanner: {
         screen: NodeQRScanner

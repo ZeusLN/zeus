@@ -2,14 +2,13 @@ import * as React from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import UnitsStore from '../stores/UnitsStore';
+import SettingsStore from '../stores/SettingsStore';
 import PrivacyUtils from '../utils/PrivacyUtils';
 import ClockIcon from '../assets/images/SVG/Clock.svg';
 import { themeColor } from '../utils/ThemeUtils';
 import { Spacer } from './layout/Spacer';
 import { Row } from './layout/Row';
 import { Body } from './text/Body';
-
-export const satoshisPerBTC = 100000000;
 
 type Units = 'sats' | 'BTC' | 'fiat';
 
@@ -120,6 +119,7 @@ function AmountDisplay({
 
 interface AmountProps {
     UnitsStore?: UnitsStore;
+    SettingsStore?: SettingsStore;
     sats: number | string;
     fixedUnits?: string;
     sensitive?: boolean;
@@ -133,9 +133,9 @@ interface AmountProps {
     pending?: boolean;
 }
 
-@inject('UnitsStore')
+@inject('UnitsStore', 'SettingsStore')
 @observer
-export class Amount extends React.Component<AmountProps, {}> {
+export default class Amount extends React.Component<AmountProps, {}> {
     render() {
         const {
             sats: value,
@@ -150,6 +150,11 @@ export class Amount extends React.Component<AmountProps, {}> {
             pending = false
         } = this.props;
         const UnitsStore = this.props.UnitsStore!;
+        const SettingsStore = this.props.SettingsStore!;
+        const lurkerMode =
+            SettingsStore.settings.privacy &&
+            SettingsStore.settings.privacy.lurkerMode;
+        const lurkerExposed = SettingsStore.lurkerExposed;
 
         // TODO: This doesn't feel like the right place for this but it makes the component "reactive"
         const units = fixedUnits ? fixedUnits : UnitsStore.units;
@@ -164,7 +169,19 @@ export class Amount extends React.Component<AmountProps, {}> {
 
             if (toggleable) {
                 return (
-                    <TouchableOpacity onPress={() => UnitsStore.changeUnits()}>
+                    <TouchableOpacity
+                        onPress={() => UnitsStore.changeUnits()}
+                        onLongPress={() => {
+                            if (lurkerMode) {
+                                SettingsStore.toggleLurker();
+                            }
+                        }}
+                        onPressOut={() => {
+                            if (!lurkerMode && lurkerExposed) {
+                                SettingsStore.toggleLurker();
+                            }
+                        }}
+                    >
                         <AmountDisplay
                             amount={amount}
                             unit={unit}
@@ -211,7 +228,21 @@ export class Amount extends React.Component<AmountProps, {}> {
 
         if (toggleable) {
             return (
-                <TouchableOpacity onPress={() => UnitsStore.changeUnits()}>
+                <TouchableOpacity
+                    onPress={() => UnitsStore.changeUnits()}
+                    onLongPress={() => {
+                        if (lurkerMode) {
+                            SettingsStore.toggleLurker();
+                        }
+                    }}
+                    onPressOut={() => {
+                        if (!lurkerMode && lurkerExposed) {
+                            setTimeout(() => {
+                                SettingsStore.toggleLurker();
+                            }, 3000);
+                        }
+                    }}
+                >
                     <AmountDisplay
                         {...unformattedAmount}
                         negative={false}

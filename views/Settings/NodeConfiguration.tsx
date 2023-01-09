@@ -1,12 +1,11 @@
 import * as React from 'react';
 import {
     Modal,
-    Platform,
     StyleSheet,
-    Switch,
     Text,
     View,
-    ScrollView
+    ScrollView,
+    TouchableOpacity
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { Header, Icon } from 'react-native-elements';
@@ -17,6 +16,7 @@ import { hash, STORAGE_KEY } from './../../backends/LNC/credentialStore';
 import AddressUtils, { CUSTODIAL_LNDHUBS } from './../../utils/AddressUtils';
 import ConnectionFormatUtils from './../../utils/ConnectionFormatUtils';
 import { localeString } from './../../utils/LocaleUtils';
+import BackendUtils from './../../utils/BackendUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import Button from './../../components/Button';
@@ -27,6 +27,7 @@ import {
     SuccessMessage,
     ErrorMessage
 } from './../../components/SuccessErrorMessage';
+import Switch from './../../components/Switch';
 import TextInput from './../../components/TextInput';
 
 import SettingsStore, {
@@ -34,12 +35,14 @@ import SettingsStore, {
     LNC_MAILBOX_KEYS
 } from './../../stores/SettingsStore';
 
-interface AddEditNodeProps {
+import Scan from './../../assets/images/SVG/Scan.svg';
+
+interface NodeConfigurationProps {
     navigation: any;
     SettingsStore: SettingsStore;
 }
 
-interface AddEditNodeState {
+interface NodeConfigurationState {
     nickname: string; //
     host: string; // lnd
     port: string | number; // lnd
@@ -54,7 +57,7 @@ interface AddEditNodeState {
     certVerification: boolean;
     saved: boolean;
     active: boolean;
-    index: number;
+    index: number | null;
     newEntry: boolean;
     suggestImport: string;
     showLndHubModal: boolean;
@@ -68,11 +71,19 @@ interface AddEditNodeState {
     remoteKey: string;
 }
 
+const ScanBadge = ({ navigation }: { navigation: any }) => (
+    <TouchableOpacity
+        onPress={() => navigation.navigate('HandleAnythingQRScanner')}
+    >
+        <Scan fill={themeColor('text')} />
+    </TouchableOpacity>
+);
+
 @inject('SettingsStore')
 @observer
-export default class AddEditNode extends React.Component<
-    AddEditNodeProps,
-    AddEditNodeState
+export default class NodeConfiguration extends React.Component<
+    NodeConfigurationProps,
+    NodeConfigurationState
 > {
     state = {
         nickname: '',
@@ -80,7 +91,7 @@ export default class AddEditNode extends React.Component<
         port: '',
         macaroonHex: '',
         saved: false,
-        index: 0,
+        index: null,
         active: false,
         newEntry: false,
         implementation: 'lnd',
@@ -279,8 +290,7 @@ export default class AddEditNode extends React.Component<
             mailboxServer,
             customMailboxServer
         } = this.state;
-        const { setConnectingStatus, setSettings, settings } = SettingsStore;
-        const { passphrase, fiat, locale } = settings;
+        const { setConnectingStatus, updateSettings, settings } = SettingsStore;
 
         if (
             implementation === 'lndhub' &&
@@ -311,37 +321,20 @@ export default class AddEditNode extends React.Component<
         let nodes: any;
         if (settings.nodes) {
             nodes = settings.nodes;
-            nodes[index] = node;
+            nodes[index !== null ? index : settings.nodes.length] = node;
         } else {
             nodes = [node];
         }
 
-        setSettings(
-            JSON.stringify(
-                settings
-                    ? {
-                          nodes,
-                          theme: settings.theme,
-                          selectedNode: settings.selectedNode,
-                          fiat,
-                          locale,
-                          passphrase,
-                          duressPassphrase: settings.duressPassphrase,
-                          pin: settings.pin,
-                          duressPin: settings.duressPin,
-                          scramblePin: settings.scramblePin,
-                          authenticationAttempts:
-                              settings.authenticationAttempts,
-                          privacy: settings.privacy
-                      }
-                    : { nodes }
-            )
-        ).then(() => {
+        updateSettings({ nodes }).then(() => {
             this.setState({
                 saved: true
             });
 
             if (nodes.length === 1) {
+                if (implementation === 'lightning-node-connect') {
+                    BackendUtils.disconnect();
+                }
                 setConnectingStatus(true);
                 navigation.navigate('Wallet', { refresh: true });
             } else {
@@ -392,7 +385,7 @@ export default class AddEditNode extends React.Component<
             customMailboxServer
         };
 
-        navigation.navigate('AddEditNode', {
+        navigation.navigate('NodeConfiguration', {
             node,
             newEntry: true,
             saved: false,
@@ -402,9 +395,9 @@ export default class AddEditNode extends React.Component<
 
     deleteNodeConfig = () => {
         const { SettingsStore, navigation } = this.props;
-        const { setSettings, settings } = SettingsStore;
+        const { updateSettings, settings } = SettingsStore;
         const { index } = this.state;
-        const { nodes, passphrase, fiat, locale } = settings;
+        const { nodes } = settings;
 
         const newNodes: any = [];
         for (let i = 0; nodes && i < nodes.length; i++) {
@@ -413,49 +406,23 @@ export default class AddEditNode extends React.Component<
             }
         }
 
-        setSettings(
-            JSON.stringify({
-                nodes: newNodes,
-                theme: settings.theme,
-                selectedNode:
-                    index === settings.selectedNode ? 0 : settings.selectedNode,
-                fiat,
-                locale,
-                passphrase,
-                duressPassphrase: settings.duressPassphrase,
-                pin: settings.pin,
-                duressPin: settings.duressPin,
-                scramblePin: settings.scramblePin,
-                authenticationAttempts: settings.authenticationAttempts,
-                privacy: settings.privacy
-            })
-        ).then(() => {
+        updateSettings({
+            nodes: newNodes,
+            selectedNode:
+                index === settings.selectedNode ? 0 : settings.selectedNode
+        }).then(() => {
             navigation.navigate('Nodes', { refresh: true });
         });
     };
 
     setNodeConfigurationAsActive = () => {
         const { SettingsStore, navigation } = this.props;
-        const { setSettings, settings } = SettingsStore;
+        const { updateSettings } = SettingsStore;
         const { index } = this.state;
-        const { nodes, passphrase, fiat, locale } = settings;
 
-        setSettings(
-            JSON.stringify({
-                nodes,
-                theme: settings.theme,
-                selectedNode: index,
-                fiat,
-                locale,
-                passphrase,
-                duressPassphrase: settings.duressPassphrase,
-                pin: settings.pin,
-                duressPin: settings.duressPin,
-                scramblePin: settings.scramblePin,
-                authenticationAttempts: settings.authenticationAttempts,
-                privacy: settings.privacy
-            })
-        );
+        updateSettings({
+            selectedNode: index
+        });
 
         this.setState({
             active: true
@@ -528,17 +495,10 @@ export default class AddEditNode extends React.Component<
             </View>
         );
 
-        const displayItem = INTERFACE_KEYS.filter(
-            (value: any) => value.value === implementation
-        )[0];
-
-        const displayValue =
-            Platform.OS === 'android' ? displayItem.value : displayItem.key;
-
         const NodeInterface = () => (
             <DropdownSetting
                 title={localeString('views.Settings.AddEditNode.nodeInterface')}
-                selectedValue={displayValue}
+                selectedValue={implementation}
                 onValueChange={(value: string) => {
                     this.setState({
                         implementation: value,
@@ -551,15 +511,12 @@ export default class AddEditNode extends React.Component<
         );
 
         const Mailbox = () => {
-            const mailboxDisplayValue = LNC_MAILBOX_KEYS.filter(
-                (value: any) => value.value === mailboxServer
-            )[0].value;
             return (
                 <DropdownSetting
                     title={localeString(
                         'views.Settings.AddEditNode.mailboxServer'
                     )}
-                    selectedValue={mailboxDisplayValue}
+                    selectedValue={mailboxServer}
                     onValueChange={(value: string) => {
                         this.setState({
                             mailboxServer: value,
@@ -587,6 +544,7 @@ export default class AddEditNode extends React.Component<
                         ),
                         style: { ...styles.text, color: themeColor('text') }
                     }}
+                    rightComponent={<ScanBadge navigation={navigation} />}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
                         borderBottomWidth: 0
@@ -1031,13 +989,6 @@ export default class AddEditNode extends React.Component<
                                                     !existingAccount
                                             })
                                         }
-                                        trackColor={{
-                                            false: '#767577',
-                                            true: themeColor('highlight')
-                                        }}
-                                        style={{
-                                            alignSelf: 'flex-end'
-                                        }}
                                     />
                                 </>
 
@@ -1225,7 +1176,7 @@ export default class AddEditNode extends React.Component<
                                     value={pairingPhrase}
                                     onChangeText={(text: string) =>
                                         this.setState({
-                                            pairingPhrase: text.trim(),
+                                            pairingPhrase: text,
                                             saved: false
                                         })
                                     }
@@ -1295,13 +1246,6 @@ export default class AddEditNode extends React.Component<
                                             saved: false
                                         })
                                     }
-                                    trackColor={{
-                                        false: '#767577',
-                                        true: themeColor('highlight')
-                                    }}
-                                    style={{
-                                        alignSelf: 'flex-end'
-                                    }}
                                 />
                             </>
                         )}
@@ -1328,13 +1272,6 @@ export default class AddEditNode extends React.Component<
                                                 saved: false
                                             })
                                         }
-                                        trackColor={{
-                                            false: '#767577',
-                                            true: themeColor('highlight')
-                                        }}
-                                        style={{
-                                            alignSelf: 'flex-end'
-                                        }}
                                     />
                                 </>
                             )}
@@ -1561,10 +1498,10 @@ export default class AddEditNode extends React.Component<
                                 )}
                                 onPress={() => this.deleteNodeConfig()}
                                 containerStyle={{
-                                    borderColor: 'red'
+                                    borderColor: themeColor('delete')
                                 }}
                                 titleStyle={{
-                                    color: 'red'
+                                    color: themeColor('delete')
                                 }}
                                 secondary
                             />

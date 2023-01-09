@@ -63,7 +63,7 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
     saveSettings = async () => {
         const { SettingsStore, navigation } = this.props;
         const { pin, pinConfirm } = this.state;
-        const { getSettings, setSettings, setLoginStatus } = SettingsStore;
+        const { getSettings, updateSettings, setLoginStatus } = SettingsStore;
 
         if (pin !== pinConfirm) {
             this.setState({
@@ -87,27 +87,7 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
             return;
         }
 
-        await setSettings(
-            JSON.stringify(
-                settings
-                    ? {
-                          nodes: settings.nodes,
-                          theme: settings.theme,
-                          selectedNode: settings.selectedNode,
-                          fiat: settings.fiat,
-                          locale: settings.locale,
-                          privacy: settings.privacy,
-                          authenticationAttempts:
-                              settings.authenticationAttempts,
-                          passphrase: settings.passphrase,
-                          duressPassphrase: settings.duressPassphrase,
-                          duressPin: settings.duressPin,
-                          scramblePin: settings.scramblePin,
-                          pin
-                      }
-                    : { pin }
-            )
-        ).then(() => {
+        await updateSettings({ pin }).then(() => {
             setLoginStatus(false);
             getSettings();
             navigation.navigate('Settings', {

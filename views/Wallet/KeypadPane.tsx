@@ -3,6 +3,7 @@ import { Animated, View, Text } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
 import Button from '../../components/Button';
+import Conversion from '../../components/Conversion';
 import PinPad from '../../components/PinPad';
 import UnitToggle from '../../components/UnitToggle';
 import WalletHeader from '../../components/WalletHeader';
@@ -15,14 +16,14 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { getDecimalPlaceholder } from '../../utils/UnitsUtils';
 
-interface DefaultPaneProps {
+interface KeypadPaneProps {
     navigation: any;
     FiatStore: FiatStore;
     UnitsStore: UnitsStore;
     SettingsStore: SettingsStore;
 }
 
-interface DefaultPaneState {
+interface KeypadPaneState {
     amount: string;
 }
 
@@ -30,9 +31,9 @@ const MAX_LENGTH = 10;
 
 @inject('FiatStore', 'UnitsStore', 'SettingsStore')
 @observer
-export default class DefaultPane extends React.PureComponent<
-    DefaultPaneProps,
-    DefaultPaneState
+export default class KeypadPane extends React.PureComponent<
+    KeypadPaneProps,
+    KeypadPaneState
 > {
     shakeAnimation = new Animated.Value(0);
     textAnimation = new Animated.Value(0);
@@ -205,6 +206,12 @@ export default class DefaultPane extends React.PureComponent<
                     </Animated.Text>
 
                     <UnitToggle onToggle={this.clearValue} />
+
+                    {amount !== '0' && (
+                        <View style={{ top: 10, alignItems: 'center' }}>
+                            <Conversion amount={amount} />
+                        </View>
+                    )}
                 </Animated.View>
 
                 <View>
@@ -236,6 +243,7 @@ export default class DefaultPane extends React.PureComponent<
                                         autoGenerate: true
                                     });
                                 }}
+                                buttonStyle={{ height: 40 }}
                             />
                         </View>
                         <View style={{ width: '20%' }}>
@@ -253,6 +261,7 @@ export default class DefaultPane extends React.PureComponent<
                                         amount
                                     });
                                 }}
+                                buttonStyle={{ height: 40 }}
                             />
                         </View>
                         <View style={{ width: '40%' }}>
@@ -260,12 +269,12 @@ export default class DefaultPane extends React.PureComponent<
                                 title={localeString('general.send')}
                                 quinary
                                 noUppercase
-                                disabled={amount === '0'}
                                 onPress={() => {
                                     navigation.navigate('Send', {
                                         amount
                                     });
                                 }}
+                                buttonStyle={{ height: 40 }}
                             />
                         </View>
                     </View>

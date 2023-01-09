@@ -10,7 +10,7 @@ import {
 
 import { RectButton } from 'react-native-gesture-handler';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
-import RESTUtils from './../../utils/RESTUtils';
+import BackendUtils from './../../utils/BackendUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -85,7 +85,14 @@ export default class LightningSwipeableRow extends Component<
                             height={30}
                         />
                     )}
-                    <Text style={styles.actionText}>{text}</Text>
+                    <Text
+                        style={{
+                            ...styles.actionText,
+                            color: themeColor('text')
+                        }}
+                    >
+                        {text}
+                    </Text>
                 </RectButton>
             </Animated.View>
         );
@@ -95,16 +102,16 @@ export default class LightningSwipeableRow extends Component<
         <View
             style={{
                 marginLeft: 15,
-                width: RESTUtils.supportsRouting() ? 200 : 135,
+                width: BackendUtils.supportsRouting() ? 200 : 135,
                 flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row'
             }}
         >
             {this.renderAction(
                 localeString('general.receive'),
-                RESTUtils.supportsRouting() ? 200 : 135,
+                BackendUtils.supportsRouting() ? 200 : 135,
                 progress
             )}
-            {RESTUtils.supportsRouting() &&
+            {BackendUtils.supportsRouting() &&
                 this.renderAction(
                     localeString('general.routing'),
                     200,
@@ -112,7 +119,7 @@ export default class LightningSwipeableRow extends Component<
                 )}
             {this.renderAction(
                 localeString('general.send'),
-                RESTUtils.supportsRouting() ? 200 : 135,
+                BackendUtils.supportsRouting() ? 200 : 135,
                 progress
             )}
         </View>
@@ -163,7 +170,6 @@ export default class LightningSwipeableRow extends Component<
 
 const styles = StyleSheet.create({
     actionText: {
-        color: 'gray',
         fontSize: 12,
         backgroundColor: 'transparent',
         padding: 10,

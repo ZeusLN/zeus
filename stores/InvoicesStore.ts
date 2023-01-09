@@ -7,7 +7,7 @@ import querystring from 'querystring-es3';
 import hashjs from 'hash.js';
 import Invoice from './../models/Invoice';
 import SettingsStore from './SettingsStore';
-import RESTUtils from './../utils/RESTUtils';
+import BackendUtils from './../utils/BackendUtils';
 import { localeString } from './../utils/LocaleUtils';
 
 export default class InvoicesStore {
@@ -26,6 +26,7 @@ export default class InvoicesStore {
     @observable creatingInvoiceError = false;
     @observable invoicesCount: number;
     @observable watchedInvoicePaid = false;
+    @observable watchedInvoicePaidAmt: number | string | null = null;
     settingsStore: SettingsStore;
 
     // lnd
@@ -42,7 +43,7 @@ export default class InvoicesStore {
                 if (
                     this.pay_req &&
                     this.pay_req.destination &&
-                    (RESTUtils.isLNDBased() ||
+                    (BackendUtils.isLNDBased() ||
                         this.settingsStore.implementation === 'spark')
                 ) {
                     this.getRoutes(
@@ -72,6 +73,7 @@ export default class InvoicesStore {
         this.feeEstimate = null;
         this.successProbability = null;
         this.watchedInvoicePaid = false;
+        this.watchedInvoicePaidAmt = null;
     };
 
     resetInvoices = () => {
@@ -83,9 +85,9 @@ export default class InvoicesStore {
     @action
     public getInvoices = async () => {
         this.loading = true;
-        await RESTUtils.getInvoices()
+        await BackendUtils.getInvoices()
             .then((data: any) => {
-                this.invoices = data.payments || data.invoices || data;
+                this.invoices = data.invoices;
                 this.invoices = this.invoices.map(
                     (invoice) => new Invoice(invoice)
                 );
@@ -117,16 +119,11 @@ export default class InvoicesStore {
             ampInvoice,
             routeHints
         );
-        const { implementation, lndhubUrl } = this.settingsStore;
-        // do not fetch new address if using Lnbank
-        if (
-            !(
-                implementation === 'lndhub' &&
-                lndhubUrl.includes('lnbank/api/lndhub')
-            )
-        ) {
+
+        if (BackendUtils.supportsOnchainReceiving()) {
             this.getNewAddress(addressType ? { type: addressType } : null);
         }
+
         return rHash;
     };
 
@@ -154,17 +151,24 @@ export default class InvoicesStore {
         if (ampInvoice) req.is_amp = true;
         if (routeHints) req.private = true;
 
-        return RESTUtils.createInvoice(req)
+        return BackendUtils.createInvoice(req)
             .then((data: any) => {
                 if (data.error) {
                     this.creatingInvoiceError = true;
                     this.creatingInvoice = false;
+                    const errString =
+                        data.message.toString() || data.error.toString();
                     this.error_msg =
-                        data.message.toString() ||
-                        data.error.toString() ||
-                        localeString(
-                            'stores.InvoicesStore.errorCreatingInvoice'
-                        );
+                        errString === 'Bad arguments' &&
+                        this.settingsStore.implementation === 'lndhub' &&
+                        req.value === '0'
+                            ? localeString(
+                                  'stores.InvoicesStore.zeroAmountLndhub'
+                              )
+                            : errString ||
+                              localeString(
+                                  'stores.InvoicesStore.errorCreatingInvoice'
+                              );
                 }
                 const invoice = new Invoice(data);
                 this.payment_request = invoice.getPaymentRequest;
@@ -230,8 +234,9 @@ export default class InvoicesStore {
     };
 
     @action
-    public setWatchedInvoicePaid = () => {
+    public setWatchedInvoicePaid = (amount?: string | number) => {
         this.watchedInvoicePaid = true;
+        if (amount) this.watchedInvoicePaidAmt = amount;
     };
 
     @action
@@ -239,7 +244,7 @@ export default class InvoicesStore {
         this.loading = true;
         this.error_msg = null;
         this.onChainAddress = null;
-        return RESTUtils.getNewAddress(params)
+        return BackendUtils.getNewAddress(params)
             .then((data: any) => {
                 this.onChainAddress =
                     data.address || data.bech32 || (data[0] && data[0].address);
@@ -270,6 +275,8 @@ export default class InvoicesStore {
     public clearUnified = () => {
         this.clearAddress();
         this.clearPaymentRequest();
+        this.error_msg = null;
+        this.creatingInvoiceError = false;
     };
 
     @action
@@ -282,7 +289,7 @@ export default class InvoicesStore {
         this.paymentRequest = paymentRequest;
         this.feeEstimate = null;
 
-        return RESTUtils.decodePaymentRequest([paymentRequest])
+        return BackendUtils.decodePaymentRequest([paymentRequest])
             .then((data: any) => {
                 this.pay_req = new Invoice(data);
 
@@ -323,7 +330,7 @@ export default class InvoicesStore {
         this.feeEstimate = null;
         this.successProbability = null;
 
-        return RESTUtils.getRoutes([destination, amount])
+        return BackendUtils.getRoutes([destination, amount])
             .then((data: any) => {
                 this.loadingFeeEstimate = false;
                 this.successProbability = data.success_prob

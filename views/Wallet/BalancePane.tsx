@@ -1,31 +1,34 @@
 import * as React from 'react';
-import { Image, Text, View, TouchableOpacity } from 'react-native';
-import { Badge } from 'react-native-elements';
+import { Image, Text, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Button from '../../components/Button';
 import WalletHeader from '../../components/WalletHeader';
-import { Amount } from '../../components/Amount';
+import Amount from '../../components/Amount';
+import Conversion from '../../components/Conversion';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
-import NodeInfoStore from './../../stores/NodeInfoStore';
 import BalanceStore from './../../stores/BalanceStore';
+import NodeInfoStore from './../../stores/NodeInfoStore';
 import SettingsStore from './../../stores/SettingsStore';
 
 import { version, playStore } from './../../package.json';
 
 const TorIcon = require('./../../assets/images/tor.png');
 
-interface MainPaneProps {
+interface BalancePaneProps {
     navigation: any;
-    NodeInfoStore: NodeInfoStore;
     BalanceStore: BalanceStore;
+    NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
 }
 
-@inject('BalanceStore', 'SettingsStore')
+@inject('BalanceStore', 'NodeInfoStore', 'SettingsStore')
 @observer
-export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
+export default class BalancePane extends React.PureComponent<
+    BalancePaneProps,
+    {}
+> {
     render() {
         const { NodeInfoStore, BalanceStore, SettingsStore, navigation } =
             this.props;
@@ -44,50 +47,71 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
             Number(totalBlockchainBalance) + Number(lightningBalance);
 
         const LightningBalance = () => (
-            <>
+            <View style={styles.balance}>
                 <Amount
                     sats={lightningBalance}
                     sensitive
                     jumboText
                     toggleable
                 />
+                {!(pendingOpenBalance > 0) && (
+                    <View style={styles.conversion}>
+                        <Conversion sats={lightningBalance} sensitive />
+                    </View>
+                )}
                 {pendingOpenBalance > 0 ? (
-                    <Amount
-                        sats={pendingOpenBalance}
-                        sensitive
-                        jumboText
-                        toggleable
-                        pending
-                    />
+                    <>
+                        <Amount
+                            sats={pendingOpenBalance}
+                            sensitive
+                            jumboText
+                            toggleable
+                            pending
+                        />
+                        <View style={styles.conversion}>
+                            <Conversion
+                                sats={lightningBalance}
+                                satsPending={pendingOpenBalance}
+                                sensitive
+                            />
+                        </View>
+                    </>
                 ) : null}
-            </>
+            </View>
         );
         const BalanceViewCombined = () => (
-            <>
+            <View style={styles.balance}>
                 <Amount
                     sats={combinedBalanceValue}
                     sensitive
                     jumboText
                     toggleable
                 />
+                {!(unconfirmedBlockchainBalance || pendingOpenBalance) && (
+                    <View style={styles.conversion}>
+                        <Conversion sats={combinedBalanceValue} sensitive />
+                    </View>
+                )}
                 {unconfirmedBlockchainBalance || pendingOpenBalance ? (
-                    <Amount
-                        sats={pendingUnconfirmedBalance}
-                        sensitive
-                        jumboText
-                        toggleable
-                        pending
-                    />
+                    <>
+                        <Amount
+                            sats={pendingUnconfirmedBalance}
+                            sensitive
+                            jumboText
+                            toggleable
+                            pending
+                        />
+                        <View style={styles.conversionSecondary}>
+                            <Conversion
+                                sats={combinedBalanceValue}
+                                satsPending={pendingUnconfirmedBalance}
+                                sensitive
+                            />
+                        </View>
+                    </>
                 ) : null}
-            </>
+            </View>
         );
-
-        let infoValue = 'ⓘ';
-        if (NodeInfoStore.nodeInfo.isTestNet) {
-            infoValue = localeString('views.Wallet.MainPane.testnet');
-        } else if (NodeInfoStore.nodeInfo.isRegTest) {
-            infoValue = localeString('views.Wallet.MainPane.regnet');
-        }
 
         const NetworkBadge = () => (
             <>
@@ -101,25 +125,14 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                         />
                     </TouchableOpacity>
                 ) : null}
-                {infoValue !== 'ⓘ' ? (
-                    <Badge
-                        onPress={() => navigation.navigate('NodeInfo')}
-                        value={infoValue}
-                        badgeStyle={{
-                            backgroundColor: 'gray',
-                            borderWidth: 0,
-                            marginTop: 5
-                        }}
-                    />
-                ) : null}
             </>
         );
 
-        let mainPane;
+        let balancePane;
         const error = NodeInfoStore.error || SettingsStore.error;
 
         if (!error) {
-            mainPane = (
+            balancePane = (
                 <View
                     style={{
                         alignItems: 'center',
@@ -149,7 +162,7 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
                 </View>
             );
         } else {
-            mainPane = (
+            balancePane = (
                 <View
                     style={{
                         backgroundColor: themeColor('error'),
@@ -207,6 +220,20 @@ export default class MainPane extends React.PureComponent<MainPaneProps, {}> {
             );
         }
 
-        return <React.Fragment>{mainPane}</React.Fragment>;
+        return <React.Fragment>{balancePane}</React.Fragment>;
     }
 }
+
+const styles = StyleSheet.create({
+    balance: {
+        alignItems: 'center'
+    },
+    conversion: {
+        top: 10,
+        alignItems: 'center'
+    },
+    conversionSecondary: {
+        top: 3,
+        alignItems: 'center'
+    }
+});

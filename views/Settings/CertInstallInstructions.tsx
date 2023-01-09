@@ -1,17 +1,13 @@
 import * as React from 'react';
 import { Platform, StyleSheet, Text, View, ScrollView } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
-import { inject, observer } from 'mobx-react';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 interface CertInstallInstructionsProps {
     navigation: any;
-    SettingsStore: SettingsStore;
 }
 
-@inject('SettingsStore')
-@observer
 export default class CertInstallInstructions extends React.Component<
     CertInstallInstructionsProps,
     {}

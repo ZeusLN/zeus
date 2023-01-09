@@ -5,7 +5,8 @@ import FeeUtils from './../utils/FeeUtils';
 
 type Units = 'sats' | 'BTC' | 'fiat';
 
-export const satoshisPerBTC = 100000000;
+// 100_000_000
+export const SATS_PER_BTC = 100000000;
 
 interface ValueDisplayProps {
     amount: string;
@@ -68,7 +69,7 @@ export default class UnitsStore {
 
         if (units === 'BTC') {
             return {
-                amount: FeeUtils.toFixed(absValueSats / satoshisPerBTC),
+                amount: FeeUtils.toFixed(absValueSats / SATS_PER_BTC),
                 unit: 'BTC',
                 negative,
                 space: false
@@ -101,7 +102,7 @@ export default class UnitsStore {
                     this.fiatStore.getSymbol();
 
                 const amount = (
-                    FeeUtils.toFixed(absValueSats / satoshisPerBTC) * rate
+                    FeeUtils.toFixed(absValueSats / SATS_PER_BTC) * rate
                 ).toFixed(2);
 
                 return {
@@ -134,12 +135,12 @@ export default class UnitsStore {
             if (valueToProcess.includes('-')) {
                 const processedValue = valueToProcess.split('-')[1];
                 return `-₿${FeeUtils.toFixed(
-                    Number(processedValue) / satoshisPerBTC
+                    Number(processedValue) / SATS_PER_BTC
                 )}`;
             }
 
             return `₿${FeeUtils.toFixed(
-                Number(wholeSats || 0) / satoshisPerBTC
+                Number(wholeSats || 0) / SATS_PER_BTC
             )}`;
         } else if (units === 'sats') {
             const sats = `${this.fiatStore.numberWithCommas(value) || 0} ${
@@ -157,7 +158,7 @@ export default class UnitsStore {
                     this.fiatStore.symbolLookup(code);
 
                 const amount = (
-                    FeeUtils.toFixed(Number(wholeSats || 0) / satoshisPerBTC) *
+                    FeeUtils.toFixed(Number(wholeSats || 0) / SATS_PER_BTC) *
                     rate
                 ).toFixed(2);
 

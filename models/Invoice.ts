@@ -1,5 +1,6 @@
 import { observable, computed } from 'mobx';
 import BaseModel from './BaseModel';
+import Base64Utils from './../utils/Base64Utils';
 import DateTimeUtils from './../utils/DateTimeUtils';
 import { localeString } from './../utils/LocaleUtils';
 
@@ -41,6 +42,7 @@ export default class Invoice extends BaseModel {
     public label: string;
     public description: string;
     public msatoshi: number;
+    public msatoshi_received: number;
     @observable public payment_hash: string;
     public paid_at: number;
     public expires_at: number;
@@ -59,6 +61,20 @@ export default class Invoice extends BaseModel {
 
     @computed public get model(): string {
         return 'Invoice';
+    }
+
+    @computed public get getRPreimage(): string {
+        const preimage = this.r_preimage;
+        return typeof preimage === 'string' && preimage.includes('=')
+            ? Base64Utils.base64ToHex(preimage)
+            : preimage;
+    }
+
+    @computed public get getRHash(): string {
+        const hash = this.r_hash;
+        return typeof hash === 'string' && hash.includes('=')
+            ? Base64Utils.base64ToHex(hash)
+            : hash;
     }
 
     @computed public get getTimestamp(): string | number {
@@ -93,6 +109,10 @@ export default class Invoice extends BaseModel {
 
     // return amount in satoshis
     @computed public get getAmount(): number {
+        if (this.msatoshi_received) {
+            const msatoshi = this.msatoshi_received.toString();
+            return Number(msatoshi.replace('msat', '')) / 1000;
+        }
         if (this.msatoshi) {
             const msatoshi = this.msatoshi.toString();
             return Number(msatoshi.replace('msat', '')) / 1000;
@@ -119,6 +139,16 @@ export default class Invoice extends BaseModel {
         return this.isPaid
             ? this.settleDate
             : DateTimeUtils.listFormattedDate(
+                  this.expires_at || this.creation_date || this.timestamp || 0
+              );
+    }
+
+    @computed public get getDisplayTimeShort(): string {
+        return this.isPaid
+            ? DateTimeUtils.listFormattedDateShort(
+                  this.settle_date || this.paid_at || this.timestamp || 0
+              )
+            : DateTimeUtils.listFormattedDateShort(
                   this.expires_at || this.creation_date || this.timestamp || 0
               );
     }

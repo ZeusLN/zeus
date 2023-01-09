@@ -1,4 +1,8 @@
 module.exports = {
+  globals: {
+    'JSX': true,
+    'Buffer': true
+  },
   root: true,
   extends: '@react-native-community',
   rules: {
@@ -26,6 +30,7 @@ module.exports = {
     'camelcase': 'off',
     'no-case-declarations': 'off',
     'no-control-regex': 'off',
+    'no-undef': 2,
     'no-unused-vars': 0,
     'object-shorthand': ['error', 'always'],
     'prefer-spread': 'off',

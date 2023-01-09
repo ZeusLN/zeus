@@ -10,7 +10,7 @@ import Eclair from '../backends/Eclair';
 // Custodial
 import LndHub from '../backends/LndHub';
 
-class RESTUtils {
+class BackendUtils {
     lnd: LND;
     lightningNodeConnect: LightningNodeConnect;
     clightningREST: CLightningREST;
@@ -48,7 +48,8 @@ class RESTUtils {
 
     call = (funcName: string, args?: any) => {
         const cls: any = this.getClass();
-        return cls[funcName].apply(cls, args);
+        // return false if function is not defined in backend, as a fallback
+        return cls[funcName] ? cls[funcName].apply(cls, args) : false;
     };
 
     getTransactions = (...args: any[]) => this.call('getTransactions', args);
@@ -104,6 +105,7 @@ class RESTUtils {
 
     supportsMessageSigning = () => this.call('supportsMessageSigning');
     supportsOnchainSends = () => this.call('supportsOnchainSends');
+    supportsOnchainReceiving = () => this.call('supportsOnchainReceiving');
     supportsKeysend = () => this.call('supportsKeysend');
     supportsChannelManagement = () => this.call('supportsChannelManagement');
     supportsMPP = () => this.call('supportsMPP');
@@ -113,11 +115,11 @@ class RESTUtils {
     supportsAccounts = () => this.call('supportsAccounts');
     supportsRouting = () => this.call('supportsRouting');
     supportsNodeInfo = () => this.call('supportsNodeInfo');
-    isLNDBased = () => this.call('isLNDBased');
     singleFeesEarnedTotal = () => this.call('singleFeesEarnedTotal');
     supportsAddressTypeSelection = () =>
         this.call('supportsAddressTypeSelection');
     supportsTaproot = () => this.call('supportsTaproot');
+    isLNDBased = () => this.call('isLNDBased');
 
     // LNC
     initLNC = (...args: any[]) => this.call('initLNC', args);
@@ -126,5 +128,5 @@ class RESTUtils {
     disconnect = (...args: any[]) => this.call('disconnect', args);
 }
 
-const restUtils = new RESTUtils();
-export default restUtils;
+const backendUtils = new BackendUtils();
+export default backendUtils;

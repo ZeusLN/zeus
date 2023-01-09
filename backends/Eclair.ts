@@ -223,8 +223,6 @@ export default class Eclair {
                     payment_preimage: paymentPreimage,
                     creation_date: parts[0].timestamp / 1000,
                     value: recipientAmount / 1000,
-                    value_sat: recipientAmount / 1000,
-                    value_msat: recipientAmount,
                     msatoshi: recipientAmount,
                     msatoshi_sent: recipientAmount,
                     destination: recipientNodeId,
@@ -471,6 +469,7 @@ export default class Eclair {
 
     supportsMessageSigning = () => true;
     supportsOnchainSends = () => true;
+    supportsOnchainReceiving = () => true;
     supportsKeysend = () => false;
     supportsChannelManagement = () => true;
     supportsMPP = () => false;
@@ -479,6 +478,7 @@ export default class Eclair {
     supportsHopPicking = () => false;
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
+    supportsAccounts = () => false;
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => false;
     supportsTaproot = () => false;
@@ -502,7 +502,6 @@ const mapInvoice =
             memo: description,
             r_hash: paymentHash,
             value: amount / 1000,
-            value_msat: amount,
             settled: !isPending[paymentHash],
             creation_date: null,
             settle_date: null,

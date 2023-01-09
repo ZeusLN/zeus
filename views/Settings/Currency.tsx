@@ -65,7 +65,7 @@ export default class Currency extends React.Component<
     render() {
         const { navigation, SettingsStore, UnitsStore } = this.props;
         const { selectedCurrency, search, currencies } = this.state;
-        const { setSettings, getSettings }: any = SettingsStore;
+        const { updateSettings, getSettings }: any = SettingsStore;
 
         const BackButton = () => (
             <Icon
@@ -126,33 +126,9 @@ export default class Currency extends React.Component<
                                     backgroundColor: themeColor('background')
                                 }}
                                 onPress={async () => {
-                                    const settings = await getSettings();
-                                    await setSettings(
-                                        JSON.stringify(
-                                            settings
-                                                ? {
-                                                      nodes: settings.nodes,
-                                                      theme: settings.theme,
-                                                      selectedNode:
-                                                          settings.selectedNode,
-                                                      fiat: item.value,
-                                                      passphrase:
-                                                          settings.passphrase,
-                                                      duressPassphrase:
-                                                          settings.duressPassphrase,
-                                                      pin: settings.pin,
-                                                      duressPin:
-                                                          settings.duressPin,
-                                                      scramblePin:
-                                                          settings.scramblePin,
-                                                      authenticationAttempts:
-                                                          settings.authenticationAttempts,
-                                                      locale: settings.locale,
-                                                      privacy: settings.privacy
-                                                  }
-                                                : { fiat: item.value }
-                                        )
-                                    ).then(() => {
+                                    await updateSettings({
+                                        fiat: item.value
+                                    }).then(() => {
                                         UnitsStore.resetUnits();
                                         getSettings();
                                         navigation.navigate('Settings', {

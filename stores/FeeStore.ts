@@ -2,7 +2,7 @@ import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
 
-import RESTUtils from './../utils/RESTUtils';
+import BackendUtils from './../utils/BackendUtils';
 import Base64Utils from './../utils/Base64Utils';
 import ForwardEvent from './../models/ForwardEvent';
 import SettingsStore from './SettingsStore';
@@ -70,7 +70,7 @@ export default class FeeStore {
     @action
     public getFees = () => {
         this.loading = true;
-        RESTUtils.getFees()
+        BackendUtils.getFees()
             .then((data: any) => {
                 if (data.channel_fees) {
                     const channelFees: any = {};
@@ -145,7 +145,7 @@ export default class FeeStore {
             data.max_htlc = maxHtlc;
         }
 
-        return RESTUtils.setFees(data)
+        return BackendUtils.setFees(data)
             .then(() => {
                 this.loading = false;
                 this.setFeesSuccess = true;
@@ -169,7 +169,7 @@ export default class FeeStore {
         this.forwardingEvents = [];
         this.forwardingHistoryError = false;
         this.earnedDuringTimeframe = new BigNumber(0);
-        RESTUtils.getForwardingHistory(params)
+        BackendUtils.getForwardingHistory(params)
             .then((data: any) => {
                 this.forwardingEvents = data.forwarding_events
                     .map((event: any) => new ForwardEvent(event))

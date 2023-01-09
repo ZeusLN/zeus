@@ -7,7 +7,9 @@ import Button from './../../components/Button';
 import LoadingIndicator from './../../components/LoadingIndicator';
 import NodeIdenticon, { NodeTitle } from './../../components/NodeIdenticon';
 
-import RESTUtils from './../../utils/RESTUtils';
+import BackendUtils from './../../utils/BackendUtils';
+import BalanceStore from './../../stores/BalanceStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore, { INTERFACE_KEYS } from './../../stores/SettingsStore';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -18,6 +20,8 @@ interface NodesProps {
     edit?: boolean;
     loading?: boolean;
     selectedNode?: number;
+    BalanceStore: BalanceStore;
+    NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
 }
 
@@ -26,7 +30,7 @@ interface NodesState {
     loading: boolean;
 }
 
-@inject('SettingsStore')
+@inject('BalanceStore', 'NodeInfoStore', 'SettingsStore')
 @observer
 export default class Nodes extends React.Component<NodesProps, NodesState> {
     state = {
@@ -66,10 +70,11 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
     );
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation, BalanceStore, NodeInfoStore, SettingsStore } =
+            this.props;
         const { loading, nodes } = this.state;
         const {
-            setSettings,
+            updateSettings,
             settings,
             setConnectingStatus,
             implementation
@@ -94,7 +99,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             <Icon
                 name="add"
                 onPress={() =>
-                    navigation.navigate('AddEditNode', {
+                    navigation.navigate('NodeConfiguration', {
                         newEntry: true,
                         index:
                             (nodes && nodes.length && Number(nodes.length)) || 0
@@ -141,30 +146,18 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                     onPress={async () => {
                                         const currentImplementation =
                                             implementation;
-                                        await setSettings(
-                                            JSON.stringify({
-                                                nodes,
-                                                theme: settings.theme,
-                                                selectedNode: index,
-                                                fiat: settings.fiat,
-                                                passphrase: settings.passphrase,
-                                                duressPassphrase:
-                                                    settings.duressPassphrase,
-                                                pin: settings.pin,
-                                                duressPin: settings.duressPin,
-                                                scramblePin:
-                                                    settings.scramblePin,
-                                                authenticationAttempts:
-                                                    settings.authenticationAttempts,
-                                                privacy: settings.privacy
-                                            })
-                                        ).then(() => {
+                                        await updateSettings({
+                                            nodes,
+                                            selectedNode: index
+                                        }).then(() => {
                                             if (
                                                 currentImplementation ===
                                                 'lightning-node-connect'
                                             ) {
-                                                RESTUtils.disconnect();
+                                                BackendUtils.disconnect();
                                             }
+                                            BalanceStore.reset();
+                                            NodeInfoStore.reset();
                                             setConnectingStatus(true);
                                             navigation.navigate('Wallet', {
                                                 refresh: true
@@ -216,12 +209,16 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                             color: themeColor('text')
                                         }}
                                         onPress={() =>
-                                            navigation.navigate('AddEditNode', {
-                                                node: item,
-                                                index,
-                                                active: selectedNode === index,
-                                                saved: true
-                                            })
+                                            navigation.navigate(
+                                                'NodeConfiguration',
+                                                {
+                                                    node: item,
+                                                    index,
+                                                    active:
+                                                        selectedNode === index,
+                                                    saved: true
+                                                }
+                                            )
                                         }
                                         iconOnly
                                         adaptiveWidth

@@ -2,7 +2,6 @@ import * as React from 'react';
 import {
     ScrollView,
     StyleSheet,
-    Switch,
     Text,
     TouchableOpacity,
     View
@@ -10,16 +9,18 @@ import {
 import { Divider, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Channel from './../../models/Channel';
+
 import BalanceSlider from './../../components/BalanceSlider';
 import Button from './../../components/Button';
 import KeyValue from './../../components/KeyValue';
-import { Amount } from './../../components/Amount';
+import Amount from './../../components/Amount';
 import FeeBreakdown from './../../components/FeeBreakdown';
 import SetFeesForm from './../../components/SetFeesForm';
+import Switch from './../../components/Switch';
 import TextInput from './../../components/TextInput';
 
 import PrivacyUtils from './../../utils/PrivacyUtils';
-import RESTUtils from './../../utils/RESTUtils';
+import BackendUtils from './../../utils/BackendUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -67,7 +68,7 @@ export default class ChannelView extends React.Component<
             channel
         };
 
-        if (RESTUtils.isLNDBased()) {
+        if (BackendUtils.isLNDBased()) {
             ChannelsStore.getChannelInfo(channel.channelId);
         }
     }
@@ -140,7 +141,8 @@ export default class ChannelView extends React.Component<
             capacity,
             alias,
             channelId,
-            initiator
+            initiator,
+            alias_scids
         } = channel;
         const privateChannel = channel.private;
 
@@ -280,6 +282,19 @@ export default class ChannelView extends React.Component<
                         color={privateChannel ? 'green' : '#808000'}
                     />
 
+                    {!!alias_scids && alias_scids.length > 0 && (
+                        <KeyValue
+                            keyValue={
+                                alias_scids.length > 1
+                                    ? localeString('views.Channel.aliasScids')
+                                    : localeString('views.Channel.aliasScid')
+                            }
+                            value={PrivacyUtils.sensitiveValue(
+                                alias_scids.join(', ')
+                            )}
+                        />
+                    )}
+
                     {total_satoshis_received && (
                         <KeyValue
                             keyValue={localeString(
@@ -351,7 +366,7 @@ export default class ChannelView extends React.Component<
 
                     <Divider orientation="horizontal" style={{ margin: 20 }} />
 
-                    {RESTUtils.isLNDBased() && (
+                    {BackendUtils.isLNDBased() && (
                         <FeeBreakdown
                             channelId={channelId}
                             peerDisplay={peerDisplay}
@@ -360,7 +375,7 @@ export default class ChannelView extends React.Component<
                         />
                     )}
 
-                    {!RESTUtils.isLNDBased() && (
+                    {!BackendUtils.isLNDBased() && (
                         <SetFeesForm
                             baseFee={
                                 channelFee &&
@@ -379,7 +394,7 @@ export default class ChannelView extends React.Component<
                         />
                     )}
 
-                    {RESTUtils.isLNDBased() && (
+                    {BackendUtils.isLNDBased() && (
                         <View style={styles.button}>
                             <Button
                                 title={localeString('views.Channel.keysend')}
@@ -418,7 +433,7 @@ export default class ChannelView extends React.Component<
 
                     {confirmCloseChannel && (
                         <React.Fragment>
-                            {(RESTUtils.isLNDBased() || !implementation) && (
+                            {(BackendUtils.isLNDBased() || !implementation) && (
                                 <React.Fragment>
                                     <Text style={styles.text}>
                                         {localeString(
@@ -437,7 +452,7 @@ export default class ChannelView extends React.Component<
                                         autoCapitalize="none"
                                         autoCorrect={false}
                                     />
-                                    {RESTUtils.isLNDBased() && (
+                                    {BackendUtils.isLNDBased() && (
                                         <>
                                             <Text
                                                 style={{
@@ -456,15 +471,6 @@ export default class ChannelView extends React.Component<
                                                         forceClose: !forceClose
                                                     })
                                                 }
-                                                trackColor={{
-                                                    false: '#767577',
-                                                    true: themeColor(
-                                                        'highlight'
-                                                    )
-                                                }}
-                                                style={{
-                                                    alignSelf: 'flex-end'
-                                                }}
                                             />
                                         </>
                                     )}

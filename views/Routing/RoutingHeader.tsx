@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import RESTUtils from '../../utils/RESTUtils';
+import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -9,7 +9,7 @@ import { Body } from '../../components/text/Body';
 import { Row } from '../../components/layout/Row';
 import { Spacer } from '../../components/layout/Spacer';
 import { Sats } from '../../components/Sats';
-import { Amount } from '../../components/Amount';
+import Amount from '../../components/Amount';
 
 function TotalRow({
     kind,
@@ -59,7 +59,7 @@ export function RoutingHeader(props) {
         wrapper: {
             display: 'flex',
             justifyContent: 'space-between',
-            height: RESTUtils.singleFeesEarnedTotal()
+            height: BackendUtils.singleFeesEarnedTotal()
                 ? 55
                 : fullSize
                 ? 200
@@ -99,7 +99,7 @@ export function RoutingHeader(props) {
                         </Text>
                     </View>
                 )}
-                {!RESTUtils.singleFeesEarnedTotal() && fullSize && (
+                {!BackendUtils.singleFeesEarnedTotal() && fullSize && (
                     <>
                         <TotalRow
                             kind={localeString(
@@ -121,7 +121,7 @@ export function RoutingHeader(props) {
                         />
                     </>
                 )}
-                {RESTUtils.singleFeesEarnedTotal() && fullSize && (
+                {BackendUtils.singleFeesEarnedTotal() && fullSize && (
                     <>
                         <TotalRow
                             kind={localeString(

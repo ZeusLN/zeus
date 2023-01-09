@@ -16,4 +16,4 @@ jobs:
         with:
           node-version: '14.x'
       - run: yarn install --frozen-lockfile
-      - run: yarn run lint
+      - run: yarn run prettier

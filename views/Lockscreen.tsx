@@ -127,7 +127,7 @@ export default class Lockscreen extends React.Component<
             deletePin,
             deleteDuressPin
         } = this.state;
-        const { setSettings, getSettings } = SettingsStore;
+        const { updateSettings, getSettings } = SettingsStore;
 
         this.setState({
             error: false
@@ -175,22 +175,7 @@ export default class Lockscreen extends React.Component<
                 // wipe node configs, passwords, and pins
                 this.authenticationFailure();
             } else {
-                await setSettings(
-                    JSON.stringify({
-                        nodes: updatedSettings?.nodes,
-                        selectedNode: updatedSettings?.selectedNode,
-                        theme: updatedSettings?.theme,
-                        passphrase: updatedSettings?.passphrase,
-                        duressPassphrase: updatedSettings?.duressPassphrase,
-                        pin: updatedSettings?.pin,
-                        duressPin: updatedSettings?.duressPin,
-                        scramblePin: updatedSettings?.scramblePin,
-                        authenticationAttempts,
-                        fiat: updatedSettings?.fiat,
-                        locale: updatedSettings?.locale,
-                        privacy: updatedSettings?.privacy
-                    })
-                ).then(() => {
+                await updateSettings({ authenticationAttempts }).then(() => {
                     this.setState({
                         error: true,
                         pinAttempt: ''
@@ -208,121 +193,65 @@ export default class Lockscreen extends React.Component<
 
     deletePin = () => {
         const { SettingsStore, navigation } = this.props;
-        const { setSettings, settings } = SettingsStore;
+        const { updateSettings } = SettingsStore;
 
         // duress pin is also deleted when pin is deleted
-        setSettings(
-            JSON.stringify({
-                nodes: settings.nodes,
-                selectedNode: settings.selectedNode,
-                theme: settings.theme,
-                passphrase: settings.passphrase,
-                duressPassphrase: settings.duressPassphrase,
-                pin: '',
-                duressPin: '',
-                scramblePin: settings.scramblePin,
-                authenticationAttempts: 0,
-                fiat: settings.fiat,
-                locale: settings.locale,
-                privacy: settings.privacy
-            })
-        ).then(() => {
+        updateSettings({
+            pin: '',
+            duressPin: '',
+            authenticationAttempts: 0
+        }).then(() => {
             navigation.navigate('Settings');
         });
     };
 
     deleteDuressPin = () => {
         const { SettingsStore, navigation } = this.props;
-        const { setSettings, settings } = SettingsStore;
+        const { updateSettings } = SettingsStore;
 
-        setSettings(
-            JSON.stringify({
-                nodes: settings.nodes,
-                selectedNode: settings.selectedNode,
-                theme: settings.theme,
-                passphrase: settings.passphrase,
-                duressPassphrase: settings.duressPassphrase,
-                pin: settings.pin,
-                duressPin: '',
-                scramblePin: settings.scramblePin,
-                authenticationAttempts: 0,
-                fiat: settings.fiat,
-                locale: settings.locale,
-                privacy: settings.privacy
-            })
-        ).then(() => {
+        updateSettings({
+            duressPin: '',
+            authenticationAttempts: 0
+        }).then(() => {
             navigation.navigate('Settings');
         });
     };
 
     deleteNodes = () => {
         const { SettingsStore, navigation } = this.props;
-        const { setSettings, settings } = SettingsStore;
+        const { updateSettings } = SettingsStore;
 
-        setSettings(
-            JSON.stringify({
-                nodes: undefined,
-                selectedNode: undefined,
-                theme: settings.theme,
-                passphrase: settings.passphrase,
-                duressPassphrase: settings.duressPassphrase,
-                pin: settings.pin,
-                duressPin: settings.duressPin,
-                scramblePin: settings.scramblePin,
-                authenticationAttempts: 0,
-                fiat: settings.fiat,
-                locale: settings.locale,
-                privacy: settings.privacy
-            })
-        ).then(() => {
+        updateSettings({
+            nodes: undefined,
+            selectedNode: undefined,
+            authenticationAttempts: 0
+        }).then(() => {
             navigation.navigate('Wallet');
         });
     };
 
     authenticationFailure = () => {
         const { SettingsStore, navigation } = this.props;
-        const { setSettings, settings } = SettingsStore;
+        const { updateSettings } = SettingsStore;
 
-        setSettings(
-            JSON.stringify({
-                nodes: undefined,
-                selectedNode: undefined,
-                theme: settings.theme,
-                passphrase: '',
-                duressPassphrase: '',
-                pin: '',
-                duressPin: '',
-                scramblePin: settings.scramblePin,
-                authenticationAttempts: 0,
-                fiat: settings.fiat,
-                locale: settings.locale,
-                privacy: settings.privacy
-            })
-        ).then(() => {
+        updateSettings({
+            nodes: undefined,
+            selectedNode: undefined,
+            passphrase: '',
+            duressPassphrase: '',
+            pin: '',
+            duressPin: '',
+            authenticationAttempts: 0
+        }).then(() => {
             navigation.navigate('Wallet');
         });
     };
 
     resetAuthenticationAttempts = () => {
         const { SettingsStore } = this.props;
-        const { setSettings, settings } = SettingsStore;
+        const { updateSettings } = SettingsStore;
 
-        setSettings(
-            JSON.stringify({
-                nodes: settings.nodes,
-                selectedNode: settings.selectedNode,
-                theme: settings.theme,
-                passphrase: settings.passphrase,
-                duressPassphrase: settings.duressPassphrase,
-                pin: settings.pin,
-                duressPin: settings.duressPin,
-                scramblePin: settings.scramblePin,
-                authenticationAttempts: 0,
-                fiat: settings.fiat,
-                locale: settings.locale,
-                privacy: settings.privacy
-            })
-        );
+        updateSettings({ authenticationAttempts: 0 });
     };
 
     generateErrorMessage = (): string => {

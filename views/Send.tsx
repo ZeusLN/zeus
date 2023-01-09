@@ -8,14 +8,17 @@ import {
     View,
     ScrollView,
     TouchableOpacity,
-    TouchableWithoutFeedback,
-    Switch
+    TouchableWithoutFeedback
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import { Header, Icon } from 'react-native-elements';
 
-import NfcManager, { NfcEvents, TagEvent } from 'react-native-nfc-manager';
+import NfcManager, {
+    NfcEvents,
+    TagEvent,
+    Ndef
+} from 'react-native-nfc-manager';
 
 import handleAnything, { isClipboardValue } from './../utils/handleAnything';
 
@@ -25,16 +28,18 @@ import TransactionsStore from './../stores/TransactionsStore';
 import BalanceStore from './../stores/BalanceStore';
 import UTXOsStore from './../stores/UTXOsStore';
 import SettingsStore from './../stores/SettingsStore';
-import UnitsStore, { satoshisPerBTC } from './../stores/UnitsStore';
+import UnitsStore, { SATS_PER_BTC } from './../stores/UnitsStore';
 import FiatStore from './../stores/FiatStore';
 
-import { Amount } from './../components/Amount';
+import Amount from './../components/Amount';
+import Conversion from './../components/Conversion';
 import Button from './../components/Button';
 import { ErrorMessage } from './../components/SuccessErrorMessage';
+import Switch from './../components/Switch';
 import TextInput from './../components/TextInput';
 import UTXOPicker from './../components/UTXOPicker';
 
-import RESTUtils from './../utils/RESTUtils';
+import BackendUtils from './../utils/BackendUtils';
 import NFCUtils from './../utils/NFCUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
@@ -208,7 +213,14 @@ export default class Send extends React.Component<SendProps, SendState> {
                     const bytes = new Uint8Array(
                         tagFound.ndefMessage[0].payload
                     );
-                    const str = NFCUtils.nfcUtf8ArrayToStr(bytes) || '';
+
+                    let str;
+                    const decoded = Ndef.text.decodePayload(bytes);
+                    if (decoded.match(/^(https?|lnurl)/)) {
+                        str = decoded;
+                    } else {
+                        str = NFCUtils.nfcUtf8ArrayToStr(bytes) || '';
+                    }
                     resolve(this.validateAddress(str));
                     NfcManager.unregisterTagEvent().catch(() => 0);
                 }
@@ -242,14 +254,21 @@ export default class Send extends React.Component<SendProps, SendState> {
     validateAddress = (text: string) => {
         const { navigation } = this.props;
         handleAnything(text, this.state.amount)
-            .then(([route, props]) => {
-                navigation.navigate(route, props);
+            .then((response) => {
+                try {
+                    const [route, props] = response;
+                    navigation.navigate(route, props);
+                } catch {
+                    this.setState({
+                        transactionType: null,
+                        isValid: false
+                    });
+                }
             })
             .catch((err) => {
                 this.setState({
                     transactionType: null,
                     isValid: false,
-                    destination: text,
                     error_msg: err.message
                 });
             });
@@ -378,12 +397,12 @@ export default class Send extends React.Component<SendProps, SendState> {
                 satAmount = amount;
                 break;
             case 'BTC':
-                satAmount = Number(amount) * satoshisPerBTC;
+                satAmount = Number(amount) * SATS_PER_BTC;
                 break;
             case 'fiat':
                 satAmount = Number(
                     (Number(amount.replace(/,/g, '.')) / Number(rate)) *
-                        Number(satoshisPerBTC)
+                        Number(SATS_PER_BTC)
                 ).toFixed(0);
                 break;
         }
@@ -399,10 +418,10 @@ export default class Send extends React.Component<SendProps, SendState> {
 
         const paymentOptions = [localeString('views.Send.lnPayment')];
 
-        if (RESTUtils.supportsOnchainSends()) {
+        if (BackendUtils.supportsOnchainSends()) {
             paymentOptions.push(localeString('views.Send.btcAddress'));
         }
-        if (RESTUtils.supportsKeysend()) {
+        if (BackendUtils.supportsKeysend()) {
             paymentOptions.push(localeString('views.Send.keysendAddress'));
         }
 
@@ -425,7 +444,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     rightComponent={
                         <TouchableOpacity
                             onPress={() =>
-                                navigation.navigate('AddressQRCodeScanner')
+                                navigation.navigate('HandleAnythingQRScanner')
                             }
                         >
                             <Scan fill={themeColor('text')} />
@@ -449,6 +468,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                         placeholder={'lnbc1...'}
                         value={destination}
                         onChangeText={(text: string) => {
+                            this.setState({
+                                destination: text
+                            });
                             this.validateAddress(text);
                         }}
                         style={styles.textInput}
@@ -482,7 +504,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         >{`${transactionType} Transaction`}</Text>
                     )}
                     {transactionType === 'On-chain' &&
-                        !RESTUtils.supportsOnchainSends() && (
+                        !BackendUtils.supportsOnchainSends() && (
                             <Text
                                 style={{
                                     ...styles.secondaryText,
@@ -494,7 +516,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             </Text>
                         )}
                     {transactionType === 'On-chain' &&
-                        RESTUtils.supportsOnchainSends() && (
+                        BackendUtils.supportsOnchainSends() && (
                             <React.Fragment>
                                 <TouchableOpacity onPress={() => changeUnits()}>
                                     <Text
@@ -531,20 +553,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     toggleUnits={changeUnits}
                                 />
                                 <View style={{ paddingBottom: 15 }}>
-                                    {units !== 'sats' && amount !== 'all' && (
-                                        <Amount
-                                            sats={satAmount}
-                                            fixedUnits="sats"
-                                            toggleable
-                                        />
-                                    )}
-                                    {units !== 'BTC' && amount !== 'all' && (
-                                        <Amount
-                                            sats={satAmount}
-                                            fixedUnits="BTC"
-                                            toggleable
-                                        />
-                                    )}
+                                    <Conversion amount={amount} />
                                     {amount === 'all' && (
                                         <>
                                             <Amount
@@ -566,20 +575,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 toggleable
                                             />
                                         </>
-                                    )}
-                                    {units === 'fiat' && (
-                                        <TouchableOpacity
-                                            onPress={() => changeUnits()}
-                                        >
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    color: themeColor('text')
-                                                }}
-                                            >
-                                                {FiatStore.getRate()}
-                                            </Text>
-                                        </TouchableOpacity>
                                     )}
                                 </View>
 
@@ -631,7 +626,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     />
                                 )}
 
-                                {RESTUtils.supportsCoinControl() && (
+                                {BackendUtils.supportsCoinControl() && (
                                     <UTXOPicker
                                         onValueChange={this.selectUTXOs}
                                         UTXOsStore={UTXOsStore}
@@ -654,7 +649,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             </React.Fragment>
                         )}
                     {transactionType === 'Keysend' &&
-                        RESTUtils.supportsKeysend() && (
+                        BackendUtils.supportsKeysend() && (
                             <React.Fragment>
                                 <TouchableOpacity onPress={() => changeUnits()}>
                                     <Text
@@ -663,8 +658,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             color: themeColor('secondaryText')
                                         }}
                                     >
-                                        {localeString('views.Send.amount')} (
-                                        {units === 'fiat' ? fiat : units})
+                                        {localeString('views.Send.amount')}
                                     </Text>
                                 </TouchableOpacity>
                                 <TextInput
@@ -674,31 +668,58 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         this.setState({ amount: text })
                                     }
                                     style={styles.textInput}
+                                    prefix={
+                                        units !== 'sats' &&
+                                        (units === 'BTC'
+                                            ? '₿'
+                                            : !getSymbol().rtl
+                                            ? getSymbol().symbol
+                                            : null)
+                                    }
+                                    suffix={
+                                        units === 'sats'
+                                            ? units
+                                            : getSymbol().rtl &&
+                                              units === 'fiat' &&
+                                              getSymbol().symbol
+                                    }
+                                    toggleUnits={changeUnits}
                                 />
                                 {units !== 'sats' && (
+                                    <Amount
+                                        sats={satAmount}
+                                        fixedUnits="sats"
+                                        toggleable
+                                    />
+                                )}
+                                {units !== 'BTC' && (
+                                    <Amount
+                                        sats={satAmount}
+                                        fixedUnits="BTC"
+                                        toggleable
+                                    />
+                                )}
+                                {units === 'fiat' && (
                                     <TouchableOpacity
                                         onPress={() => changeUnits()}
                                     >
                                         <Text
                                             style={{
-                                                ...styles.secondaryText,
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
+                                                ...styles.text,
+                                                color: themeColor('text')
                                             }}
                                         >
-                                            {satAmount}{' '}
-                                            {localeString(
-                                                'views.Send.satoshis'
-                                            )}
+                                            {FiatStore.getRate()}
                                         </Text>
                                     </TouchableOpacity>
                                 )}
-                                {RESTUtils.supportsAMP() && (
+
+                                {BackendUtils.supportsAMP() && (
                                     <React.Fragment>
                                         <Text
                                             style={{
                                                 ...styles.secondaryText,
+                                                marginTop: 10,
                                                 color: themeColor(
                                                     'secondaryText'
                                                 )
@@ -756,18 +777,12 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                                 !enableAtomicMultiPathPayment
                                                         })
                                                     }
-                                                    trackColor={{
-                                                        false: '#767577',
-                                                        true: themeColor(
-                                                            'highlight'
-                                                        )
-                                                    }}
                                                 />
                                             </View>
                                         </View>
                                     </React.Fragment>
                                 )}
-                                {RESTUtils.supportsAMP() &&
+                                {BackendUtils.supportsAMP() &&
                                     enableAtomicMultiPathPayment && (
                                         <React.Fragment>
                                             <Text
@@ -878,7 +893,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             </React.Fragment>
                         )}
                     {transactionType === 'Keysend' &&
-                        !RESTUtils.supportsKeysend() && (
+                        !BackendUtils.supportsKeysend() && (
                             <React.Fragment>
                                 <Text
                                     style={{

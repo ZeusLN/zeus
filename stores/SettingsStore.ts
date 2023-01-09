@@ -1,8 +1,8 @@
-import RNSecureKeyStore, { ACCESSIBLE } from 'react-native-secure-key-store';
+import EncryptedStorage from 'react-native-encrypted-storage';
 import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
-import RESTUtils from '../utils/RESTUtils';
+import BackendUtils from '../utils/BackendUtils';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import { localeString } from '../utils/LocaleUtils';
 
@@ -33,6 +33,12 @@ interface PrivacySettings {
     enableMempoolRates?: boolean;
 }
 
+interface DisplaySettings {
+    theme?: string;
+    defaultView?: string;
+    displayNickname?: boolean;
+}
+
 interface PaymentSettings {
     defaultFeeMethod?: string;
     defaultFeePercentage?: number;
@@ -41,17 +47,18 @@ interface PaymentSettings {
 
 interface Settings {
     nodes?: Array<Node>;
-    theme?: string;
     selectedNode?: number;
     passphrase?: string;
     duressPassphrase?: string;
     pin?: string;
     duressPin?: string;
     scramblePin?: boolean;
+    loginBackground?: boolean;
     authenticationAttempts?: number;
     fiat?: string;
     locale?: string;
     privacy: PrivacySettings;
+    display: DisplaySettings;
     payments: PaymentSettings;
 }
 
@@ -65,7 +72,7 @@ export const INTERFACE_KEYS = [
     { key: 'LND (REST)', value: 'lnd' },
     { key: 'LND (Lightning Node Connect)', value: 'lightning-node-connect' },
     { key: 'Core Lightning (c-lightning-REST)', value: 'c-lightning-REST' },
-    { key: 'Core Lightning (Spark) [Experimental]', value: 'spark' },
+    { key: 'Core Lightning (Sparko)', value: 'spark' },
     { key: 'Eclair', value: 'eclair' },
     { key: 'LNDHub', value: 'lndhub' }
 ];
@@ -87,8 +94,8 @@ export const LOCALE_KEYS = [
     { key: 'Español', value: 'Español' },
     { key: 'Português', value: 'Português' },
     { key: 'Français', value: 'Français' },
-    { key: 'Češka', value: 'Češka' },
-    { key: 'Slovák', value: 'Slovák' },
+    { key: 'Čeština', value: 'Čeština' },
+    { key: 'Slovenčina', value: 'Slovenčina' },
     { key: 'Deutsch', value: 'Deutsch' },
     { key: 'Polski', value: 'Polski' },
     { key: 'Türkçe', value: 'Türkçe' },
@@ -152,12 +159,25 @@ export const THEME_KEYS = [
     { key: 'Orange', value: 'orange' },
     { key: 'Blacked Out', value: 'blacked-out' },
     { key: 'Scarlet', value: 'scarlet' },
-    { key: 'Memberberry', value: 'purple' }
+    { key: 'Memberberry', value: 'purple' },
+    { key: 'Blueberry', value: 'blueberry' },
+    { key: 'Deep Purple', value: 'deep-purple' },
+    { key: 'Deadpool', value: 'deadpool' },
+    { key: 'Mighty', value: 'mighty' },
+    { key: 'Green', value: 'green' }
+];
+
+export const DEFAULT_VIEW_KEYS = [
+    { key: 'Balance', value: 'Balance' },
+    { key: 'Keypad', value: 'Keypad' }
 ];
 
 export const DEFAULT_THEME = 'dark';
 export const DEFAULT_FIAT = 'Disabled';
 export const DEFAULT_LOCALE = 'English';
+
+const STORAGE_KEY = 'zeus-settings';
+
 export default class SettingsStore {
     @observable settings: Settings = {
         privacy: {
@@ -167,12 +187,19 @@ export default class SettingsStore {
             lurkerMode: false,
             enableMempoolRates: true
         },
+        display: {
+            theme: DEFAULT_THEME,
+            defaultView: 'Keypad',
+            displayNickname: false
+        },
         payments: {
             defaultFeeMethod: 'fixed',
             defaultFeePercentage: 1,
             defaultFeeFixed: 100,
         },
-        scramblePin: true
+        scramblePin: true,
+        loginBackground: false,
+        fiat: DEFAULT_FIAT
     };
     @observable public loading = false;
     @observable btcPayError: string | null;
@@ -189,6 +216,7 @@ export default class SettingsStore {
     @observable certVerification: boolean | undefined;
     @observable public loggedIn = false;
     @observable public connecting = true;
+    @observable public lurkerExposed = false;
     // LNDHub
     @observable username: string;
     @observable password: string;
@@ -338,8 +366,8 @@ export default class SettingsStore {
         this.loading = true;
         try {
             // Retrieve the credentials
-            const credentials: any = await RNSecureKeyStore.get(
-                'zeus-settings'
+            const credentials: any = await EncryptedStorage.getItem(
+                STORAGE_KEY
             );
             if (credentials) {
                 this.settings = JSON.parse(credentials);
@@ -378,15 +406,22 @@ export default class SettingsStore {
     @action
     public async setSettings(settings: string) {
         this.loading = true;
-
-        // Store the credentials
-        await RNSecureKeyStore.set('zeus-settings', settings, {
-            accessible: ACCESSIBLE.WHEN_UNLOCKED
-        }).then(() => {
-            this.loading = false;
-            return settings;
-        });
+        await EncryptedStorage.setItem(STORAGE_KEY, settings);
+        this.loading = false;
+        return settings;
     }
+
+    @action
+    public updateSettings = async (newSetting: any) => {
+        const newSettings = {
+            ...this.settings,
+            ...newSetting
+        };
+
+        await this.setSettings(JSON.stringify(newSettings));
+        this.settings = newSettings;
+        return this.settings;
+    };
 
     // LNDHub
     @action
@@ -460,7 +495,7 @@ export default class SettingsStore {
         this.createAccountSuccess = '';
         this.createAccountError = '';
         this.loading = true;
-        return RESTUtils.login({
+        return BackendUtils.login({
             login: request.login,
             password: request.password
         })
@@ -480,9 +515,9 @@ export default class SettingsStore {
     public connect = async () => {
         this.loading = true;
 
-        await RESTUtils.initLNC();
+        await BackendUtils.initLNC();
 
-        const error = await RESTUtils.connect();
+        const error = await BackendUtils.connect();
         if (error) {
             this.error = true;
             this.errorMsg = error;
@@ -494,7 +529,7 @@ export default class SettingsStore {
             let counter = 0;
             const interval = setInterval(async () => {
                 counter++;
-                const connected = await RESTUtils.isConnected();
+                const connected = await BackendUtils.isConnected();
                 if (connected) {
                     clearInterval(interval);
                     this.loading = false;
@@ -527,5 +562,15 @@ export default class SettingsStore {
         }
         this.connecting = status;
         return this.connecting;
+    };
+
+    @action
+    public toggleLurker = () => {
+        if (this.settings.privacy.lurkerMode) {
+            this.lurkerExposed = true;
+        } else {
+            this.lurkerExposed = false;
+        }
+        this.settings.privacy.lurkerMode = !this.settings.privacy.lurkerMode;
     };
 }
