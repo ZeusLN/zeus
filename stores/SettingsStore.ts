@@ -33,6 +33,12 @@ interface PrivacySettings {
     enableMempoolRates?: boolean;
 }
 
+interface PaymentSettings {
+    defaultFeeMethod?: string;
+    defaultFeePercentage?: number;
+    defaultFeeFixed?: number;
+}
+
 interface Settings {
     nodes?: Array<Node>;
     theme?: string;
@@ -46,6 +52,7 @@ interface Settings {
     fiat?: string;
     locale?: string;
     privacy: PrivacySettings;
+    payments: PaymentSettings;
 }
 
 export const BLOCK_EXPLORER_KEYS = [
@@ -159,6 +166,11 @@ export default class SettingsStore {
             clipboard: true,
             lurkerMode: false,
             enableMempoolRates: true
+        },
+        payments: {
+            defaultFeeMethod: 'fixed',
+            defaultFeePercentage: 1,
+            defaultFeeFixed: 100,
         },
         scramblePin: true
     };
