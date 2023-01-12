@@ -311,6 +311,7 @@ export default class Spark {
     };
 
     supportsMessageSigning = () => false;
+    supportsLnurlAuth = () => false;
     supportsOnchainSends = () => true;
     supportsOnchainReceiving = () => true;
     supportsKeysend = () => false;
