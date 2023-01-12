@@ -96,7 +96,7 @@ export default class LnurlAuth extends React.Component<
 
         const body = LNURLAUTH_CANONICAL_PHRASE;
 
-        BackendUtils.signMessage(body)
+        BackendUtils.lnurlAuth(body)
             .then((signature: any) => {
                 // got the signed message, now build linkingkey
 
@@ -252,7 +252,8 @@ export default class LnurlAuth extends React.Component<
                             padding: 20,
                             fontSize: 22,
                             color: themeColor('text'),
-                            fontFamily: 'Lato-Bold'
+                            fontFamily: 'Lato-Bold',
+                            textAlign: 'center'
                         }}
                     >
                         {domain}

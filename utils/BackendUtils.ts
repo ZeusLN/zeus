@@ -88,6 +88,7 @@ class BackendUtils {
     importAccount = (...args: any[]) => this.call('importAccount', args);
     signMessage = (...args: any[]) => this.call('signMessage', args);
     verifyMessage = (...args: any[]) => this.call('verifyMessage', args);
+    lnurlAuth = (...args: any[]) => this.call('lnurlAuth', args);
 
     fundPsbt = (...args: any[]) => this.call('fundPsbt', args);
     finalizePsbt = (...args: any[]) => this.call('finalizePsbt', args);
@@ -104,6 +105,7 @@ class BackendUtils {
     login = (...args: any[]) => this.call('login', args);
 
     supportsMessageSigning = () => this.call('supportsMessageSigning');
+    supportsLnurlAuth = () => this.call('supportsLnurlAuth');
     supportsOnchainSends = () => this.call('supportsOnchainSends');
     supportsOnchainReceiving = () => this.call('supportsOnchainReceiving');
     supportsKeysend = () => this.call('supportsKeysend');

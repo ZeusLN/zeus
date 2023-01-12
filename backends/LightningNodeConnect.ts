@@ -271,6 +271,7 @@ export default class LightningNodeConnect {
                 signature: req.signature
             })
             .then((data: lnrpc.VerifyMessageResponse) => snakeize(data));
+    lnurlAuth = async (message: string) => await this.signMessage(message);
     subscribeInvoice = (r_hash: string) =>
         this.lnc.lnd.invoices.subscribeSingleInvoice({ r_hash });
     subscribeInvoices = () => this.lnc.lnd.lightning.subscribeInvoices();
@@ -285,6 +286,7 @@ export default class LightningNodeConnect {
     };
 
     supportsMessageSigning = () => true;
+    supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;
     supportsOnchainReceiving = () => true;
     supportsKeysend = () => true;
