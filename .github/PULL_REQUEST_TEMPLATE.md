@@ -50,7 +50,7 @@ I have tested this PR with the following types of nodes (please specify node ver
 
 - [ ] Contributors will need to run `yarn` after this PR is merged in
 - [ ] 3rd party dependencies have been modified:
-    * verify that `package.json` and `package-lock.json` have been properly updated
+    * verify that `package.json` and `yarn.lock` have been properly updated
     * verify that dependencies are installed for both iOS and Android platforms
 
 ### Other:
