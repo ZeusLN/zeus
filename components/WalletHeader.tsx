@@ -6,6 +6,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 
 import SettingsStore from '../stores/SettingsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
+import PosStore from '../stores/PosStore';
 
 import LoadingIndicator from '../components/LoadingIndicator';
 import NodeIdenticon from '../components/NodeIdenticon';
@@ -16,6 +17,7 @@ import { themeColor } from '../utils/ThemeUtils';
 
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
 import Scan from '../assets/images/SVG/Scan.svg';
+import POS from '../assets/images/SVG/POS.svg';
 
 import stores from '../stores/Stores';
 
@@ -41,6 +43,32 @@ const OpenChannelButton = ({ navigation }: { navigation: any }) => (
     />
 );
 
+const AdminButton = ({ navigation }: { navigation: any }) => (
+    <Button
+        title=""
+        icon={{
+            name: 'settings',
+            size: 20,
+            color: themeColor('text')
+        }}
+        buttonStyle={{
+            backgroundColor: 'transparent',
+            marginRight: -10,
+            marginTop: -5
+        }}
+        onPress={() => {
+            const { settings } = stores.settingsStore;
+            const loginRequired =
+                settings && (settings.passphrase || settings.pin);
+            loginRequired
+                ? navigation.navigate('Lockscreen', {
+                      attemptAdminLogin: true
+                  })
+                : navigation.navigate('Settings');
+        }}
+    />
+);
+
 const ScanBadge = ({ navigation }: { navigation: any }) => (
     <TouchableOpacity
         onPress={() => navigation.navigate('HandleAnythingQRScanner')}
@@ -63,9 +91,28 @@ const ClipboardBadge = ({
     </TouchableOpacity>
 );
 
+const POSBadge = ({
+    setPosStatus,
+    getOrders
+}: {
+    setPosStatus: (status: string) => void;
+    getOrders: () => void;
+}) => (
+    <TouchableOpacity
+        onPress={async () => {
+            getOrders();
+            await setPosStatus('active');
+        }}
+        style={{ top: -3 }}
+    >
+        <POS stroke={themeColor('text')} width="34" height="34" />
+    </TouchableOpacity>
+);
+
 interface WalletHeaderProps {
     SettingsStore: SettingsStore;
     NodeInfoStore: NodeInfoStore;
+    PosStore: PosStore;
     navigation: any;
     loading: boolean;
     title: string;
@@ -76,7 +123,7 @@ interface WalletHeaderState {
     clipboard: string;
 }
 
-@inject('SettingsStore', 'NodeInfoStore')
+@inject('SettingsStore', 'NodeInfoStore', 'PosStore')
 @observer
 export default class WalletHeader extends React.Component<
     WalletHeaderProps,
@@ -109,9 +156,11 @@ export default class WalletHeader extends React.Component<
             title,
             channels,
             SettingsStore,
-            NodeInfoStore
+            NodeInfoStore,
+            PosStore
         } = this.props;
-        const { settings } = SettingsStore;
+        const { settings, posStatus, setPosStatus } = SettingsStore;
+        const { getOrders } = PosStore;
         const multipleNodes: boolean =
             (settings && settings.nodes && settings.nodes.length > 1) || false;
         const selectedNode: any =
@@ -119,6 +168,9 @@ export default class WalletHeader extends React.Component<
                 settings.nodes &&
                 settings.nodes[settings.selectedNode || 0]) ||
             null;
+
+        const squareEnabled: boolean =
+            (settings && settings.pos && settings.pos.squareEnabled) || false;
 
         const SettingsButton = () => (
             <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
@@ -160,7 +212,11 @@ export default class WalletHeader extends React.Component<
 
         return (
             <Header
-                leftComponent={loading ? undefined : <SettingsButton />}
+                leftComponent={
+                    loading || posStatus == 'active' ? undefined : (
+                        <SettingsButton />
+                    )
+                }
                 centerComponent={
                     title ? (
                         <View style={{ top: 5 }}>
@@ -178,7 +234,9 @@ export default class WalletHeader extends React.Component<
                     )
                 }
                 rightComponent={
-                    channels ? (
+                    posStatus === 'active' ? (
+                        <AdminButton navigation={navigation} />
+                    ) : channels ? (
                         <OpenChannelButton navigation={navigation} />
                     ) : (
                         <View style={{ flex: 1, flexDirection: 'row' }}>
@@ -186,6 +244,14 @@ export default class WalletHeader extends React.Component<
                                 stores.balanceStore
                                     .loadingLightningBalance) && (
                                 <LoadingIndicator size={80} />
+                            )}
+                            {squareEnabled && (
+                                <View style={{ marginRight: 20 }}>
+                                    <POSBadge
+                                        setPosStatus={setPosStatus}
+                                        getOrders={getOrders}
+                                    />
+                                </View>
                             )}
                             {!!clipboard && (
                                 <View style={{ marginRight: 20 }}>
