@@ -48,6 +48,7 @@ import Sponsors from './views/Settings/Sponsors';
 import Olympians from './views/Settings/Olympians';
 import Gods from './views/Settings/Gods';
 import Mortals from './views/Settings/Mortals';
+import PointOfSale from './views/Settings/PointOfSale';
 
 // Routing
 import Routing from './views/Routing/Routing';
@@ -62,6 +63,9 @@ import Utxo from './views/UTXOs/UTXO';
 import Accounts from './views/Accounts/Accounts';
 import ImportAccount from './views/Accounts/ImportAccount';
 import ImportAccountQRScanner from './views/Accounts/ImportAccountQRScanner';
+
+// POS
+import Order from './views/Order';
 
 import Intro from './views/Intro';
 import IntroSplash from './views/IntroSplash';
@@ -239,6 +243,12 @@ const AppScenes = {
     },
     SparkQRScanner: {
         screen: SparkQRScanner
+    },
+    Order: {
+        screen: Order
+    },
+    PointOfSaleSettings: {
+        screen: PointOfSale
     }
 };
 
