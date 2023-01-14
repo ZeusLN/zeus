@@ -18,6 +18,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
 import Scan from '../assets/images/SVG/Scan.svg';
 import POS from '../assets/images/SVG/POS.svg';
+import Temple from '../assets/images/SVG/Temple.svg';
 
 import stores from '../stores/Stores';
 
@@ -43,30 +44,31 @@ const OpenChannelButton = ({ navigation }: { navigation: any }) => (
     />
 );
 
-const AdminButton = ({ navigation }: { navigation: any }) => (
-    <Button
-        title=""
-        icon={{
-            name: 'settings',
-            size: 20,
-            color: themeColor('text')
-        }}
-        buttonStyle={{
-            backgroundColor: 'transparent',
-            marginRight: -10,
-            marginTop: -5
-        }}
-        onPress={() => {
-            const { settings } = stores.settingsStore;
+const TempleButton = ({
+    setPosStatus,
+    navigation
+}: {
+    setPosStatus: (status: string) => void;
+    navigation: any;
+}) => (
+    <TouchableOpacity
+        onPress={async () => {
+            const { posStatus, settings } = stores.settingsStore;
             const loginRequired =
                 settings && (settings.passphrase || settings.pin);
-            loginRequired
-                ? navigation.navigate('Lockscreen', {
-                      attemptAdminLogin: true
-                  })
-                : navigation.navigate('Settings');
+            const posEnabled = posStatus === 'active';
+            if (posEnabled && loginRequired) {
+                navigation.navigate('Lockscreen', {
+                    attemptAdminLogin: true
+                });
+            } else {
+                await setPosStatus('inactive');
+                navigation.navigate('Wallet');
+            }
         }}
-    />
+    >
+        <Temple fill={themeColor('text')} />
+    </TouchableOpacity>
 );
 
 const ScanBadge = ({ navigation }: { navigation: any }) => (
@@ -173,7 +175,22 @@ export default class WalletHeader extends React.Component<
             (settings && settings.pos && settings.pos.squareEnabled) || false;
 
         const SettingsButton = () => (
-            <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
+            <TouchableOpacity
+                onPress={() => {
+                    const { posStatus, settings } = stores.settingsStore;
+                    const loginRequired =
+                        settings && (settings.passphrase || settings.pin);
+                    const posEnabled = posStatus === 'active';
+
+                    if (posEnabled && loginRequired) {
+                        navigation.navigate('Lockscreen', {
+                            attemptAdminLogin: true
+                        });
+                    } else {
+                        navigation.navigate('Settings');
+                    }
+                }}
+            >
                 {multipleNodes ? (
                     <NodeIdenticon
                         selectedNode={selectedNode}
@@ -212,11 +229,7 @@ export default class WalletHeader extends React.Component<
 
         return (
             <Header
-                leftComponent={
-                    loading || posStatus == 'active' ? undefined : (
-                        <SettingsButton />
-                    )
-                }
+                leftComponent={loading ? undefined : <SettingsButton />}
                 centerComponent={
                     title ? (
                         <View style={{ top: 5 }}>
@@ -235,7 +248,10 @@ export default class WalletHeader extends React.Component<
                 }
                 rightComponent={
                     posStatus === 'active' ? (
-                        <AdminButton navigation={navigation} />
+                        <TempleButton
+                            navigation={navigation}
+                            setPosStatus={setPosStatus}
+                        />
                     ) : channels ? (
                         <OpenChannelButton navigation={navigation} />
                     ) : (
