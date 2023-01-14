@@ -89,12 +89,12 @@ export default class PosPane extends React.PureComponent<
 
     renderItem = (order) => {
         const { navigation, FiatStore } = this.props;
-        const { getRate, loading } = FiatStore;
+        const { getRate } = FiatStore;
         const { item } = order;
         return (
             <TouchableHighlight
                 onPress={() => {
-                    if (loading || getRate() === '$N/A') return;
+                    if (getRate() === '$N/A') return;
                     navigation.navigate('Order', {
                         order: item
                     });
@@ -196,7 +196,7 @@ export default class PosPane extends React.PureComponent<
                         ListFooterComponent={<Spacer height={100} />}
                         onRefresh={() => getOrders()}
                         refreshing={loading}
-                        keyExtractor={(item, index) => `${item.id}-${index}`}
+                        keyExtractor={(item, index) => `${index}`}
                     />
                 )}
 
