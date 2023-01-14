@@ -12,6 +12,7 @@ import FiatStore from './FiatStore';
 import UTXOsStore from './UTXOsStore';
 import MessageSignStore from './MessageSignStore';
 import ActivityStore from './ActivityStore';
+import PosStore from './PosStore';
 
 class Stores {
     public channelsStore: ChannelsStore;
@@ -28,6 +29,7 @@ class Stores {
     public utxosStore: UTXOsStore;
     public messageSignStore: MessageSignStore;
     public activityStore: ActivityStore;
+    public posStore: PosStore;
 
     constructor() {
         this.settingsStore = new SettingsStore();
@@ -56,6 +58,7 @@ class Stores {
             this.invoicesStore,
             this.transactionsStore
         );
+        this.posStore = new PosStore(this.settingsStore);
     }
 }
 

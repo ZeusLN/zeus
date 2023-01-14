@@ -39,6 +39,12 @@ interface DisplaySettings {
     displayNickname?: boolean;
 }
 
+interface PosSettings {
+    squareEnabled?: boolean;
+    squareAccessToken?: string;
+    squareLocationId?: string;
+}
+
 interface Settings {
     nodes?: Array<Node>;
     selectedNode?: number;
@@ -53,6 +59,7 @@ interface Settings {
     locale?: string;
     privacy: PrivacySettings;
     display: DisplaySettings;
+    pos: PosSettings;
 }
 
 export const BLOCK_EXPLORER_KEYS = [
@@ -185,10 +192,16 @@ export default class SettingsStore {
             defaultView: 'Keypad',
             displayNickname: false
         },
+        pos: {
+            squareEnabled: false,
+            squareAccessToken: '',
+            squareLocationId: ''
+        },
         scramblePin: true,
         loginBackground: false,
         fiat: DEFAULT_FIAT
     };
+    @observable public posStatus: string = 'unselected';
     @observable public loading = false;
     @observable btcPayError: string | null;
     @observable sponsorsError: string | null;
@@ -560,5 +573,11 @@ export default class SettingsStore {
             this.lurkerExposed = false;
         }
         this.settings.privacy.lurkerMode = !this.settings.privacy.lurkerMode;
+    };
+
+    @action
+    public setPosStatus = (setting: string) => {
+        this.posStatus = setting;
+        return this.posStatus;
     };
 }
