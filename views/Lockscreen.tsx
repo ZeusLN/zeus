@@ -60,7 +60,7 @@ export default class Lockscreen extends React.Component<
         };
     }
 
-    UNSAFE_componentWillMount() {
+    async UNSAFE_componentWillMount() {
         const { SettingsStore, navigation } = this.props;
         const { settings } = SettingsStore;
         const modifySecurityScreen: string = navigation.getParam(
@@ -68,6 +68,20 @@ export default class Lockscreen extends React.Component<
         );
         const deletePin: boolean = navigation.getParam('deletePin');
         const deleteDuressPin: boolean = navigation.getParam('deleteDuressPin');
+        const attemptAdminLogin: boolean =
+            navigation.getParam('attemptAdminLogin');
+
+        const posEnabled: boolean = settings.pos.squareEnabled || false;
+
+        if (
+            posEnabled &&
+            !attemptAdminLogin &&
+            !deletePin &&
+            !deleteDuressPin
+        ) {
+            SettingsStore.setLoginStatus(true);
+            navigation.navigate('Wallet');
+        }
 
         if (settings.authenticationAttempts) {
             this.setState({
@@ -127,7 +141,7 @@ export default class Lockscreen extends React.Component<
             deletePin,
             deleteDuressPin
         } = this.state;
-        const { updateSettings, getSettings } = SettingsStore;
+        const { updateSettings, getSettings, setPosStatus } = SettingsStore;
 
         this.setState({
             error: false
@@ -147,6 +161,7 @@ export default class Lockscreen extends React.Component<
             } else if (deleteDuressPin) {
                 this.deleteDuressPin();
             } else {
+                await setPosStatus('inactive');
                 this.resetAuthenticationAttempts();
                 navigation.navigate('Wallet');
             }

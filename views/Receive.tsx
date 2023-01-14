@@ -16,6 +16,7 @@ import { inject, observer } from 'mobx-react';
 import _map from 'lodash/map';
 
 import Success from '../assets/images/GIF/Success.gif';
+import WordLogo from '../assets/images/SVG/Word Logo.svg';
 
 import Amount from './../components/Amount';
 import Button from './../components/Button';
@@ -34,6 +35,7 @@ import FiatStore from './../stores/FiatStore';
 import InvoicesStore from './../stores/InvoicesStore';
 import SettingsStore from './../stores/SettingsStore';
 import UnitsStore, { SATS_PER_BTC } from './../stores/UnitsStore';
+import PosStore from './../stores/PosStore';
 
 import { localeString } from './../utils/LocaleUtils';
 import BackendUtils from './../utils/BackendUtils';
@@ -46,6 +48,7 @@ interface ReceiveProps {
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
     FiatStore: FiatStore;
+    PosStore: PosStore;
 }
 
 interface ReceiveState {
@@ -56,9 +59,13 @@ interface ReceiveState {
     expiry: string;
     ampInvoice: boolean;
     routeHints: boolean;
+    // POS
+    orderId: string;
+    orderAmount: number;
+    orderTip: number;
 }
 
-@inject('InvoicesStore', 'SettingsStore', 'UnitsStore', 'FiatStore')
+@inject('InvoicesStore', 'SettingsStore', 'UnitsStore', 'FiatStore', 'PosStore')
 @observer
 export default class Receive extends React.Component<
     ReceiveProps,
@@ -72,7 +79,11 @@ export default class Receive extends React.Component<
         value: '',
         expiry: '3600',
         ampInvoice: false,
-        routeHints: false
+        routeHints: false,
+        // POS
+        orderId: '',
+        orderTip: 0,
+        orderAmount: 0
     };
 
     componentDidMount() {
@@ -85,6 +96,20 @@ export default class Receive extends React.Component<
 
         const amount: string = navigation.getParam('amount');
         const autoGenerate: boolean = navigation.getParam('autoGenerate');
+
+        // POS
+        const memo: string = navigation.getParam('memo');
+        const orderId: string = navigation.getParam('orderId');
+        const orderAmount: number = navigation.getParam('orderAmount');
+        const orderTip: number = navigation.getParam('orderTip');
+
+        if (orderId) {
+            this.setState({
+                orderId,
+                orderAmount,
+                orderTip
+            });
+        }
 
         if (lnurl) {
             this.setState({
@@ -99,21 +124,21 @@ export default class Receive extends React.Component<
             });
         }
 
-        if (autoGenerate) this.autoGenerateInvoice(this.getSatAmount(amount));
+        if (autoGenerate)
+            this.autoGenerateInvoice(this.getSatAmount(amount), memo);
     }
 
     componentWillUnmount() {
         if (this.listener && this.listener.stop) this.listener.stop();
     }
 
-    autoGenerateInvoice = (amount?: string) => {
+    autoGenerateInvoice = (amount?: string, memo?: string) => {
         const { InvoicesStore } = this.props;
         const { createUnifiedInvoice } = InvoicesStore;
-        const { memo, expiry, ampInvoice, routeHints, addressType } =
-            this.state;
+        const { expiry, ampInvoice, routeHints, addressType } = this.state;
 
         createUnifiedInvoice(
-            memo,
+            memo || '',
             amount || '0',
             expiry,
             undefined,
@@ -124,7 +149,8 @@ export default class Receive extends React.Component<
     };
 
     subscribeInvoice = (rHash: string) => {
-        const { InvoicesStore, SettingsStore } = this.props;
+        const { InvoicesStore, PosStore, SettingsStore } = this.props;
+        const { orderId, orderAmount, orderTip } = this.state;
         const { implementation } = SettingsStore;
         const { setWatchedInvoicePaid } = InvoicesStore;
         if (implementation === 'lightning-node-connect') {
@@ -139,6 +165,12 @@ export default class Receive extends React.Component<
                             const result = JSON.parse(event.result);
                             if (result.settled) {
                                 setWatchedInvoicePaid(result.amt_paid_sat);
+                                if (orderId)
+                                    PosStore.makePayment({
+                                        orderId,
+                                        orderAmount,
+                                        orderTip
+                                    });
                                 this.listener = null;
                             }
                         } catch (error) {
@@ -153,6 +185,12 @@ export default class Receive extends React.Component<
             BackendUtils.subscribeInvoice(rHash).then((response: any) => {
                 if (response.result && response.result.settled) {
                     setWatchedInvoicePaid(response.result.amt_paid_sat);
+                    if (orderId)
+                        PosStore.makePayment({
+                            orderId,
+                            orderAmount,
+                            orderTip
+                        });
                 }
             });
         }
@@ -240,7 +278,7 @@ export default class Receive extends React.Component<
             clearUnified,
             reset
         } = InvoicesStore;
-        const { implementation } = SettingsStore;
+        const { implementation, posStatus } = SettingsStore;
         const loading = SettingsStore.loading || InvoicesStore.loading;
         const address = onChainAddress;
 
@@ -428,7 +466,9 @@ export default class Receive extends React.Component<
                         }
                     }}
                     rightComponent={
-                        loading || watchedInvoicePaid ? null : haveInvoice ? (
+                        loading ||
+                        watchedInvoicePaid ||
+                        posStatus === 'active' ? null : haveInvoice ? (
                             <ClearButton />
                         ) : (
                             BackendUtils.supportsAddressTypeSelection() && (
@@ -454,10 +494,16 @@ export default class Receive extends React.Component<
                         <View
                             style={{
                                 alignItems: 'center',
-                                height: 400,
-                                justifyContent: 'center'
+                                justifyContent: 'center',
+                                paddingTop: 100
                             }}
                         >
+                            <WordLogo
+                                height={150}
+                                style={{
+                                    alignSelf: 'center'
+                                }}
+                            />
                             <Image
                                 source={Success}
                                 style={{ width: 290, height: 290 }}
@@ -471,16 +517,23 @@ export default class Receive extends React.Component<
                                     color: themeColor('text')
                                 }}
                             >
-                                {`${localeString(
-                                    'views.Receive.youReceived'
-                                )} ${getAmount(
-                                    watchedInvoicePaidAmt || payment_request_amt
-                                )}`}
+                                {posStatus === 'active'
+                                    ? localeString('views.Wallet.Invoices.paid')
+                                    : `${localeString(
+                                          'views.Receive.youReceived'
+                                      )} ${getAmount(
+                                          watchedInvoicePaidAmt ||
+                                              payment_request_amt
+                                      )}`}
                             </Text>
                             <Button
-                                title={localeString(
-                                    'views.SendingLightning.goToWallet'
-                                )}
+                                title={
+                                    posStatus === 'active'
+                                        ? localeString('general.goBack')
+                                        : localeString(
+                                              'views.SendingLightning.goToWallet'
+                                          )
+                                }
                                 icon={{
                                     name: 'list',
                                     size: 25

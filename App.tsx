@@ -22,6 +22,7 @@ export default class App extends React.PureComponent {
                 UTXOsStore={Stores.utxosStore}
                 MessageSignStore={Stores.messageSignStore}
                 ActivityStore={Stores.activityStore}
+                PosStore={Stores.posStore}
             >
                 <AppContainer>
                     <Navigation />
