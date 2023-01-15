@@ -74,19 +74,6 @@ export default class PosPane extends React.PureComponent<
         ).start();
     }
 
-    updateSearch = (value: string) => {
-        const { orders } = this.props.PosStore;
-        const result = orders.filter(
-            (item: any) =>
-                item.getItemsList.includes(value) ||
-                item.getItemsList.toLowerCase().includes(value)
-        );
-        this.setState({
-            search: value,
-            filteredOrders: result
-        });
-    };
-
     renderItem = (order) => {
         const { navigation, FiatStore } = this.props;
         const { getRate } = FiatStore;
@@ -111,11 +98,10 @@ export default class PosPane extends React.PureComponent<
 
     render() {
         const { SettingsStore, PosStore, FiatStore, navigation } = this.props;
-        const { search, filteredOrders } = this.state;
-        const { loading, getOrders } = PosStore;
-        const orders = filteredOrders;
+        const { search } = this.state;
+        const { loading, getOrders, filteredOrders, updateSearch } = PosStore;
         const { getRate, getFiatRates } = FiatStore;
-        const fiatLoading = FiatStore.loading;
+        const orders = filteredOrders;
 
         const headerString = `${localeString('general.orders')} (${
             orders.length || 0
@@ -129,7 +115,7 @@ export default class PosPane extends React.PureComponent<
                     SettingsStore={SettingsStore}
                 />
 
-                {fiatLoading ? (
+                {getRate() === '$N/A' ? (
                     <Animated.View
                         style={{
                             alignSelf: 'center',
@@ -171,7 +157,12 @@ export default class PosPane extends React.PureComponent<
                 {!loading && (
                     <SearchBar
                         placeholder={localeString('general.search')}
-                        onChangeText={this.updateSearch}
+                        onChangeText={(value: string) => {
+                            updateSearch(value);
+                            this.setState({
+                                search: value
+                            });
+                        }}
                         value={search}
                         inputStyle={{
                             color: themeColor('text')
