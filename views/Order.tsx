@@ -324,11 +324,17 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 keyboardType="numeric"
                                 right={25}
                                 value={customAmount}
-                                onChangeText={(text: string) =>
+                                onChangeText={(text: string) => {
+                                    if (
+                                        text.includes('-') ||
+                                        (text.split('.')[1] &&
+                                            text.split('.')[1].length === 3)
+                                    )
+                                        return;
                                     this.setState({
                                         customAmount: text
-                                    })
-                                }
+                                    });
+                                }}
                                 onPressIn={() =>
                                     this.setState({
                                         customType: 'amount'
@@ -396,6 +402,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 orderAmount: Number(order.getTotalMoney) * 100
                             })
                         }
+                        disabled={isNaN(Number(satAmount))}
                     />
                 </View>
             </ScrollView>
