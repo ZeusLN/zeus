@@ -48,7 +48,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         this.state = {
             order,
             selectedIndex: 0,
-            customPercentage: '20',
+            customPercentage: '21',
             customAmount: '',
             customType: 'percentage',
             units: 'sats'
@@ -172,10 +172,8 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     ).toFixed(2);
                 } else if (customType === 'amount') {
                     totalAmount = !isNaN(Number(customAmount))
-                        ? order.getTotalMoney
-                        : (order.getTotalMoney + Number(customAmount)).toFixed(
-                              2
-                          );
+                        ? order.getTotalMoney + Number(customAmount)
+                        : order.getTotalMoney;
                     tipAmount = !isNaN(Number(customAmount))
                         ? Number(customAmount).toFixed(2)
                         : '0';
