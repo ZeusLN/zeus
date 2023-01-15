@@ -67,7 +67,12 @@ const TempleButton = ({
             }
         }}
     >
-        <Temple fill={themeColor('text')} />
+        <Temple
+            fill={themeColor('text')}
+            width="40"
+            height="40"
+            style={{ right: -6, top: -8, alignSelf: 'center' }}
+        />
     </TouchableOpacity>
 );
 
@@ -105,7 +110,6 @@ const POSBadge = ({
             getOrders();
             await setPosStatus('active');
         }}
-        style={{ top: -3 }}
     >
         <POS stroke={themeColor('text')} width="34" height="34" />
     </TouchableOpacity>
@@ -261,14 +265,6 @@ export default class WalletHeader extends React.Component<
                                     .loadingLightningBalance) && (
                                 <LoadingIndicator size={80} />
                             )}
-                            {squareEnabled && (
-                                <View style={{ marginRight: 20 }}>
-                                    <POSBadge
-                                        setPosStatus={setPosStatus}
-                                        getOrders={getOrders}
-                                    />
-                                </View>
-                            )}
                             {!!clipboard && (
                                 <View style={{ marginRight: 20 }}>
                                     <ClipboardBadge
@@ -280,6 +276,20 @@ export default class WalletHeader extends React.Component<
                             <View style={{ marginTop: 1 }}>
                                 <ScanBadge navigation={navigation} />
                             </View>
+                            {squareEnabled && (
+                                <View
+                                    style={{
+                                        marginLeft: 10,
+                                        top: -4,
+                                        right: -4
+                                    }}
+                                >
+                                    <POSBadge
+                                        setPosStatus={setPosStatus}
+                                        getOrders={getOrders}
+                                    />
+                                </View>
+                            )}
                         </View>
                     )
                 }
