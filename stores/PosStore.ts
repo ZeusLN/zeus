@@ -18,7 +18,8 @@ const genIdemptotencyKey = () =>
     `${genHex(8)}-${genHex(4)}-${genHex(4)}-${genHex(4)}-${genHex(12)}}`;
 
 export default class PosStore {
-    @observable public orders: any = {};
+    @observable public orders: Array<Order> = [];
+    @observable public filteredOrders: Array<Order> = [];
     @observable public loading = false;
     @observable public error = false;
 
@@ -27,6 +28,15 @@ export default class PosStore {
     constructor(settingsStore: SettingsStore) {
         this.settingsStore = settingsStore;
     }
+
+    @action
+    public updateSearch = (value: string) => {
+        this.filteredOrders = this.orders.filter(
+            (item: any) =>
+                item.getItemsList.includes(value) ||
+                item.getItemsList.toLowerCase().includes(value)
+        );
+    };
 
     @action
     public makePayment = ({
@@ -42,7 +52,7 @@ export default class PosStore {
         ReactNativeBlobUtil.fetch(
             'POST',
             // DEV -> 'https://connect.squareupsandbox.com/v2/payments',
-            'https://connect.squareup.com/v2/payments',
+            'https://connect.squareupsandbox.com/v2/payments',
             {
                 Authorization: `Bearer ${squareAccessToken}`,
                 'Content-Type': 'application/json'
@@ -91,7 +101,7 @@ export default class PosStore {
         ReactNativeBlobUtil.fetch(
             'POST',
             // DEV -> 'https://connect.squareupsandbox.com/v2/orders/search'
-            'https://connect.squareup.com/v2/orders/search',
+            'https://connect.squareupsandbox.com/v2/orders/search',
             {
                 Authorization: `Bearer ${squareAccessToken}`,
                 'Content-Type': 'application/json'
@@ -115,6 +125,7 @@ export default class PosStore {
                         .json()
                         .orders.map((order: any) => new Order(order));
                     this.orders = orders;
+                    this.filteredOrders = orders;
                 } else {
                     this.orders = [];
                     this.loading = false;

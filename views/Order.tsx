@@ -172,7 +172,9 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     ).toFixed(2);
                 } else if (customType === 'amount') {
                     totalAmount = !isNaN(Number(customAmount))
-                        ? order.getTotalMoney + Number(customAmount)
+                        ? `${Number(
+                              Number(order.getTotalMoney) + Number(customAmount)
+                          ).toFixed(2)}`
                         : order.getTotalMoney;
                     tipAmount = !isNaN(Number(customAmount))
                         ? Number(customAmount).toFixed(2)
