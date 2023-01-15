@@ -226,14 +226,15 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                 />
 
                 <View style={styles.content}>
-                    {lineItems.map((item: any) => {
+                    {lineItems.map((item: any, index: number) => {
+                        const keyValue =
+                            item.quantity > 1
+                                ? `${item.name} (x${item.quantity})`
+                                : item.name;
                         return (
                             <KeyValue
-                                keyValue={
-                                    item.quantity > 1
-                                        ? `${item.name} (x${item.quantity})`
-                                        : item.name
-                                }
+                                key={index}
+                                keyValue={keyValue}
                                 value={`$${Number(
                                     item.total_money.amount / 100
                                 ).toFixed(2)}`}
