@@ -23,6 +23,8 @@ import PosStore from '../../stores/PosStore';
 import UnitsStore from '../../stores/UnitsStore';
 import SettingsStore from '../../stores/SettingsStore';
 
+import Order from '../../models/Order';
+
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
