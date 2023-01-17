@@ -5,6 +5,7 @@ import { inject, observer } from 'mobx-react';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
+import DropdownSetting from './../../components/DropdownSetting';
 import {
     ErrorMessage,
     WarningMessage
@@ -12,7 +13,10 @@ import {
 import Switch from './../../components/Switch';
 import TextInput from './../../components/TextInput';
 
-import SettingsStore, { DEFAULT_FIAT } from './../../stores/SettingsStore';
+import SettingsStore, {
+    DEFAULT_FIAT,
+    POS_CONF_PREF_KEYS
+} from './../../stores/SettingsStore';
 
 interface PointOfSaleProps {
     navigation: any;
@@ -23,6 +27,7 @@ interface PointOfSaleState {
     squareEnabled: boolean;
     squareAccessToken: string;
     squareLocationId: string;
+    confirmationPreference: string;
 }
 
 @inject('SettingsStore')
@@ -34,7 +39,8 @@ export default class PointOfSale extends React.Component<
     state = {
         squareEnabled: false,
         squareAccessToken: '',
-        squareLocationId: ''
+        squareLocationId: '',
+        confirmationPreference: 'lnOnly'
     };
 
     async UNSAFE_componentWillMount() {
@@ -48,7 +54,10 @@ export default class PointOfSale extends React.Component<
             squareAccessToken:
                 (settings.pos && settings.pos.squareAccessToken) || '',
             squareLocationId:
-                (settings.pos && settings.pos.squareLocationId) || ''
+                (settings.pos && settings.pos.squareLocationId) || '',
+            confirmationPreference:
+                (settings.pos && settings.pos.confirmationPreference) ||
+                'lnOnly'
         });
     }
 
@@ -63,8 +72,12 @@ export default class PointOfSale extends React.Component<
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { squareEnabled, squareAccessToken, squareLocationId } =
-            this.state;
+        const {
+            squareEnabled,
+            squareAccessToken,
+            squareLocationId,
+            confirmationPreference
+        } = this.state;
         const { updateSettings, settings }: any = SettingsStore;
         const { passphrase, pin, fiat } = settings;
 
@@ -153,7 +166,8 @@ export default class PointOfSale extends React.Component<
                                             pos: {
                                                 squareAccessToken,
                                                 squareLocationId,
-                                                squareEnabled: !squareEnabled
+                                                squareEnabled: !squareEnabled,
+                                                confirmationPreference
                                             }
                                         });
                                     }}
@@ -184,7 +198,8 @@ export default class PointOfSale extends React.Component<
                                             pos: {
                                                 squareEnabled,
                                                 squareAccessToken: text,
-                                                squareLocationId
+                                                squareLocationId,
+                                                confirmationPreference
                                             }
                                         });
                                     }}
@@ -211,11 +226,38 @@ export default class PointOfSale extends React.Component<
                                             pos: {
                                                 squareEnabled,
                                                 squareAccessToken,
-                                                squareLocationId: text
+                                                squareLocationId: text,
+                                                confirmationPreference
                                             }
                                         });
                                     }}
                                 />
+
+                                {false && (
+                                    <DropdownSetting
+                                        title={localeString(
+                                            'views.Settings.POS.confPref'
+                                        )}
+                                        selectedValue={confirmationPreference}
+                                        onValueChange={async (
+                                            value: string
+                                        ) => {
+                                            this.setState({
+                                                confirmationPreference: value
+                                            });
+                                            await updateSettings({
+                                                pos: {
+                                                    squareEnabled,
+                                                    squareAccessToken,
+                                                    squareLocationId,
+                                                    confirmationPreference:
+                                                        value
+                                                }
+                                            });
+                                        }}
+                                        values={POS_CONF_PREF_KEYS}
+                                    />
+                                )}
                             </>
                         )}
                     </ScrollView>

@@ -12,6 +12,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { Spacer } from '../../components/layout/Spacer';
 
 import ChannelsStore from '../../stores/ChannelsStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 // TODO: does this belong in the model? Or can it be computed from the model?
 export enum Status {
@@ -24,6 +25,7 @@ export enum Status {
 interface ChannelsProps {
     navigation: any;
     ChannelsStore: ChannelsStore;
+    SettingsStore: SettingsStore;
 }
 
 @inject('ChannelsStore', 'SettingsStore')
