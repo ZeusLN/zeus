@@ -10,6 +10,7 @@ import {
 import { SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
+import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import WalletHeader from '../../components/WalletHeader';
 
@@ -17,6 +18,7 @@ import { Spacer } from '../../components/layout/Spacer';
 import OrderItem from './OrderItem';
 
 import FiatStore from '../../stores/FiatStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 import PosStore from '../../stores/PosStore';
 import UnitsStore from '../../stores/UnitsStore';
 import SettingsStore from '../../stores/SettingsStore';
@@ -24,11 +26,12 @@ import SettingsStore from '../../stores/SettingsStore';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
-import Order from '../../models/Order';
+import { version } from './../../package.json';
 
 interface PosPaneProps {
     navigation: any;
     FiatStore: FiatStore;
+    NodeInfoStore: NodeInfoStore;
     PosStore: PosStore;
     UnitsStore: UnitsStore;
     SettingsStore: SettingsStore;
@@ -40,7 +43,7 @@ interface PosPaneState {
     fadeAnimation: any;
 }
 
-@inject('FiatStore', 'PosStore', 'UnitsStore', 'SettingsStore')
+@inject('FiatStore', 'NodeInfoStore', 'PosStore', 'UnitsStore', 'SettingsStore')
 @observer
 export default class PosPane extends React.PureComponent<
     PosPaneProps,
@@ -97,7 +100,13 @@ export default class PosPane extends React.PureComponent<
     };
 
     render() {
-        const { SettingsStore, PosStore, FiatStore, navigation } = this.props;
+        const {
+            SettingsStore,
+            PosStore,
+            FiatStore,
+            NodeInfoStore,
+            navigation
+        } = this.props;
         const { search } = this.state;
         const { loading, getOrders, filteredOrders, updateSearch } = PosStore;
         const { getRate, getFiatRates } = FiatStore;
@@ -106,6 +115,82 @@ export default class PosPane extends React.PureComponent<
         const headerString = `${localeString('general.orders')} (${
             orders.length || 0
         })`;
+
+        const error = NodeInfoStore.error || SettingsStore.error;
+
+        if (error) {
+            return (
+                <View
+                    style={{
+                        backgroundColor: themeColor('error'),
+                        paddingTop: 20,
+                        paddingLeft: 10,
+                        flex: 1
+                    }}
+                >
+                    <Text
+                        style={{
+                            fontFamily: 'Lato-Regular',
+                            color: '#fff',
+                            fontSize: 20,
+                            marginTop: 20,
+                            marginBottom: 25
+                        }}
+                    >
+                        {SettingsStore.errorMsg
+                            ? SettingsStore.errorMsg
+                            : NodeInfoStore.errorMsg
+                            ? NodeInfoStore.errorMsg
+                            : localeString('views.Wallet.MainPane.error')}
+                    </Text>
+                    <Button
+                        icon={{
+                            name: 'settings',
+                            size: 25,
+                            color: '#fff'
+                        }}
+                        title={localeString(
+                            'views.Wallet.MainPane.goToSettings'
+                        )}
+                        buttonStyle={{
+                            backgroundColor: 'gray',
+                            borderRadius: 30
+                        }}
+                        containerStyle={{
+                            alignItems: 'center'
+                        }}
+                        onPress={() => {
+                            const { posStatus, settings } =
+                                this.props.SettingsStore;
+                            const loginRequired =
+                                settings &&
+                                (settings.passphrase || settings.pin);
+                            const posEnabled = posStatus === 'active';
+
+                            if (posEnabled && loginRequired) {
+                                navigation.navigate('Lockscreen', {
+                                    attemptAdminLogin: true
+                                });
+                            } else {
+                                navigation.navigate('Settings');
+                            }
+                        }}
+                        adaptiveWidth
+                    />
+                    <Text
+                        style={{
+                            fontFamily: 'Lato-Regular',
+                            color: '#fff',
+                            fontSize: 12,
+                            marginTop: 20,
+                            marginBottom: -40
+                        }}
+                    >
+                        {`v${version}`}
+                    </Text>
+                </View>
+            );
+        }
 
         return (
             <View style={{ flex: 1 }}>
