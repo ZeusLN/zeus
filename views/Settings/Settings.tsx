@@ -22,6 +22,7 @@ import LanguageIcon from '../../assets/images/SVG/Globe.svg';
 import HelpIcon from '../../assets/images/SVG/Help Icon.svg';
 import NodeOn from '../../assets/images/SVG/Node On.svg';
 import POS from '../../assets/images/SVG/POS.svg';
+import SendIcon from '../../assets/images/SVG/Send.svg';
 
 import NodeIdenticon, { NodeTitle } from './../../components/NodeIdenticon';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -37,14 +38,17 @@ interface SettingsProps {
     UnitsStore: UnitsStore;
 }
 
-interface SettingsStore {
+interface SettingsState {
     showHiddenSettings: boolean;
     easterEggCount: number;
 }
 
 @inject('SettingsStore', 'UnitsStore')
 @observer
-export default class Settings extends React.Component<SettingsProps, {}> {
+export default class Settings extends React.Component<
+    SettingsProps,
+    SettingsState
+> {
     state = {
         showHiddenSettings: false,
         easterEggCount: 0
@@ -272,6 +276,40 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     <ForwardIcon />
                                 </View>
                             </View>
+                        </View>
+                    )}
+                    {selectedNode && BackendUtils.isLNDBased() && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                height: 45,
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginBottom: 15
+                            }}
+                        >
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() =>
+                                    navigation.navigate('PaymentsSettings')
+                                }
+                            >
+                                <View>
+                                    <SendIcon stroke={themeColor('text')} />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString('views.Settings.payments')}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon />
+                                </View>
+                            </TouchableOpacity>
                         </View>
                     )}
                     {selectedNode && BackendUtils.supportsMessageSigning() ? (

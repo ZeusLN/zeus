@@ -150,8 +150,10 @@ export default class CLightningREST extends LND {
         this.getRequest(
             `/v1/utility/checkMessage/${data.msg}/${data.signature}`
         );
+    lnurlAuth = (message: string) => this.signMessage(message);
 
     supportsMessageSigning = () => true;
+    supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;
     supportsOnchainReceiving = () => true;
     supportsKeysend = () => true;
