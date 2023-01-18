@@ -7,13 +7,22 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View
+    View,
+    Platform
 } from 'react-native';
 import BigNumber from 'bignumber.js';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import { ButtonGroup, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import _map from 'lodash/map';
+
+import NfcManager, {
+    NfcEvents,
+    TagEvent,
+    Ndef
+} from 'react-native-nfc-manager';
+
+import handleAnything from './../utils/handleAnything';
 
 import Success from '../assets/images/GIF/Success.gif';
 import WordLogo from '../assets/images/SVG/Word Logo.svg';
@@ -39,6 +48,7 @@ import PosStore from './../stores/PosStore';
 
 import { localeString } from './../utils/LocaleUtils';
 import BackendUtils from './../utils/BackendUtils';
+import NFCUtils from './../utils/NFCUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
 interface ReceiveProps {
@@ -87,7 +97,7 @@ export default class Receive extends React.Component<
         orderAmount: 0
     };
 
-    componentDidMount() {
+    async componentDidMount() {
         const { navigation, InvoicesStore, SettingsStore } = this.props;
         const { reset } = InvoicesStore;
         const { settings, posStatus } = SettingsStore;
@@ -133,37 +143,46 @@ export default class Receive extends React.Component<
             });
         }
 
-<<<<<<< HEAD
-=======
         if (lnOnly) {
             this.setState({
                 selectedIndex: 1
             });
         }
 
->>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
         if (autoGenerate)
             this.autoGenerateInvoice(this.getSatAmount(amount), memo);
+
+        if (Platform.OS === 'android') {
+            await this.enableNfc();
+        }
     }
 
     componentWillUnmount() {
         if (this.listener && this.listener.stop) this.listener.stop();
     }
 
-<<<<<<< HEAD
-    autoGenerateInvoice = (amount?: string, memo?: string) => {
-=======
+    UNSAFE_componentWillReceiveProps(nextProps: any) {
+        const { navigation, InvoicesStore } = nextProps;
+        const { reset } = InvoicesStore;
+
+        reset();
+        const lnurl: LNURLWithdrawParams | undefined =
+            navigation.getParam('lnurlParams');
+
+        if (lnurl) {
+            this.setState({
+                memo: lnurl.defaultDescription,
+                value: (lnurl.maxWithdrawable / 1000).toString()
+            });
+        }
+    }
+
     autoGenerateInvoice = async (amount?: string, memo?: string) => {
->>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
         const { InvoicesStore } = this.props;
         const { createUnifiedInvoice } = InvoicesStore;
         const { expiry, ampInvoice, routeHints, addressType } = this.state;
 
-<<<<<<< HEAD
-        createUnifiedInvoice(
-=======
         const { rHash, onChainAddress } = await createUnifiedInvoice(
->>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
             memo || '',
             amount || '0',
             expiry,
@@ -176,17 +195,92 @@ export default class Receive extends React.Component<
         this.subscribeInvoice(rHash, onChainAddress || '');
     };
 
-<<<<<<< HEAD
-    subscribeInvoice = (rHash: string) => {
-        const { InvoicesStore, PosStore, SettingsStore } = this.props;
-        const { orderId, orderAmount, orderTip } = this.state;
-        const { implementation } = SettingsStore;
-=======
+    disableNfc = () => {
+        NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
+        NfcManager.setEventListener(NfcEvents.SessionClosed, null);
+    };
+
+    enableNfc = async () => {
+        this.disableNfc();
+        await NfcManager.start().catch((e) => console.warn(e.message));
+
+        return new Promise((resolve: any) => {
+            let tagFound: TagEvent | null = null;
+
+            NfcManager.setEventListener(
+                NfcEvents.DiscoverTag,
+                (tag: TagEvent) => {
+                    tagFound = tag;
+                    const bytes = new Uint8Array(
+                        tagFound.ndefMessage[0].payload
+                    );
+
+                    let str;
+                    const decoded = Ndef.text.decodePayload(bytes);
+                    if (decoded.match(/^(https?|lnurl)/)) {
+                        str = decoded;
+                    } else {
+                        str = NFCUtils.nfcUtf8ArrayToStr(bytes) || '';
+                    }
+                    resolve(this.validateAddress(str));
+                    NfcManager.unregisterTagEvent().catch(() => 0);
+                }
+            );
+
+            NfcManager.setEventListener(NfcEvents.SessionClosed, () => {
+                if (!tagFound) {
+                    resolve();
+                }
+            });
+
+            NfcManager.registerTagEvent();
+        });
+    };
+
+    validateAddress = (text: string) => {
+        const { navigation, InvoicesStore } = this.props;
+        const { createUnifiedInvoice } = InvoicesStore;
+        const amount = this.getSatAmount(navigation.getParam('amount'));
+
+        handleAnything(text, amount.toString())
+            .then((response) => {
+                try {
+                    const [route, props] = response;
+                    const { lnurlParams } = props;
+                    const { memo } = lnurlParams.defaultDescription;
+
+                    // if an amount was entered on the keypad screen before scanning
+                    // we will automatically create an invoice and attempt to withdraw
+                    // otherwise we present the user with the create invoice screen
+                    if (Number(amount) > 0) {
+                        createUnifiedInvoice(
+                            memo,
+                            amount.toString(),
+                            '3600',
+                            lnurlParams
+                        )
+                            .then((rHash: string) => {
+                                navigation.setParam;
+                                this.subscribeInvoice(rHash);
+                            })
+                            .catch(() => {
+                                navigation.navigate(route, {
+                                    amount,
+                                    ...props
+                                });
+                            });
+                    } else {
+                        navigation.navigate(route, props);
+                    }
+                } catch (e) {}
+            })
+            .catch();
+    };
+
     subscribeInvoice = (rHash: string, onChainAddress: string) => {
         const { InvoicesStore, PosStore, SettingsStore } = this.props;
         const { orderId, orderAmount, orderTip, value } = this.state;
         const { implementation, settings } = SettingsStore;
->>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
         const { setWatchedInvoicePaid } = InvoicesStore;
 
         const numConfPreference =
@@ -255,22 +349,15 @@ export default class Receive extends React.Component<
 
         if (implementation === 'lnd') {
             BackendUtils.subscribeInvoice(rHash).then((response: any) => {
-<<<<<<< HEAD
-                if (response.result && response.result.settled) {
-                    setWatchedInvoicePaid(response.result.amt_paid_sat);
-=======
                 const result = response.result;
                 if (result && result.settled) {
                     setWatchedInvoicePaid(result.amt_paid_sat);
->>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
                     if (orderId)
                         PosStore.makePayment({
                             orderId,
                             orderAmount,
                             orderTip
                         });
-<<<<<<< HEAD
-=======
                 }
             });
 
@@ -289,7 +376,6 @@ export default class Receive extends React.Component<
                             orderTip
                         });
                     this.listener = null;
->>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
                 }
             });
         }
@@ -377,11 +463,7 @@ export default class Receive extends React.Component<
             clearUnified,
             reset
         } = InvoicesStore;
-<<<<<<< HEAD
-        const { implementation, posStatus } = SettingsStore;
-=======
         const { implementation, posStatus, settings } = SettingsStore;
->>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
         const loading = SettingsStore.loading || InvoicesStore.loading;
         const address = onChainAddress;
 
@@ -733,6 +815,26 @@ export default class Receive extends React.Component<
                                             expanded
                                             textBottom
                                         />
+                                    )}
+                                    {Platform.OS === 'ios' && (
+                                        <View
+                                            style={[
+                                                styles.button,
+                                                { paddingTop: 0 }
+                                            ]}
+                                        >
+                                            <Button
+                                                title={localeString(
+                                                    'general.receiveNfc'
+                                                )}
+                                                icon={{
+                                                    name: 'nfc',
+                                                    size: 25
+                                                }}
+                                                onPress={() => this.enableNfc()}
+                                                secondary
+                                            />
+                                        </View>
                                     )}
                                     {!belowDustLimit &&
                                         haveUnifiedInvoice &&

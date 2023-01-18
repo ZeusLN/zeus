@@ -49,6 +49,7 @@ import Olympians from './views/Settings/Olympians';
 import Gods from './views/Settings/Gods';
 import Mortals from './views/Settings/Mortals';
 import PointOfSale from './views/Settings/PointOfSale';
+import PaymentsSettings from './views/Settings/PaymentsSettings';
 
 // Routing
 import Routing from './views/Routing/Routing';
@@ -249,6 +250,9 @@ const AppScenes = {
     },
     PointOfSaleSettings: {
         screen: PointOfSale
+    },
+    PaymentsSettings: {
+        screen: PaymentsSettings
     }
 };
 

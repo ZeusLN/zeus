@@ -74,11 +74,23 @@ export default class PaymentRequest extends React.Component<
         maxParts: '16',
         maxShardAmt: '',
         feeLimitSat: '100',
-        feeOption: 'sats',
+        feeOption: 'fixed',
         maxFeePercent: '0.5',
         outgoingChanId: null,
         lastHopPubkey: null
     };
+
+    async UNSAFE_componentWillMount() {
+        const { SettingsStore } = this.props;
+        const { getSettings } = SettingsStore;
+        const settings = await getSettings();
+
+        this.setState({
+            feeOption: settings.payments.defaultFeeMethod || 'fixed',
+            feeLimitSat: settings.payments.defaultFeeFixed || '100',
+            maxFeePercent: settings.payments.defaultFeePercentage || '0.5'
+        });
+    }
 
     subscribePayment = (streamingCall: string) => {
         const { handlePayment, handlePaymentError } =
@@ -148,7 +160,7 @@ export default class PaymentRequest extends React.Component<
             this.props;
         let feeLimitSat = fee_limit_sat;
 
-        if (feeOption == 'sats') {
+        if (feeOption == 'fixed') {
             // If the fee limit is not set, use a default routing fee calculation
             if (!fee_limit_sat) {
                 const { pay_req } = InvoicesStore;
@@ -469,7 +481,7 @@ export default class PaymentRequest extends React.Component<
                                             style={{
                                                 width: '50%',
                                                 opacity:
-                                                    feeOption == 'sats'
+                                                    feeOption == 'fixed'
                                                         ? 1
                                                         : 0.25
                                             }}
@@ -482,7 +494,7 @@ export default class PaymentRequest extends React.Component<
                                             }
                                             onPressIn={() =>
                                                 this.setState({
-                                                    feeOption: 'sats'
+                                                    feeOption: 'fixed'
                                                 })
                                             }
                                         />
@@ -493,7 +505,7 @@ export default class PaymentRequest extends React.Component<
                                                 top: 28,
                                                 right: 30,
                                                 opacity:
-                                                    feeOption == 'sats'
+                                                    feeOption == 'fixed'
                                                         ? 1
                                                         : 0.25
                                             }}

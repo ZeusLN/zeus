@@ -46,6 +46,12 @@ interface PosSettings {
     confirmationPreference?: string;
 }
 
+interface PaymentSettings {
+    defaultFeeMethod?: string;
+    defaultFeePercentage?: string;
+    defaultFeeFixed?: string;
+}
+
 interface Settings {
     nodes?: Array<Node>;
     selectedNode?: number;
@@ -61,6 +67,7 @@ interface Settings {
     privacy: PrivacySettings;
     display: DisplaySettings;
     pos: PosSettings;
+    payments: PaymentSettings;
 }
 
 export const BLOCK_EXPLORER_KEYS = [
@@ -204,6 +211,11 @@ export default class SettingsStore {
             squareAccessToken: '',
             squareLocationId: '',
             confirmationPreference: 'lnOnly'
+        },
+        payments: {
+            defaultFeeMethod: 'fixed',
+            defaultFeePercentage: '0.5',
+            defaultFeeFixed: '100'
         },
         scramblePin: true,
         loginBackground: false,
