@@ -39,6 +39,12 @@ interface DisplaySettings {
     displayNickname?: boolean;
 }
 
+interface PaymentSettings {
+    defaultFeeMethod?: string;
+    defaultFeePercentage?: string;
+    defaultFeeFixed?: string;
+}
+
 interface Settings {
     nodes?: Array<Node>;
     selectedNode?: number;
@@ -53,6 +59,7 @@ interface Settings {
     locale?: string;
     privacy: PrivacySettings;
     display: DisplaySettings;
+    payments: PaymentSettings;
 }
 
 export const BLOCK_EXPLORER_KEYS = [
@@ -184,6 +191,11 @@ export default class SettingsStore {
             theme: DEFAULT_THEME,
             defaultView: 'Keypad',
             displayNickname: false
+        },
+        payments: {
+            defaultFeeMethod: 'fixed',
+            defaultFeePercentage: '0.5',
+            defaultFeeFixed: '100'
         },
         scramblePin: true,
         loginBackground: false,
