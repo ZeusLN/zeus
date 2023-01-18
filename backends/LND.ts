@@ -338,6 +338,7 @@ export default class LND {
         });
     subscribeInvoice = (r_hash: string) =>
         this.getRequest(`/v2/invoices/subscribe/${r_hash}`);
+    subscribeTransactions = () => this.getRequest('/v1/transactions/subscribe');
 
     supportsMessageSigning = () => true;
     supportsOnchainSends = () => true;

@@ -465,6 +465,10 @@
     "views.Settings.POS.enableSquare": "Enable Square POS integration",
     "views.Settings.POS.accessToken": "Square Access token",
     "views.Settings.POS.locationId": "Square Location ID",
+<<<<<<< HEAD
+=======
+    "views.Settings.POS.confPref": "Confirmation preference",
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
     "views.Transaction.title": "Transaction",
     "views.Transaction.totalFees": "Total Fees",
     "views.Transaction.transactionHash": "Transaction Hash",

@@ -48,7 +48,11 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         this.state = {
             order,
             selectedIndex: 0,
+<<<<<<< HEAD
             customPercentage: '20',
+=======
+            customPercentage: '21',
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
             customAmount: '',
             customType: 'percentage',
             units: 'sats'
@@ -172,10 +176,17 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     ).toFixed(2);
                 } else if (customType === 'amount') {
                     totalAmount = !isNaN(Number(customAmount))
+<<<<<<< HEAD
                         ? order.getTotalMoney
                         : (order.getTotalMoney + Number(customAmount)).toFixed(
                               2
                           );
+=======
+                        ? `${Number(
+                              Number(order.getTotalMoney) + Number(customAmount)
+                          ).toFixed(2)}`
+                        : order.getTotalMoney;
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
                     tipAmount = !isNaN(Number(customAmount))
                         ? Number(customAmount).toFixed(2)
                         : '0';
@@ -226,6 +237,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                 />
 
                 <View style={styles.content}>
+<<<<<<< HEAD
                     {lineItems.map((item: any) => {
                         return (
                             <KeyValue
@@ -234,6 +246,17 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                         ? `${item.name} (x${item.quantity})`
                                         : item.name
                                 }
+=======
+                    {lineItems.map((item: any, index: number) => {
+                        const keyValue =
+                            item.quantity > 1
+                                ? `${item.name} (x${item.quantity})`
+                                : item.name;
+                        return (
+                            <KeyValue
+                                key={index}
+                                keyValue={keyValue}
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
                                 value={`$${Number(
                                     item.total_money.amount / 100
                                 ).toFixed(2)}`}
@@ -324,11 +347,25 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 keyboardType="numeric"
                                 right={25}
                                 value={customAmount}
+<<<<<<< HEAD
                                 onChangeText={(text: string) =>
                                     this.setState({
                                         customAmount: text
                                     })
                                 }
+=======
+                                onChangeText={(text: string) => {
+                                    if (
+                                        text.includes('-') ||
+                                        (text.split('.')[1] &&
+                                            text.split('.')[1].length === 3)
+                                    )
+                                        return;
+                                    this.setState({
+                                        customAmount: text
+                                    });
+                                }}
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
                                 onPressIn={() =>
                                     this.setState({
                                         customType: 'amount'
@@ -396,6 +433,10 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 orderAmount: Number(order.getTotalMoney) * 100
                             })
                         }
+<<<<<<< HEAD
+=======
+                        disabled={isNaN(Number(satAmount))}
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
                     />
                 </View>
             </ScrollView>

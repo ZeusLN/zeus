@@ -10,6 +10,10 @@ import {
 import { SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
+<<<<<<< HEAD
+=======
+import Button from '../../components/Button';
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
 import LoadingIndicator from '../../components/LoadingIndicator';
 import WalletHeader from '../../components/WalletHeader';
 
@@ -17,18 +21,35 @@ import { Spacer } from '../../components/layout/Spacer';
 import OrderItem from './OrderItem';
 
 import FiatStore from '../../stores/FiatStore';
+<<<<<<< HEAD
+=======
+import NodeInfoStore from '../../stores/NodeInfoStore';
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
 import PosStore from '../../stores/PosStore';
 import UnitsStore from '../../stores/UnitsStore';
 import SettingsStore from '../../stores/SettingsStore';
 
+<<<<<<< HEAD
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
 import Order from '../../models/Order';
+=======
+import Order from '../../models/Order';
+
+import { themeColor } from '../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+
+import { version } from './../../package.json';
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
 
 interface PosPaneProps {
     navigation: any;
     FiatStore: FiatStore;
+<<<<<<< HEAD
+=======
+    NodeInfoStore: NodeInfoStore;
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
     PosStore: PosStore;
     UnitsStore: UnitsStore;
     SettingsStore: SettingsStore;
@@ -40,7 +61,11 @@ interface PosPaneState {
     fadeAnimation: any;
 }
 
+<<<<<<< HEAD
 @inject('FiatStore', 'PosStore', 'UnitsStore', 'SettingsStore')
+=======
+@inject('FiatStore', 'NodeInfoStore', 'PosStore', 'UnitsStore', 'SettingsStore')
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
 @observer
 export default class PosPane extends React.PureComponent<
     PosPaneProps,
@@ -74,6 +99,7 @@ export default class PosPane extends React.PureComponent<
         ).start();
     }
 
+<<<<<<< HEAD
     updateSearch = (value: string) => {
         const { orders } = this.props.PosStore;
         const result = orders.filter(
@@ -90,11 +116,20 @@ export default class PosPane extends React.PureComponent<
     renderItem = (order) => {
         const { navigation, FiatStore } = this.props;
         const { getRate, loading } = FiatStore;
+=======
+    renderItem = (order) => {
+        const { navigation, FiatStore } = this.props;
+        const { getRate } = FiatStore;
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
         const { item } = order;
         return (
             <TouchableHighlight
                 onPress={() => {
+<<<<<<< HEAD
                     if (loading || getRate() === '$N/A') return;
+=======
+                    if (getRate() === '$N/A') return;
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
                     navigation.navigate('Order', {
                         order: item
                     });
@@ -110,6 +145,7 @@ export default class PosPane extends React.PureComponent<
     };
 
     render() {
+<<<<<<< HEAD
         const { SettingsStore, PosStore, FiatStore, navigation } = this.props;
         const { search, filteredOrders } = this.state;
         const { loading, getOrders } = PosStore;
@@ -121,6 +157,100 @@ export default class PosPane extends React.PureComponent<
             orders.length
         })`;
 
+=======
+        const {
+            SettingsStore,
+            PosStore,
+            FiatStore,
+            NodeInfoStore,
+            navigation
+        } = this.props;
+        const { search } = this.state;
+        const { loading, getOrders, filteredOrders, updateSearch } = PosStore;
+        const { getRate, getFiatRates } = FiatStore;
+        const orders = filteredOrders;
+
+        const headerString = `${localeString('general.orders')} (${
+            orders.length || 0
+        })`;
+
+        const error = NodeInfoStore.error || SettingsStore.error;
+
+        if (error) {
+            return (
+                <View
+                    style={{
+                        backgroundColor: themeColor('error'),
+                        paddingTop: 20,
+                        paddingLeft: 10,
+                        flex: 1
+                    }}
+                >
+                    <Text
+                        style={{
+                            fontFamily: 'Lato-Regular',
+                            color: '#fff',
+                            fontSize: 20,
+                            marginTop: 20,
+                            marginBottom: 25
+                        }}
+                    >
+                        {SettingsStore.errorMsg
+                            ? SettingsStore.errorMsg
+                            : NodeInfoStore.errorMsg
+                            ? NodeInfoStore.errorMsg
+                            : localeString('views.Wallet.MainPane.error')}
+                    </Text>
+                    <Button
+                        icon={{
+                            name: 'settings',
+                            size: 25,
+                            color: '#fff'
+                        }}
+                        title={localeString(
+                            'views.Wallet.MainPane.goToSettings'
+                        )}
+                        buttonStyle={{
+                            backgroundColor: 'gray',
+                            borderRadius: 30
+                        }}
+                        containerStyle={{
+                            alignItems: 'center'
+                        }}
+                        onPress={() => {
+                            const { posStatus, settings } =
+                                this.props.SettingsStore;
+                            const loginRequired =
+                                settings &&
+                                (settings.passphrase || settings.pin);
+                            const posEnabled = posStatus === 'active';
+
+                            if (posEnabled && loginRequired) {
+                                navigation.navigate('Lockscreen', {
+                                    attemptAdminLogin: true
+                                });
+                            } else {
+                                navigation.navigate('Settings');
+                            }
+                        }}
+                        adaptiveWidth
+                    />
+                    <Text
+                        style={{
+                            fontFamily: 'Lato-Regular',
+                            color: '#fff',
+                            fontSize: 12,
+                            marginTop: 20,
+                            marginBottom: -40
+                        }}
+                    >
+                        {`v${version}`}
+                    </Text>
+                </View>
+            );
+        }
+
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
         return (
             <View style={{ flex: 1 }}>
                 <WalletHeader
@@ -129,7 +259,11 @@ export default class PosPane extends React.PureComponent<
                     SettingsStore={SettingsStore}
                 />
 
+<<<<<<< HEAD
                 {fiatLoading ? (
+=======
+                {getRate() === '$N/A' ? (
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
                     <Animated.View
                         style={{
                             alignSelf: 'center',
@@ -171,7 +305,16 @@ export default class PosPane extends React.PureComponent<
                 {!loading && (
                     <SearchBar
                         placeholder={localeString('general.search')}
+<<<<<<< HEAD
                         onChangeText={this.updateSearch}
+=======
+                        onChangeText={(value: string) => {
+                            updateSearch(value);
+                            this.setState({
+                                search: value
+                            });
+                        }}
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
                         value={search}
                         inputStyle={{
                             color: themeColor('text')
@@ -196,7 +339,11 @@ export default class PosPane extends React.PureComponent<
                         ListFooterComponent={<Spacer height={100} />}
                         onRefresh={() => getOrders()}
                         refreshing={loading}
+<<<<<<< HEAD
                         keyExtractor={(item, index) => `${item.id}-${index}`}
+=======
+                        keyExtractor={(item, index) => `${index}`}
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
                     />
                 )}
 

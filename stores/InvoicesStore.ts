@@ -111,20 +111,20 @@ export default class InvoicesStore {
         routeHints?: boolean,
         addressType?: string
     ) => {
-        const rHash = this.createInvoice(
+        if (BackendUtils.supportsOnchainReceiving()) {
+            this.getNewAddress(addressType ? { type: addressType } : null);
+        }
+
+        return this.createInvoice(
             memo,
             value,
             expiry,
             lnurl,
             ampInvoice,
             routeHints
-        );
-
-        if (BackendUtils.supportsOnchainReceiving()) {
-            this.getNewAddress(addressType ? { type: addressType } : null);
-        }
-
-        return rHash;
+        ).then((rHash: string) => {
+            return { rHash, onChainAddress: this.onChainAddress };
+        });
     };
 
     @action

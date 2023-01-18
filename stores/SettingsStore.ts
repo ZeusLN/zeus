@@ -43,6 +43,7 @@ interface PosSettings {
     squareEnabled?: boolean;
     squareAccessToken?: string;
     squareLocationId?: string;
+    confirmationPreference?: string;
 }
 
 interface Settings {
@@ -176,6 +177,12 @@ export const DEFAULT_THEME = 'dark';
 export const DEFAULT_FIAT = 'Disabled';
 export const DEFAULT_LOCALE = 'English';
 
+export const POS_CONF_PREF_KEYS = [
+    { key: '0 conf', value: '0conf' },
+    { key: '1 conf', value: '1conf' },
+    { key: 'LN only', value: 'lnOnly' }
+];
+
 const STORAGE_KEY = 'zeus-settings';
 
 export default class SettingsStore {
@@ -195,7 +202,8 @@ export default class SettingsStore {
         pos: {
             squareEnabled: false,
             squareAccessToken: '',
-            squareLocationId: ''
+            squareLocationId: '',
+            confirmationPreference: 'lnOnly'
         },
         scramblePin: true,
         loginBackground: false,
