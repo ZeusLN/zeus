@@ -48,6 +48,7 @@ import Sponsors from './views/Settings/Sponsors';
 import Olympians from './views/Settings/Olympians';
 import Gods from './views/Settings/Gods';
 import Mortals from './views/Settings/Mortals';
+import PaymentsSettings from './views/Settings/PaymentsSettings';
 
 // Routing
 import Routing from './views/Routing/Routing';
@@ -239,6 +240,9 @@ const AppScenes = {
     },
     SparkQRScanner: {
         screen: SparkQRScanner
+    },
+    PaymentsSettings: {
+        screen: PaymentsSettings
     }
 };
 

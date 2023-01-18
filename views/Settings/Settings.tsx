@@ -14,6 +14,7 @@ import BrushIcon from '../../assets/images/SVG/Brush.svg';
 import LanguageIcon from '../../assets/images/SVG/Globe.svg';
 import HelpIcon from '../../assets/images/SVG/Help Icon.svg';
 import NodeOn from '../../assets/images/SVG/Node On.svg';
+import SendIcon from '../../assets/images/SVG/Send';
 
 import NodeIdenticon, { NodeTitle } from './../../components/NodeIdenticon';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -242,6 +243,42 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         </View>
                     </View>
                 )}
+
+                {selectedNode && (
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            width: '90%',
+                            height: 45,
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            top: 30
+                        }}
+                    >
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() =>
+                                navigation.navigate('PaymentsSettings')
+                            }
+                        >
+                            <View>
+                                <SendIcon stroke={themeColor('text')} />
+                            </View>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString('views.Settings.payments')}
+                            </Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
                 {selectedNode && BackendUtils.supportsMessageSigning() ? (
                     <View
                         style={{
@@ -250,7 +287,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             height: 138,
                             borderRadius: 10,
                             alignSelf: 'center',
-                            top: 30
+                            top: 45
                         }}
                     >
                         <TouchableOpacity
@@ -381,7 +418,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         height: 90,
                         borderRadius: 10,
                         alignSelf: 'center',
-                        top: 50
+                        top: 60
                     }}
                 >
                     <TouchableOpacity
@@ -435,7 +472,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         height: 45,
                         borderRadius: 10,
                         alignSelf: 'center',
-                        top: 70
+                        top: 75
                     }}
                 >
                     <TouchableOpacity
