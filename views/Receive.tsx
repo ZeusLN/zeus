@@ -72,6 +72,7 @@ export default class Receive extends React.Component<
     ReceiveState
 > {
     listener: any;
+    listenerSecondary: any;
     state = {
         selectedIndex: 0,
         addressType: '0',
@@ -87,8 +88,16 @@ export default class Receive extends React.Component<
     };
 
     componentDidMount() {
-        const { navigation, InvoicesStore } = this.props;
+        const { navigation, InvoicesStore, SettingsStore } = this.props;
         const { reset } = InvoicesStore;
+        const { settings, posStatus } = SettingsStore;
+        const lnOnly =
+            settings &&
+            posStatus &&
+            posStatus === 'active' &&
+            settings.pos &&
+            settings.pos.confirmationPreference &&
+            settings.pos.confirmationPreference === 'lnOnly';
 
         reset();
         const lnurl: LNURLWithdrawParams | undefined =
@@ -124,6 +133,15 @@ export default class Receive extends React.Component<
             });
         }
 
+<<<<<<< HEAD
+=======
+        if (lnOnly) {
+            this.setState({
+                selectedIndex: 1
+            });
+        }
+
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
         if (autoGenerate)
             this.autoGenerateInvoice(this.getSatAmount(amount), memo);
     }
@@ -132,12 +150,20 @@ export default class Receive extends React.Component<
         if (this.listener && this.listener.stop) this.listener.stop();
     }
 
+<<<<<<< HEAD
     autoGenerateInvoice = (amount?: string, memo?: string) => {
+=======
+    autoGenerateInvoice = async (amount?: string, memo?: string) => {
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
         const { InvoicesStore } = this.props;
         const { createUnifiedInvoice } = InvoicesStore;
         const { expiry, ampInvoice, routeHints, addressType } = this.state;
 
+<<<<<<< HEAD
         createUnifiedInvoice(
+=======
+        const { rHash, onChainAddress } = await createUnifiedInvoice(
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
             memo || '',
             amount || '0',
             expiry,
@@ -145,14 +171,29 @@ export default class Receive extends React.Component<
             ampInvoice,
             routeHints,
             BackendUtils.supportsAddressTypeSelection() ? addressType : null
-        ).then((rHash: string) => this.subscribeInvoice(rHash));
+        );
+
+        this.subscribeInvoice(rHash, onChainAddress || '');
     };
 
+<<<<<<< HEAD
     subscribeInvoice = (rHash: string) => {
         const { InvoicesStore, PosStore, SettingsStore } = this.props;
         const { orderId, orderAmount, orderTip } = this.state;
         const { implementation } = SettingsStore;
+=======
+    subscribeInvoice = (rHash: string, onChainAddress: string) => {
+        const { InvoicesStore, PosStore, SettingsStore } = this.props;
+        const { orderId, orderAmount, orderTip, value } = this.state;
+        const { implementation, settings } = SettingsStore;
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
         const { setWatchedInvoicePaid } = InvoicesStore;
+
+        const numConfPreference =
+            settings.pos && settings.pos.confirmationPreference === '1conf'
+                ? 1
+                : 0;
+
         if (implementation === 'lightning-node-connect') {
             const { LncModule } = NativeModules;
             const eventName = BackendUtils.subscribeInvoice(rHash);
@@ -179,18 +220,76 @@ export default class Receive extends React.Component<
                     }
                 }
             );
+
+            const eventName2 = BackendUtils.subscribeTransactions();
+            const eventEmitter2 = new NativeEventEmitter(LncModule);
+            this.listenerSecondary = eventEmitter2.addListener(
+                eventName2,
+                (event: any) => {
+                    if (event.result) {
+                        try {
+                            const result = JSON.parse(event.result);
+                            if (
+                                result.dest_addresses.includes(
+                                    onChainAddress
+                                ) &&
+                                result.num_confirmations >= numConfPreference &&
+                                result.amount >= Number(value)
+                            ) {
+                                setWatchedInvoicePaid(result.amount);
+                                if (orderId)
+                                    PosStore.makePayment({
+                                        orderId,
+                                        orderAmount,
+                                        orderTip
+                                    });
+                                this.listenerSecondary = null;
+                            }
+                        } catch (error) {
+                            console.error(error);
+                        }
+                    }
+                }
+            );
         }
 
         if (implementation === 'lnd') {
             BackendUtils.subscribeInvoice(rHash).then((response: any) => {
+<<<<<<< HEAD
                 if (response.result && response.result.settled) {
                     setWatchedInvoicePaid(response.result.amt_paid_sat);
+=======
+                const result = response.result;
+                if (result && result.settled) {
+                    setWatchedInvoicePaid(result.amt_paid_sat);
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
                     if (orderId)
                         PosStore.makePayment({
                             orderId,
                             orderAmount,
                             orderTip
                         });
+<<<<<<< HEAD
+=======
+                }
+            });
+
+            BackendUtils.subscribeTransactions().then((response: any) => {
+                const result = response.result;
+                if (
+                    result.dest_addresses.includes(onChainAddress) &&
+                    result.num_confirmations >= numConfPreference &&
+                    result.amount >= Number(value)
+                ) {
+                    setWatchedInvoicePaid(result.amount);
+                    if (orderId)
+                        PosStore.makePayment({
+                            orderId,
+                            orderAmount,
+                            orderTip
+                        });
+                    this.listener = null;
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
                 }
             });
         }
@@ -278,9 +377,21 @@ export default class Receive extends React.Component<
             clearUnified,
             reset
         } = InvoicesStore;
+<<<<<<< HEAD
         const { implementation, posStatus } = SettingsStore;
+=======
+        const { implementation, posStatus, settings } = SettingsStore;
+>>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
         const loading = SettingsStore.loading || InvoicesStore.loading;
         const address = onChainAddress;
+
+        const lnOnly =
+            settings &&
+            posStatus &&
+            posStatus === 'active' &&
+            settings.pos &&
+            settings.pos.confirmationPreference &&
+            settings.pos.confirmationPreference === 'lnOnly';
 
         const satAmount = this.getSatAmount();
 
@@ -623,28 +734,32 @@ export default class Receive extends React.Component<
                                             textBottom
                                         />
                                     )}
-                                    {!belowDustLimit && haveUnifiedInvoice && (
-                                        <ButtonGroup
-                                            onPress={this.updateIndex}
-                                            selectedIndex={selectedIndex}
-                                            buttons={buttons}
-                                            selectedButtonStyle={{
-                                                backgroundColor:
-                                                    themeColor('highlight'),
-                                                borderRadius: 12
-                                            }}
-                                            containerStyle={{
-                                                backgroundColor:
-                                                    themeColor('secondary'),
-                                                borderRadius: 12,
-                                                borderColor:
-                                                    themeColor('secondary')
-                                            }}
-                                            innerBorderStyle={{
-                                                color: themeColor('secondary')
-                                            }}
-                                        />
-                                    )}
+                                    {!belowDustLimit &&
+                                        haveUnifiedInvoice &&
+                                        !lnOnly && (
+                                            <ButtonGroup
+                                                onPress={this.updateIndex}
+                                                selectedIndex={selectedIndex}
+                                                buttons={buttons}
+                                                selectedButtonStyle={{
+                                                    backgroundColor:
+                                                        themeColor('highlight'),
+                                                    borderRadius: 12
+                                                }}
+                                                containerStyle={{
+                                                    backgroundColor:
+                                                        themeColor('secondary'),
+                                                    borderRadius: 12,
+                                                    borderColor:
+                                                        themeColor('secondary')
+                                                }}
+                                                innerBorderStyle={{
+                                                    color: themeColor(
+                                                        'secondary'
+                                                    )
+                                                }}
+                                            />
+                                        )}
                                 </View>
                             )}
                             {!loading && !haveInvoice && (
@@ -847,7 +962,7 @@ export default class Receive extends React.Component<
                                                       )} ${lnurl.domain}`
                                                     : '')
                                             }
-                                            onPress={() =>
+                                            onPress={() => {
                                                 createUnifiedInvoice(
                                                     memo,
                                                     satAmount.toString() || '0',
@@ -857,11 +972,19 @@ export default class Receive extends React.Component<
                                                     routeHints,
                                                     BackendUtils.supportsAddressTypeSelection()
                                                         ? addressType
-                                                        : null
-                                                ).then((rHash: string) =>
-                                                    this.subscribeInvoice(rHash)
-                                                )
-                                            }
+                                                        : undefined
+                                                ).then(
+                                                    ({
+                                                        rHash,
+                                                        onChainAddress
+                                                    }: any) => {
+                                                        this.subscribeInvoice(
+                                                            rHash,
+                                                            onChainAddress || ''
+                                                        );
+                                                    }
+                                                );
+                                            }}
                                         />
                                     </View>
                                 </>
@@ -894,8 +1017,9 @@ export default class Receive extends React.Component<
                     >
                         {localeString('views.Receive.addressType')}
                     </Text>
-                    {_map(ADDRESS_TYPES, (d) => (
+                    {_map(ADDRESS_TYPES, (d, index) => (
                         <TouchableOpacity
+                            key={index}
                             onPress={() => {
                                 InvoicesStore.clearAddress();
                                 this.setState({ addressType: d.value });
