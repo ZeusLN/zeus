@@ -177,12 +177,12 @@ export default class Receive extends React.Component<
         }
     }
 
-    autoGenerateInvoice = async (amount?: string, memo?: string) => {
+    autoGenerateInvoice = (amount?: string, memo?: string) => {
         const { InvoicesStore } = this.props;
         const { createUnifiedInvoice } = InvoicesStore;
         const { expiry, ampInvoice, routeHints, addressType } = this.state;
 
-        const { rHash, onChainAddress } = await createUnifiedInvoice(
+        createUnifiedInvoice(
             memo || '',
             amount || '0',
             expiry,
@@ -190,9 +190,17 @@ export default class Receive extends React.Component<
             ampInvoice,
             routeHints,
             BackendUtils.supportsAddressTypeSelection() ? addressType : null
+        ).then(
+            ({
+                rHash,
+                onChainAddress
+            }: {
+                rHash: string;
+                onChainAddress?: string;
+            }) => {
+                this.subscribeInvoice(rHash, onChainAddress);
+            }
         );
-
-        this.subscribeInvoice(rHash, onChainAddress || '');
     };
 
     disableNfc = () => {
@@ -259,10 +267,21 @@ export default class Receive extends React.Component<
                             '3600',
                             lnurlParams
                         )
-                            .then((rHash: string) => {
-                                navigation.setParam;
-                                this.subscribeInvoice(rHash);
-                            })
+                            .then(
+                                ({
+                                    rHash,
+                                    onChainAddress
+                                }: {
+                                    rHash: string;
+                                    onChainAddress?: string;
+                                }) => {
+                                    navigation.setParam;
+                                    this.subscribeInvoice(
+                                        rHash,
+                                        onChainAddress
+                                    );
+                                }
+                            )
                             .catch(() => {
                                 navigation.navigate(route, {
                                     amount,
@@ -277,7 +296,7 @@ export default class Receive extends React.Component<
             .catch();
     };
 
-    subscribeInvoice = (rHash: string, onChainAddress: string) => {
+    subscribeInvoice = (rHash: string, onChainAddress?: string) => {
         const { InvoicesStore, PosStore, SettingsStore } = this.props;
         const { orderId, orderAmount, orderTip, value } = this.state;
         const { implementation, settings } = SettingsStore;
@@ -315,36 +334,39 @@ export default class Receive extends React.Component<
                 }
             );
 
-            const eventName2 = BackendUtils.subscribeTransactions();
-            const eventEmitter2 = new NativeEventEmitter(LncModule);
-            this.listenerSecondary = eventEmitter2.addListener(
-                eventName2,
-                (event: any) => {
-                    if (event.result) {
-                        try {
-                            const result = JSON.parse(event.result);
-                            if (
-                                result.dest_addresses.includes(
-                                    onChainAddress
-                                ) &&
-                                result.num_confirmations >= numConfPreference &&
-                                result.amount >= Number(value)
-                            ) {
-                                setWatchedInvoicePaid(result.amount);
-                                if (orderId)
-                                    PosStore.makePayment({
-                                        orderId,
-                                        orderAmount,
-                                        orderTip
-                                    });
-                                this.listenerSecondary = null;
+            if (onChainAddress) {
+                const eventName2 = BackendUtils.subscribeTransactions();
+                const eventEmitter2 = new NativeEventEmitter(LncModule);
+                this.listenerSecondary = eventEmitter2.addListener(
+                    eventName2,
+                    (event: any) => {
+                        if (event.result) {
+                            try {
+                                const result = JSON.parse(event.result);
+                                if (
+                                    result.dest_addresses.includes(
+                                        onChainAddress
+                                    ) &&
+                                    result.num_confirmations >=
+                                        numConfPreference &&
+                                    Number(result.amount) >= Number(value)
+                                ) {
+                                    setWatchedInvoicePaid(result.amount);
+                                    if (orderId)
+                                        PosStore.makePayment({
+                                            orderId,
+                                            orderAmount,
+                                            orderTip
+                                        });
+                                    this.listenerSecondary = null;
+                                }
+                            } catch (error) {
+                                console.error(error);
                             }
-                        } catch (error) {
-                            console.error(error);
                         }
                     }
-                }
-            );
+                );
+            }
         }
 
         if (implementation === 'lnd') {
@@ -361,23 +383,74 @@ export default class Receive extends React.Component<
                 }
             });
 
-            BackendUtils.subscribeTransactions().then((response: any) => {
-                const result = response.result;
-                if (
-                    result.dest_addresses.includes(onChainAddress) &&
-                    result.num_confirmations >= numConfPreference &&
-                    result.amount >= Number(value)
-                ) {
-                    setWatchedInvoicePaid(result.amount);
-                    if (orderId)
-                        PosStore.makePayment({
-                            orderId,
-                            orderAmount,
-                            orderTip
-                        });
-                    this.listener = null;
-                }
-            });
+            // TODO investigate why call is timing out
+            // BackendUtils.subscribeTransactions({}).then((response: any) => {
+            //     const result = response.result;
+            //     if (
+            //         result.dest_addresses.includes(onChainAddress) &&
+            //         result.num_confirmations >= numConfPreference &&
+            //         result.amount >= Number(value)
+            //     ) {
+            //         const output_details = result.output_details;
+            //         for (let i = 0; i < output_details.length; i++) {
+            //             const output = output_details[i];
+            //             if (Number(output.amount) >= Number(value) && output.address === onChainAddress) {
+            //                 setWatchedInvoicePaid(output.amount);
+            //                 if (orderId)
+            //                     PosStore.makePayment({
+            //                         orderId,
+            //                         orderAmount,
+            //                         orderTip
+            //                     });
+            //                 break;
+            //             }
+            //         }
+            //     }
+            // });
+
+            // this is workaround that manually calls your transactions every 30 secs
+            if (onChainAddress) {
+                setInterval(function () {
+                    BackendUtils.getTransactions().then((response: any) => {
+                        const txs = response.transactions;
+                        for (let i = 0; i < txs.length; i++) {
+                            const result = txs[i];
+                            if (
+                                result.dest_addresses.includes(
+                                    onChainAddress
+                                ) &&
+                                result.num_confirmations >= numConfPreference
+                            ) {
+                                // loop through outputs since amount is negative if unconfirmed
+                                const output_details = result.output_details;
+                                for (
+                                    let j = 0;
+                                    j < output_details.length;
+                                    j++
+                                ) {
+                                    const output = output_details[j];
+                                    if (
+                                        Number(output.amount) >=
+                                            Number(value) &&
+                                        output.address === onChainAddress
+                                    ) {
+                                        setWatchedInvoicePaid(output.amount);
+                                        if (orderId)
+                                            PosStore.makePayment({
+                                                orderId,
+                                                orderAmount,
+                                                orderTip
+                                            });
+                                        // break parent loop
+                                        i = txs.length;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }, 30000);
+            }
         }
     };
 
@@ -1084,10 +1157,13 @@ export default class Receive extends React.Component<
                                                     ({
                                                         rHash,
                                                         onChainAddress
-                                                    }: any) => {
+                                                    }: {
+                                                        rHash: string;
+                                                        onChainAddress?: string;
+                                                    }) => {
                                                         this.subscribeInvoice(
                                                             rHash,
-                                                            onChainAddress || ''
+                                                            onChainAddress
                                                         );
                                                     }
                                                 );

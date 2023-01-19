@@ -196,8 +196,8 @@ export default class LND {
     deleteRequest = (route: string) => this.request(route, 'delete', null);
 
     getTransactions = () =>
-        this.getRequest('/v1/transactions').then((data: any) => ({
-            transactions: data.transactions.reverse()
+        this.getRequest('/v1/transactions?end_height=-1').then((data: any) => ({
+            transactions: data.transactions
         }));
     getChannels = () => this.getRequest('/v1/channels');
     getChannelInfo = (chanId: string) =>
