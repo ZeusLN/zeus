@@ -29,6 +29,7 @@ body:
       label: Zeus version
       description: What version of Zeus were you running when the bug occurred?
       options:
+        - v0.7.2
         - v0.7.1
         - v0.7.0
         - v0.6.6
