@@ -44,15 +44,17 @@ export default class PosStore {
         orderAmount,
         orderTip
     }: makePaymentRequest) => {
-        const { squareAccessToken, squareLocationId } =
+        const { squareAccessToken, squareLocationId, squareDevMode } =
             this.settingsStore.settings.pos;
         const fiat: string = this.settingsStore.settings.fiat || 'USD';
         this.loading = true;
         this.error = false;
+        const apiHost = squareDevMode
+            ? 'https://connect.squareupsandbox.com'
+            : 'https://connect.squareup.com';
         ReactNativeBlobUtil.fetch(
             'POST',
-            // DEV -> 'https://connect.squareupsandbox.com/v2/payments',
-            'https://connect.squareupsandbox.com/v2/payments',
+            `${apiHost}/v2/payments`,
             {
                 Authorization: `Bearer ${squareAccessToken}`,
                 'Content-Type': 'application/json'
@@ -93,15 +95,17 @@ export default class PosStore {
 
     @action
     public getOrders = (states = ['OPEN']) => {
-        const { squareAccessToken, squareLocationId } =
+        const { squareAccessToken, squareLocationId, squareDevMode } =
             this.settingsStore.settings.pos;
         this.loading = true;
         this.error = false;
         this.orders = [];
+        const apiHost = squareDevMode
+            ? 'https://connect.squareupsandbox.com'
+            : 'https://connect.squareup.com';
         ReactNativeBlobUtil.fetch(
             'POST',
-            // DEV -> 'https://connect.squareupsandbox.com/v2/orders/search'
-            'https://connect.squareupsandbox.com/v2/orders/search',
+            `${apiHost}/v2/orders/search`,
             {
                 Authorization: `Bearer ${squareAccessToken}`,
                 'Content-Type': 'application/json'
