@@ -17,6 +17,7 @@ import RNRestart from 'react-native-restart';
 import ChannelsPane from '../Channels/ChannelsPane';
 import KeypadPane from './KeypadPane';
 import BalancePane from './BalancePane';
+import PosPane from './PosPane';
 
 import Button from './../../components/Button';
 import LayerBalances from './../../components/LayerBalances';
@@ -32,6 +33,7 @@ import ChannelsStore from './../../stores/ChannelsStore';
 import FeeStore from './../../stores/FeeStore';
 
 import NodeInfoStore from './../../stores/NodeInfoStore';
+import PosStore from './../../stores/PosStore';
 import SettingsStore from './../../stores/SettingsStore';
 import FiatStore from './../../stores/FiatStore';
 import UnitsStore from './../../stores/UnitsStore';
@@ -39,6 +41,7 @@ import UTXOsStore from './../../stores/UTXOsStore';
 
 import Bitcoin from './../../assets/images/SVG/Bitcoin.svg';
 import Temple from './../../assets/images/SVG/Temple.svg';
+import POS from './../../assets/images/SVG/POS.svg';
 import ChannelsIcon from './../../assets/images/SVG/Channels.svg';
 import CaretUp from './../../assets/images/SVG/Caret Up.svg';
 import WordLogo from './../../assets/images/SVG/Word Logo.svg';
@@ -54,6 +57,7 @@ interface WalletProps {
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
     FiatStore: FiatStore;
+    PosStore: PosStore;
     UTXOsStore: UTXOsStore;
 }
 
@@ -69,6 +73,7 @@ interface WalletState {
     'SettingsStore',
     'UnitsStore',
     'FiatStore',
+    'PosStore',
     'UTXOsStore'
 )
 @observer
@@ -137,14 +142,27 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
     async getSettingsAndNavigate() {
         const { SettingsStore, navigation } = this.props;
+        const { posStatus, setPosStatus } = SettingsStore;
 
         // This awaits on settings, so should await on Tor being bootstrapped before making requests
-        await SettingsStore.getSettings().then((settings: any) => {
+        await SettingsStore.getSettings().then(async (settings: any) => {
             const loginRequired =
                 settings &&
                 (settings.passphrase || settings.pin) &&
                 !SettingsStore.loggedIn;
-            if (loginRequired) {
+            const posEnabled =
+                settings && settings.pos && settings.pos.squareEnabled;
+
+            if (posEnabled && posStatus === 'inactive' && loginRequired) {
+                navigation.navigate('Lockscreen');
+            } else if (posEnabled && posStatus === 'unselected') {
+                await setPosStatus('active');
+                if (!this.state.unlocked) {
+                    this.startListeners();
+                    this.setState({ unlocked: true });
+                }
+                this.fetchData();
+            } else if (loginRequired) {
                 navigation.navigate('Lockscreen');
             } else if (
                 settings &&
@@ -183,6 +201,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             FeeStore,
             UTXOsStore,
             SettingsStore,
+            PosStore,
             FiatStore
         } = this.props;
         const {
@@ -193,9 +212,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             login,
             connecting,
             setConnectingStatus,
-            connect
+            connect,
+            posStatus
         } = SettingsStore;
-        const { fiat } = settings;
+        const { fiat, pos } = settings;
+
+        if (pos && pos.squareEnabled && posStatus === 'active')
+            PosStore.getOrders();
 
         if (!!fiat && fiat !== 'Disabled') {
             FiatStore.getFiatRates();
@@ -256,11 +279,18 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         } = this.props;
         const { nodeInfo } = NodeInfoStore;
         const error = NodeInfoStore.error || SettingsStore.error;
-        const { implementation, settings, loggedIn, connecting } =
+        const { implementation, settings, loggedIn, connecting, posStatus } =
             SettingsStore;
         const loginRequired =
             !settings ||
-            (settings && (settings.passphrase || settings.pin) && !loggedIn);
+            (settings &&
+                (settings.passphrase || settings.pin) &&
+                !loggedIn &&
+                settings.pos);
+
+        const squareEnabled: boolean =
+            (settings && settings.pos && settings.pos.squareEnabled) || false;
+
         const dataAvailable = implementation === 'lndhub' || nodeInfo.version;
 
         const BalanceScreen = () => {
@@ -335,6 +365,19 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             );
         };
 
+        const PosScreen = () => {
+            return (
+                <View
+                    style={{
+                        backgroundColor: themeColor('background'),
+                        flex: 1
+                    }}
+                >
+                    <PosPane navigation={navigation} />
+                </View>
+            );
+        };
+
         const KeypadScreen = () => {
             return (
                 <View
@@ -373,13 +416,15 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         return (
             <View style={{ flex: 1 }}>
                 <View style={{ flex: 1 }}>
-                    {!connecting && !loginRequired && (
+                    {!connecting && (!loginRequired || squareEnabled) && (
                         <NavigationContainer theme={Theme}>
                             <Tab.Navigator
                                 initialRouteName={
-                                    (settings.display &&
-                                        settings.display.defaultView) ||
-                                    'Keypad'
+                                    squareEnabled && posStatus === 'active'
+                                        ? 'POS'
+                                        : (settings.display &&
+                                              settings.display.defaultView) ||
+                                          'Keypad'
                                 }
                                 screenOptions={({ route }) => ({
                                     tabBarIcon: ({ color }) => {
@@ -388,6 +433,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         }
                                         if (route.name === 'Balance') {
                                             return <Temple fill={color} />;
+                                        }
+                                        if (route.name === 'POS') {
+                                            return (
+                                                <POS
+                                                    stroke={themeColor('text')}
+                                                />
+                                            );
                                         }
                                         if (
                                             BackendUtils.supportsChannelManagement()
@@ -410,39 +462,55 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     showLabel: false
                                 }}
                             >
-                                <Tab.Screen
-                                    name="Balance"
-                                    component={BalanceScreen}
-                                />
-                                {!error ? (
+                                {squareEnabled && posStatus === 'active' ? (
                                     <Tab.Screen
-                                        name="Keypad"
-                                        component={KeypadScreen}
+                                        name="POS"
+                                        component={PosScreen}
                                     />
                                 ) : (
                                     <Tab.Screen
-                                        name={'  '}
+                                        name="Balance"
                                         component={BalanceScreen}
                                     />
                                 )}
-                                {BackendUtils.supportsChannelManagement() &&
-                                !error ? (
-                                    <Tab.Screen
-                                        name={localeString(
-                                            'views.Wallet.Wallet.channels'
+                                {posStatus !== 'active' && (
+                                    <>
+                                        {!error ? (
+                                            <Tab.Screen
+                                                name="Keypad"
+                                                component={KeypadScreen}
+                                            />
+                                        ) : (
+                                            <Tab.Screen
+                                                name={'  '}
+                                                component={BalanceScreen}
+                                            />
                                         )}
-                                        component={ChannelsScreen}
-                                    />
-                                ) : (
-                                    <Tab.Screen
-                                        name={' '}
-                                        component={BalanceScreen}
-                                    />
+                                        {BackendUtils.supportsChannelManagement() &&
+                                        !error ? (
+                                            <Tab.Screen
+                                                name={localeString(
+                                                    'views.Wallet.Wallet.channels'
+                                                )}
+                                                component={ChannelsScreen}
+                                            />
+                                        ) : (
+                                            <Tab.Screen
+                                                name={' '}
+                                                component={
+                                                    squareEnabled &&
+                                                    posStatus === 'active'
+                                                        ? PosScreen
+                                                        : BalanceScreen
+                                                }
+                                            />
+                                        )}
+                                    </>
                                 )}
                             </Tab.Navigator>
                         </NavigationContainer>
                     )}
-                    {connecting && !loginRequired && (
+                    {connecting && (!loginRequired || squareEnabled) && (
                         <View
                             style={{
                                 backgroundColor: themeColor('background'),
@@ -482,33 +550,35 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 </Text>
                                 <LoadingIndicator size={120} />
                             </View>
-                            <View
-                                style={{
-                                    bottom: 56
-                                }}
-                            >
-                                <Button
-                                    title={
-                                        settings.nodes
-                                            ? localeString(
-                                                  'views.Settings.title'
-                                              )
-                                            : null
-                                    }
-                                    containerStyle={{
-                                        width: 320
+                            {posStatus !== 'active' && (
+                                <View
+                                    style={{
+                                        bottom: 56
                                     }}
-                                    titleStyle={{
-                                        color: themeColor('text')
-                                    }}
-                                    onPress={() => {
-                                        if (settings.nodes)
-                                            navigation.navigate('Settings');
-                                    }}
-                                    adaptiveWidth
-                                    iconOnly
-                                />
-                            </View>
+                                >
+                                    <Button
+                                        title={
+                                            settings.nodes
+                                                ? localeString(
+                                                      'views.Settings.title'
+                                                  )
+                                                : null
+                                        }
+                                        containerStyle={{
+                                            width: 320
+                                        }}
+                                        titleStyle={{
+                                            color: themeColor('text')
+                                        }}
+                                        onPress={() => {
+                                            if (settings.nodes)
+                                                navigation.navigate('Settings');
+                                        }}
+                                        adaptiveWidth
+                                        iconOnly
+                                    />
+                                </View>
+                            )}
                         </View>
                     )}
                 </View>

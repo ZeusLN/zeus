@@ -199,12 +199,10 @@ export default class FiatStore {
                     this.loading = false;
                     this.fiatRates = data;
                 } else {
-                    this.fiatRates = {};
                     this.loading = false;
                 }
             })
             .catch(() => {
-                this.fiatRates = {};
                 this.loading = false;
             });
     };
