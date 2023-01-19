@@ -339,6 +339,7 @@ export default class LND {
     lnurlAuth = (r_hash: string) => this.signMessage(r_hash);
     subscribeInvoice = (r_hash: string) =>
         this.getRequest(`/v2/invoices/subscribe/${r_hash}`);
+    subscribeTransactions = () => this.getRequest('/v1/transactions/subscribe');
 
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;

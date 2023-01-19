@@ -6,6 +6,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 
 import SettingsStore from '../stores/SettingsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
+import PosStore from '../stores/PosStore';
 
 import LoadingIndicator from '../components/LoadingIndicator';
 import NodeIdenticon from '../components/NodeIdenticon';
@@ -16,6 +17,8 @@ import { themeColor } from '../utils/ThemeUtils';
 
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
 import Scan from '../assets/images/SVG/Scan.svg';
+import POS from '../assets/images/SVG/POS.svg';
+import Temple from '../assets/images/SVG/Temple.svg';
 
 import stores from '../stores/Stores';
 
@@ -41,6 +44,38 @@ const OpenChannelButton = ({ navigation }: { navigation: any }) => (
     />
 );
 
+const TempleButton = ({
+    setPosStatus,
+    navigation
+}: {
+    setPosStatus: (status: string) => void;
+    navigation: any;
+}) => (
+    <TouchableOpacity
+        onPress={async () => {
+            const { posStatus, settings } = stores.settingsStore;
+            const loginRequired =
+                settings && (settings.passphrase || settings.pin);
+            const posEnabled = posStatus === 'active';
+            if (posEnabled && loginRequired) {
+                navigation.navigate('Lockscreen', {
+                    attemptAdminLogin: true
+                });
+            } else {
+                await setPosStatus('inactive');
+                navigation.navigate('Wallet');
+            }
+        }}
+    >
+        <Temple
+            fill={themeColor('text')}
+            width="40"
+            height="40"
+            style={{ right: -6, top: -8, alignSelf: 'center' }}
+        />
+    </TouchableOpacity>
+);
+
 const ScanBadge = ({ navigation }: { navigation: any }) => (
     <TouchableOpacity
         onPress={() => navigation.navigate('HandleAnythingQRScanner')}
@@ -63,9 +98,27 @@ const ClipboardBadge = ({
     </TouchableOpacity>
 );
 
+const POSBadge = ({
+    setPosStatus,
+    getOrders
+}: {
+    setPosStatus: (status: string) => void;
+    getOrders: () => void;
+}) => (
+    <TouchableOpacity
+        onPress={async () => {
+            getOrders();
+            await setPosStatus('active');
+        }}
+    >
+        <POS stroke={themeColor('text')} width="34" height="34" />
+    </TouchableOpacity>
+);
+
 interface WalletHeaderProps {
     SettingsStore: SettingsStore;
     NodeInfoStore: NodeInfoStore;
+    PosStore: PosStore;
     navigation: any;
     loading: boolean;
     title: string;
@@ -76,7 +129,7 @@ interface WalletHeaderState {
     clipboard: string;
 }
 
-@inject('SettingsStore', 'NodeInfoStore')
+@inject('SettingsStore', 'NodeInfoStore', 'PosStore')
 @observer
 export default class WalletHeader extends React.Component<
     WalletHeaderProps,
@@ -109,9 +162,11 @@ export default class WalletHeader extends React.Component<
             title,
             channels,
             SettingsStore,
-            NodeInfoStore
+            NodeInfoStore,
+            PosStore
         } = this.props;
-        const { settings } = SettingsStore;
+        const { settings, posStatus, setPosStatus } = SettingsStore;
+        const { getOrders } = PosStore;
         const multipleNodes: boolean =
             (settings && settings.nodes && settings.nodes.length > 1) || false;
         const selectedNode: any =
@@ -120,8 +175,26 @@ export default class WalletHeader extends React.Component<
                 settings.nodes[settings.selectedNode || 0]) ||
             null;
 
+        const squareEnabled: boolean =
+            (settings && settings.pos && settings.pos.squareEnabled) || false;
+
         const SettingsButton = () => (
-            <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
+            <TouchableOpacity
+                onPress={() => {
+                    const { posStatus, settings } = stores.settingsStore;
+                    const loginRequired =
+                        settings && (settings.passphrase || settings.pin);
+                    const posEnabled = posStatus === 'active';
+
+                    if (posEnabled && loginRequired) {
+                        navigation.navigate('Lockscreen', {
+                            attemptAdminLogin: true
+                        });
+                    } else {
+                        navigation.navigate('Settings');
+                    }
+                }}
+            >
                 {multipleNodes ? (
                     <NodeIdenticon
                         selectedNode={selectedNode}
@@ -178,7 +251,12 @@ export default class WalletHeader extends React.Component<
                     )
                 }
                 rightComponent={
-                    channels ? (
+                    posStatus === 'active' ? (
+                        <TempleButton
+                            navigation={navigation}
+                            setPosStatus={setPosStatus}
+                        />
+                    ) : channels ? (
                         <OpenChannelButton navigation={navigation} />
                     ) : (
                         <View style={{ flex: 1, flexDirection: 'row' }}>
@@ -198,6 +276,20 @@ export default class WalletHeader extends React.Component<
                             <View style={{ marginTop: 1 }}>
                                 <ScanBadge navigation={navigation} />
                             </View>
+                            {squareEnabled && (
+                                <View
+                                    style={{
+                                        marginLeft: 10,
+                                        top: -4,
+                                        right: -4
+                                    }}
+                                >
+                                    <POSBadge
+                                        setPosStatus={setPosStatus}
+                                        getOrders={getOrders}
+                                    />
+                                </View>
+                            )}
                         </View>
                     )
                 }

@@ -26,6 +26,7 @@ interface TextInputProps {
     suffix?: string;
     toggleUnits?: any;
     onPressIn?: any;
+    right?: number;
 }
 
 export default function TextInput(props: TextInputProps) {
@@ -46,7 +47,8 @@ export default function TextInput(props: TextInputProps) {
         prefix,
         suffix,
         toggleUnits,
-        onPressIn
+        onPressIn,
+        right
     } = props;
 
     const defaultStyle = numberOfLines
@@ -67,15 +69,23 @@ export default function TextInput(props: TextInputProps) {
             }}
         >
             {prefix && (
-                <TouchableOpacity onPress={() => toggleUnits()}>
+                <TouchableOpacity onPress={() => toggleUnits && toggleUnits()}>
                     <Text
-                        style={{
-                            ...styles.unit,
-                            marginRight: 5,
-                            color: themeColor('text'),
-                            backgroundColor: themeColor('background')
-                        }}
-                        onPress={() => toggleUnits()}
+                        style={
+                            toggleUnits
+                                ? {
+                                      ...styles.unit,
+                                      marginRight: 5,
+                                      color: themeColor('text'),
+                                      backgroundColor: themeColor('background')
+                                  }
+                                : {
+                                      ...styles.unit,
+                                      marginRight: 5,
+                                      color: themeColor('text')
+                                  }
+                        }
+                        onPress={() => toggleUnits && toggleUnits()}
                     >
                         {prefix}
                     </Text>
@@ -100,15 +110,23 @@ export default function TextInput(props: TextInputProps) {
                 onPressIn={onPressIn}
             />
             {suffix && (
-                <TouchableOpacity onPress={() => toggleUnits()}>
+                <TouchableOpacity onPress={() => toggleUnits && toggleUnits()}>
                     <Text
-                        style={{
-                            ...styles.unit,
-                            right: 45,
-                            color: themeColor('text'),
-                            backgroundColor: themeColor('background')
-                        }}
-                        onPress={() => toggleUnits()}
+                        style={
+                            toggleUnits
+                                ? {
+                                      ...styles.unit,
+                                      right: right || 45,
+                                      color: themeColor('text'),
+                                      backgroundColor: themeColor('background')
+                                  }
+                                : {
+                                      ...styles.unit,
+                                      right: right || 45,
+                                      color: themeColor('text')
+                                  }
+                        }
+                        onPress={() => toggleUnits && toggleUnits()}
                     >
                         {suffix}
                     </Text>

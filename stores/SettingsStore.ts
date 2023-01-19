@@ -39,6 +39,14 @@ interface DisplaySettings {
     displayNickname?: boolean;
 }
 
+interface PosSettings {
+    squareEnabled?: boolean;
+    squareAccessToken?: string;
+    squareLocationId?: string;
+    confirmationPreference?: string;
+    squareDevMode?: boolean;
+}
+
 interface PaymentSettings {
     defaultFeeMethod?: string;
     defaultFeePercentage?: string;
@@ -59,6 +67,7 @@ interface Settings {
     locale?: string;
     privacy: PrivacySettings;
     display: DisplaySettings;
+    pos: PosSettings;
     payments: PaymentSettings;
 }
 
@@ -176,6 +185,12 @@ export const DEFAULT_THEME = 'dark';
 export const DEFAULT_FIAT = 'Disabled';
 export const DEFAULT_LOCALE = 'English';
 
+export const POS_CONF_PREF_KEYS = [
+    { key: '0 conf', value: '0conf' },
+    { key: '1 conf', value: '1conf' },
+    { key: 'LN only', value: 'lnOnly' }
+];
+
 const STORAGE_KEY = 'zeus-settings';
 
 export default class SettingsStore {
@@ -192,6 +207,13 @@ export default class SettingsStore {
             defaultView: 'Keypad',
             displayNickname: false
         },
+        pos: {
+            squareEnabled: false,
+            squareAccessToken: '',
+            squareLocationId: '',
+            confirmationPreference: 'lnOnly',
+            squareDevMode: false
+        },
         payments: {
             defaultFeeMethod: 'fixed',
             defaultFeePercentage: '0.5',
@@ -201,6 +223,7 @@ export default class SettingsStore {
         loginBackground: false,
         fiat: DEFAULT_FIAT
     };
+    @observable public posStatus: string = 'unselected';
     @observable public loading = false;
     @observable btcPayError: string | null;
     @observable sponsorsError: string | null;
@@ -572,5 +595,11 @@ export default class SettingsStore {
             this.lurkerExposed = false;
         }
         this.settings.privacy.lurkerMode = !this.settings.privacy.lurkerMode;
+    };
+
+    @action
+    public setPosStatus = (setting: string) => {
+        this.posStatus = setting;
+        return this.posStatus;
     };
 }
