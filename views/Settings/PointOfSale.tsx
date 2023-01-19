@@ -233,30 +233,28 @@ export default class PointOfSale extends React.Component<
                                     }}
                                 />
 
-                                    <DropdownSetting
-                                        title={localeString(
-                                            'views.Settings.POS.confPref'
-                                        )}
-                                        selectedValue={confirmationPreference}
-                                        onValueChange={async (
-                                            value: string
-                                        ) => {
-                                            this.setState({
+                                <DropdownSetting
+                                    title={localeString(
+                                        'views.Settings.POS.confPref'
+                                    )}
+                                    selectedValue={confirmationPreference}
+                                    onValueChange={async (value: string) => {
+                                        this.setState({
+                                            confirmationPreference: value
+                                        });
+                                        await updateSettings({
+                                            pos: {
+                                                squareEnabled,
+                                                squareAccessToken,
+                                                squareLocationId,
                                                 confirmationPreference: value
-                                            });
-                                            await updateSettings({
-                                                pos: {
-                                                    squareEnabled,
-                                                    squareAccessToken,
-                                                    squareLocationId,
-                                                    confirmationPreference:
-                                                        value
-                                                }
-                                            });
-                                        }}
-                                        values={POS_CONF_PREF_KEYS}
-                                    />
+                                            }
+                                        });
+                                    }}
+                                    values={POS_CONF_PREF_KEYS}
+                                />
                             </>
+                        )}
                     </ScrollView>
                 )}
             </View>
