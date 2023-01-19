@@ -111,10 +111,6 @@ export default class InvoicesStore {
         routeHints?: boolean,
         addressType?: string
     ) => {
-        if (BackendUtils.supportsOnchainReceiving()) {
-            this.getNewAddress(addressType ? { type: addressType } : null);
-        }
-
         return this.createInvoice(
             memo,
             value,
@@ -123,7 +119,15 @@ export default class InvoicesStore {
             ampInvoice,
             routeHints
         ).then((rHash: string) => {
-            return { rHash, onChainAddress: this.onChainAddress };
+            if (BackendUtils.supportsOnchainReceiving()) {
+                return this.getNewAddress(
+                    addressType ? { type: addressType } : null
+                ).then((onChainAddress: string) => {
+                    return { rHash, onChainAddress };
+                });
+            } else {
+                return { rHash };
+            }
         });
     };
 
@@ -249,6 +253,7 @@ export default class InvoicesStore {
                 this.onChainAddress =
                     data.address || data.bech32 || (data[0] && data[0].address);
                 this.loading = false;
+                return this.onChainAddress;
             })
             .catch((error: any) => {
                 // handle error
