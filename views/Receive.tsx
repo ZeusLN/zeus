@@ -607,8 +607,13 @@ export default class Receive extends React.Component<
         const haveInvoice = !!payment_request || !!address;
 
         let unifiedInvoice, lnInvoice, btcAddress;
+        // if format is case insensitive, format as all caps to save QR space, otherwise present in original format
+        const onChainFormatted =
+            address && address === address.toLowerCase()
+                ? address.toUpperCase()
+                : address;
         if (haveUnifiedInvoice) {
-            unifiedInvoice = `bitcoin:${address.toUpperCase()}?${`lightning=${payment_request.toUpperCase()}`}${
+            unifiedInvoice = `bitcoin:${onChainFormatted}?${`lightning=${payment_request.toUpperCase()}`}${
                 Number(satAmount) > 0
                     ? `&amount=${new BigNumber(satAmount)
                           .dividedBy(SATS_PER_BTC)
@@ -622,7 +627,7 @@ export default class Receive extends React.Component<
         }
 
         if (address) {
-            btcAddress = `bitcoin:${address.toUpperCase()}${
+            btcAddress = `bitcoin:${onChainFormatted}${
                 (Number(satAmount) > 0 || memo) && '?'
             }${
                 Number(satAmount) > 0
