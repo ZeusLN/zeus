@@ -1073,6 +1073,7 @@ export default class NodeConfiguration extends React.Component<
                                 </Text>
                                 <TextInput
                                     placeholder={'localhost'}
+                                    autoCapitalize="none"
                                     value={host}
                                     onChangeText={(text: string) =>
                                         this.setState({
