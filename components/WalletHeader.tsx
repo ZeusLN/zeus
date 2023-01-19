@@ -18,10 +18,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
 import Scan from '../assets/images/SVG/Scan.svg';
 import POS from '../assets/images/SVG/POS.svg';
-<<<<<<< HEAD
-=======
 import Temple from '../assets/images/SVG/Temple.svg';
->>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
 
 import stores from '../stores/Stores';
 
@@ -47,32 +44,6 @@ const OpenChannelButton = ({ navigation }: { navigation: any }) => (
     />
 );
 
-<<<<<<< HEAD
-const AdminButton = ({ navigation }: { navigation: any }) => (
-    <Button
-        title=""
-        icon={{
-            name: 'settings',
-            size: 20,
-            color: themeColor('text')
-        }}
-        buttonStyle={{
-            backgroundColor: 'transparent',
-            marginRight: -10,
-            marginTop: -5
-        }}
-        onPress={() => {
-            const { settings } = stores.settingsStore;
-            const loginRequired =
-                settings && (settings.passphrase || settings.pin);
-            loginRequired
-                ? navigation.navigate('Lockscreen', {
-                      attemptAdminLogin: true
-                  })
-                : navigation.navigate('Settings');
-        }}
-    />
-=======
 const TempleButton = ({
     setPosStatus,
     navigation
@@ -103,7 +74,6 @@ const TempleButton = ({
             style={{ right: -6, top: -8, alignSelf: 'center' }}
         />
     </TouchableOpacity>
->>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
 );
 
 const ScanBadge = ({ navigation }: { navigation: any }) => (
@@ -140,10 +110,6 @@ const POSBadge = ({
             getOrders();
             await setPosStatus('active');
         }}
-<<<<<<< HEAD
-        style={{ top: -3 }}
-=======
->>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
     >
         <POS stroke={themeColor('text')} width="34" height="34" />
     </TouchableOpacity>
@@ -290,14 +256,10 @@ export default class WalletHeader extends React.Component<
                 }
                 rightComponent={
                     posStatus === 'active' ? (
-<<<<<<< HEAD
-                        <AdminButton navigation={navigation} />
-=======
                         <TempleButton
                             navigation={navigation}
                             setPosStatus={setPosStatus}
                         />
->>>>>>> 59886a969b3bac7eaa5bbbd65e1cc7621934ffa7
                     ) : channels ? (
                         <OpenChannelButton navigation={navigation} />
                     ) : (
@@ -306,14 +268,6 @@ export default class WalletHeader extends React.Component<
                                 stores.balanceStore
                                     .loadingLightningBalance) && (
                                 <LoadingIndicator size={80} />
-                            )}
-                            {squareEnabled && (
-                                <View style={{ marginRight: 20 }}>
-                                    <POSBadge
-                                        setPosStatus={setPosStatus}
-                                        getOrders={getOrders}
-                                    />
-                                </View>
                             )}
                             {!!clipboard && (
                                 <View style={{ marginRight: 20 }}>

@@ -52,7 +52,7 @@ export default class PosStore {
         ReactNativeBlobUtil.fetch(
             'POST',
             // DEV -> 'https://connect.squareupsandbox.com/v2/payments',
-            'https://connect.squareup.com/v2/payments',
+            'https://connect.squareupsandbox.com/v2/payments',
             {
                 Authorization: `Bearer ${squareAccessToken}`,
                 'Content-Type': 'application/json'
@@ -101,7 +101,7 @@ export default class PosStore {
         ReactNativeBlobUtil.fetch(
             'POST',
             // DEV -> 'https://connect.squareupsandbox.com/v2/orders/search'
-            'https://connect.squareup.com/v2/orders/search',
+            'https://connect.squareupsandbox.com/v2/orders/search',
             {
                 Authorization: `Bearer ${squareAccessToken}`,
                 'Content-Type': 'application/json'
