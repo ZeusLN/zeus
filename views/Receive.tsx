@@ -370,18 +370,46 @@ export default class Receive extends React.Component<
         }
 
         if (implementation === 'lnd') {
-            BackendUtils.subscribeInvoice(rHash).then((response: any) => {
-                const result = response.result;
-                if (result && result.settled) {
-                    setWatchedInvoicePaid(result.amt_paid_sat);
-                    if (orderId)
-                        PosStore.makePayment({
-                            orderId,
-                            orderAmount,
-                            orderTip
+            BackendUtils.subscribeInvoice(rHash)
+                .then((response: any) => {
+                    const result = response.result;
+                    if (result && result.settled) {
+                        setWatchedInvoicePaid(result.amt_paid_sat);
+                        if (orderId)
+                            PosStore.makePayment({
+                                orderId,
+                                orderAmount,
+                                orderTip
+                            });
+                    }
+                })
+                .catch(() => {
+                    // fallback in case streaming call times out
+                    // 15 seconds
+                    setInterval(function () {
+                        BackendUtils.getInvoices().then((response: any) => {
+                            const invoices = response.invoices;
+                            for (let i = 0; i < invoices.length; i++) {
+                                const result = invoices[i];
+                                if (
+                                    result.r_hash
+                                        .replace(/\+/g, '-')
+                                        .replace(/\//g, '_') === rHash &&
+                                    Number(result.amt_paid_sat) >= Number(value)
+                                ) {
+                                    setWatchedInvoicePaid(result.amt_paid_sat);
+                                    if (orderId)
+                                        PosStore.makePayment({
+                                            orderId,
+                                            orderAmount,
+                                            orderTip
+                                        });
+                                    break;
+                                }
+                            }
                         });
-                }
-            });
+                    }, 15000);
+                });
 
             // TODO investigate why call is timing out
             // BackendUtils.subscribeTransactions({}).then((response: any) => {
