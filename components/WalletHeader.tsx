@@ -233,11 +233,7 @@ export default class WalletHeader extends React.Component<
 
         return (
             <Header
-                leftComponent={
-                    loading || posStatus == 'active' ? undefined : (
-                        <SettingsButton />
-                    )
-                }
+                leftComponent={loading ? undefined : <SettingsButton />}
                 centerComponent={
                     title ? (
                         <View style={{ top: 5 }}>
