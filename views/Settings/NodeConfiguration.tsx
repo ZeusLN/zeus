@@ -960,6 +960,7 @@ export default class NodeConfiguration extends React.Component<
                                 <TextInput
                                     placeholder={'https://'}
                                     value={lndhubUrl}
+                                    autoCapitalize="none"
                                     onChangeText={(text: string) =>
                                         this.setState({
                                             lndhubUrl: text.trim(),
