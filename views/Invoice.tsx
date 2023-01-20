@@ -196,23 +196,22 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                     )}
 
                     {!!bolt11 && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Invoice.paymentRequest'
-                            )}
-                            value={bolt11}
-                            sensitive
-                        />
-                    )}
-
-                    {!!bolt11 && (
-                        <CollapsedQR
-                            value={bolt11}
-                            copyText={localeString(
-                                'views.Invoice.copyPaymentRequest'
-                            )}
-                            hideText
-                        />
+                        <>
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Invoice.paymentRequest'
+                                )}
+                                value={bolt11}
+                                sensitive
+                            />
+                            <CollapsedQR
+                                value={bolt11}
+                                copyText={localeString(
+                                    'views.Invoice.copyPaymentRequest'
+                                )}
+                                hideText
+                            />
+                        </>
                     )}
                 </View>
             </ScrollView>
