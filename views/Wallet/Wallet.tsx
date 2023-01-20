@@ -553,7 +553,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             {posStatus !== 'active' && (
                                 <View
                                     style={{
-                                        bottom: 56
+                                        bottom: 56,
+                                        position: 'absolute',
+                                        alignSelf: 'center'
                                     }}
                                 >
                                     <Button
