@@ -65,16 +65,20 @@ export default class Invoice extends BaseModel {
 
     @computed public get getRPreimage(): string {
         const preimage = this.r_preimage;
-        return typeof preimage === 'string' && preimage.includes('=')
-            ? Base64Utils.base64ToHex(preimage)
-            : preimage;
+        return typeof preimage === 'string'
+            ? preimage.includes('=')
+                ? Base64Utils.base64ToHex(preimage)
+                : preimage
+            : '';
     }
 
     @computed public get getRHash(): string {
         const hash = this.r_hash;
-        return typeof hash === 'string' && hash.includes('=')
-            ? Base64Utils.base64ToHex(hash)
-            : hash;
+        return typeof hash === 'string'
+            ? hash.includes('=')
+                ? Base64Utils.base64ToHex(hash)
+                : hash
+            : '';
     }
 
     @computed public get getTimestamp(): string | number {
