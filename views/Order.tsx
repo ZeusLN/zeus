@@ -69,6 +69,8 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         const { settings } = SettingsStore;
         const fiat = settings.fiat;
 
+        const isPaid: boolean = order.payment;
+
         const memo = `ZEUS POS: ${order.id} | ${getRate()}`;
 
         const lineItems = order.line_items;
@@ -258,112 +260,155 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
 
                     <Divider />
 
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            alignSelf: 'center',
-                            margin: 10
-                        }}
-                    >
-                        {localeString('pos.views.Order.addTip')}
-                    </Text>
-
-                    <ButtonGroup
-                        onPress={(selectedIndex: number) => {
-                            this.setState({ selectedIndex });
-                        }}
-                        selectedIndex={selectedIndex}
-                        buttons={buttons}
-                        selectedButtonStyle={{
-                            backgroundColor: themeColor('highlight'),
-                            borderRadius: 12
-                        }}
-                        containerStyle={{
-                            backgroundColor: themeColor('secondary'),
-                            borderRadius: 12,
-                            borderColor: themeColor('secondary')
-                        }}
-                        innerBorderStyle={{
-                            color: themeColor('secondary')
-                        }}
-                    />
-
-                    {selectedIndex === 3 && (
-                        <View
-                            style={{
-                                flexDirection: 'row',
-                                width: '95%',
-                                alignSelf: 'center'
-                            }}
-                        >
-                            <TextInput
-                                suffix="%"
-                                keyboardType="numeric"
-                                right={25}
-                                value={customPercentage}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        customPercentage: text
-                                    })
-                                }
-                                onPressIn={() =>
-                                    this.setState({
-                                        customType: 'percentage'
-                                    })
-                                }
-                                autoCapitalize="none"
-                                autoCorrect={false}
+                    {!isPaid && (
+                        <>
+                            <Text
                                 style={{
-                                    width: '50%',
-                                    marginRight: 10,
-                                    opacity:
-                                        customType == 'percentage' ? 1 : 0.25
+                                    color: themeColor('text'),
+                                    alignSelf: 'center',
+                                    margin: 10
+                                }}
+                            >
+                                {localeString('pos.views.Order.addTip')}
+                            </Text>
+
+                            <ButtonGroup
+                                onPress={(selectedIndex: number) => {
+                                    this.setState({ selectedIndex });
+                                }}
+                                selectedIndex={selectedIndex}
+                                buttons={buttons}
+                                selectedButtonStyle={{
+                                    backgroundColor: themeColor('highlight'),
+                                    borderRadius: 12
+                                }}
+                                containerStyle={{
+                                    backgroundColor: themeColor('secondary'),
+                                    borderRadius: 12,
+                                    borderColor: themeColor('secondary')
+                                }}
+                                innerBorderStyle={{
+                                    color: themeColor('secondary')
                                 }}
                             />
-                            <TextInput
-                                prefix={FiatStore.getSymbol().symbol}
-                                keyboardType="numeric"
-                                right={25}
-                                value={customAmount}
-                                onChangeText={(text: string) => {
-                                    if (
-                                        text.includes('-') ||
-                                        (text.split('.')[1] &&
-                                            text.split('.')[1].length === 3)
-                                    )
-                                        return;
-                                    this.setState({
-                                        customAmount: text
-                                    });
-                                }}
-                                onPressIn={() =>
-                                    this.setState({
-                                        customType: 'amount'
-                                    })
-                                }
-                                autoCapitalize="none"
-                                autoCorrect={false}
-                                style={{
-                                    width: '50%',
-                                    opacity: customType == 'amount' ? 1 : 0.25
-                                }}
+
+                            {selectedIndex === 3 && (
+                                <View
+                                    style={{
+                                        flexDirection: 'row',
+                                        width: '95%',
+                                        alignSelf: 'center'
+                                    }}
+                                >
+                                    <TextInput
+                                        suffix="%"
+                                        keyboardType="numeric"
+                                        right={25}
+                                        value={customPercentage}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                customPercentage: text
+                                            })
+                                        }
+                                        onPressIn={() =>
+                                            this.setState({
+                                                customType: 'percentage'
+                                            })
+                                        }
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
+                                        style={{
+                                            width: '50%',
+                                            marginRight: 10,
+                                            opacity:
+                                                customType == 'percentage'
+                                                    ? 1
+                                                    : 0.25
+                                        }}
+                                    />
+                                    <TextInput
+                                        prefix={FiatStore.getSymbol().symbol}
+                                        keyboardType="numeric"
+                                        right={25}
+                                        value={customAmount}
+                                        onChangeText={(text: string) => {
+                                            if (
+                                                text.includes('-') ||
+                                                (text.split('.')[1] &&
+                                                    text.split('.')[1]
+                                                        .length === 3)
+                                            )
+                                                return;
+                                            this.setState({
+                                                customAmount: text
+                                            });
+                                        }}
+                                        onPressIn={() =>
+                                            this.setState({
+                                                customType: 'amount'
+                                            })
+                                        }
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
+                                        style={{
+                                            width: '50%',
+                                            opacity:
+                                                customType == 'amount'
+                                                    ? 1
+                                                    : 0.25
+                                        }}
+                                    />
+                                </View>
+                            )}
+
+                            <KeyValue
+                                keyValue={localeString('pos.views.Order.tip')}
+                                value={`$${tipAmount}`}
                             />
-                        </View>
+
+                            <KeyValue
+                                keyValue={localeString(
+                                    'pos.views.Order.totalFiat'
+                                )}
+                                value={`$${totalAmount}`}
+                            />
+
+                            <Divider />
+                        </>
                     )}
 
-                    <KeyValue
-                        keyValue={localeString('pos.views.Order.tip')}
-                        value={`$${tipAmount}`}
-                    />
-
-                    <KeyValue
-                        keyValue={localeString('pos.views.Order.totalFiat')}
-                        value={`$${totalAmount}`}
-                    />
-
-                    <Divider />
-
                     <KeyValue keyValue={'Conversion Rate'} value={getRate()} />
+
+                    {isPaid && (
+                        <KeyValue
+                            keyValue={localeString('pos.views.Order.tip')}
+                            value={`$${Number(order.payment.orderTip) / 100}`}
+                        />
+                    )}
+
+                    {isPaid && (
+                        <KeyValue
+                            keyValue={localeString(
+                                'pos.views.Order.paymentType'
+                            )}
+                            value={
+                                order.payment.type === 'ln'
+                                    ? localeString('general.lightning')
+                                    : localeString('general.onchain')
+                            }
+                        />
+                    )}
+
+                    {isPaid && (
+                        <KeyValue
+                            keyValue={
+                                order.payment.type === 'ln'
+                                    ? localeString('views.Send.lnPayment')
+                                    : localeString('views.SendingOnChain.txid')
+                            }
+                            value={order.payment.tx}
+                        />
+                    )}
 
                     <TouchableOpacity
                         onPress={() => {
@@ -390,21 +435,24 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                         />
                     </TouchableOpacity>
 
-                    <Button
-                        title={localeString('general.pay')}
-                        containerStyle={{ marginTop: 40 }}
-                        onPress={() =>
-                            navigation.navigate('Receive', {
-                                amount: satAmount,
-                                autoGenerate: true,
-                                memo,
-                                orderId: order.id,
-                                orderTip: Number(tipAmount) * 100,
-                                orderAmount: Number(order.getTotalMoney) * 100
-                            })
-                        }
-                        disabled={isNaN(Number(satAmount))}
-                    />
+                    {!isPaid && (
+                        <Button
+                            title={localeString('general.pay')}
+                            containerStyle={{ marginTop: 40 }}
+                            onPress={() =>
+                                navigation.navigate('Receive', {
+                                    amount: satAmount,
+                                    autoGenerate: true,
+                                    memo,
+                                    orderId: order.id,
+                                    orderTip: Number(tipAmount) * 100,
+                                    orderAmount:
+                                        Number(order.getTotalMoney) * 100
+                                })
+                            }
+                            disabled={isNaN(Number(satAmount))}
+                        />
+                    )}
                 </View>
             </ScrollView>
         );

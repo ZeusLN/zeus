@@ -1,25 +1,24 @@
 import { action, observable } from 'mobx';
+import EncryptedStorage from 'react-native-encrypted-storage';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import SettingsStore from './SettingsStore';
 import Order from '../models/Order';
 
-interface makePaymentRequest {
+export interface orderPaymentInfo {
     orderId: string;
     orderAmount: number;
     orderTip: number;
+    exchangeRate: string;
+    type: string; // ln OR onchain
+    tx: string; // txid OR payment request
 }
 
-const genHex = (size: number) =>
-    [...Array(size)]
-        .map(() => Math.floor(Math.random() * 16).toString(16))
-        .join('');
-const genIdemptotencyKey = () =>
-    `${genHex(8)}-${genHex(4)}-${genHex(4)}-${genHex(4)}-${genHex(12)}}`;
-
 export default class PosStore {
-    @observable public orders: Array<Order> = [];
-    @observable public filteredOrders: Array<Order> = [];
+    @observable public openOrders: Array<Order> = [];
+    @observable public paidOrders: Array<Order> = [];
+    @observable public filteredOpenOrders: Array<Order> = [];
+    @observable public filteredPaidOrders: Array<Order> = [];
     @observable public loading = false;
     @observable public error = false;
 
@@ -31,7 +30,12 @@ export default class PosStore {
 
     @action
     public updateSearch = (value: string) => {
-        this.filteredOrders = this.orders.filter(
+        this.filteredOpenOrders = this.openOrders.filter(
+            (item: any) =>
+                item.getItemsList.includes(value) ||
+                item.getItemsList.toLowerCase().includes(value)
+        );
+        this.filteredPaidOrders = this.paidOrders.filter(
             (item: any) =>
                 item.getItemsList.includes(value) ||
                 item.getItemsList.toLowerCase().includes(value)
@@ -39,67 +43,32 @@ export default class PosStore {
     };
 
     @action
-    public makePayment = ({
+    public recordPayment = ({
         orderId,
         orderAmount,
-        orderTip
-    }: makePaymentRequest) => {
-        const { squareAccessToken, squareLocationId, squareDevMode } =
-            this.settingsStore.settings.pos;
-        const fiat: string = this.settingsStore.settings.fiat || 'USD';
-        this.loading = true;
-        this.error = false;
-        const apiHost = squareDevMode
-            ? 'https://connect.squareupsandbox.com'
-            : 'https://connect.squareup.com';
-        ReactNativeBlobUtil.fetch(
-            'POST',
-            `${apiHost}/v2/payments`,
-            {
-                Authorization: `Bearer ${squareAccessToken}`,
-                'Content-Type': 'application/json'
-            },
+        orderTip,
+        exchangeRate,
+        type,
+        tx
+    }: orderPaymentInfo) =>
+        EncryptedStorage.setItem(
+            `pos-${orderId}`,
             JSON.stringify({
-                location_ids: [squareLocationId],
-                amount_money: {
-                    amount: orderAmount,
-                    currency: fiat
-                },
-                idempotency_key: genIdemptotencyKey(),
-                source_id: 'EXTERNAL',
-                external_details: {
-                    source: 'ZEUS',
-                    type: 'CRYPTO'
-                },
-                order_id: orderId,
-                tip_money: {
-                    currency: fiat,
-                    amount: orderTip
-                }
+                orderId,
+                orderAmount,
+                orderTip,
+                exchangeRate,
+                type,
+                tx
             })
-        )
-            .then((response: any) => {
-                const status = response.info().status;
-                if (status == 200) {
-                    this.loading = false;
-                } else {
-                    this.loading = false;
-                    this.error = true;
-                }
-            })
-            .catch((err) => {
-                console.error('POS make payment err', err);
-                this.loading = false;
-            });
-    };
+        );
 
     @action
-    public getOrders = (states = ['OPEN']) => {
+    public getOrders = async () => {
         const { squareAccessToken, squareLocationId, squareDevMode } =
             this.settingsStore.settings.pos;
         this.loading = true;
         this.error = false;
-        this.orders = [];
         const apiHost = squareDevMode
             ? 'https://connect.squareupsandbox.com'
             : 'https://connect.squareup.com';
@@ -111,40 +80,75 @@ export default class PosStore {
                 'Content-Type': 'application/json'
             },
             JSON.stringify({
-                location_ids: [squareLocationId],
-                query: {
-                    filter: {
-                        state_filter: {
-                            states
-                        }
-                    }
-                }
+                location_ids: [squareLocationId]
             })
         )
-            .then((response: any) => {
+            .then(async (response: any) => {
                 const status = response.info().status;
                 if (status == 200) {
                     this.loading = false;
-                    const orders = response
+                    let orders = response
                         .json()
-                        .orders.map((order: any) => new Order(order));
-                    this.orders = orders;
-                    this.filteredOrders = orders;
+                        .orders.map((order: any) => new Order(order))
+                        .filter((order: any) => {
+                            return (
+                                order.tenders &&
+                                order.tenders[0] &&
+                                order.tenders[0].note &&
+                                (order.tenders[0].note
+                                    .toLowerCase()
+                                    .includes('zeus') ||
+                                    order.tenders[0].note
+                                        .toLowerCase()
+                                        .includes('zues') ||
+                                    order.tenders[0].note
+                                        .toLowerCase()
+                                        .includes('bitcoin') ||
+                                    order.tenders[0].note
+                                        .toLowerCase()
+                                        .includes('btc'))
+                            );
+                        });
+
+                    const enrichedOrders = await Promise.all(
+                        orders.map(async (order: any) => {
+                            const payment = await EncryptedStorage.getItem(
+                                `pos-${order.id}`
+                            );
+                            if (payment) order.payment = JSON.parse(payment);
+                            return order;
+                        })
+                    );
+
+                    const openOrders = enrichedOrders.filter((order: any) => {
+                        return !order.payment;
+                    });
+                    const paidOrders = enrichedOrders.filter((order: any) => {
+                        return order.payment;
+                    });
+
+                    this.openOrders = openOrders;
+                    this.filteredOpenOrders = openOrders;
+                    this.paidOrders = paidOrders;
+                    this.filteredPaidOrders = paidOrders;
                 } else {
-                    this.orders = [];
+                    this.openOrders = [];
+                    this.paidOrders = [];
                     this.loading = false;
                     this.error = true;
                 }
             })
             .catch((err) => {
                 console.error('POS get orders err', err);
-                this.orders = [];
+                this.openOrders = [];
+                this.paidOrders = [];
                 this.loading = false;
             });
     };
 
     resetOrders = () => {
-        this.orders = [];
+        this.openOrders = [];
+        this.paidOrders = [];
         this.loading = false;
     };
 }
