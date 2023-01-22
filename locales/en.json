@@ -43,6 +43,7 @@
     "general.pos": "Point of Sale",
     "general.admin": "Admin",
     "general.pay": "Pay",
+    "general.open": "Open",
     "general.fiatFetchError": "Error fetching exchange rates",
     "components.CollapsedQr.show": "Show QR",
     "components.CollapsedQr.hide": "Hide QR",
@@ -528,6 +529,7 @@
     "error.hostUnreachable": "Host unreachable. Try restarting your node or its Tor process.",
     "error.torBootstrap": "Error starting up Tor on your phone. Try restarting Zeus. If the problem persists consider reinstalling the app.",
     "pos.views.Wallet.PosPane.noOrders": "No orders open at the moment",
+    "pos.views.Wallet.PosPane.noOrdersPaid": "No orders have been paid yet",
     "pos.views.Wallet.PosPane.fetchingRates": "Fetching exchange rates",
     "pos.views.Order.tax": "Tax",
     "pos.views.Order.totalBeforeTip": "Total before tip",
@@ -535,6 +537,7 @@
     "pos.views.Order.tip": "Tip",
     "pos.views.Order.totalFiat": "Total (Fiat)",
     "pos.views.Order.totalBitcoin": "Total (Bitcoin)",
+    "pos.views.Order.paymentType": "Payment type",
     "pos.views.Settings.PointOfSale.authWarning": "Warning: no password or PIN set",
     "pos.views.Settings.PointOfSale.currencyError": "Error: currency must be set first"
 }

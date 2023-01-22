@@ -1,9 +1,9 @@
 import { computed } from 'mobx';
-
 import moment from 'moment';
 
 import BaseModel from './BaseModel';
 import { localeString } from './../utils/LocaleUtils';
+import { orderPaymentInfo } from './../stores/PosStore';
 
 interface LineItem {
     name: string;
@@ -11,6 +11,7 @@ interface LineItem {
 }
 
 export default class Order extends BaseModel {
+    id: string;
     updated_at: string;
     created_at: string;
     tax_money: {
@@ -22,6 +23,7 @@ export default class Order extends BaseModel {
         currency: string;
     };
     line_items: Array<LineItem>;
+    payment?: orderPaymentInfo;
 
     @computed public get model(): string {
         return localeString('general.order');

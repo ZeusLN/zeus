@@ -4,6 +4,7 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
+    TouchableWithoutFeedback,
     View
 } from 'react-native';
 import { Divider, Header, Icon } from 'react-native-elements';
@@ -108,6 +109,12 @@ export default class ChannelView extends React.Component<
         navigation.navigate('Wallet');
     };
 
+    handleOnNavigateBack = (satPerByte: string) => {
+        this.setState({
+            satPerByte
+        });
+    };
+
     render() {
         const {
             navigation,
@@ -123,7 +130,8 @@ export default class ChannelView extends React.Component<
         const { nodes } = ChannelsStore;
         const { settings, implementation } = SettingsStore;
         const { privacy } = settings;
-        const lurkerMode = (privacy && privacy.lurkerMode) || false;
+        const lurkerMode = privacy && privacy.lurkerMode;
+        const enableMempoolRates = privacy && privacy.enableMempoolRates;
 
         const {
             channel_point,
@@ -440,18 +448,51 @@ export default class ChannelView extends React.Component<
                                             'views.Channel.closingRate'
                                         )}
                                     </Text>
-                                    <TextInput
-                                        keyboardType="numeric"
-                                        placeholder={'2'}
-                                        value={satPerByte}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                satPerByte: text
-                                            })
-                                        }
-                                        autoCapitalize="none"
-                                        autoCorrect={false}
-                                    />
+                                    {enableMempoolRates ? (
+                                        <TouchableWithoutFeedback
+                                            onPress={() =>
+                                                navigation.navigate('EditFee', {
+                                                    onNavigateBack:
+                                                        this
+                                                            .handleOnNavigateBack
+                                                })
+                                            }
+                                        >
+                                            <View
+                                                style={{
+                                                    ...styles.editFeeBox,
+                                                    borderColor:
+                                                        'rgba(255, 217, 63, .6)',
+                                                    borderWidth: 3
+                                                }}
+                                            >
+                                                <Text
+                                                    style={{
+                                                        ...styles.text,
+                                                        color: themeColor(
+                                                            'text'
+                                                        ),
+                                                        fontSize: 18
+                                                    }}
+                                                >
+                                                    {satPerByte}
+                                                </Text>
+                                            </View>
+                                        </TouchableWithoutFeedback>
+                                    ) : (
+                                        <TextInput
+                                            keyboardType="numeric"
+                                            placeholder={'2'}
+                                            value={satPerByte}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    satPerByte: text
+                                                })
+                                            }
+                                            autoCapitalize="none"
+                                            autoCorrect={false}
+                                        />
+                                    )}
                                     {BackendUtils.isLNDBased() && (
                                         <>
                                             <Text
@@ -539,5 +580,14 @@ const styles = StyleSheet.create({
     button: {
         paddingTop: 15,
         paddingBottom: 15
+    },
+    editFeeBox: {
+        height: 65,
+        padding: 15,
+        marginTop: 15,
+        borderRadius: 4,
+        borderColor: '#FFD93F',
+        borderWidth: 2,
+        marginBottom: 20
     }
 });
