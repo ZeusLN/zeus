@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { ButtonGroup, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import BigNumber from 'bignumber.js';
 
 import Amount from './../components/Amount';
 import Button from './../components/Button';
@@ -65,7 +66,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             customType,
             units
         } = this.state;
-        const { fiatRates, getRate }: any = FiatStore;
+        const { fiatRates, getRate, getSymbol }: any = FiatStore;
         const { settings } = SettingsStore;
         const fiat = settings.fiat;
 
@@ -150,38 +151,49 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
 
         let totalAmount = '0';
         let tipAmount = '0';
-        switch (selectedIndex) {
-            case 0:
-                totalAmount = (order.getTotalMoney * 1.2).toFixed(2);
-                tipAmount = (order.getTotalMoney * 0.2).toFixed(2);
-                break;
-            case 1:
-                totalAmount = (order.getTotalMoney * 1.25).toFixed(2);
-                tipAmount = (order.getTotalMoney * 0.25).toFixed(2);
-                break;
-            case 2:
-                totalAmount = (order.getTotalMoney * 1.3).toFixed(2);
-                tipAmount = (order.getTotalMoney * 0.3).toFixed(2);
-                break;
-            default:
-                if (customType === 'percentage') {
-                    totalAmount = (
-                        order.getTotalMoney * Number(`1.${customPercentage}`)
-                    ).toFixed(2);
-                    tipAmount = (
-                        order.getTotalMoney *
-                        (Number(customPercentage) / 100)
-                    ).toFixed(2);
-                } else if (customType === 'amount') {
-                    totalAmount = !isNaN(Number(customAmount))
-                        ? `${Number(
-                              Number(order.getTotalMoney) + Number(customAmount)
-                          ).toFixed(2)}`
-                        : order.getTotalMoney;
-                    tipAmount = !isNaN(Number(customAmount))
-                        ? Number(customAmount).toFixed(2)
-                        : '0';
-                }
+        if (!isPaid) {
+            switch (selectedIndex) {
+                case 0:
+                    totalAmount = (order.getTotalMoney * 1.2).toFixed(2);
+                    tipAmount = (order.getTotalMoney * 0.2).toFixed(2);
+                    break;
+                case 1:
+                    totalAmount = (order.getTotalMoney * 1.25).toFixed(2);
+                    tipAmount = (order.getTotalMoney * 0.25).toFixed(2);
+                    break;
+                case 2:
+                    totalAmount = (order.getTotalMoney * 1.3).toFixed(2);
+                    tipAmount = (order.getTotalMoney * 0.3).toFixed(2);
+                    break;
+                default:
+                    if (customType === 'percentage') {
+                        totalAmount = (
+                            order.getTotalMoney *
+                            Number(`1.${customPercentage}`)
+                        ).toFixed(2);
+                        tipAmount = (
+                            order.getTotalMoney *
+                            (Number(customPercentage) / 100)
+                        ).toFixed(2);
+                    } else if (customType === 'amount') {
+                        totalAmount = !isNaN(Number(customAmount))
+                            ? `${Number(
+                                  Number(order.getTotalMoney) +
+                                      Number(customAmount)
+                              ).toFixed(2)}`
+                            : order.getTotalMoney;
+                        tipAmount = !isNaN(Number(customAmount))
+                            ? Number(customAmount).toFixed(2)
+                            : '0';
+                    }
+            }
+        } else {
+            tipAmount = new BigNumber(order.payment.orderTip || 0)
+                .dividedBy(100)
+                .toString();
+            totalAmount = new BigNumber(order.getTotalMoney)
+                .plus(new BigNumber(tipAmount))
+                .toString();
         }
 
         const fiatEntry =
@@ -363,14 +375,14 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
 
                             <KeyValue
                                 keyValue={localeString('pos.views.Order.tip')}
-                                value={`$${tipAmount}`}
+                                value={`${getSymbol().symbol}${tipAmount}`}
                             />
 
                             <KeyValue
                                 keyValue={localeString(
                                     'pos.views.Order.totalFiat'
                                 )}
-                                value={`$${totalAmount}`}
+                                value={`${getSymbol().symbol}${totalAmount}`}
                             />
 
                             <Divider />
@@ -382,7 +394,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     {isPaid && (
                         <KeyValue
                             keyValue={localeString('pos.views.Order.tip')}
-                            value={`$${Number(order.payment.orderTip) / 100}`}
+                            value={`${getSymbol().symbol}${tipAmount}`}
                         />
                     )}
 
@@ -407,6 +419,13 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                     : localeString('views.SendingOnChain.txid')
                             }
                             value={order.payment.tx}
+                        />
+                    )}
+
+                    {isPaid && (
+                        <KeyValue
+                            keyValue={localeString('pos.views.Order.totalFiat')}
+                            value={`${getSymbol().symbol}${totalAmount}`}
                         />
                     )}
 
