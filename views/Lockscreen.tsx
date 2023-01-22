@@ -71,7 +71,8 @@ export default class Lockscreen extends React.Component<
         const attemptAdminLogin: boolean =
             navigation.getParam('attemptAdminLogin');
 
-        const posEnabled: boolean = settings.pos.squareEnabled || false;
+        const posEnabled: boolean =
+            (settings && settings.pos && settings.pos.squareEnabled) || false;
 
         if (
             posEnabled &&
