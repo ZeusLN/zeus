@@ -76,7 +76,7 @@ export default class PosPane extends React.PureComponent<
 
     renderItem = (order) => {
         const { navigation, FiatStore } = this.props;
-        const { getRate } = FiatStore;
+        const { getRate, getSymbol } = FiatStore;
         const { item } = order;
         return (
             <TouchableHighlight
@@ -89,7 +89,13 @@ export default class PosPane extends React.PureComponent<
             >
                 <OrderItem
                     title={item.getItemsList}
-                    money={item.getTotalMoneyDisplay}
+                    money={
+                        item.payment
+                            ? `${item.getTotalMoneyDisplay} + ${
+                                  getSymbol().symbol
+                              }${Number(item.payment.orderTip || 0) / 100}`
+                            : item.getTotalMoneyDisplay
+                    }
                     date={item.getDisplayTime}
                 />
             </TouchableHighlight>
