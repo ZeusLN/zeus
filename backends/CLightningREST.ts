@@ -34,7 +34,7 @@ export default class CLightningREST extends LND {
             transactions: data.outputs
         }));
     getChannels = () =>
-        this.getRequest('/v1/channel/listChannels').then((data: any) => ({
+        this.getRequest('/v1/peer/listPeers').then((data: any) => ({
             channels: data
         }));
     getBlockchainBalance = () =>
