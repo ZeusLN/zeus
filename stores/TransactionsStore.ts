@@ -295,8 +295,9 @@ export default class TransactionsStore {
         this.payment_route = result.payment_route;
         this.payment_preimage = result.payment_preimage;
         this.payment_hash =
-            (result.payment_hash && typeof result.payment_hash === 'string') ||
-            null;
+            result.payment_hash && typeof result.payment_hash === 'string'
+                ? result.payment_hash
+                : null;
         if (
             result.status !== 'complete' &&
             result.status !== 'SUCCEEDED' &&
