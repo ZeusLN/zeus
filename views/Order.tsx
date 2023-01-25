@@ -89,10 +89,26 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         const memo = `ZEUS POS: ${order.id}`;
 
         // round to nearest sat
-        const subTotalSats = new BigNumber(order.total_money.amount / 100)
+        const subTotalSats = new BigNumber(order.total_money.amount)
+            .div(100)
             .div(rate)
             .multipliedBy(SATS_PER_BTC)
             .toFixed(0);
+
+        const taxSats = new BigNumber(order.total_tax_money.amount)
+            .div(100)
+            .div(rate)
+            .multipliedBy(SATS_PER_BTC)
+            .toFixed(0);
+
+        const orderTipSats =
+            order.payment && order.payment.orderTip
+                ? new BigNumber(order.payment.orderTip)
+                      .div(100)
+                      .div(rate)
+                      .multipliedBy(SATS_PER_BTC)
+                      .toFixed(0)
+                : '0';
 
         const twentyPercentButton = () => (
             <Text
@@ -167,117 +183,114 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             { element: customButton }
         ];
 
-        // fiat
+        // sats
         // total amount is subtotal + tip + tax
-        let totalAmount = '0';
-        let tipAmount = '0';
+        let totalSats = '0';
+        let tipSats = '0';
         if (!isPaid) {
             switch (selectedIndex) {
                 case 0:
-                    totalAmount = new BigNumber(order.getTotalMoney)
+                    totalSats = new BigNumber(subTotalSats)
                         .multipliedBy(1.2)
-                        .plus(order.getTaxMoney)
-                        .toFixed(2)
-                        .toString();
-                    tipAmount = new BigNumber(order.getTotalMoney)
+                        .plus(taxSats)
+                        .toFixed(0);
+                    tipSats = new BigNumber(subTotalSats)
                         .multipliedBy(0.2)
-                        .toFixed(2)
-                        .toString();
+                        .toFixed(0);
                     break;
                 case 1:
-                    totalAmount = new BigNumber(order.getTotalMoney)
+                    totalSats = new BigNumber(subTotalSats)
                         .multipliedBy(1.25)
-                        .plus(order.getTaxMoney)
-                        .toFixed(2)
-                        .toString();
-                    tipAmount = new BigNumber(order.getTotalMoney)
+                        .plus(taxSats)
+                        .toFixed(0);
+                    tipSats = new BigNumber(subTotalSats)
                         .multipliedBy(0.25)
-                        .toFixed(2)
-                        .toString();
+                        .toFixed(0);
                     break;
                 case 2:
-                    totalAmount = new BigNumber(order.getTotalMoney)
+                    totalSats = new BigNumber(subTotalSats)
                         .multipliedBy(1.3)
-                        .plus(order.getTaxMoney)
-                        .toFixed(2)
-                        .toString();
-                    tipAmount = new BigNumber(order.getTotalMoney)
+                        .plus(taxSats)
+                        .toFixed(0);
+                    tipSats = new BigNumber(subTotalSats)
                         .multipliedBy(0.3)
-                        .toFixed(2)
-                        .toString();
+                        .toFixed(0);
                     break;
                 default:
                     if (customType === 'percentage') {
-                        totalAmount = new BigNumber(order.getTotalMoney)
+                        totalSats = new BigNumber(subTotalSats)
                             .multipliedBy(`1.${customPercentage || 0}`)
-                            .plus(order.getTaxMoney)
-                            .toFixed(2);
-                        tipAmount = new BigNumber(order.getTotalMoney)
+                            .plus(taxSats)
+                            .toFixed(0);
+                        tipSats = new BigNumber(subTotalSats)
                             .multipliedBy(
                                 new BigNumber(customPercentage || 0).dividedBy(
                                     100
                                 )
                             )
-                            .toFixed(2);
+                            .toFixed(0);
                     } else if (customType === 'amount') {
                         if (units === 'fiat') {
-                            totalAmount =
+                            const customSats = new BigNumber(customAmount)
+                                .div(rate)
+                                .multipliedBy(SATS_PER_BTC)
+                                .toFixed(0);
+
+                            totalSats =
                                 !!customAmount && !isNaN(Number(customAmount))
-                                    ? `${new BigNumber(order.getTotalMoney)
-                                          .plus(customAmount)
-                                          .plus(order.getTaxMoney)
-                                          .toFixed(2)}`
-                                    : new BigNumber(order.getTotalMoney)
-                                          .plus(order.getTaxMoney)
-                                          .toFixed(2);
-                            tipAmount =
+                                    ? `${new BigNumber(subTotalSats)
+                                          .plus(customSats)
+                                          .plus(taxSats)
+                                          .toFixed(0)}`
+                                    : new BigNumber(subTotalSats)
+                                          .plus(taxSats)
+                                          .toFixed(0);
+                            tipSats =
                                 !!customAmount && !isNaN(Number(customAmount))
-                                    ? new BigNumber(customAmount).toFixed(2)
+                                    ? new BigNumber(customSats).toFixed(0)
                                     : '0';
                         } else {
-                            const fiatAmount =
+                            const customSats =
                                 units === 'sats'
                                     ? new BigNumber(customAmount)
-                                          .dividedBy(SATS_PER_BTC)
-                                          .multipliedBy(rate)
-                                          .toFixed(2)
-                                    : new BigNumber(customAmount)
-                                          .multipliedBy(rate)
-                                          .toFixed(2);
+                                    : new BigNumber(customAmount).multipliedBy(
+                                          SATS_PER_BTC
+                                      );
 
-                            totalAmount = !isNaN(Number(fiatAmount))
-                                ? `${new BigNumber(order.getTotalMoney)
-                                      .plus(fiatAmount)
-                                      .plus(order.getTaxMoney)
-                                      .toFixed(2)}`
-                                : order.getTotalMoney;
-                            tipAmount = !isNaN(Number(fiatAmount))
-                                ? Number(fiatAmount).toFixed(2)
-                                : '0';
+                            totalSats =
+                                !!customAmount && !isNaN(Number(customAmount))
+                                    ? new BigNumber(subTotalSats)
+                                          .plus(customSats)
+                                          .plus(taxSats)
+                                          .toFixed(0)
+                                    : new BigNumber(subTotalSats)
+                                          .plus(taxSats)
+                                          .toFixed(0);
+
+                            tipSats =
+                                !!customAmount && !isNaN(Number(customAmount))
+                                    ? Number(customSats).toFixed(0)
+                                    : '0';
                         }
                     }
             }
         } else {
-            tipAmount = new BigNumber(order.payment.orderTip || 0)
-                .dividedBy(100)
-                .toString();
-            totalAmount = new BigNumber(order.getTotalMoney)
-                .plus(new BigNumber(tipAmount))
-                .plus(order.getTaxMoney)
-                .toString();
+            tipSats = new BigNumber(orderTipSats).dividedBy(100).toFixed(0);
+            totalSats = new BigNumber(subTotalSats)
+                .plus(tipSats)
+                .plus(taxSats)
+                .toFixed(0);
         }
 
-        const satAmountTotal: string = new BigNumber(
-            totalAmount.replace(/,/g, '.')
-        )
-            .dividedBy(rate)
-            .multipliedBy(SATS_PER_BTC)
-            .toFixed(0);
+        const totalFiat: string = new BigNumber(totalSats)
+            .multipliedBy(rate)
+            .dividedBy(SATS_PER_BTC)
+            .toFixed(2);
 
-        const satAmountTip: string = new BigNumber(tipAmount.replace(/,/g, '.'))
-            .dividedBy(rate)
-            .multipliedBy(SATS_PER_BTC)
-            .toFixed(0);
+        const tipFiat: string = new BigNumber(tipSats)
+            .multipliedBy(rate)
+            .dividedBy(SATS_PER_BTC)
+            .toFixed(2);
 
         const BackButton = () => (
             <Icon
@@ -511,7 +524,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 keyValue={localeString(
                                     'pos.views.Order.tipFiat'
                                 )}
-                                value={`${getSymbol().symbol}${tipAmount}`}
+                                value={`${getSymbol().symbol}${tipFiat}`}
                             />
 
                             <TouchableOpacity
@@ -532,12 +545,12 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                         bitcoinUnits === 'sats' ? (
                                             <Amount
                                                 fixedUnits="sats"
-                                                sats={satAmountTip}
+                                                sats={tipSats}
                                             />
                                         ) : (
                                             <Amount
                                                 fixedUnits="BTC"
-                                                sats={satAmountTip}
+                                                sats={tipSats}
                                             />
                                         )
                                     }
@@ -559,7 +572,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 keyValue={localeString(
                                     'pos.views.Order.tipFiat'
                                 )}
-                                value={`${getSymbol().symbol}${tipAmount}`}
+                                value={`${getSymbol().symbol}${tipFiat}`}
                             />
 
                             <TouchableOpacity
@@ -580,12 +593,12 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                         bitcoinUnits === 'sats' ? (
                                             <Amount
                                                 fixedUnits="sats"
-                                                sats={satAmountTip}
+                                                sats={tipSats}
                                             />
                                         ) : (
                                             <Amount
                                                 fixedUnits="BTC"
-                                                sats={satAmountTip}
+                                                sats={tipSats}
                                             />
                                         )
                                     }
@@ -617,7 +630,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
 
                     <KeyValue
                         keyValue={localeString('pos.views.Order.totalFiat')}
-                        value={`${getSymbol().symbol}${totalAmount}`}
+                        value={`${getSymbol().symbol}${totalFiat}`}
                     />
 
                     <TouchableOpacity
@@ -638,13 +651,10 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 bitcoinUnits === 'sats' ? (
                                     <Amount
                                         fixedUnits="sats"
-                                        sats={satAmountTotal}
+                                        sats={totalSats}
                                     />
                                 ) : (
-                                    <Amount
-                                        fixedUnits="BTC"
-                                        sats={satAmountTotal}
-                                    />
+                                    <Amount fixedUnits="BTC" sats={totalSats} />
                                 )
                             }
                         />
@@ -656,17 +666,17 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                             containerStyle={{ marginTop: 40 }}
                             onPress={() =>
                                 navigation.navigate('Receive', {
-                                    amount: satAmountTotal,
+                                    amount: totalSats,
                                     autoGenerate: true,
                                     memo,
                                     // TODO evaluate fields to save
                                     orderId: order.id,
-                                    orderTip: Number(tipAmount) * 100,
+                                    orderTip: Number(tipSats) * 100,
                                     orderAmount:
                                         Number(order.getTotalMoney) * 100
                                 })
                             }
-                            disabled={isNaN(Number(satAmountTotal))}
+                            disabled={isNaN(Number(totalSats))}
                         />
                     )}
                 </View>
