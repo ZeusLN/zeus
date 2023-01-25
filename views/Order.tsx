@@ -21,12 +21,13 @@ import { themeColor } from './../utils/ThemeUtils';
 
 import SettingsStore from './../stores/SettingsStore';
 import FiatStore from './../stores/FiatStore';
-import { SATS_PER_BTC } from './../stores/UnitsStore';
+import UnitsStore, { SATS_PER_BTC } from './../stores/UnitsStore';
 
 interface OrderProps {
     navigation: any;
     SettingsStore: SettingsStore;
     FiatStore: FiatStore;
+    UnitsStore: UnitsStore;
 }
 
 interface OrderState {
@@ -35,10 +36,10 @@ interface OrderState {
     customPercentage: string;
     customAmount: string;
     customType: string;
-    units: string;
+    bitcoinUnits: string;
 }
 
-@inject('FiatStore', 'SettingsStore')
+@inject('FiatStore', 'SettingsStore', 'UnitsStore')
 @observer
 export default class OrderView extends React.Component<OrderProps, OrderState> {
     constructor(props: any) {
@@ -52,29 +53,46 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             customPercentage: '21',
             customAmount: '',
             customType: 'percentage',
-            units: 'sats'
+            bitcoinUnits: 'sats'
         };
     }
 
     render() {
-        const { navigation, FiatStore, SettingsStore } = this.props;
+        const { navigation, FiatStore, SettingsStore, UnitsStore } = this.props;
         const {
             order,
             selectedIndex,
             customPercentage,
             customAmount,
             customType,
-            units
+            bitcoinUnits
         } = this.state;
         const { fiatRates, getRate, getSymbol }: any = FiatStore;
         const { settings } = SettingsStore;
+        const { changeUnits, units } = UnitsStore;
         const fiat = settings.fiat;
 
-        const isPaid: boolean = order.payment;
+        const fiatEntry =
+            fiat && fiatRates && fiatRates.filter
+                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+                : null;
 
-        const memo = `ZEUS POS: ${order.id} | ${getRate()}`;
+        const rate =
+            fiat && fiatRates && fiatEntry ? fiatEntry.rate.toFixed(2) : 0;
+
+        const isPaid: boolean = order.payment;
+        const exchangeRate = isPaid ? order.payment.exchangeRate : getRate();
 
         const lineItems = order.line_items;
+
+        // TODO add custom memo label in settings
+        const memo = `ZEUS POS: ${order.id}`;
+
+        // round to nearest sat
+        const subTotalSats = new BigNumber(order.total_money.amount / 100)
+            .div(rate)
+            .multipliedBy(SATS_PER_BTC)
+            .toFixed(0);
 
         const twentyPercentButton = () => (
             <Text
@@ -149,42 +167,94 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             { element: customButton }
         ];
 
+        // fiat
+        // total amount is subtotal + tip + tax
         let totalAmount = '0';
         let tipAmount = '0';
         if (!isPaid) {
             switch (selectedIndex) {
                 case 0:
-                    totalAmount = (order.getTotalMoney * 1.2).toFixed(2);
-                    tipAmount = (order.getTotalMoney * 0.2).toFixed(2);
+                    totalAmount = new BigNumber(order.getTotalMoney)
+                        .multipliedBy(1.2)
+                        .plus(order.getTaxMoney)
+                        .toFixed(2)
+                        .toString();
+                    tipAmount = new BigNumber(order.getTotalMoney)
+                        .multipliedBy(0.2)
+                        .toFixed(2)
+                        .toString();
                     break;
                 case 1:
-                    totalAmount = (order.getTotalMoney * 1.25).toFixed(2);
-                    tipAmount = (order.getTotalMoney * 0.25).toFixed(2);
+                    totalAmount = new BigNumber(order.getTotalMoney)
+                        .multipliedBy(1.25)
+                        .plus(order.getTaxMoney)
+                        .toFixed(2)
+                        .toString();
+                    tipAmount = new BigNumber(order.getTotalMoney)
+                        .multipliedBy(0.25)
+                        .toFixed(2)
+                        .toString();
                     break;
                 case 2:
-                    totalAmount = (order.getTotalMoney * 1.3).toFixed(2);
-                    tipAmount = (order.getTotalMoney * 0.3).toFixed(2);
+                    totalAmount = new BigNumber(order.getTotalMoney)
+                        .multipliedBy(1.3)
+                        .plus(order.getTaxMoney)
+                        .toFixed(2)
+                        .toString();
+                    tipAmount = new BigNumber(order.getTotalMoney)
+                        .multipliedBy(0.3)
+                        .toFixed(2)
+                        .toString();
                     break;
                 default:
                     if (customType === 'percentage') {
-                        totalAmount = (
-                            order.getTotalMoney *
-                            Number(`1.${customPercentage}`)
-                        ).toFixed(2);
-                        tipAmount = (
-                            order.getTotalMoney *
-                            (Number(customPercentage) / 100)
-                        ).toFixed(2);
+                        totalAmount = new BigNumber(order.getTotalMoney)
+                            .multipliedBy(`1.${customPercentage || 0}`)
+                            .plus(order.getTaxMoney)
+                            .toFixed(2);
+                        tipAmount = new BigNumber(order.getTotalMoney)
+                            .multipliedBy(
+                                new BigNumber(customPercentage || 0).dividedBy(
+                                    100
+                                )
+                            )
+                            .toFixed(2);
                     } else if (customType === 'amount') {
-                        totalAmount = !isNaN(Number(customAmount))
-                            ? `${Number(
-                                  Number(order.getTotalMoney) +
-                                      Number(customAmount)
-                              ).toFixed(2)}`
-                            : order.getTotalMoney;
-                        tipAmount = !isNaN(Number(customAmount))
-                            ? Number(customAmount).toFixed(2)
-                            : '0';
+                        if (units === 'fiat') {
+                            totalAmount =
+                                !!customAmount && !isNaN(Number(customAmount))
+                                    ? `${new BigNumber(order.getTotalMoney)
+                                          .plus(customAmount)
+                                          .plus(order.getTaxMoney)
+                                          .toFixed(2)}`
+                                    : new BigNumber(order.getTotalMoney)
+                                          .plus(order.getTaxMoney)
+                                          .toFixed(2);
+                            tipAmount =
+                                !!customAmount && !isNaN(Number(customAmount))
+                                    ? new BigNumber(customAmount).toFixed(2)
+                                    : '0';
+                        } else {
+                            const fiatAmount =
+                                units === 'sats'
+                                    ? new BigNumber(customAmount)
+                                          .dividedBy(SATS_PER_BTC)
+                                          .multipliedBy(rate)
+                                          .toFixed(2)
+                                    : new BigNumber(customAmount)
+                                          .multipliedBy(rate)
+                                          .toFixed(2);
+
+                            totalAmount = !isNaN(Number(fiatAmount))
+                                ? `${new BigNumber(order.getTotalMoney)
+                                      .plus(fiatAmount)
+                                      .plus(order.getTaxMoney)
+                                      .toFixed(2)}`
+                                : order.getTotalMoney;
+                            tipAmount = !isNaN(Number(fiatAmount))
+                                ? Number(fiatAmount).toFixed(2)
+                                : '0';
+                        }
                     }
             }
         } else {
@@ -193,20 +263,21 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                 .toString();
             totalAmount = new BigNumber(order.getTotalMoney)
                 .plus(new BigNumber(tipAmount))
+                .plus(order.getTaxMoney)
                 .toString();
         }
 
-        const fiatEntry =
-            fiat && fiatRates && fiatRates.filter
-                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
-                : null;
+        const satAmountTotal: string = new BigNumber(
+            totalAmount.replace(/,/g, '.')
+        )
+            .dividedBy(rate)
+            .multipliedBy(SATS_PER_BTC)
+            .toFixed(0);
 
-        const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
-
-        const satAmount: string = Number(
-            (Number(totalAmount.replace(/,/g, '.')) / Number(rate)) *
-                Number(SATS_PER_BTC)
-        ).toFixed(0);
+        const satAmountTip: string = new BigNumber(tipAmount.replace(/,/g, '.'))
+            .dividedBy(rate)
+            .multipliedBy(SATS_PER_BTC)
+            .toFixed(0);
 
         const BackButton = () => (
             <Icon
@@ -259,16 +330,42 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     <Divider />
 
                     <KeyValue
-                        keyValue={localeString('pos.views.Order.tax')}
-                        value={order.getTaxMoneyDisplay}
+                        keyValue={localeString('general.conversionRate')}
+                        value={exchangeRate}
                     />
 
                     <KeyValue
-                        keyValue={localeString(
-                            'pos.views.Order.totalBeforeTip'
-                        )}
+                        keyValue={'Subtotal (fiat)'}
                         value={order.getTotalMoneyDisplay}
                     />
+
+                    <TouchableOpacity
+                        onPress={() => {
+                            this.setState({
+                                bitcoinUnits:
+                                    this.state.bitcoinUnits === 'sats'
+                                        ? 'BTC'
+                                        : 'sats'
+                            });
+                        }}
+                    >
+                        <KeyValue
+                            keyValue={'Subtotal (Bitcoin)'}
+                            value={
+                                bitcoinUnits === 'sats' ? (
+                                    <Amount
+                                        fixedUnits="sats"
+                                        sats={subTotalSats}
+                                    />
+                                ) : (
+                                    <Amount
+                                        fixedUnits="BTC"
+                                        sats={subTotalSats}
+                                    />
+                                )
+                            }
+                        />
+                    </TouchableOpacity>
 
                     <Divider />
 
@@ -317,11 +414,17 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                         keyboardType="numeric"
                                         right={25}
                                         value={customPercentage}
-                                        onChangeText={(text: string) =>
+                                        onChangeText={(text: string) => {
+                                            if (
+                                                text.includes('-') ||
+                                                text.includes('.') ||
+                                                text.includes(',')
+                                            )
+                                                return;
                                             this.setState({
                                                 customPercentage: text
-                                            })
-                                        }
+                                            });
+                                        }}
                                         onPressIn={() =>
                                             this.setState({
                                                 customType: 'percentage'
@@ -339,16 +442,26 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                         }}
                                     />
                                     <TextInput
-                                        prefix={FiatStore.getSymbol().symbol}
                                         keyboardType="numeric"
-                                        right={25}
                                         value={customAmount}
                                         onChangeText={(text: string) => {
+                                            if (text.includes('-')) return;
                                             if (
-                                                text.includes('-') ||
-                                                (text.split('.')[1] &&
-                                                    text.split('.')[1]
-                                                        .length === 3)
+                                                units === 'sats' &&
+                                                (text.includes(',') ||
+                                                    text.includes('.'))
+                                            )
+                                                return;
+                                            if (
+                                                units === 'BTC' &&
+                                                text.split('.')[1] &&
+                                                text.split('.')[1].length === 9
+                                            )
+                                                return;
+                                            if (
+                                                units === 'fiat' &&
+                                                text.split('.')[1] &&
+                                                text.split('.')[1].length === 3
                                             )
                                                 return;
                                             this.setState({
@@ -369,71 +482,151 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                                     ? 1
                                                     : 0.25
                                         }}
+                                        prefix={
+                                            units !== 'sats' &&
+                                            (units === 'BTC'
+                                                ? '₿'
+                                                : !getSymbol().rtl
+                                                ? getSymbol().symbol
+                                                : null)
+                                        }
+                                        suffix={
+                                            units === 'sats'
+                                                ? units
+                                                : getSymbol().rtl &&
+                                                  units === 'fiat' &&
+                                                  getSymbol().symbol
+                                        }
+                                        toggleUnits={() => {
+                                            this.setState({
+                                                customAmount: ''
+                                            });
+                                            changeUnits();
+                                        }}
                                     />
                                 </View>
                             )}
 
                             <KeyValue
-                                keyValue={localeString('pos.views.Order.tip')}
+                                keyValue={localeString(
+                                    'pos.views.Order.tipFiat'
+                                )}
                                 value={`${getSymbol().symbol}${tipAmount}`}
                             />
 
+                            <TouchableOpacity
+                                onPress={() => {
+                                    this.setState({
+                                        bitcoinUnits:
+                                            this.state.bitcoinUnits === 'sats'
+                                                ? 'BTC'
+                                                : 'sats'
+                                    });
+                                }}
+                            >
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'pos.views.Order.tipBitcoin'
+                                    )}
+                                    value={
+                                        bitcoinUnits === 'sats' ? (
+                                            <Amount
+                                                fixedUnits="sats"
+                                                sats={satAmountTip}
+                                            />
+                                        ) : (
+                                            <Amount
+                                                fixedUnits="BTC"
+                                                sats={satAmountTip}
+                                            />
+                                        )
+                                    }
+                                />
+                            </TouchableOpacity>
+
                             <KeyValue
-                                keyValue={localeString(
-                                    'pos.views.Order.totalFiat'
-                                )}
-                                value={`${getSymbol().symbol}${totalAmount}`}
+                                keyValue={localeString('pos.views.Order.tax')}
+                                value={order.getTaxMoneyDisplay}
                             />
 
                             <Divider />
                         </>
                     )}
 
-                    <KeyValue keyValue={'Conversion Rate'} value={getRate()} />
-
                     {isPaid && (
-                        <KeyValue
-                            keyValue={localeString('pos.views.Order.tip')}
-                            value={`${getSymbol().symbol}${tipAmount}`}
-                        />
+                        <>
+                            <KeyValue
+                                keyValue={localeString(
+                                    'pos.views.Order.tipFiat'
+                                )}
+                                value={`${getSymbol().symbol}${tipAmount}`}
+                            />
+
+                            <TouchableOpacity
+                                onPress={() => {
+                                    this.setState({
+                                        bitcoinUnits:
+                                            this.state.bitcoinUnits === 'sats'
+                                                ? 'BTC'
+                                                : 'sats'
+                                    });
+                                }}
+                            >
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'pos.views.Order.tipBitcoin'
+                                    )}
+                                    value={
+                                        bitcoinUnits === 'sats' ? (
+                                            <Amount
+                                                fixedUnits="sats"
+                                                sats={satAmountTip}
+                                            />
+                                        ) : (
+                                            <Amount
+                                                fixedUnits="BTC"
+                                                sats={satAmountTip}
+                                            />
+                                        )
+                                    }
+                                />
+                            </TouchableOpacity>
+
+                            <KeyValue
+                                keyValue={localeString(
+                                    'pos.views.Order.paymentType'
+                                )}
+                                value={
+                                    order.payment.type === 'ln'
+                                        ? localeString('general.lightning')
+                                        : localeString('general.onchain')
+                                }
+                            />
+                            <KeyValue
+                                keyValue={
+                                    order.payment.type === 'ln'
+                                        ? localeString('views.Send.lnPayment')
+                                        : localeString(
+                                              'views.SendingOnChain.txid'
+                                          )
+                                }
+                                value={order.payment.tx}
+                            />
+                        </>
                     )}
 
-                    {isPaid && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'pos.views.Order.paymentType'
-                            )}
-                            value={
-                                order.payment.type === 'ln'
-                                    ? localeString('general.lightning')
-                                    : localeString('general.onchain')
-                            }
-                        />
-                    )}
-
-                    {isPaid && (
-                        <KeyValue
-                            keyValue={
-                                order.payment.type === 'ln'
-                                    ? localeString('views.Send.lnPayment')
-                                    : localeString('views.SendingOnChain.txid')
-                            }
-                            value={order.payment.tx}
-                        />
-                    )}
-
-                    {isPaid && (
-                        <KeyValue
-                            keyValue={localeString('pos.views.Order.totalFiat')}
-                            value={`${getSymbol().symbol}${totalAmount}`}
-                        />
-                    )}
+                    <KeyValue
+                        keyValue={localeString('pos.views.Order.totalFiat')}
+                        value={`${getSymbol().symbol}${totalAmount}`}
+                    />
 
                     <TouchableOpacity
                         onPress={() => {
                             this.setState({
-                                units:
-                                    this.state.units === 'sats' ? 'BTC' : 'sats'
+                                bitcoinUnits:
+                                    this.state.bitcoinUnits === 'sats'
+                                        ? 'BTC'
+                                        : 'sats'
                             });
                         }}
                     >
@@ -442,13 +635,16 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 'pos.views.Order.totalBitcoin'
                             )}
                             value={
-                                units === 'sats' ? (
+                                bitcoinUnits === 'sats' ? (
                                     <Amount
                                         fixedUnits="sats"
-                                        sats={satAmount}
+                                        sats={satAmountTotal}
                                     />
                                 ) : (
-                                    <Amount fixedUnits="BTC" sats={satAmount} />
+                                    <Amount
+                                        fixedUnits="BTC"
+                                        sats={satAmountTotal}
+                                    />
                                 )
                             }
                         />
@@ -460,16 +656,17 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                             containerStyle={{ marginTop: 40 }}
                             onPress={() =>
                                 navigation.navigate('Receive', {
-                                    amount: satAmount,
+                                    amount: satAmountTotal,
                                     autoGenerate: true,
                                     memo,
+                                    // TODO evaluate fields to save
                                     orderId: order.id,
                                     orderTip: Number(tipAmount) * 100,
                                     orderAmount:
                                         Number(order.getTotalMoney) * 100
                                 })
                             }
-                            disabled={isNaN(Number(satAmount))}
+                            disabled={isNaN(Number(satAmountTotal))}
                         />
                     )}
                 </View>

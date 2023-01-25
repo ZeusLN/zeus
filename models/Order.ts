@@ -14,7 +14,7 @@ export default class Order extends BaseModel {
     id: string;
     updated_at: string;
     created_at: string;
-    tax_money: {
+    total_tax_money: {
         amount: number;
         currency: string;
     };
@@ -63,7 +63,7 @@ export default class Order extends BaseModel {
 
     @computed public get getTaxMoney(): string {
         return Number(
-            ((this.tax_money && this.tax_money.amount) || 0) / 100
+            ((this.total_tax_money && this.total_tax_money.amount) || 0) / 100
         ).toFixed(2);
     }
 
