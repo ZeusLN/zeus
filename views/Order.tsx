@@ -557,11 +557,6 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 />
                             </TouchableOpacity>
 
-                            <KeyValue
-                                keyValue={localeString('pos.views.Order.tax')}
-                                value={order.getTaxMoneyDisplay}
-                            />
-
                             <Divider />
                         </>
                     )}
@@ -627,6 +622,11 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                             />
                         </>
                     )}
+
+                    <KeyValue
+                        keyValue={localeString('pos.views.Order.tax')}
+                        value={order.getTaxMoneyDisplay}
+                    />
 
                     <KeyValue
                         keyValue={localeString('pos.views.Order.totalFiat')}
