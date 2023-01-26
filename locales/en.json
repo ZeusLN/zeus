@@ -533,7 +533,7 @@
     "error.connectionRefused": "Host unreachable. Try restarting your node or its Tor process.",
     "error.hostUnreachable": "Host unreachable. Try restarting your node or its Tor process.",
     "error.torBootstrap": "Error starting up Tor on your phone. Try restarting Zeus. If the problem persists consider reinstalling the app.",
-    "pos.views.Wallet.PosPane.noOrders": "No orders open at the moment",
+    "pos.views.Wallet.PosPane.noOrders": "No orders open at the moment. To send to ZEUS, mark order as 'Other Payment Type' with a note that includes 'Zeus', 'BTC', or 'Bitcoin'",
     "pos.views.Wallet.PosPane.noOrdersPaid": "No orders have been paid yet",
     "pos.views.Wallet.PosPane.fetchingRates": "Fetching exchange rates",
     "pos.views.Order.tax": "Tax",
