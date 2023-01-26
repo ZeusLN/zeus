@@ -2,6 +2,8 @@ import * as React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+
+import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -137,6 +139,13 @@ export default class PointOfSale extends React.Component<
                     </View>
                 ) : (
                     <ScrollView style={{ flex: 1, padding: 15 }}>
+                        {!BackendUtils.isLNDBased() && (
+                            <WarningMessage
+                                message={localeString(
+                                    'pos.views.Settings.PointOfSale.backendWarning'
+                                )}
+                            />
+                        )}
                         {!pin && !passphrase && (
                             <WarningMessage
                                 message={localeString(
