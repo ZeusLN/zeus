@@ -44,6 +44,7 @@ interface PosSettings {
     squareAccessToken?: string;
     squareLocationId?: string;
     confirmationPreference?: string;
+    disableTips?: boolean;
     squareDevMode?: boolean;
 }
 
@@ -212,6 +213,7 @@ export default class SettingsStore {
             squareAccessToken: '',
             squareLocationId: '',
             confirmationPreference: 'lnOnly',
+            disableTips: false,
             squareDevMode: false
         },
         payments: {

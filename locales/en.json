@@ -474,6 +474,7 @@
     "views.Settings.POS.squareAccessToken": "Square Access token",
     "views.Settings.POS.squareLocationId": "Square Location ID",
     "views.Settings.POS.confPref": "Confirmation preference",
+    "views.Settings.POS.disableTips": "Disable tips",
     "views.Settings.POS.devMode": "Developer mode",
     "views.Transaction.title": "Transaction",
     "views.Transaction.totalFees": "Total Fees",
