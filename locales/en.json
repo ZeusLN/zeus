@@ -473,6 +473,7 @@
     "views.Settings.POS.enableSquare": "Enable Square POS integration",
     "views.Settings.POS.squareAccessToken": "Square Access token",
     "views.Settings.POS.squareLocationId": "Square Location ID",
+    "views.Settings.POS.merchantName": "Merchant name (Optional, used for invoice memos)",
     "views.Settings.POS.confPref": "Confirmation preference",
     "views.Settings.POS.disableTips": "Disable tips",
     "views.Settings.POS.devMode": "Developer mode",

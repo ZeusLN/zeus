@@ -75,7 +75,9 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         const { changeUnits, units } = UnitsStore;
         const fiat = settings.fiat;
         const disableTips: boolean =
-            settings && settings.pos && settings.pos.disableTips;
+            (settings && settings.pos && settings.pos.disableTips) || false;
+        const merchantName =
+            settings && settings.pos && settings.pos.merchantName;
 
         const fiatEntry =
             fiat && fiatRates && fiatRates.filter
@@ -90,8 +92,9 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
 
         const lineItems = order.line_items;
 
-        // TODO add custom memo label in settings
-        const memo = `ZEUS POS: ${order.id}`;
+        const memo = merchantName
+            ? `${merchantName} POS powered by ZEUS - Order ${order.id}`
+            : `ZEUS POS - Order ${order.id}`;
 
         // round to nearest sat
         const subTotalSats = new BigNumber(order.total_money.amount)
