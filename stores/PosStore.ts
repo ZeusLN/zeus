@@ -7,9 +7,10 @@ import Order from '../models/Order';
 
 export interface orderPaymentInfo {
     orderId: string;
-    orderAmount: number;
-    orderTip: number;
+    orderTotal: string;
+    orderTip: string;
     exchangeRate: string;
+    rate: number;
     type: string; // ln OR onchain
     tx: string; // txid OR payment request
 }
@@ -45,9 +46,10 @@ export default class PosStore {
     @action
     public recordPayment = ({
         orderId,
-        orderAmount,
+        orderTotal,
         orderTip,
         exchangeRate,
+        rate,
         type,
         tx
     }: orderPaymentInfo) =>
@@ -55,9 +57,10 @@ export default class PosStore {
             `pos-${orderId}`,
             JSON.stringify({
                 orderId,
-                orderAmount,
+                orderTotal,
                 orderTip,
                 exchangeRate,
+                rate,
                 type,
                 tx
             })

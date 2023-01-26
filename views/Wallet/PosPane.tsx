@@ -7,6 +7,7 @@ import {
     TouchableHighlight,
     TouchableOpacity
 } from 'react-native';
+import BigNumber from 'bignumber.js';
 import { ButtonGroup, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -20,7 +21,7 @@ import OrderItem from './OrderItem';
 import FiatStore from '../../stores/FiatStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import PosStore from '../../stores/PosStore';
-import UnitsStore from '../../stores/UnitsStore';
+import UnitsStore, { SATS_PER_BTC } from '../../stores/UnitsStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import { themeColor } from '../../utils/ThemeUtils';
@@ -78,6 +79,17 @@ export default class PosPane extends React.PureComponent<
         const { navigation, FiatStore } = this.props;
         const { getRate, getSymbol } = FiatStore;
         const { item } = order;
+        const isPaid: boolean = item && item.payment;
+
+        let tip = '';
+        if (isPaid) {
+            const { orderTip, rate } = item.payment;
+            tip = new BigNumber(orderTip)
+                .multipliedBy(rate)
+                .dividedBy(SATS_PER_BTC)
+                .toFixed(2);
+        }
+
         return (
             <TouchableHighlight
                 onPress={() => {
@@ -90,10 +102,10 @@ export default class PosPane extends React.PureComponent<
                 <OrderItem
                     title={item.getItemsList}
                     money={
-                        item.payment
+                        isPaid
                             ? `${item.getTotalMoneyDisplay} + ${
                                   getSymbol().symbol
-                              }${Number(item.payment.orderTip || 0) / 100}`
+                              }${tip}`
                             : item.getTotalMoneyDisplay
                     }
                     date={item.getDisplayTime}
