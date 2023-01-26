@@ -44,13 +44,16 @@ interface OrderState {
 export default class OrderView extends React.Component<OrderProps, OrderState> {
     constructor(props: any) {
         super(props);
-        const { navigation } = props;
+        const { SettingsStore, navigation } = props;
         const order = navigation.getParam('order', null);
+        const { settings } = SettingsStore;
+        const disableTips: boolean =
+            settings && settings.pos && settings.pos.disableTips;
 
         this.state = {
             order,
-            selectedIndex: 0,
-            customPercentage: '21',
+            selectedIndex: disableTips ? 3 : 0,
+            customPercentage: disableTips ? '0' : '21',
             customAmount: '',
             customType: 'percentage',
             bitcoinUnits: 'sats'
@@ -71,6 +74,8 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         const { settings } = SettingsStore;
         const { changeUnits, units } = UnitsStore;
         const fiat = settings.fiat;
+        const disableTips: boolean =
+            settings && settings.pos && settings.pos.disableTips;
 
         const fiatEntry =
             fiat && fiatRates && fiatRates.filter
@@ -382,7 +387,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
 
                     <Divider />
 
-                    {!isPaid && (
+                    {!isPaid && !disableTips && (
                         <>
                             <Text
                                 style={{
@@ -666,7 +671,14 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                             containerStyle={{ marginTop: 40 }}
                             onPress={() =>
                                 navigation.navigate('Receive', {
-                                    amount: totalSats,
+                                    amount:
+                                        units === 'sats'
+                                            ? totalSats
+                                            : units === 'BTC'
+                                            ? new BigNumber(totalSats)
+                                                  .div(SATS_PER_BTC)
+                                                  .toFixed(8)
+                                            : totalFiat,
                                     autoGenerate: true,
                                     memo,
                                     // TODO evaluate fields to save

@@ -28,6 +28,7 @@ interface PointOfSaleState {
     squareAccessToken: string;
     squareLocationId: string;
     confirmationPreference: string;
+    disableTips: boolean;
     squareDevMode: boolean;
 }
 
@@ -42,6 +43,7 @@ export default class PointOfSale extends React.Component<
         squareAccessToken: '',
         squareLocationId: '',
         confirmationPreference: 'lnOnly',
+        disableTips: false,
         squareDevMode: false
     };
 
@@ -60,6 +62,7 @@ export default class PointOfSale extends React.Component<
             confirmationPreference:
                 (settings.pos && settings.pos.confirmationPreference) ||
                 'lnOnly',
+            disableTips: (settings.pos && settings.pos.disableTips) || false,
             squareDevMode: (settings.pos && settings.pos.squareDevMode) || false
         });
     }
@@ -80,6 +83,7 @@ export default class PointOfSale extends React.Component<
             squareAccessToken,
             squareLocationId,
             confirmationPreference,
+            disableTips,
             squareDevMode
         } = this.state;
         const { updateSettings, settings }: any = SettingsStore;
@@ -172,6 +176,7 @@ export default class PointOfSale extends React.Component<
                                                 squareLocationId,
                                                 squareEnabled: !squareEnabled,
                                                 confirmationPreference,
+                                                disableTips,
                                                 squareDevMode
                                             }
                                         });
@@ -205,6 +210,7 @@ export default class PointOfSale extends React.Component<
                                                 squareAccessToken: text,
                                                 squareLocationId,
                                                 confirmationPreference,
+                                                disableTips,
                                                 squareDevMode
                                             }
                                         });
@@ -234,6 +240,7 @@ export default class PointOfSale extends React.Component<
                                                 squareAccessToken,
                                                 squareLocationId: text,
                                                 confirmationPreference,
+                                                disableTips,
                                                 squareDevMode
                                             }
                                         });
@@ -255,12 +262,60 @@ export default class PointOfSale extends React.Component<
                                                 squareAccessToken,
                                                 squareLocationId,
                                                 confirmationPreference: value,
+                                                disableTips,
                                                 squareDevMode
                                             }
                                         });
                                     }}
                                     values={POS_CONF_PREF_KEYS}
                                 />
+
+                                <ListItem
+                                    containerStyle={{
+                                        borderBottomWidth: 0,
+                                        backgroundColor:
+                                            themeColor('background')
+                                    }}
+                                >
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'Lato-Regular',
+                                            left: -10
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.POS.disableTips'
+                                        )}
+                                    </ListItem.Title>
+                                    <View
+                                        style={{
+                                            flex: 1,
+                                            flexDirection: 'row',
+                                            justifyContent: 'flex-end'
+                                        }}
+                                    >
+                                        <Switch
+                                            value={disableTips}
+                                            onValueChange={async () => {
+                                                this.setState({
+                                                    disableTips: !disableTips
+                                                });
+                                                await updateSettings({
+                                                    pos: {
+                                                        squareAccessToken,
+                                                        squareLocationId,
+                                                        squareEnabled,
+                                                        confirmationPreference,
+                                                        disableTips:
+                                                            !disableTips,
+                                                        squareDevMode
+                                                    }
+                                                });
+                                            }}
+                                        />
+                                    </View>
+                                </ListItem>
 
                                 <ListItem
                                     containerStyle={{
@@ -300,6 +355,7 @@ export default class PointOfSale extends React.Component<
                                                         squareLocationId,
                                                         squareEnabled,
                                                         confirmationPreference,
+                                                        disableTips,
                                                         squareDevMode:
                                                             !squareDevMode
                                                     }
