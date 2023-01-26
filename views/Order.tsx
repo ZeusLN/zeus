@@ -84,10 +84,14 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                 ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
                 : null;
 
-        const rate =
-            fiat && fiatRates && fiatEntry ? fiatEntry.rate.toFixed(2) : 0;
-
         const isPaid: boolean = order.payment;
+
+        const rate = isPaid
+            ? order.payment.rate
+            : fiat && fiatRates && fiatEntry
+            ? fiatEntry.rate.toFixed(2)
+            : 0;
+
         const exchangeRate = isPaid ? order.payment.exchangeRate : getRate();
 
         const lineItems = order.line_items;
@@ -108,15 +112,6 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             .div(rate)
             .multipliedBy(SATS_PER_BTC)
             .toFixed(0);
-
-        const orderTipSats =
-            order.payment && order.payment.orderTip
-                ? new BigNumber(order.payment.orderTip)
-                      .div(100)
-                      .div(rate)
-                      .multipliedBy(SATS_PER_BTC)
-                      .toFixed(0)
-                : '0';
 
         const twentyPercentButton = () => (
             <Text
@@ -283,11 +278,8 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     }
             }
         } else {
-            tipSats = new BigNumber(orderTipSats).dividedBy(100).toFixed(0);
-            totalSats = new BigNumber(subTotalSats)
-                .plus(tipSats)
-                .plus(taxSats)
-                .toFixed(0);
+            tipSats = order.payment.orderTip;
+            totalSats = order.payment.orderTotal;
         }
 
         const totalFiat: string = new BigNumber(totalSats)
@@ -686,11 +678,15 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                             : totalFiat,
                                     autoGenerate: true,
                                     memo,
-                                    // TODO evaluate fields to save
+                                    // For displaying paid orders
                                     orderId: order.id,
-                                    orderTip: Number(tipSats) * 100,
-                                    orderAmount:
-                                        Number(order.getTotalMoney) * 100
+                                    // sats
+                                    orderTip: tipSats,
+                                    orderTotal: totalSats,
+                                    // formatted string rate
+                                    exchangeRate,
+                                    // numerical rate
+                                    rate
                                 })
                             }
                             disabled={isNaN(Number(totalSats))}

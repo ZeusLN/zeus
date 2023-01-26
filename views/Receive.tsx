@@ -71,8 +71,10 @@ interface ReceiveState {
     routeHints: boolean;
     // POS
     orderId: string;
-    orderAmount: number;
-    orderTip: number;
+    orderTotal: string;
+    orderTip: string;
+    exchangeRate: string;
+    rate: number;
 }
 
 @inject('InvoicesStore', 'SettingsStore', 'UnitsStore', 'FiatStore', 'PosStore')
@@ -93,8 +95,10 @@ export default class Receive extends React.Component<
         routeHints: false,
         // POS
         orderId: '',
-        orderTip: 0,
-        orderAmount: 0
+        orderTip: '',
+        orderTotal: '',
+        exchangeRate: '',
+        rate: 0
     };
 
     async componentDidMount() {
@@ -119,14 +123,18 @@ export default class Receive extends React.Component<
         // POS
         const memo: string = navigation.getParam('memo');
         const orderId: string = navigation.getParam('orderId');
-        const orderAmount: number = navigation.getParam('orderAmount');
-        const orderTip: number = navigation.getParam('orderTip');
+        const orderTotal: string = navigation.getParam('orderTotal');
+        const orderTip: string = navigation.getParam('orderTip');
+        const exchangeRate: string = navigation.getParam('exchangeRate');
+        const rate: number = navigation.getParam('rate');
 
         if (orderId) {
             this.setState({
                 orderId,
-                orderAmount,
-                orderTip
+                orderTotal,
+                orderTip,
+                exchangeRate,
+                rate
             });
         }
 
@@ -297,12 +305,11 @@ export default class Receive extends React.Component<
     };
 
     subscribeInvoice = (rHash: string, onChainAddress?: string) => {
-        const { InvoicesStore, PosStore, SettingsStore, FiatStore } =
-            this.props;
-        const { orderId, orderAmount, orderTip, value } = this.state;
+        const { InvoicesStore, PosStore, SettingsStore } = this.props;
+        const { orderId, orderTotal, orderTip, exchangeRate, rate, value } =
+            this.state;
         const { implementation, settings } = SettingsStore;
         const { setWatchedInvoicePaid } = InvoicesStore;
-        const { getRate } = FiatStore;
 
         const numConfPreference =
             settings.pos && settings.pos.confirmationPreference === '1conf'
@@ -324,9 +331,10 @@ export default class Receive extends React.Component<
                                 if (orderId)
                                     PosStore.recordPayment({
                                         orderId,
-                                        orderAmount,
+                                        orderTotal,
                                         orderTip,
-                                        exchangeRate: getRate(),
+                                        exchangeRate,
+                                        rate,
                                         type: 'ln',
                                         tx: result.payment_request
                                     });
@@ -360,9 +368,10 @@ export default class Receive extends React.Component<
                                     if (orderId)
                                         PosStore.recordPayment({
                                             orderId,
-                                            orderAmount,
+                                            orderTotal,
                                             orderTip,
-                                            exchangeRate: getRate(),
+                                            exchangeRate,
+                                            rate,
                                             type: 'onchain',
                                             tx: result.tx_hash
                                         });
@@ -386,9 +395,10 @@ export default class Receive extends React.Component<
                         if (orderId)
                             PosStore.recordPayment({
                                 orderId,
-                                orderAmount,
+                                orderTotal,
                                 orderTip,
-                                exchangeRate: getRate(),
+                                exchangeRate,
+                                rate,
                                 type: 'ln',
                                 tx: result.payment_request
                             });
@@ -412,9 +422,10 @@ export default class Receive extends React.Component<
                                     if (orderId)
                                         PosStore.recordPayment({
                                             orderId,
-                                            orderAmount,
+                                            orderTotal,
                                             orderTip,
-                                            exchangeRate: getRate(),
+                                            exchangeRate,
+                                            rate,
                                             type: 'ln',
                                             tx: result.payment_request
                                         });
@@ -441,7 +452,7 @@ export default class Receive extends React.Component<
             //                 if (orderId)
             //                     PosStore.recordPayment({
             //                         orderId,
-            //                         orderAmount,
+            //                         orderTotal,
             //                         orderTip
             //                     });
             //                 break;
@@ -480,9 +491,10 @@ export default class Receive extends React.Component<
                                         if (orderId)
                                             PosStore.recordPayment({
                                                 orderId,
-                                                orderAmount,
+                                                orderTotal,
                                                 orderTip,
-                                                exchangeRate: getRate(),
+                                                exchangeRate,
+                                                rate,
                                                 type: 'onchain',
                                                 tx: result.tx_hash
                                             });
