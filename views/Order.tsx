@@ -356,7 +356,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     />
 
                     <KeyValue
-                        keyValue={'Subtotal (fiat)'}
+                        keyValue={localeString('pos.views.Order.subtotalFiat')}
                         value={order.getTotalMoneyDisplay}
                     />
 
@@ -371,7 +371,9 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                         }}
                     >
                         <KeyValue
-                            keyValue={'Subtotal (Bitcoin)'}
+                            keyValue={localeString(
+                                'pos.views.Order.subtotalBitcoin'
+                            )}
                             value={
                                 bitcoinUnits === 'sats' ? (
                                     <Amount
