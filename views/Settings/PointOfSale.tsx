@@ -27,6 +27,7 @@ interface PointOfSaleState {
     squareEnabled: boolean;
     squareAccessToken: string;
     squareLocationId: string;
+    merchantName: string;
     confirmationPreference: string;
     disableTips: boolean;
     squareDevMode: boolean;
@@ -42,6 +43,7 @@ export default class PointOfSale extends React.Component<
         squareEnabled: false,
         squareAccessToken: '',
         squareLocationId: '',
+        merchantName: '',
         confirmationPreference: 'lnOnly',
         disableTips: false,
         squareDevMode: false
@@ -59,6 +61,7 @@ export default class PointOfSale extends React.Component<
                 (settings.pos && settings.pos.squareAccessToken) || '',
             squareLocationId:
                 (settings.pos && settings.pos.squareLocationId) || '',
+            merchantName: (settings.pos && settings.pos.merchantName) || '',
             confirmationPreference:
                 (settings.pos && settings.pos.confirmationPreference) ||
                 'lnOnly',
@@ -82,6 +85,7 @@ export default class PointOfSale extends React.Component<
             squareEnabled,
             squareAccessToken,
             squareLocationId,
+            merchantName,
             confirmationPreference,
             disableTips,
             squareDevMode
@@ -174,6 +178,7 @@ export default class PointOfSale extends React.Component<
                                             pos: {
                                                 squareAccessToken,
                                                 squareLocationId,
+                                                merchantName,
                                                 squareEnabled: !squareEnabled,
                                                 confirmationPreference,
                                                 disableTips,
@@ -209,6 +214,7 @@ export default class PointOfSale extends React.Component<
                                                 squareEnabled,
                                                 squareAccessToken: text,
                                                 squareLocationId,
+                                                merchantName,
                                                 confirmationPreference,
                                                 disableTips,
                                                 squareDevMode
@@ -239,6 +245,38 @@ export default class PointOfSale extends React.Component<
                                                 squareEnabled,
                                                 squareAccessToken,
                                                 squareLocationId: text,
+                                                merchantName,
+                                                confirmationPreference,
+                                                disableTips,
+                                                squareDevMode
+                                            }
+                                        });
+                                    }}
+                                />
+
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'Lato-Regular'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.POS.merchantName'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    value={merchantName}
+                                    onChangeText={async (text: string) => {
+                                        this.setState({
+                                            merchantName: text
+                                        });
+
+                                        await updateSettings({
+                                            pos: {
+                                                squareEnabled,
+                                                squareAccessToken,
+                                                squareLocationId,
+                                                merchantName: text,
                                                 confirmationPreference,
                                                 disableTips,
                                                 squareDevMode
@@ -261,6 +299,7 @@ export default class PointOfSale extends React.Component<
                                                 squareEnabled,
                                                 squareAccessToken,
                                                 squareLocationId,
+                                                merchantName,
                                                 confirmationPreference: value,
                                                 disableTips,
                                                 squareDevMode
@@ -306,6 +345,7 @@ export default class PointOfSale extends React.Component<
                                                         squareAccessToken,
                                                         squareLocationId,
                                                         squareEnabled,
+                                                        merchantName,
                                                         confirmationPreference,
                                                         disableTips:
                                                             !disableTips,
@@ -354,6 +394,7 @@ export default class PointOfSale extends React.Component<
                                                         squareAccessToken,
                                                         squareLocationId,
                                                         squareEnabled,
+                                                        merchantName,
                                                         confirmationPreference,
                                                         disableTips,
                                                         squareDevMode:
