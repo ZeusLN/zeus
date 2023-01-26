@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { ButtonGroup, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import BigNumber from 'bignumber.js';
 
 import Amount from './../components/Amount';
 import Button from './../components/Button';
@@ -20,12 +21,13 @@ import { themeColor } from './../utils/ThemeUtils';
 
 import SettingsStore from './../stores/SettingsStore';
 import FiatStore from './../stores/FiatStore';
-import { SATS_PER_BTC } from './../stores/UnitsStore';
+import UnitsStore, { SATS_PER_BTC } from './../stores/UnitsStore';
 
 interface OrderProps {
     navigation: any;
     SettingsStore: SettingsStore;
     FiatStore: FiatStore;
+    UnitsStore: UnitsStore;
 }
 
 interface OrderState {
@@ -34,44 +36,82 @@ interface OrderState {
     customPercentage: string;
     customAmount: string;
     customType: string;
-    units: string;
+    bitcoinUnits: string;
 }
 
-@inject('FiatStore', 'SettingsStore')
+@inject('FiatStore', 'SettingsStore', 'UnitsStore')
 @observer
 export default class OrderView extends React.Component<OrderProps, OrderState> {
     constructor(props: any) {
         super(props);
-        const { navigation } = props;
+        const { SettingsStore, navigation } = props;
         const order = navigation.getParam('order', null);
+        const { settings } = SettingsStore;
+        const disableTips: boolean =
+            settings && settings.pos && settings.pos.disableTips;
 
         this.state = {
             order,
-            selectedIndex: 0,
-            customPercentage: '21',
+            selectedIndex: disableTips ? 3 : 0,
+            customPercentage: disableTips ? '0' : '21',
             customAmount: '',
             customType: 'percentage',
-            units: 'sats'
+            bitcoinUnits: 'sats'
         };
     }
 
     render() {
-        const { navigation, FiatStore, SettingsStore } = this.props;
+        const { navigation, FiatStore, SettingsStore, UnitsStore } = this.props;
         const {
             order,
             selectedIndex,
             customPercentage,
             customAmount,
             customType,
-            units
+            bitcoinUnits
         } = this.state;
-        const { fiatRates, getRate }: any = FiatStore;
+        const { fiatRates, getRate, getSymbol }: any = FiatStore;
         const { settings } = SettingsStore;
+        const { changeUnits, units } = UnitsStore;
         const fiat = settings.fiat;
+        const disableTips: boolean =
+            (settings && settings.pos && settings.pos.disableTips) || false;
+        const merchantName =
+            settings && settings.pos && settings.pos.merchantName;
 
-        const memo = `ZEUS POS: ${order.id} | ${getRate()}`;
+        const fiatEntry =
+            fiat && fiatRates && fiatRates.filter
+                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+                : null;
+
+        const isPaid: boolean = order.payment;
+
+        const rate = isPaid
+            ? order.payment.rate
+            : fiat && fiatRates && fiatEntry
+            ? fiatEntry.rate.toFixed(2)
+            : 0;
+
+        const exchangeRate = isPaid ? order.payment.exchangeRate : getRate();
 
         const lineItems = order.line_items;
+
+        const memo = merchantName
+            ? `${merchantName} POS powered by ZEUS - Order ${order.id}`
+            : `ZEUS POS - Order ${order.id}`;
+
+        // round to nearest sat
+        const subTotalSats = new BigNumber(order.total_money.amount)
+            .div(100)
+            .div(rate)
+            .multipliedBy(SATS_PER_BTC)
+            .toFixed(0);
+
+        const taxSats = new BigNumber(order.total_tax_money.amount)
+            .div(100)
+            .div(rate)
+            .multipliedBy(SATS_PER_BTC)
+            .toFixed(0);
 
         const twentyPercentButton = () => (
             <Text
@@ -146,53 +186,111 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             { element: customButton }
         ];
 
-        let totalAmount = '0';
-        let tipAmount = '0';
-        switch (selectedIndex) {
-            case 0:
-                totalAmount = (order.getTotalMoney * 1.2).toFixed(2);
-                tipAmount = (order.getTotalMoney * 0.2).toFixed(2);
-                break;
-            case 1:
-                totalAmount = (order.getTotalMoney * 1.25).toFixed(2);
-                tipAmount = (order.getTotalMoney * 0.25).toFixed(2);
-                break;
-            case 2:
-                totalAmount = (order.getTotalMoney * 1.3).toFixed(2);
-                tipAmount = (order.getTotalMoney * 0.3).toFixed(2);
-                break;
-            default:
-                if (customType === 'percentage') {
-                    totalAmount = (
-                        order.getTotalMoney * Number(`1.${customPercentage}`)
-                    ).toFixed(2);
-                    tipAmount = (
-                        order.getTotalMoney *
-                        (Number(customPercentage) / 100)
-                    ).toFixed(2);
-                } else if (customType === 'amount') {
-                    totalAmount = !isNaN(Number(customAmount))
-                        ? `${Number(
-                              Number(order.getTotalMoney) + Number(customAmount)
-                          ).toFixed(2)}`
-                        : order.getTotalMoney;
-                    tipAmount = !isNaN(Number(customAmount))
-                        ? Number(customAmount).toFixed(2)
-                        : '0';
-                }
+        // sats
+        // total amount is subtotal + tip + tax
+        let totalSats = '0';
+        let tipSats = '0';
+        if (!isPaid) {
+            switch (selectedIndex) {
+                case 0:
+                    totalSats = new BigNumber(subTotalSats)
+                        .multipliedBy(1.2)
+                        .plus(taxSats)
+                        .toFixed(0);
+                    tipSats = new BigNumber(subTotalSats)
+                        .multipliedBy(0.2)
+                        .toFixed(0);
+                    break;
+                case 1:
+                    totalSats = new BigNumber(subTotalSats)
+                        .multipliedBy(1.25)
+                        .plus(taxSats)
+                        .toFixed(0);
+                    tipSats = new BigNumber(subTotalSats)
+                        .multipliedBy(0.25)
+                        .toFixed(0);
+                    break;
+                case 2:
+                    totalSats = new BigNumber(subTotalSats)
+                        .multipliedBy(1.3)
+                        .plus(taxSats)
+                        .toFixed(0);
+                    tipSats = new BigNumber(subTotalSats)
+                        .multipliedBy(0.3)
+                        .toFixed(0);
+                    break;
+                default:
+                    if (customType === 'percentage') {
+                        totalSats = new BigNumber(subTotalSats)
+                            .multipliedBy(`1.${customPercentage || 0}`)
+                            .plus(taxSats)
+                            .toFixed(0);
+                        tipSats = new BigNumber(subTotalSats)
+                            .multipliedBy(
+                                new BigNumber(customPercentage || 0).dividedBy(
+                                    100
+                                )
+                            )
+                            .toFixed(0);
+                    } else if (customType === 'amount') {
+                        if (units === 'fiat') {
+                            const customSats = new BigNumber(customAmount)
+                                .div(rate)
+                                .multipliedBy(SATS_PER_BTC)
+                                .toFixed(0);
+
+                            totalSats =
+                                !!customAmount && !isNaN(Number(customAmount))
+                                    ? `${new BigNumber(subTotalSats)
+                                          .plus(customSats)
+                                          .plus(taxSats)
+                                          .toFixed(0)}`
+                                    : new BigNumber(subTotalSats)
+                                          .plus(taxSats)
+                                          .toFixed(0);
+                            tipSats =
+                                !!customAmount && !isNaN(Number(customAmount))
+                                    ? new BigNumber(customSats).toFixed(0)
+                                    : '0';
+                        } else {
+                            const customSats =
+                                units === 'sats'
+                                    ? new BigNumber(customAmount)
+                                    : new BigNumber(customAmount).multipliedBy(
+                                          SATS_PER_BTC
+                                      );
+
+                            totalSats =
+                                !!customAmount && !isNaN(Number(customAmount))
+                                    ? new BigNumber(subTotalSats)
+                                          .plus(customSats)
+                                          .plus(taxSats)
+                                          .toFixed(0)
+                                    : new BigNumber(subTotalSats)
+                                          .plus(taxSats)
+                                          .toFixed(0);
+
+                            tipSats =
+                                !!customAmount && !isNaN(Number(customAmount))
+                                    ? Number(customSats).toFixed(0)
+                                    : '0';
+                        }
+                    }
+            }
+        } else {
+            tipSats = order.payment.orderTip;
+            totalSats = order.payment.orderTotal;
         }
 
-        const fiatEntry =
-            fiat && fiatRates && fiatRates.filter
-                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
-                : null;
+        const totalFiat: string = new BigNumber(totalSats)
+            .multipliedBy(rate)
+            .dividedBy(SATS_PER_BTC)
+            .toFixed(2);
 
-        const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
-
-        const satAmount: string = Number(
-            (Number(totalAmount.replace(/,/g, '.')) / Number(rate)) *
-                Number(SATS_PER_BTC)
-        ).toFixed(0);
+        const tipFiat: string = new BigNumber(tipSats)
+            .multipliedBy(rate)
+            .dividedBy(SATS_PER_BTC)
+            .toFixed(2);
 
         const BackButton = () => (
             <Icon
@@ -245,131 +343,305 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     <Divider />
 
                     <KeyValue
+                        keyValue={localeString('general.conversionRate')}
+                        value={exchangeRate}
+                    />
+
+                    <KeyValue
+                        keyValue={localeString('pos.views.Order.subtotalFiat')}
+                        value={order.getTotalMoneyDisplay}
+                    />
+
+                    <TouchableOpacity
+                        onPress={() => {
+                            this.setState({
+                                bitcoinUnits:
+                                    this.state.bitcoinUnits === 'sats'
+                                        ? 'BTC'
+                                        : 'sats'
+                            });
+                        }}
+                    >
+                        <KeyValue
+                            keyValue={localeString(
+                                'pos.views.Order.subtotalBitcoin'
+                            )}
+                            value={
+                                bitcoinUnits === 'sats' ? (
+                                    <Amount
+                                        fixedUnits="sats"
+                                        sats={subTotalSats}
+                                    />
+                                ) : (
+                                    <Amount
+                                        fixedUnits="BTC"
+                                        sats={subTotalSats}
+                                    />
+                                )
+                            }
+                        />
+                    </TouchableOpacity>
+
+                    <Divider />
+
+                    {!isPaid && !disableTips && (
+                        <>
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    alignSelf: 'center',
+                                    margin: 10
+                                }}
+                            >
+                                {localeString('pos.views.Order.addTip')}
+                            </Text>
+
+                            <ButtonGroup
+                                onPress={(selectedIndex: number) => {
+                                    this.setState({ selectedIndex });
+                                }}
+                                selectedIndex={selectedIndex}
+                                buttons={buttons}
+                                selectedButtonStyle={{
+                                    backgroundColor: themeColor('highlight'),
+                                    borderRadius: 12
+                                }}
+                                containerStyle={{
+                                    backgroundColor: themeColor('secondary'),
+                                    borderRadius: 12,
+                                    borderColor: themeColor('secondary')
+                                }}
+                                innerBorderStyle={{
+                                    color: themeColor('secondary')
+                                }}
+                            />
+
+                            {selectedIndex === 3 && (
+                                <View
+                                    style={{
+                                        flexDirection: 'row',
+                                        width: '95%',
+                                        alignSelf: 'center'
+                                    }}
+                                >
+                                    <TextInput
+                                        suffix="%"
+                                        keyboardType="numeric"
+                                        right={25}
+                                        value={customPercentage}
+                                        onChangeText={(text: string) => {
+                                            if (
+                                                text.includes('-') ||
+                                                text.includes('.') ||
+                                                text.includes(',')
+                                            )
+                                                return;
+                                            this.setState({
+                                                customPercentage: text
+                                            });
+                                        }}
+                                        onPressIn={() =>
+                                            this.setState({
+                                                customType: 'percentage'
+                                            })
+                                        }
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
+                                        style={{
+                                            width: '50%',
+                                            marginRight: 10,
+                                            opacity:
+                                                customType == 'percentage'
+                                                    ? 1
+                                                    : 0.25
+                                        }}
+                                    />
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        value={customAmount}
+                                        onChangeText={(text: string) => {
+                                            if (text.includes('-')) return;
+                                            if (
+                                                units === 'sats' &&
+                                                (text.includes(',') ||
+                                                    text.includes('.'))
+                                            )
+                                                return;
+                                            if (
+                                                units === 'BTC' &&
+                                                text.split('.')[1] &&
+                                                text.split('.')[1].length === 9
+                                            )
+                                                return;
+                                            if (
+                                                units === 'fiat' &&
+                                                text.split('.')[1] &&
+                                                text.split('.')[1].length === 3
+                                            )
+                                                return;
+                                            this.setState({
+                                                customAmount: text
+                                            });
+                                        }}
+                                        onPressIn={() =>
+                                            this.setState({
+                                                customType: 'amount'
+                                            })
+                                        }
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
+                                        style={{
+                                            width: '50%',
+                                            opacity:
+                                                customType == 'amount'
+                                                    ? 1
+                                                    : 0.25
+                                        }}
+                                        prefix={
+                                            units !== 'sats' &&
+                                            (units === 'BTC'
+                                                ? '₿'
+                                                : !getSymbol().rtl
+                                                ? getSymbol().symbol
+                                                : null)
+                                        }
+                                        suffix={
+                                            units === 'sats'
+                                                ? units
+                                                : getSymbol().rtl &&
+                                                  units === 'fiat' &&
+                                                  getSymbol().symbol
+                                        }
+                                        toggleUnits={() => {
+                                            this.setState({
+                                                customAmount: ''
+                                            });
+                                            changeUnits();
+                                        }}
+                                    />
+                                </View>
+                            )}
+
+                            <KeyValue
+                                keyValue={localeString(
+                                    'pos.views.Order.tipFiat'
+                                )}
+                                value={`${getSymbol().symbol}${tipFiat}`}
+                            />
+
+                            <TouchableOpacity
+                                onPress={() => {
+                                    this.setState({
+                                        bitcoinUnits:
+                                            this.state.bitcoinUnits === 'sats'
+                                                ? 'BTC'
+                                                : 'sats'
+                                    });
+                                }}
+                            >
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'pos.views.Order.tipBitcoin'
+                                    )}
+                                    value={
+                                        bitcoinUnits === 'sats' ? (
+                                            <Amount
+                                                fixedUnits="sats"
+                                                sats={tipSats}
+                                            />
+                                        ) : (
+                                            <Amount
+                                                fixedUnits="BTC"
+                                                sats={tipSats}
+                                            />
+                                        )
+                                    }
+                                />
+                            </TouchableOpacity>
+
+                            <Divider />
+                        </>
+                    )}
+
+                    {isPaid && (
+                        <>
+                            <KeyValue
+                                keyValue={localeString(
+                                    'pos.views.Order.tipFiat'
+                                )}
+                                value={`${getSymbol().symbol}${tipFiat}`}
+                            />
+
+                            <TouchableOpacity
+                                onPress={() => {
+                                    this.setState({
+                                        bitcoinUnits:
+                                            this.state.bitcoinUnits === 'sats'
+                                                ? 'BTC'
+                                                : 'sats'
+                                    });
+                                }}
+                            >
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'pos.views.Order.tipBitcoin'
+                                    )}
+                                    value={
+                                        bitcoinUnits === 'sats' ? (
+                                            <Amount
+                                                fixedUnits="sats"
+                                                sats={tipSats}
+                                            />
+                                        ) : (
+                                            <Amount
+                                                fixedUnits="BTC"
+                                                sats={tipSats}
+                                            />
+                                        )
+                                    }
+                                />
+                            </TouchableOpacity>
+
+                            <KeyValue
+                                keyValue={localeString(
+                                    'pos.views.Order.paymentType'
+                                )}
+                                value={
+                                    order.payment.type === 'ln'
+                                        ? localeString('general.lightning')
+                                        : localeString('general.onchain')
+                                }
+                            />
+                            <KeyValue
+                                keyValue={
+                                    order.payment.type === 'ln'
+                                        ? localeString('views.Send.lnPayment')
+                                        : localeString(
+                                              'views.SendingOnChain.txid'
+                                          )
+                                }
+                                value={order.payment.tx}
+                            />
+                        </>
+                    )}
+
+                    <KeyValue
                         keyValue={localeString('pos.views.Order.tax')}
                         value={order.getTaxMoneyDisplay}
                     />
 
                     <KeyValue
-                        keyValue={localeString(
-                            'pos.views.Order.totalBeforeTip'
-                        )}
-                        value={order.getTotalMoneyDisplay}
-                    />
-
-                    <Divider />
-
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            alignSelf: 'center',
-                            margin: 10
-                        }}
-                    >
-                        {localeString('pos.views.Order.addTip')}
-                    </Text>
-
-                    <ButtonGroup
-                        onPress={(selectedIndex: number) => {
-                            this.setState({ selectedIndex });
-                        }}
-                        selectedIndex={selectedIndex}
-                        buttons={buttons}
-                        selectedButtonStyle={{
-                            backgroundColor: themeColor('highlight'),
-                            borderRadius: 12
-                        }}
-                        containerStyle={{
-                            backgroundColor: themeColor('secondary'),
-                            borderRadius: 12,
-                            borderColor: themeColor('secondary')
-                        }}
-                        innerBorderStyle={{
-                            color: themeColor('secondary')
-                        }}
-                    />
-
-                    {selectedIndex === 3 && (
-                        <View
-                            style={{
-                                flexDirection: 'row',
-                                width: '95%',
-                                alignSelf: 'center'
-                            }}
-                        >
-                            <TextInput
-                                suffix="%"
-                                keyboardType="numeric"
-                                right={25}
-                                value={customPercentage}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        customPercentage: text
-                                    })
-                                }
-                                onPressIn={() =>
-                                    this.setState({
-                                        customType: 'percentage'
-                                    })
-                                }
-                                autoCapitalize="none"
-                                autoCorrect={false}
-                                style={{
-                                    width: '50%',
-                                    marginRight: 10,
-                                    opacity:
-                                        customType == 'percentage' ? 1 : 0.25
-                                }}
-                            />
-                            <TextInput
-                                prefix={FiatStore.getSymbol().symbol}
-                                keyboardType="numeric"
-                                right={25}
-                                value={customAmount}
-                                onChangeText={(text: string) => {
-                                    if (
-                                        text.includes('-') ||
-                                        (text.split('.')[1] &&
-                                            text.split('.')[1].length === 3)
-                                    )
-                                        return;
-                                    this.setState({
-                                        customAmount: text
-                                    });
-                                }}
-                                onPressIn={() =>
-                                    this.setState({
-                                        customType: 'amount'
-                                    })
-                                }
-                                autoCapitalize="none"
-                                autoCorrect={false}
-                                style={{
-                                    width: '50%',
-                                    opacity: customType == 'amount' ? 1 : 0.25
-                                }}
-                            />
-                        </View>
-                    )}
-
-                    <KeyValue
-                        keyValue={localeString('pos.views.Order.tip')}
-                        value={`$${tipAmount}`}
-                    />
-
-                    <KeyValue
                         keyValue={localeString('pos.views.Order.totalFiat')}
-                        value={`$${totalAmount}`}
+                        value={`${getSymbol().symbol}${totalFiat}`}
                     />
-
-                    <Divider />
-
-                    <KeyValue keyValue={'Conversion Rate'} value={getRate()} />
 
                     <TouchableOpacity
                         onPress={() => {
                             this.setState({
-                                units:
-                                    this.state.units === 'sats' ? 'BTC' : 'sats'
+                                bitcoinUnits:
+                                    this.state.bitcoinUnits === 'sats'
+                                        ? 'BTC'
+                                        : 'sats'
                             });
                         }}
                     >
@@ -378,33 +650,48 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 'pos.views.Order.totalBitcoin'
                             )}
                             value={
-                                units === 'sats' ? (
+                                bitcoinUnits === 'sats' ? (
                                     <Amount
                                         fixedUnits="sats"
-                                        sats={satAmount}
+                                        sats={totalSats}
                                     />
                                 ) : (
-                                    <Amount fixedUnits="BTC" sats={satAmount} />
+                                    <Amount fixedUnits="BTC" sats={totalSats} />
                                 )
                             }
                         />
                     </TouchableOpacity>
 
-                    <Button
-                        title={localeString('general.pay')}
-                        containerStyle={{ marginTop: 40 }}
-                        onPress={() =>
-                            navigation.navigate('Receive', {
-                                amount: satAmount,
-                                autoGenerate: true,
-                                memo,
-                                orderId: order.id,
-                                orderTip: Number(tipAmount) * 100,
-                                orderAmount: Number(order.getTotalMoney) * 100
-                            })
-                        }
-                        disabled={isNaN(Number(satAmount))}
-                    />
+                    {!isPaid && (
+                        <Button
+                            title={localeString('general.pay')}
+                            containerStyle={{ marginTop: 40 }}
+                            onPress={() =>
+                                navigation.navigate('Receive', {
+                                    amount:
+                                        units === 'sats'
+                                            ? totalSats
+                                            : units === 'BTC'
+                                            ? new BigNumber(totalSats)
+                                                  .div(SATS_PER_BTC)
+                                                  .toFixed(8)
+                                            : totalFiat,
+                                    autoGenerate: true,
+                                    memo,
+                                    // For displaying paid orders
+                                    orderId: order.id,
+                                    // sats
+                                    orderTip: tipSats,
+                                    orderTotal: totalSats,
+                                    // formatted string rate
+                                    exchangeRate,
+                                    // numerical rate
+                                    rate
+                                })
+                            }
+                            disabled={isNaN(Number(totalSats))}
+                        />
+                    )}
                 </View>
             </ScrollView>
         );

@@ -71,8 +71,10 @@ interface ReceiveState {
     routeHints: boolean;
     // POS
     orderId: string;
-    orderAmount: number;
-    orderTip: number;
+    orderTotal: string;
+    orderTip: string;
+    exchangeRate: string;
+    rate: number;
 }
 
 @inject('InvoicesStore', 'SettingsStore', 'UnitsStore', 'FiatStore', 'PosStore')
@@ -93,8 +95,10 @@ export default class Receive extends React.Component<
         routeHints: false,
         // POS
         orderId: '',
-        orderTip: 0,
-        orderAmount: 0
+        orderTip: '',
+        orderTotal: '',
+        exchangeRate: '',
+        rate: 0
     };
 
     async componentDidMount() {
@@ -119,14 +123,18 @@ export default class Receive extends React.Component<
         // POS
         const memo: string = navigation.getParam('memo');
         const orderId: string = navigation.getParam('orderId');
-        const orderAmount: number = navigation.getParam('orderAmount');
-        const orderTip: number = navigation.getParam('orderTip');
+        const orderTotal: string = navigation.getParam('orderTotal');
+        const orderTip: string = navigation.getParam('orderTip');
+        const exchangeRate: string = navigation.getParam('exchangeRate');
+        const rate: number = navigation.getParam('rate');
 
         if (orderId) {
             this.setState({
                 orderId,
-                orderAmount,
-                orderTip
+                orderTotal,
+                orderTip,
+                exchangeRate,
+                rate
             });
         }
 
@@ -298,7 +306,8 @@ export default class Receive extends React.Component<
 
     subscribeInvoice = (rHash: string, onChainAddress?: string) => {
         const { InvoicesStore, PosStore, SettingsStore } = this.props;
-        const { orderId, orderAmount, orderTip, value } = this.state;
+        const { orderId, orderTotal, orderTip, exchangeRate, rate, value } =
+            this.state;
         const { implementation, settings } = SettingsStore;
         const { setWatchedInvoicePaid } = InvoicesStore;
 
@@ -320,10 +329,14 @@ export default class Receive extends React.Component<
                             if (result.settled) {
                                 setWatchedInvoicePaid(result.amt_paid_sat);
                                 if (orderId)
-                                    PosStore.makePayment({
+                                    PosStore.recordPayment({
                                         orderId,
-                                        orderAmount,
-                                        orderTip
+                                        orderTotal,
+                                        orderTip,
+                                        exchangeRate,
+                                        rate,
+                                        type: 'ln',
+                                        tx: result.payment_request
                                     });
                                 this.listener = null;
                             }
@@ -353,10 +366,14 @@ export default class Receive extends React.Component<
                                 ) {
                                     setWatchedInvoicePaid(result.amount);
                                     if (orderId)
-                                        PosStore.makePayment({
+                                        PosStore.recordPayment({
                                             orderId,
-                                            orderAmount,
-                                            orderTip
+                                            orderTotal,
+                                            orderTip,
+                                            exchangeRate,
+                                            rate,
+                                            type: 'onchain',
+                                            tx: result.tx_hash
                                         });
                                     this.listenerSecondary = null;
                                 }
@@ -376,10 +393,14 @@ export default class Receive extends React.Component<
                     if (result && result.settled) {
                         setWatchedInvoicePaid(result.amt_paid_sat);
                         if (orderId)
-                            PosStore.makePayment({
+                            PosStore.recordPayment({
                                 orderId,
-                                orderAmount,
-                                orderTip
+                                orderTotal,
+                                orderTip,
+                                exchangeRate,
+                                rate,
+                                type: 'ln',
+                                tx: result.payment_request
                             });
                     }
                 })
@@ -399,10 +420,14 @@ export default class Receive extends React.Component<
                                 ) {
                                     setWatchedInvoicePaid(result.amt_paid_sat);
                                     if (orderId)
-                                        PosStore.makePayment({
+                                        PosStore.recordPayment({
                                             orderId,
-                                            orderAmount,
-                                            orderTip
+                                            orderTotal,
+                                            orderTip,
+                                            exchangeRate,
+                                            rate,
+                                            type: 'ln',
+                                            tx: result.payment_request
                                         });
                                     break;
                                 }
@@ -425,9 +450,9 @@ export default class Receive extends React.Component<
             //             if (Number(output.amount) >= Number(value) && output.address === onChainAddress) {
             //                 setWatchedInvoicePaid(output.amount);
             //                 if (orderId)
-            //                     PosStore.makePayment({
+            //                     PosStore.recordPayment({
             //                         orderId,
-            //                         orderAmount,
+            //                         orderTotal,
             //                         orderTip
             //                     });
             //                 break;
@@ -464,10 +489,14 @@ export default class Receive extends React.Component<
                                     ) {
                                         setWatchedInvoicePaid(output.amount);
                                         if (orderId)
-                                            PosStore.makePayment({
+                                            PosStore.recordPayment({
                                                 orderId,
-                                                orderAmount,
-                                                orderTip
+                                                orderTotal,
+                                                orderTip,
+                                                exchangeRate,
+                                                rate,
+                                                type: 'onchain',
+                                                tx: result.tx_hash
                                             });
                                         // break parent loop
                                         i = txs.length;

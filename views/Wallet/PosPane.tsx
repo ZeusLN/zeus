@@ -7,7 +7,8 @@ import {
     TouchableHighlight,
     TouchableOpacity
 } from 'react-native';
-import { SearchBar } from 'react-native-elements';
+import BigNumber from 'bignumber.js';
+import { ButtonGroup, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import Button from '../../components/Button';
@@ -20,10 +21,8 @@ import OrderItem from './OrderItem';
 import FiatStore from '../../stores/FiatStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import PosStore from '../../stores/PosStore';
-import UnitsStore from '../../stores/UnitsStore';
+import UnitsStore, { SATS_PER_BTC } from '../../stores/UnitsStore';
 import SettingsStore from '../../stores/SettingsStore';
-
-import Order from '../../models/Order';
 
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -40,8 +39,8 @@ interface PosPaneProps {
 }
 
 interface PosPaneState {
+    selectedIndex: number;
     search: string;
-    filteredOrders: Array<Order>;
     fadeAnimation: any;
 }
 
@@ -53,12 +52,9 @@ export default class PosPane extends React.PureComponent<
 > {
     constructor(props: any) {
         super(props);
-
-        const { orders } = this.props.PosStore;
-
         this.state = {
+            selectedIndex: 0,
             search: '',
-            filteredOrders: orders,
             fadeAnimation: new Animated.Value(1)
         };
 
@@ -81,8 +77,19 @@ export default class PosPane extends React.PureComponent<
 
     renderItem = (order) => {
         const { navigation, FiatStore } = this.props;
-        const { getRate } = FiatStore;
+        const { getRate, getSymbol } = FiatStore;
         const { item } = order;
+        const isPaid: boolean = item && item.payment;
+
+        let tip = '';
+        if (isPaid) {
+            const { orderTip, rate } = item.payment;
+            tip = new BigNumber(orderTip)
+                .multipliedBy(rate)
+                .dividedBy(SATS_PER_BTC)
+                .toFixed(2);
+        }
+
         return (
             <TouchableHighlight
                 onPress={() => {
@@ -94,7 +101,13 @@ export default class PosPane extends React.PureComponent<
             >
                 <OrderItem
                     title={item.getItemsList}
-                    money={item.getTotalMoneyDisplay}
+                    money={
+                        isPaid
+                            ? `${item.getTotalMoneyDisplay} + ${
+                                  getSymbol().symbol
+                              }${tip}`
+                            : item.getTotalMoneyDisplay
+                    }
                     date={item.getDisplayTime}
                 />
             </TouchableHighlight>
@@ -109,16 +122,56 @@ export default class PosPane extends React.PureComponent<
             NodeInfoStore,
             navigation
         } = this.props;
-        const { search } = this.state;
-        const { loading, getOrders, filteredOrders, updateSearch } = PosStore;
+        const { search, selectedIndex } = this.state;
+        const {
+            loading,
+            getOrders,
+            filteredOpenOrders,
+            filteredPaidOrders,
+            updateSearch
+        } = PosStore;
         const { getRate, getFiatRates } = FiatStore;
-        const orders = filteredOrders;
+        const orders =
+            selectedIndex === 0 ? filteredOpenOrders : filteredPaidOrders;
 
         const headerString = `${localeString('general.orders')} (${
             orders.length || 0
         })`;
 
         const error = NodeInfoStore.error || SettingsStore.error;
+
+        const openOrdersButton = () => (
+            <Text
+                style={{
+                    fontFamily: 'Lato-Regular',
+                    color:
+                        selectedIndex === 0
+                            ? themeColor('background')
+                            : themeColor('text')
+                }}
+            >
+                {localeString('general.open')}
+            </Text>
+        );
+
+        const paidOrdersButton = () => (
+            <Text
+                style={{
+                    fontFamily: 'Lato-Regular',
+                    color:
+                        selectedIndex === 1
+                            ? themeColor('background')
+                            : themeColor('text')
+                }}
+            >
+                {localeString('views.Wallet.Invoices.paid')}
+            </Text>
+        );
+
+        const buttons = [
+            { element: openOrdersButton },
+            { element: paidOrdersButton }
+        ];
 
         if (error) {
             return (
@@ -239,6 +292,28 @@ export default class PosPane extends React.PureComponent<
                     </TouchableOpacity>
                 )}
 
+                {!loading && (
+                    <ButtonGroup
+                        onPress={(selectedIndex: number) => {
+                            this.setState({ selectedIndex });
+                        }}
+                        selectedIndex={selectedIndex}
+                        buttons={buttons}
+                        selectedButtonStyle={{
+                            backgroundColor: themeColor('highlight'),
+                            borderRadius: 12
+                        }}
+                        containerStyle={{
+                            backgroundColor: themeColor('secondary'),
+                            borderRadius: 12,
+                            borderColor: themeColor('secondary')
+                        }}
+                        innerBorderStyle={{
+                            color: themeColor('secondary')
+                        }}
+                    />
+                )}
+
                 {loading && <LoadingIndicator />}
 
                 {!loading && (
@@ -287,7 +362,13 @@ export default class PosPane extends React.PureComponent<
                                 textAlign: 'center'
                             }}
                         >
-                            {localeString('pos.views.Wallet.PosPane.noOrders')}
+                            {selectedIndex === 0
+                                ? localeString(
+                                      'pos.views.Wallet.PosPane.noOrders'
+                                  )
+                                : localeString(
+                                      'pos.views.Wallet.PosPane.noOrdersPaid'
+                                  )}
                         </Text>
                     </TouchableOpacity>
                 )}

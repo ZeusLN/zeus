@@ -1,9 +1,9 @@
 import { computed } from 'mobx';
-
 import moment from 'moment';
 
 import BaseModel from './BaseModel';
 import { localeString } from './../utils/LocaleUtils';
+import { orderPaymentInfo } from './../stores/PosStore';
 
 interface LineItem {
     name: string;
@@ -11,9 +11,10 @@ interface LineItem {
 }
 
 export default class Order extends BaseModel {
+    id: string;
     updated_at: string;
     created_at: string;
-    tax_money: {
+    total_tax_money: {
         amount: number;
         currency: string;
     };
@@ -22,6 +23,7 @@ export default class Order extends BaseModel {
         currency: string;
     };
     line_items: Array<LineItem>;
+    payment?: orderPaymentInfo;
 
     @computed public get model(): string {
         return localeString('general.order');
@@ -61,7 +63,7 @@ export default class Order extends BaseModel {
 
     @computed public get getTaxMoney(): string {
         return Number(
-            ((this.tax_money && this.tax_money.amount) || 0) / 100
+            ((this.total_tax_money && this.total_tax_money.amount) || 0) / 100
         ).toFixed(2);
     }
 

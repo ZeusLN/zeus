@@ -2,6 +2,8 @@ import * as React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+
+import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -27,7 +29,9 @@ interface PointOfSaleState {
     squareEnabled: boolean;
     squareAccessToken: string;
     squareLocationId: string;
+    merchantName: string;
     confirmationPreference: string;
+    disableTips: boolean;
     squareDevMode: boolean;
 }
 
@@ -41,7 +45,9 @@ export default class PointOfSale extends React.Component<
         squareEnabled: false,
         squareAccessToken: '',
         squareLocationId: '',
+        merchantName: '',
         confirmationPreference: 'lnOnly',
+        disableTips: false,
         squareDevMode: false
     };
 
@@ -57,9 +63,11 @@ export default class PointOfSale extends React.Component<
                 (settings.pos && settings.pos.squareAccessToken) || '',
             squareLocationId:
                 (settings.pos && settings.pos.squareLocationId) || '',
+            merchantName: (settings.pos && settings.pos.merchantName) || '',
             confirmationPreference:
                 (settings.pos && settings.pos.confirmationPreference) ||
                 'lnOnly',
+            disableTips: (settings.pos && settings.pos.disableTips) || false,
             squareDevMode: (settings.pos && settings.pos.squareDevMode) || false
         });
     }
@@ -79,7 +87,9 @@ export default class PointOfSale extends React.Component<
             squareEnabled,
             squareAccessToken,
             squareLocationId,
+            merchantName,
             confirmationPreference,
+            disableTips,
             squareDevMode
         } = this.state;
         const { updateSettings, settings }: any = SettingsStore;
@@ -129,6 +139,13 @@ export default class PointOfSale extends React.Component<
                     </View>
                 ) : (
                     <ScrollView style={{ flex: 1, padding: 15 }}>
+                        {!BackendUtils.isLNDBased() && (
+                            <WarningMessage
+                                message={localeString(
+                                    'pos.views.Settings.PointOfSale.backendWarning'
+                                )}
+                            />
+                        )}
                         {!pin && !passphrase && (
                             <WarningMessage
                                 message={localeString(
@@ -170,8 +187,10 @@ export default class PointOfSale extends React.Component<
                                             pos: {
                                                 squareAccessToken,
                                                 squareLocationId,
+                                                merchantName,
                                                 squareEnabled: !squareEnabled,
                                                 confirmationPreference,
+                                                disableTips,
                                                 squareDevMode
                                             }
                                         });
@@ -204,7 +223,9 @@ export default class PointOfSale extends React.Component<
                                                 squareEnabled,
                                                 squareAccessToken: text,
                                                 squareLocationId,
+                                                merchantName,
                                                 confirmationPreference,
+                                                disableTips,
                                                 squareDevMode
                                             }
                                         });
@@ -233,7 +254,40 @@ export default class PointOfSale extends React.Component<
                                                 squareEnabled,
                                                 squareAccessToken,
                                                 squareLocationId: text,
+                                                merchantName,
                                                 confirmationPreference,
+                                                disableTips,
+                                                squareDevMode
+                                            }
+                                        });
+                                    }}
+                                />
+
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'Lato-Regular'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.POS.merchantName'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    value={merchantName}
+                                    onChangeText={async (text: string) => {
+                                        this.setState({
+                                            merchantName: text
+                                        });
+
+                                        await updateSettings({
+                                            pos: {
+                                                squareEnabled,
+                                                squareAccessToken,
+                                                squareLocationId,
+                                                merchantName: text,
+                                                confirmationPreference,
+                                                disableTips,
                                                 squareDevMode
                                             }
                                         });
@@ -254,13 +308,63 @@ export default class PointOfSale extends React.Component<
                                                 squareEnabled,
                                                 squareAccessToken,
                                                 squareLocationId,
+                                                merchantName,
                                                 confirmationPreference: value,
+                                                disableTips,
                                                 squareDevMode
                                             }
                                         });
                                     }}
                                     values={POS_CONF_PREF_KEYS}
                                 />
+
+                                <ListItem
+                                    containerStyle={{
+                                        borderBottomWidth: 0,
+                                        backgroundColor:
+                                            themeColor('background')
+                                    }}
+                                >
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'Lato-Regular',
+                                            left: -10
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.POS.disableTips'
+                                        )}
+                                    </ListItem.Title>
+                                    <View
+                                        style={{
+                                            flex: 1,
+                                            flexDirection: 'row',
+                                            justifyContent: 'flex-end'
+                                        }}
+                                    >
+                                        <Switch
+                                            value={disableTips}
+                                            onValueChange={async () => {
+                                                this.setState({
+                                                    disableTips: !disableTips
+                                                });
+                                                await updateSettings({
+                                                    pos: {
+                                                        squareAccessToken,
+                                                        squareLocationId,
+                                                        squareEnabled,
+                                                        merchantName,
+                                                        confirmationPreference,
+                                                        disableTips:
+                                                            !disableTips,
+                                                        squareDevMode
+                                                    }
+                                                });
+                                            }}
+                                        />
+                                    </View>
+                                </ListItem>
 
                                 <ListItem
                                     containerStyle={{
@@ -299,7 +403,9 @@ export default class PointOfSale extends React.Component<
                                                         squareAccessToken,
                                                         squareLocationId,
                                                         squareEnabled,
+                                                        merchantName,
                                                         confirmationPreference,
+                                                        disableTips,
                                                         squareDevMode:
                                                             !squareDevMode
                                                     }
