@@ -153,6 +153,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             const posEnabled =
                 settings && settings.pos && settings.pos.squareEnabled;
 
+            if (!loginRequired) SettingsStore.setLoginStatus(true);
+
             if (posEnabled && posStatus === 'inactive' && loginRequired) {
                 navigation.navigate('Lockscreen');
             } else if (posEnabled && posStatus === 'unselected') {
@@ -540,7 +542,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         padding: 8
                                     }}
                                 >
-                                    {settings.nodes
+                                    {settings.nodes && loggedIn
                                         ? localeString(
                                               'views.Wallet.Wallet.connecting'
                                           )
