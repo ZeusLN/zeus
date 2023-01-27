@@ -172,6 +172,16 @@ export function themeColor(themeString: string): any {
         chain: '#fff'
     };
 
+    const Pub: { [key: string]: any } = {
+        generalStyle: 'dark',
+        background: '#4C09F4',
+        secondary: '#141414',
+        separator: '#141414',
+        highlight: '#fff',
+        bolt: '#fff',
+        chain: '#fff'
+    };
+
     switch (theme) {
         case 'light':
             return Light[themeString] || Dark[themeString];
@@ -197,6 +207,8 @@ export function themeColor(themeString: string): any {
             return Mighty[themeString] || Dark[themeString];
         case 'green':
             return Green[themeString] || Dark[themeString];
+        case 'pub':
+            return Pub[themeString] || Dark[themeString];
         default:
             return Dark[themeString];
     }

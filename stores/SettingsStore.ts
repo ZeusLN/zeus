@@ -175,7 +175,8 @@ export const THEME_KEYS = [
     { key: 'Deep Purple', value: 'deep-purple' },
     { key: 'Deadpool', value: 'deadpool' },
     { key: 'Mighty', value: 'mighty' },
-    { key: 'Green', value: 'green' }
+    { key: 'Green', value: 'green' },
+    { key: 'Pub', value: 'pub' }
 ];
 
 export const DEFAULT_VIEW_KEYS = [
