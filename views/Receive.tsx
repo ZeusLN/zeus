@@ -85,6 +85,8 @@ export default class Receive extends React.Component<
 > {
     listener: any;
     listenerSecondary: any;
+    lnInterval: any;
+    onChainInterval: any;
     state = {
         selectedIndex: 0,
         addressType: '0',
@@ -165,10 +167,6 @@ export default class Receive extends React.Component<
         }
     }
 
-    componentWillUnmount() {
-        if (this.listener && this.listener.stop) this.listener.stop();
-    }
-
     UNSAFE_componentWillReceiveProps(nextProps: any) {
         const { navigation, InvoicesStore } = nextProps;
         const { reset } = InvoicesStore;
@@ -184,6 +182,32 @@ export default class Receive extends React.Component<
             });
         }
     }
+
+    clearListeners = () => {
+        if (this.listener && this.listener.stop) this.listener.stop();
+        if (this.listenerSecondary && this.listenerSecondary.stop)
+            this.listenerSecondary.stop();
+    };
+
+    clearIntervals = () => {
+        if (this.lnInterval) clearInterval(this.lnInterval);
+        if (this.onChainInterval) clearInterval(this.onChainInterval);
+    };
+
+    navBack = () => {
+        const { InvoicesStore, navigation } = this.props;
+        const { reset } = InvoicesStore;
+        // kill all listeners and pollers before navigating back
+        this.clearListeners();
+        this.clearIntervals();
+
+        // clear invoice
+        reset();
+
+        navigation.navigate('Wallet', {
+            refresh: true
+        });
+    };
 
     autoGenerateInvoice = (amount?: string, memo?: string) => {
         const { InvoicesStore } = this.props;
@@ -387,83 +411,38 @@ export default class Receive extends React.Component<
         }
 
         if (implementation === 'lnd') {
-            BackendUtils.subscribeInvoice(rHash)
-                .then((response: any) => {
-                    const result = response.result;
-                    if (result && result.settled) {
-                        setWatchedInvoicePaid(result.amt_paid_sat);
-                        if (orderId)
-                            PosStore.recordPayment({
-                                orderId,
-                                orderTotal,
-                                orderTip,
-                                exchangeRate,
-                                rate,
-                                type: 'ln',
-                                tx: result.payment_request
-                            });
+            this.lnInterval = setInterval(() => {
+                BackendUtils.getInvoices().then((response: any) => {
+                    const invoices = response.invoices;
+                    for (let i = 0; i < invoices.length; i++) {
+                        const result = invoices[i];
+                        if (
+                            result.r_hash
+                                .replace(/\+/g, '-')
+                                .replace(/\//g, '_') === rHash &&
+                            Number(result.amt_paid_sat) >= Number(value)
+                        ) {
+                            setWatchedInvoicePaid(result.amt_paid_sat);
+                            if (orderId)
+                                PosStore.recordPayment({
+                                    orderId,
+                                    orderTotal,
+                                    orderTip,
+                                    exchangeRate,
+                                    rate,
+                                    type: 'ln',
+                                    tx: result.payment_request
+                                });
+                            this.clearIntervals();
+                            break;
+                        }
                     }
-                })
-                .catch(() => {
-                    // fallback in case streaming call times out
-                    // 15 seconds
-                    setInterval(function () {
-                        BackendUtils.getInvoices().then((response: any) => {
-                            const invoices = response.invoices;
-                            for (let i = 0; i < invoices.length; i++) {
-                                const result = invoices[i];
-                                if (
-                                    result.r_hash
-                                        .replace(/\+/g, '-')
-                                        .replace(/\//g, '_') === rHash &&
-                                    Number(result.amt_paid_sat) >= Number(value)
-                                ) {
-                                    setWatchedInvoicePaid(result.amt_paid_sat);
-                                    if (orderId)
-                                        PosStore.recordPayment({
-                                            orderId,
-                                            orderTotal,
-                                            orderTip,
-                                            exchangeRate,
-                                            rate,
-                                            type: 'ln',
-                                            tx: result.payment_request
-                                        });
-                                    break;
-                                }
-                            }
-                        });
-                    }, 15000);
                 });
-
-            // TODO investigate why call is timing out
-            // BackendUtils.subscribeTransactions({}).then((response: any) => {
-            //     const result = response.result;
-            //     if (
-            //         result.dest_addresses.includes(onChainAddress) &&
-            //         result.num_confirmations >= numConfPreference &&
-            //         result.amount >= Number(value)
-            //     ) {
-            //         const output_details = result.output_details;
-            //         for (let i = 0; i < output_details.length; i++) {
-            //             const output = output_details[i];
-            //             if (Number(output.amount) >= Number(value) && output.address === onChainAddress) {
-            //                 setWatchedInvoicePaid(output.amount);
-            //                 if (orderId)
-            //                     PosStore.recordPayment({
-            //                         orderId,
-            //                         orderTotal,
-            //                         orderTip
-            //                     });
-            //                 break;
-            //             }
-            //         }
-            //     }
-            // });
+            }, 7000);
 
             // this is workaround that manually calls your transactions every 30 secs
             if (onChainAddress) {
-                setInterval(function () {
+                this.onChainInterval = setInterval(() => {
                     BackendUtils.getTransactions().then((response: any) => {
                         const txs = response.transactions;
                         for (let i = 0; i < txs.length; i++) {
@@ -498,6 +477,7 @@ export default class Receive extends React.Component<
                                                 type: 'onchain',
                                                 tx: result.tx_hash
                                             });
+                                        this.clearIntervals();
                                         // break parent loop
                                         i = txs.length;
                                         break;
@@ -506,7 +486,7 @@ export default class Receive extends React.Component<
                             }
                         }
                     });
-                }, 30000);
+                }, 15000);
             }
         }
     };
@@ -590,8 +570,7 @@ export default class Receive extends React.Component<
             error_msg,
             watchedInvoicePaid,
             watchedInvoicePaidAmt,
-            clearUnified,
-            reset
+            clearUnified
         } = InvoicesStore;
         const { implementation, posStatus, settings } = SettingsStore;
         const loading = SettingsStore.loading || InvoicesStore.loading;
@@ -614,8 +593,7 @@ export default class Receive extends React.Component<
             <Icon
                 name="arrow-back"
                 onPress={() => {
-                    reset();
-                    navigation.navigate('Wallet');
+                    this.navBack();
                 }}
                 color={themeColor('text')}
                 underlayColor="transparent"
@@ -866,11 +844,7 @@ export default class Receive extends React.Component<
                                     name: 'list',
                                     size: 25
                                 }}
-                                onPress={() =>
-                                    navigation.navigate('Wallet', {
-                                        refresh: true
-                                    })
-                                }
+                                onPress={() => this.navBack()}
                                 containerStyle={{ width: '100%' }}
                             />
                         </View>
