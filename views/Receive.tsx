@@ -973,7 +973,7 @@ export default class Receive extends React.Component<
                                         )}
                                 </View>
                             )}
-                            {!loading && !haveInvoice && (
+                            {!loading && !haveInvoice && !creatingInvoice && (
                                 <>
                                     <Text
                                         style={{
