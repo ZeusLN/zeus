@@ -72,7 +72,11 @@ export default class Gods extends React.Component<GodsProps, {}> {
                                     }}
                                     onPress={() =>
                                         UrlUtils.goToUrl(
-                                            `https://twitter.com/${item.handle}`
+                                            `https://${
+                                                item.type === 'Twitter'
+                                                    ? 'twitter.com/'
+                                                    : 'iris.to/#/profile/'
+                                            }${item.handle}`
                                         )
                                     }
                                 >
@@ -83,7 +87,11 @@ export default class Gods extends React.Component<GodsProps, {}> {
                                         }
                                         rounded
                                         source={{
-                                            uri: `https://zeusln.app/api/twitter-images/${item.handle}.jpg`
+                                            uri: `https://zeusln.app/api/${
+                                                item.type === 'Twitter'
+                                                    ? 'twitter-images/'
+                                                    : 'nostr-images/'
+                                            }${item.handle}.jpg`
                                         }}
                                         key={1}
                                         containerStyle={{ margin: 5 }}
