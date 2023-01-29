@@ -47,6 +47,9 @@ export default class KeypadPane extends React.PureComponent<
 
         let newAmount;
 
+        // only allow one decimal
+        if (amount.includes('.') && value === '.') return this.startShake();
+
         // limit decimal places depending on units
         if (units === 'fiat') {
             if (amount.split('.')[1] && amount.split('.')[1].length == 2)
