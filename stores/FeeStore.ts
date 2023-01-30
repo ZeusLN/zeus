@@ -165,31 +165,33 @@ export default class FeeStore {
 
     @action
     public getForwardingHistory = (params?: any) => {
-        this.loading = true;
-        this.forwardingEvents = [];
-        this.forwardingHistoryError = false;
-        this.earnedDuringTimeframe = new BigNumber(0);
-        BackendUtils.getForwardingHistory(params)
-            .then((data: any) => {
-                this.forwardingEvents = data.forwarding_events
-                    .map((event: any) => new ForwardEvent(event))
-                    .reverse();
+        if (!this.loading) {
+            this.loading = true;
+            this.forwardingEvents = [];
+            this.forwardingHistoryError = false;
+            this.earnedDuringTimeframe = new BigNumber(0);
+            BackendUtils.getForwardingHistory(params)
+                .then((data: any) => {
+                    this.forwardingEvents = data.forwarding_events
+                        .map((event: any) => new ForwardEvent(event))
+                        .reverse();
 
-                // Add up fees earned for this timeframe
-                // Uses BigNumber to prevent rounding errors in the add operation
-                this.forwardingEvents.map(
-                    (event: ForwardEvent) =>
-                        (this.earnedDuringTimeframe =
-                            this.earnedDuringTimeframe.plus(
-                                Number(event.fee_msat) / 1000
-                            ))
-                );
+                    // Add up fees earned for this timeframe
+                    // Uses BigNumber to prevent rounding errors in the add operation
+                    this.forwardingEvents.map(
+                        (event: ForwardEvent) =>
+                            (this.earnedDuringTimeframe =
+                                this.earnedDuringTimeframe.plus(
+                                    Number(event.fee_msat) / 1000
+                                ))
+                    );
 
-                this.lastOffsetIndex = data.last_offset_index;
-                this.loading = false;
-            })
-            .catch(() => {
-                this.forwardingError();
-            });
+                    this.lastOffsetIndex = data.last_offset_index;
+                    this.loading = false;
+                })
+                .catch(() => {
+                    this.forwardingError();
+                });
+        }
     };
 }
