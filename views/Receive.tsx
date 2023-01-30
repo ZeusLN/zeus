@@ -765,7 +765,10 @@ export default class Receive extends React.Component<
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: localeString('views.Receive.title'),
+                        text:
+                            posStatus === 'active'
+                                ? localeString('general.pay')
+                                : localeString('views.Receive.title'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'Lato-Regular'
@@ -801,7 +804,7 @@ export default class Receive extends React.Component<
                             style={{
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                paddingTop: 100
+                                paddingTop: 50
                             }}
                         >
                             <WordLogo
@@ -933,9 +936,15 @@ export default class Receive extends React.Component<
                                             ]}
                                         >
                                             <Button
-                                                title={localeString(
-                                                    'general.receiveNfc'
-                                                )}
+                                                title={
+                                                    posStatus === 'active'
+                                                        ? localeString(
+                                                              'general.payNfc'
+                                                          )
+                                                        : localeString(
+                                                              'general.receiveNfc'
+                                                          )
+                                                }
                                                 icon={{
                                                     name: 'nfc',
                                                     size: 25
