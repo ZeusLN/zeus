@@ -109,7 +109,7 @@ export default class EditFee extends React.Component<
                 >
                     <MempoolSpace width={140} height={55} />
                 </View>
-                <ScrollView style={{ paddingTop: 10, paddingLeft: 20 }}>
+                <ScrollView style={{ paddingTop: 10, alignSelf: 'center' }}>
                     {loading && !error && (
                         <View style={{ flex: 1, justifyContent: 'center' }}>
                             <LoadingIndicator />
@@ -140,8 +140,7 @@ export default class EditFee extends React.Component<
                                             selectedFee === 'fastestFee'
                                                 ? themeColor('highlight')
                                                 : '#A7A9AC',
-                                        borderWidth: 3,
-                                        color: themeColor('text')
+                                        borderWidth: 3
                                     }}
                                 >
                                     <Text
@@ -182,8 +181,7 @@ export default class EditFee extends React.Component<
                                             selectedFee === 'halfHourFee'
                                                 ? themeColor('highlight')
                                                 : '#A7A9AC',
-                                        borderWidth: 3,
-                                        color: themeColor('text')
+                                        borderWidth: 3
                                     }}
                                 >
                                     <Text
@@ -225,8 +223,7 @@ export default class EditFee extends React.Component<
                                             selectedFee === 'hourFee'
                                                 ? themeColor('highlight')
                                                 : '#A7A9AC',
-                                        borderWidth: 3,
-                                        color: themeColor('text')
+                                        borderWidth: 3
                                     }}
                                 >
                                     <Text
@@ -265,8 +262,7 @@ export default class EditFee extends React.Component<
                                             selectedFee === 'minimumFee'
                                                 ? themeColor('highlight')
                                                 : '#A7A9AC',
-                                        borderWidth: 3,
-                                        color: themeColor('text')
+                                        borderWidth: 3
                                     }}
                                 >
                                     <Text
@@ -304,7 +300,8 @@ export default class EditFee extends React.Component<
                                         <TextInput
                                             style={{
                                                 ...styles.feeBox,
-                                                paddingLeft: '85%',
+                                                textAlign: 'right',
+                                                paddingRight: 15,
                                                 borderColor:
                                                     selectedFee === 'custom'
                                                         ? themeColor(
@@ -313,7 +310,8 @@ export default class EditFee extends React.Component<
                                                         : '#A7A9AC',
                                                 borderWidth: 3,
                                                 color: themeColor('text'),
-                                                fontSize: 18
+                                                fontSize: 18,
+                                                height: 52
                                             }}
                                             keyboardType="numeric"
                                             defaultValue={this.state.customFee}
@@ -383,9 +381,10 @@ const styles = StyleSheet.create({
         top: 10
     },
     feeText: {
-        top: -15,
+        top: -12,
         fontSize: 18,
-        left: '90%'
+        textAlign: 'right',
+        paddingRight: 15
     },
     custom: {
         color: '#A7A9AC',
