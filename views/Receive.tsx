@@ -825,7 +825,8 @@ export default class Receive extends React.Component<
                             style={{
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                paddingTop: 50
+                                height: '100%',
+                                paddingTop: 100
                             }}
                         >
                             <WordLogo
