@@ -433,7 +433,8 @@ export default class Receive extends React.Component<
                                 result.r_hash
                                     .replace(/\+/g, '-')
                                     .replace(/\//g, '_') === rHash &&
-                                Number(result.amt_paid_sat) >= Number(value)
+                                Number(result.amt_paid_sat) >= Number(value) &&
+                                Number(result.amt_paid_sat) !== 0
                             ) {
                                 setWatchedInvoicePaid(result.amt_paid_sat);
                                 if (orderId)
