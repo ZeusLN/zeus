@@ -19,6 +19,7 @@ import * as RO from './../locales/ro.json';
 import * as PL from './../locales/pl.json';
 
 import * as HE from './../locales/he.json';
+import * as HR from './../locales/hr.json';
 
 // in progress
 import * as FA from './../locales/fa.json';
@@ -57,6 +58,7 @@ const Italian: any = IT;
 const Vietnamese: any = VI;
 const Japanese: any = JA;
 const Hebrew: any = HE;
+const Croatian: any = HR;
 
 export function localeString(localeString: string): any {
     const { settings } = stores.settingsStore;
@@ -113,6 +115,8 @@ export function localeString(localeString: string): any {
             return Japanese[localeString] || English[localeString];
         case 'עִבְרִית':
             return Hebrew[localeString] || English[localeString];
+        case 'Hrvatski':
+            return Croatian[localeString] || English[localeString];
         default:
             return English[localeString];
     }

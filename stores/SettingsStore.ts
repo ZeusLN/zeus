@@ -127,7 +127,8 @@ export const LOCALE_KEYS = [
     { key: 'Italiano', value: 'Italiano' },
     { key: 'Tiếng Việt', value: 'Tiếng Việt' },
     { key: '日本語', value: '日本語' },
-    { key: 'עִבְרִית', value: 'עִבְרִית' }
+    { key: 'עִבְרִית', value: 'עִבְרִית' },
+    { key: 'Hrvatski', value: 'Hrvatski' }
 ];
 
 export const CURRENCY_KEYS = [
