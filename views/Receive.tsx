@@ -41,6 +41,7 @@ import Switch from './../components/Switch';
 import TextInput from './../components/TextInput';
 
 import FiatStore from './../stores/FiatStore';
+import NodeInfoStore from './../stores/NodeInfoStore';
 import InvoicesStore from './../stores/InvoicesStore';
 import SettingsStore from './../stores/SettingsStore';
 import UnitsStore, { SATS_PER_BTC } from './../stores/UnitsStore';
@@ -59,6 +60,7 @@ interface ReceiveProps {
     UnitsStore: UnitsStore;
     FiatStore: FiatStore;
     PosStore: PosStore;
+    NodeInfoStore: NodeInfoStore;
 }
 
 interface ReceiveState {
@@ -77,7 +79,14 @@ interface ReceiveState {
     rate: number;
 }
 
-@inject('InvoicesStore', 'SettingsStore', 'UnitsStore', 'FiatStore', 'PosStore')
+@inject(
+    'InvoicesStore',
+    'SettingsStore',
+    'UnitsStore',
+    'FiatStore',
+    'PosStore',
+    'NodeInfoStore'
+)
 @observer
 export default class Receive extends React.Component<
     ReceiveProps,
@@ -329,10 +338,12 @@ export default class Receive extends React.Component<
     };
 
     subscribeInvoice = (rHash: string, onChainAddress?: string) => {
-        const { InvoicesStore, PosStore, SettingsStore } = this.props;
+        const { InvoicesStore, PosStore, SettingsStore, NodeInfoStore } =
+            this.props;
         const { orderId, orderTotal, orderTip, exchangeRate, rate, value } =
             this.state;
         const { implementation, settings } = SettingsStore;
+        const { nodeInfo } = NodeInfoStore;
         const { setWatchedInvoicePaid } = InvoicesStore;
 
         const numConfPreference =
@@ -412,38 +423,49 @@ export default class Receive extends React.Component<
 
         if (implementation === 'lnd') {
             this.lnInterval = setInterval(() => {
-                BackendUtils.getInvoices().then((response: any) => {
-                    const invoices = response.invoices;
-                    for (let i = 0; i < invoices.length; i++) {
-                        const result = invoices[i];
-                        if (
-                            result.r_hash
-                                .replace(/\+/g, '-')
-                                .replace(/\//g, '_') === rHash &&
-                            Number(result.amt_paid_sat) >= Number(value)
-                        ) {
-                            setWatchedInvoicePaid(result.amt_paid_sat);
-                            if (orderId)
-                                PosStore.recordPayment({
-                                    orderId,
-                                    orderTotal,
-                                    orderTip,
-                                    exchangeRate,
-                                    rate,
-                                    type: 'ln',
-                                    tx: result.payment_request
-                                });
-                            this.clearIntervals();
-                            break;
+                // only fetch the last 10 invoices
+                BackendUtils.getInvoices({ limit: 10 }).then(
+                    (response: any) => {
+                        const invoices = response.invoices;
+                        for (let i = 0; i < invoices.length; i++) {
+                            const result = invoices[i];
+                            if (
+                                result.r_hash
+                                    .replace(/\+/g, '-')
+                                    .replace(/\//g, '_') === rHash &&
+                                Number(result.amt_paid_sat) >= Number(value) &&
+                                Number(result.amt_paid_sat) !== 0
+                            ) {
+                                setWatchedInvoicePaid(result.amt_paid_sat);
+                                if (orderId)
+                                    PosStore.recordPayment({
+                                        orderId,
+                                        orderTotal,
+                                        orderTip,
+                                        exchangeRate,
+                                        rate,
+                                        type: 'ln',
+                                        tx: result.payment_request
+                                    });
+                                this.clearIntervals();
+                                break;
+                            }
                         }
                     }
-                });
-            }, 7000);
+                );
+            }, 5000);
 
             // this is workaround that manually calls your transactions every 30 secs
             if (onChainAddress) {
                 this.onChainInterval = setInterval(() => {
-                    BackendUtils.getTransactions().then((response: any) => {
+                    // only look for transactions in the last 3 blocks
+                    BackendUtils.getTransactions(
+                        nodeInfo && nodeInfo.block_height
+                            ? {
+                                  start_height: nodeInfo.block_height - 3
+                              }
+                            : null
+                    ).then((response: any) => {
                         const txs = response.transactions;
                         for (let i = 0; i < txs.length; i++) {
                             const result = txs[i];
@@ -486,7 +508,7 @@ export default class Receive extends React.Component<
                             }
                         }
                     });
-                }, 15000);
+                }, 7000);
             }
         }
     };
@@ -765,7 +787,10 @@ export default class Receive extends React.Component<
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: localeString('views.Receive.title'),
+                        text:
+                            posStatus === 'active'
+                                ? localeString('general.pay')
+                                : localeString('views.Receive.title'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'Lato-Regular'
@@ -801,6 +826,7 @@ export default class Receive extends React.Component<
                             style={{
                                 alignItems: 'center',
                                 justifyContent: 'center',
+                                height: '100%',
                                 paddingTop: 100
                             }}
                         >
@@ -933,9 +959,15 @@ export default class Receive extends React.Component<
                                             ]}
                                         >
                                             <Button
-                                                title={localeString(
-                                                    'general.receiveNfc'
-                                                )}
+                                                title={
+                                                    posStatus === 'active'
+                                                        ? localeString(
+                                                              'general.payNfc'
+                                                          )
+                                                        : localeString(
+                                                              'general.receiveNfc'
+                                                          )
+                                                }
                                                 icon={{
                                                     name: 'nfc',
                                                     size: 25

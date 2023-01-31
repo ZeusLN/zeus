@@ -195,8 +195,12 @@ export default class LND {
         this.request(route, 'post', data);
     deleteRequest = (route: string) => this.request(route, 'delete', null);
 
-    getTransactions = () =>
-        this.getRequest('/v1/transactions?end_height=-1').then((data: any) => ({
+    getTransactions = (data: any) =>
+        this.getRequest(
+            data && data.start_height
+                ? `/v1/transactions?end_height=-1&start_height=${data.start_height}`
+                : '/v1/transactions?end_height=-1'
+        ).then((data: any) => ({
             transactions: data.transactions
         }));
     getChannels = () => this.getRequest('/v1/channels');
@@ -212,8 +216,12 @@ export default class LND {
             spend_unconfirmed: data.spend_unconfirmed
         });
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
-    getInvoices = () =>
-        this.getRequest('/v1/invoices?reversed=true&num_max_invoices=100');
+    getInvoices = (data: any) =>
+        this.getRequest(
+            `/v1/invoices?reversed=true&num_max_invoices=${
+                (data && data.limit) || 100
+            }`
+        );
     createInvoice = (data: any) =>
         this.postRequest('/v1/invoices', {
             memo: data.memo,

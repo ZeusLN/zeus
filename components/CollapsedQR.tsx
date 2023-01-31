@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Platform, StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 import HCESession, { NFCContentType, NFCTagType4 } from 'react-native-hce';
@@ -103,7 +103,11 @@ export default class CollapsedQR extends React.Component<
                 )}
                 {!collapsed && value && (
                     <View style={styles.qrPadding}>
-                        <QRCode value={value} size={300} logo={secondaryLogo} />
+                        <QRCode
+                            value={value}
+                            size={Dimensions.get('window').width * 0.8}
+                            logo={secondaryLogo}
+                        />
                     </View>
                 )}
                 {!hideText && textBottom && (

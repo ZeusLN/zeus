@@ -5,6 +5,7 @@
     "general.scan": "Scan",
     "general.enableNfc": "Enable NFC",
     "general.receiveNfc": "Receive via NFC",
+    "general.payNfc": "Pay via NFC",
     "general.confirm": "Confirm",
     "general.cancel": "Cancel",
     "general.warning": "Warning",
