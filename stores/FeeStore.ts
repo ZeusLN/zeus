@@ -165,6 +165,7 @@ export default class FeeStore {
 
     @action
     public getForwardingHistory = (params?: any) => {
+        if (this.loading) return;
         this.loading = true;
         this.forwardingEvents = [];
         this.forwardingHistoryError = false;
