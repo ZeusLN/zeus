@@ -24,6 +24,8 @@ export function Tag({ status }: { status: Status }) {
             colors.background = '#E14C4C';
             colors.dot = '#FF0000';
             break;
+        case Status.Opening:
+        case Status.Closing:
         case Status.Offline:
             colors.background = '#A7A9AC';
             colors.dot = '#E5E5E5';
