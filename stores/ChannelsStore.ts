@@ -153,10 +153,35 @@ export default class ChannelsStore {
                 //    "pending_closing_channels": <ClosedChannel>,
                 //    "pending_force_closing_channels": <ForceClosedChannel>,
                 //    "waiting_close_channels": <WaitingCloseChannel>,
-                const pendingChannels = data.pending_open_channels.map(
-                    (channel: any) => new Channel(channel)
+                const pendingOpenChannels = data.pending_open_channels.map(
+                    (pending: any) => {
+                        pending.channel.pendingOpen = true;
+                        return new Channel(pending.channel);
+                    }
                 );
-                this.pendingChannels = pendingChannels;
+                const pendingCloseChannels = data.pending_closing_channels.map(
+                    (pending: any) => {
+                        pending.channel.pendingClose = true;
+                        return new Channel(pending.channel);
+                    }
+                );
+                const forceCloseChannels =
+                    data.pending_force_closing_channels.map((pending: any) => {
+                        pending.channel.blocks_til_maturity =
+                            pending.blocks_til_maturity;
+                        pending.channel.forceClose = true;
+                        return new Channel(pending.channel);
+                    });
+                const waitCloseChannels = data.waiting_close_channels.map(
+                    (pending: any) => {
+                        pending.channel.closing = true;
+                        return new Channel(pending.channel);
+                    }
+                );
+                this.pendingChannels = pendingOpenChannels
+                    .concat(pendingCloseChannels)
+                    .concat(forceCloseChannels)
+                    .concat(waitCloseChannels);
                 this.error = false;
             })
             .catch(() => {

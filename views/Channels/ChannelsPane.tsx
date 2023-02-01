@@ -18,12 +18,16 @@ import { Spacer } from '../../components/layout/Spacer';
 
 import ChannelsStore from '../../stores/ChannelsStore';
 
+import { duration } from 'moment';
+
 // TODO: does this belong in the model? Or can it be computed from the model?
 export enum Status {
     Good = 'Good',
     Stable = 'Stable',
     Unstable = 'Unstable',
-    Offline = 'Offline'
+    Offline = 'Offline',
+    Opening = 'Opening',
+    Closing = 'Closing'
 }
 
 interface ChannelsProps {
@@ -54,6 +58,22 @@ export default class ChannelsPane extends React.PureComponent<
             item.remote_pubkey ||
             item.channelId;
 
+        const getStatus = () => {
+            if (item.isActive) {
+                return Status.Good;
+            } else if (item.pendingOpen) {
+                return Status.Opening;
+            } else if (item.pendingClose || item.forceClose) {
+                return Status.Closing;
+            } else {
+                return Status.Offline;
+            }
+        };
+
+        const forceCloseTimeLabel = (maturity: number) => {
+            return duration(maturity * 10, 'minutes').humanize();
+        };
+
         if (this.state.channelsType === 0) {
             return (
                 <TouchableHighlight
@@ -65,7 +85,7 @@ export default class ChannelsPane extends React.PureComponent<
                 >
                     <ChannelItem
                         title={displayName}
-                        status={item.isActive ? Status.Good : Status.Offline}
+                        status={getStatus()}
                         inbound={item.remoteBalance}
                         outbound={item.localBalance}
                         largestTotal={largestChannelSats}
@@ -86,7 +106,12 @@ export default class ChannelsPane extends React.PureComponent<
                     title={displayName}
                     inbound={item.remoteBalance}
                     outbound={item.localBalance}
-                    status={item.isActive ? Status.Good : Status.Offline}
+                    status={getStatus()}
+                    pendingTimelock={
+                        item.forceClose
+                            ? forceCloseTimeLabel(item.blocks_til_maturity)
+                            : null
+                    }
                 />
             </TouchableHighlight>
         );
