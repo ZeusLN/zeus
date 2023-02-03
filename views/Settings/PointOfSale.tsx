@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { FlatList, ScrollView, Text, View } from 'react-native';
 import { Header, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -95,6 +95,13 @@ export default class PointOfSale extends React.Component<
         const { updateSettings, settings }: any = SettingsStore;
         const { passphrase, pin, fiat } = settings;
 
+        const LIST_ITEMS = [
+            {
+                label: localeString('views.Settings.POS.recon'),
+                path: 'PointOfSaleRecon'
+            }
+        ];
+
         const BackButton = () => (
             <Icon
                 name="arrow-back"
@@ -138,283 +145,329 @@ export default class PointOfSale extends React.Component<
                         />
                     </View>
                 ) : (
-                    <ScrollView style={{ flex: 1, padding: 15 }}>
-                        {!BackendUtils.isLNDBased() && (
-                            <WarningMessage
-                                message={localeString(
-                                    'pos.views.Settings.PointOfSale.backendWarning'
-                                )}
-                            />
-                        )}
-                        {!pin && !passphrase && (
-                            <WarningMessage
-                                message={localeString(
-                                    'pos.views.Settings.PointOfSale.authWarning'
-                                )}
-                            />
-                        )}
-                        <ListItem
-                            containerStyle={{
-                                borderBottomWidth: 0,
-                                backgroundColor: themeColor('background')
-                            }}
-                        >
-                            <ListItem.Title
-                                style={{
-                                    color: themeColor('secondaryText'),
-                                    fontFamily: 'Lato-Regular',
-                                    left: -10
+                    <ScrollView style={{ flex: 1 }}>
+                        <View style={{ padding: 15 }}>
+                            {!BackendUtils.isLNDBased() && (
+                                <WarningMessage
+                                    message={localeString(
+                                        'pos.views.Settings.PointOfSale.backendWarning'
+                                    )}
+                                />
+                            )}
+                            {!pin && !passphrase && (
+                                <WarningMessage
+                                    message={localeString(
+                                        'pos.views.Settings.PointOfSale.authWarning'
+                                    )}
+                                />
+                            )}
+                            <ListItem
+                                containerStyle={{
+                                    borderBottomWidth: 0,
+                                    backgroundColor: themeColor('background')
                                 }}
                             >
-                                {localeString(
-                                    'views.Settings.POS.enableSquare'
-                                )}
-                            </ListItem.Title>
-                            <View
-                                style={{
-                                    flex: 1,
-                                    flexDirection: 'row',
-                                    justifyContent: 'flex-end'
-                                }}
-                            >
-                                <Switch
-                                    value={squareEnabled}
-                                    onValueChange={async () => {
-                                        this.setState({
-                                            squareEnabled: !squareEnabled
-                                        });
-                                        await updateSettings({
-                                            pos: {
-                                                squareAccessToken,
-                                                squareLocationId,
-                                                merchantName,
-                                                squareEnabled: !squareEnabled,
-                                                confirmationPreference,
-                                                disableTips,
-                                                squareDevMode
-                                            }
-                                        });
-                                    }}
-                                />
-                            </View>
-                        </ListItem>
-
-                        {squareEnabled && (
-                            <>
-                                <Text
+                                <ListItem.Title
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'Lato-Regular'
+                                        fontFamily: 'Lato-Regular',
+                                        left: -10
                                     }}
                                 >
                                     {localeString(
-                                        'views.Settings.POS.squareAccessToken'
+                                        'views.Settings.POS.enableSquare'
                                     )}
-                                </Text>
-                                <TextInput
-                                    value={squareAccessToken}
-                                    onChangeText={async (text: string) => {
-                                        this.setState({
-                                            squareAccessToken: text
-                                        });
-
-                                        await updateSettings({
-                                            pos: {
-                                                squareEnabled,
-                                                squareAccessToken: text,
-                                                squareLocationId,
-                                                merchantName,
-                                                confirmationPreference,
-                                                disableTips,
-                                                squareDevMode
-                                            }
-                                        });
-                                    }}
-                                />
-
-                                <Text
+                                </ListItem.Title>
+                                <View
                                     style={{
-                                        color: themeColor('secondaryText'),
-                                        fontFamily: 'Lato-Regular'
+                                        flex: 1,
+                                        flexDirection: 'row',
+                                        justifyContent: 'flex-end'
                                     }}
                                 >
-                                    {localeString(
-                                        'views.Settings.POS.squareLocationId'
-                                    )}
-                                </Text>
-                                <TextInput
-                                    value={squareLocationId}
-                                    onChangeText={async (text: string) => {
-                                        this.setState({
-                                            squareLocationId: text
-                                        });
+                                    <Switch
+                                        value={squareEnabled}
+                                        onValueChange={async () => {
+                                            this.setState({
+                                                squareEnabled: !squareEnabled
+                                            });
+                                            await updateSettings({
+                                                pos: {
+                                                    squareAccessToken,
+                                                    squareLocationId,
+                                                    merchantName,
+                                                    squareEnabled:
+                                                        !squareEnabled,
+                                                    confirmationPreference,
+                                                    disableTips,
+                                                    squareDevMode
+                                                }
+                                            });
+                                        }}
+                                    />
+                                </View>
+                            </ListItem>
 
-                                        await updateSettings({
-                                            pos: {
-                                                squareEnabled,
-                                                squareAccessToken,
-                                                squareLocationId: text,
-                                                merchantName,
-                                                confirmationPreference,
-                                                disableTips,
-                                                squareDevMode
-                                            }
-                                        });
-                                    }}
-                                />
-
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText'),
-                                        fontFamily: 'Lato-Regular'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.POS.merchantName'
-                                    )}
-                                </Text>
-                                <TextInput
-                                    value={merchantName}
-                                    onChangeText={async (text: string) => {
-                                        this.setState({
-                                            merchantName: text
-                                        });
-
-                                        await updateSettings({
-                                            pos: {
-                                                squareEnabled,
-                                                squareAccessToken,
-                                                squareLocationId,
-                                                merchantName: text,
-                                                confirmationPreference,
-                                                disableTips,
-                                                squareDevMode
-                                            }
-                                        });
-                                    }}
-                                />
-
-                                <DropdownSetting
-                                    title={localeString(
-                                        'views.Settings.POS.confPref'
-                                    )}
-                                    selectedValue={confirmationPreference}
-                                    onValueChange={async (value: string) => {
-                                        this.setState({
-                                            confirmationPreference: value
-                                        });
-                                        await updateSettings({
-                                            pos: {
-                                                squareEnabled,
-                                                squareAccessToken,
-                                                squareLocationId,
-                                                merchantName,
-                                                confirmationPreference: value,
-                                                disableTips,
-                                                squareDevMode
-                                            }
-                                        });
-                                    }}
-                                    values={POS_CONF_PREF_KEYS}
-                                />
-
-                                <ListItem
-                                    containerStyle={{
-                                        borderBottomWidth: 0,
-                                        backgroundColor:
-                                            themeColor('background')
-                                    }}
-                                >
-                                    <ListItem.Title
+                            {squareEnabled && (
+                                <>
+                                    <Text
                                         style={{
                                             color: themeColor('secondaryText'),
-                                            fontFamily: 'Lato-Regular',
-                                            left: -10
+                                            fontFamily: 'Lato-Regular'
                                         }}
                                     >
                                         {localeString(
-                                            'views.Settings.POS.disableTips'
+                                            'views.Settings.POS.squareAccessToken'
                                         )}
-                                    </ListItem.Title>
-                                    <View
+                                    </Text>
+                                    <TextInput
+                                        value={squareAccessToken}
+                                        onChangeText={async (text: string) => {
+                                            this.setState({
+                                                squareAccessToken: text
+                                            });
+
+                                            await updateSettings({
+                                                pos: {
+                                                    squareEnabled,
+                                                    squareAccessToken: text,
+                                                    squareLocationId,
+                                                    merchantName,
+                                                    confirmationPreference,
+                                                    disableTips,
+                                                    squareDevMode
+                                                }
+                                            });
+                                        }}
+                                    />
+
+                                    <Text
                                         style={{
-                                            flex: 1,
-                                            flexDirection: 'row',
-                                            justifyContent: 'flex-end'
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'Lato-Regular'
                                         }}
                                     >
-                                        <Switch
-                                            value={disableTips}
-                                            onValueChange={async () => {
-                                                this.setState({
-                                                    disableTips: !disableTips
-                                                });
-                                                await updateSettings({
-                                                    pos: {
-                                                        squareAccessToken,
-                                                        squareLocationId,
-                                                        squareEnabled,
-                                                        merchantName,
-                                                        confirmationPreference,
-                                                        disableTips:
-                                                            !disableTips,
-                                                        squareDevMode
-                                                    }
-                                                });
+                                        {localeString(
+                                            'views.Settings.POS.squareLocationId'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        value={squareLocationId}
+                                        onChangeText={async (text: string) => {
+                                            this.setState({
+                                                squareLocationId: text
+                                            });
+
+                                            await updateSettings({
+                                                pos: {
+                                                    squareEnabled,
+                                                    squareAccessToken,
+                                                    squareLocationId: text,
+                                                    merchantName,
+                                                    confirmationPreference,
+                                                    disableTips,
+                                                    squareDevMode
+                                                }
+                                            });
+                                        }}
+                                    />
+
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'Lato-Regular'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.POS.merchantName'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        value={merchantName}
+                                        onChangeText={async (text: string) => {
+                                            this.setState({
+                                                merchantName: text
+                                            });
+
+                                            await updateSettings({
+                                                pos: {
+                                                    squareEnabled,
+                                                    squareAccessToken,
+                                                    squareLocationId,
+                                                    merchantName: text,
+                                                    confirmationPreference,
+                                                    disableTips,
+                                                    squareDevMode
+                                                }
+                                            });
+                                        }}
+                                    />
+
+                                    <DropdownSetting
+                                        title={localeString(
+                                            'views.Settings.POS.confPref'
+                                        )}
+                                        selectedValue={confirmationPreference}
+                                        onValueChange={async (
+                                            value: string
+                                        ) => {
+                                            this.setState({
+                                                confirmationPreference: value
+                                            });
+                                            await updateSettings({
+                                                pos: {
+                                                    squareEnabled,
+                                                    squareAccessToken,
+                                                    squareLocationId,
+                                                    merchantName,
+                                                    confirmationPreference:
+                                                        value,
+                                                    disableTips,
+                                                    squareDevMode
+                                                }
+                                            });
+                                        }}
+                                        values={POS_CONF_PREF_KEYS}
+                                    />
+
+                                    <ListItem
+                                        containerStyle={{
+                                            borderBottomWidth: 0,
+                                            backgroundColor:
+                                                themeColor('background')
+                                        }}
+                                    >
+                                        <ListItem.Title
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                fontFamily: 'Lato-Regular',
+                                                left: -10
                                             }}
-                                        />
-                                    </View>
-                                </ListItem>
+                                        >
+                                            {localeString(
+                                                'views.Settings.POS.disableTips'
+                                            )}
+                                        </ListItem.Title>
+                                        <View
+                                            style={{
+                                                flex: 1,
+                                                flexDirection: 'row',
+                                                justifyContent: 'flex-end'
+                                            }}
+                                        >
+                                            <Switch
+                                                value={disableTips}
+                                                onValueChange={async () => {
+                                                    this.setState({
+                                                        disableTips:
+                                                            !disableTips
+                                                    });
+                                                    await updateSettings({
+                                                        pos: {
+                                                            squareAccessToken,
+                                                            squareLocationId,
+                                                            squareEnabled,
+                                                            merchantName,
+                                                            confirmationPreference,
+                                                            disableTips:
+                                                                !disableTips,
+                                                            squareDevMode
+                                                        }
+                                                    });
+                                                }}
+                                            />
+                                        </View>
+                                    </ListItem>
 
-                                <ListItem
-                                    containerStyle={{
-                                        borderBottomWidth: 0,
-                                        backgroundColor:
-                                            themeColor('background')
-                                    }}
-                                >
-                                    <ListItem.Title
-                                        style={{
-                                            color: themeColor('secondaryText'),
-                                            fontFamily: 'Lato-Regular',
-                                            left: -10
+                                    <ListItem
+                                        containerStyle={{
+                                            borderBottomWidth: 0,
+                                            backgroundColor:
+                                                themeColor('background')
                                         }}
                                     >
-                                        {localeString(
-                                            'views.Settings.POS.devMode'
-                                        )}
-                                    </ListItem.Title>
-                                    <View
-                                        style={{
-                                            flex: 1,
-                                            flexDirection: 'row',
-                                            justifyContent: 'flex-end'
-                                        }}
-                                    >
-                                        <Switch
-                                            value={squareDevMode}
-                                            onValueChange={async () => {
-                                                this.setState({
-                                                    squareDevMode:
-                                                        !squareDevMode
-                                                });
-                                                await updateSettings({
-                                                    pos: {
-                                                        squareAccessToken,
-                                                        squareLocationId,
-                                                        squareEnabled,
-                                                        merchantName,
-                                                        confirmationPreference,
-                                                        disableTips,
+                                        <ListItem.Title
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                fontFamily: 'Lato-Regular',
+                                                left: -10
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.POS.devMode'
+                                            )}
+                                        </ListItem.Title>
+                                        <View
+                                            style={{
+                                                flex: 1,
+                                                flexDirection: 'row',
+                                                justifyContent: 'flex-end'
+                                            }}
+                                        >
+                                            <Switch
+                                                value={squareDevMode}
+                                                onValueChange={async () => {
+                                                    this.setState({
                                                         squareDevMode:
                                                             !squareDevMode
-                                                    }
-                                                });
-                                            }}
+                                                    });
+                                                    await updateSettings({
+                                                        pos: {
+                                                            squareAccessToken,
+                                                            squareLocationId,
+                                                            squareEnabled,
+                                                            merchantName,
+                                                            confirmationPreference,
+                                                            disableTips,
+                                                            squareDevMode:
+                                                                !squareDevMode
+                                                        }
+                                                    });
+                                                }}
+                                            />
+                                        </View>
+                                    </ListItem>
+                                </>
+                            )}
+                        </View>
+                        {squareEnabled && (
+                            <FlatList
+                                data={LIST_ITEMS}
+                                renderItem={({ item }) => (
+                                    <ListItem
+                                        containerStyle={{
+                                            borderBottomWidth: 0,
+                                            backgroundColor:
+                                                themeColor('background')
+                                        }}
+                                        onPress={() =>
+                                            navigation.navigate(item.path)
+                                        }
+                                    >
+                                        <ListItem.Content>
+                                            <ListItem.Title
+                                                style={{
+                                                    color: themeColor('text'),
+                                                    fontFamily: 'Lato-Regular'
+                                                }}
+                                            >
+                                                {item.label}
+                                            </ListItem.Title>
+                                        </ListItem.Content>
+                                        <Icon
+                                            name="keyboard-arrow-right"
+                                            color={themeColor('secondaryText')}
                                         />
-                                    </View>
-                                </ListItem>
-                            </>
+                                    </ListItem>
+                                )}
+                                keyExtractor={(item, index) =>
+                                    `${item.label}-${index}`
+                                }
+                            />
                         )}
                     </ScrollView>
                 )}
