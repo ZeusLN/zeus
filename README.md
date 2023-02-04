@@ -19,6 +19,8 @@ Read more on our [documentation site](https://docs.zeusln.app/).
 [developer Slack](https://zeusln.slack.com/join/shared_invite/zt-qw205nqa-o4VJJC0zPI7HiSfToZGoVw#/)
 * Keep up with us on
 [Twitter](https://twitter.com/ZeusLN)
+and
+[Nostr](https://iris.to/#/profile/npub1xnf02f60r9v0e5kty33a404dm79zr7z2eepyrk5gsq3m7pwvsz2sazlpr5)
 * Open a channel with
 [our node](https://amboss.space/node/031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581)
 
