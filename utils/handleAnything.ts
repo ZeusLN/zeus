@@ -24,9 +24,12 @@ const handleAnything = async (
         AddressUtils.processSendAddress(data);
     const hasAt: boolean = value.includes('@');
     let lnurl;
-    try {
-        lnurl = decodelnurl(data);
-    } catch (e) {}
+    // if the value is from clipboard and looks like a url we don't want to decode it
+    if (!isClipboardValue || !data.match(/^https?:\/\//i)) {
+        try {
+            lnurl = decodelnurl(data);
+        } catch (e) {}
+    }
 
     if (
         !hasAt &&
