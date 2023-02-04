@@ -127,7 +127,7 @@ export default class Send extends React.Component<SendProps, SendState> {
 
         if (settings.privacy && settings.privacy.clipboard) {
             const clipboard = await Clipboard.getString();
-            if (isClipboardValue(clipboard)) {
+            if (await isClipboardValue(clipboard)) {
                 this.setState({
                     clipboard
                 });

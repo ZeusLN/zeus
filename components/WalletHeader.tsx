@@ -146,7 +146,7 @@ export default class WalletHeader extends React.Component<
         if (settings.privacy && settings.privacy.clipboard) {
             const clipboard = await Clipboard.getString();
 
-            if (!!clipboard && isClipboardValue(clipboard)) {
+            if (!!clipboard && (await isClipboardValue(clipboard))) {
                 this.setState({
                     clipboard
                 });
