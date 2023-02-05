@@ -1,6 +1,6 @@
+import { inject, observer } from 'mobx-react';
 import * as React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { inject, observer } from 'mobx-react';
 import { Header, Icon } from 'react-native-elements';
 
 import Button from './../components/Button';
@@ -10,6 +10,7 @@ import TextInput from './../components/TextInput';
 
 import SettingsStore from './../stores/SettingsStore';
 
+import { getIsBiometryRequired, verifyBiometry } from '../utils/BiometricUtils';
 import LinkingUtils from './../utils/LinkingUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
@@ -73,6 +74,26 @@ export default class Lockscreen extends React.Component<
 
         const posEnabled: boolean =
             (settings && settings.pos && settings.pos.squareEnabled) || false;
+
+        const isBiometryRequired = getIsBiometryRequired(settings);
+
+        if (
+            isBiometryRequired &&
+            !attemptAdminLogin &&
+            !deletePin &&
+            !deleteDuressPin &&
+            !modifySecurityScreen
+        ) {
+            const isVerified = await verifyBiometry(
+                localeString('views.Lockscreen.Biometrics.prompt')
+            );
+
+            if (isVerified) {
+                SettingsStore.setLoginStatus(true);
+                navigation.navigate('Wallet');
+                return;
+            }
+        }
 
         if (
             posEnabled &&

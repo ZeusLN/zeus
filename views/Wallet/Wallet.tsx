@@ -2,21 +2,21 @@ import * as React from 'react';
 import {
     Animated,
     AppState,
+    Linking,
     PanResponder,
     Text,
     TouchableOpacity,
-    View,
-    Linking
+    View
 } from 'react-native';
 
-import { inject, observer } from 'mobx-react';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { inject, observer } from 'mobx-react';
 import RNRestart from 'react-native-restart';
 
 import ChannelsPane from '../Channels/ChannelsPane';
-import KeypadPane from './KeypadPane';
 import BalancePane from './BalancePane';
+import KeypadPane from './KeypadPane';
 import PosPane from './PosPane';
 
 import Button from './../../components/Button';
@@ -32,18 +32,22 @@ import BalanceStore from './../../stores/BalanceStore';
 import ChannelsStore from './../../stores/ChannelsStore';
 import FeeStore from './../../stores/FeeStore';
 
+import FiatStore from './../../stores/FiatStore';
 import NodeInfoStore from './../../stores/NodeInfoStore';
 import PosStore from './../../stores/PosStore';
-import SettingsStore from './../../stores/SettingsStore';
-import FiatStore from './../../stores/FiatStore';
+import SettingsStore, { Settings } from './../../stores/SettingsStore';
 import UnitsStore from './../../stores/UnitsStore';
 import UTXOsStore from './../../stores/UTXOsStore';
 
+import {
+    getIsBiometryRequired,
+    getSupportedBiometryType
+} from '../../utils/BiometricUtils';
 import Bitcoin from './../../assets/images/SVG/Bitcoin.svg';
-import Temple from './../../assets/images/SVG/Temple.svg';
-import POS from './../../assets/images/SVG/POS.svg';
-import ChannelsIcon from './../../assets/images/SVG/Channels.svg';
 import CaretUp from './../../assets/images/SVG/Caret Up.svg';
+import ChannelsIcon from './../../assets/images/SVG/Channels.svg';
+import POS from './../../assets/images/SVG/POS.svg';
+import Temple from './../../assets/images/SVG/Temple.svg';
 import WordLogo from './../../assets/images/SVG/Word Logo.svg';
 
 interface WalletProps {
@@ -99,8 +103,17 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         });
     }
+    async UNSAFE_componentWillMount(): Promise<void> {
+        const {
+            SettingsStore: { updateSettings }
+        } = this.props;
 
-    componentDidMount() {
+        const supportedBiometryType = await getSupportedBiometryType();
+
+        await updateSettings({ supportedBiometryType });
+    }
+
+    async componentDidMount() {
         // triggers when loaded from navigation or back action
         this.props.navigation.addListener('didFocus', () => {
             this.getSettingsAndNavigate();
@@ -120,13 +133,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { SettingsStore } = this.props;
         const { settings, implementation } = SettingsStore;
         const { loginBackground } = settings;
-        const loginRequired = settings && (settings.passphrase || settings.pin);
+        const loginRequired =
+            settings &&
+            (!!settings.passphrase ||
+                !!settings.pin ||
+                settings.isBiometryEnabled);
 
-        if (
-            nextAppState.match(/inactive|background/) &&
-            loginRequired &&
-            loginBackground
-        ) {
+        if (nextAppState === 'background' && loginRequired && loginBackground) {
             if (implementation === 'lightning-node-connect') {
                 BackendUtils.disconnect();
             }
@@ -145,10 +158,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { posStatus, setPosStatus } = SettingsStore;
 
         // This awaits on settings, so should await on Tor being bootstrapped before making requests
-        await SettingsStore.getSettings().then(async (settings: any) => {
+        await SettingsStore.getSettings().then(async (settings: Settings) => {
+            const isBiometryRequired = getIsBiometryRequired(settings);
+
             const loginRequired =
                 settings &&
-                (settings.passphrase || settings.pin) &&
+                (settings.passphrase || settings.pin || isBiometryRequired) &&
                 !SettingsStore.loggedIn;
             const posEnabled =
                 settings && settings.pos && settings.pos.squareEnabled;
