@@ -4,6 +4,7 @@ import stores from '../stores/Stores';
 
 import LND from './LND';
 import LoginRequest from './../models/LoginRequest';
+import Base64Utils from './../utils/Base64Utils';
 
 export default class LndHub extends LND {
     getHeaders = (accessToken: string) => {
@@ -76,7 +77,9 @@ export default class LndHub extends LND {
         });
     lnurlAuth = () =>
         Promise.resolve({
-            signature: `lndhub://${stores.settingsStore.username}:${stores.settingsStore.password}`
+            signature: Base64Utils.stringToUint8Array(
+                `lndhub://${stores.settingsStore.username}:${stores.settingsStore.password}`
+            )
         });
 
     supportsMessageSigning = () => false;

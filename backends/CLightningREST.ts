@@ -3,6 +3,8 @@ import LND from './LND';
 import TransactionRequest from './../models/TransactionRequest';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import VersionUtils from './../utils/VersionUtils';
+import Base64Utils from './../utils/Base64Utils';
+import { Hash as sha256Hash } from 'fast-sha256';
 
 export default class CLightningREST extends LND {
     getHeaders = (macaroonHex: string): any => {
@@ -150,7 +152,14 @@ export default class CLightningREST extends LND {
         this.getRequest(
             `/v1/utility/checkMessage/${data.msg}/${data.signature}`
         );
-    lnurlAuth = (message: string) => this.signMessage(message);
+    lnurlAuth = async (r_hash: string) => {
+        const signed = await this.signMessage(r_hash);
+        return {
+            signature: new sha256Hash()
+                .update(Base64Utils.stringToUint8Array(signed.signature))
+                .digest()
+        };
+    };
 
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;
