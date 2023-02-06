@@ -4,7 +4,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import querystring from 'querystring-es3';
-import { Hash as sha256Hash, HMAC as sha256HMAC } from 'fast-sha256';
+import { HMAC as sha256HMAC } from 'fast-sha256';
 
 import Button from './../components/Button';
 import LoadingIndicator from './../components/LoadingIndicator';
@@ -104,11 +104,8 @@ export default class LnurlAuth extends React.Component<
                 // 1. The following canonical phrase is defined: [...].
                 // 2. LN WALLET obtains an RFC6979 deterministic signature of sha256(utf8ToBytes(canonical phrase)) using secp256k1 with node private key.
                 // 3. LN WALLET defines hashingKey as PrivateKey(sha256(obtained signature)).
-                const hashingKey = new sha256Hash()
-                    .update(Base64Utils.stringToUint8Array(signature.signature))
-                    .digest();
                 // // 4. SERVICE domain name is extracted from auth LNURL and then service-specific linkingPrivKey is defined as PrivateKey(hmacSha256(hashingKey, service domain name)).
-                const linkingKeyPriv = new sha256HMAC(hashingKey)
+                const linkingKeyPriv = new sha256HMAC(signature.signature)
                     .update(Base64Utils.stringToUint8Array(this.state.domain))
                     .digest();
 
