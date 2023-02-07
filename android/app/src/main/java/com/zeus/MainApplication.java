@@ -14,6 +14,7 @@ import com.swmansion.gesturehandler.react.RNGestureHandlerPackage;
 import com.oblador.vectoricons.VectorIconsPackage;
 import com.facebook.react.ReactNativeHost;
 import com.facebook.react.ReactPackage;
+import com.remobile.qrcodeLocalImage.RCTQRCodeLocalImagePackage; 
 import android.content.Context;
 
 import com.facebook.soloader.SoLoader;
@@ -33,6 +34,7 @@ public class MainApplication extends Application implements ReactApplication {
         }
         @Override
         protected List<ReactPackage> getPackages() {
+          new RCTQRCodeLocalImagePackage();   
           @SuppressWarnings("UnnecessaryLocalVariable")
           List<ReactPackage> packages = new PackageList(this).getPackages();
           packages.add(new MobileToolsPackage());
