@@ -11,13 +11,14 @@
   },
   "scripts": {
     "start": "react-native start",
-    "postinstall": "rn-nodeify --install --hack; npx jetify",
+    "postinstall": "rn-nodeify --install --hack; npx jetify; yarn run patch",
     "test": "jest",
     "tsc": "tsc",
     "lint": "eslint --ext .js,.ts,.tsx '*.@(js|ts|tsx)' .",
     "prettier": "prettier --check '**/*.ts*'",
     "prettier-write": "prettier --check --write '**/*.ts*'",
-    "install-lnc": "cd node_modules/@lightninglabs/lnc-rn; yarn run fetch-libraries"
+    "install-lnc": "cd node_modules/@lightninglabs/lnc-rn; yarn run fetch-libraries",
+    "patch": "git apply patches/rnqli-build.gradle.patch"
   },
   "dependencies": {
     "@keystonehq/bc-ur-registry": "0.4.2",
