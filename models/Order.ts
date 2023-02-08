@@ -53,6 +53,20 @@ export default class Order extends BaseModel {
         return itemsList;
     }
 
+    @computed public get autoGratuity(): string {
+        let autoGratuity = '';
+        const itemCount = this.getItemCount;
+        for (let i = 0; i < itemCount; i++) {
+            const line_item: any = this.line_items[i];
+            if (line_item.name.toLowerCase().includes('gratuity')) {
+                autoGratuity = Number(
+                    line_item.base_price_money.amount / 100
+                ).toFixed(2);
+            }
+        }
+        return autoGratuity;
+    }
+
     @computed public get getTotalMoney(): string {
         return Number(this.total_money.amount / 100).toFixed(2);
     }
