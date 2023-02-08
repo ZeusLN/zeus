@@ -250,7 +250,7 @@ export default class InvoicesStore {
                         : '';
 
                 return {
-                    formattedRhash,
+                    rHash: formattedRhash,
                     paymentRequest: invoice.getPaymentRequest
                 };
             })
