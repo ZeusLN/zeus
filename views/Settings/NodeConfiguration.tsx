@@ -32,7 +32,8 @@ import TextInput from './../../components/TextInput';
 
 import SettingsStore, {
     INTERFACE_KEYS,
-    LNC_MAILBOX_KEYS
+    LNC_MAILBOX_KEYS,
+    LNDHUB_AUTH_MODES
 } from './../../stores/SettingsStore';
 
 import Scan from './../../assets/images/SVG/Scan.svg';
@@ -61,6 +62,7 @@ interface NodeConfigurationState {
     newEntry: boolean;
     suggestImport: string;
     showLndHubModal: boolean;
+    lndHubLnAuthMode: string | undefined;
     showCertModal: boolean;
     enableTor: boolean;
     // lnc
@@ -102,6 +104,7 @@ export default class NodeConfiguration extends React.Component<
         url: '',
         lndhubUrl: '',
         showLndHubModal: false,
+        lndHubLnAuthMode: 'BlueWallet',
         showCertModal: false,
         username: '',
         password: '',
@@ -227,6 +230,7 @@ export default class NodeConfiguration extends React.Component<
                 url,
                 lndhubUrl,
                 existingAccount,
+                lndHubLnAuthMode,
                 accessKey,
                 username,
                 password,
@@ -246,6 +250,7 @@ export default class NodeConfiguration extends React.Component<
                 url,
                 lndhubUrl,
                 existingAccount,
+                lndHubLnAuthMode,
                 accessKey,
                 username,
                 password,
@@ -278,6 +283,7 @@ export default class NodeConfiguration extends React.Component<
             url,
             enableTor,
             lndhubUrl,
+            lndHubLnAuthMode,
             existingAccount,
             macaroonHex,
             accessKey,
@@ -306,6 +312,8 @@ export default class NodeConfiguration extends React.Component<
             url,
             lndhubUrl,
             existingAccount,
+            lndHubLnAuthMode:
+                implementation === 'lndhub' ? lndHubLnAuthMode : undefined,
             macaroonHex,
             accessKey,
             username,
@@ -354,6 +362,7 @@ export default class NodeConfiguration extends React.Component<
             enableTor,
             lndhubUrl,
             existingAccount,
+            lndHubLnAuthMode,
             macaroonHex,
             accessKey,
             username,
@@ -373,6 +382,7 @@ export default class NodeConfiguration extends React.Component<
             url,
             lndhubUrl,
             existingAccount,
+            lndHubLnAuthMode,
             macaroonHex,
             accessKey,
             username,
@@ -453,6 +463,7 @@ export default class NodeConfiguration extends React.Component<
             existingAccount,
             suggestImport,
             showLndHubModal,
+            lndHubLnAuthMode,
             showCertModal,
             pairingPhrase,
             mailboxServer,
@@ -507,6 +518,22 @@ export default class NodeConfiguration extends React.Component<
                     });
                 }}
                 values={INTERFACE_KEYS}
+            />
+        );
+
+        const LndHubAuthMode = () => (
+            <DropdownSetting
+                title={localeString(
+                    'views.Settings.AddEditNode.lndHubAuthMode'
+                )}
+                selectedValue={lndHubLnAuthMode}
+                onValueChange={(value: string) => {
+                    this.setState({
+                        lndHubLnAuthMode: value,
+                        saved: false
+                    });
+                }}
+                values={LNDHUB_AUTH_MODES}
             />
         );
 
@@ -1041,6 +1068,9 @@ export default class NodeConfiguration extends React.Component<
                                             locked={loading}
                                             secureTextEntry={saved}
                                         />
+
+                                        <LndHubAuthMode />
+
                                         {saved && (
                                             <CollapsedQR
                                                 showText={localeString(

@@ -195,6 +195,12 @@ export const POS_CONF_PREF_KEYS = [
     { key: 'LN only', value: 'lnOnly' }
 ];
 
+export const LNDHUB_AUTH_MODES = [
+    { key: 'BlueWallet', value: 'BlueWallet' },
+    { key: 'Alby', value: 'Alby' },
+    { key: 'Alby (legacy signing)', value: 'Alby-legacy' }
+];
+
 const STORAGE_KEY = 'zeus-settings';
 
 export default class SettingsStore {
@@ -250,6 +256,7 @@ export default class SettingsStore {
     @observable username: string;
     @observable password: string;
     @observable lndhubUrl: string;
+    @observable lndhubLnAuthMode: string;
     @observable public createAccountError: string;
     @observable public createAccountSuccess: string;
     @observable public accessToken: string;
@@ -410,6 +417,7 @@ export default class SettingsStore {
                     this.username = node.username;
                     this.password = node.password;
                     this.lndhubUrl = node.lndhubUrl;
+                    this.lndhubLnAuthMode = node.lndHubLnAuthMode;
                     this.macaroonHex = node.macaroonHex;
                     this.accessKey = node.accessKey;
                     this.implementation = node.implementation || 'lnd';

@@ -5,6 +5,9 @@ import stores from '../stores/Stores';
 import LND from './LND';
 import LoginRequest from './../models/LoginRequest';
 import Base64Utils from './../utils/Base64Utils';
+import { Hash as sha256Hash } from 'fast-sha256';
+const EC = require('elliptic').ec;
+const ec = new EC('secp256k1');
 
 export default class LndHub extends LND {
     getHeaders = (accessToken: string) => {
@@ -75,12 +78,59 @@ export default class LndHub extends LND {
             invoice: data.payment_request,
             amount: data.amt
         });
-    lnurlAuth = () =>
-        Promise.resolve({
-            signature: Base64Utils.stringToUint8Array(
-                `lndhub://${stores.settingsStore.username}:${stores.settingsStore.password}`
-            )
+    lnurlAuth = (message: string) => {
+        const messageHash = new sha256Hash()
+            .update(Base64Utils.stringToUint8Array(message))
+            .digest();
+
+        let signed, signature, key, linkingKeyPair;
+        switch (stores.settingsStore.lndhubLnAuthMode || 'BlueWallet') {
+            case 'Alby':
+                key = new sha256Hash()
+                    .update(
+                        Base64Utils.stringToUint8Array(
+                            `lndhub://${stores.settingsStore.username}:${stores.settingsStore.password}`
+                        )
+                    )
+                    .digest();
+                linkingKeyPair = ec.keyFromPrivate(key, true);
+                signed = linkingKeyPair
+                    .sign(messageHash, { canonical: true })
+                    .toDER('hex');
+                signature = new sha256Hash()
+                    .update(Base64Utils.stringToUint8Array(signed))
+                    .digest();
+                break;
+            case 'Alby-legacy':
+                key = new sha256Hash()
+                    .update(
+                        Base64Utils.stringToUint8Array(
+                            `LBE-LNDHUB-${stores.settingsStore.lndhubUrl.toLowerCase()}-${
+                                stores.settingsStore.username
+                            }-${stores.settingsStore.password}`
+                        )
+                    )
+                    .digest();
+                linkingKeyPair = ec.keyFromPrivate(key, true);
+                signed = linkingKeyPair
+                    .sign(messageHash, { canonical: true })
+                    .toDER('hex');
+                signature = new sha256Hash()
+                    .update(Base64Utils.stringToUint8Array(signed))
+                    .digest();
+                break;
+            case 'BlueWallet':
+                signature = Base64Utils.stringToUint8Array(
+                    `lndhub://${stores.settingsStore.username}:${stores.settingsStore.password}`
+                );
+                break;
+        }
+        if (!signature) return Promise.reject('Signing failed');
+
+        return Promise.resolve({
+            signature
         });
+    };
 
     supportsMessageSigning = () => false;
     supportsLnurlAuth = () => true;
