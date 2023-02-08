@@ -117,18 +117,41 @@ export default class InvoicesStore {
             expiry,
             lnurl,
             ampInvoice,
-            routeHints
-        ).then((rHash: string) => {
-            if (BackendUtils.supportsOnchainReceiving()) {
-                return this.getNewAddress(
-                    addressType ? { type: addressType } : null
-                ).then((onChainAddress: string) => {
-                    return { rHash, onChainAddress };
-                });
-            } else {
-                return { rHash };
+            routeHints,
+            true
+        ).then(
+            ({
+                rHash,
+                paymentRequest
+            }: {
+                rHash: string;
+                paymentRequest: string;
+            }) => {
+                this.creatingInvoice = true;
+                if (BackendUtils.supportsOnchainReceiving()) {
+                    return this.getNewAddress(
+                        addressType
+                            ? { type: addressType, unified: true }
+                            : { unified: true }
+                    )
+                        .then((onChainAddress: string) => {
+                            this.onChainAddress = onChainAddress;
+                            this.payment_request = paymentRequest;
+                            this.loading = false;
+                            this.creatingInvoice = false;
+                            return { rHash, onChainAddress };
+                        })
+                        .catch(() => {
+                            this.loading = false;
+                            this.creatingInvoice = false;
+                        });
+                } else {
+                    this.payment_request = paymentRequest;
+                    this.creatingInvoice = false;
+                    return { rHash };
+                }
             }
-        });
+        );
     };
 
     @action
@@ -138,11 +161,12 @@ export default class InvoicesStore {
         expiry = '3600',
         lnurl?: LNURLWithdrawParams,
         ampInvoice?: boolean,
-        routeHints?: boolean
+        routeHints?: boolean,
+        unified?: boolean
     ) => {
         this.payment_request = null;
         this.payment_request_amt = null;
-        this.creatingInvoice = true;
+        if (!unified) this.creatingInvoice = true;
         this.creatingInvoiceError = false;
         this.error_msg = null;
 
@@ -159,7 +183,7 @@ export default class InvoicesStore {
             .then((data: any) => {
                 if (data.error) {
                     this.creatingInvoiceError = true;
-                    this.creatingInvoice = false;
+                    if (!unified) this.creatingInvoice = false;
                     const errString =
                         data.message.toString() || data.error.toString();
                     this.error_msg =
@@ -175,9 +199,9 @@ export default class InvoicesStore {
                               );
                 }
                 const invoice = new Invoice(data);
-                this.payment_request = invoice.getPaymentRequest;
+                if (!unified) this.payment_request = invoice.getPaymentRequest;
                 this.payment_request_amt = value;
-                this.creatingInvoice = false;
+                if (!unified) this.creatingInvoice = false;
 
                 if (lnurl) {
                     const u = url.parse(lnurl.callback);
@@ -225,7 +249,10 @@ export default class InvoicesStore {
                         ? invoice.r_hash.replace(/\+/g, '-').replace(/\//g, '_')
                         : '';
 
-                return formattedRhash;
+                return {
+                    formattedRhash,
+                    paymentRequest: invoice.getPaymentRequest
+                };
             })
             .catch((error: any) => {
                 // handle error
@@ -245,22 +272,23 @@ export default class InvoicesStore {
 
     @action
     public getNewAddress = (params: any) => {
-        this.loading = true;
+        if (!params.unified) this.creatingInvoice = true;
         this.error_msg = null;
         this.onChainAddress = null;
         return BackendUtils.getNewAddress(params)
             .then((data: any) => {
-                this.onChainAddress =
+                const address =
                     data.address || data.bech32 || (data[0] && data[0].address);
-                this.loading = false;
-                return this.onChainAddress;
+                if (!params.unified) this.onChainAddress = address;
+                if (!params.unified) this.creatingInvoice = false;
+                return address;
             })
             .catch((error: any) => {
                 // handle error
                 this.error_msg =
                     error.toString() ||
                     localeString('stores.InvoicesStore.errorGeneratingAddress');
-                this.loading = false;
+                this.creatingInvoice = false;
             });
     };
 
