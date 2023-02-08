@@ -102,10 +102,16 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
 
         // round to nearest sat
         const subTotalSats = new BigNumber(order.total_money.amount)
+            .minus(order.total_tax_money.amount)
             .div(100)
             .div(rate)
             .multipliedBy(SATS_PER_BTC)
             .toFixed(0);
+
+        const subTotalFiat: string = new BigNumber(subTotalSats)
+            .multipliedBy(rate)
+            .dividedBy(SATS_PER_BTC)
+            .toFixed(2);
 
         const taxSats = new BigNumber(order.total_tax_money.amount)
             .div(100)
@@ -334,7 +340,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 key={index}
                                 keyValue={keyValue}
                                 value={`$${Number(
-                                    item.total_money.amount / 100
+                                    item.base_price_money.amount / 100
                                 ).toFixed(2)}`}
                             />
                         );
@@ -349,7 +355,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
 
                     <KeyValue
                         keyValue={localeString('pos.views.Order.subtotalFiat')}
-                        value={order.getTotalMoneyDisplay}
+                        value={`${getSymbol().symbol}${subTotalFiat}`}
                     />
 
                     <TouchableOpacity
