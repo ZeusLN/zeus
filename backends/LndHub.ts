@@ -84,7 +84,10 @@ export default class LndHub extends LND {
             .digest();
 
         let signed, signature, key, linkingKeyPair;
-        switch (stores.settingsStore.lndhubLnAuthMode || 'BlueWallet') {
+        switch (
+            stores.settingsStore.settings.lndHubLnAuthMode ||
+            'BlueWallet'
+        ) {
             case 'Alby':
                 key = new sha256Hash()
                     .update(
@@ -101,23 +104,6 @@ export default class LndHub extends LND {
                     .update(Base64Utils.stringToUint8Array(signed))
                     .digest();
                 break;
-            case 'Alby-legacy':
-                key = new sha256Hash()
-                    .update(
-                        Base64Utils.stringToUint8Array(
-                            `LBE-LNDHUB-${stores.settingsStore.lndhubUrl.toLowerCase()}-${
-                                stores.settingsStore.username
-                            }-${stores.settingsStore.password}`
-                        )
-                    )
-                    .digest();
-                linkingKeyPair = ec.keyFromPrivate(key, true);
-                signed = linkingKeyPair
-                    .sign(messageHash, { canonical: true })
-                    .toDER('hex');
-                signature = new sha256Hash()
-                    .update(Base64Utils.stringToUint8Array(signed))
-                    .digest();
                 break;
             case 'BlueWallet':
                 signature = Base64Utils.stringToUint8Array(
