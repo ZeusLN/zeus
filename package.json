@@ -11,13 +11,14 @@
   },
   "scripts": {
     "start": "react-native start",
-    "postinstall": "rn-nodeify --install --hack; npx jetify",
+    "postinstall": "rn-nodeify --install --hack; npx jetify; yarn run patch",
     "test": "jest",
     "tsc": "tsc",
     "lint": "eslint --ext .js,.ts,.tsx '*.@(js|ts|tsx)' .",
     "prettier": "prettier --check '**/*.ts*'",
     "prettier-write": "prettier --check --write '**/*.ts*'",
-    "install-lnc": "cd node_modules/@lightninglabs/lnc-rn; yarn run fetch-libraries"
+    "install-lnc": "cd node_modules/@lightninglabs/lnc-rn; yarn run fetch-libraries",
+    "patch": "git apply patches/rnqli-build.gradle.patch"
   },
   "dependencies": {
     "@keystonehq/bc-ur-registry": "0.4.2",
@@ -28,6 +29,7 @@
     "@react-native-picker/picker": "2.4.8",
     "@react-navigation/bottom-tabs": "5.11.11",
     "@react-navigation/native": "6.0.16",
+    "@remobile/react-native-qrcode-local-image": "1.0.4",
     "@tradle/react-native-http": "2.0.1",
     "@types/react-native-snap-carousel": "3.8.5",
     "assert": "1.5.0",
@@ -75,6 +77,7 @@
     "react-native-encrypted-storage": "4.0.2",
     "react-native-gesture-handler": "2.2.0",
     "react-native-hce": "0.1.2",
+    "react-native-image-picker": "5.0.1",
     "react-native-level-fs": "3.0.1",
     "react-native-nfc-manager": "3.13.0",
     "react-native-os": "aprock/react-native-os#5/head",
