@@ -156,6 +156,7 @@ export default class CLightningREST extends LND {
     supportsOnchainReceiving = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
+    supportsPendingChannels = () => false;
     supportsMPP = () => false;
     supportsAMP = () => false;
     supportsCoinControl = () => this.supports('v0.8.2', undefined, 'v0.4.0');

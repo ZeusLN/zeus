@@ -315,6 +315,7 @@ export default class Spark {
     supportsOnchainReceiving = () => true;
     supportsKeysend = () => false;
     supportsChannelManagement = () => true;
+    supportsPendingChannels = () => false;
     supportsMPP = () => false;
     supportsAMP = () => false;
     supportsCoinControl = () => false;

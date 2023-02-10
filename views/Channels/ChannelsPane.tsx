@@ -19,6 +19,7 @@ import { Spacer } from '../../components/layout/Spacer';
 import ChannelsStore from '../../stores/ChannelsStore';
 
 import { duration } from 'moment';
+import BackendUtils from '../../utils/BackendUtils';
 
 // TODO: does this belong in the model? Or can it be computed from the model?
 export enum Status {
@@ -165,7 +166,12 @@ export default class ChannelsPane extends React.PureComponent<
 
         return (
             <View style={{ flex: 1 }}>
-                <TouchableOpacity onPress={() => this.toggleChannelsType()}>
+                <TouchableOpacity
+                    onPress={() => {
+                        if (BackendUtils.supportsPendingChannels())
+                            this.toggleChannelsType();
+                    }}
+                >
                     <WalletHeader
                         navigation={navigation}
                         title={headerString}
