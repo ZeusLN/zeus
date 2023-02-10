@@ -147,12 +147,6 @@ export default class ChannelsStore {
 
         BackendUtils.getPendingChannels()
             .then((data: any) => {
-                // TODO parse out
-                //    "total_limbo_balance": <int64>,
-                //    "pending_open_channels": <PendingOpenChannel>,
-                //    "pending_closing_channels": <ClosedChannel>,
-                //    "pending_force_closing_channels": <ForceClosedChannel>,
-                //    "waiting_close_channels": <WaitingCloseChannel>,
                 const pendingOpenChannels = data.pending_open_channels.map(
                     (pending: any) => {
                         pending.channel.pendingOpen = true;
