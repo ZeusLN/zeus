@@ -70,7 +70,7 @@ export default class LnurlAuth extends React.Component<
                 signatureSuccess: false,
                 lnurlAuthSuccess: false,
                 errorMsgAuth: '',
-                lndHubLnAuthMode: 'BlueWallet',
+                lndHubLnAuthMode: 'Alby',
                 chooseAuthMode: false
             };
 
@@ -98,7 +98,7 @@ export default class LnurlAuth extends React.Component<
             signatureSuccess: false,
             lnurlAuthSuccess: false,
             errorMsgAuth: 'Error',
-            lndHubLnAuthMode: 'BlueWallet',
+            lndHubLnAuthMode: 'Alby',
             chooseAuthMode: false
         };
     }
