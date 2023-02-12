@@ -314,7 +314,7 @@ export default class PaymentRequest extends React.Component<
                         </View>
                     )}
 
-                    {!loading && !!pay_req && (
+                    {!loading && !loadingFeeEstimate && !!pay_req && (
                         <View style={styles.content}>
                             <View style={styles.center}>
                                 {isNoAmountInvoice ? (
