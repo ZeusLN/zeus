@@ -113,17 +113,15 @@ Zeus is proud to be integrated on the following platforms:
 [enable Developer mode and USB Debugging](https://developer.android.com/studio/debug/dev-options)
 , then make sure it is connected to your computer by running `adb devices`
 3. install node dependencies with `yarn`
-4. install Lightning Node Connect's libraries with `yarn run install-lnc`
-5. open up your Android simulator or connect your phone and run `npx react-native start`
-6. open a new tab and run `npx react-native run-android`
+4. open up your Android simulator or connect your phone and run `npx react-native start`
+5. open a new tab and run `npx react-native run-android`
 
 ### iOS
 1. install and setup react-native and its related dependencies under **"Building Projects with Native Code"** on
 [react-native's Getting Started page](https://reactnative.dev/docs/environment-setup)
 2. install node dependencies with `yarn`
-3. install Lightning Node Connect's libraries with `yarn run install-lnc`
-4. `cd ios && pod install`
-5. open `ios/zeus.xcworkspace` in Xcode and hit Run. NOTE: if you're using an M1 mac, you may need to right click Xcode > get info > check `Open using Rosetta` before opening `zeus.xcworkspace`.
+3. `cd ios && pod install`
+4. open `ios/zeus.xcworkspace` in Xcode and hit Run. NOTE: if you're using an M1 mac, you may need to right click Xcode > get info > check `Open using Rosetta` before opening `zeus.xcworkspace`.
 
 ## Reproducible builds
 

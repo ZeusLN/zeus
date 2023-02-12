@@ -11,7 +11,7 @@
   },
   "scripts": {
     "start": "react-native start",
-    "postinstall": "rn-nodeify --install --hack; npx jetify; yarn run patch",
+    "postinstall": "rn-nodeify --install --hack; npx jetify; yarn run patch; yarn run install-lnc",
     "test": "jest",
     "tsc": "tsc",
     "lint": "eslint --ext .js,.ts,.tsx '*.@(js|ts|tsx)' .",
