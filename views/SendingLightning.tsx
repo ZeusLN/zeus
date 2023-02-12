@@ -5,7 +5,8 @@ import LnurlPaySuccess from './LnurlPay/Success';
 
 import Button from './../components/Button';
 import CopyButton from './../components/CopyButton';
-import LoadingIndicator from './../components/LoadingIndicator';
+import LightningIndicator from './../components/LightningIndicator';
+import PaidIndicator from './../components/PaidIndicator';
 
 import TransactionsStore from './../stores/TransactionsStore';
 import LnurlPayStore from './../stores/LnurlPayStore';
@@ -76,7 +77,7 @@ export default class SendingLightning extends React.Component<
                         ...styles.content
                     }}
                 >
-                    {loading && <LoadingIndicator />}
+                    {loading && <LightningIndicator />}
                     {loading && (
                         <Text
                             style={{
@@ -104,6 +105,7 @@ export default class SendingLightning extends React.Component<
                                     marginBottom: -50
                                 }}
                             />
+                            <PaidIndicator />
                         </>
                     )}
                     {(!!error || !!payment_error) && (

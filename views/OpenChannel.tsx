@@ -14,7 +14,7 @@ import { Header, Icon } from 'react-native-elements';
 import NfcManager, { NfcEvents } from 'react-native-nfc-manager';
 
 import Button from './../components/Button';
-import LoadingIndicator from './../components/LoadingIndicator';
+import LightningIndicator from './../components/LightningIndicator';
 import {
     SuccessMessage,
     ErrorMessage
@@ -308,7 +308,7 @@ export default class OpenChannel extends React.Component<
 
                 <View style={styles.content}>
                     {(connectingToPeer || openingChannel) && (
-                        <LoadingIndicator />
+                        <LightningIndicator />
                     )}
                     {peerSuccess && (
                         <SuccessMessage

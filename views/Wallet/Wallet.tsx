@@ -550,7 +550,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                               'views.Wallet.Wallet.startingUp'
                                           )}
                                 </Text>
-                                <LoadingIndicator size={120} />
+                                <View style={{ top: 40 }}>
+                                    <LoadingIndicator />
+                                </View>
                             </View>
                             {posStatus !== 'active' && (
                                 <View
