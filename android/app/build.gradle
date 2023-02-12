@@ -200,10 +200,11 @@ android {
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
     implementation 'com.android.support:multidex:1.0.3'
+    implementation 'com.android.support:support-v13:+'
     implementation project(':react-native-randombytes')
-    implementation "androidx.core:core:1.1.0"
     implementation "com.facebook.react:react-native:0.70.6!!"  // From node_modules
-    implementation 'androidx.appcompat:appcompat:1.1.0-rc01'
+    implementation 'androidx.core:core-ktx:1.7.0'
+    implementation 'androidx.appcompat:appcompat:1.4.0'
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0-alpha02'
     implementation files("../../node_modules/react-native-tor/android/libs/sifir_android.aar")
     implementation project(':react-native-restart')
