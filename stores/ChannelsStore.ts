@@ -4,7 +4,6 @@ import { randomBytes } from 'react-native-randombytes';
 import Channel from './../models/Channel';
 import ClosedChannel from './../models/ClosedChannel';
 import ChannelInfo from './../models/ChannelInfo';
-import ForceClosedChannel from './../models/ForceClosedChannel';
 
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import CloseChannelRequest from './../models/CloseChannelRequest';
@@ -206,7 +205,7 @@ export default class ChannelsStore {
                             pending.blocks_til_maturity;
                         pending.channel.forceClose = true;
                         pending.channel.closing_txid = pending.closing_txid;
-                        return new ForceClosedChannel(pending.channel);
+                        return new Channel(pending.channel);
                     });
                 const waitCloseChannels = data.waiting_close_channels.map(
                     (pending: any) => {
