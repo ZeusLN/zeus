@@ -16,7 +16,6 @@ import Button from '../../components/Button';
 import KeyValue from '../../components/KeyValue';
 import Amount from '../../components/Amount';
 import FeeBreakdown from '../../components/FeeBreakdown';
-import PaidIndicator from '../../components/PaidIndicator';
 import SetFeesForm from '../../components/SetFeesForm';
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
@@ -225,7 +224,6 @@ export default class ChannelView extends React.Component<
                     }}
                 />
                 <View style={styles.content}>
-                    <PaidIndicator />
                     <View style={styles.center}>
                         <Text
                             style={{
