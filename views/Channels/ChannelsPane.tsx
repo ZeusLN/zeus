@@ -57,8 +57,8 @@ export default class ChannelsPane extends React.PureComponent<
         const { nodes, largestChannelSats } = ChannelsStore;
         const displayName =
             item.alias ||
-            (nodes[item.remote_pubkey] && nodes[item.remote_pubkey].alias) ||
-            item.remote_pubkey ||
+            (nodes[item.remotePubkey] && nodes[item.remotePubkey].alias) ||
+            item.remotePubkey ||
             item.channelId;
 
         const getStatus = () => {
