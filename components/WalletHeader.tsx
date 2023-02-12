@@ -27,6 +27,25 @@ import { Row } from '../components/layout/Row';
 
 const Contact = require('../assets/images/Mascot.png');
 
+const protectedNavigation = async (
+    navigation: any,
+    route: string,
+    disactivatePOS?: boolean
+) => {
+    const { posStatus, settings, setPosStatus } = stores.settingsStore;
+    const loginRequired = settings && (settings.passphrase || settings.pin);
+    const posEnabled = posStatus === 'active';
+
+    if (posEnabled && loginRequired) {
+        navigation.navigate('Lockscreen', {
+            attemptAdminLogin: true
+        });
+    } else {
+        if (disactivatePOS) await setPosStatus('inactive');
+        navigation.navigate(route);
+    }
+};
+
 const OpenChannelButton = ({ navigation }: { navigation: any }) => (
     <Button
         title=""
@@ -44,28 +63,9 @@ const OpenChannelButton = ({ navigation }: { navigation: any }) => (
     />
 );
 
-const TempleButton = ({
-    setPosStatus,
-    navigation
-}: {
-    setPosStatus: (status: string) => void;
-    navigation: any;
-}) => (
+const TempleButton = ({ navigation }: { navigation: any }) => (
     <TouchableOpacity
-        onPress={async () => {
-            const { posStatus, settings } = stores.settingsStore;
-            const loginRequired =
-                settings && (settings.passphrase || settings.pin);
-            const posEnabled = posStatus === 'active';
-            if (posEnabled && loginRequired) {
-                navigation.navigate('Lockscreen', {
-                    attemptAdminLogin: true
-                });
-            } else {
-                await setPosStatus('inactive');
-                navigation.navigate('Wallet');
-            }
-        }}
+        onPress={() => protectedNavigation(navigation, 'Wallet', true)}
     >
         <Temple
             fill={themeColor('text')}
@@ -180,20 +180,8 @@ export default class WalletHeader extends React.Component<
 
         const SettingsButton = () => (
             <TouchableOpacity
-                onPress={() => {
-                    const { posStatus, settings } = stores.settingsStore;
-                    const loginRequired =
-                        settings && (settings.passphrase || settings.pin);
-                    const posEnabled = posStatus === 'active';
-
-                    if (posEnabled && loginRequired) {
-                        navigation.navigate('Lockscreen', {
-                            attemptAdminLogin: true
-                        });
-                    } else {
-                        navigation.navigate('Settings');
-                    }
-                }}
+                onPress={() => protectedNavigation(navigation, 'Settings')}
+                onLongPress={() => protectedNavigation(navigation, 'Nodes')}
             >
                 {multipleNodes ? (
                     <NodeIdenticon
@@ -252,10 +240,7 @@ export default class WalletHeader extends React.Component<
                 }
                 rightComponent={
                     posStatus === 'active' ? (
-                        <TempleButton
-                            navigation={navigation}
-                            setPosStatus={setPosStatus}
-                        />
+                        <TempleButton navigation={navigation} />
                     ) : channels ? (
                         <OpenChannelButton navigation={navigation} />
                     ) : (
