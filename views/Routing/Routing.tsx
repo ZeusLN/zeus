@@ -249,7 +249,11 @@ export default class Routing extends React.PureComponent<
                                 color: themeColor('secondary')
                             }}
                         />
-                        {loading && <LoadingIndicator />}
+                        {loading && (
+                            <View style={{ top: 40 }}>
+                                <LoadingIndicator />
+                            </View>
+                        )}
                         {forwardingEvents.length > 0 && !loading && (
                             <FlatList
                                 data={forwardingEvents}

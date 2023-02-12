@@ -7,7 +7,7 @@ import querystring from 'querystring-es3';
 import { Hash as sha256Hash, HMAC as sha256HMAC } from 'fast-sha256';
 
 import Button from './../components/Button';
-import LoadingIndicator from './../components/LoadingIndicator';
+import LightningIndicator from './../components/LightningIndicator';
 import {
     SuccessMessage,
     ErrorMessage
@@ -282,7 +282,7 @@ export default class LnurlAuth extends React.Component<
 
                     <View style={styles.content}>
                         {(preparingSignature || authenticating) && (
-                            <LoadingIndicator />
+                            <LightningIndicator />
                         )}
                         {lnurlAuthSuccess && (
                             <SuccessMessage
