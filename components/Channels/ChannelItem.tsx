@@ -46,7 +46,6 @@ export function ChannelItem({
         <View
             style={{
                 padding: 16,
-                height: 110,
                 justifyContent: 'space-around',
                 borderBottomColor: themeColor('secondary'),
                 borderBottomWidth: 1
@@ -70,7 +69,7 @@ export function ChannelItem({
                 <Tag status={status} />
             </Row>
             {inbound && outbound && (
-                <Row>
+                <Row style={{ marginTop: 15, marginBottom: 15 }}>
                     <BalanceBar
                         left={lurkerMode ? 50 : Number(outbound)}
                         right={lurkerMode ? 50 : Number(inbound)}

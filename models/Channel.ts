@@ -68,4 +68,9 @@ export default class Channel extends BaseModel {
             localeString('models.Channel.unknownId')
         );
     }
+
+    @computed
+    public get remotePubkey(): string {
+        return this.remote_pubkey;
+    }
 }
