@@ -1,6 +1,7 @@
 import { action, observable, reaction } from 'mobx';
 import { randomBytes } from 'react-native-randombytes';
 import Channel from './../models/Channel';
+import ChannelClose from './../models/ChannelClose';
 import ChannelInfo from './../models/ChannelInfo';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import CloseChannelRequest from './../models/CloseChannelRequest';
@@ -22,6 +23,8 @@ export default class ChannelsStore {
     @observable public nodes: any = {};
     @observable public aliasesById: any = {};
     @observable public channels: Array<Channel> = [];
+    @observable public pendingChannels: Array<Channel> = [];
+    @observable public closedChannels: Array<Channel> = [];
     @observable public output_index: number | null;
     @observable public funding_txid_str: string | null;
     @observable public openingChannel = false;
@@ -136,6 +139,55 @@ export default class ChannelsStore {
                     }
                 });
                 this.channels = channels;
+                this.error = false;
+            })
+            .catch(() => {
+                this.getChannelsError();
+            });
+
+        BackendUtils.getPendingChannels()
+            .then((data: any) => {
+                const pendingOpenChannels = data.pending_open_channels.map(
+                    (pending: any) => {
+                        pending.channel.pendingOpen = true;
+                        return new Channel(pending.channel);
+                    }
+                );
+                const pendingCloseChannels = data.pending_closing_channels.map(
+                    (pending: any) => {
+                        pending.channel.pendingClose = true;
+                        return new Channel(pending.channel);
+                    }
+                );
+                const forceCloseChannels =
+                    data.pending_force_closing_channels.map((pending: any) => {
+                        pending.channel.blocks_til_maturity =
+                            pending.blocks_til_maturity;
+                        pending.channel.forceClose = true;
+                        return new Channel(pending.channel);
+                    });
+                const waitCloseChannels = data.waiting_close_channels.map(
+                    (pending: any) => {
+                        pending.channel.closing = true;
+                        return new Channel(pending.channel);
+                    }
+                );
+                this.pendingChannels = pendingOpenChannels
+                    .concat(pendingCloseChannels)
+                    .concat(forceCloseChannels)
+                    .concat(waitCloseChannels);
+                this.error = false;
+            })
+            .catch(() => {
+                this.getChannelsError();
+            });
+
+        BackendUtils.getClosedChannels()
+            .then((data: any) => {
+                const closedChannels = data.channels.map(
+                    (channel: any) => new ChannelClose(channel)
+                );
+                this.closedChannels = closedChannels;
                 this.error = false;
                 this.loading = false;
             })

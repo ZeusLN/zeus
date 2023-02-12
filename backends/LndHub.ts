@@ -89,6 +89,7 @@ export default class LndHub extends LND {
         );
     supportsKeysend = () => false;
     supportsChannelManagement = () => false;
+    supportsPendingChannels = () => false;
     supportsMPP = () => false;
     supportsAMP = () => false;
     supportsCoinControl = () => false;
