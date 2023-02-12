@@ -204,6 +204,8 @@ export default class LND {
             transactions: data.transactions
         }));
     getChannels = () => this.getRequest('/v1/channels');
+    getPendingChannels = () => this.getRequest('/v1/channels/pending');
+    getClosedChannels = () => this.getRequest('/v1/channels/closed');
     getChannelInfo = (chanId: string) =>
         this.getRequest(`/v1/graph/edge/${chanId}`);
     getBlockchainBalance = () => this.getRequest('/v1/balance/blockchain');
@@ -355,6 +357,7 @@ export default class LND {
     supportsOnchainReceiving = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
+    supportsPendingChannels = () => true;
     supportsMPP = () => this.supports('v0.10.0');
     supportsAMP = () => this.supports('v0.13.0');
     supportsCoinControl = () => this.supports('v0.12.0');
