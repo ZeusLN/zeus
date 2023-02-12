@@ -7,7 +7,7 @@ import { Header, Icon } from 'react-native-elements';
 import querystring from 'querystring-es3';
 
 import Button from './../components/Button';
-import LoadingIndicator from './../components/LoadingIndicator';
+import LightningIndicator from './../components/LightningIndicator';
 
 import ChannelsStore from './../stores/ChannelsStore';
 import NodeInfoStore from './../stores/NodeInfoStore';
@@ -291,7 +291,7 @@ export default class LnurlChannel extends React.Component<
                     </View>
 
                     <View style={styles.content}>
-                        {this.state.connectingToPeer && <LoadingIndicator />}
+                        {this.state.connectingToPeer && <LightningIndicator />}
                         {this.state.peerSuccess && (
                             <Text
                                 style={{

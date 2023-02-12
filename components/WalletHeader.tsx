@@ -248,7 +248,9 @@ export default class WalletHeader extends React.Component<
                             {(stores.balanceStore.loadingBlockchainBalance ||
                                 stores.balanceStore
                                     .loadingLightningBalance) && (
-                                <LoadingIndicator size={80} />
+                                <View style={{ paddingRight: 15 }}>
+                                    <LoadingIndicator size={30} />
+                                </View>
                             )}
                             {!!clipboard && (
                                 <View style={{ marginRight: 20 }}>

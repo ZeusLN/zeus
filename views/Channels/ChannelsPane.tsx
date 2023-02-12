@@ -187,7 +187,9 @@ export default class ChannelsPane extends React.PureComponent<
                     totalOffline={totalOffline}
                 />
                 {loading ? (
-                    <LoadingIndicator />
+                    <View style={{ top: 40 }}>
+                        <LoadingIndicator />
+                    </View>
                 ) : (
                     <FlatList
                         data={channelsData}
