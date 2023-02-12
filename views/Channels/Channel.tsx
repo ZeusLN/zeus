@@ -9,26 +9,27 @@ import {
 } from 'react-native';
 import { Divider, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import Channel from './../../models/Channel';
+import Channel from '../../models/Channel';
 
-import BalanceSlider from './../../components/BalanceSlider';
-import Button from './../../components/Button';
-import KeyValue from './../../components/KeyValue';
-import Amount from './../../components/Amount';
-import FeeBreakdown from './../../components/FeeBreakdown';
-import SetFeesForm from './../../components/SetFeesForm';
-import Switch from './../../components/Switch';
-import TextInput from './../../components/TextInput';
+import BalanceSlider from '../../components/BalanceSlider';
+import Button from '../../components/Button';
+import KeyValue from '../../components/KeyValue';
+import Amount from '../../components/Amount';
+import FeeBreakdown from '../../components/FeeBreakdown';
+import PaidIndicator from '../../components/PaidIndicator';
+import SetFeesForm from '../../components/SetFeesForm';
+import Switch from '../../components/Switch';
+import TextInput from '../../components/TextInput';
 
-import PrivacyUtils from './../../utils/PrivacyUtils';
-import BackendUtils from './../../utils/BackendUtils';
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import PrivacyUtils from '../../utils/PrivacyUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import ChannelsStore from './../../stores/ChannelsStore';
-import FeeStore from './../../stores/FeeStore';
-import UnitsStore from './../../stores/UnitsStore';
-import SettingsStore from './../../stores/SettingsStore';
+import ChannelsStore from '../../stores/ChannelsStore';
+import FeeStore from '../../stores/FeeStore';
+import UnitsStore from '../../stores/UnitsStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 interface ChannelProps {
     navigation: any;
@@ -224,6 +225,7 @@ export default class ChannelView extends React.Component<
                     }}
                 />
                 <View style={styles.content}>
+                    <PaidIndicator />
                     <View style={styles.center}>
                         <Text
                             style={{

@@ -297,7 +297,11 @@ export default class PaymentRequest extends React.Component<
                     }}
                 />
 
-                {(loading || loadingFeeEstimate) && <LoadingIndicator />}
+                {(loading || loadingFeeEstimate) && (
+                    <View style={{ top: 40 }}>
+                        <LoadingIndicator />
+                    </View>
+                )}
 
                 <ScrollView>
                     {!!getPayReqError && (
