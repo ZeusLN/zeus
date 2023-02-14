@@ -8,7 +8,7 @@ docker run --rm --name $CONTAINER_NAME -v `pwd`:$ZEUS_PATH $BUILDER_IMAGE bash -
      'echo -e "\n\n********************************\n*** Building Zeus...\n********************************\n" && \
       cd /olympus/zeus ; yarn install --frozen-lockfile && \
       cd /olympus/zeus/node_modules/@lightninglabs/lnc-rn ; bash fetch-libraries.sh && \
-      cd /olympus/zeus/android ; ./gradlew assembleRelease && \
+      cd /olympus/zeus/android ; ./gradlew app:assembleRelease && \
 
       echo -e "\n\n********************************\n**** APKs and SHA256 Hashes\n********************************\n" && \
       cd /olympus/zeus && \
