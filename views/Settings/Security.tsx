@@ -1,12 +1,14 @@
 import { inject, observer } from 'mobx-react';
 import * as React from 'react';
-import { FlatList, View, ScrollView } from 'react-native';
+import { FlatList, ScrollView, View } from 'react-native';
+import { BiometryType } from 'react-native-biometrics';
 import { Header, Icon, ListItem } from 'react-native-elements';
 
 import Switch from './../../components/Switch';
 
 import SettingsStore from '../../stores/SettingsStore';
 
+import { verifyBiometry } from './../../utils/BiometricUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -21,6 +23,8 @@ interface SecurityState {
     displaySecurityItems: Array<any>;
     pinExists: boolean;
     passphraseExists: boolean;
+    supportedBiometryType: BiometryType | undefined;
+    isBiometryEnabled: boolean | undefined;
 }
 
 const possibleSecurityItems = [
@@ -56,12 +60,21 @@ export default class Security extends React.Component<
     SecurityProps,
     SecurityState
 > {
+    constructor(props: SecurityProps) {
+        super(props);
+
+        this.handleBiometricsSwitchChange =
+            this.handleBiometricsSwitchChange.bind(this);
+    }
+
     state = {
         scramblePin: true,
         loginBackground: false,
         displaySecurityItems: [],
         pinExists: false,
-        passphraseExists: false
+        passphraseExists: false,
+        supportedBiometryType: undefined,
+        isBiometryEnabled: undefined
     };
 
     async componentDidMount() {
@@ -71,7 +84,9 @@ export default class Security extends React.Component<
 
         this.setState({
             scramblePin: settings.scramblePin ?? true,
-            loginBackground: settings.loginBackground ?? false
+            loginBackground: settings.loginBackground ?? false,
+            isBiometryEnabled: settings.isBiometryEnabled,
+            supportedBiometryType: settings.supportedBiometryType
         });
 
         if (settings.pin) {
@@ -115,6 +130,26 @@ export default class Security extends React.Component<
             }
             this.setState({
                 displaySecurityItems: minPinItems
+            });
+        }
+    }
+
+    async handleBiometricsSwitchChange(value: boolean): Promise<void> {
+        const isVerified = await verifyBiometry(
+            localeString(`views.Settings.Security.Biometrics.prompt`)
+        );
+
+        if (isVerified) {
+            const {
+                SettingsStore: { updateSettings }
+            } = this.props;
+
+            this.setState({
+                isBiometryEnabled: value
+            });
+
+            updateSettings({
+                isBiometryEnabled: value
             });
         }
     }
@@ -184,9 +219,10 @@ export default class Security extends React.Component<
             displaySecurityItems,
             pinExists,
             passphraseExists,
-            loginBackground
+            loginBackground,
+            isBiometryEnabled = false
         } = this.state;
-        const { updateSettings } = SettingsStore;
+        const { updateSettings, settings } = SettingsStore;
 
         const BackButton = () => (
             <Icon
@@ -224,6 +260,31 @@ export default class Security extends React.Component<
                     keyExtractor={(item, index) => `${item.label}-${index}`}
                     ItemSeparatorComponent={this.renderSeparator}
                 />
+                {settings.supportedBiometryType !== undefined && (
+                    <ListItem
+                        containerStyle={{
+                            backgroundColor: themeColor('background')
+                        }}
+                    >
+                        <ListItem.Content>
+                            <ListItem.Title
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'Lato-Regular'
+                                }}
+                            >
+                                {localeString(
+                                    `views.Settings.Security.${this.state.supportedBiometryType}.title`
+                                )}
+                            </ListItem.Title>
+                        </ListItem.Content>
+
+                        <Switch
+                            value={isBiometryEnabled}
+                            onValueChange={this.handleBiometricsSwitchChange}
+                        />
+                    </ListItem>
+                )}
                 {pinExists && (
                     <ListItem
                         containerStyle={{

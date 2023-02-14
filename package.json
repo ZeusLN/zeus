@@ -70,6 +70,7 @@
     "querystring-es3": "0.2.1",
     "react": "18.1.0",
     "react-native": "0.70.6",
+    "react-native-biometrics": "3.0.1",
     "react-native-blob-util": "0.14.0",
     "react-native-camera": "react-native-camera/react-native-camera#3443/head",
     "react-native-crypto": "2.2.0",
