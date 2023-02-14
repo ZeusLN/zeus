@@ -1,10 +1,11 @@
-import EncryptedStorage from 'react-native-encrypted-storage';
 import { action, observable } from 'mobx';
+import { BiometryType } from 'react-native-biometrics';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import EncryptedStorage from 'react-native-encrypted-storage';
 
 import BackendUtils from '../utils/BackendUtils';
-import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 
 // lndhub
 import LoginRequest from './../models/LoginRequest';
@@ -55,7 +56,7 @@ interface PaymentSettings {
     defaultFeeFixed?: string;
 }
 
-interface Settings {
+export interface Settings {
     nodes?: Array<Node>;
     selectedNode?: number;
     passphrase?: string;
@@ -71,6 +72,8 @@ interface Settings {
     display: DisplaySettings;
     pos: PosSettings;
     payments: PaymentSettings;
+    isBiometryEnabled: boolean;
+    supportedBiometryType?: BiometryType;
     lndHubLnAuthMode?: string;
 }
 
@@ -231,6 +234,8 @@ export default class SettingsStore {
             defaultFeePercentage: '0.5',
             defaultFeeFixed: '100'
         },
+        supportedBiometryType: undefined,
+        isBiometryEnabled: false,
         scramblePin: true,
         loginBackground: false,
         fiat: DEFAULT_FIAT
@@ -406,6 +411,7 @@ export default class SettingsStore {
             );
             if (credentials) {
                 this.settings = JSON.parse(credentials);
+
                 const node: any =
                     this.settings.nodes &&
                     this.settings.nodes[this.settings.selectedNode || 0];
@@ -448,8 +454,10 @@ export default class SettingsStore {
 
     @action
     public updateSettings = async (newSetting: any) => {
+        const existingSettings = await this.getSettings();
+
         const newSettings = {
-            ...this.settings,
+            ...existingSettings,
             ...newSetting
         };
 

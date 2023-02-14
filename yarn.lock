@@ -7598,6 +7598,11 @@ react-is@^17.0.1:
   resolved "https://registry.npmjs.org/react-is/-/react-is-17.0.2.tgz"
   integrity sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==
 
+react-native-biometrics@3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/react-native-biometrics/-/react-native-biometrics-3.0.1.tgz#23c5a0bdbae1fcb1e08b22936223fe0fc4af846e"
+  integrity sha512-Ru80gXRa9KG04sl5AB9HyjLjVbduhqZVjA+AiOSGqr+fNqCDmCu9y5WEksnjbnniNLmq1yGcw+qcLXmR1ddLDQ==
+
 react-native-blob-util@0.14.0:
   version "0.14.0"
   resolved "https://registry.npmjs.org/react-native-blob-util/-/react-native-blob-util-0.14.0.tgz"
