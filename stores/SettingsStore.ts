@@ -71,6 +71,7 @@ interface Settings {
     display: DisplaySettings;
     pos: PosSettings;
     payments: PaymentSettings;
+    lndHubLnAuthMode?: string;
 }
 
 export const BLOCK_EXPLORER_KEYS = [
@@ -193,6 +194,11 @@ export const POS_CONF_PREF_KEYS = [
     { key: '0 conf', value: '0conf' },
     { key: '1 conf', value: '1conf' },
     { key: 'LN only', value: 'lnOnly' }
+];
+
+export const LNDHUB_AUTH_MODES = [
+    { key: 'BlueWallet', value: 'BlueWallet' },
+    { key: 'Alby', value: 'Alby' }
 ];
 
 const STORAGE_KEY = 'zeus-settings';
