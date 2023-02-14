@@ -6,6 +6,7 @@ import OpenChannelRequest from './../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
 import { snakeize } from './../utils/DataFormatUtils';
 import VersionUtils from './../utils/VersionUtils';
+import { Hash as sha256Hash } from 'fast-sha256';
 
 const ADDRESS_TYPES = [
     'WITNESS_PUBKEY_HASH',
@@ -53,6 +54,14 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.lightning
             .listChannels({})
             .then((data: lnrpc.ListChannelsResponse) => snakeize(data));
+    getPendingChannels = async () =>
+        await this.lnc.lnd.lightning
+            .pendingChannels({})
+            .then((data: lnrpc.PendingChannelsResponse) => snakeize(data));
+    getClosedChannels = async () =>
+        await this.lnc.lnd.lightning
+            .closedChannels({})
+            .then((data: lnrpc.ClosedChannelsResponse) => snakeize(data));
     getChannelInfo = async (chanId: string) => {
         const request: lnrpc.ChanInfoRequest = { chanId };
         return await this.lnc.lnd.lightning
@@ -271,7 +280,14 @@ export default class LightningNodeConnect {
                 signature: req.signature
             })
             .then((data: lnrpc.VerifyMessageResponse) => snakeize(data));
-    lnurlAuth = async (message: string) => await this.signMessage(message);
+    lnurlAuth = async (r_hash: string) => {
+        const signed = await this.signMessage(r_hash);
+        return {
+            signature: new sha256Hash()
+                .update(Base64Utils.stringToUint8Array(signed.signature))
+                .digest()
+        };
+    };
     subscribeInvoice = (r_hash: string) =>
         this.lnc.lnd.invoices.subscribeSingleInvoice({ r_hash });
     subscribeInvoices = () => this.lnc.lnd.lightning.subscribeInvoices();
@@ -291,6 +307,7 @@ export default class LightningNodeConnect {
     supportsOnchainReceiving = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
+    supportsPendingChannels = () => true;
     supportsMPP = () => this.supports('v0.10.0');
     supportsAMP = () => this.supports('v0.13.0');
     supportsCoinControl = () => this.supports('v0.12.0');

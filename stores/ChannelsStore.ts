@@ -1,9 +1,13 @@
 import { action, observable, reaction } from 'mobx';
 import { randomBytes } from 'react-native-randombytes';
+
 import Channel from './../models/Channel';
+import ClosedChannel from './../models/ClosedChannel';
 import ChannelInfo from './../models/ChannelInfo';
+
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import CloseChannelRequest from './../models/CloseChannelRequest';
+
 import SettingsStore from './SettingsStore';
 
 import Base64Utils from './../utils/Base64Utils';
@@ -22,6 +26,8 @@ export default class ChannelsStore {
     @observable public nodes: any = {};
     @observable public aliasesById: any = {};
     @observable public channels: Array<Channel> = [];
+    @observable public pendingChannels: Array<Channel> = [];
+    @observable public closedChannels: Array<Channel> = [];
     @observable public output_index: number | null;
     @observable public funding_txid_str: string | null;
     @observable public openingChannel = false;
@@ -52,6 +58,39 @@ export default class ChannelsStore {
                 }
             }
         );
+
+        reaction(
+            () => this.channels,
+            () => {
+                if (this.channels) {
+                    this.channels.forEach((channel: any) =>
+                        this.enrichChannel(channel)
+                    );
+                }
+            }
+        );
+
+        reaction(
+            () => this.pendingChannels,
+            () => {
+                if (this.pendingChannels) {
+                    this.pendingChannels.forEach((channel: any) =>
+                        this.enrichChannel(channel)
+                    );
+                }
+            }
+        );
+
+        reaction(
+            () => this.closedChannels,
+            () => {
+                if (this.closedChannels) {
+                    this.closedChannels.forEach((channel: any) =>
+                        this.enrichChannel(channel)
+                    );
+                }
+            }
+        );
     }
 
     @action
@@ -78,11 +117,31 @@ export default class ChannelsStore {
     };
 
     @action
-    getNodeInfo = (pubkey: string) => {
-        this.loading = true;
-        return BackendUtils.getNodeInfo([pubkey]).then((data: any) => {
+    getNodeInfo = (pubkey: string) =>
+        BackendUtils.getNodeInfo([pubkey]).then((data: any) => {
             return data.node;
         });
+
+    @action
+    enrichChannel = (channel: any) => {
+        if (!channel.remotePubkey) return;
+        if (
+            this.settingsStore.implementation !== 'c-lightning-REST' &&
+            !this.nodes[channel.remotePubkey]
+        ) {
+            this.getNodeInfo(channel.remotePubkey)
+                .then((nodeInfo: any) => {
+                    if (!nodeInfo) return;
+                    this.nodes[channel.remotePubkey] = nodeInfo;
+                    this.aliasesById[channel.channelId] = nodeInfo.alias;
+                })
+                .catch((err: any) => {
+                    console.log(
+                        `Couldn't find node alias for ${channel.remotePubkey}`,
+                        err
+                    );
+                });
+        }
     };
 
     getChannelsError = () => {
@@ -117,25 +176,59 @@ export default class ChannelsStore {
                         this.totalInbound += channelRemoteBalance;
                         this.totalOutbound += channelLocalBalance;
                     }
-                    if (
-                        this.settingsStore.implementation !==
-                            'c-lightning-REST' &&
-                        !this.nodes[channel.remote_pubkey]
-                    ) {
-                        this.getNodeInfo(channel.remote_pubkey)
-                            .then((nodeInfo: any) => {
-                                if (!nodeInfo) return;
-
-                                this.nodes[channel.remote_pubkey] = nodeInfo;
-                                this.aliasesById[channel.chan_id] =
-                                    nodeInfo.alias;
-                            })
-                            .catch((err: any) => {
-                                console.log("Couldn't find node alias", err);
-                            });
-                    }
                 });
                 this.channels = channels;
+                this.error = false;
+            })
+            .catch(() => {
+                this.getChannelsError();
+            });
+
+        BackendUtils.getPendingChannels()
+            .then((data: any) => {
+                const pendingOpenChannels = data.pending_open_channels.map(
+                    (pending: any) => {
+                        pending.channel.pendingOpen = true;
+                        return new Channel(pending.channel);
+                    }
+                );
+                const pendingCloseChannels = data.pending_closing_channels.map(
+                    (pending: any) => {
+                        pending.channel.pendingClose = true;
+                        pending.channel.closing_txid = pending.closing_txid;
+                        return new Channel(pending.channel);
+                    }
+                );
+                const forceCloseChannels =
+                    data.pending_force_closing_channels.map((pending: any) => {
+                        pending.channel.blocks_til_maturity =
+                            pending.blocks_til_maturity;
+                        pending.channel.forceClose = true;
+                        pending.channel.closing_txid = pending.closing_txid;
+                        return new Channel(pending.channel);
+                    });
+                const waitCloseChannels = data.waiting_close_channels.map(
+                    (pending: any) => {
+                        pending.channel.closing = true;
+                        return new Channel(pending.channel);
+                    }
+                );
+                this.pendingChannels = pendingOpenChannels
+                    .concat(pendingCloseChannels)
+                    .concat(forceCloseChannels)
+                    .concat(waitCloseChannels);
+                this.error = false;
+            })
+            .catch(() => {
+                this.getChannelsError();
+            });
+
+        BackendUtils.getClosedChannels()
+            .then((data: any) => {
+                const closedChannels = data.channels.map(
+                    (channel: any) => new ClosedChannel(channel)
+                );
+                this.closedChannels = closedChannels;
                 this.error = false;
                 this.loading = false;
             })
@@ -220,8 +313,6 @@ export default class ChannelsStore {
     };
 
     openChannelLNDCoinControl = (request: OpenChannelRequest) => {
-        console.log('calling openChannelLNDCoinControl');
-        console.log(request);
         const { utxos } = request;
         const inputs: any = [];
         const outputs: any = {};
@@ -242,7 +333,6 @@ export default class ChannelsStore {
         delete request.sat_per_byte;
 
         const pending_chan_id = randomBytes(32).toString('base64');
-        console.log(pending_chan_id);
 
         const openChanRequest = {
             funding_shim: {
@@ -255,12 +345,8 @@ export default class ChannelsStore {
             ...request
         };
 
-        console.log(openChanRequest);
-
         BackendUtils.openChannelStream(openChanRequest)
             .then((data: any) => {
-                console.log('stream');
-                console.log(data);
                 const psbt_fund = data.psbt_fund;
                 const { funding_address, funding_amount } = psbt_fund;
 
@@ -281,8 +367,6 @@ export default class ChannelsStore {
 
                 BackendUtils.fundPsbt(fundPsbtRequest)
                     .then((data: any) => {
-                        console.log('fund');
-                        console.log(data);
                         const funded_psbt = data.funded_psbt;
 
                         const openChanRequest = {
@@ -300,8 +384,6 @@ export default class ChannelsStore {
                                 console.log(data);
                             })
                             .catch((error: any) => {
-                                console.log('chan2 err');
-                                console.log(error.toString());
                                 this.errorMsgChannel = error.toString();
                                 this.output_index = null;
                                 this.funding_txid_str = null;
@@ -313,8 +395,6 @@ export default class ChannelsStore {
                             });
                     })
                     .catch((error: any) => {
-                        console.log('fundPsbt err');
-                        console.log(error.toString());
                         this.errorMsgChannel = error.toString();
                         this.output_index = null;
                         this.funding_txid_str = null;
@@ -326,8 +406,6 @@ export default class ChannelsStore {
                     });
             })
             .catch((error: any) => {
-                console.log('stream err');
-                console.log(error.toString());
                 this.errorMsgChannel = error.toString();
                 this.output_index = null;
                 this.funding_txid_str = null;

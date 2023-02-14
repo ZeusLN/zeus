@@ -54,6 +54,10 @@ class BackendUtils {
 
     getTransactions = (...args: any[]) => this.call('getTransactions', args);
     getChannels = (...args: any[]) => this.call('getChannels', args);
+    getPendingChannels = (...args: any[]) =>
+        this.call('getPendingChannels', args);
+    getClosedChannels = (...args: any[]) =>
+        this.call('getClosedChannels', args);
     getChannelInfo = (...args: any[]) => this.call('getChannelInfo', args);
     getBlockchainBalance = (...args: any[]) =>
         this.call('getBlockchainBalance', args);
@@ -110,6 +114,7 @@ class BackendUtils {
     supportsOnchainReceiving = () => this.call('supportsOnchainReceiving');
     supportsKeysend = () => this.call('supportsKeysend');
     supportsChannelManagement = () => this.call('supportsChannelManagement');
+    supportsPendingChannels = () => this.call('supportsPendingChannels');
     supportsMPP = () => this.call('supportsMPP');
     supportsAMP = () => this.call('supportsAMP');
     supportsCoinControl = () => this.call('supportsCoinControl');

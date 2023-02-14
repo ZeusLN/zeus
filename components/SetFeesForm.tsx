@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
 import Button from './../components/Button';
-import LoadingIndicator from './../components/LoadingIndicator';
+import LightningIndicator from './../components/LightningIndicator';
 import {
     SuccessMessage,
     ErrorMessage
@@ -119,7 +119,7 @@ export default class SetFeesForm extends React.Component<
 
                 {(expanded || showNewFeesForm) && (
                     <ScrollView style={{ paddingTop: 15 }}>
-                        {loading && <LoadingIndicator />}
+                        {loading && <LightningIndicator />}
                         {feesSubmitted && setFeesSuccess && (
                             <SuccessMessage
                                 message={localeString(
