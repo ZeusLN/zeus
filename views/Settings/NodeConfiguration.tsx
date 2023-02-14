@@ -1041,6 +1041,7 @@ export default class NodeConfiguration extends React.Component<
                                             locked={loading}
                                             secureTextEntry={saved}
                                         />
+
                                         {saved && (
                                             <CollapsedQR
                                                 showText={localeString(

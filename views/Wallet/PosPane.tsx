@@ -314,7 +314,11 @@ export default class PosPane extends React.PureComponent<
                     />
                 )}
 
-                {loading && <LoadingIndicator />}
+                {loading && (
+                    <View style={{ top: 40 }}>
+                        <LoadingIndicator />
+                    </View>
+                )}
 
                 {!loading && (
                     <SearchBar

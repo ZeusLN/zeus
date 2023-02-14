@@ -539,7 +539,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     flex: 1,
                                     justifyContent: 'center',
                                     alignItems: 'center',
-                                    top: 50
+                                    top: 10
                                 }}
                             >
                                 <WordLogo
@@ -565,7 +565,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                               'views.Wallet.Wallet.startingUp'
                                           )}
                                 </Text>
-                                <LoadingIndicator size={120} />
+                                <View style={{ marginTop: 40 }}>
+                                    <LoadingIndicator />
+                                </View>
                             </View>
                             {posStatus !== 'active' && (
                                 <View

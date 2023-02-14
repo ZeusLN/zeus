@@ -9,26 +9,26 @@ import {
 } from 'react-native';
 import { Divider, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import Channel from './../../models/Channel';
+import Channel from '../../models/Channel';
 
-import BalanceSlider from './../../components/BalanceSlider';
-import Button from './../../components/Button';
-import KeyValue from './../../components/KeyValue';
-import Amount from './../../components/Amount';
-import FeeBreakdown from './../../components/FeeBreakdown';
-import SetFeesForm from './../../components/SetFeesForm';
-import Switch from './../../components/Switch';
-import TextInput from './../../components/TextInput';
+import BalanceSlider from '../../components/BalanceSlider';
+import Button from '../../components/Button';
+import KeyValue from '../../components/KeyValue';
+import Amount from '../../components/Amount';
+import FeeBreakdown from '../../components/FeeBreakdown';
+import SetFeesForm from '../../components/SetFeesForm';
+import Switch from '../../components/Switch';
+import TextInput from '../../components/TextInput';
 
-import PrivacyUtils from './../../utils/PrivacyUtils';
-import BackendUtils from './../../utils/BackendUtils';
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import PrivacyUtils from '../../utils/PrivacyUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import ChannelsStore from './../../stores/ChannelsStore';
-import FeeStore from './../../stores/FeeStore';
-import UnitsStore from './../../stores/UnitsStore';
-import SettingsStore from './../../stores/SettingsStore';
+import ChannelsStore from '../../stores/ChannelsStore';
+import FeeStore from '../../stores/FeeStore';
+import UnitsStore from '../../stores/UnitsStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 interface ChannelProps {
     navigation: any;
@@ -41,7 +41,7 @@ interface ChannelProps {
 interface ChannelState {
     confirmCloseChannel: boolean;
     satPerByte: string;
-    forceClose: boolean;
+    forceCloseChannel: boolean;
     channel: Channel;
 }
 
@@ -65,7 +65,7 @@ export default class ChannelView extends React.Component<
         this.state = {
             confirmCloseChannel: false,
             satPerByte: '',
-            forceClose: false,
+            forceCloseChannel: false,
             channel
         };
 
@@ -123,7 +123,7 @@ export default class ChannelView extends React.Component<
             UnitsStore,
             SettingsStore
         } = this.props;
-        const { channel, confirmCloseChannel, satPerByte, forceClose } =
+        const { channel, confirmCloseChannel, satPerByte, forceCloseChannel } =
             this.state;
         const { changeUnits, getAmount, units } = UnitsStore;
         const { channelFees } = FeeStore;
@@ -145,17 +145,29 @@ export default class ChannelView extends React.Component<
             remoteBalance,
             unsettled_balance,
             total_satoshis_sent,
-            remote_pubkey,
+            remotePubkey,
             capacity,
             alias,
             channelId,
             initiator,
-            alias_scids
+            alias_scids,
+            // closed
+            closeHeight,
+            closeType,
+            open_initiator,
+            close_initiator,
+            closing_tx_hash,
+            chain_hash,
+            settled_balance,
+            time_locked_balance,
+            closing_txid,
+            pendingClose,
+            forceClose
         } = channel;
         const privateChannel = channel.private;
 
         const peerName =
-            (nodes[remote_pubkey] && nodes[remote_pubkey].alias) ||
+            (nodes[remotePubkey] && nodes[remotePubkey].alias) ||
             alias ||
             channelId;
 
@@ -222,7 +234,7 @@ export default class ChannelView extends React.Component<
                         >
                             {peerDisplay}
                         </Text>
-                        {remote_pubkey && (
+                        {remotePubkey && (
                             <Text
                                 style={{
                                     color: themeColor('text'),
@@ -230,7 +242,7 @@ export default class ChannelView extends React.Component<
                                     ...styles.pubkey
                                 }}
                             >
-                                {PrivacyUtils.sensitiveValue(remote_pubkey)}
+                                {PrivacyUtils.sensitiveValue(remotePubkey)}
                             </Text>
                         )}
                     </View>
@@ -277,18 +289,26 @@ export default class ChannelView extends React.Component<
                     <KeyValue
                         keyValue={localeString('views.Channel.status')}
                         value={
-                            isActive
+                            pendingClose
+                                ? localeString('views.Channel.pendingClose')
+                                : forceClose
+                                ? localeString('views.Channel.forceClose')
+                                : closeHeight
+                                ? localeString('views.Channel.closed')
+                                : isActive
                                 ? localeString('views.Channel.active')
                                 : localeString('views.Channel.inactive')
                         }
                         color={isActive ? 'green' : 'red'}
                     />
 
-                    <KeyValue
-                        keyValue={localeString('views.Channel.private')}
-                        value={privateChannel ? 'True' : 'False'}
-                        color={privateChannel ? 'green' : '#808000'}
-                    />
+                    {!closeHeight && (
+                        <KeyValue
+                            keyValue={localeString('views.Channel.private')}
+                            value={privateChannel ? 'True' : 'False'}
+                            color={privateChannel ? 'green' : '#808000'}
+                        />
+                    )}
 
                     {!!alias_scids && alias_scids.length > 0 && (
                         <KeyValue
@@ -300,6 +320,24 @@ export default class ChannelView extends React.Component<
                             value={PrivacyUtils.sensitiveValue(
                                 alias_scids.join(', ')
                             )}
+                        />
+                    )}
+
+                    {channel_point && (
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Channel.channelPoint'
+                            )}
+                            value={channel_point}
+                            sensitive
+                        />
+                    )}
+
+                    {chain_hash && (
+                        <KeyValue
+                            keyValue={localeString('views.Channel.chainHash')}
+                            value={chain_hash}
+                            sensitive
                         />
                     )}
 
@@ -340,6 +378,38 @@ export default class ChannelView extends React.Component<
                         />
                     )}
 
+                    {settled_balance && (
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Channel.settledBalance'
+                            )}
+                            value={
+                                <Amount
+                                    sats={settled_balance}
+                                    sensitive
+                                    toggleable
+                                />
+                            }
+                            sensitive
+                        />
+                    )}
+
+                    {time_locked_balance && (
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Channel.timeLockedBalance'
+                            )}
+                            value={
+                                <Amount
+                                    sats={time_locked_balance}
+                                    sensitive
+                                    toggleable
+                                />
+                            }
+                            sensitive
+                        />
+                    )}
+
                     {commit_weight && (
                         <KeyValue
                             keyValue={localeString(
@@ -368,6 +438,60 @@ export default class ChannelView extends React.Component<
                         <KeyValue
                             keyValue={localeString('views.Channel.feePerKw')}
                             value={fee_per_kw}
+                            sensitive
+                        />
+                    )}
+
+                    {closeHeight && (
+                        <KeyValue
+                            keyValue={localeString('views.Channel.closeHeight')}
+                            value={closeHeight}
+                            sensitive
+                        />
+                    )}
+
+                    {closeType && (
+                        <KeyValue
+                            keyValue={localeString('views.Channel.closeType')}
+                            value={closeType}
+                            sensitive
+                        />
+                    )}
+
+                    {open_initiator && (
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Channel.openInitiator'
+                            )}
+                            value={open_initiator}
+                            sensitive
+                        />
+                    )}
+
+                    {close_initiator && (
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Channel.closeInitiator'
+                            )}
+                            value={close_initiator}
+                            sensitive
+                        />
+                    )}
+
+                    {closing_txid && (
+                        <KeyValue
+                            keyValue={localeString('views.Channel.closingTxId')}
+                            value={closing_txid}
+                            sensitive
+                        />
+                    )}
+
+                    {closing_tx_hash && (
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Channel.closingTxHash'
+                            )}
+                            value={closing_tx_hash}
                             sensitive
                         />
                     )}
@@ -411,7 +535,7 @@ export default class ChannelView extends React.Component<
                                 }}
                                 onPress={() =>
                                     navigation.navigate('Send', {
-                                        destination: remote_pubkey,
+                                        destination: remotePubkey,
                                         transactionType: 'Keysend',
                                         isValid: true
                                     })
@@ -420,24 +544,31 @@ export default class ChannelView extends React.Component<
                         </View>
                     )}
 
-                    <View style={styles.button}>
-                        <Button
-                            title={
-                                confirmCloseChannel
-                                    ? localeString('views.Channel.cancelClose')
-                                    : localeString('views.Channel.close')
-                            }
-                            icon={{
-                                name: confirmCloseChannel ? 'cancel' : 'delete'
-                            }}
-                            onPress={() =>
-                                this.setState({
-                                    confirmCloseChannel: !confirmCloseChannel
-                                })
-                            }
-                            secondary
-                        />
-                    </View>
+                    {!closeHeight && !closing_txid && (
+                        <View style={styles.button}>
+                            <Button
+                                title={
+                                    confirmCloseChannel
+                                        ? localeString(
+                                              'views.Channel.cancelClose'
+                                          )
+                                        : localeString('views.Channel.close')
+                                }
+                                icon={{
+                                    name: confirmCloseChannel
+                                        ? 'cancel'
+                                        : 'delete'
+                                }}
+                                onPress={() =>
+                                    this.setState({
+                                        confirmCloseChannel:
+                                            !confirmCloseChannel
+                                    })
+                                }
+                                secondary
+                            />
+                        </View>
+                    )}
 
                     {confirmCloseChannel && (
                         <React.Fragment>
@@ -506,10 +637,11 @@ export default class ChannelView extends React.Component<
                                                 )}
                                             </Text>
                                             <Switch
-                                                value={forceClose}
+                                                value={forceCloseChannel}
                                                 onValueChange={() =>
                                                     this.setState({
-                                                        forceClose: !forceClose
+                                                        forceCloseChannel:
+                                                            !forceCloseChannel
                                                     })
                                                 }
                                             />
@@ -530,7 +662,7 @@ export default class ChannelView extends React.Component<
                                             channel_point,
                                             channelId,
                                             satPerByte,
-                                            forceClose
+                                            forceCloseChannel
                                         )
                                     }
                                     tertiary

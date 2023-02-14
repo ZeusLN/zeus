@@ -1,29 +1,40 @@
 import * as React from 'react';
-import { FlatList, View, Text, TouchableOpacity } from 'react-native';
+import {
+    FlatList,
+    View,
+    Text,
+    TouchableHighlight,
+    TouchableOpacity
+} from 'react-native';
 import { ButtonGroup, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import BigNumber from 'bignumber.js';
 
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Spacer } from '../../components/layout/Spacer';
 import LoadingIndicator from '../../components/LoadingIndicator';
 
-import Pie from '../../assets/images/SVG/Pie.svg';
+import Export from '../../assets/images/SVG/Export.svg';
 
-import FeeStore from '../../stores/FeeStore';
+import FiatStore from '../../stores/FiatStore';
+import PosStore from '../../stores/PosStore';
+import { SATS_PER_BTC } from '../../stores/UnitsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
-import { RoutingListItem } from './RoutingListItem';
-import { RoutingHeader } from './RoutingHeader';
+import { ReconHeader } from './PointOfSaleReconHeader';
 
-interface RoutingProps {
+import OrderItem from '../../views/Wallet/OrderItem';
+
+interface PointOfSaleReconProps {
     navigation: any;
-    FeeStore: FeeStore;
+    FiatStore: FiatStore;
+    PosStore: PosStore;
 }
 
-interface RoutingState {
+interface PointOfSaleReconState {
     selectedIndex: number;
 }
 
@@ -36,78 +47,94 @@ const HOURS = {
     5: 24 * 365
 };
 
-@inject('FeeStore')
+@inject('FiatStore', 'PosStore')
 @observer
-export default class Routing extends React.PureComponent<
-    RoutingProps,
-    RoutingState
+export default class PointOfSaleRecon extends React.PureComponent<
+    PointOfSaleReconProps,
+    PointOfSaleReconState
 > {
     state = {
         selectedIndex: 0
     };
 
     UNSAFE_componentWillMount() {
-        const { FeeStore } = this.props;
-        FeeStore.getFees();
-        if (BackendUtils.isLNDBased()) {
-            FeeStore.getForwardingHistory();
-        }
+        const { PosStore } = this.props;
+        PosStore.getOrdersHistorical();
     }
 
-    renderItem = ({ item }) => {
-        const { navigation } = this.props;
+    renderItem = (order) => {
+        const { navigation, FiatStore } = this.props;
+        const { getSymbol } = FiatStore;
+        const { item } = order;
+        const isPaid: boolean = item && item.payment;
+
+        let tip = '';
+        if (isPaid) {
+            const { orderTip, rate } = item.payment;
+            tip = new BigNumber(orderTip)
+                .multipliedBy(rate)
+                .dividedBy(SATS_PER_BTC)
+                .toFixed(2);
+        }
+
         return (
-            <TouchableOpacity
-                onPress={() =>
-                    navigation.navigate('RoutingEvent', {
-                        routingEvent: item
-                    })
-                }
+            <TouchableHighlight
+                onPress={() => {
+                    navigation.navigate('Order', {
+                        order: item
+                    });
+                }}
             >
-                <RoutingListItem
-                    title={localeString('views.Routing.received')}
-                    fee={item.fee_msat / 1000}
-                    amountOut={item.amt_out}
-                    date={item.getDateShort}
+                <OrderItem
+                    title={item.getItemsList}
+                    money={
+                        isPaid
+                            ? `${item.getTotalMoneyDisplay} + ${
+                                  getSymbol().symbol
+                              }${tip}`
+                            : item.getTotalMoneyDisplay
+                    }
+                    date={item.getDisplayTime}
                 />
-            </TouchableOpacity>
+            </TouchableHighlight>
         );
     };
 
     render() {
-        const { FeeStore, navigation } = this.props;
+        const { FiatStore, PosStore, navigation } = this.props;
         const { selectedIndex } = this.state;
         const {
-            dayEarned,
-            weekEarned,
-            monthEarned,
-            totalEarned,
-            earnedDuringTimeframe,
-            forwardingEvents,
-            forwardingHistoryError,
-            getForwardingHistory,
+            completedOrders,
+            getOrdersHistorical,
+            reconTotal,
+            reconTax,
+            reconTips,
             loading
-        } = FeeStore;
+        } = PosStore;
+
+        const orders = completedOrders;
 
         const headerString =
-            forwardingEvents.length > 0
-                ? `${localeString('general.routing')} (${
-                      forwardingEvents.length
+            orders.length > 0
+                ? `${localeString('views.Settings.POS.recon')} (${
+                      orders.length
                   })`
-                : localeString('general.routing');
+                : localeString('views.Settings.POS.recon');
 
         const BackButton = () => (
             <Icon
                 name="arrow-back"
-                onPress={() => navigation.navigate('Wallet')}
+                onPress={() => navigation.goBack()}
                 color={themeColor('text')}
                 underlayColor="transparent"
             />
         );
 
-        const FeeBadge = ({ navigation }: { navigation: any }) => (
-            <TouchableOpacity onPress={() => navigation.navigate('SetFees')}>
-                <Pie stroke={themeColor('highlight')} />
+        const ExportBadge = ({ navigation }: { navigation: any }) => (
+            <TouchableOpacity
+                onPress={() => navigation.navigate('PointOfSaleReconExport')}
+            >
+                <Export stroke={themeColor('highlight')} />
             </TouchableOpacity>
         );
 
@@ -203,8 +230,7 @@ export default class Routing extends React.PureComponent<
             <View
                 style={{
                     flex: 1,
-                    backgroundColor: themeColor('background'),
-                    color: themeColor('text')
+                    backgroundColor: themeColor('background')
                 }}
             >
                 <Header
@@ -213,25 +239,23 @@ export default class Routing extends React.PureComponent<
                         text: headerString,
                         style: { color: themeColor('text') }
                     }}
-                    rightComponent={<FeeBadge navigation={navigation} />}
+                    rightComponent={<ExportBadge navigation={navigation} />}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
                 />
-                <RoutingHeader
-                    dayEarned={dayEarned}
-                    weekEarned={weekEarned}
-                    monthEarned={monthEarned}
-                    totalEarned={totalEarned}
-                    timeframeEarned={earnedDuringTimeframe}
-                    fullSize={!BackendUtils.isLNDBased()}
+                <ReconHeader
+                    total={reconTotal}
+                    tax={reconTax}
+                    tips={reconTips}
+                    FiatStore={FiatStore}
                 />
                 {BackendUtils.isLNDBased() && (
                     <View style={{ flex: 1 }}>
                         <ButtonGroup
                             onPress={(selectedIndex: number) => {
-                                getForwardingHistory(HOURS[selectedIndex]);
+                                getOrdersHistorical(HOURS[selectedIndex]);
                                 this.setState({ selectedIndex });
                             }}
                             selectedIndex={selectedIndex}
@@ -249,26 +273,18 @@ export default class Routing extends React.PureComponent<
                                 color: themeColor('secondary')
                             }}
                         />
-                        {loading && (
-                            <View style={{ top: 40 }}>
-                                <LoadingIndicator />
-                            </View>
-                        )}
-                        {forwardingEvents.length > 0 && !loading && (
+                        {loading && <LoadingIndicator />}
+                        {orders.length > 0 && !loading && (
                             <FlatList
-                                data={forwardingEvents}
+                                data={orders}
                                 renderItem={this.renderItem}
                                 ListFooterComponent={<Spacer height={100} />}
-                                onRefresh={() =>
-                                    getForwardingHistory(HOURS[selectedIndex])
-                                }
-                                refreshing={false}
-                                keyExtractor={(item, index) =>
-                                    `${item.getTime}-${index}`
-                                }
+                                onRefresh={() => getOrdersHistorical()}
+                                refreshing={loading}
+                                keyExtractor={(item, index) => `${index}`}
                             />
                         )}
-                        {forwardingEvents.length === 0 && !loading && (
+                        {false && orders.length === 0 && !loading && (
                             <Text
                                 style={{
                                     fontFamily: 'Lato-Regular',
@@ -280,7 +296,7 @@ export default class Routing extends React.PureComponent<
                                 {localeString('views.Routing.noEvents')}
                             </Text>
                         )}
-                        {forwardingHistoryError && !loading && (
+                        {false && !loading && (
                             <ErrorMessage
                                 message={localeString(
                                     'views.NodeInfo.ForwardingHistory.error'
