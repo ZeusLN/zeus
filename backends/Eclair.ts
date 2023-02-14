@@ -5,6 +5,7 @@ import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import TransactionRequest from './../models/TransactionRequest';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
+import { Hash as sha256Hash } from 'fast-sha256';
 
 // keep track of all active calls so we can cancel when appropriate
 const calls: any = {};
@@ -466,7 +467,14 @@ export default class Eclair {
             msg: Base64Utils.btoa(data.msg),
             sig: data.signature
         });
-    lnurlAuth = (message: string) => this.signMessage(message);
+    lnurlAuth = async (r_hash: string) => {
+        const signed = await this.signMessage(r_hash);
+        return {
+            signature: new sha256Hash()
+                .update(Base64Utils.stringToUint8Array(signed.signature))
+                .digest()
+        };
+    };
 
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;

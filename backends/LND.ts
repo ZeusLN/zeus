@@ -5,6 +5,7 @@ import OpenChannelRequest from './../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
 import VersionUtils from './../utils/VersionUtils';
 import { localeString } from './../utils/LocaleUtils';
+import { Hash as sha256Hash } from 'fast-sha256';
 
 interface Headers {
     macaroon?: string;
@@ -346,7 +347,14 @@ export default class LND {
             msg: Base64Utils.btoa(data.msg),
             signature: data.signature
         });
-    lnurlAuth = (r_hash: string) => this.signMessage(r_hash);
+    lnurlAuth = async (r_hash: string) => {
+        const signed = await this.signMessage(r_hash);
+        return {
+            signature: new sha256Hash()
+                .update(Base64Utils.stringToUint8Array(signed.signature))
+                .digest()
+        };
+    };
     subscribeInvoice = (r_hash: string) =>
         this.getRequest(`/v2/invoices/subscribe/${r_hash}`);
     subscribeTransactions = () => this.getRequest('/v1/transactions/subscribe');
