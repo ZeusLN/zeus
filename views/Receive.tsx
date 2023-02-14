@@ -550,12 +550,15 @@ export default class Receive extends React.Component<
                 satAmount = value;
                 break;
             case 'BTC':
-                satAmount = Number(value) * SATS_PER_BTC;
+                satAmount = Number(
+                    new BigNumber(value).multipliedBy(SATS_PER_BTC)
+                );
                 break;
             case 'fiat':
                 satAmount = Number(
-                    (Number(value.replace(/,/g, '.')) / Number(rate)) *
-                        Number(SATS_PER_BTC)
+                    new BigNumber(value.replace(/,/g, '.'))
+                        .dividedBy(rate)
+                        .multipliedBy(SATS_PER_BTC)
                 ).toFixed(0);
                 break;
         }
