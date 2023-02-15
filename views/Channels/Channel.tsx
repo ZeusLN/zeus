@@ -30,6 +30,8 @@ import FeeStore from './../../stores/FeeStore';
 import UnitsStore from './../../stores/UnitsStore';
 import SettingsStore from './../../stores/SettingsStore';
 
+import Share from './../../assets/images/SVG/Share.svg';
+
 interface ChannelProps {
     navigation: any;
     ChannelsStore: ChannelsStore;
@@ -150,7 +152,9 @@ export default class ChannelView extends React.Component<
             alias,
             channelId,
             initiator,
-            alias_scids
+            alias_scids,
+            local_chan_reserve_sat,
+            remote_chan_reserve_sat
         } = channel;
         const privateChannel = channel.private;
 
@@ -189,6 +193,18 @@ export default class ChannelView extends React.Component<
             />
         );
 
+        const KeySend = () => (
+            <Share
+                onPress={() =>
+                    navigation.navigate('Send', {
+                        destination: remote_pubkey,
+                        transactionType: 'Keysend',
+                        isValid: true
+                    })
+                }
+            />
+        );
+
         return (
             <ScrollView
                 style={{
@@ -199,13 +215,14 @@ export default class ChannelView extends React.Component<
             >
                 <Header
                     leftComponent={<BackButton />}
-                    centerComponent={{
-                        text: localeString('views.Channel.title'),
-                        style: {
-                            color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
-                        }
-                    }}
+                    // centerComponent={{
+                    //     text: localeString('views.Channel.title'),
+                    //     style: {
+                    //         color: themeColor('text'),
+                    //         fontFamily: 'Lato-Regular'
+                    //     }
+                    // }}
+                    rightComponent={<KeySend />}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
                         borderBottomWidth: 0
@@ -225,22 +242,28 @@ export default class ChannelView extends React.Component<
                         {remote_pubkey && (
                             <Text
                                 style={{
-                                    color: themeColor('text'),
+                                    color: '#FFD93F',
                                     fontFamily: 'Lato-Regular',
                                     ...styles.pubkey
                                 }}
                             >
-                                {PrivacyUtils.sensitiveValue(remote_pubkey)}
+                                {PrivacyUtils.sensitiveValue(
+                                    remote_pubkey
+                                ).slice(0, 6) +
+                                    '...' +
+                                    PrivacyUtils.sensitiveValue(
+                                        remote_pubkey
+                                    ).slice(-6)}
                             </Text>
                         )}
                     </View>
 
-                    <BalanceSlider
+                    {/* <BalanceSlider
                         localBalance={lurkerMode ? 50 : localBalance}
                         remoteBalance={lurkerMode ? 50 : remoteBalance}
-                    />
+                    /> */}
 
-                    <View style={styles.balances}>
+                    {/* <View style={styles.balances}>
                         <TouchableOpacity onPress={() => changeUnits()}>
                             <Text
                                 style={{
@@ -272,9 +295,31 @@ export default class ChannelView extends React.Component<
                                 )}: ${units && unsettledBalance}`}</Text>
                             )}
                         </TouchableOpacity>
-                    </View>
+                    </View> */}
 
                     <KeyValue
+                        keyValue="Channel balance"
+                        color={isActive ? 'green' : 'red'}
+                    />
+
+                    <KeyValue
+                        keyValue="Outbound"
+                        value={units && channelBalanceLocal}
+                    />
+
+                    <KeyValue
+                        keyValue="Inbound"
+                        value={units && channelBalanceRemote}
+                    />
+
+                    {unsettled_balance && (
+                        <KeyValue
+                            keyValue="Unsettled"
+                            value={units && unsettledBalance}
+                        />
+                    )}
+
+                    {/* <KeyValue
                         keyValue={localeString('views.Channel.status')}
                         value={
                             isActive
@@ -282,13 +327,13 @@ export default class ChannelView extends React.Component<
                                 : localeString('views.Channel.inactive')
                         }
                         color={isActive ? 'green' : 'red'}
-                    />
-
+                    /> */}
+{/* 
                     <KeyValue
                         keyValue={localeString('views.Channel.private')}
                         value={privateChannel ? 'True' : 'False'}
                         color={privateChannel ? 'green' : '#808000'}
-                    />
+                    /> */}
 
                     {!!alias_scids && alias_scids.length > 0 && (
                         <KeyValue
@@ -303,7 +348,7 @@ export default class ChannelView extends React.Component<
                         />
                     )}
 
-                    {total_satoshis_received && (
+                    {/* {total_satoshis_received && (
                         <KeyValue
                             keyValue={localeString(
                                 'views.Channel.totalReceived'
@@ -329,7 +374,16 @@ export default class ChannelView extends React.Component<
                                 />
                             }
                         />
-                    )}
+                    )} */}
+
+                    <KeyValue 
+                        keyValue="Local reserve"
+                        value={local_chan_reserve_sat}    
+                    />
+                    <KeyValue 
+                        keyValue="Remote reserve"
+                        value={remote_chan_reserve_sat}    
+                    />
 
                     {capacity && (
                         <KeyValue
@@ -340,46 +394,53 @@ export default class ChannelView extends React.Component<
                         />
                     )}
 
-                    {commit_weight && (
+                    {/* {commit_weight && (
                         <KeyValue
                             keyValue={localeString(
                                 'views.Channel.commitWeight'
                             )}
                             value={commit_weight}
                         />
-                    )}
+                    )} */}
 
-                    {commit_fee && (
+                    {/* {commit_fee && (
                         <KeyValue
                             keyValue={localeString('views.Channel.commitFee')}
                             value={commit_fee}
                             sensitive
                         />
-                    )}
+                    )} */}
 
-                    {csv_delay && (
+                    {/* {csv_delay && (
                         <KeyValue
                             keyValue={localeString('views.Channel.csvDelay')}
                             value={csv_delay}
                         />
-                    )}
+                    )} */}
 
-                    {fee_per_kw && (
+                    {/* {fee_per_kw && (
                         <KeyValue
                             keyValue={localeString('views.Channel.feePerKw')}
                             value={fee_per_kw}
                             sensitive
                         />
-                    )}
+                    )} */}
 
                     <Divider orientation="horizontal" style={{ margin: 20 }} />
 
                     {BackendUtils.isLNDBased() && (
                         <FeeBreakdown
+                            isActive={isActive}
                             channelId={channelId}
                             peerDisplay={peerDisplay}
                             channelPoint={channel_point}
                             initiator={initiator}
+                            total_satoshis_received={total_satoshis_received}
+                            total_satoshis_sent={total_satoshis_sent}
+                            commit_fee={commit_fee}
+                            commit_weight={commit_weight}
+                            csv_delay={csv_delay}
+                            privateChannel={privateChannel}
                         />
                     )}
 
@@ -401,8 +462,8 @@ export default class ChannelView extends React.Component<
                             FeeStore={FeeStore}
                         />
                     )}
-
-                    {BackendUtils.isLNDBased() && (
+                    
+                    {/* {BackendUtils.isLNDBased() && (
                         <View style={styles.button}>
                             <Button
                                 title={localeString('views.Channel.keysend')}
@@ -418,7 +479,7 @@ export default class ChannelView extends React.Component<
                                 }
                             />
                         </View>
-                    )}
+                    )} */}
 
                     <View style={styles.button}>
                         <Button
@@ -427,15 +488,16 @@ export default class ChannelView extends React.Component<
                                     ? localeString('views.Channel.cancelClose')
                                     : localeString('views.Channel.close')
                             }
-                            icon={{
-                                name: confirmCloseChannel ? 'cancel' : 'delete'
-                            }}
+                            // icon={{
+                            //     name: confirmCloseChannel ? 'cancel' : 'delete'
+                            // }}
                             onPress={() =>
                                 this.setState({
                                     confirmCloseChannel: !confirmCloseChannel
                                 })
                             }
-                            secondary
+                            quaternary
+                            warning
                         />
                     </View>
 
@@ -522,9 +584,9 @@ export default class ChannelView extends React.Component<
                                     title={localeString(
                                         'views.Channel.confirmClose'
                                     )}
-                                    icon={{
-                                        name: 'delete-forever'
-                                    }}
+                                    // icon={{
+                                    //     name: 'delete-forever'
+                                    // }}
                                     onPress={() =>
                                         this.closeChannel(
                                             channel_point,
@@ -533,7 +595,9 @@ export default class ChannelView extends React.Component<
                                             forceClose
                                         )
                                     }
-                                    tertiary
+                                  
+                                    quaternary
+                                    warning
                                 />
                             </View>
                         </React.Fragment>
@@ -561,13 +625,13 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     alias: {
-        fontSize: 20,
-        paddingTop: 10,
+        fontSize: 28,
+        paddingTop: 14,
         paddingBottom: 10
     },
     pubkey: {
-        paddingTop: 10,
-        paddingBottom: 30
+        paddingBottom: 30,
+        textAlign: 'center'
     },
     balance: {
         fontSize: 15,
