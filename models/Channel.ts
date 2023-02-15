@@ -30,6 +30,8 @@ export default class Channel extends BaseModel {
     private: boolean;
     initiator?: boolean;
     alias_scids?: Array<number>; // array uint64
+    local_chan_reserve_sat?: string;
+    remote_chan_reserve_sat?: string;
     // c-lightning
     @observable
     state: string;
