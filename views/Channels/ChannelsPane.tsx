@@ -49,7 +49,7 @@ export default class ChannelsPane extends React.PureComponent<
     ChannelsState
 > {
     state = {
-        channelsType: 0
+        channelsType: this.props.ChannelsStore.channelsType || 0
     };
 
     renderItem = ({ item }) => {
@@ -121,12 +121,15 @@ export default class ChannelsPane extends React.PureComponent<
     };
 
     toggleChannelsType = () => {
+        const { ChannelsStore } = this.props;
         const { channelsType } = this.state;
         if (channelsType === 2) {
+            ChannelsStore.channelsType = 0;
             this.setState({
                 channelsType: 0
             });
         } else {
+            ChannelsStore.channelsType = channelsType + 1;
             this.setState({
                 channelsType: channelsType + 1
             });

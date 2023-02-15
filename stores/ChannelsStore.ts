@@ -43,6 +43,7 @@ export default class ChannelsStore {
     @observable public totalInbound = 0;
     @observable public totalOffline = 0;
     @observable public chanInfo: ChannelInfoIndex = {};
+    @observable public channelsType = 0;
 
     settingsStore: SettingsStore;
 
@@ -114,6 +115,7 @@ export default class ChannelsStore {
         this.totalOutbound = 0;
         this.totalInbound = 0;
         this.totalOffline = 0;
+        this.channelsType = 0;
     };
 
     @action
