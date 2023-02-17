@@ -193,6 +193,8 @@
     "views.Wallet.Wallet.invoices": "Invoices",
     "views.Wallet.Wallet.onchain": "On-chain",
     "views.Wallet.Wallet.channels": "Channels",
+    "views.Wallet.Wallet.pendingChannels": "Pending Channels",
+    "views.Wallet.Wallet.closedChannels": "Closed Channels",
     "views.Wallet.Wallet.startingUp": "Zeus is starting up.",
     "views.Wallet.Wallet.connecting": "Zeus is connecting to your node.",
     "views.Wallet.restart": "Restart",
