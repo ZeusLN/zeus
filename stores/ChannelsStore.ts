@@ -472,4 +472,8 @@ export default class ChannelsStore {
                 this.loading = false;
             });
     };
+
+    public setChannelsType = (type: number) => {
+        this.channelsType = type;
+    };
 }

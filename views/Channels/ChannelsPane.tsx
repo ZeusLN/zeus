@@ -38,23 +38,12 @@ interface ChannelsProps {
     SettingsStore: SettingsStore;
 }
 
-interface ChannelsState {
-    channelsType: number;
-}
-
 @inject('ChannelsStore', 'SettingsStore')
 @observer
-export default class ChannelsPane extends React.PureComponent<
-    ChannelsProps,
-    ChannelsState
-> {
-    state = {
-        channelsType: this.props.ChannelsStore.channelsType || 0
-    };
-
+export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
     renderItem = ({ item }) => {
         const { ChannelsStore, navigation } = this.props;
-        const { nodes, largestChannelSats } = ChannelsStore;
+        const { nodes, largestChannelSats, channelsType } = ChannelsStore;
         const displayName =
             item.alias ||
             (nodes[item.remotePubkey] && nodes[item.remotePubkey].alias) ||
@@ -77,7 +66,7 @@ export default class ChannelsPane extends React.PureComponent<
             return duration(maturity * 10, 'minutes').humanize();
         };
 
-        if (this.state.channelsType === 0) {
+        if (channelsType === 0) {
             return (
                 <TouchableHighlight
                     onPress={() =>
@@ -122,23 +111,17 @@ export default class ChannelsPane extends React.PureComponent<
 
     toggleChannelsType = () => {
         const { ChannelsStore } = this.props;
-        const { channelsType } = this.state;
+        const { channelsType } = ChannelsStore;
         if (channelsType === 2) {
-            ChannelsStore.channelsType = 0;
-            this.setState({
-                channelsType: 0
-            });
+            ChannelsStore.setChannelsType(0);
         } else {
-            ChannelsStore.channelsType = channelsType + 1;
-            this.setState({
-                channelsType: channelsType + 1
-            });
+            ChannelsStore.setChannelsType(channelsType + 1);
         }
     };
 
     render() {
         const { ChannelsStore, SettingsStore, navigation } = this.props;
-        const { channelsType } = this.state;
+        const { channelsType } = ChannelsStore;
         const {
             loading,
             getChannels,

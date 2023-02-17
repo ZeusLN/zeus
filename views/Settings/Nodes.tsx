@@ -13,6 +13,7 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore, { INTERFACE_KEYS } from './../../stores/SettingsStore';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
+import ChannelsStore from '../../stores/ChannelsStore';
 
 interface NodesProps {
     nodes: any[];
@@ -22,6 +23,7 @@ interface NodesProps {
     selectedNode?: number;
     BalanceStore: BalanceStore;
     NodeInfoStore: NodeInfoStore;
+    ChannelsStore: ChannelsStore;
     SettingsStore: SettingsStore;
 }
 
@@ -30,7 +32,7 @@ interface NodesState {
     loading: boolean;
 }
 
-@inject('BalanceStore', 'NodeInfoStore', 'SettingsStore')
+@inject('BalanceStore', 'NodeInfoStore', 'ChannelsStore', 'SettingsStore')
 @observer
 export default class Nodes extends React.Component<NodesProps, NodesState> {
     state = {
@@ -70,8 +72,13 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
     );
 
     render() {
-        const { navigation, BalanceStore, NodeInfoStore, SettingsStore } =
-            this.props;
+        const {
+            navigation,
+            BalanceStore,
+            NodeInfoStore,
+            ChannelsStore,
+            SettingsStore
+        } = this.props;
         const { loading, nodes } = this.state;
         const {
             updateSettings,
@@ -158,6 +165,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                             }
                                             BalanceStore.reset();
                                             NodeInfoStore.reset();
+                                            ChannelsStore.reset();
                                             setConnectingStatus(true);
                                             navigation.navigate('Wallet', {
                                                 refresh: true
