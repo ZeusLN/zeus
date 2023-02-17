@@ -16,7 +16,7 @@ import WalletHeader from '../../components/WalletHeader';
 import { localeString } from '../../utils/LocaleUtils';
 import { Spacer } from '../../components/layout/Spacer';
 
-import ChannelsStore from '../../stores/ChannelsStore';
+import ChannelsStore, { ChannelsType } from '../../stores/ChannelsStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import { duration } from 'moment';
@@ -66,7 +66,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
             return duration(maturity * 10, 'minutes').humanize();
         };
 
-        if (channelsType === 0) {
+        if (channelsType === ChannelsType.Open) {
             return (
                 <TouchableHighlight
                     onPress={() =>
@@ -112,11 +112,20 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
     toggleChannelsType = () => {
         const { ChannelsStore } = this.props;
         const { channelsType } = ChannelsStore;
-        if (channelsType === 2) {
-            ChannelsStore.setChannelsType(0);
-        } else {
-            ChannelsStore.setChannelsType(channelsType + 1);
+
+        let newType = ChannelsType.Open;
+        switch (channelsType) {
+            case ChannelsType.Open:
+                newType = ChannelsType.Pending;
+                break;
+            case ChannelsType.Pending:
+                newType = ChannelsType.Closed;
+                break;
+
+            default:
+                newType = ChannelsType.Open;
         }
+        ChannelsStore.setChannelsType(newType);
     };
 
     render() {
@@ -136,18 +145,22 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
         let headerString;
         let channelsData;
         switch (channelsType) {
-            case 0:
+            case ChannelsType.Open:
                 headerString = `${localeString(
                     'views.Wallet.Wallet.channels'
                 )} (${channels.length})`;
                 channelsData = channels;
                 break;
-            case 1:
-                headerString = `Pending Channels (${pendingChannels.length})`;
+            case ChannelsType.Pending:
+                headerString = `${localeString(
+                    'views.Wallet.Wallet.pendingChannels'
+                )} (${pendingChannels.length})`;
                 channelsData = pendingChannels;
                 break;
-            case 2:
-                headerString = `Closed Channels (${closedChannels.length})`;
+            case ChannelsType.Closed:
+                headerString = `${localeString(
+                    'views.Wallet.Wallet.closedChannels'
+                )} (${closedChannels.length})`;
                 channelsData = closedChannels;
                 break;
         }
