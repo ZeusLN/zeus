@@ -314,7 +314,7 @@ export default class Security extends React.Component<
                         />
                     </ListItem>
                 )}
-                {(pinExists || passphraseExists) && (
+                {(pinExists || passphraseExists || isBiometryEnabled) && (
                     <ListItem
                         containerStyle={{
                             backgroundColor: themeColor('background')
