@@ -211,7 +211,7 @@ export default class SettingsStore {
         privacy: {
             defaultBlockExplorer: 'mempool.space',
             customBlockExplorer: '',
-            clipboard: true,
+            clipboard: false,
             lurkerMode: false,
             enableMempoolRates: true
         },
