@@ -1334,6 +1334,11 @@ export default class NodeConfiguration extends React.Component<
                                     this.saveNodeConfiguration();
                                 }
                             }}
+                            // disable save button if no creds passed
+                            disabled={
+                                implementation === 'lndhub' &&
+                                !(username && password)
+                            }
                         />
                     </View>
 
