@@ -39,7 +39,7 @@ export default class LndHub extends LND {
             balance: BTC.AvailableBalance
         }));
     getInvoices = () =>
-        this.getRequest('/getuserinvoices?limit=200').then((data: any) => ({
+        this.getRequest('/getuserinvoices').then((data: any) => ({
             invoices: data
         }));
 
