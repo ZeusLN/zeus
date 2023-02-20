@@ -29,7 +29,7 @@
     "@react-native-picker/picker": "2.4.8",
     "@react-navigation/bottom-tabs": "5.11.11",
     "@react-navigation/native": "6.0.16",
-    "@remobile/react-native-qrcode-local-image": "1.0.4",
+    "@remobile/react-native-qrcode-local-image": "github:BlueWallet/react-native-qrcode-local-image#b8baa79",
     "@tradle/react-native-http": "2.0.1",
     "@types/react-native-snap-carousel": "3.8.5",
     "assert": "1.5.0",
