@@ -3,7 +3,6 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TouchableOpacity,
     TouchableWithoutFeedback,
     View
 } from 'react-native';
@@ -11,7 +10,6 @@ import { Divider, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Channel from './../../models/Channel';
 
-import BalanceSlider from './../../components/BalanceSlider';
 import Button from './../../components/Button';
 import KeyValue from './../../components/KeyValue';
 import Amount from './../../components/Amount';
@@ -127,12 +125,11 @@ export default class ChannelView extends React.Component<
         } = this.props;
         const { channel, confirmCloseChannel, satPerByte, forceClose } =
             this.state;
-        const { changeUnits, getAmount, units } = UnitsStore;
+        const { getAmount, units } = UnitsStore;
         const { channelFees } = FeeStore;
         const { nodes } = ChannelsStore;
         const { settings, implementation } = SettingsStore;
         const { privacy } = settings;
-        const lurkerMode = privacy && privacy.lurkerMode;
         const enableMempoolRates = privacy && privacy.enableMempoolRates;
 
         const {
@@ -141,7 +138,6 @@ export default class ChannelView extends React.Component<
             localBalance,
             commit_fee,
             csv_delay,
-            fee_per_kw,
             total_satoshis_received,
             isActive,
             remoteBalance,
@@ -157,6 +153,7 @@ export default class ChannelView extends React.Component<
             remote_chan_reserve_sat
         } = channel;
         const privateChannel = channel.private;
+        const [fundingTransaction] = channel_point.split(':');
 
         const peerName =
             (nodes[remote_pubkey] && nodes[remote_pubkey].alias) ||
@@ -215,13 +212,6 @@ export default class ChannelView extends React.Component<
             >
                 <Header
                     leftComponent={<BackButton />}
-                    // centerComponent={{
-                    //     text: localeString('views.Channel.title'),
-                    //     style: {
-                    //         color: themeColor('text'),
-                    //         fontFamily: 'Lato-Regular'
-                    //     }
-                    // }}
                     rightComponent={<KeySend />}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
@@ -258,82 +248,28 @@ export default class ChannelView extends React.Component<
                         )}
                     </View>
 
-                    {/* <BalanceSlider
-                        localBalance={lurkerMode ? 50 : localBalance}
-                        remoteBalance={lurkerMode ? 50 : remoteBalance}
-                    /> */}
-
-                    {/* <View style={styles.balances}>
-                        <TouchableOpacity onPress={() => changeUnits()}>
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    fontFamily: 'Lato-Regular',
-                                    ...styles.balance
-                                }}
-                            >{`${localeString('views.Channel.localBalance')}: ${
-                                units && channelBalanceLocal
-                            }`}</Text>
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    fontFamily: 'Lato-Regular',
-                                    ...styles.balance
-                                }}
-                            >{`${localeString(
-                                'views.Channel.remoteBalance'
-                            )}: ${units && channelBalanceRemote}`}</Text>
-                            {unsettled_balance && (
-                                <Text
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'Lato-Regular',
-                                        ...styles.balance
-                                    }}
-                                >{`${localeString(
-                                    'views.Channel.unsettledBalance'
-                                )}: ${units && unsettledBalance}`}</Text>
-                            )}
-                        </TouchableOpacity>
-                    </View> */}
-
                     <KeyValue
-                        keyValue="Channel balance"
-                        color={isActive ? 'green' : 'red'}
+                        keyValue={localeString('views.Channel.channelBalance')}
                     />
 
                     <KeyValue
-                        keyValue="Outbound"
+                        keyValue={localeString('views.Channel.outbound')}
                         value={units && channelBalanceLocal}
                     />
 
                     <KeyValue
-                        keyValue="Inbound"
+                        keyValue={localeString('views.Channel.inbound')}
                         value={units && channelBalanceRemote}
                     />
 
                     {unsettled_balance && (
                         <KeyValue
-                            keyValue="Unsettled"
+                            keyValue={localeString(
+                                'views.Channel.channelBalance'
+                            )}
                             value={units && unsettledBalance}
                         />
                     )}
-
-                    {/* <KeyValue
-                        keyValue={localeString('views.Channel.status')}
-                        value={
-                            isActive
-                                ? localeString('views.Channel.active')
-                                : localeString('views.Channel.inactive')
-                        }
-                        color={isActive ? 'green' : 'red'}
-                    /> */}
-{/* 
-                    <KeyValue
-                        keyValue={localeString('views.Channel.private')}
-                        value={privateChannel ? 'True' : 'False'}
-                        color={privateChannel ? 'green' : '#808000'}
-                    /> */}
 
                     {!!alias_scids && alias_scids.length > 0 && (
                         <KeyValue
@@ -348,41 +284,13 @@ export default class ChannelView extends React.Component<
                         />
                     )}
 
-                    {/* {total_satoshis_received && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Channel.totalReceived'
-                            )}
-                            value={
-                                <Amount
-                                    sats={total_satoshis_received}
-                                    sensitive
-                                    toggleable
-                                />
-                            }
-                        />
-                    )}
-
-                    {total_satoshis_sent && (
-                        <KeyValue
-                            keyValue={localeString('views.Channel.totalSent')}
-                            value={
-                                <Amount
-                                    sats={total_satoshis_sent}
-                                    sensitive
-                                    toggleable
-                                />
-                            }
-                        />
-                    )} */}
-
-                    <KeyValue 
-                        keyValue="Local reserve"
-                        value={local_chan_reserve_sat}    
+                    <KeyValue
+                        keyValue={localeString('views.Channel.localReserve')}
+                        value={local_chan_reserve_sat}
                     />
-                    <KeyValue 
-                        keyValue="Remote reserve"
-                        value={remote_chan_reserve_sat}    
+                    <KeyValue
+                        keyValue={localeString('views.Channel.remoteReserve')}
+                        value={remote_chan_reserve_sat}
                     />
 
                     {capacity && (
@@ -393,38 +301,6 @@ export default class ChannelView extends React.Component<
                             }
                         />
                     )}
-
-                    {/* {commit_weight && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Channel.commitWeight'
-                            )}
-                            value={commit_weight}
-                        />
-                    )} */}
-
-                    {/* {commit_fee && (
-                        <KeyValue
-                            keyValue={localeString('views.Channel.commitFee')}
-                            value={commit_fee}
-                            sensitive
-                        />
-                    )} */}
-
-                    {/* {csv_delay && (
-                        <KeyValue
-                            keyValue={localeString('views.Channel.csvDelay')}
-                            value={csv_delay}
-                        />
-                    )} */}
-
-                    {/* {fee_per_kw && (
-                        <KeyValue
-                            keyValue={localeString('views.Channel.feePerKw')}
-                            value={fee_per_kw}
-                            sensitive
-                        />
-                    )} */}
 
                     <Divider orientation="horizontal" style={{ margin: 20 }} />
 
@@ -441,6 +317,7 @@ export default class ChannelView extends React.Component<
                             commit_weight={commit_weight}
                             csv_delay={csv_delay}
                             privateChannel={privateChannel}
+                            fundingTransaction={fundingTransaction}
                         />
                     )}
 
@@ -462,24 +339,6 @@ export default class ChannelView extends React.Component<
                             FeeStore={FeeStore}
                         />
                     )}
-                    
-                    {/* {BackendUtils.isLNDBased() && (
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString('views.Channel.keysend')}
-                                icon={{
-                                    name: 'send'
-                                }}
-                                onPress={() =>
-                                    navigation.navigate('Send', {
-                                        destination: remote_pubkey,
-                                        transactionType: 'Keysend',
-                                        isValid: true
-                                    })
-                                }
-                            />
-                        </View>
-                    )} */}
 
                     <View style={styles.button}>
                         <Button
@@ -488,9 +347,6 @@ export default class ChannelView extends React.Component<
                                     ? localeString('views.Channel.cancelClose')
                                     : localeString('views.Channel.close')
                             }
-                            // icon={{
-                            //     name: confirmCloseChannel ? 'cancel' : 'delete'
-                            // }}
                             onPress={() =>
                                 this.setState({
                                     confirmCloseChannel: !confirmCloseChannel
@@ -595,7 +451,6 @@ export default class ChannelView extends React.Component<
                                             forceClose
                                         )
                                     }
-                                  
                                     quaternary
                                     warning
                                 />

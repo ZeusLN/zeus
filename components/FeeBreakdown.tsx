@@ -36,6 +36,7 @@ interface FeeBreakdownProps {
     commit_fee?: number;
     csv_delay?: number;
     privateChannel?: boolean;
+    fundingTransaction?: string;
 }
 
 @inject('FeeStore', 'ChannelsStore', 'NodeInfoStore', 'SettingsStore')
@@ -60,7 +61,8 @@ export default class FeeBreakdown extends React.Component<
             commit_weight,
             commit_fee,
             csv_delay,
-            privateChannel
+            privateChannel,
+            fundingTransaction
         } = this.props;
         const { loading, chanInfo } = ChannelsStore;
         const { nodeInfo } = NodeInfoStore;
@@ -74,39 +76,13 @@ export default class FeeBreakdown extends React.Component<
                 chanInfo[channelId] &&
                 chanInfo[channelId].node1Policy ? (
                     <React.Fragment>
-                        {/* <View style={styles.title}>
-                            <Text
-                                style={{
-                                    ...styles.text,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {(chanInfo[channelId].node1Pub === nodeId &&
-                                    initiator) ||
-                                (chanInfo[channelId].node1Pub !== nodeId &&
-                                    !initiator)
-                                    ? localeString(
-                                          'views.Channel.initiatingParty'
-                                      )
-                                    : localeString(
-                                          'views.Channel.counterparty'
-                                      )}
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.secondaryText,
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {chanInfo[channelId].node1Pub === nodeId
-                                    ? localeString('views.Channel.yourNode')
-                                    : peerDisplay ||
-                                      chanInfo[channelId].node1Pub}
-                            </Text>
-                        </View> */}
-                        <KeyValue keyValue="Channel fees" />
                         <KeyValue
-                            keyValue="Local base fee"
+                            keyValue={localeString('views.Channel.channelFees')}
+                        />
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Channel.localBaseFee'
+                            )}
                             value={
                                 <Amount
                                     sats={
@@ -121,7 +97,9 @@ export default class FeeBreakdown extends React.Component<
                             }
                         />
                         <KeyValue
-                            keyValue="Local fee rate"
+                            keyValue={localeString(
+                                'views.Channel.localFeeRate'
+                            )}
                             value={`${
                                 Number(
                                     chanInfo[channelId].node1Policy
@@ -130,52 +108,10 @@ export default class FeeBreakdown extends React.Component<
                             }%`}
                             sensitive
                         />
-                        {/* <KeyValue
-                            keyValue={localeString('views.Channel.minHTLC')}
-                            value={
-                                <Amount
-                                    sats={
-                                        Number(
-                                            chanInfo[channelId].node1Policy
-                                                .min_htlc
-                                        ) / 1000
-                                    }
-                                    toggleable
-                                    sensitive
-                                />
-                            }
-                        />
                         <KeyValue
-                            keyValue={localeString('views.Channel.maxHTLC')}
-                            value={
-                                <Amount
-                                    sats={
-                                        Number(
-                                            chanInfo[channelId].node1Policy
-                                                .max_htlc_msat
-                                        ) / 1000
-                                    }
-                                    toggleable
-                                    sensitive
-                                />
-                            }
-                        /> */}
-                        {/* <KeyValue
                             keyValue={localeString(
-                                'views.Channel.timeLockDelta'
+                                'views.Channel.remoteBaseFee'
                             )}
-                            value={`${
-                                chanInfo[channelId].node1Policy.time_lock_delta
-                            } ${localeString('general.blocks')}`}
-                        /> */}
-                        {/* <KeyValue
-                            keyValue={localeString('views.Channel.lastUpdate')}
-                            value={DateTimeUtils.listFormattedDate(
-                                chanInfo[channelId].node1Policy.last_update
-                            )}
-                        /> */}
-                        <KeyValue
-                            keyValue="Remote base fee"
                             value={
                                 <Amount
                                     sats={
@@ -190,7 +126,9 @@ export default class FeeBreakdown extends React.Component<
                             }
                         />
                         <KeyValue
-                            keyValue="Remote fee rate"
+                            keyValue={localeString(
+                                'views.Channel.remoteFeeRate'
+                            )}
                             value={`${
                                 Number(
                                     chanInfo[channelId].node2Policy
@@ -237,50 +175,17 @@ export default class FeeBreakdown extends React.Component<
                     </React.Fragment>
                 ) : (
                     <React.Fragment>
-                        <View style={styles.title}>
-                            <Text
-                                style={{
-                                    ...styles.text,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString(
-                                    'components.FeeBreakdown.nowClosed'
-                                )}
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.secondaryText,
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {peerDisplay}
-                            </Text>
-                        </View>
-                    </React.Fragment>
-                )}
-                {!loading &&
-                    chanInfo &&
-                    chanInfo[channelId] &&
-                    chanInfo[channelId].node2Policy && (
-                        <React.Fragment>
-                            {/* <View style={styles.title}>
+                        {!loading && (
+                            <View style={styles.title}>
                                 <Text
                                     style={{
                                         ...styles.text,
                                         color: themeColor('text')
                                     }}
                                 >
-                                    {(chanInfo[channelId].node2Pub === nodeId &&
-                                        initiator) ||
-                                    (chanInfo[channelId].node2Pub !== nodeId &&
-                                        !initiator)
-                                        ? localeString(
-                                              'views.Channel.initiatingParty'
-                                          )
-                                        : localeString(
-                                              'views.Channel.counterparty'
-                                          )}
+                                    {localeString(
+                                        'components.FeeBreakdown.nowClosed'
+                                    )}
                                 </Text>
                                 <Text
                                     style={{
@@ -288,21 +193,31 @@ export default class FeeBreakdown extends React.Component<
                                         color: themeColor('secondaryText')
                                     }}
                                 >
-                                    {chanInfo[channelId].node2Pub === nodeId
-                                        ? localeString('views.Channel.yourNode')
-                                        : peerDisplay ||
-                                          chanInfo[channelId].node2Pub}
+                                    {peerDisplay}
                                 </Text>
-                            </View> */}
-
+                            </View>
+                        )}
+                    </React.Fragment>
+                )}
+                {!loading &&
+                    chanInfo &&
+                    chanInfo[channelId] &&
+                    chanInfo[channelId].node2Policy && (
+                        <React.Fragment>
                             <Divider
                                 orientation="horizontal"
                                 style={{ margin: 20 }}
                             />
 
-                            <KeyValue keyValue="Channel payments" />
                             <KeyValue
-                                keyValue="Local min"
+                                keyValue={localeString(
+                                    'views.Channel.channelPayments'
+                                )}
+                            />
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.localMin'
+                                )}
                                 value={
                                     <Amount
                                         sats={`${
@@ -317,7 +232,9 @@ export default class FeeBreakdown extends React.Component<
                                 }
                             />
                             <KeyValue
-                                keyValue="Remote min"
+                                keyValue={localeString(
+                                    'views.Channel.remoteMin'
+                                )}
                                 value={
                                     <Amount
                                         sats={
@@ -332,7 +249,9 @@ export default class FeeBreakdown extends React.Component<
                                 }
                             />
                             <KeyValue
-                                keyValue="Local max"
+                                keyValue={localeString(
+                                    'views.Channel.localMax'
+                                )}
                                 value={
                                     <Amount
                                         sats={
@@ -347,7 +266,9 @@ export default class FeeBreakdown extends React.Component<
                                 }
                             />
                             <KeyValue
-                                keyValue="Remote max"
+                                keyValue={localeString(
+                                    'views.Channel.remoteMax'
+                                )}
                                 value={
                                     <Amount
                                         sats={
@@ -363,14 +284,18 @@ export default class FeeBreakdown extends React.Component<
                             />
 
                             <KeyValue
-                                keyValue="Local timelock"
+                                keyValue={localeString(
+                                    'views.Channel.localTimeLock'
+                                )}
                                 value={`${
                                     chanInfo[channelId].node2Policy
                                         .time_lock_delta
                                 } ${localeString('general.blocks')}`}
                             />
                             <KeyValue
-                                keyValue="Remote timelock"
+                                keyValue={localeString(
+                                    'views.Channel.remoteTimeLock'
+                                )}
                                 value={`${
                                     chanInfo[channelId].node1Policy
                                         .time_lock_delta
@@ -380,7 +305,11 @@ export default class FeeBreakdown extends React.Component<
                                 orientation="horizontal"
                                 style={{ margin: 20 }}
                             />
-                            <KeyValue keyValue="Channel activity" />
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.channelActivity'
+                                )}
+                            />
                             <KeyValue
                                 keyValue={localeString(
                                     'views.Channel.lastUpdate'
@@ -390,7 +319,9 @@ export default class FeeBreakdown extends React.Component<
                                 )}
                             />
                             <KeyValue
-                                keyValue="Peer status"
+                                keyValue={localeString(
+                                    'views.Channel.peerStatus'
+                                )}
                                 value={
                                     isActive
                                         ? localeString('views.Channel.active')
@@ -430,22 +361,26 @@ export default class FeeBreakdown extends React.Component<
                                 orientation="horizontal"
                                 style={{ margin: 20 }}
                             />
-                            <KeyValue keyValue="Channel funding" />
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.channelFunding'
+                                )}
+                            />
 
                             <KeyValue
-                                keyValue="Funded by"
+                                keyValue={localeString(
+                                    'views.Channel.fundedBy'
+                                )}
                                 value={
-                                    (chanInfo[channelId].node1Pub === nodeId &&
-                                        initiator) ||
-                                    (chanInfo[channelId].node1Pub !== nodeId &&
-                                        !initiator)
+                                    initiator
                                         ? localeString('views.Channel.yourNode')
-                                        : peerDisplay ||
-                                          chanInfo[channelId].node1Pub
+                                        : peerDisplay
                                 }
                             />
                             <KeyValue
-                                keyValue="Unannounced"
+                                keyValue={localeString(
+                                    'views.Channel.unannounced'
+                                )}
                                 value={privateChannel ? 'True' : 'False'}
                             />
 
@@ -476,6 +411,17 @@ export default class FeeBreakdown extends React.Component<
                                     value={csv_delay}
                                 />
                             )}
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.fundingTransaction'
+                                )}
+                                value={
+                                    fundingTransaction.slice(0, 8) +
+                                    '...' +
+                                    fundingTransaction.slice(-8)
+                                }
+                                color={themeColor('chain')}
+                            />
                             {chanInfo[channelId].node2Pub === nodeId && (
                                 <SetFeesForm
                                     baseFee={`${
@@ -533,7 +479,3 @@ const styles = StyleSheet.create({
         paddingBottom: 5
     }
 });
-
-{
-    /* <Divider orientation="horizontal" style={{ margin: 20 }} /> */
-}
