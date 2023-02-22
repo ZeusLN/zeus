@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
     flashlightOverlay: {
         position: 'absolute',
         right: 20,
-        top: 50
+        top: 40
     },
     buttonOverlay: {
         backgroundColor: 'rgba(0,0,0,0.5)',
