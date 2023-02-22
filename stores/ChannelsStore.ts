@@ -17,6 +17,12 @@ interface ChannelInfoIndex {
     [key: string]: ChannelInfo;
 }
 
+export enum ChannelsType {
+    Open = 0,
+    Pending = 1,
+    Closed = 2
+}
+
 export default class ChannelsStore {
     @observable public loading = false;
     @observable public error = false;
@@ -43,6 +49,7 @@ export default class ChannelsStore {
     @observable public totalInbound = 0;
     @observable public totalOffline = 0;
     @observable public chanInfo: ChannelInfoIndex = {};
+    @observable public channelsType = ChannelsType.Open;
 
     settingsStore: SettingsStore;
 
@@ -114,6 +121,7 @@ export default class ChannelsStore {
         this.totalOutbound = 0;
         this.totalInbound = 0;
         this.totalOffline = 0;
+        this.channelsType = ChannelsType.Open;
     };
 
     @action
@@ -469,5 +477,9 @@ export default class ChannelsStore {
                 if (this.chanInfo[chanId]) delete this.chanInfo[chanId];
                 this.loading = false;
             });
+    };
+
+    public setChannelsType = (type: ChannelsType) => {
+        this.channelsType = type;
     };
 }
