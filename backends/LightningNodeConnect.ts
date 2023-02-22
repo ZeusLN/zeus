@@ -20,6 +20,13 @@ const ADDRESS_TYPES = [
 export default class LightningNodeConnect {
     lnc: any;
 
+    permOpenChannel: boolean;
+    permSendCoins: boolean;
+    permNewAddress: boolean;
+    permImportAccount: boolean;
+    permForwardingHistory: boolean;
+    permSignMessage: boolean;
+
     initLNC = async () => {
         const { pairingPhrase, mailboxServer, customMailboxServer } =
             stores.settingsStore;
@@ -38,6 +45,26 @@ export default class LightningNodeConnect {
     };
 
     connect = async () => await this.lnc.connect();
+    checkPerms = async () => {
+        this.permOpenChannel = await this.lnc.hasPerms(
+            'lnrpc.Lightning.OpenChannel'
+        );
+        this.permSendCoins = await this.lnc.hasPerms(
+            'lnrpc.Lightning.SendCoins'
+        );
+        this.permNewAddress = await this.lnc.hasPerms(
+            'lnrpc.Lightning.NewAddress'
+        );
+        this.permImportAccount = await this.lnc.hasPerms(
+            'walletrpc.WalletKit.ImportAccount'
+        );
+        this.permForwardingHistory = await this.lnc.hasPerms(
+            'lnrpc.Lightning.ForwardingHistory'
+        );
+        this.permSignMessage = await this.lnc.hasPerms(
+            'signrpc.Signer.SignMessage'
+        );
+    };
     isConnected = async () => await this.lnc.isConnected();
     disconnect = () => this.lnc.disconnect();
 
@@ -301,19 +328,19 @@ export default class LightningNodeConnect {
         return isSupportedVersion(version, minVersion, eosVersion);
     };
 
-    supportsMessageSigning = () => true;
+    supportsMessageSigning = () => this.permSignMessage;
     supportsLnurlAuth = () => true;
-    supportsOnchainSends = () => true;
-    supportsOnchainReceiving = () => true;
+    supportsOnchainSends = () => this.permSendCoins;
+    supportsOnchainReceiving = () => this.permNewAddress;
     supportsKeysend = () => true;
-    supportsChannelManagement = () => true;
+    supportsChannelManagement = () => this.permOpenChannel;
     supportsPendingChannels = () => true;
     supportsMPP = () => this.supports('v0.10.0');
     supportsAMP = () => this.supports('v0.13.0');
-    supportsCoinControl = () => this.supports('v0.12.0');
-    supportsHopPicking = () => this.supports('v0.11.0');
-    supportsAccounts = () => this.supports('v0.13.0');
-    supportsRouting = () => true;
+    supportsCoinControl = () => this.permNewAddress;
+    supportsHopPicking = () => this.permOpenChannel;
+    supportsAccounts = () => this.permImportAccount;
+    supportsRouting = () => this.permForwardingHistory;
     supportsNodeInfo = () => true;
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => true;

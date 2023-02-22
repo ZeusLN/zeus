@@ -131,6 +131,7 @@ class BackendUtils {
     // LNC
     initLNC = (...args: any[]) => this.call('initLNC', args);
     connect = (...args: any[]) => this.call('connect', args);
+    checkPerms = () => this.call('checkPerms');
     isConnected = (...args: any[]) => this.call('isConnected', args);
     disconnect = (...args: any[]) => this.call('disconnect', args);
 }
