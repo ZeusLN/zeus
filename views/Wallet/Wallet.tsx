@@ -251,12 +251,15 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 error = await connect();
             }
             if (!error) {
+                await BackendUtils.checkPerms();
                 NodeInfoStore.getNodeInfo();
-                UTXOsStore.listAccounts();
+                if (BackendUtils.supportsAccounts()) UTXOsStore.listAccounts();
                 await BalanceStore.getCombinedBalance();
-                ChannelsStore.getChannels();
-                FeeStore.getFees();
-                FeeStore.getForwardingHistory();
+                if (BackendUtils.supportsChannelManagement())
+                    ChannelsStore.getChannels();
+                if (BackendUtils.supportsRouting()) FeeStore.getFees();
+                if (BackendUtils.supportsRouting())
+                    FeeStore.getForwardingHistory();
             }
         } else {
             NodeInfoStore.getNodeInfo();
@@ -504,24 +507,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             />
                                         )}
                                         {BackendUtils.supportsChannelManagement() &&
-                                        !error ? (
-                                            <Tab.Screen
-                                                name={localeString(
-                                                    'views.Wallet.Wallet.channels'
-                                                )}
-                                                component={ChannelsScreen}
-                                            />
-                                        ) : (
-                                            <Tab.Screen
-                                                name={' '}
-                                                component={
-                                                    squareEnabled &&
-                                                    posStatus === 'active'
-                                                        ? PosScreen
-                                                        : BalanceScreen
-                                                }
-                                            />
-                                        )}
+                                            !error && (
+                                                <Tab.Screen
+                                                    name={localeString(
+                                                        'views.Wallet.Wallet.channels'
+                                                    )}
+                                                    component={ChannelsScreen}
+                                                />
+                                            )}
                                     </>
                                 )}
                             </Tab.Navigator>
