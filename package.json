@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@keystonehq/bc-ur-registry": "0.4.2",
-    "@lightninglabs/lnc-rn": "0.2.1-alpha.2",
+    "@lightninglabs/lnc-rn": "0.2.3-alpha",
     "@ngraveio/bc-ur": "1.1.6",
     "@react-native-clipboard/clipboard": "1.9.0",
     "@react-native-community/masked-view": "0.1.11",

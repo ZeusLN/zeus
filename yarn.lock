@@ -1218,17 +1218,17 @@
     base58check "^2.0.0"
     tslib "~2.2.0"
 
-"@lightninglabs/lnc-core@0.2.1-alpha":
-  version "0.2.1-alpha"
-  resolved "https://registry.npmjs.org/@lightninglabs/lnc-core/-/lnc-core-0.2.1-alpha.tgz"
-  integrity sha512-H297V3seL+PE786HcuAQiSass/3y0NSYCy3b4hNTZL4Io80Oy4WY49s08CpRuV8cNfjAzWjYSXkhorALjaRdwA==
+"@lightninglabs/lnc-core@0.2.3-alpha":
+  version "0.2.3-alpha"
+  resolved "https://registry.yarnpkg.com/@lightninglabs/lnc-core/-/lnc-core-0.2.3-alpha.tgz#e1b92a9071d1dfb92e2d565710b56f28f57cbbd4"
+  integrity sha512-93D/uU64ayAaJv5kv4Pqwvkt+uT7yCtmHD08aUzvql+lbWm6U7m5loZLxz7tACFLXVPOQ8OHJL25W+3QMEYthg==
 
-"@lightninglabs/lnc-rn@0.2.1-alpha.2":
-  version "0.2.1-alpha.2"
-  resolved "https://registry.npmjs.org/@lightninglabs/lnc-rn/-/lnc-rn-0.2.1-alpha.2.tgz"
-  integrity sha512-yLn80pmWlPGNcFH8Ha2k9bBxRjMrGGk7ZUaQ2QtAAmnn/+SXavtm4h03NLJHKPkID0I9+hfqEgV+Dg+NpaR6vA==
+"@lightninglabs/lnc-rn@0.2.3-alpha":
+  version "0.2.3-alpha"
+  resolved "https://registry.yarnpkg.com/@lightninglabs/lnc-rn/-/lnc-rn-0.2.3-alpha.tgz#b9b06e30a711384b8c94d578767858965d8804e2"
+  integrity sha512-t1eWjZcbizoI2xKw4Uu/gPM0pNh1KdIpFCUzOmCXiaW36bCxgR7d8M069yU9xck6mbGCnhwFS4TIEqVN4sGSkg==
   dependencies:
-    "@lightninglabs/lnc-core" "0.2.1-alpha"
+    "@lightninglabs/lnc-core" "0.2.3-alpha"
 
 "@ngraveio/bc-ur@1.1.6", "@ngraveio/bc-ur@^1.1.5":
   version "1.1.6"
