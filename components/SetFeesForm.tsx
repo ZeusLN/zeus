@@ -30,10 +30,10 @@ interface SetFeesFormProps {
     expanded?: boolean;
     minHtlc?: string;
     maxHtlc?: string;
+    showNewFeesForm?: boolean;
 }
 
 interface SetFeesFormState {
-    showNewFeesForm: boolean;
     feesSubmitted: boolean;
     newBaseFee: string;
     newFeeRate: string;
@@ -52,7 +52,6 @@ export default class SetFeesForm extends React.Component<
         super(props);
 
         this.state = {
-            showNewFeesForm: false,
             feesSubmitted: false,
             newBaseFee: props.baseFee || '',
             newFeeRate: props.feeRate || '',
@@ -64,7 +63,6 @@ export default class SetFeesForm extends React.Component<
 
     render() {
         const {
-            showNewFeesForm,
             feesSubmitted,
             newBaseFee,
             newFeeRate,
@@ -82,6 +80,7 @@ export default class SetFeesForm extends React.Component<
             channelPoint,
             channelId,
             expanded,
+            showNewFeesForm,
             minHTLC,
             maxHTLC
         } = this.props;
@@ -96,27 +95,6 @@ export default class SetFeesForm extends React.Component<
 
         return (
             <React.Fragment>
-                {!expanded && (
-                    <View style={styles.button}>
-                        <Button
-                            title={
-                                showNewFeesForm
-                                    ? localeString(
-                                          'components.SetFeesForm.hide'
-                                      )
-                                    : localeString(
-                                          'components.SetFeesForm.setNew'
-                                      )
-                            }
-                            onPress={() =>
-                                this.setState({
-                                    showNewFeesForm: !showNewFeesForm
-                                })
-                            }
-                        />
-                    </View>
-                )}
-
                 {(expanded || showNewFeesForm) && (
                     <ScrollView style={{ paddingTop: 15 }}>
                         {loading && <LoadingIndicator />}
