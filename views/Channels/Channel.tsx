@@ -29,6 +29,7 @@ import UnitsStore from './../../stores/UnitsStore';
 import SettingsStore from './../../stores/SettingsStore';
 
 import Share from './../../assets/images/SVG/Share.svg';
+import Edit from './../../assets/images/SVG/Edit.svg';
 
 interface ChannelProps {
     navigation: any;
@@ -43,6 +44,7 @@ interface ChannelState {
     satPerByte: string;
     forceClose: boolean;
     channel: Channel;
+    showNewFeesForm: boolean;
 }
 
 @inject(
@@ -66,7 +68,8 @@ export default class ChannelView extends React.Component<
             confirmCloseChannel: false,
             satPerByte: '',
             forceClose: false,
-            channel
+            channel,
+            showNewFeesForm: false
         };
 
         if (BackendUtils.isLNDBased()) {
@@ -123,11 +126,16 @@ export default class ChannelView extends React.Component<
             UnitsStore,
             SettingsStore
         } = this.props;
-        const { channel, confirmCloseChannel, satPerByte, forceClose } =
-            this.state;
+        const {
+            channel,
+            confirmCloseChannel,
+            satPerByte,
+            forceClose,
+            showNewFeesForm
+        } = this.state;
         const { getAmount, units } = UnitsStore;
         const { channelFees } = FeeStore;
-        const { nodes } = ChannelsStore;
+        const { nodes, chanInfo } = ChannelsStore;
         const { settings, implementation } = SettingsStore;
         const { privacy } = settings;
         const enableMempoolRates = privacy && privacy.enableMempoolRates;
@@ -190,6 +198,16 @@ export default class ChannelView extends React.Component<
             />
         );
 
+        const EditFees = () => (
+            <Edit
+                onPress={() =>
+                    this.setState({
+                        showNewFeesForm: !showNewFeesForm
+                    })
+                }
+            />
+        );
+
         const KeySend = () => (
             <Share
                 onPress={() =>
@@ -212,11 +230,13 @@ export default class ChannelView extends React.Component<
             >
                 <Header
                     leftComponent={<BackButton />}
+                    centerComponent={<EditFees />}
                     rightComponent={<KeySend />}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
+                    placement="right"
                 />
                 <View style={styles.content}>
                     <View style={styles.center}>
@@ -318,6 +338,7 @@ export default class ChannelView extends React.Component<
                             csv_delay={csv_delay}
                             privateChannel={privateChannel}
                             fundingTransaction={fundingTransaction}
+                            showNewFeesForm={showNewFeesForm}
                         />
                     )}
 

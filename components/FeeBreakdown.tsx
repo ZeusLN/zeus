@@ -37,6 +37,7 @@ interface FeeBreakdownProps {
     csv_delay?: number;
     privateChannel?: boolean;
     fundingTransaction?: string;
+    showNewFeesForm?: boolean;
 }
 
 @inject('FeeStore', 'ChannelsStore', 'NodeInfoStore', 'SettingsStore')
@@ -62,7 +63,8 @@ export default class FeeBreakdown extends React.Component<
             commit_fee,
             csv_delay,
             privateChannel,
-            fundingTransaction
+            fundingTransaction,
+            showNewFeesForm
         } = this.props;
         const { loading, chanInfo } = ChannelsStore;
         const { nodeInfo } = NodeInfoStore;
@@ -456,6 +458,7 @@ export default class FeeBreakdown extends React.Component<
                                     FeeStore={FeeStore}
                                     ChannelsStore={ChannelsStore}
                                     SettingsStore={SettingsStore}
+                                    showNewFeesForm={showNewFeesForm}
                                 />
                             )}
                         </React.Fragment>
