@@ -4,6 +4,7 @@ import {
     StyleSheet,
     Text,
     TouchableWithoutFeedback,
+    TouchableOpacity,
     View
 } from 'react-native';
 import { Divider, Header, Icon } from 'react-native-elements';
@@ -17,6 +18,7 @@ import FeeBreakdown from './../../components/FeeBreakdown';
 import SetFeesForm from './../../components/SetFeesForm';
 import Switch from './../../components/Switch';
 import TextInput from './../../components/TextInput';
+import BalanceSlider from '../../components/BalanceSlider';
 
 import PrivacyUtils from './../../utils/PrivacyUtils';
 import BackendUtils from './../../utils/BackendUtils';
@@ -133,11 +135,12 @@ export default class ChannelView extends React.Component<
             forceClose,
             showNewFeesForm
         } = this.state;
-        const { getAmount, units } = UnitsStore;
+        const { changeUnits, getAmount, units } = UnitsStore;
         const { channelFees } = FeeStore;
         const { nodes, chanInfo } = ChannelsStore;
         const { settings, implementation } = SettingsStore;
         const { privacy } = settings;
+        const lurkerMode = privacy && privacy.lurkerMode;
         const enableMempoolRates = privacy && privacy.enableMempoolRates;
 
         const {
@@ -267,7 +270,43 @@ export default class ChannelView extends React.Component<
                             </Text>
                         )}
                     </View>
-
+                    <BalanceSlider
+                        localBalance={lurkerMode ? 50 : localBalance}
+                        remoteBalance={lurkerMode ? 50 : remoteBalance}
+                    />
+                    <View style={styles.balances}>
+                        <TouchableOpacity onPress={() => changeUnits()}>
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontFamily: 'Lato-Regular',
+                                    ...styles.balance
+                                }}
+                            >{`${localeString('views.Channel.localBalance')}: ${
+                                units && channelBalanceLocal
+                            }`}</Text>
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontFamily: 'Lato-Regular',
+                                    ...styles.balance
+                                }}
+                            >{`${localeString(
+                                'views.Channel.remoteBalance'
+                            )}: ${units && channelBalanceRemote}`}</Text>
+                            {unsettled_balance && (
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'Lato-Regular',
+                                        ...styles.balance
+                                    }}
+                                >{`${localeString(
+                                    'views.Channel.unsettledBalance'
+                                )}: ${units && unsettledBalance}`}</Text>
+                            )}
+                        </TouchableOpacity>
+                    </View>
                     <KeyValue
                         keyValue={localeString('views.Channel.channelBalance')}
                     />

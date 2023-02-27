@@ -172,6 +172,7 @@ export default class FeeBreakdown extends React.Component<
                                 FeeStore={FeeStore}
                                 ChannelsStore={ChannelsStore}
                                 SettingsStore={SettingsStore}
+                                showNewFeesForm={showNewFeesForm}
                             />
                         )}
                     </React.Fragment>
