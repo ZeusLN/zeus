@@ -7,6 +7,8 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
+
 import { Divider, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Channel from './../../models/Channel';
@@ -222,6 +224,9 @@ export default class ChannelView extends React.Component<
                 }
             />
         );
+        const handleCopyText = () => {
+            Clipboard.setString(remote_pubkey);
+        };
 
         return (
             <ScrollView
@@ -259,6 +264,7 @@ export default class ChannelView extends React.Component<
                                     fontFamily: 'Lato-Regular',
                                     ...styles.pubkey
                                 }}
+                                onPress={handleCopyText}
                             >
                                 {PrivacyUtils.sensitiveValue(
                                     remote_pubkey
