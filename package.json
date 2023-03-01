@@ -96,6 +96,7 @@
     "react-native-udp": "2.7.0",
     "react-native-v8": "0.61.5-patch.4",
     "react-native-vector-icons": "7.1.0",
+    "react-native-view-shot": "^3.5.0",
     "react-navigation": "4.4.4",
     "react-navigation-stack": "2.0.16",
     "readable-stream": "1.0.33",

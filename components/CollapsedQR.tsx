@@ -1,6 +1,14 @@
 import * as React from 'react';
-import { Dimensions, Platform, StyleSheet, Text, View } from 'react-native';
+import {
+    Dimensions,
+    Platform,
+    StyleSheet,
+    Text,
+    View,
+    Share
+} from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import ViewShot, { captureRef } from 'react-native-view-shot';
 
 import HCESession, { NFCContentType, NFCTagType4 } from 'react-native-hce';
 
@@ -26,16 +34,25 @@ interface CollapsedQRProps {
 interface CollapsedQRState {
     collapsed: boolean;
     nfcBroadcast: boolean;
+    qrCodeUri: any;
+    qrData: any;
 }
 
 export default class CollapsedQR extends React.Component<
     CollapsedQRProps,
     CollapsedQRState
 > {
-    state = {
-        collapsed: this.props.expanded ? false : true,
-        nfcBroadcast: false
-    };
+    qrCodeRef: React.RefObject<unknown>;
+    constructor(props: CollapsedQRProps) {
+        super(props);
+        this.state = {
+            collapsed: this.props.expanded ? false : true,
+            nfcBroadcast: false,
+            qrData: this.props.value,
+            qrCodeUri: null
+        };
+        this.qrCodeRef = React.createRef();
+    }
 
     componentWillUnmount() {
         if (this.state.nfcBroadcast) {
@@ -76,8 +93,57 @@ export default class CollapsedQR extends React.Component<
         await simulation.terminate();
     };
 
+    generateQRCode = (data: string) => {
+        const qrCodeValue = data;
+        return (
+            <QRCode
+                value={qrCodeValue}
+                size={Dimensions.get('window').width * 0.8}
+                logo={secondaryLogo}
+                ref={this.qrCodeRef}
+            />
+        );
+    };
+
+    shareQRCode = async () => {
+        if (this.qrCodeRef.current) {
+            try {
+                const qrCodeUri = await captureRef(this.qrCodeRef, {
+                    format: 'png'
+                });
+                this.setState({ qrCodeUri });
+            } catch (error) {
+                console.error(error);
+            }
+        }
+        console.log(this.state.qrCodeUri);
+        try {
+            const result = await Share.share({
+                message: 'Check out my QR code!',
+                type: 'image/png',
+                title: 'QR Code',
+                subject: 'QR Code Image',
+                url: `file://${this.state.qrCodeUri}`
+            });
+            if (result.action === Share.sharedAction) {
+                if (result.activityType) {
+                    console.log(`Shared with ${result.activityType}`);
+                } else {
+                    console.log('Shared');
+                }
+            } else if (result.action === Share.dismissedAction) {
+                console.log('Dismissed');
+            }
+        } catch (error) {
+            console.error(error.message);
+        }
+    };
+
     render() {
-        const { collapsed, nfcBroadcast } = this.state;
+        const { collapsed, nfcBroadcast, qrData, qrCodeUri } = this.state;
+        {
+            console.log(qrData);
+        }
         const {
             value,
             showText,
@@ -101,15 +167,15 @@ export default class CollapsedQR extends React.Component<
                         {value}
                     </Text>
                 )}
+                {}
                 {!collapsed && value && (
                     <View style={styles.qrPadding}>
-                        <QRCode
-                            value={value}
-                            size={Dimensions.get('window').width * 0.8}
-                            logo={secondaryLogo}
-                        />
+                        <ViewShot ref={this.qrCodeRef}>
+                            {this.generateQRCode(value)}
+                        </ViewShot>
                     </View>
                 )}
+                <Button title="share qr code" onPress={this.shareQRCode} />
                 {!hideText && textBottom && (
                     <Text
                         style={{
