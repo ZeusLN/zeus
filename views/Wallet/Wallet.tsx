@@ -67,6 +67,7 @@ interface WalletProps {
 
 interface WalletState {
     unlocked: boolean;
+    initialLoad: boolean;
 }
 
 @inject(
@@ -85,7 +86,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     constructor(props) {
         super(props);
         this.state = {
-            unlocked: false
+            unlocked: false,
+            initialLoad: true
         };
         this.pan = new Animated.ValueXY();
         this.panResponder = PanResponder.create({
@@ -150,7 +152,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
     startListeners() {
         Linking.addEventListener('url', this.handleOpenURL);
-        LinkingUtils.handleInitialUrl(this.props.navigation);
     }
 
     async getSettingsAndNavigate() {
@@ -278,6 +279,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (connecting) {
             setConnectingStatus(false);
+        }
+
+        // only navigate to initial url after connection and main calls are made
+        if (this.state.initialLoad) {
+            this.setState({
+                initialLoad: false
+            });
+            LinkingUtils.handleInitialUrl(this.props.navigation);
         }
     }
 
