@@ -132,29 +132,29 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                             }
                         >
                             <View style={styles.overlay} />
-                            <View style={styles.flashlightOverlay}>
-                                {this.state.torch ===
-                                RNCamera.Constants.FlashMode.torch ? (
-                                    <FlashOnIcon
-                                        width={35}
-                                        height={35}
-                                        onPress={this.handleFlash}
-                                    />
-                                ) : (
-                                    <FlashOffIcon
-                                        width={35}
-                                        height={35}
-                                        onPress={this.handleFlash}
-                                    />
-                                )}
-                                <View style={{ paddingTop: 15 }}>
-                                    <GalleryIcon
-                                        width={38}
-                                        height={38}
-                                        onPress={this.handleOpenGallery}
-                                        backgroundColor="red"
-                                    />
+                            <View style={styles.actionOverlay}>
+                                <View style={{ marginTop: 8, marginRight: 5 }}>
+                                    {this.state.torch ===
+                                    RNCamera.Constants.FlashMode.torch ? (
+                                        <FlashOnIcon
+                                            width={35}
+                                            height={35}
+                                            onPress={this.handleFlash}
+                                        />
+                                    ) : (
+                                        <FlashOffIcon
+                                            width={35}
+                                            height={35}
+                                            onPress={this.handleFlash}
+                                        />
+                                    )}
                                 </View>
+                                <GalleryIcon
+                                    width={50}
+                                    height={50}
+                                    onPress={this.handleOpenGallery}
+                                    backgroundColor="red"
+                                />
                             </View>
                             <Text style={styles.textOverlay}>{text}</Text>
                             <View
@@ -170,7 +170,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                                 <View style={styles.overlay} />
                             </View>
                             <View style={styles.overlay} />
-                            <View style={styles.buttonOverlay}>
+                            <View style={styles.cancelOverlay}>
                                 <Button
                                     title={localeString('general.cancel')}
                                     onPress={() => goBack()}
@@ -220,22 +220,21 @@ const styles = StyleSheet.create({
     scan: {
         margin: 0
     },
-    flashlightOverlay: {
+    actionOverlay: {
+        flexDirection: 'row',
         position: 'absolute',
-        right: 20,
-        top: 40
+        right: 10,
+        top: '7%'
     },
-    buttonOverlay: {
+    cancelOverlay: {
         backgroundColor: 'rgba(0,0,0,0.5)',
         paddingBottom: 50
     },
     textOverlay: {
         backgroundColor: 'rgba(0,0,0,0.5)',
         color: 'white',
-        paddingBottom: 60,
         textAlign: 'center',
-        fontSize: 15,
-        padding: 30
+        fontSize: 15
     },
     contentRow: {
         flexDirection: 'row'
