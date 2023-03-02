@@ -231,10 +231,17 @@ export default class PaymentRequest extends React.Component<
         const description = pay_req && pay_req.description;
         const payment_hash = pay_req && pay_req.payment_hash;
         const timestamp = pay_req && pay_req.timestamp;
+
+        // handle fee percents that use commas
+        const maxFeePercentFormatted = maxFeePercent.replace(/,/g, '.');
+
         const percentAmount = customAmount
-            ? (Number(customAmount) * (Number(maxFeePercent) / 100)).toFixed()
+            ? (
+                  Number(customAmount) *
+                  (Number(maxFeePercentFormatted) / 100)
+              ).toFixed()
             : requestAmount
-            ? (requestAmount * (Number(maxFeePercent) / 100)).toFixed()
+            ? (requestAmount * (Number(maxFeePercentFormatted) / 100)).toFixed()
             : 0;
 
         let lockAtomicMultiPathPayment = false;
@@ -793,7 +800,7 @@ export default class PaymentRequest extends React.Component<
                                                         : null,
                                                     max_fee_percent:
                                                         isCLightning
-                                                            ? maxFeePercent
+                                                            ? maxFeePercentFormatted
                                                             : null,
                                                     outgoing_chan_id:
                                                         outgoingChanId,
