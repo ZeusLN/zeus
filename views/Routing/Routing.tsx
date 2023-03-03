@@ -50,7 +50,7 @@ export default class Routing extends React.PureComponent<
         const { FeeStore } = this.props;
         FeeStore.getFees();
         if (BackendUtils.isLNDBased()) {
-            FeeStore.getForwardingHistory();
+            FeeStore.getForwardingHistory(HOURS[0]);
         }
     }
 
@@ -85,9 +85,10 @@ export default class Routing extends React.PureComponent<
             earnedDuringTimeframe,
             forwardingEvents,
             forwardingHistoryError,
-            getForwardingHistory,
-            loading
+            getForwardingHistory
         } = FeeStore;
+
+        const loading = FeeStore.loading || FeeStore.loadingFees;
 
         const headerString =
             forwardingEvents.length > 0
