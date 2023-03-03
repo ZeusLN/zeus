@@ -30,7 +30,6 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import BalanceStore from './../../stores/BalanceStore';
 import ChannelsStore from './../../stores/ChannelsStore';
-import FeeStore from './../../stores/FeeStore';
 
 import FiatStore from './../../stores/FiatStore';
 import NodeInfoStore from './../../stores/NodeInfoStore';
@@ -56,7 +55,6 @@ interface WalletProps {
     navigation: any;
     BalanceStore: BalanceStore;
     ChannelsStore: ChannelsStore;
-    FeeStore: FeeStore;
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
@@ -74,7 +72,6 @@ interface WalletState {
     'BalanceStore',
     'ChannelsStore',
     'NodeInfoStore',
-    'FeeStore',
     'SettingsStore',
     'UnitsStore',
     'FiatStore',
@@ -216,7 +213,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             NodeInfoStore,
             BalanceStore,
             ChannelsStore,
-            FeeStore,
             UTXOsStore,
             SettingsStore,
             PosStore,
@@ -258,9 +254,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 await BalanceStore.getCombinedBalance();
                 if (BackendUtils.supportsChannelManagement())
                     ChannelsStore.getChannels();
-                if (BackendUtils.supportsRouting()) FeeStore.getFees();
-                if (BackendUtils.supportsRouting())
-                    FeeStore.getForwardingHistory();
             }
         } else {
             NodeInfoStore.getNodeInfo();
@@ -270,11 +263,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
             await BalanceStore.getCombinedBalance();
             ChannelsStore.getChannels();
-            FeeStore.getFees();
-        }
-
-        if (implementation === 'lnd') {
-            FeeStore.getForwardingHistory();
         }
 
         if (connecting) {
