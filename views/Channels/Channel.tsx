@@ -204,13 +204,7 @@ export default class ChannelView extends React.Component<
         );
 
         const EditFees = () => (
-            <Edit
-                onPress={() =>
-                    this.setState({
-                        showNewFeesForm: !showNewFeesForm
-                    })
-                }
-            />
+            <Edit onPress={() => navigation.navigate('SetFees')} />
         );
 
         const KeySend = () => (
