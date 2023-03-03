@@ -14,6 +14,7 @@ export default class FeeStore {
     @observable public dataFrame: any = {};
     @observable public recommendedFees: any = {};
     @observable public loading = false;
+    @observable public loadingFees = false;
     @observable public error = false;
     @observable public setFeesError = false;
     @observable public setFeesErrorMsg: string;
@@ -64,12 +65,12 @@ export default class FeeStore {
 
     resetFees = () => {
         this.fees = {};
-        this.loading = false;
+        this.loadingFees = false;
     };
 
     @action
     public getFees = () => {
-        this.loading = true;
+        this.loadingFees = true;
         BackendUtils.getFees()
             .then((data: any) => {
                 if (data.channel_fees) {
@@ -87,7 +88,7 @@ export default class FeeStore {
                 // Deprecated in LND
                 // Used in c-lightning-REST
                 this.totalEarned = data.total_fee_sum || 0;
-                this.loading = false;
+                this.loadingFees = false;
             })
             .catch((err: any) => {
                 console.log('error getting fee report', err);
