@@ -1,6 +1,8 @@
 import { Alert } from 'react-native';
 import { getParams as getlnurlParams, findlnurl, decodelnurl } from 'js-lnurl';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import { doTorRequest, RequestMethod } from './TorUtils';
+
 import stores from '../stores/Stores';
 import AddressUtils from './../utils/AddressUtils';
 import ConnectionFormatUtils from './../utils/ConnectionFormatUtils';
@@ -194,27 +196,44 @@ const handleAnything = async (
         const error = localeString(
             'utils.handleAnything.lightningAddressError'
         );
-        return ReactNativeBlobUtil.fetch('get', url)
-            .then((response: any) => {
-                const status = response.info().status;
-                if (status == 200) {
-                    const data = response.json();
+        // handle Tor LN addresses
+        if (value.endsWith('.onion')) {
+            doTorRequest(url, RequestMethod.GET)
+                .then((response: any) => {
                     return [
                         'LnurlPay',
                         {
-                            lnurlParams: data,
+                            lnurlParams: response,
                             amount: setAmount
                         }
                     ];
-                } else {
+                })
+                .catch((error: any) => {
                     throw new Error(error);
-                }
-            })
-            .catch(() => {
-                throw new Error(error);
-            });
-        // BTCPay pairing QR
+                });
+        } else {
+            return ReactNativeBlobUtil.fetch('get', url)
+                .then((response: any) => {
+                    const status = response.info().status;
+                    if (status == 200) {
+                        const data = response.json();
+                        return [
+                            'LnurlPay',
+                            {
+                                lnurlParams: data,
+                                amount: setAmount
+                            }
+                        ];
+                    } else {
+                        throw new Error(error);
+                    }
+                })
+                .catch(() => {
+                    throw new Error(error);
+                });
+        }
     } else if (value.includes('config=') && value.includes('lnd.config')) {
+        // BTCPay pairing QR
         if (isClipboardValue) return true;
         return settingsStore
             .fetchBTCPayConfig(value)

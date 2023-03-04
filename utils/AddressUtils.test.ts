@@ -393,6 +393,11 @@ describe('AddressUtils', () => {
                         'evankaloudis@ln.twitter.com'
                     )
                 ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'oniontip@7tpv3ynajkv6cdocmzitcd4z3xrstp3ic6xtv5om3dc2ned3fffll5qd.onion'
+                    )
+                ).toBeTruthy();
             });
 
             it("rejects LNURLPay Lightning Addresses with ports - let's not mix this up with nodes", () => {
