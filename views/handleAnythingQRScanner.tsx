@@ -37,11 +37,15 @@ export default class handleAnythingQRScanner extends React.Component<
             loading: true
         });
         handleAnything(data)
-            .then(([route, props]) => {
+            .then((response) => {
                 this.setState({
                     loading: false
                 });
-                navigation.navigate(route, props);
+                if (response) {
+                    navigation.navigate(response.route, response.props);
+                } else {
+                    navigation.navigate('Send');
+                }
             })
             .catch((err) => {
                 Alert.alert(
