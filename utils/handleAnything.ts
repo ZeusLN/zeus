@@ -277,6 +277,11 @@ const handleAnything = async (
     } else if (!!findlnurl(value) || !!lnurl) {
         const raw: string = findlnurl(value) || lnurl || '';
         return getlnurlParams(raw).then((params: any) => {
+            if (params.status === 'ERROR' && params.domain.endsWith('.onion')) {
+                // TODO handle fetching of params with Tor
+                throw new Error(`${params.domain} says: ${params.reason}`);
+            }
+
             switch (params.tag) {
                 case 'withdrawRequest':
                     if (isClipboardValue) return true;
