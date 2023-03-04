@@ -1,7 +1,7 @@
 import { Alert } from 'react-native';
 import { getParams as getlnurlParams, findlnurl, decodelnurl } from 'js-lnurl';
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import { doTorRequest, RequestMethod } from './TorUtils';
+import { doTorRequest, RequestMethod } from './../utils/TorUtils';
 
 import stores from '../stores/Stores';
 import AddressUtils from './../utils/AddressUtils';
@@ -198,7 +198,7 @@ const handleAnything = async (
         );
         // handle Tor LN addresses
         if (value.endsWith('.onion')) {
-            doTorRequest(url, RequestMethod.GET)
+            await doTorRequest(url, RequestMethod.GET)
                 .then((response: any) => {
                     return [
                         'LnurlPay',
