@@ -34,6 +34,7 @@ import FiatStore from './../stores/FiatStore';
 import Amount from './../components/Amount';
 import Conversion from './../components/Conversion';
 import Button from './../components/Button';
+import LoadingIndicator from './../components/LoadingIndicator';
 import { ErrorMessage } from './../components/SuccessErrorMessage';
 import Switch from './../components/Switch';
 import TextInput from './../components/TextInput';
@@ -75,6 +76,7 @@ interface SendState {
     message: string;
     enableAtomicMultiPathPayment: boolean;
     clipboard: string;
+    loading: boolean;
 }
 
 @inject(
@@ -117,7 +119,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             feeLimitSat: '',
             message: '',
             enableAtomicMultiPathPayment: false,
-            clipboard: ''
+            clipboard: '',
+            loading: false
         };
     }
 
@@ -253,6 +256,9 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     validateAddress = (text: string) => {
         const { navigation } = this.props;
+        this.setState({
+            loading: true
+        });
         handleAnything(text, this.state.amount)
             .then((response) => {
                 try {
@@ -260,6 +266,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                     navigation.navigate(route, props);
                 } catch {
                     this.setState({
+                        loading: false,
                         transactionType: null,
                         isValid: false
                     });
@@ -267,6 +274,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             })
             .catch((err) => {
                 this.setState({
+                    loading: false,
                     transactionType: null,
                     isValid: false,
                     error_msg: err.message
@@ -372,7 +380,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             feeLimitSat,
             message,
             enableAtomicMultiPathPayment,
-            clipboard
+            clipboard,
+            loading
         } = this.state;
         const { confirmedBlockchainBalance } = BalanceStore;
         const { implementation, settings } = SettingsStore;
@@ -423,6 +432,34 @@ export default class Send extends React.Component<SendProps, SendState> {
         }
         if (BackendUtils.supportsKeysend()) {
             paymentOptions.push(localeString('views.Send.keysendAddress'));
+        }
+
+        if (loading) {
+            return (
+                <View
+                    style={{
+                        flex: 1,
+                        backgroundColor: themeColor('background')
+                    }}
+                >
+                    <Header
+                        centerComponent={{
+                            text: localeString('general.loading'),
+                            style: {
+                                color: themeColor('text'),
+                                fontFamily: 'Lato-Regular'
+                            }
+                        }}
+                        backgroundColor={themeColor('background')}
+                        containerStyle={{
+                            borderBottomWidth: 0
+                        }}
+                    />
+                    <View style={{ top: 40 }}>
+                        <LoadingIndicator />
+                    </View>
+                </View>
+            );
         }
 
         return (
