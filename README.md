@@ -121,7 +121,7 @@ Zeus is proud to be integrated on the following platforms:
 [react-native's Getting Started page](https://reactnative.dev/docs/environment-setup)
 2. install node dependencies with `yarn`
 3. `cd ios && pod install`
-4. open `ios/zeus.xcworkspace` in Xcode and hit Run. NOTE: if you're using an M1 mac, you may need to right click Xcode > get info > check `Open using Rosetta` before opening `zeus.xcworkspace`.
+4. open `ios/zeus.xcworkspace` in Xcode and hit Run.
 
 ## Reproducible builds
 
