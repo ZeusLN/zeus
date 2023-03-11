@@ -648,7 +648,10 @@ export default class NodeConfiguration extends React.Component<
                                                     lndhubUrl,
                                                     certVerification
                                                 ).then((data: any) => {
-                                                    if (data) {
+                                                    if (
+                                                        data.login &&
+                                                        data.password
+                                                    ) {
                                                         this.setState({
                                                             username:
                                                                 data.login,

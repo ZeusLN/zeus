@@ -486,9 +486,15 @@ export default class SettingsStore {
             return doTorRequest(url, RequestMethod.POST)
                 .then((response: any) => {
                     this.loading = false;
-                    this.createAccountSuccess = localeString(
-                        'stores.SettingsStore.lndhubSuccess'
-                    );
+                    if (response.error) {
+                        this.createAccountError =
+                            response.message ||
+                            localeString('stores.SettingsStore.lndhubError');
+                    } else {
+                        this.createAccountSuccess = localeString(
+                            'stores.SettingsStore.lndhubSuccess'
+                        );
+                    }
                     return response;
                 })
                 .catch((err: any) => {
@@ -508,10 +514,20 @@ export default class SettingsStore {
                     const status = response.info().status;
                     if (status == 200) {
                         const data = response.json();
+                        console.log('!!', data);
                         this.loading = false;
-                        this.createAccountSuccess = localeString(
-                            'stores.SettingsStore.lndhubSuccess'
-                        );
+                        if (data.error) {
+                            this.createAccountError =
+                                data.message ||
+                                localeString(
+                                    'stores.SettingsStore.lndhubError'
+                                );
+                        } else {
+                            this.createAccountSuccess = localeString(
+                                'stores.SettingsStore.lndhubSuccess'
+                            );
+                        }
+
                         return data;
                     } else {
                         // handle error
