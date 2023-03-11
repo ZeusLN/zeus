@@ -25,7 +25,7 @@ export default class NodeInfo extends BaseModel {
     api_version?: string;
 
     @computed public get nodeId(): string {
-        return this.id || this.pubkey || this.identity_pubkey || 'N/A';
+        return this.id || this.pubkey || this.identity_pubkey || '';
     }
 
     @computed public get isTestNet(): boolean {
