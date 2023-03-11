@@ -1,26 +1,59 @@
 import * as React from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import UrlUtils from '../utils/UrlUtils';
 
 interface MessageProps {
     message?: string;
+    fontSize?: number;
+    link: string;
+    mainStyle: any;
 }
 
-const SuccessMessage = (props: MessageProps) => (
-    <Text style={[styles.field, styles.successField]}>{props.message}</Text>
+const Message = ({ message, fontSize, link, mainStyle }: MessageProps) =>
+    link ? (
+        <TouchableOpacity onPress={() => UrlUtils.goToUrl(link)}>
+            <Text
+                style={[styles.field, mainStyle, { fontSize: fontSize || 20 }]}
+            >
+                {message}
+            </Text>
+        </TouchableOpacity>
+    ) : (
+        <Text style={[styles.field, mainStyle, { fontSize: fontSize || 20 }]}>
+            {message}
+        </Text>
+    );
+
+const SuccessMessage = ({ message, fontSize, link }: MessageProps) => (
+    <Message
+        message={message}
+        fontSize={fontSize}
+        link={link}
+        mainStyle={styles.successField}
+    />
 );
 
-const WarningMessage = (props: MessageProps) => (
-    <Text style={[styles.field, styles.warningField]}>{props.message}</Text>
+const WarningMessage = ({ message, fontSize, link }: MessageProps) => (
+    <Message
+        message={message}
+        fontSize={fontSize}
+        link={link}
+        mainStyle={styles.warningField}
+    />
 );
 
-const ErrorMessage = (props: MessageProps) => (
-    <Text style={[styles.field, styles.errorField]}>{props.message}</Text>
+const ErrorMessage = ({ message, fontSize, link }: MessageProps) => (
+    <Message
+        message={message}
+        fontSize={fontSize}
+        link={link}
+        mainStyle={styles.errorField}
+    />
 );
 
 const styles = StyleSheet.create({
     field: {
         fontFamily: 'Lato-Regular',
-        fontSize: 20,
         width: '100%',
         top: 10,
         borderRadius: 6,
