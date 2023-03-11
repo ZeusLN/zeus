@@ -1,5 +1,5 @@
 import React from 'react';
-import { Badge, Button, Header } from 'react-native-elements';
+import { Badge, Header } from 'react-native-elements';
 import { Image, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -8,6 +8,7 @@ import SettingsStore from '../stores/SettingsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import PosStore from '../stores/PosStore';
 
+import Button from '../components/Button';
 import LoadingIndicator from '../components/LoadingIndicator';
 import NodeIdenticon from '../components/NodeIdenticon';
 
@@ -56,7 +57,7 @@ const OpenChannelButton = ({ navigation }: { navigation: any }) => (
         }}
         buttonStyle={{
             backgroundColor: 'transparent',
-            marginRight: -10,
+            marginRight: -50,
             marginTop: -10
         }}
         onPress={() => navigation.navigate('OpenChannel')}
@@ -123,6 +124,7 @@ interface WalletHeaderProps {
     loading: boolean;
     title: string;
     channels: boolean;
+    toggle?: () => void;
 }
 
 interface WalletHeaderState {
@@ -161,6 +163,7 @@ export default class WalletHeader extends React.Component<
             loading,
             title,
             channels,
+            toggle,
             SettingsStore,
             NodeInfoStore,
             PosStore
@@ -225,7 +228,18 @@ export default class WalletHeader extends React.Component<
                 centerComponent={
                     title ? (
                         <View style={{ top: 5 }}>
-                            <Body bold>{title}</Body>
+                            {toggle ? (
+                                <View style={{ top: -9, width: '100%' }}>
+                                    <Button
+                                        onPress={() => toggle()}
+                                        title={title}
+                                        noUppercase
+                                        buttonStyle={{ alignSelf: 'center' }}
+                                    />
+                                </View>
+                            ) : (
+                                <Body bold>{title}</Body>
+                            )}
                         </View>
                     ) : settings.display && settings.display.displayNickname ? (
                         <View style={{ top: 5 }}>
