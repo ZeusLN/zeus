@@ -38,6 +38,7 @@ interface DisplaySettings {
     theme?: string;
     defaultView?: string;
     displayNickname?: boolean;
+    bigKeypadButtons?: boolean;
 }
 
 interface PosSettings {
@@ -218,7 +219,8 @@ export default class SettingsStore {
         display: {
             theme: DEFAULT_THEME,
             defaultView: 'Keypad',
-            displayNickname: false
+            displayNickname: false,
+            bigKeypadButtons: false
         },
         pos: {
             squareEnabled: false,
