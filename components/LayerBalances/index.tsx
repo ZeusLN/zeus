@@ -15,6 +15,8 @@ import UnitsStore from './../../stores/UnitsStore';
 import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
+import BlueWalletWarning from '../../components/BlueWalletWarning';
+
 import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
 import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
 
@@ -126,25 +128,30 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
         }
 
         return (
-            <FlatList
-                data={DATA}
-                ItemSeparatorComponent={() => <View style={styles.separator} />}
-                renderItem={({ item, index }) => (
-                    <SwipeableRow
-                        item={item}
-                        index={index}
-                        navigation={navigation}
-                        // select pay method vars
-                        value={value}
-                        amount={amount}
-                        lightning={lightning}
-                    />
-                )}
-                keyExtractor={(_item, index) => `message ${index}`}
-                style={{ top: 20 }}
-                onRefresh={() => onRefresh()}
-                refreshing={false}
-            />
+            <>
+                <BlueWalletWarning />
+                <FlatList
+                    data={DATA}
+                    ItemSeparatorComponent={() => (
+                        <View style={styles.separator} />
+                    )}
+                    renderItem={({ item, index }) => (
+                        <SwipeableRow
+                            item={item}
+                            index={index}
+                            navigation={navigation}
+                            // select pay method vars
+                            value={value}
+                            amount={amount}
+                            lightning={lightning}
+                        />
+                    )}
+                    keyExtractor={(_item, index) => `message ${index}`}
+                    style={{ top: 20 }}
+                    onRefresh={() => onRefresh()}
+                    refreshing={false}
+                />
+            </>
         );
     }
 }

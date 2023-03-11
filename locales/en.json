@@ -539,6 +539,7 @@
     "components.ChannelPicker.modal.title": "Select Channel to use",
     "components.ChannelPicker.modal.description": "Select the Channel to be used in this operation. You may want to only use specific channels to preserve your privacy.",
     "components.ChannelPicker.modal.set": "Set Channel",
+    "components.BlueWalletWarning.warning": "WARNING: LNDHub.io is shutting down. Move your funds by April 30th or you will lose them.",
     "backends.LND.wsReq.warning": "You may have to enable Certificate Verification to make these kind of calls",
     "utils.handleAnything.lightningAddressError": "Error fetching Lightning Address data",
     "utils.handleAnything.notValid": "Value provided was not a valid Bitcoin address or Lightning Invoice",
