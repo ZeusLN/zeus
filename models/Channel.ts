@@ -39,6 +39,8 @@ export default class Channel extends BaseModel {
     msatoshi_to_us: string;
     channel_id?: string;
     alias?: string;
+    // pending
+    remote_node_pub: string;
 
     @computed
     public get isActive(): boolean {
@@ -69,5 +71,10 @@ export default class Channel extends BaseModel {
             this.channel_id ||
             localeString('models.Channel.unknownId')
         );
+    }
+
+    @computed
+    public get remotePubkey(): string {
+        return this.remote_pubkey || this.remote_node_pub;
     }
 }

@@ -12,7 +12,7 @@ import { Icon, Header } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import Button from '../components/Button';
-import LoadingIndicator from '../components/LoadingIndicator';
+import LightningIndicator from '../components/LightningIndicator';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -112,7 +112,7 @@ export default class EditFee extends React.Component<
                 <ScrollView style={{ paddingTop: 10, alignSelf: 'center' }}>
                     {loading && !error && (
                         <View style={{ flex: 1, justifyContent: 'center' }}>
-                            <LoadingIndicator />
+                            <LightningIndicator />
                         </View>
                     )}
                     {recommendedFees['fastestFee'] && !loading && (

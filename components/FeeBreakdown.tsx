@@ -36,7 +36,6 @@ interface FeeBreakdownProps {
     commit_fee?: number;
     csv_delay?: number;
     privateChannel?: boolean;
-    fundingTransaction?: string;
     showNewFeesForm?: boolean;
 }
 
@@ -63,7 +62,6 @@ export default class FeeBreakdown extends React.Component<
             commit_fee,
             csv_delay,
             privateChannel,
-            fundingTransaction,
             showNewFeesForm
         } = this.props;
         const { loading, chanInfo } = ChannelsStore;
@@ -385,6 +383,7 @@ export default class FeeBreakdown extends React.Component<
                                     'views.Channel.unannounced'
                                 )}
                                 value={privateChannel ? 'True' : 'False'}
+                                color={privateChannel ? 'green' : '#808000'}
                             />
 
                             {commit_fee && (
@@ -392,7 +391,13 @@ export default class FeeBreakdown extends React.Component<
                                     keyValue={localeString(
                                         'views.Channel.commitFee'
                                     )}
-                                    value={commit_fee}
+                                    value={
+                                        <Amount
+                                            sats={commit_fee}
+                                            toggleable
+                                            sensitive
+                                        />
+                                    }
                                     sensitive
                                 />
                             )}
@@ -411,20 +416,23 @@ export default class FeeBreakdown extends React.Component<
                                     keyValue={localeString(
                                         'views.Channel.csvDelay'
                                     )}
-                                    value={csv_delay}
+                                    value={`${csv_delay} ${localeString(
+                                        'general.blocks'
+                                    )}`}
                                 />
                             )}
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.Channel.fundingTransaction'
-                                )}
-                                value={
-                                    fundingTransaction.slice(0, 8) +
-                                    '...' +
-                                    fundingTransaction.slice(-8)
-                                }
-                                color={themeColor('chain')}
-                            />
+
+                            {channelPoint && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Channel.channelPoint'
+                                    )}
+                                    value={channelPoint}
+                                    color={themeColor('chain')}
+                                    sensitive
+                                />
+                            )}
+
                             {chanInfo[channelId].node2Pub === nodeId && (
                                 <SetFeesForm
                                     baseFee={`${

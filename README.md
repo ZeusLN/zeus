@@ -113,17 +113,15 @@ Zeus is proud to be integrated on the following platforms:
 [enable Developer mode and USB Debugging](https://developer.android.com/studio/debug/dev-options)
 , then make sure it is connected to your computer by running `adb devices`
 3. install node dependencies with `yarn`
-4. install Lightning Node Connect's libraries with `yarn run install-lnc`
-5. open up your Android simulator or connect your phone and run `npx react-native start`
-6. open a new tab and run `npx react-native run-android`
+4. open up your Android simulator or connect your phone and run `npx react-native start`
+5. open a new tab and run `npx react-native run-android`
 
 ### iOS
 1. install and setup react-native and its related dependencies under **"Building Projects with Native Code"** on
 [react-native's Getting Started page](https://reactnative.dev/docs/environment-setup)
 2. install node dependencies with `yarn`
-3. install Lightning Node Connect's libraries with `yarn run install-lnc`
-4. `cd ios && pod install`
-5. open `ios/zeus.xcworkspace` in Xcode and hit Run. NOTE: if you're using an M1 mac, you may need to right click Xcode > get info > check `Open using Rosetta` before opening `zeus.xcworkspace`.
+3. `cd ios && pod install`
+4. open `ios/zeus.xcworkspace` in Xcode and hit Run.
 
 ## Reproducible builds
 
@@ -133,7 +131,7 @@ Reproducible builds are available for Android only right now. You'll need Docker
     You can also remove the `--branch v0.7.0` parameter to build APKs for `master`.
 2. Change to the zeus directory: `cd zeus`
 3. Execute the build script: `./build.sh`
-4. If everything goes well, the script will print a list of all the generated APK files and MD5 for each one of them: armv7, armv8, x86, x86_64, universal. The equivalent to the one provided in the web page is the one ending in 'universal'. You can compare MD5s with the ones provided on the [GitHub releases page](https://github.com/ZeusLN/zeus/releases)
+4. If everything goes well, the script will print a list of all the generated APK files and SHA256 hashes for each one of them: armv7, armv8, x86, x86_64, universal. The equivalent to the one provided in the web page is the one ending in 'universal'. You can compare SHA256 hashes with the ones provided on the [GitHub releases page](https://github.com/ZeusLN/zeus/releases)
 5. Download the oficial apk from [GitHub releases page](https://github.com/ZeusLN/zeus/releases) or from the [Zeus homepage](https://zeusln.app/): `wget https://zeusln.app/zeus-v0.7.0.apk`
 6. Compare both APKs with a suitable utility like `diffoscope`, `apksigcopier` or by running `diff --brief --recursive ./unpacked_oficial_apk ./unpacked_built_apk`. You should only get differences for the certificates used to sign the official APK
 

@@ -1,7 +1,9 @@
 import { action, observable } from 'mobx';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import BigNumber from 'bignumber.js';
 
+import { SATS_PER_BTC } from './UnitsStore';
 import SettingsStore from './SettingsStore';
 import Order from '../models/Order';
 
@@ -20,6 +22,13 @@ export default class PosStore {
     @observable public paidOrders: Array<Order> = [];
     @observable public filteredOpenOrders: Array<Order> = [];
     @observable public filteredPaidOrders: Array<Order> = [];
+    // recon
+    @observable public completedOrders: Array<Order> = [];
+    @observable public reconTotal: string = '0.00';
+    @observable public reconTax: string = '0.00';
+    @observable public reconTips: string = '0.00';
+    @observable public reconExport: string = '';
+    //
     @observable public loading = false;
     @observable public error = false;
 
@@ -145,6 +154,135 @@ export default class PosStore {
                 console.error('POS get orders err', err);
                 this.openOrders = [];
                 this.paidOrders = [];
+                this.loading = false;
+            });
+    };
+
+    @action
+    public getOrdersHistorical = async (hours = 24) => {
+        const { squareAccessToken, squareLocationId, squareDevMode } =
+            this.settingsStore.settings.pos;
+        this.loading = true;
+        this.error = false;
+        const apiHost = squareDevMode
+            ? 'https://connect.squareupsandbox.com'
+            : 'https://connect.squareup.com';
+        ReactNativeBlobUtil.fetch(
+            'POST',
+            `${apiHost}/v2/orders/search`,
+            {
+                Authorization: `Bearer ${squareAccessToken}`,
+                'Content-Type': 'application/json'
+            },
+            JSON.stringify({
+                limit: 10000,
+                location_ids: [squareLocationId],
+                query: {
+                    filter: {
+                        date_time_filter: {
+                            created_at: {
+                                start_at: new Date(
+                                    Date.now() - hours * 60 * 60 * 1000
+                                ).toISOString(),
+                                end_at: new Date().toISOString()
+                            }
+                        },
+                        state_filter: {
+                            states: ['COMPLETED']
+                        }
+                    }
+                },
+                sort: {
+                    sort_field: 'CREATED_AT',
+                    sort_order: 'DESC'
+                }
+            })
+        )
+            .then(async (response: any) => {
+                const status = response.info().status;
+                if (status == 200) {
+                    this.loading = false;
+                    let orders = response
+                        .json()
+                        .orders.map((order: any) => new Order(order))
+                        .filter((order: any) => {
+                            return (
+                                order.tenders &&
+                                order.tenders[0] &&
+                                order.tenders[0].note &&
+                                (order.tenders[0].note
+                                    .toLowerCase()
+                                    .includes('zeus') ||
+                                    order.tenders[0].note
+                                        .toLowerCase()
+                                        .includes('zues') ||
+                                    order.tenders[0].note
+                                        .toLowerCase()
+                                        .includes('bitcoin') ||
+                                    order.tenders[0].note
+                                        .toLowerCase()
+                                        .includes('btc'))
+                            );
+                        });
+
+                    let total = 0;
+                    let tax = 0;
+                    let tips = 0;
+                    let exportString =
+                        'orderId, totalSats, tipSats, rateFull, rateNumerical, type, tx\n';
+                    const enrichedOrders = await Promise.all(
+                        orders.map(async (order: any) => {
+                            const payment = await EncryptedStorage.getItem(
+                                `pos-${order.id}`
+                            );
+                            let tip;
+                            if (payment) {
+                                order.payment = JSON.parse(payment);
+                                const {
+                                    orderId,
+                                    orderTotal,
+                                    orderTip,
+                                    exchangeRate,
+                                    rate,
+                                    type,
+                                    tx
+                                } = order.payment;
+                                tip = new BigNumber(orderTip)
+                                    .multipliedBy(rate)
+                                    .dividedBy(SATS_PER_BTC)
+                                    .toFixed(2);
+
+                                exportString += `${orderId}, ${orderTotal}, ${orderTip}, ${exchangeRate}, ${rate}, ${type}, ${tx}\n`;
+                            }
+
+                            // tally totals
+                            total +=
+                                Number(order.getTotalMoney) +
+                                Number(order.getTaxMoney);
+                            tax += Number(order.getTaxMoney);
+                            tips += tip
+                                ? Number(tip)
+                                : order.autoGratuity
+                                ? Number(order.autoGratuity)
+                                : 0;
+                            return order;
+                        })
+                    );
+
+                    this.completedOrders = enrichedOrders;
+                    this.reconTotal = total.toFixed(2);
+                    this.reconTax = tax.toFixed(2);
+                    this.reconTips = tips.toFixed(2);
+                    this.reconExport = exportString;
+                } else {
+                    this.completedOrders = [];
+                    this.loading = false;
+                    this.error = true;
+                }
+            })
+            .catch((err) => {
+                console.error('POS get historical orders err', err);
+                this.completedOrders = [];
                 this.loading = false;
             });
     };
