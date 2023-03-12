@@ -18,7 +18,6 @@ import Button from '../../components/Button';
 import KeyValue from '../../components/KeyValue';
 import Amount from '../../components/Amount';
 import FeeBreakdown from '../../components/FeeBreakdown';
-import SetFeesForm from '../../components/SetFeesForm';
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
 
@@ -28,7 +27,6 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import ChannelsStore from '../../stores/ChannelsStore';
-import FeeStore from '../../stores/FeeStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import Share from '../../assets/images/SVG/Share.svg';
@@ -37,7 +35,6 @@ import Edit from '../../assets/images/SVG/Edit.svg';
 interface ChannelProps {
     navigation: any;
     ChannelsStore: ChannelsStore;
-    FeeStore: FeeStore;
     SettingsStore: SettingsStore;
 }
 
@@ -46,10 +43,9 @@ interface ChannelState {
     satPerByte: string;
     forceCloseChannel: boolean;
     channel: Channel;
-    showNewFeesForm: boolean;
 }
 
-@inject('ChannelsStore', 'FeeStore', 'NodeInfoStore', 'SettingsStore')
+@inject('ChannelsStore', 'NodeInfoStore', 'SettingsStore')
 @observer
 export default class ChannelView extends React.Component<
     ChannelProps,
@@ -64,8 +60,7 @@ export default class ChannelView extends React.Component<
             confirmCloseChannel: false,
             satPerByte: '',
             forceCloseChannel: false,
-            channel,
-            showNewFeesForm: false
+            channel
         };
 
         if (BackendUtils.isLNDBased()) {
@@ -115,16 +110,9 @@ export default class ChannelView extends React.Component<
     };
 
     render() {
-        const { navigation, ChannelsStore, FeeStore, SettingsStore } =
-            this.props;
-        const {
-            channel,
-            confirmCloseChannel,
-            satPerByte,
-            forceCloseChannel,
-            showNewFeesForm
-        } = this.state;
-        const { channelFees } = FeeStore;
+        const { navigation, ChannelsStore, SettingsStore } = this.props;
+        const { channel, confirmCloseChannel, satPerByte, forceCloseChannel } =
+            this.state;
         const { nodes } = ChannelsStore;
         const { settings, implementation } = SettingsStore;
         const { privacy } = settings;
@@ -172,8 +160,6 @@ export default class ChannelView extends React.Component<
 
         const peerDisplay = PrivacyUtils.sensitiveValue(peerName, 8);
 
-        const channelFee = channelFees[channel_point];
-
         const BackButton = () => (
             <Icon
                 name="arrow-back"
@@ -185,7 +171,9 @@ export default class ChannelView extends React.Component<
 
         const EditFees = () => (
             <View style={{ top: -3 }}>
-                <Edit onPress={() => navigation.navigate('SetFees')} />
+                <Edit
+                    onPress={() => navigation.navigate('SetFees', { channel })}
+                />
             </View>
         );
 
@@ -467,26 +455,6 @@ export default class ChannelView extends React.Component<
                             commit_weight={commit_weight}
                             csv_delay={csv_delay}
                             privateChannel={privateChannel}
-                            showNewFeesForm={showNewFeesForm}
-                        />
-                    )}
-
-                    {!BackendUtils.isLNDBased() && (
-                        <SetFeesForm
-                            baseFee={
-                                channelFee &&
-                                channelFee.base_fee_msat &&
-                                `${Number(channelFee.base_fee_msat) / 1000}`
-                            }
-                            feeRate={
-                                channelFee &&
-                                channelFee.fee_rate &&
-                                `${Number(channelFee.fee_rate) / 10000}`
-                            }
-                            channelPoint={channel_point}
-                            channelId={channelId}
-                            peerDisplay={peerDisplay}
-                            FeeStore={FeeStore}
                         />
                     )}
 

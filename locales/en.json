@@ -107,6 +107,7 @@
     "views.Routing.noEvents": "No routing events for selected timeframe",
     "views.Routing.RoutingEvent.title": "You received",
     "views.Routing.SetFees": "Your node fees",
+    "views.Routing.channelFees": "Edit channel fees",
     "views.Settings.AddEditNode.certificateButton": "Certificate Install Instructions",
     "views.Settings.AddEditNode.nodeConfig": "Node Configuration",
     "views.Settings.AddEditNode.connectionStringClipboard": "Detected the following connection string in your clipboard",
