@@ -6,6 +6,7 @@ import BackendUtils from './../utils/BackendUtils';
 import Base64Utils from './../utils/Base64Utils';
 import ForwardEvent from './../models/ForwardEvent';
 import SettingsStore from './SettingsStore';
+import NodeInfoStore from './NodeInfoStore';
 
 export default class FeeStore {
     @observable public fees: any = {};
@@ -32,9 +33,11 @@ export default class FeeStore {
     getOnchainFeesToken: any;
 
     settingsStore: SettingsStore;
+    nodeInfoStore: NodeInfoStore;
 
-    constructor(settingsStore: SettingsStore) {
+    constructor(settingsStore: SettingsStore, nodeInfoStore: NodeInfoStore) {
         this.settingsStore = settingsStore;
+        this.nodeInfoStore = nodeInfoStore;
     }
 
     @action
@@ -44,7 +47,9 @@ export default class FeeStore {
         this.recommendedFees = {};
         ReactNativeBlobUtil.fetch(
             'get',
-            'https://mempool.space/api/v1/fees/recommended'
+            `https://mempool.space/${
+                this.nodeInfoStore.nodeInfo.isTestNet ? 'testnet/' : ''
+            }api/v1/fees/recommended`
         )
             .then((response: any) => {
                 const status = response.info().status;
