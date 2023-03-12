@@ -48,6 +48,8 @@
     "general.conversionRate": "Conversion rate",
     "general.bitcoin": "Bitcoin",
     "general.fiat": "Fiat",
+    "general.true": "True",
+    "general.false": "False",
     "general.fiatFetchError": "Error fetching exchange rates",
     "components.CollapsedQr.show": "Show QR",
     "components.CollapsedQr.hide": "Hide QR",

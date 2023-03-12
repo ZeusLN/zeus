@@ -317,7 +317,11 @@ export default class FeeBreakdown extends React.Component<
                         />
                         <KeyValue
                             keyValue={localeString('views.Channel.unannounced')}
-                            value={privateChannel ? 'True' : 'False'}
+                            value={
+                                privateChannel
+                                    ? localeString('general.true')
+                                    : localeString('general.false')
+                            }
                             color={privateChannel ? 'green' : '#808000'}
                         />
 
