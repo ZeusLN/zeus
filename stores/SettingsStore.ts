@@ -535,22 +535,30 @@ export default class SettingsStore {
     // LNDHub
     @action
     public login = (request: LoginRequest) => {
+        this.error = false;
+        this.errorMsg = '';
         this.createAccountSuccess = '';
         this.createAccountError = '';
         this.loading = true;
-        return BackendUtils.login({
-            login: request.login,
-            password: request.password
-        })
-            .then((data: any) => {
-                this.loading = false;
-                this.accessToken = data.access_token;
-                this.refreshToken = data.refresh_token;
+        return new Promise<void>(async (resolve) => {
+            await BackendUtils.login({
+                login: request.login,
+                password: request.password
             })
-            .catch(() => {
-                // handle error
-                this.loading = false;
-            });
+                .then((data: any) => {
+                    this.loading = false;
+                    this.accessToken = data.access_token;
+                    this.refreshToken = data.refresh_token;
+                    resolve(data);
+                })
+                .catch(() => {
+                    // handle error
+                    this.loading = false;
+                    this.error = true;
+                    this.errorMsg = 'Failed to log in to LNDHub server';
+                    resolve();
+                });
+        });
     };
 
     // LNC

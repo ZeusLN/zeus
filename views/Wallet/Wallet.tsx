@@ -239,7 +239,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
 
         if (implementation === 'lndhub') {
-            login({ login: username, password }).then(async () => {
+            await login({ login: username, password }).then(async () => {
                 BalanceStore.getLightningBalance(true);
             });
         } else if (implementation === 'lightning-node-connect') {
