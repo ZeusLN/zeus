@@ -29,8 +29,9 @@ import { themeColor } from '../../utils/ThemeUtils';
 import ChannelsStore from '../../stores/ChannelsStore';
 import SettingsStore from '../../stores/SettingsStore';
 
-import Share from '../../assets/images/SVG/Share.svg';
 import Edit from '../../assets/images/SVG/Edit.svg';
+// import Rocket from '../../assets/images/SVG/Rocket.svg';
+import Share from '../../assets/images/SVG/Share.svg';
 
 interface ChannelProps {
     navigation: any;
@@ -150,13 +151,19 @@ export default class ChannelView extends React.Component<
             closing_txid,
             pendingClose,
             forceClose,
-            pendingOpen
+            pendingOpen,
+            closing
         } = channel;
         const privateChannel = channel.private;
 
-        const uneditableFees: boolean =
-            pendingOpen || pendingClose || forceClose || closeHeight;
-        // const bumpable: boolean = pendingOpen || pendingClose;
+        const editableFees: boolean = !(
+            pendingOpen ||
+            pendingClose ||
+            forceClose ||
+            closeHeight ||
+            closing
+        );
+        // const bumpable: boolean = pendingOpen || pendingClose || closing;
 
         const peerName =
             (nodes[remotePubkey] && nodes[remotePubkey].alias) ||
@@ -173,6 +180,14 @@ export default class ChannelView extends React.Component<
                 underlayColor="transparent"
             />
         );
+
+        // const BumpFee = () => (
+        //     <View style={{ top: -3 }}>
+        //         <Rocket
+        //             onPress={() => navigation.navigate('SetFees', { channel })}
+        //         />
+        //     </View>
+        // );
 
         const EditFees = () => (
             <View style={{ top: -3 }}>
@@ -197,6 +212,12 @@ export default class ChannelView extends React.Component<
             Clipboard.setString(remotePubkey);
         };
 
+        const centerComponent = () => {
+            // if (bumpable) return <BumpFee />;
+            if (editableFees) return <EditFees />;
+            return null;
+        };
+
         return (
             <ScrollView
                 style={{
@@ -206,7 +227,7 @@ export default class ChannelView extends React.Component<
             >
                 <Header
                     leftComponent={<BackButton />}
-                    centerComponent={uneditableFees ? null : <EditFees />}
+                    centerComponent={centerComponent}
                     rightComponent={<KeySend />}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
@@ -253,7 +274,9 @@ export default class ChannelView extends React.Component<
                     <KeyValue
                         keyValue={localeString('views.Channel.status')}
                         value={
-                            pendingClose
+                            pendingOpen
+                                ? localeString('views.Channel.pendingOpen')
+                                : pendingClose
                                 ? localeString('views.Channel.pendingClose')
                                 : forceClose
                                 ? localeString('views.Channel.forceClose')
@@ -263,7 +286,7 @@ export default class ChannelView extends React.Component<
                                 ? localeString('views.Channel.active')
                                 : localeString('views.Channel.inactive')
                         }
-                        color={isActive ? 'green' : 'red'}
+                        color={isActive ? 'green' : null}
                     />
 
                     {chain_hash && (
@@ -450,6 +473,7 @@ export default class ChannelView extends React.Component<
                     {BackendUtils.isLNDBased() && (
                         <FeeBreakdown
                             isActive={isActive}
+                            isClosed={closeHeight || closeType}
                             channelId={channelId}
                             peerDisplay={peerDisplay}
                             channelPoint={channel_point}
