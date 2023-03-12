@@ -30,11 +30,24 @@ export default function KeyValue({
     }
     const isCopyable = typeof value === 'string' || typeof value === 'number';
     const rtl = false;
-    const Key = <Body>{keyValue}</Body>;
+    const Key = (
+        <Body>
+            <Text
+                style={{
+                    color:
+                        value !== undefined
+                            ? themeColor('secondaryText')
+                            : themeColor('text')
+                }}
+            >
+                {keyValue}
+            </Text>
+        </Body>
+    );
     const Value = isCopyable ? (
         <Text
             style={{
-                color: color || themeColor('secondaryText'),
+                color: color || themeColor('text'),
                 fontFamily: 'Lato-Regular'
             }}
         >
@@ -52,7 +65,9 @@ export default function KeyValue({
     const KeyValueRow = () => (
         <Row justify="space-between">
             <View style={rtl ? styles.rtlValue : styles.key}>
-                {rtl ? Value : Key}
+                <Text style={{ color: themeColor('secondaryText') }}>
+                    {rtl ? Value : Key}
+                </Text>
             </View>
             <View style={rtl ? styles.rtlKey : styles.value}>
                 {rtl ? Key : Value}
@@ -79,7 +94,7 @@ export default function KeyValue({
 const styles = StyleSheet.create({
     key: {
         paddingRight: 40,
-        maxWidth: '50%'
+        maxWidth: '52%'
     },
     value: {
         flex: 1,
