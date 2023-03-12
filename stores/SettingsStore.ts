@@ -555,7 +555,9 @@ export default class SettingsStore {
                     // handle error
                     this.loading = false;
                     this.error = true;
-                    this.errorMsg = 'Failed to log in to LNDHub server';
+                    this.errorMsg = localeString(
+                        'stores.SettingsStore.lndhubLoginError'
+                    );
                     resolve();
                 });
         });
@@ -576,7 +578,7 @@ export default class SettingsStore {
         }
 
         // repeatedly check if the connection was successful
-        return new Promise<void>((resolve) => {
+        return new Promise<string | void>((resolve) => {
             let counter = 0;
             const interval = setInterval(async () => {
                 counter++;
@@ -588,12 +590,11 @@ export default class SettingsStore {
                 } else if (counter > 20) {
                     clearInterval(interval);
                     this.error = true;
-                    this.errorMsg =
-                        'Failed to connect the LNC client to the proxy server';
-                    this.loading = false;
-                    resolve(
-                        'Failed to connect the LNC client to the proxy server'
+                    this.errorMsg = localeString(
+                        'stores.SettingsStore.lncConnectError'
                     );
+                    this.loading = false;
+                    resolve(this.errorMsg);
                 }
             }, 500);
         });

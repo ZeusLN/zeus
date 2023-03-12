@@ -552,6 +552,8 @@
     "stores.SettingsStore.olympianFetchError": "Error fetching Olympians",
     "stores.SettingsStore.lndhubSuccess": "Successfully created LNDHub account. Record the username and password somewhere so you can restore your funds if something happens to your device. Then hit Save Node Config to continue.",
     "stores.SettingsStore.lndhubError": "Error creating LNDHub account. Please check the host and try again.",
+    "stores.SettingsStore.lndhubLoginError": "Failed to log in to LNDHub server",
+    "stores.SettingsStore.lncConnectError": "Failed to connect the LNC client to the proxy server",
     "error.connectionRefused": "Host unreachable. Try restarting your node or its Tor process.",
     "error.hostUnreachable": "Host unreachable. Try restarting your node or its Tor process.",
     "error.torBootstrap": "Error starting up Tor on your phone. Try restarting Zeus. If the problem persists consider reinstalling the app.",
