@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { BarCodeReadEvent, FlashMode, RNCamera } from 'react-native-camera';
+import { launchImageLibrary } from 'react-native-image-picker';
+const LocalQRCode = require('@remobile/react-native-qrcode-local-image');
 
 import Button from './../components/Button';
 
@@ -8,6 +10,7 @@ import { localeString } from './../utils/LocaleUtils';
 
 import FlashOffIcon from './../assets/images/SVG/Flash Off.svg';
 import FlashOnIcon from './../assets/images/SVG/Flash On.svg';
+import GalleryIcon from './../assets/images/SVG/Gallery.svg';
 import ScanFrameSvg from './../assets/images/SVG/DynamicSVG/ScanFrameSvg';
 
 const createHash = require('create-hash');
@@ -67,6 +70,27 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
         this.props.handleQRScanned(data);
     };
 
+    handleOpenGallery = () => {
+        launchImageLibrary(
+            {
+                mediaType: 'photo'
+            },
+            (response) => {
+                if (!response.didCancel) {
+                    const asset = response.assets[0];
+                    if (asset.uri) {
+                        const uri = asset.uri.toString().replace('file://', '');
+                        LocalQRCode.decode(uri, (error: any, result: any) => {
+                            if (!error) {
+                                this.handleRead(result);
+                            }
+                        });
+                    }
+                }
+            }
+        );
+    };
+
     render() {
         const { cameraStatus } = this.state;
         const { text, goBack } = this.props;
@@ -108,13 +132,29 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                             }
                         >
                             <View style={styles.overlay} />
-                            <View style={styles.flashlightOverlay}>
-                                {this.state.torch ===
-                                RNCamera.Constants.FlashMode.torch ? (
-                                    <FlashOnIcon onPress={this.handleFlash} />
-                                ) : (
-                                    <FlashOffIcon onPress={this.handleFlash} />
-                                )}
+                            <View style={styles.actionOverlay}>
+                                <View style={{ marginTop: 8, marginRight: 5 }}>
+                                    {this.state.torch ===
+                                    RNCamera.Constants.FlashMode.torch ? (
+                                        <FlashOnIcon
+                                            width={35}
+                                            height={35}
+                                            onPress={this.handleFlash}
+                                        />
+                                    ) : (
+                                        <FlashOffIcon
+                                            width={35}
+                                            height={35}
+                                            onPress={this.handleFlash}
+                                        />
+                                    )}
+                                </View>
+                                <GalleryIcon
+                                    width={50}
+                                    height={50}
+                                    onPress={this.handleOpenGallery}
+                                    backgroundColor="red"
+                                />
                             </View>
                             <Text style={styles.textOverlay}>{text}</Text>
                             <View
@@ -130,7 +170,7 @@ export default class QRCodeScanner extends React.Component<QRProps, QRState> {
                                 <View style={styles.overlay} />
                             </View>
                             <View style={styles.overlay} />
-                            <View style={styles.buttonOverlay}>
+                            <View style={styles.cancelOverlay}>
                                 <Button
                                     title={localeString('general.cancel')}
                                     onPress={() => goBack()}
@@ -180,23 +220,21 @@ const styles = StyleSheet.create({
     scan: {
         margin: 0
     },
-    flashlightOverlay: {
-        display: 'flex',
-        flexDirection: 'row-reverse',
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        paddingLeft: 20
+    actionOverlay: {
+        flexDirection: 'row',
+        position: 'absolute',
+        right: 10,
+        top: '7%'
     },
-    buttonOverlay: {
+    cancelOverlay: {
         backgroundColor: 'rgba(0,0,0,0.5)',
         paddingBottom: 50
     },
     textOverlay: {
         backgroundColor: 'rgba(0,0,0,0.5)',
         color: 'white',
-        paddingBottom: 60,
         textAlign: 'center',
-        fontSize: 15,
-        padding: 30
+        fontSize: 15
     },
     contentRow: {
         flexDirection: 'row'

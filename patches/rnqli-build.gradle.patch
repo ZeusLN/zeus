@@ -1,0 +1,17 @@
+diff --git a/node_modules/@remobile/react-native-qrcode-local-image/android/build.gradle b/node_modules/@remobile/react-native-qrcode-local-image/android/build.gradle
+index 631ea93..818cc91 100755
+--- a/node_modules/@remobile/react-native-qrcode-local-image/android/build.gradle
++++ b/node_modules/@remobile/react-native-qrcode-local-image/android/build.gradle
+@@ -19,8 +19,8 @@ android {
+ }
+ 
+ dependencies {
+-    compile fileTree(dir: 'libs', include: ['*.jar'])
+-    compile 'com.android.support:appcompat-v7:23.0.1'
+-    compile 'com.facebook.react:react-native:+'
+-    compile 'com.google.zxing:core:3.2.0'
++    implementation fileTree(dir: 'libs', include: ['*.jar'])
++    implementation 'com.android.support:appcompat-v7:23.0.1'
++    implementation 'com.facebook.react:react-native:+'
++    implementation 'com.google.zxing:core:3.2.0'
+ }

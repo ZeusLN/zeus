@@ -1,13 +1,14 @@
 import url from 'url';
 import * as React from 'react';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import { inject, observer } from 'mobx-react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Header, Icon } from 'react-native-elements';
 import querystring from 'querystring-es3';
-import { Hash as sha256Hash, HMAC as sha256HMAC } from 'fast-sha256';
+import { HMAC as sha256HMAC } from 'fast-sha256';
 
 import Button from './../components/Button';
-import LoadingIndicator from './../components/LoadingIndicator';
+import LightningIndicator from './../components/LightningIndicator';
 import {
     SuccessMessage,
     ErrorMessage
@@ -17,6 +18,8 @@ import { themeColor } from './../utils/ThemeUtils';
 import { localeString } from './../utils/LocaleUtils';
 import BackendUtils from './../utils/BackendUtils';
 import Base64Utils from './../utils/Base64Utils';
+import DropdownSetting from './../components/DropdownSetting';
+import SettingsStore, { LNDHUB_AUTH_MODES } from './../stores/SettingsStore';
 
 const EC = require('elliptic').ec;
 const ec = new EC('secp256k1');
@@ -26,6 +29,7 @@ const LNURLAUTH_CANONICAL_PHRASE =
 
 interface LnurlAuthProps {
     navigation: any;
+    SettingsStore: SettingsStore;
 }
 
 interface LnurlAuthState {
@@ -39,8 +43,12 @@ interface LnurlAuthState {
     signatureSuccess: boolean;
     lnurlAuthSuccess: boolean;
     errorMsgAuth: string;
+    lndHubLnAuthMode: string;
+    chooseAuthMode: boolean;
 }
 
+@inject('SettingsStore')
+@observer
 export default class LnurlAuth extends React.Component<
     LnurlAuthProps,
     LnurlAuthState
@@ -61,7 +69,9 @@ export default class LnurlAuth extends React.Component<
                 authenticating: false,
                 signatureSuccess: false,
                 lnurlAuthSuccess: false,
-                errorMsgAuth: ''
+                errorMsgAuth: '',
+                lndHubLnAuthMode: 'Alby',
+                chooseAuthMode: false
             };
 
             Alert.alert(
@@ -87,11 +97,13 @@ export default class LnurlAuth extends React.Component<
             authenticating: false,
             signatureSuccess: false,
             lnurlAuthSuccess: false,
-            errorMsgAuth: 'Error'
+            errorMsgAuth: 'Error',
+            lndHubLnAuthMode: 'Alby',
+            chooseAuthMode: false
         };
     }
 
-    triggerSign() {
+    async triggerSign() {
         this.setState({ preparingSignature: true });
 
         const body = LNURLAUTH_CANONICAL_PHRASE;
@@ -104,11 +116,8 @@ export default class LnurlAuth extends React.Component<
                 // 1. The following canonical phrase is defined: [...].
                 // 2. LN WALLET obtains an RFC6979 deterministic signature of sha256(utf8ToBytes(canonical phrase)) using secp256k1 with node private key.
                 // 3. LN WALLET defines hashingKey as PrivateKey(sha256(obtained signature)).
-                const hashingKey = new sha256Hash()
-                    .update(Base64Utils.stringToUint8Array(signature.signature))
-                    .digest();
                 // // 4. SERVICE domain name is extracted from auth LNURL and then service-specific linkingPrivKey is defined as PrivateKey(hmacSha256(hashingKey, service domain name)).
-                const linkingKeyPriv = new sha256HMAC(hashingKey)
+                const linkingKeyPriv = new sha256HMAC(signature.signature)
                     .update(Base64Utils.stringToUint8Array(this.state.domain))
                     .digest();
 
@@ -141,7 +150,15 @@ export default class LnurlAuth extends React.Component<
             });
     }
     componentDidMount() {
-        this.triggerSign();
+        const { implementation } = this.props.SettingsStore;
+        if (implementation === 'lndhub') {
+            this.props.SettingsStore.updateSettings({
+                lndHubLnAuthMode: this.state.lndHubLnAuthMode
+            });
+            this.setState({ chooseAuthMode: true });
+        } else {
+            this.triggerSign();
+        }
     }
 
     sendValues() {
@@ -206,14 +223,15 @@ export default class LnurlAuth extends React.Component<
     }
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, SettingsStore } = this.props;
         const {
             domain,
             preparingSignature,
             signatureSuccess,
             authenticating,
             lnurlAuthSuccess,
-            errorMsgAuth
+            errorMsgAuth,
+            chooseAuthMode
         } = this.state;
 
         const BackButton = () => (
@@ -222,6 +240,23 @@ export default class LnurlAuth extends React.Component<
                 onPress={() => navigation.navigate('Wallet')}
                 color={themeColor('text')}
                 underlayColor="transparent"
+            />
+        );
+
+        const LndHubAuthMode = () => (
+            <DropdownSetting
+                title={localeString('views.LnurlAuth.lndHubAuthMode')}
+                selectedValue={this.state.lndHubLnAuthMode}
+                onValueChange={async (value: string) => {
+                    this.setState({
+                        lndHubLnAuthMode: value
+                    });
+                    await SettingsStore.updateSettings({
+                        lndHubLnAuthMode: value
+                    });
+                    this.triggerSign();
+                }}
+                values={LNDHUB_AUTH_MODES}
             />
         );
 
@@ -259,6 +294,13 @@ export default class LnurlAuth extends React.Component<
                         {domain}
                     </Text>
                 </View>
+                {this.state.chooseAuthMode && (
+                    <View style={styles.content}>
+                        <View style={styles.dropdown}>
+                            <LndHubAuthMode />
+                        </View>
+                    </View>
+                )}
                 <View style={styles.content}>
                     <View style={styles.button}>
                         <Button
@@ -268,11 +310,20 @@ export default class LnurlAuth extends React.Component<
                                 size: 25,
                                 color: 'white'
                             }}
-                            onPress={() => {
-                                this.sendValues();
+                            onPress={async () => {
+                                if (chooseAuthMode && !signatureSuccess) {
+                                    this.setState({ chooseAuthMode: false });
+                                    await this.triggerSign();
+                                    this.sendValues();
+                                } else {
+                                    this.sendValues();
+                                }
                             }}
                             style={styles.button}
-                            disabled={!signatureSuccess || authenticating}
+                            disabled={
+                                (!signatureSuccess && !chooseAuthMode) ||
+                                authenticating
+                            }
                             buttonStyle={{
                                 backgroundColor: 'orange',
                                 borderRadius: 30
@@ -282,7 +333,7 @@ export default class LnurlAuth extends React.Component<
 
                     <View style={styles.content}>
                         {(preparingSignature || authenticating) && (
-                            <LoadingIndicator />
+                            <LightningIndicator />
                         )}
                         {lnurlAuthSuccess && (
                             <SuccessMessage
@@ -293,6 +344,7 @@ export default class LnurlAuth extends React.Component<
                         )}
                         {!preparingSignature &&
                             !signatureSuccess &&
+                            !chooseAuthMode &&
                             !authenticating &&
                             !lnurlAuthSuccess && (
                                 <ErrorMessage
@@ -317,5 +369,9 @@ const styles = StyleSheet.create({
     button: {
         paddingTop: 15,
         paddingBottom: 15
+    },
+    dropdown: {
+        paddingLeft: 20,
+        paddingRight: 20
     }
 });

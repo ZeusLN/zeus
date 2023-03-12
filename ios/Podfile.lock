@@ -13,8 +13,12 @@ PODS:
   - glog (0.3.5)
   - hermes-engine (0.70.6)
   - libevent (2.1.12)
-  - lnc-rn (0.2.1-alpha.2):
+  - lnc-rn (0.2.3-alpha):
     - React
+  - lottie-ios (3.4.4)
+  - lottie-react-native (5.1.5):
+    - lottie-ios (~> 3.4.0)
+    - React-Core
   - RCT-Folly (2021.07.22.00):
     - boost
     - DoubleConversion
@@ -241,6 +245,8 @@ PODS:
   - React-jsinspector (0.70.6)
   - React-logger (0.70.6):
     - glog
+  - react-native-biometrics (3.0.1):
+    - React-Core
   - react-native-blob-util (0.14.0):
     - React-Core
   - react-native-camera (4.2.1):
@@ -257,6 +263,8 @@ PODS:
     - React-Core
   - react-native-hce (0.1.2):
     - React
+  - react-native-image-picker (5.0.1):
+    - React-Core
   - react-native-nfc-manager (3.13.0):
     - React
   - react-native-randombytes (3.5.3):
@@ -335,6 +343,8 @@ PODS:
     - React-jsi (= 0.70.6)
     - React-logger (= 0.70.6)
     - React-perflogger (= 0.70.6)
+  - RemobileReactNativeQrcodeLocalImage (1.0.4):
+    - React
   - RNCClipboard (1.9.0):
     - React-Core
   - RNCMaskedView (0.1.11):
@@ -363,6 +373,7 @@ DEPENDENCIES:
   - hermes-engine (from `../node_modules/react-native/sdks/hermes/hermes-engine.podspec`)
   - libevent (~> 2.1.12)
   - "lnc-rn (from `../node_modules/@lightninglabs/lnc-rn`)"
+  - lottie-react-native (from `../node_modules/lottie-react-native`)
   - RCT-Folly (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
   - RCTRequired (from `../node_modules/react-native/Libraries/RCTRequired`)
   - RCTTypeSafety (from `../node_modules/react-native/Libraries/TypeSafety`)
@@ -379,11 +390,13 @@ DEPENDENCIES:
   - React-jsiexecutor (from `../node_modules/react-native/ReactCommon/jsiexecutor`)
   - React-jsinspector (from `../node_modules/react-native/ReactCommon/jsinspector`)
   - React-logger (from `../node_modules/react-native/ReactCommon/logger`)
+  - react-native-biometrics (from `../node_modules/react-native-biometrics`)
   - react-native-blob-util (from `../node_modules/react-native-blob-util`)
   - react-native-camera (from `../node_modules/react-native-camera`)
   - react-native-date-picker (from `../node_modules/react-native-date-picker`)
   - react-native-encrypted-storage (from `../node_modules/react-native-encrypted-storage`)
   - react-native-hce (from `../node_modules/react-native-hce`)
+  - react-native-image-picker (from `../node_modules/react-native-image-picker`)
   - react-native-nfc-manager (from `../node_modules/react-native-nfc-manager`)
   - react-native-randombytes (from `../node_modules/react-native-randombytes`)
   - react-native-restart (from `../node_modules/react-native-restart`)
@@ -402,6 +415,7 @@ DEPENDENCIES:
   - React-RCTVibration (from `../node_modules/react-native/Libraries/Vibration`)
   - React-runtimeexecutor (from `../node_modules/react-native/ReactCommon/runtimeexecutor`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
+  - "RemobileReactNativeQrcodeLocalImage (from `../node_modules/@remobile/react-native-qrcode-local-image`)"
   - "RNCClipboard (from `../node_modules/@react-native-clipboard/clipboard`)"
   - "RNCMaskedView (from `../node_modules/@react-native-community/masked-view`)"
   - "RNCPicker (from `../node_modules/@react-native-picker/picker`)"
@@ -416,6 +430,7 @@ SPEC REPOS:
   trunk:
     - fmt
     - libevent
+    - lottie-ios
 
 EXTERNAL SOURCES:
   boost:
@@ -432,6 +447,8 @@ EXTERNAL SOURCES:
     :podspec: "../node_modules/react-native/sdks/hermes/hermes-engine.podspec"
   lnc-rn:
     :path: "../node_modules/@lightninglabs/lnc-rn"
+  lottie-react-native:
+    :path: "../node_modules/lottie-react-native"
   RCT-Folly:
     :podspec: "../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec"
   RCTRequired:
@@ -462,6 +479,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/jsinspector"
   React-logger:
     :path: "../node_modules/react-native/ReactCommon/logger"
+  react-native-biometrics:
+    :path: "../node_modules/react-native-biometrics"
   react-native-blob-util:
     :path: "../node_modules/react-native-blob-util"
   react-native-camera:
@@ -472,6 +491,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-encrypted-storage"
   react-native-hce:
     :path: "../node_modules/react-native-hce"
+  react-native-image-picker:
+    :path: "../node_modules/react-native-image-picker"
   react-native-nfc-manager:
     :path: "../node_modules/react-native-nfc-manager"
   react-native-randombytes:
@@ -508,6 +529,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/runtimeexecutor"
   ReactCommon:
     :path: "../node_modules/react-native/ReactCommon"
+  RemobileReactNativeQrcodeLocalImage:
+    :path: "../node_modules/@remobile/react-native-qrcode-local-image"
   RNCClipboard:
     :path: "../node_modules/@react-native-clipboard/clipboard"
   RNCMaskedView:
@@ -536,7 +559,9 @@ SPEC CHECKSUMS:
   glog: 04b94705f318337d7ead9e6d17c019bd9b1f6b1b
   hermes-engine: 2af7b7a59128f250adfd86f15aa1d5a2ecd39995
   libevent: 4049cae6c81cdb3654a443be001fb9bdceff7913
-  lnc-rn: 4c1d7510e5b36069a993697a08468c0d2cedcdae
+  lnc-rn: 4481ea672dbc31ccaeb32576d8e6d2ae1845f57b
+  lottie-ios: 8f97d3271e155c2d688875c29cd3c74908aef5f8
+  lottie-react-native: 3e722c63015fdb9c27638b0a77969fc412067c18
   RCT-Folly: 0080d0a6ebf2577475bda044aa59e2ca1f909cda
   RCTRequired: e1866f61af7049eb3d8e08e8b133abd38bc1ca7a
   RCTTypeSafety: 27c2ac1b00609a432ced1ae701247593f07f901e
@@ -552,11 +577,13 @@ SPEC CHECKSUMS:
   React-jsiexecutor: b4a65947391c658450151275aa406f2b8263178f
   React-jsinspector: 60769e5a0a6d4b32294a2456077f59d0266f9a8b
   React-logger: 1623c216abaa88974afce404dc8f479406bbc3a0
+  react-native-biometrics: 352e5a794bfffc46a0c86725ea7dc62deb085bdc
   react-native-blob-util: 180714990c4563645fa70e9202cd32e27656a6e6
   react-native-camera: 3eae183c1d111103963f3dd913b65d01aef8110f
   react-native-date-picker: 93e43b3084cea595b4d68b1405d6d99849663bd6
   react-native-encrypted-storage: e78d848ce0fb663c2ce306e37921d026809322e6
   react-native-hce: 677aa1c41edf183523bb7b1014d106a08631ff88
+  react-native-image-picker: 8cb4280e2c1efc3daeb2d9d597f9429a60472e40
   react-native-nfc-manager: 001c3a98e68efd57b7fb04b1837ab06ca7243238
   react-native-randombytes: 3638d24759d67c68f6ccba60c52a7a8a8faa6a23
   react-native-restart: 45c8dca02491980f2958595333cbccd6877cb57e
@@ -575,6 +602,7 @@ SPEC CHECKSUMS:
   React-RCTVibration: c75ceef7aa60a33b2d5731ebe5800ddde40cefc4
   React-runtimeexecutor: 15437b576139df27635400de0599d9844f1ab817
   ReactCommon: 349be31adeecffc7986a0de875d7fb0dcf4e251c
+  RemobileReactNativeQrcodeLocalImage: 57aadc12896b148fb5e04bc7c6805f3565f5c3fa
   RNCClipboard: 99fc8ad669a376b756fbc8098ae2fd05c0ed0668
   RNCMaskedView: 0e1bc4bfa8365eba5fbbb71e07fbdc0555249489
   RNCPicker: 0bf8ef8f7800524f32d2bb2a8bcadd53eda0ecd1
@@ -585,6 +613,6 @@ SPEC CHECKSUMS:
   TcpSockets: 6e65629a3742333f3a9165ebde4b2394407a543a
   Yoga: 99caf8d5ab45e9d637ee6e0174ec16fbbb01bcfc
 
-PODFILE CHECKSUM: 5644411d5f4fd931f08669526d5c8e8c87ab6ea0
+PODFILE CHECKSUM: 8fd366bb49fae24964dcf0feb11a5cb0d9db2ef4
 
 COCOAPODS: 1.11.3

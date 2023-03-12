@@ -5,6 +5,7 @@ import OpenChannelRequest from './../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
 import VersionUtils from './../utils/VersionUtils';
 import { localeString } from './../utils/LocaleUtils';
+import { Hash as sha256Hash } from 'fast-sha256';
 
 interface Headers {
     macaroon?: string;
@@ -204,6 +205,8 @@ export default class LND {
             transactions: data.transactions
         }));
     getChannels = () => this.getRequest('/v1/channels');
+    getPendingChannels = () => this.getRequest('/v1/channels/pending');
+    getClosedChannels = () => this.getRequest('/v1/channels/closed');
     getChannelInfo = (chanId: string) =>
         this.getRequest(`/v1/graph/edge/${chanId}`);
     getBlockchainBalance = () => this.getRequest('/v1/balance/blockchain');
@@ -219,7 +222,7 @@ export default class LND {
     getInvoices = (data: any) =>
         this.getRequest(
             `/v1/invoices?reversed=true&num_max_invoices=${
-                (data && data.limit) || 100
+                (data && data.limit) || 1000
             }`
         );
     createInvoice = (data: any) =>
@@ -344,7 +347,14 @@ export default class LND {
             msg: Base64Utils.btoa(data.msg),
             signature: data.signature
         });
-    lnurlAuth = (r_hash: string) => this.signMessage(r_hash);
+    lnurlAuth = async (r_hash: string) => {
+        const signed = await this.signMessage(r_hash);
+        return {
+            signature: new sha256Hash()
+                .update(Base64Utils.stringToUint8Array(signed.signature))
+                .digest()
+        };
+    };
     subscribeInvoice = (r_hash: string) =>
         this.getRequest(`/v2/invoices/subscribe/${r_hash}`);
     subscribeTransactions = () => this.getRequest('/v1/transactions/subscribe');
@@ -355,6 +365,7 @@ export default class LND {
     supportsOnchainReceiving = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
+    supportsPendingChannels = () => true;
     supportsMPP = () => this.supports('v0.10.0');
     supportsAMP = () => this.supports('v0.13.0');
     supportsCoinControl = () => this.supports('v0.12.0');

@@ -366,17 +366,20 @@ export default class LnurlPay extends React.Component<
                     <View style={styles.button}>
                         <Button
                             title="Confirm"
+                            titleStyle={{
+                                color: themeColor('text')
+                            }}
                             icon={{
                                 name: 'send',
                                 size: 25,
-                                color: 'white'
+                                color: themeColor('text')
                             }}
                             onPress={() => {
                                 this.sendValues(satAmount);
                             }}
                             style={styles.button}
                             buttonStyle={{
-                                backgroundColor: 'orange',
+                                backgroundColor: themeColor('secondary'),
                                 borderRadius: 30
                             }}
                         />

@@ -22,35 +22,36 @@ import NfcManager, {
     Ndef
 } from 'react-native-nfc-manager';
 
-import handleAnything from './../utils/handleAnything';
+import handleAnything from '../utils/handleAnything';
 
 import Success from '../assets/images/GIF/Success.gif';
 import WordLogo from '../assets/images/SVG/Word Logo.svg';
 
-import Amount from './../components/Amount';
-import Button from './../components/Button';
-import CollapsedQR from './../components/CollapsedQR';
-import LoadingIndicator from './../components/LoadingIndicator';
-import ModalBox from './../components/ModalBox';
+import Amount from '../components/Amount';
+import Button from '../components/Button';
+import CollapsedQR from '../components/CollapsedQR';
+import LoadingIndicator from '../components/LoadingIndicator';
+import PaidIndicator from '../components/PaidIndicator';
+import ModalBox from '../components/ModalBox';
 import {
     SuccessMessage,
     WarningMessage,
     ErrorMessage
-} from './../components/SuccessErrorMessage';
-import Switch from './../components/Switch';
-import TextInput from './../components/TextInput';
+} from '../components/SuccessErrorMessage';
+import Switch from '../components/Switch';
+import TextInput from '../components/TextInput';
 
-import FiatStore from './../stores/FiatStore';
-import NodeInfoStore from './../stores/NodeInfoStore';
-import InvoicesStore from './../stores/InvoicesStore';
-import SettingsStore from './../stores/SettingsStore';
-import UnitsStore, { SATS_PER_BTC } from './../stores/UnitsStore';
-import PosStore from './../stores/PosStore';
+import FiatStore from '../stores/FiatStore';
+import NodeInfoStore from '../stores/NodeInfoStore';
+import InvoicesStore from '../stores/InvoicesStore';
+import SettingsStore from '../stores/SettingsStore';
+import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
+import PosStore from '../stores/PosStore';
 
-import { localeString } from './../utils/LocaleUtils';
-import BackendUtils from './../utils/BackendUtils';
-import NFCUtils from './../utils/NFCUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import { localeString } from '../utils/LocaleUtils';
+import BackendUtils from '../utils/BackendUtils';
+import NFCUtils from '../utils/NFCUtils';
+import { themeColor } from '../utils/ThemeUtils';
 
 interface ReceiveProps {
     exitSetup: any;
@@ -549,12 +550,15 @@ export default class Receive extends React.Component<
                 satAmount = value;
                 break;
             case 'BTC':
-                satAmount = Number(value) * SATS_PER_BTC;
+                satAmount = Number(
+                    new BigNumber(value).multipliedBy(SATS_PER_BTC)
+                );
                 break;
             case 'fiat':
                 satAmount = Number(
-                    (Number(value.replace(/,/g, '.')) / Number(rate)) *
-                        Number(SATS_PER_BTC)
+                    new BigNumber(value.replace(/,/g, '.'))
+                        .dividedBy(rate)
+                        .multipliedBy(SATS_PER_BTC)
                 ).toFixed(0);
                 break;
         }
@@ -840,6 +844,7 @@ export default class Receive extends React.Component<
                                 source={Success}
                                 style={{ width: 290, height: 290 }}
                             />
+                            <PaidIndicator />
                             <Text
                                 style={{
                                     ...styles.text,
@@ -901,7 +906,11 @@ export default class Receive extends React.Component<
                                     )}
                                 </>
                             )}
-                            {creatingInvoice && <LoadingIndicator />}
+                            {creatingInvoice && (
+                                <View style={{ top: 40 }}>
+                                    <LoadingIndicator />
+                                </View>
+                            )}
                             {haveInvoice && !creatingInvoiceError && (
                                 <View style={{ marginTop: 10 }}>
                                     {selectedIndex == 0 &&

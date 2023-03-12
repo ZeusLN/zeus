@@ -2,21 +2,21 @@ import * as React from 'react';
 import {
     Animated,
     AppState,
+    Linking,
     PanResponder,
     Text,
     TouchableOpacity,
-    View,
-    Linking
+    View
 } from 'react-native';
 
-import { inject, observer } from 'mobx-react';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { inject, observer } from 'mobx-react';
 import RNRestart from 'react-native-restart';
 
 import ChannelsPane from '../Channels/ChannelsPane';
-import KeypadPane from './KeypadPane';
 import BalancePane from './BalancePane';
+import KeypadPane from './KeypadPane';
 import PosPane from './PosPane';
 
 import Button from './../../components/Button';
@@ -30,20 +30,23 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import BalanceStore from './../../stores/BalanceStore';
 import ChannelsStore from './../../stores/ChannelsStore';
-import FeeStore from './../../stores/FeeStore';
 
+import FiatStore from './../../stores/FiatStore';
 import NodeInfoStore from './../../stores/NodeInfoStore';
 import PosStore from './../../stores/PosStore';
-import SettingsStore from './../../stores/SettingsStore';
-import FiatStore from './../../stores/FiatStore';
+import SettingsStore, { Settings } from './../../stores/SettingsStore';
 import UnitsStore from './../../stores/UnitsStore';
 import UTXOsStore from './../../stores/UTXOsStore';
 
+import {
+    getIsBiometryRequired,
+    getSupportedBiometryType
+} from '../../utils/BiometricUtils';
 import Bitcoin from './../../assets/images/SVG/Bitcoin.svg';
-import Temple from './../../assets/images/SVG/Temple.svg';
-import POS from './../../assets/images/SVG/POS.svg';
-import ChannelsIcon from './../../assets/images/SVG/Channels.svg';
 import CaretUp from './../../assets/images/SVG/Caret Up.svg';
+import ChannelsIcon from './../../assets/images/SVG/Channels.svg';
+import POS from './../../assets/images/SVG/POS.svg';
+import Temple from './../../assets/images/SVG/Temple.svg';
 import WordLogo from './../../assets/images/SVG/Word Logo.svg';
 
 interface WalletProps {
@@ -52,7 +55,6 @@ interface WalletProps {
     navigation: any;
     BalanceStore: BalanceStore;
     ChannelsStore: ChannelsStore;
-    FeeStore: FeeStore;
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
@@ -63,13 +65,13 @@ interface WalletProps {
 
 interface WalletState {
     unlocked: boolean;
+    initialLoad: boolean;
 }
 
 @inject(
     'BalanceStore',
     'ChannelsStore',
     'NodeInfoStore',
-    'FeeStore',
     'SettingsStore',
     'UnitsStore',
     'FiatStore',
@@ -81,7 +83,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     constructor(props) {
         super(props);
         this.state = {
-            unlocked: false
+            unlocked: false,
+            initialLoad: true
         };
         this.pan = new Animated.ValueXY();
         this.panResponder = PanResponder.create({
@@ -99,8 +102,17 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         });
     }
+    async UNSAFE_componentWillMount(): Promise<void> {
+        const {
+            SettingsStore: { updateSettings }
+        } = this.props;
 
-    componentDidMount() {
+        const supportedBiometryType = await getSupportedBiometryType();
+
+        await updateSettings({ supportedBiometryType });
+    }
+
+    async componentDidMount() {
         // triggers when loaded from navigation or back action
         this.props.navigation.addListener('didFocus', () => {
             this.getSettingsAndNavigate();
@@ -120,13 +132,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { SettingsStore } = this.props;
         const { settings, implementation } = SettingsStore;
         const { loginBackground } = settings;
-        const loginRequired = settings && (settings.passphrase || settings.pin);
+        const loginRequired =
+            settings &&
+            (!!settings.passphrase ||
+                !!settings.pin ||
+                settings.isBiometryEnabled);
 
-        if (
-            nextAppState.match(/inactive|background/) &&
-            loginRequired &&
-            loginBackground
-        ) {
+        if (nextAppState === 'background' && loginRequired && loginBackground) {
             if (implementation === 'lightning-node-connect') {
                 BackendUtils.disconnect();
             }
@@ -137,7 +149,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
     startListeners() {
         Linking.addEventListener('url', this.handleOpenURL);
-        LinkingUtils.handleInitialUrl(this.props.navigation);
     }
 
     async getSettingsAndNavigate() {
@@ -145,10 +156,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { posStatus, setPosStatus } = SettingsStore;
 
         // This awaits on settings, so should await on Tor being bootstrapped before making requests
-        await SettingsStore.getSettings().then(async (settings: any) => {
+        await SettingsStore.getSettings().then(async (settings: Settings) => {
+            const isBiometryRequired = getIsBiometryRequired(settings);
+
             const loginRequired =
                 settings &&
-                (settings.passphrase || settings.pin) &&
+                (settings.passphrase || settings.pin || isBiometryRequired) &&
                 !SettingsStore.loggedIn;
             const posEnabled =
                 settings && settings.pos && settings.pos.squareEnabled;
@@ -200,7 +213,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             NodeInfoStore,
             BalanceStore,
             ChannelsStore,
-            FeeStore,
             UTXOsStore,
             SettingsStore,
             PosStore,
@@ -236,12 +248,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 error = await connect();
             }
             if (!error) {
+                await BackendUtils.checkPerms();
                 NodeInfoStore.getNodeInfo();
-                UTXOsStore.listAccounts();
+                if (BackendUtils.supportsAccounts()) UTXOsStore.listAccounts();
                 await BalanceStore.getCombinedBalance();
-                ChannelsStore.getChannels();
-                FeeStore.getFees();
-                FeeStore.getForwardingHistory();
+                if (BackendUtils.supportsChannelManagement())
+                    ChannelsStore.getChannels();
             }
         } else {
             NodeInfoStore.getNodeInfo();
@@ -251,15 +263,18 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
             await BalanceStore.getCombinedBalance();
             ChannelsStore.getChannels();
-            FeeStore.getFees();
-        }
-
-        if (implementation === 'lnd') {
-            FeeStore.getForwardingHistory();
         }
 
         if (connecting) {
             setConnectingStatus(false);
+        }
+
+        // only navigate to initial url after connection and main calls are made
+        if (this.state.initialLoad) {
+            this.setState({
+                initialLoad: false
+            });
+            LinkingUtils.handleInitialUrl(this.props.navigation);
         }
     }
 
@@ -489,24 +504,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             />
                                         )}
                                         {BackendUtils.supportsChannelManagement() &&
-                                        !error ? (
-                                            <Tab.Screen
-                                                name={localeString(
-                                                    'views.Wallet.Wallet.channels'
-                                                )}
-                                                component={ChannelsScreen}
-                                            />
-                                        ) : (
-                                            <Tab.Screen
-                                                name={' '}
-                                                component={
-                                                    squareEnabled &&
-                                                    posStatus === 'active'
-                                                        ? PosScreen
-                                                        : BalanceScreen
-                                                }
-                                            />
-                                        )}
+                                            !error && (
+                                                <Tab.Screen
+                                                    name={localeString(
+                                                        'views.Wallet.Wallet.channels'
+                                                    )}
+                                                    component={ChannelsScreen}
+                                                />
+                                            )}
                                     </>
                                 )}
                             </Tab.Navigator>
@@ -524,7 +529,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     flex: 1,
                                     justifyContent: 'center',
                                     alignItems: 'center',
-                                    top: 50
+                                    top: 10
                                 }}
                             >
                                 <WordLogo
@@ -550,7 +555,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                               'views.Wallet.Wallet.startingUp'
                                           )}
                                 </Text>
-                                <LoadingIndicator size={120} />
+                                <View style={{ marginTop: 40 }}>
+                                    <LoadingIndicator />
+                                </View>
                             </View>
                             {posStatus !== 'active' && (
                                 <View
