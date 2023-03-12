@@ -149,9 +149,14 @@ export default class ChannelView extends React.Component<
             time_locked_balance,
             closing_txid,
             pendingClose,
-            forceClose
+            forceClose,
+            pendingOpen
         } = channel;
         const privateChannel = channel.private;
+
+        const uneditableFees: boolean =
+            pendingOpen || pendingClose || forceClose || closeHeight;
+        // const bumpable: boolean = pendingOpen || pendingClose;
 
         const peerName =
             (nodes[remotePubkey] && nodes[remotePubkey].alias) ||
@@ -201,7 +206,7 @@ export default class ChannelView extends React.Component<
             >
                 <Header
                     leftComponent={<BackButton />}
-                    centerComponent={<EditFees />}
+                    centerComponent={uneditableFees ? null : <EditFees />}
                     rightComponent={<KeySend />}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
