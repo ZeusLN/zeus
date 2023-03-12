@@ -62,7 +62,6 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
             chanInfo[channelId] &&
             chanInfo[channelId].node1Pub === nodeId
         ) {
-            console.log(chanInfo[channelId].node1Policy);
             policy = chanInfo[channelId].node1Policy;
         }
         if (
