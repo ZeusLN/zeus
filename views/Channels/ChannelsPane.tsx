@@ -1,10 +1,5 @@
 import * as React from 'react';
-import {
-    FlatList,
-    View,
-    TouchableHighlight,
-    TouchableOpacity
-} from 'react-native';
+import { FlatList, View, TouchableHighlight } from 'react-native';
 
 import { inject, observer } from 'mobx-react';
 
@@ -167,19 +162,17 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
 
         return (
             <View style={{ flex: 1 }}>
-                <TouchableOpacity
-                    onPress={() => {
-                        if (BackendUtils.supportsPendingChannels())
-                            this.toggleChannelsType();
-                    }}
-                >
-                    <WalletHeader
-                        navigation={navigation}
-                        title={headerString}
-                        SettingsStore={SettingsStore}
-                        channels
-                    />
-                </TouchableOpacity>
+                <WalletHeader
+                    navigation={navigation}
+                    title={headerString}
+                    SettingsStore={SettingsStore}
+                    channels
+                    toggle={
+                        BackendUtils.supportsPendingChannels()
+                            ? this.toggleChannelsType
+                            : null
+                    }
+                />
                 <ChannelsHeader
                     totalInbound={totalInbound}
                     totalOutbound={totalOutbound}
