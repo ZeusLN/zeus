@@ -269,6 +269,8 @@
     "views.Channel.settledBalance": "Settled balance",
     "views.Channel.timeLockedBalance": "Time locked balance",
     "views.Channel.closed": "Closed",
+    "views.Channel.pendingClose": "Pending close",
+    "views.Channel.pendingOpen": "Pending open",
     "views.UTXOs.CoinControl.noUTXOs": "No UTXOs available",
     "views.EditFee.mainText": "Edit network fee",
     "views.EditFee.fastestFee": "Fastest fee",
