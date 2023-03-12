@@ -16,6 +16,7 @@ import { isClipboardValue } from '../utils/handleAnything';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
+import Add from '../assets/images/SVG/Add.svg';
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
 import Scan from '../assets/images/SVG/Scan.svg';
 import POS from '../assets/images/SVG/POS.svg';
@@ -48,20 +49,14 @@ const protectedNavigation = async (
 };
 
 const OpenChannelButton = ({ navigation }: { navigation: any }) => (
-    <Button
-        title=""
-        icon={{
-            name: 'add',
-            size: 25,
-            color: themeColor('text')
-        }}
-        buttonStyle={{
-            backgroundColor: 'transparent',
-            marginRight: -50,
-            marginTop: -10
-        }}
-        onPress={() => navigation.navigate('OpenChannel')}
-    />
+    <TouchableOpacity onPress={() => navigation.navigate('OpenChannel')}>
+        <Add
+            fill={themeColor('text')}
+            width="25"
+            height="25"
+            style={{ alignSelf: 'center' }}
+        />
+    </TouchableOpacity>
 );
 
 const TempleButton = ({ navigation }: { navigation: any }) => (
