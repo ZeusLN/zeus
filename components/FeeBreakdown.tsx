@@ -4,10 +4,6 @@ import { StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import ChannelsStore from '../stores/ChannelsStore';
 
-import NodeInfoStore from '../stores/NodeInfoStore';
-import FeeStore from '../stores/FeeStore';
-import SettingsStore from '../stores/SettingsStore';
-
 import DateTimeUtils from '../utils/DateTimeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -18,13 +14,9 @@ import LoadingIndicator from '../components/LoadingIndicator';
 
 import Amount from './Amount';
 import KeyValue from './KeyValue';
-import SetFeesForm from './SetFeesForm';
 
 interface FeeBreakdownProps {
     ChannelsStore: ChannelsStore;
-    NodeInfoStore: NodeInfoStore;
-    FeeStore: FeeStore;
-    SettingsStore: SettingsStore;
     channelId: string;
     channelPoint: string;
     peerDisplay?: string;
@@ -36,10 +28,9 @@ interface FeeBreakdownProps {
     commit_fee?: number;
     csv_delay?: number;
     privateChannel?: boolean;
-    showNewFeesForm?: boolean;
 }
 
-@inject('FeeStore', 'ChannelsStore', 'NodeInfoStore', 'SettingsStore')
+@inject('ChannelsStore')
 @observer
 export default class FeeBreakdown extends React.Component<
     FeeBreakdownProps,
@@ -52,21 +43,15 @@ export default class FeeBreakdown extends React.Component<
             peerDisplay,
             initiator,
             ChannelsStore,
-            FeeStore,
-            NodeInfoStore,
-            SettingsStore,
             isActive,
             total_satoshis_received,
             total_satoshis_sent,
             commit_weight,
             commit_fee,
             csv_delay,
-            privateChannel,
-            showNewFeesForm
+            privateChannel
         } = this.props;
         const { loading, chanInfo } = ChannelsStore;
-        const { nodeInfo } = NodeInfoStore;
-        const { nodeId } = nodeInfo;
 
         return (
             <React.Fragment>
@@ -137,42 +122,6 @@ export default class FeeBreakdown extends React.Component<
                             }%`}
                             sensitive
                         />
-                        {chanInfo[channelId].node1Pub === nodeId && (
-                            <SetFeesForm
-                                baseFee={`${
-                                    Number(
-                                        chanInfo[channelId].node1Policy
-                                            .fee_base_msat
-                                    ) / 1000
-                                }`}
-                                feeRate={`${
-                                    Number(
-                                        chanInfo[channelId].node1Policy
-                                            .fee_rate_milli_msat
-                                    ) / 10000
-                                }`}
-                                timeLockDelta={chanInfo[
-                                    channelId
-                                ].node1Policy.time_lock_delta.toString()}
-                                minHtlc={`${
-                                    Number(
-                                        chanInfo[channelId].node1Policy.min_htlc
-                                    ) / 1000
-                                }`}
-                                maxHtlc={`${
-                                    Number(
-                                        chanInfo[channelId].node1Policy
-                                            .max_htlc_msat
-                                    ) / 1000
-                                }`}
-                                channelPoint={channelPoint}
-                                channelId={channelId}
-                                FeeStore={FeeStore}
-                                ChannelsStore={ChannelsStore}
-                                SettingsStore={SettingsStore}
-                                showNewFeesForm={showNewFeesForm}
-                            />
-                        )}
                     </React.Fragment>
                 ) : (
                     <React.Fragment>
@@ -430,44 +379,6 @@ export default class FeeBreakdown extends React.Component<
                                     value={channelPoint}
                                     color={themeColor('chain')}
                                     sensitive
-                                />
-                            )}
-
-                            {chanInfo[channelId].node2Pub === nodeId && (
-                                <SetFeesForm
-                                    baseFee={`${
-                                        Number(
-                                            chanInfo[channelId].node2Policy
-                                                .fee_base_msat
-                                        ) / 1000
-                                    }`}
-                                    feeRate={`${
-                                        Number(
-                                            chanInfo[channelId].node2Policy
-                                                .fee_rate_milli_msat
-                                        ) / 10000
-                                    }`}
-                                    timeLockDelta={chanInfo[
-                                        channelId
-                                    ].node2Policy.time_lock_delta.toString()}
-                                    minHtlc={`${
-                                        Number(
-                                            chanInfo[channelId].node2Policy
-                                                .min_htlc
-                                        ) / 1000
-                                    }`}
-                                    maxHtlc={`${
-                                        Number(
-                                            chanInfo[channelId].node2Policy
-                                                .max_htlc_msat
-                                        ) / 1000
-                                    }`}
-                                    channelPoint={channelPoint}
-                                    channelId={channelId}
-                                    FeeStore={FeeStore}
-                                    ChannelsStore={ChannelsStore}
-                                    SettingsStore={SettingsStore}
-                                    showNewFeesForm={showNewFeesForm}
                                 />
                             )}
                         </React.Fragment>
