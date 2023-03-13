@@ -3,10 +3,12 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TouchableOpacity,
     TouchableWithoutFeedback,
+    TouchableOpacity,
     View
 } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
+
 import { Divider, Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Channel from '../../models/Channel';
@@ -16,7 +18,6 @@ import Button from '../../components/Button';
 import KeyValue from '../../components/KeyValue';
 import Amount from '../../components/Amount';
 import FeeBreakdown from '../../components/FeeBreakdown';
-import SetFeesForm from '../../components/SetFeesForm';
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
 
@@ -26,15 +27,14 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import ChannelsStore from '../../stores/ChannelsStore';
-import FeeStore from '../../stores/FeeStore';
-import UnitsStore from '../../stores/UnitsStore';
 import SettingsStore from '../../stores/SettingsStore';
+
+import Share from '../../assets/images/SVG/Share.svg';
+import Edit from '../../assets/images/SVG/Edit.svg';
 
 interface ChannelProps {
     navigation: any;
     ChannelsStore: ChannelsStore;
-    FeeStore: FeeStore;
-    UnitsStore: UnitsStore;
     SettingsStore: SettingsStore;
 }
 
@@ -45,13 +45,7 @@ interface ChannelState {
     channel: Channel;
 }
 
-@inject(
-    'ChannelsStore',
-    'FeeStore',
-    'NodeInfoStore',
-    'UnitsStore',
-    'SettingsStore'
-)
+@inject('ChannelsStore', 'NodeInfoStore', 'SettingsStore')
 @observer
 export default class ChannelView extends React.Component<
     ChannelProps,
@@ -116,17 +110,9 @@ export default class ChannelView extends React.Component<
     };
 
     render() {
-        const {
-            navigation,
-            ChannelsStore,
-            FeeStore,
-            UnitsStore,
-            SettingsStore
-        } = this.props;
+        const { navigation, ChannelsStore, SettingsStore } = this.props;
         const { channel, confirmCloseChannel, satPerByte, forceCloseChannel } =
             this.state;
-        const { changeUnits, getAmount, units } = UnitsStore;
-        const { channelFees } = FeeStore;
         const { nodes } = ChannelsStore;
         const { settings, implementation } = SettingsStore;
         const { privacy } = settings;
@@ -139,7 +125,6 @@ export default class ChannelView extends React.Component<
             localBalance,
             commit_fee,
             csv_delay,
-            fee_per_kw,
             total_satoshis_received,
             isActive,
             remoteBalance,
@@ -151,6 +136,8 @@ export default class ChannelView extends React.Component<
             channelId,
             initiator,
             alias_scids,
+            local_chan_reserve_sat,
+            remote_chan_reserve_sat,
             // closed
             closeHeight,
             closeType,
@@ -173,25 +160,6 @@ export default class ChannelView extends React.Component<
 
         const peerDisplay = PrivacyUtils.sensitiveValue(peerName, 8);
 
-        const channelFee = channelFees[channel_point];
-
-        const channelBalanceLocal = PrivacyUtils.sensitiveValue(
-            getAmount(localBalance || 0),
-            8,
-            true
-        );
-        const channelBalanceRemote = PrivacyUtils.sensitiveValue(
-            getAmount(remoteBalance || 0),
-            8,
-            true
-        );
-
-        const unsettledBalance = PrivacyUtils.sensitiveValue(
-            getAmount(unsettled_balance),
-            8,
-            true
-        );
-
         const BackButton = () => (
             <Icon
                 name="arrow-back"
@@ -201,27 +169,45 @@ export default class ChannelView extends React.Component<
             />
         );
 
+        const EditFees = () => (
+            <View style={{ top: -3 }}>
+                <Edit
+                    onPress={() => navigation.navigate('SetFees', { channel })}
+                />
+            </View>
+        );
+
+        const KeySend = () => (
+            <Share
+                onPress={() =>
+                    navigation.navigate('Send', {
+                        destination: remotePubkey,
+                        transactionType: 'Keysend',
+                        isValid: true
+                    })
+                }
+            />
+        );
+        const handleCopyText = () => {
+            Clipboard.setString(remotePubkey);
+        };
+
         return (
             <ScrollView
                 style={{
                     flex: 1,
-                    backgroundColor: themeColor('background'),
-                    color: themeColor('text')
+                    backgroundColor: themeColor('background')
                 }}
             >
                 <Header
                     leftComponent={<BackButton />}
-                    centerComponent={{
-                        text: localeString('views.Channel.title'),
-                        style: {
-                            color: themeColor('text'),
-                            fontFamily: 'Lato-Regular'
-                        }
-                    }}
+                    centerComponent={<EditFees />}
+                    rightComponent={<KeySend />}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
                         borderBottomWidth: 0
                     }}
+                    placement="right"
                 />
                 <View style={styles.content}>
                     <View style={styles.center}>
@@ -235,56 +221,29 @@ export default class ChannelView extends React.Component<
                             {peerDisplay}
                         </Text>
                         {remotePubkey && (
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    fontFamily: 'Lato-Regular',
-                                    ...styles.pubkey
-                                }}
-                            >
-                                {PrivacyUtils.sensitiveValue(remotePubkey)}
-                            </Text>
+                            <TouchableOpacity onPress={handleCopyText}>
+                                <Text
+                                    style={{
+                                        color: '#FFD93F',
+                                        fontFamily: 'Lato-Regular',
+                                        ...styles.pubkey
+                                    }}
+                                >
+                                    {PrivacyUtils.sensitiveValue(
+                                        remotePubkey
+                                    ).slice(0, 6) +
+                                        '...' +
+                                        PrivacyUtils.sensitiveValue(
+                                            remotePubkey
+                                        ).slice(-6)}
+                                </Text>
+                            </TouchableOpacity>
                         )}
                     </View>
-
                     <BalanceSlider
                         localBalance={lurkerMode ? 50 : localBalance}
                         remoteBalance={lurkerMode ? 50 : remoteBalance}
                     />
-
-                    <View style={styles.balances}>
-                        <TouchableOpacity onPress={() => changeUnits()}>
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    fontFamily: 'Lato-Regular',
-                                    ...styles.balance
-                                }}
-                            >{`${localeString('views.Channel.localBalance')}: ${
-                                units && channelBalanceLocal
-                            }`}</Text>
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    fontFamily: 'Lato-Regular',
-                                    ...styles.balance
-                                }}
-                            >{`${localeString(
-                                'views.Channel.remoteBalance'
-                            )}: ${units && channelBalanceRemote}`}</Text>
-                            {unsettled_balance && (
-                                <Text
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'Lato-Regular',
-                                        ...styles.balance
-                                    }}
-                                >{`${localeString(
-                                    'views.Channel.unsettledBalance'
-                                )}: ${units && unsettledBalance}`}</Text>
-                            )}
-                        </TouchableOpacity>
-                    </View>
 
                     <KeyValue
                         keyValue={localeString('views.Channel.status')}
@@ -302,142 +261,10 @@ export default class ChannelView extends React.Component<
                         color={isActive ? 'green' : 'red'}
                     />
 
-                    {!closeHeight && (
-                        <KeyValue
-                            keyValue={localeString('views.Channel.private')}
-                            value={privateChannel ? 'True' : 'False'}
-                            color={privateChannel ? 'green' : '#808000'}
-                        />
-                    )}
-
-                    {!!alias_scids && alias_scids.length > 0 && (
-                        <KeyValue
-                            keyValue={
-                                alias_scids.length > 1
-                                    ? localeString('views.Channel.aliasScids')
-                                    : localeString('views.Channel.aliasScid')
-                            }
-                            value={PrivacyUtils.sensitiveValue(
-                                alias_scids.join(', ')
-                            )}
-                        />
-                    )}
-
-                    {channel_point && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Channel.channelPoint'
-                            )}
-                            value={channel_point}
-                            sensitive
-                        />
-                    )}
-
                     {chain_hash && (
                         <KeyValue
                             keyValue={localeString('views.Channel.chainHash')}
                             value={chain_hash}
-                            sensitive
-                        />
-                    )}
-
-                    {total_satoshis_received && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Channel.totalReceived'
-                            )}
-                            value={
-                                <Amount
-                                    sats={total_satoshis_received}
-                                    sensitive
-                                    toggleable
-                                />
-                            }
-                        />
-                    )}
-
-                    {total_satoshis_sent && (
-                        <KeyValue
-                            keyValue={localeString('views.Channel.totalSent')}
-                            value={
-                                <Amount
-                                    sats={total_satoshis_sent}
-                                    sensitive
-                                    toggleable
-                                />
-                            }
-                        />
-                    )}
-
-                    {capacity && (
-                        <KeyValue
-                            keyValue={localeString('views.Channel.capacity')}
-                            value={
-                                <Amount sats={capacity} sensitive toggleable />
-                            }
-                        />
-                    )}
-
-                    {settled_balance && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Channel.settledBalance'
-                            )}
-                            value={
-                                <Amount
-                                    sats={settled_balance}
-                                    sensitive
-                                    toggleable
-                                />
-                            }
-                            sensitive
-                        />
-                    )}
-
-                    {time_locked_balance && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Channel.timeLockedBalance'
-                            )}
-                            value={
-                                <Amount
-                                    sats={time_locked_balance}
-                                    sensitive
-                                    toggleable
-                                />
-                            }
-                            sensitive
-                        />
-                    )}
-
-                    {commit_weight && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Channel.commitWeight'
-                            )}
-                            value={commit_weight}
-                        />
-                    )}
-
-                    {commit_fee && (
-                        <KeyValue
-                            keyValue={localeString('views.Channel.commitFee')}
-                            value={commit_fee}
-                            sensitive
-                        />
-                    )}
-
-                    {csv_delay && (
-                        <KeyValue
-                            keyValue={localeString('views.Channel.csvDelay')}
-                            value={csv_delay}
-                        />
-                    )}
-
-                    {fee_per_kw && (
-                        <KeyValue
-                            keyValue={localeString('views.Channel.feePerKw')}
-                            value={fee_per_kw}
                             sensitive
                         />
                     )}
@@ -496,52 +323,139 @@ export default class ChannelView extends React.Component<
                         />
                     )}
 
+                    <KeyValue
+                        keyValue={localeString('views.Channel.channelBalance')}
+                    />
+
+                    {settled_balance && (
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Channel.settledBalance'
+                            )}
+                            value={
+                                <Amount
+                                    sats={settled_balance}
+                                    sensitive
+                                    toggleable
+                                />
+                            }
+                            sensitive
+                        />
+                    )}
+
+                    {time_locked_balance && (
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Channel.timeLockedBalance'
+                            )}
+                            value={
+                                <Amount
+                                    sats={time_locked_balance}
+                                    sensitive
+                                    toggleable
+                                />
+                            }
+                            sensitive
+                        />
+                    )}
+
+                    <KeyValue
+                        keyValue={localeString('views.Channel.outbound')}
+                        value={
+                            <Amount sats={localBalance} sensitive toggleable />
+                        }
+                    />
+
+                    <KeyValue
+                        keyValue={localeString('views.Channel.inbound')}
+                        value={
+                            <Amount sats={remoteBalance} sensitive toggleable />
+                        }
+                    />
+
+                    {unsettled_balance && (
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Channel.unsettledBalance'
+                            )}
+                            value={
+                                <Amount
+                                    sats={unsettled_balance}
+                                    sensitive
+                                    toggleable
+                                />
+                            }
+                        />
+                    )}
+
+                    {!!alias_scids && alias_scids.length > 0 && (
+                        <KeyValue
+                            keyValue={
+                                alias_scids.length > 1
+                                    ? localeString('views.Channel.aliasScids')
+                                    : localeString('views.Channel.aliasScid')
+                            }
+                            value={PrivacyUtils.sensitiveValue(
+                                alias_scids.join(', ')
+                            )}
+                        />
+                    )}
+
+                    {!!local_chan_reserve_sat && (
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Channel.localReserve'
+                            )}
+                            value={
+                                <Amount
+                                    sats={local_chan_reserve_sat}
+                                    sensitive
+                                    toggleable
+                                />
+                            }
+                        />
+                    )}
+
+                    {!!remote_chan_reserve_sat && (
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Channel.remoteReserve'
+                            )}
+                            value={
+                                <Amount
+                                    sats={remote_chan_reserve_sat}
+                                    sensitive
+                                    toggleable
+                                />
+                            }
+                        />
+                    )}
+
+                    {capacity && (
+                        <KeyValue
+                            keyValue={localeString('views.Channel.capacity')}
+                            value={
+                                <Amount sats={capacity} sensitive toggleable />
+                            }
+                        />
+                    )}
+
                     <Divider orientation="horizontal" style={{ margin: 20 }} />
 
                     {BackendUtils.isLNDBased() && (
                         <FeeBreakdown
+                            isActive={isActive}
                             channelId={channelId}
                             peerDisplay={peerDisplay}
                             channelPoint={channel_point}
                             initiator={initiator}
+                            total_satoshis_received={total_satoshis_received}
+                            total_satoshis_sent={total_satoshis_sent}
+                            commit_fee={commit_fee}
+                            commit_weight={commit_weight}
+                            csv_delay={csv_delay}
+                            privateChannel={privateChannel}
                         />
-                    )}
-
-                    {!BackendUtils.isLNDBased() && (
-                        <SetFeesForm
-                            baseFee={
-                                channelFee &&
-                                channelFee.base_fee_msat &&
-                                `${Number(channelFee.base_fee_msat) / 1000}`
-                            }
-                            feeRate={
-                                channelFee &&
-                                channelFee.fee_rate &&
-                                `${Number(channelFee.fee_rate) / 10000}`
-                            }
-                            channelPoint={channel_point}
-                            channelId={channelId}
-                            peerDisplay={peerDisplay}
-                            FeeStore={FeeStore}
-                        />
-                    )}
-
-                    {BackendUtils.isLNDBased() && (
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString('views.Channel.keysend')}
-                                icon={{
-                                    name: 'send'
-                                }}
-                                onPress={() =>
-                                    navigation.navigate('Send', {
-                                        destination: remotePubkey,
-                                        transactionType: 'Keysend',
-                                        isValid: true
-                                    })
-                                }
-                            />
-                        </View>
                     )}
 
                     {!closeHeight && !closing_txid && (
@@ -554,18 +468,14 @@ export default class ChannelView extends React.Component<
                                           )
                                         : localeString('views.Channel.close')
                                 }
-                                icon={{
-                                    name: confirmCloseChannel
-                                        ? 'cancel'
-                                        : 'delete'
-                                }}
                                 onPress={() =>
                                     this.setState({
                                         confirmCloseChannel:
                                             !confirmCloseChannel
                                     })
                                 }
-                                secondary
+                                quaternary
+                                warning
                             />
                         </View>
                     )}
@@ -654,9 +564,9 @@ export default class ChannelView extends React.Component<
                                     title={localeString(
                                         'views.Channel.confirmClose'
                                     )}
-                                    icon={{
-                                        name: 'delete-forever'
-                                    }}
+                                    // icon={{
+                                    //     name: 'delete-forever'
+                                    // }}
                                     onPress={() =>
                                         this.closeChannel(
                                             channel_point,
@@ -665,7 +575,8 @@ export default class ChannelView extends React.Component<
                                             forceCloseChannel
                                         )
                                     }
-                                    tertiary
+                                    quaternary
+                                    warning
                                 />
                             </View>
                         </React.Fragment>
@@ -693,21 +604,17 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     alias: {
-        fontSize: 20,
-        paddingTop: 10,
+        fontSize: 28,
+        paddingTop: 14,
         paddingBottom: 10
     },
     pubkey: {
-        paddingTop: 10,
-        paddingBottom: 30
+        paddingBottom: 30,
+        textAlign: 'center'
     },
     balance: {
         fontSize: 15,
         fontWeight: 'bold'
-    },
-    balances: {
-        paddingBottom: 10,
-        alignItems: 'center'
     },
     button: {
         paddingTop: 15,

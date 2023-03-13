@@ -1,5 +1,5 @@
 import React from 'react';
-import { Badge, Button, Header } from 'react-native-elements';
+import { Badge, Header } from 'react-native-elements';
 import { Image, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -8,6 +8,7 @@ import SettingsStore from '../stores/SettingsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import PosStore from '../stores/PosStore';
 
+import Button from '../components/Button';
 import LoadingIndicator from '../components/LoadingIndicator';
 import NodeIdenticon from '../components/NodeIdenticon';
 
@@ -15,6 +16,7 @@ import { isClipboardValue } from '../utils/handleAnything';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
+import Add from '../assets/images/SVG/Add.svg';
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
 import Scan from '../assets/images/SVG/Scan.svg';
 import POS from '../assets/images/SVG/POS.svg';
@@ -47,20 +49,14 @@ const protectedNavigation = async (
 };
 
 const OpenChannelButton = ({ navigation }: { navigation: any }) => (
-    <Button
-        title=""
-        icon={{
-            name: 'add',
-            size: 25,
-            color: themeColor('text')
-        }}
-        buttonStyle={{
-            backgroundColor: 'transparent',
-            marginRight: -10,
-            marginTop: -10
-        }}
-        onPress={() => navigation.navigate('OpenChannel')}
-    />
+    <TouchableOpacity onPress={() => navigation.navigate('OpenChannel')}>
+        <Add
+            fill={themeColor('text')}
+            width="25"
+            height="25"
+            style={{ alignSelf: 'center' }}
+        />
+    </TouchableOpacity>
 );
 
 const TempleButton = ({ navigation }: { navigation: any }) => (
@@ -123,6 +119,7 @@ interface WalletHeaderProps {
     loading: boolean;
     title: string;
     channels: boolean;
+    toggle?: () => void;
 }
 
 interface WalletHeaderState {
@@ -161,6 +158,7 @@ export default class WalletHeader extends React.Component<
             loading,
             title,
             channels,
+            toggle,
             SettingsStore,
             NodeInfoStore,
             PosStore
@@ -225,7 +223,18 @@ export default class WalletHeader extends React.Component<
                 centerComponent={
                     title ? (
                         <View style={{ top: 5 }}>
-                            <Body bold>{title}</Body>
+                            {toggle ? (
+                                <View style={{ top: -9, width: '100%' }}>
+                                    <Button
+                                        onPress={() => toggle()}
+                                        title={title}
+                                        noUppercase
+                                        buttonStyle={{ alignSelf: 'center' }}
+                                    />
+                                </View>
+                            ) : (
+                                <Body bold>{title}</Body>
+                            )}
                         </View>
                     ) : settings.display && settings.display.displayNickname ? (
                         <View style={{ top: 5 }}>
