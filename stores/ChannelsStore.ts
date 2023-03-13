@@ -233,9 +233,7 @@ export default class ChannelsStore {
                 .catch(() => {
                     this.getChannelsError();
                 });
-        }
 
-        if (BackendUtils.supportsPendingChannels()) {
             BackendUtils.getClosedChannels()
                 .then((data: any) => {
                     const closedChannels = data.channels.map(
