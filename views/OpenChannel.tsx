@@ -431,7 +431,7 @@ export default class OpenChannel extends React.Component<
                                 color: themeColor('secondaryText')
                             }}
                         >
-                            {localeString('views.OpenChannel.satsPerByte')}
+                            {localeString('views.OpenChannel.satsPerVbyte')}
                         </Text>
                         {enableMempoolRates ? (
                             <TouchableWithoutFeedback

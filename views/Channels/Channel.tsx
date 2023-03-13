@@ -30,7 +30,7 @@ import ChannelsStore from '../../stores/ChannelsStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import Edit from '../../assets/images/SVG/Edit.svg';
-// import Rocket from '../../assets/images/SVG/Rocket.svg';
+import Rocket from '../../assets/images/SVG/Rocket.svg';
 import Share from '../../assets/images/SVG/Share.svg';
 
 interface ChannelProps {
@@ -163,7 +163,7 @@ export default class ChannelView extends React.Component<
             closeHeight ||
             closing
         );
-        // const bumpable: boolean = pendingOpen || pendingClose || closing;
+        const bumpable: boolean = pendingOpen || pendingClose || closing;
 
         const peerName =
             (nodes[remotePubkey] && nodes[remotePubkey].alias) ||
@@ -181,13 +181,17 @@ export default class ChannelView extends React.Component<
             />
         );
 
-        // const BumpFee = () => (
-        //     <View style={{ top: -3 }}>
-        //         <Rocket
-        //             onPress={() => navigation.navigate('SetFees', { channel })}
-        //         />
-        //     </View>
-        // );
+        const BumpFee = (params: any) => (
+            <View style={{ top: -3 }}>
+                <Rocket
+                    onPress={() =>
+                        navigation.navigate('BumpFee', {
+                            outpoint: params.outpoint
+                        })
+                    }
+                />
+            </View>
+        );
 
         const EditFees = () => (
             <View style={{ top: -3 }}>
@@ -213,7 +217,7 @@ export default class ChannelView extends React.Component<
         };
 
         const centerComponent = () => {
-            // if (bumpable) return <BumpFee />;
+            if (bumpable) return <BumpFee outpoint={channel.channel_point} />;
             if (editableFees) return <EditFees />;
             return null;
         };

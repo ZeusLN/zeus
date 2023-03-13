@@ -29,6 +29,10 @@ export default class FeeStore {
     @observable public lastOffsetIndex: number;
     @observable public forwardingHistoryError = false;
 
+    @observable public bumpFeeSuccess = false;
+    @observable public bumpFeeError = false;
+    @observable public bumpFeeErrorMsg = '';
+
     getOnchainFeesToken: any;
 
     settingsStore: SettingsStore;
@@ -192,6 +196,31 @@ export default class FeeStore {
             })
             .catch(() => {
                 this.forwardingError();
+            });
+    };
+
+    @action
+    public bumpFee = (params?: any) => {
+        this.loading = true;
+        this.bumpFeeSuccess = false;
+        this.bumpFeeError = false;
+        const [txid_str, output_index] = params.outpoint.split(':');
+        BackendUtils.bumpFee({
+            ...params,
+            outpoint: {
+                // txid_str,
+                txid_bytes: Base64Utils.btoa(txid_str),
+                output_index: Number(output_index) || 0
+            }
+        })
+            .then(() => {
+                this.bumpFeeSuccess = true;
+                this.loading = false;
+            })
+            .catch((err: Error) => {
+                this.bumpFeeError = true;
+                this.bumpFeeErrorMsg = err.toString();
+                this.loading = false;
             });
     };
 }
