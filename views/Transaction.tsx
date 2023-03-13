@@ -14,9 +14,10 @@ import { inject, observer } from 'mobx-react';
 import Amount from '../components/Amount';
 import KeyValue from '../components/KeyValue';
 
-import UrlUtils from '../utils/UrlUtils';
-import Transaction from '../models/Transaction';
+import BackendUtils from '../utils/BackendUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
+import Transaction from '../models/Transaction';
+import UrlUtils from '../utils/UrlUtils';
 
 import NodeInfoStore from '../stores/NodeInfoStore';
 import { localeString } from '../utils/LocaleUtils';
@@ -118,7 +119,9 @@ export default class TransactionView extends React.Component<TransactionProps> {
         );
 
         const rightComponent = () => {
-            if (!isConfirmed) return <BumpFee outpoint={getOutpoint} />;
+            if (!isConfirmed && BackendUtils.supportsBumpFee()) {
+                return <BumpFee outpoint={getOutpoint} />;
+            }
             return null;
         };
 
