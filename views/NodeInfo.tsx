@@ -67,6 +67,14 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
                     sensitive
                 />
 
+                {nodeInfo.nodeId && (
+                    <KeyValue
+                        keyValue={localeString('views.NodeInfo.pubkey')}
+                        value={nodeInfo.nodeId}
+                        sensitive
+                    />
+                )}
+
                 {nodeInfo.version && (
                     <KeyValue
                         keyValue={localeString(

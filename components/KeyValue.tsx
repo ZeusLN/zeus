@@ -93,8 +93,8 @@ export default function KeyValue({
 
 const styles = StyleSheet.create({
     key: {
-        paddingRight: 40,
-        maxWidth: '52%'
+        paddingRight: 35,
+        maxWidth: '50%'
     },
     value: {
         flex: 1,

@@ -308,6 +308,7 @@
     "views.NodeInfo.forwarding": "Forwarding",
     "views.NodeInfo.copyUri": "Copy URI",
     "views.NodeInfo.alias": "Alias",
+    "views.NodeInfo.pubkey": "Pubkey",
     "views.NodeInfo.implementationVersion": "Implementation Version",
     "views.NodeInfo.zeusVersion": "Zeus Version",
     "views.NodeInfo.synced": "Synced to Chain",
