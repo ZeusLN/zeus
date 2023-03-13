@@ -11,16 +11,18 @@ import {
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Amount from './../components/Amount';
-import KeyValue from './../components/KeyValue';
+import Amount from '../components/Amount';
+import KeyValue from '../components/KeyValue';
 
-import UrlUtils from './../utils/UrlUtils';
-import Transaction from './../models/Transaction';
-import PrivacyUtils from './../utils/PrivacyUtils';
+import UrlUtils from '../utils/UrlUtils';
+import Transaction from '../models/Transaction';
+import PrivacyUtils from '../utils/PrivacyUtils';
 
-import NodeInfoStore from './../stores/NodeInfoStore';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import NodeInfoStore from '../stores/NodeInfoStore';
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
+
+import Rocket from '../assets/images/SVG/Rocket.svg';
 
 interface TransactionProps {
     navigation: any;
@@ -40,13 +42,15 @@ export default class TransactionView extends React.Component<TransactionProps> {
 
         const {
             tx,
+            isConfirmed,
             block_hash,
             getBlockHeight,
             num_confirmations,
             time_stamp,
             destAddresses,
             total_fees,
-            status
+            status,
+            getOutpoint
         } = transaction;
         const amount = transaction.getAmount;
         const date = time_stamp && new Date(Number(time_stamp) * 1000);
@@ -101,6 +105,23 @@ export default class TransactionView extends React.Component<TransactionProps> {
             />
         );
 
+        const BumpFee = (params: any) => (
+            <View style={{ top: -3 }}>
+                <Rocket
+                    onPress={() =>
+                        navigation.navigate('BumpFee', {
+                            outpoint: params.outpoint
+                        })
+                    }
+                />
+            </View>
+        );
+
+        const rightComponent = () => {
+            if (!isConfirmed) return <BumpFee outpoint={getOutpoint} />;
+            return null;
+        };
+
         return (
             <ScrollView
                 style={{
@@ -117,6 +138,7 @@ export default class TransactionView extends React.Component<TransactionProps> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
+                    rightComponent={rightComponent}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
                         borderBottomWidth: 0
