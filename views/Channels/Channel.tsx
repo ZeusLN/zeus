@@ -217,8 +217,12 @@ export default class ChannelView extends React.Component<
         };
 
         const centerComponent = () => {
-            if (bumpable) return <BumpFee outpoint={channel.channel_point} />;
-            if (editableFees) return <EditFees />;
+            if (BackendUtils.supportsBumpFee() && bumpable) {
+                return <BumpFee outpoint={channel.channel_point} />;
+            }
+            if (editableFees) {
+                return <EditFees />;
+            }
             return null;
         };
 

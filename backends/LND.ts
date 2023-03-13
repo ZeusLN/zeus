@@ -376,5 +376,6 @@ export default class LND {
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => true;
     supportsTaproot = () => this.supports('v0.15.0');
+    supportsBumpFee = () => true;
     isLNDBased = () => true;
 }
