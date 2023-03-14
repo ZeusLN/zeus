@@ -208,8 +208,8 @@ export default class FeeStore {
         BackendUtils.bumpFee({
             ...params,
             outpoint: {
-                // txid_str,
-                txid_bytes: Base64Utils.btoa(txid_str),
+                txid_str,
+                // txid_bytes: Base64Utils.btoa(txid_str),
                 output_index: Number(output_index) || 0
             }
         })
