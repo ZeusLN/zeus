@@ -174,7 +174,10 @@ export const CURRENCY_KEYS = [
     { key: '🇻🇪 Venezuelan Bolivar (VES)', value: 'VES' },
     { key: '🇹🇿 Tanzanian Shilling (TZS)', value: 'TZS' },
     { key: '🇶🇦 Qatari Riyal (QAR)', value: 'QAR' },
-    { key: '🇹🇳 Tunisian Dinar (TND)', value: 'TND' }
+    { key: '🇹🇳 Tunisian Dinar (TND)', value: 'TND' },
+    { key: '🇳🇴 Norwegian Krone (NOK)', value: 'NOK' },
+    { key: '🇦🇪 United Arab Emirates Dirham (AED)', value: 'AED' },
+    { key: '🇹🇹 Trinidad & Tobago Dollar (TTD)', value: 'TTD' }
 ];
 
 export const THEME_KEYS = [
