@@ -171,7 +171,8 @@ export const CURRENCY_KEYS = [
     { key: '🇯🇲 Jamaican Dollar (JMD)', value: 'JMD' },
     { key: '🇨🇴 Colombian Peso (COP)', value: 'COP' },
     { key: '🇲🇽 Mexican Peso (MXN)', value: 'MXN' },
-    { key: '🇻🇪 Venezuelan Bolivar (VES)', value: 'VES' }
+    { key: '🇻🇪 Venezuelan Bolivar (VES)', value: 'VES' },
+    { key: '🇹🇿 Tanzanian Shilling (TZS)', value: 'TZS' }
 ];
 
 export const THEME_KEYS = [
