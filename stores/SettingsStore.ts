@@ -149,7 +149,7 @@ export const CURRENCY_KEYS = [
     { key: '🇬🇧 Great British Pound (GBP)', value: 'GBP' },
     { key: '🇩🇰 Danish Krone (DKK)', value: 'DKK' },
     { key: '🇸🇪 Swedish Krona (SEK)', value: 'SEK' },
-    // { key: '🇮🇸 Icelandic Krona (ISK)', value: 'ISK' },
+    { key: '🇮🇸 Icelandic Krona (ISK)', value: 'ISK' },
     { key: '🇨🇭 Swiss Franc (CHF)', value: 'CHF' },
     { key: '🇧🇷 Brazilian Real (BRL)', value: 'BRL' },
     { key: '🇪🇺 Eurozone Euro (EUR)', value: 'EUR' },
@@ -164,7 +164,13 @@ export const CURRENCY_KEYS = [
     { key: '🇹🇷 Turkish Lira (TRY)', value: 'TRY' },
     { key: '🇳🇬 Nigerian Naira (NGN)', value: 'NGN' },
     { key: '🇦🇷 Argentine Peso (ARS)', value: 'ARS' },
-    { key: '🇮🇱 Israeli New Shekel (ILS)', value: 'ILS' }
+    { key: '🇮🇱 Israeli New Shekel (ILS)', value: 'ILS' },
+    { key: '🇱🇧 Lebanese Pound (LBP)', value: 'LBP' },
+    { key: '🇲🇾 Malaysian Ringgit (MYR)', value: 'MYR' },
+    { key: '🇺🇦 Ukrainian Hryvnia (UAH)', value: 'UAH' },
+    { key: '🇯🇲 Jamaican Dollar (JMD)', value: 'JMD' },
+    { key: '🇨🇴 Colombian Peso (COP)', value: 'COP' },
+    { key: '🇲🇽 Mexican Peso (MXN)', value: 'MXN' }
 ];
 
 export const THEME_KEYS = [
