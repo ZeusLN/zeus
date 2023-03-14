@@ -12,6 +12,15 @@ interface OutputDetail {
     pk_script: string;
 }
 
+interface PreviousOutpoint {
+    raw_tx_hex: string;
+    is_our_output: boolean;
+    outpoint: string;
+    timestamp: string;
+    total_fees: string;
+    tx_hash: string;
+}
+
 export default class Transaction extends BaseModel {
     public amount: number;
     public block_hash: string;
@@ -22,6 +31,7 @@ export default class Transaction extends BaseModel {
     public tx_hash: string;
     public total_fees: string;
     public output_details: Array<OutputDetail>;
+    public previous_outpoints: Array<PreviousOutpoint>;
     // c-lightning
     public value: number | string;
     public blockheight: number;
@@ -73,11 +83,12 @@ export default class Transaction extends BaseModel {
         return this.dest_addresses || [this.address];
     }
 
-    @computed public getOutpoint(): string | null {
+    @computed public get getOutpoint(): string {
+        let outpoint = '';
         this.output_details.map((output: OutputDetail) => {
             if (output.is_our_address)
-                return `${this.tx}:${output.output_index}`;
+                outpoint = `${this.tx}:${output.output_index}`;
         });
-        return null;
+        return outpoint;
     }
 }

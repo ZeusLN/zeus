@@ -163,7 +163,7 @@ export default class ChannelView extends React.Component<
             closeHeight ||
             closing
         );
-        const bumpable: boolean = pendingOpen || pendingClose || closing;
+        const bumpable: boolean = pendingOpen;
 
         const peerName =
             (nodes[remotePubkey] && nodes[remotePubkey].alias) ||
@@ -218,7 +218,8 @@ export default class ChannelView extends React.Component<
 
         const centerComponent = () => {
             if (BackendUtils.supportsBumpFee() && bumpable) {
-                return <BumpFee outpoint={channel.channel_point} />;
+                const outpoint = channel.txId;
+                return <BumpFee outpoint={outpoint} />;
             }
             if (editableFees) {
                 return <EditFees />;

@@ -77,4 +77,9 @@ export default class Channel extends BaseModel {
     public get remotePubkey(): string {
         return this.remote_pubkey || this.remote_node_pub;
     }
+
+    @computed
+    public get txId(): string {
+        return this.channel_point.split(':')[0];
+    }
 }
