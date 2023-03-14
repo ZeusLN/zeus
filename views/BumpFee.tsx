@@ -66,7 +66,7 @@ export default class BumpFee extends React.PureComponent<
             this.state;
 
         const {
-            bumpFee,
+            bumpFeeOpeningChannel,
             bumpFeeSuccess,
             bumpFeeError,
             bumpFeeErrorMsg,
@@ -318,7 +318,7 @@ export default class BumpFee extends React.PureComponent<
                                     : localeString('views.BumpFee.title')
                             }
                             onPress={() =>
-                                bumpFee(
+                                bumpFeeOpeningChannel(
                                     target_type === 0
                                         ? {
                                               outpoint,

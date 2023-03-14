@@ -485,7 +485,7 @@ export default class ChannelView extends React.Component<
                                 title={localeString('views.BumpFee.titleAlt')}
                                 onPress={() =>
                                     navigation.navigate('BumpFee', {
-                                        outpoint: channel.txId,
+                                        outpoint: channel.channel_point,
                                         channel: true
                                     })
                                 }
