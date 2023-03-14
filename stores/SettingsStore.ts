@@ -172,7 +172,9 @@ export const CURRENCY_KEYS = [
     { key: '🇨🇴 Colombian Peso (COP)', value: 'COP' },
     { key: '🇲🇽 Mexican Peso (MXN)', value: 'MXN' },
     { key: '🇻🇪 Venezuelan Bolivar (VES)', value: 'VES' },
-    { key: '🇹🇿 Tanzanian Shilling (TZS)', value: 'TZS' }
+    { key: '🇹🇿 Tanzanian Shilling (TZS)', value: 'TZS' },
+    { key: '🇶🇦 Qatari Riyal (QAR)', value: 'QAR' },
+    { key: '🇹🇳 Tunisian Dinar (TND)', value: 'TND' }
 ];
 
 export const THEME_KEYS = [

@@ -144,6 +144,12 @@ export default class FiatStore {
                 separatorSwap: false
             },
             THB: { symbol: '฿', space: true, rtl: true, separatorSwap: false },
+            TND: {
+                symbol: 'د.ت',
+                space: false,
+                rtl: true,
+                separatorSwap: false
+            },
             TRY: { symbol: '₺', space: true, rtl: true, separatorSwap: false },
             TWD: {
                 symbol: '元',
@@ -160,6 +166,12 @@ export default class FiatStore {
             UAH: { symbol: '₴', space: false, rtl: false, separatorSwap: true },
             VES: {
                 symbol: 'Bs.',
+                space: true,
+                rtl: false,
+                separatorSwap: false
+            },
+            QAR: {
+                symbol: 'QR',
                 space: true,
                 rtl: false,
                 separatorSwap: false
@@ -228,7 +240,7 @@ export default class FiatStore {
 
     // as of March 13, 2023
     // BTCPAY rates string:
-    // BTC_USD,BTC_AUD,BTC_BRL,BTC_CAD,BTC_CHF,BTC_CLP,BTC_CNY,BTC_CZK,BTC_DKK,BTC_EUR,BTC_GBP,BTC_HKD,BTC_HUF,BTC_INR,BTC_ISK,BTC_JPY,BTC_KRW,BTC_NZD,BTC_PLN,BTC_RON,BTC_RUB,BTC_SEK,BTC_SGD,BTC_THB,BTC_TRY,BTC_TWD,BTC_ILS,BTC_ARS,BTC_NGN,BTC_LBP,BTC_MYR,BTC_UAH,BTC_JMD,BTC_COP,BTC_MXN,BTC_VES,BTC_TZS
+    // BTC_USD,BTC_AUD,BTC_BRL,BTC_CAD,BTC_CHF,BTC_CLP,BTC_CNY,BTC_CZK,BTC_DKK,BTC_EUR,BTC_GBP,BTC_HKD,BTC_HUF,BTC_INR,BTC_ISK,BTC_JPY,BTC_KRW,BTC_NZD,BTC_PLN,BTC_RON,BTC_RUB,BTC_SEK,BTC_SGD,BTC_THB,BTC_TRY,BTC_TWD,BTC_ILS,BTC_ARS,BTC_NGN,BTC_LBP,BTC_MYR,BTC_UAH,BTC_JMD,BTC_COP,BTC_MXN,BTC_VES,BTC_TZS,BTC_QAR,BTC_TND
     // BTCPAY custom scripting :
     // BTC_USD = coingecko(BTC_USD);
     // BTC_AUD = coingecko(BTC_AUD);
@@ -267,6 +279,8 @@ export default class FiatStore {
     // BTC_MXN = yadio(BTC_MXN);
     // BTC_VES = yadio(BTC_VES);
     // BTC_TZS = yadio(BTC_TZS);
+    // BTC_QAR = yadio(BTC_QAR);
+    // BTC_TND = yadio(BTC_TND);
     @action
     public getFiatRates = () => {
         this.loading = true;
