@@ -170,7 +170,8 @@ export const CURRENCY_KEYS = [
     { key: '🇺🇦 Ukrainian Hryvnia (UAH)', value: 'UAH' },
     { key: '🇯🇲 Jamaican Dollar (JMD)', value: 'JMD' },
     { key: '🇨🇴 Colombian Peso (COP)', value: 'COP' },
-    { key: '🇲🇽 Mexican Peso (MXN)', value: 'MXN' }
+    { key: '🇲🇽 Mexican Peso (MXN)', value: 'MXN' },
+    { key: '🇻🇪 Venezuelan Bolivar (VES)', value: 'VES' }
 ];
 
 export const THEME_KEYS = [
