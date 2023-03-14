@@ -30,7 +30,6 @@ import ChannelsStore from '../../stores/ChannelsStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import Edit from '../../assets/images/SVG/Edit.svg';
-import Rocket from '../../assets/images/SVG/Rocket.svg';
 import Share from '../../assets/images/SVG/Share.svg';
 
 interface ChannelProps {
@@ -181,18 +180,6 @@ export default class ChannelView extends React.Component<
             />
         );
 
-        const BumpFee = (params: any) => (
-            <View style={{ top: -3 }}>
-                <Rocket
-                    onPress={() =>
-                        navigation.navigate('BumpFee', {
-                            outpoint: params.outpoint
-                        })
-                    }
-                />
-            </View>
-        );
-
         const EditFees = () => (
             <View style={{ top: -3 }}>
                 <Edit
@@ -217,10 +204,6 @@ export default class ChannelView extends React.Component<
         };
 
         const centerComponent = () => {
-            if (BackendUtils.supportsBumpFee() && bumpable) {
-                const outpoint = channel.txId;
-                return <BumpFee outpoint={outpoint} />;
-            }
             if (editableFees) {
                 return <EditFees />;
             }
@@ -494,6 +477,21 @@ export default class ChannelView extends React.Component<
                             csv_delay={csv_delay}
                             privateChannel={privateChannel}
                         />
+                    )}
+
+                    {BackendUtils.supportsBumpFee() && bumpable && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString('views.BumpFee.titleAlt')}
+                                onPress={() =>
+                                    navigation.navigate('BumpFee', {
+                                        outpoint: channel.txId,
+                                        channel: true
+                                    })
+                                }
+                                noUppercase
+                            />
+                        </View>
                     )}
 
                     {!closeHeight && !closing_txid && (

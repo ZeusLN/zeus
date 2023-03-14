@@ -12,6 +12,7 @@ import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import Amount from '../components/Amount';
+import Button from '../components/Button';
 import KeyValue from '../components/KeyValue';
 
 import BackendUtils from '../utils/BackendUtils';
@@ -22,8 +23,6 @@ import UrlUtils from '../utils/UrlUtils';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
-
-import Rocket from '../assets/images/SVG/Rocket.svg';
 
 interface TransactionProps {
     navigation: any;
@@ -106,25 +105,6 @@ export default class TransactionView extends React.Component<TransactionProps> {
             />
         );
 
-        const BumpFee = (params: any) => (
-            <View style={{ top: -3 }}>
-                <Rocket
-                    onPress={() =>
-                        navigation.navigate('BumpFee', {
-                            outpoint: params.outpoint
-                        })
-                    }
-                />
-            </View>
-        );
-
-        const rightComponent = () => {
-            if (!isConfirmed && BackendUtils.supportsBumpFee()) {
-                return <BumpFee outpoint={getOutpoint} />;
-            }
-            return null;
-        };
-
         return (
             <ScrollView
                 style={{
@@ -141,7 +121,6 @@ export default class TransactionView extends React.Component<TransactionProps> {
                             fontFamily: 'Lato-Regular'
                         }
                     }}
-                    rightComponent={rightComponent}
                     backgroundColor={themeColor('background')}
                     containerStyle={{
                         borderBottomWidth: 0
@@ -284,6 +263,20 @@ export default class TransactionView extends React.Component<TransactionProps> {
 
                     {!!destAddresses && (
                         <React.Fragment>{addresses}</React.Fragment>
+                    )}
+
+                    {!isConfirmed && BackendUtils.supportsBumpFee() && (
+                        <View style={{ marginTop: 20 }}>
+                            <Button
+                                title={localeString('views.BumpFee.title')}
+                                onPress={() =>
+                                    navigation.navigate('BumpFee', {
+                                        outpoint: getOutpoint
+                                    })
+                                }
+                                noUppercase
+                            />
+                        </View>
                     )}
                 </View>
             </ScrollView>

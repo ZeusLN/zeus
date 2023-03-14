@@ -50,6 +50,10 @@ export default class BumpFee extends React.PureComponent<
         };
     }
 
+    UNSAFE_componentWillMount() {
+        this.props.FeeStore.resetFees();
+    }
+
     handleOnNavigateBack = (sat_per_vbyte: string) => {
         this.setState({
             sat_per_vbyte
@@ -71,6 +75,8 @@ export default class BumpFee extends React.PureComponent<
         const { settings } = SettingsStore;
         const { privacy } = settings;
         const enableMempoolRates = privacy && privacy.enableMempoolRates;
+
+        const isChannel = navigation.getParam('channel', false);
 
         const BackButton = () => (
             <Icon
@@ -121,7 +127,9 @@ export default class BumpFee extends React.PureComponent<
                 <Header
                     leftComponent={<BackButton />}
                     centerComponent={{
-                        text: localeString('views.BumpFee.title'),
+                        text: isChannel
+                            ? localeString('views.BumpFee.titleAlt')
+                            : localeString('views.BumpFee.title'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'Lato-Regular'
@@ -304,7 +312,11 @@ export default class BumpFee extends React.PureComponent<
 
                     <View style={{ marginTop: 20 }}>
                         <Button
-                            title={localeString('views.BumpFee.title')}
+                            title={
+                                isChannel
+                                    ? localeString('views.BumpFee.titleAlt')
+                                    : localeString('views.BumpFee.title')
+                            }
                             onPress={() =>
                                 bumpFee(
                                     target_type === 0
@@ -320,6 +332,7 @@ export default class BumpFee extends React.PureComponent<
                                           }
                                 )
                             }
+                            noUppercase
                         />
                     </View>
                 </View>

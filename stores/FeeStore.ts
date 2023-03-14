@@ -70,6 +70,8 @@ export default class FeeStore {
     resetFees = () => {
         this.fees = {};
         this.loadingFees = false;
+        this.bumpFeeSuccess = false;
+        this.bumpFeeError = false;
     };
 
     @action
