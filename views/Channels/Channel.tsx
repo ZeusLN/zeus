@@ -263,23 +263,19 @@ export default class ChannelView extends React.Component<
                         remoteBalance={lurkerMode ? 50 : remoteBalance}
                     />
 
-                    <KeyValue
-                        keyValue={localeString('views.Channel.status')}
-                        value={
-                            pendingOpen
-                                ? localeString('views.Channel.pendingOpen')
-                                : pendingClose
-                                ? localeString('views.Channel.pendingClose')
-                                : forceClose
-                                ? localeString('views.Channel.forceClose')
-                                : closeHeight
-                                ? localeString('views.Channel.closed')
-                                : isActive
-                                ? localeString('views.Channel.active')
-                                : localeString('views.Channel.inactive')
-                        }
-                        color={isActive ? 'green' : null}
-                    />
+                    <Text style={styles.status}>
+                        {pendingOpen
+                            ? localeString('views.Channel.pendingOpen')
+                            : pendingClose || closing
+                            ? localeString('views.Channel.pendingClose')
+                            : forceClose
+                            ? localeString('views.Channel.forceClose')
+                            : closeHeight
+                            ? localeString('views.Channel.closed')
+                            : isActive
+                            ? localeString('views.Channel.active')
+                            : localeString('views.Channel.inactive')}
+                    </Text>
 
                     {chain_hash && (
                         <KeyValue
@@ -638,6 +634,12 @@ const styles = StyleSheet.create({
     },
     center: {
         alignItems: 'center'
+    },
+    status: {
+        fontFamily: 'Lato-Regular',
+        color: themeColor('text'),
+        alignSelf: 'center',
+        marginBottom: 10
     },
     alias: {
         fontSize: 28,
