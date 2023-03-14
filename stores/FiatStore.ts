@@ -151,7 +151,13 @@ export default class FiatStore {
                 rtl: false,
                 separatorSwap: false
             },
-            UAH: { symbol: '₴', space: false, rtl: false, separatorSwap: true }
+            UAH: { symbol: '₴', space: false, rtl: false, separatorSwap: true },
+            VES: {
+                symbol: 'Bs.',
+                space: true,
+                rtl: false,
+                separatorSwap: false
+            }
         };
 
         if (symbol in symbolPairs) {
@@ -216,7 +222,7 @@ export default class FiatStore {
 
     // as of March 13, 2023
     // BTCPAY rates string:
-    // BTC_USD,BTC_AUD,BTC_BRL,BTC_CAD,BTC_CHF,BTC_CLP,BTC_CNY,BTC_CZK,BTC_DKK,BTC_EUR,BTC_GBP,BTC_HKD,BTC_HUF,BTC_INR,BTC_ISK,BTC_JPY,BTC_KRW,BTC_NZD,BTC_PLN,BTC_RON,BTC_RUB,BTC_SEK,BTC_SGD,BTC_THB,BTC_TRY,BTC_TWD,BTC_ILS,BTC_ARS,BTC_NGN,BTC_LBP,BTC_MYR,BTC_UAH,BTC_JMD,BTC_COP,BTC_MXN
+    // BTC_USD,BTC_AUD,BTC_BRL,BTC_CAD,BTC_CHF,BTC_CLP,BTC_CNY,BTC_CZK,BTC_DKK,BTC_EUR,BTC_GBP,BTC_HKD,BTC_HUF,BTC_INR,BTC_ISK,BTC_JPY,BTC_KRW,BTC_NZD,BTC_PLN,BTC_RON,BTC_RUB,BTC_SEK,BTC_SGD,BTC_THB,BTC_TRY,BTC_TWD,BTC_ILS,BTC_ARS,BTC_NGN,BTC_LBP,BTC_MYR,BTC_UAH,BTC_JMD,BTC_COP,BTC_MXN,BTC_VES
     // BTCPAY custom scripting :
     // BTC_USD = coingecko(BTC_USD);
     // BTC_AUD = coingecko(BTC_AUD);
@@ -253,6 +259,7 @@ export default class FiatStore {
     // BTC_JMD = yadio(BTC_JMD);
     // BTC_COP = yadio(BTC_COP);
     // BTC_MXN = yadio(BTC_MXN);
+    // BTC_VES = yadio(BTC_VES);
     @action
     public getFiatRates = () => {
         this.loading = true;
