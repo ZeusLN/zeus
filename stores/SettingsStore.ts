@@ -185,7 +185,8 @@ export const CURRENCY_KEYS = [
     { key: '🇨🇲🇨🇫🇹🇩🇨🇬🇬🇶🇬🇦 Central African CFA franc (XAF)', value: 'XAF' },
     { key: '🇰🇪 Kenyan Shilling (KES)', value: 'KES' },
     { key: '🇺🇬 Ugandan Shilling (UGX)', value: 'UGX' },
-    { key: '🇿🇦 South African Rand (ZAR)', value: 'ZAR' }
+    { key: '🇿🇦 South African Rand (ZAR)', value: 'ZAR' },
+    { key: '🇨🇺 Cuban Peso (CUP)', value: 'CUP' }
 ];
 
 export const THEME_KEYS = [
