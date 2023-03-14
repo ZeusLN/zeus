@@ -179,7 +179,13 @@ export const CURRENCY_KEYS = [
     { key: '🇦🇪 United Arab Emirates Dirham (AED)', value: 'AED' },
     { key: '🇹🇹 Trinidad & Tobago Dollar (TTD)', value: 'TTD' },
     { key: '🇵🇭 Philippine Peso (PHP)', value: 'PHP' },
-    { key: '🇮🇩 Indonesian Rupiah (IDR)', value: 'IDR' }
+    { key: '🇮🇩 Indonesian Rupiah (IDR)', value: 'IDR' },
+    { key: '🇷🇴 Romanian Leu (RON)', value: 'RON' },
+    { key: '🇨🇩 Congolese Franc (CDF)', value: 'CDF' },
+    { key: '🇨🇲🇨🇫🇹🇩🇨🇬🇬🇶🇬🇦 Central African CFA franc (XAF)', value: 'XAF' },
+    { key: '🇰🇪 Kenyan Shilling (KES)', value: 'KES' },
+    { key: '🇺🇬 Ugandan Shilling (UGX)', value: 'UGX' },
+    { key: '🇿🇦 South African Rand (ZAR)', value: 'ZAR' }
 ];
 
 export const THEME_KEYS = [
