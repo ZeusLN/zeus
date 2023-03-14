@@ -211,7 +211,6 @@ export default class FeeStore {
             ...params,
             outpoint: {
                 txid_str,
-                // txid_bytes: Base64Utils.btoa(txid_str),
                 output_index: Number(output_index) || 0
             }
         })
@@ -223,6 +222,56 @@ export default class FeeStore {
                 this.bumpFeeError = true;
                 this.bumpFeeErrorMsg = err.toString();
                 this.loading = false;
+            });
+    };
+
+    @action
+    public bumpFeeOpeningChannel = (params?: any) => {
+        this.loading = true;
+        this.bumpFeeSuccess = false;
+        this.bumpFeeError = false;
+        const [txid_str, output_index] = params.outpoint.split(':');
+        BackendUtils.bumpFee({
+            ...params,
+            outpoint: {
+                txid_str,
+                output_index: Number(output_index) || 0
+            }
+        })
+            .then(() => {
+                this.bumpFeeSuccess = true;
+                this.loading = false;
+            })
+            .catch((err: Error) => {
+                // if output isn't correct (it'll be index 0 or 1), try alternate input
+                // NOTE: this will only work for single-party funded channels
+                if (
+                    err.toString() ===
+                    'Error: the passed output does not belong to the wallet'
+                ) {
+                    const newOutputIndex = output_index === '0' ? 1 : 0;
+                    this.bumpFeeErrorMsg = `${err}. Retrying with input ${newOutputIndex}`;
+                    BackendUtils.bumpFee({
+                        ...params,
+                        outpoint: {
+                            txid_str,
+                            output_index: newOutputIndex
+                        }
+                    })
+                        .then(() => {
+                            this.bumpFeeError = false;
+                            this.bumpFeeSuccess = true;
+                            this.loading = false;
+                        })
+                        .catch((err: Error) => {
+                            this.bumpFeeError = true;
+                            this.bumpFeeErrorMsg = err.toString();
+                            this.loading = false;
+                        });
+                } else {
+                    this.bumpFeeErrorMsg = err.toString();
+                    this.loading = false;
+                }
             });
     };
 }
