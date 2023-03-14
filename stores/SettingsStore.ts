@@ -177,7 +177,8 @@ export const CURRENCY_KEYS = [
     { key: '🇹🇳 Tunisian Dinar (TND)', value: 'TND' },
     { key: '🇳🇴 Norwegian Krone (NOK)', value: 'NOK' },
     { key: '🇦🇪 United Arab Emirates Dirham (AED)', value: 'AED' },
-    { key: '🇹🇹 Trinidad & Tobago Dollar (TTD)', value: 'TTD' }
+    { key: '🇹🇹 Trinidad & Tobago Dollar (TTD)', value: 'TTD' },
+    { key: '🇵🇭 Philippine Peso (PHP)', value: 'PHP' }
 ];
 
 export const THEME_KEYS = [
