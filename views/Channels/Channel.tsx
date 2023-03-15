@@ -490,27 +490,32 @@ export default class ChannelView extends React.Component<
                         </View>
                     )}
 
-                    {!closeHeight && !closing_txid && (
-                        <View style={styles.button}>
-                            <Button
-                                title={
-                                    confirmCloseChannel
-                                        ? localeString(
-                                              'views.Channel.cancelClose'
-                                          )
-                                        : localeString('views.Channel.close')
-                                }
-                                onPress={() =>
-                                    this.setState({
-                                        confirmCloseChannel:
-                                            !confirmCloseChannel
-                                    })
-                                }
-                                quaternary
-                                warning
-                            />
-                        </View>
-                    )}
+                    {!closeHeight &&
+                        !closing_txid &&
+                        !pendingClose &&
+                        !closing && (
+                            <View style={styles.button}>
+                                <Button
+                                    title={
+                                        confirmCloseChannel
+                                            ? localeString(
+                                                  'views.Channel.cancelClose'
+                                              )
+                                            : localeString(
+                                                  'views.Channel.close'
+                                              )
+                                    }
+                                    onPress={() =>
+                                        this.setState({
+                                            confirmCloseChannel:
+                                                !confirmCloseChannel
+                                        })
+                                    }
+                                    quaternary
+                                    warning
+                                />
+                            </View>
+                        )}
 
                     {confirmCloseChannel && (
                         <React.Fragment>
