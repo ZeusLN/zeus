@@ -565,7 +565,7 @@
     "views.BumpFee.titleAlt": "Speed up channel open",
     "views.BumpFee.targetConfs": "Target confirmations",
     "views.BumpFee.success": "Succesfully bumped fee!",
-    "views.BumpFee.error": "Error buumping fee",
+    "views.BumpFee.error": "Error bumping fee",
     "components.UTXOPicker.modal.title": "Select UTXOs to use",
     "components.UTXOPicker.modal.description": "Select the UTXOs to be used in this operation. You may want to only use specific UTXOs to preserve your privacy.",
     "components.UTXOPicker.modal.set": "Set UTXOs",
