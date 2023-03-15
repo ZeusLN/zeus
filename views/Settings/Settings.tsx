@@ -22,6 +22,7 @@ import LanguageIcon from '../../assets/images/SVG/Globe.svg';
 import HelpIcon from '../../assets/images/SVG/Help Icon.svg';
 import NodeOn from '../../assets/images/SVG/Node On.svg';
 import POS from '../../assets/images/SVG/POS.svg';
+import ReceiveIcon from '../../assets/images/SVG/Receive.svg';
 import SendIcon from '../../assets/images/SVG/Send.svg';
 
 import NodeIdenticon, { NodeTitle } from './../../components/NodeIdenticon';
@@ -64,7 +65,7 @@ export default class Settings extends React.Component<
     render() {
         const { navigation, SettingsStore } = this.props;
         const { showHiddenSettings, easterEggCount } = this.state;
-        const { settings } = SettingsStore;
+        const { implementation, settings } = SettingsStore;
 
         const selectedNode: any =
             (settings &&
@@ -283,7 +284,6 @@ export default class Settings extends React.Component<
                             style={{
                                 backgroundColor: themeColor('secondary'),
                                 width: '90%',
-                                height: 45,
                                 borderRadius: 10,
                                 alignSelf: 'center',
                                 marginBottom: 15
@@ -310,8 +310,74 @@ export default class Settings extends React.Component<
                                     <ForwardIcon />
                                 </View>
                             </TouchableOpacity>
+
+                            <View style={styles.separationLine} />
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() =>
+                                    navigation.navigate('InvoicesSettings')
+                                }
+                            >
+                                <View>
+                                    <ReceiveIcon stroke={themeColor('text')} />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Wallet.Wallet.invoices'
+                                    )}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon />
+                                </View>
+                            </TouchableOpacity>
                         </View>
                     )}
+                    {selectedNode &&
+                        !BackendUtils.isLNDBased() &&
+                        implementation !== 'lndhub' && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    height: 45,
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginBottom: 15,
+                                    marginTop: 5
+                                }}
+                            >
+                                <TouchableOpacity
+                                    style={styles.columnField}
+                                    onPress={() =>
+                                        navigation.navigate('InvoicesSettings')
+                                    }
+                                >
+                                    <View>
+                                        <ReceiveIcon
+                                            stroke={themeColor('text')}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Wallet.Wallet.invoices'
+                                        )}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon />
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
                     {selectedNode && BackendUtils.supportsMessageSigning() ? (
                         <View
                             style={{
