@@ -458,7 +458,7 @@ export default class ChannelView extends React.Component<
 
                     <Divider orientation="horizontal" style={{ margin: 20 }} />
 
-                    {BackendUtils.isLNDBased() && (
+                    {BackendUtils.isLNDBased() && editableFees && (
                         <FeeBreakdown
                             isActive={isActive}
                             isClosed={closeHeight || closeType}
