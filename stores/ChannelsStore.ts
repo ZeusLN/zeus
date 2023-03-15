@@ -101,14 +101,12 @@ export default class ChannelsStore {
     }
 
     @action
-    reset = () => {
+    resetOpenChannel = () => {
         this.loading = false;
         this.error = false;
         this.errorPeerConnect = false;
         this.errorMsgChannel = null;
         this.errorMsgPeer = null;
-        this.nodes = {};
-        this.channels = [];
         this.output_index = null;
         this.funding_txid_str = null;
         this.openingChannel = false;
@@ -117,6 +115,13 @@ export default class ChannelsStore {
         this.peerSuccess = false;
         this.channelSuccess = false;
         this.channelRequest = null;
+    };
+
+    @action
+    reset = () => {
+        this.resetOpenChannel();
+        this.nodes = {};
+        this.channels = [];
         this.largestChannelSats = 0;
         this.totalOutbound = 0;
         this.totalInbound = 0;

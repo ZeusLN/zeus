@@ -327,5 +327,6 @@ export default class Spark {
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => false;
     supportsTaproot = () => false;
+    supportsBumpFee = () => false;
     isLNDBased = () => false;
 }

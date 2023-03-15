@@ -135,5 +135,6 @@ export default class LndHub extends LND {
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => false;
     supportsTaproot = () => false;
+    supportsBumpFee = () => false;
     isLNDBased = () => false;
 }

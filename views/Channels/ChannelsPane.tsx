@@ -50,7 +50,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                 return Status.Good;
             } else if (item.pendingOpen) {
                 return Status.Opening;
-            } else if (item.pendingClose || item.forceClose) {
+            } else if (item.pendingClose || item.forceClose || item.closing) {
                 return Status.Closing;
             } else {
                 return Status.Offline;
