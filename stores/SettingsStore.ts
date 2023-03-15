@@ -187,7 +187,8 @@ export const CURRENCY_KEYS = [
     { key: '🇺🇬 Ugandan Shilling (UGX)', value: 'UGX' },
     { key: '🇿🇦 South African Rand (ZAR)', value: 'ZAR' },
     { key: '🇨🇺 Cuban Peso (CUP)', value: 'CUP' },
-    { key: '🇩🇴 Dominican Peso (DOP)', value: 'DOP' }
+    { key: '🇩🇴 Dominican Peso (DOP)', value: 'DOP' },
+    { key: '🇧🇿 Belize Dollar (BZD)', value: 'BZD' }
 ];
 
 export const THEME_KEYS = [
