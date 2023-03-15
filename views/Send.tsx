@@ -475,6 +475,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         }}
                         style={styles.textInput}
                         autoCorrect={false}
+                        autoCapitalize="none"
                     />
                     {!!error_msg && !!destination && (
                         <View style={{ paddingTop: 10, paddingBottom: 10 }}>
