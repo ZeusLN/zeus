@@ -535,22 +535,32 @@ export default class SettingsStore {
     // LNDHub
     @action
     public login = (request: LoginRequest) => {
+        this.error = false;
+        this.errorMsg = '';
         this.createAccountSuccess = '';
         this.createAccountError = '';
         this.loading = true;
-        return BackendUtils.login({
-            login: request.login,
-            password: request.password
-        })
-            .then((data: any) => {
-                this.loading = false;
-                this.accessToken = data.access_token;
-                this.refreshToken = data.refresh_token;
+        return new Promise<void>(async (resolve) => {
+            await BackendUtils.login({
+                login: request.login,
+                password: request.password
             })
-            .catch(() => {
-                // handle error
-                this.loading = false;
-            });
+                .then((data: any) => {
+                    this.loading = false;
+                    this.accessToken = data.access_token;
+                    this.refreshToken = data.refresh_token;
+                    resolve(data);
+                })
+                .catch(() => {
+                    // handle error
+                    this.loading = false;
+                    this.error = true;
+                    this.errorMsg = localeString(
+                        'stores.SettingsStore.lndhubLoginError'
+                    );
+                    resolve();
+                });
+        });
     };
 
     // LNC
@@ -568,7 +578,7 @@ export default class SettingsStore {
         }
 
         // repeatedly check if the connection was successful
-        return new Promise<void>((resolve) => {
+        return new Promise<string | void>((resolve) => {
             let counter = 0;
             const interval = setInterval(async () => {
                 counter++;
@@ -580,12 +590,11 @@ export default class SettingsStore {
                 } else if (counter > 20) {
                     clearInterval(interval);
                     this.error = true;
-                    this.errorMsg =
-                        'Failed to connect the LNC client to the proxy server';
-                    this.loading = false;
-                    resolve(
-                        'Failed to connect the LNC client to the proxy server'
+                    this.errorMsg = localeString(
+                        'stores.SettingsStore.lncConnectError'
                     );
+                    this.loading = false;
+                    resolve(this.errorMsg);
                 }
             }, 500);
         });
