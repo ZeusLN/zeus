@@ -113,6 +113,20 @@ export default class Receive extends React.Component<
         rate: 0
     };
 
+    async UNSAFE_componentWillMount() {
+        const { SettingsStore } = this.props;
+        const { getSettings } = SettingsStore;
+        const settings = await getSettings();
+
+        this.setState({
+            addressType: settings.invoices.addressType || '1',
+            memo: settings.invoices.memo || '',
+            expiry: settings.invoices.expiry || '3600',
+            routeHints: settings.invoices.routeHints || false,
+            ampInvoice: settings.invoices.ampInvoice || false
+        });
+    }
+
     async componentDidMount() {
         const { navigation, InvoicesStore, SettingsStore } = this.props;
         const { reset } = InvoicesStore;
@@ -132,8 +146,10 @@ export default class Receive extends React.Component<
         const amount: string = navigation.getParam('amount');
         const autoGenerate: boolean = navigation.getParam('autoGenerate');
 
+        const { expiry, routeHints, ampInvoice, addressType } = this.state;
+
         // POS
-        const memo: string = navigation.getParam('memo');
+        const memo: string = navigation.getParam('memo', this.state.memo);
         const orderId: string = navigation.getParam('orderId');
         const orderTotal: string = navigation.getParam('orderTotal');
         const orderTip: string = navigation.getParam('orderTip');
@@ -170,7 +186,14 @@ export default class Receive extends React.Component<
         }
 
         if (autoGenerate)
-            this.autoGenerateInvoice(this.getSatAmount(amount), memo);
+            this.autoGenerateInvoice(
+                this.getSatAmount(amount),
+                memo,
+                expiry,
+                routeHints,
+                ampInvoice,
+                addressType
+            );
 
         if (Platform.OS === 'android') {
             await this.enableNfc();
@@ -219,19 +242,27 @@ export default class Receive extends React.Component<
         });
     };
 
-    autoGenerateInvoice = (amount?: string, memo?: string) => {
+    autoGenerateInvoice = (
+        amount?: string,
+        memo?: string,
+        expiry?: string,
+        routeHints?: boolean,
+        ampInvoice?: boolean,
+        addressType?: string
+    ) => {
         const { InvoicesStore } = this.props;
         const { createUnifiedInvoice } = InvoicesStore;
-        const { expiry, ampInvoice, routeHints, addressType } = this.state;
 
         createUnifiedInvoice(
             memo || '',
             amount || '0',
-            expiry,
+            expiry || '3600',
             undefined,
-            ampInvoice,
-            routeHints,
-            BackendUtils.supportsAddressTypeSelection() ? addressType : null
+            ampInvoice || false,
+            routeHints || false,
+            BackendUtils.supportsAddressTypeSelection()
+                ? addressType || '1'
+                : undefined
         ).then(
             ({
                 rHash,
