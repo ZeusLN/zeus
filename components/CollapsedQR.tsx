@@ -18,6 +18,7 @@ interface CollapsedQRProps {
     showText?: string;
     collapseText?: string;
     copyText?: string;
+    copyValue?: string;
     hideText?: boolean;
     expanded?: boolean;
     textBottom?: boolean;
@@ -82,6 +83,7 @@ export default class CollapsedQR extends React.Component<
             value,
             showText,
             copyText,
+            copyValue,
             collapseText,
             hideText,
             expanded,
@@ -141,7 +143,7 @@ export default class CollapsedQR extends React.Component<
                         onPress={() => this.toggleCollapse()}
                     />
                 )}
-                <CopyButton copyValue={value} title={copyText} />
+                <CopyButton copyValue={copyValue || value} title={copyText} />
                 {Platform.OS === 'android' && (
                     <Button
                         title={
