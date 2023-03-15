@@ -29,6 +29,8 @@ import { Row } from '../components/layout/Row';
 
 const Contact = require('../assets/images/Mascot.png');
 
+const TorIcon = require('../assets/images/tor.png');
+
 const protectedNavigation = async (
     navigation: any,
     route: string,
@@ -194,6 +196,7 @@ export default class WalletHeader extends React.Component<
         );
 
         const displayName = selectedNode && selectedNode.nickname;
+        const nodeAddress = SettingsStore.host || SettingsStore.url;
 
         let infoValue: string;
         if (NodeInfoStore.nodeInfo.isTestNet) {
@@ -216,6 +219,26 @@ export default class WalletHeader extends React.Component<
                 />
             ) : null;
         };
+
+        const TorBadge = () => (
+            <>
+                {nodeAddress && nodeAddress.includes('.onion') ? (
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('NodeInfo')}
+                    >
+                        <Image
+                            style={{
+                                marginLeft: 5,
+                                marginRight: 5,
+                                width: 25,
+                                height: 25
+                            }}
+                            source={TorIcon}
+                        />
+                    </TouchableOpacity>
+                ) : null}
+            </>
+        );
 
         return (
             <Header
@@ -241,10 +264,14 @@ export default class WalletHeader extends React.Component<
                             <Row>
                                 <Body>{displayName}</Body>
                                 <NetworkBadge />
+                                <TorBadge />
                             </Row>
                         </View>
                     ) : (
-                        <NetworkBadge />
+                        <Row>
+                            <NetworkBadge />
+                            <TorBadge />
+                        </Row>
                     )
                 }
                 rightComponent={
