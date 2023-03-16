@@ -9,6 +9,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import { Spacer } from './layout/Spacer';
 import { Row } from './layout/Row';
 import { Body } from './text/Body';
+import LoadingIndicator from './LoadingIndicator';
 
 type Units = 'sats' | 'BTC' | 'fiat';
 
@@ -94,10 +95,14 @@ function AmountDisplay({
                     <Row align="flex-end">
                         <Body jumbo={jumboText} color={color}>
                             {negative ? '-' : ''}
-                            {amount}
+                            {amount === 'N/A' ? (
+                                <LoadingIndicator size={20} />
+                            ) : (
+                                amount.toString()
+                            )}
                         </Body>
                         {space ? <TextSpace /> : <Spacer width={1} />}
-                        <FiatSymbol />
+                        {amount !== 'N/A' && <FiatSymbol />}
                         {pending ? <Pending /> : null}
                     </Row>
                 );
@@ -105,11 +110,15 @@ function AmountDisplay({
                 return (
                     <Row align="flex-end">
                         {pending ? <Pending /> : null}
-                        <FiatSymbol />
+                        {amount !== 'N/A' && <FiatSymbol />}
                         {space ? <TextSpace /> : <Spacer width={1} />}
                         <Body jumbo={jumboText} color={color}>
                             {negative ? '-' : ''}
-                            {amount.toString()}
+                            {amount === 'N/A' ? (
+                                <LoadingIndicator size={20} />
+                            ) : (
+                                amount.toString()
+                            )}
                         </Body>
                     </Row>
                 );
