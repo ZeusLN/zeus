@@ -90,6 +90,8 @@ export default class CollapsedQR extends React.Component<
             textBottom
         } = this.props;
 
+        const { width, height } = Dimensions.get('window');
+
         return (
             <React.Fragment>
                 {!hideText && !textBottom && (
@@ -107,7 +109,7 @@ export default class CollapsedQR extends React.Component<
                     <View style={styles.qrPadding}>
                         <QRCode
                             value={value}
-                            size={Dimensions.get('window').width * 0.8}
+                            size={height > width ? width * 0.8 : height * 0.6}
                             logo={secondaryLogo}
                         />
                     </View>
