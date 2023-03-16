@@ -13,6 +13,7 @@ import UrlUtils from '../utils/UrlUtils';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import TransactionsStore from '../stores/TransactionsStore';
 
+import Error from '../assets/images/SVG/Error.svg';
 import Success from '../assets/images/GIF/Success.gif';
 import WordLogo from '../assets/images/SVG/Word Logo.svg';
 
@@ -28,17 +29,6 @@ export default class SendingOnChain extends React.Component<
     SendingOnChainProps,
     {}
 > {
-    getBackgroundColor() {
-        const { TransactionsStore } = this.props;
-        const { error } = TransactionsStore;
-
-        if (error) {
-            return 'darkred';
-        }
-
-        return themeColor('background');
-    }
-
     render() {
         const { NodeInfoStore, TransactionsStore, navigation } = this.props;
         const { loading, publishSuccess, error, error_msg, txid } =
@@ -49,7 +39,7 @@ export default class SendingOnChain extends React.Component<
             <View
                 style={{
                     ...styles.container,
-                    backgroundColor: this.getBackgroundColor()
+                    backgroundColor: themeColor('background')
                 }}
             >
                 <View
@@ -85,6 +75,20 @@ export default class SendingOnChain extends React.Component<
                                     marginBottom: -50
                                 }}
                             />
+                        </>
+                    )}
+                    {(error || error_msg) && (
+                        <>
+                            <Error width="27%" />
+                            <Text
+                                style={{
+                                    color: '#FF9090',
+                                    fontFamily: 'Lato-Regular',
+                                    fontSize: 32
+                                }}
+                            >
+                                {localeString('general.error')}
+                            </Text>
                         </>
                     )}
                     {error && error_msg && (
@@ -133,22 +137,6 @@ export default class SendingOnChain extends React.Component<
                             </Text>
                         </TouchableOpacity>
                     )}
-                    {error && (
-                        <Button
-                            title=""
-                            icon={{
-                                name: 'error',
-                                size: 125,
-                                color: 'white'
-                            }}
-                            buttonStyle={{
-                                backgroundColor: 'transparent',
-                                borderRadius: 30
-                            }}
-                            onPress={() => void 0}
-                            iconOnly
-                        />
-                    )}
 
                     <View style={styles.buttons}>
                         {txid && (
@@ -162,6 +150,24 @@ export default class SendingOnChain extends React.Component<
                             </View>
                         )}
 
+                        {error && (
+                            <Button
+                                title={localeString(
+                                    'views.SendingLightning.tryAgain'
+                                )}
+                                icon={{
+                                    name: 'return-up-back',
+                                    type: 'ionicon',
+                                    size: 25
+                                }}
+                                onPress={() => navigation.goBack()}
+                                containerStyle={{
+                                    width: '100%',
+                                    margin: 20
+                                }}
+                            />
+                        )}
+
                         {(publishSuccess || error) && (
                             <Button
                                 title={localeString(
@@ -170,22 +176,11 @@ export default class SendingOnChain extends React.Component<
                                 icon={{
                                     name: 'list',
                                     size: 25,
-                                    color: publishSuccess
-                                        ? themeColor('background')
-                                        : 'darkred'
+                                    color: themeColor('background')
                                 }}
                                 titleStyle={{
-                                    color: publishSuccess
-                                        ? themeColor('background')
-                                        : 'darkred'
+                                    color: themeColor('background')
                                 }}
-                                buttonStyle={
-                                    publishSuccess
-                                        ? null
-                                        : {
-                                              backgroundColor: 'white'
-                                          }
-                                }
                                 containerStyle={{ width: '100%' }}
                                 onPress={() => navigation.navigate('Wallet')}
                             />
@@ -213,6 +208,7 @@ const styles = StyleSheet.create({
     buttons: {
         flex: 1,
         justifyContent: 'flex-end',
-        marginBottom: 35
+        marginBottom: 35,
+        width: '100%'
     }
 });
