@@ -671,7 +671,7 @@ const styles = StyleSheet.create({
     },
     columnText: {
         fontSize: 16,
-        left: '30%',
+        left: 100,
         position: 'absolute',
         marginLeft: -55,
         paddingTop: 5,
@@ -679,7 +679,7 @@ const styles = StyleSheet.create({
         fontFamily: 'Lato-Regular'
     },
     separationLine: {
-        left: '30%',
+        left: 100,
         width: '70%',
         borderColor: '#A7A9AC',
         opacity: 0.2,
