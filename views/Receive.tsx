@@ -113,7 +113,7 @@ export default class Receive extends React.Component<
         rate: 0
     };
 
-    async componentDidMount() {
+    async UNSAFE_componentWillMount() {
         const { navigation, InvoicesStore, SettingsStore } = this.props;
         const { reset } = InvoicesStore;
         const { settings, posStatus } = SettingsStore;
@@ -906,7 +906,7 @@ export default class Receive extends React.Component<
                                     )}
                                 </>
                             )}
-                            {creatingInvoice && (
+                            {(creatingInvoice || loading) && (
                                 <View style={{ top: 40 }}>
                                     <LoadingIndicator />
                                 </View>
