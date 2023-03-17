@@ -1,21 +1,93 @@
 import * as React from 'react';
-import { FlatList, View, TouchableHighlight } from 'react-native';
-
+import { Dimensions, FlatList, View, TouchableHighlight } from 'react-native';
+import { SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { duration } from 'moment';
 
 import { ChannelsHeader } from '../../components/Channels/ChannelsHeader';
 import { ChannelItem } from '../../components/Channels/ChannelItem';
+import SortButton from '../../components/Channels/SortButton';
+
 import LoadingIndicator from '../../components/LoadingIndicator';
 import WalletHeader from '../../components/WalletHeader';
-
-import { localeString } from '../../utils/LocaleUtils';
+import { Row } from '../../components/layout/Row';
 import { Spacer } from '../../components/layout/Spacer';
 
 import ChannelsStore, { ChannelsType } from '../../stores/ChannelsStore';
 import SettingsStore from '../../stores/SettingsStore';
 
-import { duration } from 'moment';
 import BackendUtils from '../../utils/BackendUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+
+const CHANNELS_SORT_KEYS = [
+    {
+        key: `${localeString('views.Channel.capacity')} (${localeString(
+            'views.Channel.SortButton.largestFirst'
+        )})`,
+        value: {
+            param: 'channelCapacity',
+            dir: 'DESC',
+            type: 'numeric'
+        }
+    },
+    {
+        key: `${localeString('views.Channel.capacity')} (${localeString(
+            'views.Channel.SortButton.smallestFirst'
+        )})`,
+        value: { param: 'channelCapacity', dir: 'ASC', type: 'numeric' }
+    },
+
+    {
+        key: `${localeString('views.Channel.inbound')} ${localeString(
+            'views.Channel.capacity'
+        )} (${localeString('views.Channel.SortButton.largestFirst')})`,
+        value: { param: 'remoteBalance', dir: 'DESC', type: 'numeric' }
+    },
+    {
+        key: `${localeString('views.Channel.inbound')} ${localeString(
+            'views.Channel.capacity'
+        )} (${localeString('views.Channel.SortButton.smallestFirst')})`,
+        value: { param: 'remoteBalance', dir: 'ASC', type: 'numeric' }
+    },
+
+    {
+        key: `${localeString('views.Channel.outbound')} ${localeString(
+            'views.Channel.capacity'
+        )} (${localeString('views.Channel.SortButton.largestFirst')})`,
+        value: { param: 'localBalance', dir: 'DESC', type: 'numeric' }
+    },
+    {
+        key: `${localeString('views.Channel.outbound')} ${localeString(
+            'views.Channel.capacity'
+        )} (${localeString('views.Channel.SortButton.smallestFirst')})`,
+        value: { param: 'localBalance', dir: 'ASC', type: 'numeric' }
+    },
+    {
+        key: `${localeString('views.Channel.displayName')} (${localeString(
+            'views.Channel.SortButton.ascending'
+        )})`,
+        value: { param: 'displayName', dir: 'ASC', type: 'alphanumeric' }
+    },
+    {
+        key: `${localeString('views.Channel.displayName')} (${localeString(
+            'views.Channel.SortButton.descending'
+        )})`,
+        value: { param: 'displayName', dir: 'DESC', type: 'alphanumeric' }
+    }
+    // {
+    //     key: `${localeString('views.Channel.channelId')} (${localeString(
+    //         'views.Channel.SortButton.ascending'
+    //     )})`,
+    //     value: { param: 'channelId', dir: 'ASC', type: 'alphanumeric' }
+    // },
+    // {
+    //     key: `${localeString('views.Channel.channelId')} (${localeString(
+    //         'views.Channel.SortButton.descending'
+    //     )})`,
+    //     value: { param: 'channelId', dir: 'DESC', type: 'alphanumeric' }
+    // }
+];
 
 // TODO: does this belong in the model? Or can it be computed from the model?
 export enum Status {
@@ -38,12 +110,8 @@ interface ChannelsProps {
 export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
     renderItem = ({ item }) => {
         const { ChannelsStore, navigation } = this.props;
-        const { nodes, largestChannelSats, channelsType } = ChannelsStore;
-        const displayName =
-            item.alias ||
-            (nodes[item.remotePubkey] && nodes[item.remotePubkey].alias) ||
-            item.remotePubkey ||
-            item.channelId;
+        const { largestChannelSats, channelsType } = ChannelsStore;
+        const displayName = item.alias || item.remotePubkey || item.channelId;
 
         const getStatus = () => {
             if (item.isActive) {
@@ -123,18 +191,26 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
         ChannelsStore.setChannelsType(newType);
     };
 
+    updateSearch = (value: string) => {
+        // const result = CURRENCY_KEYS.filter((item: any) =>
+        //     item.key.includes(value)
+        // );
+        this.props.ChannelsStore.setSearch(value);
+    };
+
     render() {
         const { ChannelsStore, SettingsStore, navigation } = this.props;
-        const { channelsType } = ChannelsStore;
+        const { channelsType, search } = ChannelsStore;
         const {
             loading,
             getChannels,
             totalInbound,
             totalOutbound,
             totalOffline,
-            channels,
-            pendingChannels,
-            closedChannels
+            filteredChannels,
+            filteredPendingChannels,
+            filteredClosedChannels,
+            setSort
         } = ChannelsStore;
 
         let headerString;
@@ -143,22 +219,24 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
             case ChannelsType.Open:
                 headerString = `${localeString(
                     'views.Wallet.Wallet.channels'
-                )} (${channels.length})`;
-                channelsData = channels;
+                )} (${filteredChannels.length})`;
+                channelsData = filteredChannels;
                 break;
             case ChannelsType.Pending:
                 headerString = `${localeString(
                     'views.Wallet.Wallet.pendingChannels'
-                )} (${pendingChannels.length})`;
-                channelsData = pendingChannels;
+                )} (${filteredPendingChannels.length})`;
+                channelsData = filteredPendingChannels;
                 break;
             case ChannelsType.Closed:
                 headerString = `${localeString(
                     'views.Wallet.Wallet.closedChannels'
-                )} (${closedChannels.length})`;
-                channelsData = closedChannels;
+                )} (${filteredClosedChannels.length})`;
+                channelsData = filteredClosedChannels;
                 break;
         }
+
+        const windowWidth = Dimensions.get('window').width;
 
         return (
             <View style={{ flex: 1 }}>
@@ -178,6 +256,35 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                     totalOutbound={totalOutbound}
                     totalOffline={totalOffline}
                 />
+                <Row>
+                    <SearchBar
+                        placeholder={localeString('general.search')}
+                        onChangeText={this.updateSearch}
+                        value={search}
+                        inputStyle={{
+                            color: themeColor('text'),
+                            fontFamily: 'Lato-Regular'
+                        }}
+                        placeholderTextColor={themeColor('secondaryText')}
+                        containerStyle={{
+                            backgroundColor: null,
+                            borderTopWidth: 0,
+                            borderBottomWidth: 0,
+                            width: windowWidth - 55
+                        }}
+                        inputContainerStyle={{
+                            borderRadius: 15,
+                            backgroundColor: themeColor('secondary')
+                        }}
+                        autoCapitalize="none"
+                    />
+                    <SortButton
+                        onValueChange={(value: any) => {
+                            setSort(value);
+                        }}
+                        values={CHANNELS_SORT_KEYS}
+                    />
+                </Row>
                 {loading ? (
                     <View style={{ top: 40 }}>
                         <LoadingIndicator />

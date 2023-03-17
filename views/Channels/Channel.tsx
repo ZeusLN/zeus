@@ -110,10 +110,9 @@ export default class ChannelView extends React.Component<
     };
 
     render() {
-        const { navigation, ChannelsStore, SettingsStore } = this.props;
+        const { navigation, SettingsStore } = this.props;
         const { channel, confirmCloseChannel, satPerByte, forceCloseChannel } =
             this.state;
-        const { nodes } = ChannelsStore;
         const { settings, implementation } = SettingsStore;
         const { privacy } = settings;
         const lurkerMode = privacy && privacy.lurkerMode;
@@ -132,12 +131,12 @@ export default class ChannelView extends React.Component<
             total_satoshis_sent,
             remotePubkey,
             capacity,
-            alias,
             channelId,
             initiator,
             alias_scids,
             local_chan_reserve_sat,
             remote_chan_reserve_sat,
+            displayName,
             // closed
             closeHeight,
             closeType,
@@ -164,12 +163,7 @@ export default class ChannelView extends React.Component<
         );
         const bumpable: boolean = pendingOpen;
 
-        const peerName =
-            (nodes[remotePubkey] && nodes[remotePubkey].alias) ||
-            alias ||
-            channelId;
-
-        const peerDisplay = PrivacyUtils.sensitiveValue(peerName, 8);
+        const peerDisplay = PrivacyUtils.sensitiveValue(displayName, 8);
 
         const BackButton = () => (
             <Icon

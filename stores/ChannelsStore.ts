@@ -50,6 +50,20 @@ export default class ChannelsStore {
     @observable public totalOffline = 0;
     @observable public chanInfo: ChannelInfoIndex = {};
     @observable public channelsType = ChannelsType.Open;
+    // enriched
+    @observable public enrichedChannels: Array<Channel> = [];
+    @observable public enrichedPendingChannels: Array<Channel> = [];
+    @observable public enrichedClosedChannels: Array<Channel> = [];
+    // search and sort
+    @observable public search: string = '';
+    @observable public filteredChannels: Array<Channel> = [];
+    @observable public filteredPendingChannels: Array<Channel> = [];
+    @observable public filteredClosedChannels: Array<Channel> = [];
+    @observable public sort = {
+        param: 'channelCapacity',
+        dir: 'DESC',
+        type: 'numeric'
+    };
 
     settingsStore: SettingsStore;
 
@@ -68,33 +82,36 @@ export default class ChannelsStore {
 
         reaction(
             () => this.channels,
-            () => {
+            async () => {
                 if (this.channels) {
-                    this.channels.forEach((channel: any) =>
-                        this.enrichChannel(channel)
+                    this.enrichedChannels = await this.enrichChannels(
+                        this.channels
                     );
+                    this.filterChannels();
                 }
             }
         );
 
         reaction(
             () => this.pendingChannels,
-            () => {
+            async () => {
                 if (this.pendingChannels) {
-                    this.pendingChannels.forEach((channel: any) =>
-                        this.enrichChannel(channel)
+                    this.enrichedPendingChannels = await this.enrichChannels(
+                        this.pendingChannels
                     );
+                    this.filterPendingChannels();
                 }
             }
         );
 
         reaction(
             () => this.closedChannels,
-            () => {
+            async () => {
                 if (this.closedChannels) {
-                    this.closedChannels.forEach((channel: any) =>
-                        this.enrichChannel(channel)
+                    this.enrichedClosedChannels = await this.enrichChannels(
+                        this.closedChannels
                     );
+                    this.filterClosedChannels();
                 }
             }
         );
@@ -130,31 +147,103 @@ export default class ChannelsStore {
     };
 
     @action
+    setSearch = (query: string) => {
+        this.search = query;
+        this.filterChannels();
+        this.filterPendingChannels();
+        this.filterClosedChannels();
+    };
+
+    @action
+    setSort = (value: any) => {
+        this.sort = value;
+        this.filterChannels();
+        this.filterPendingChannels();
+        this.filterClosedChannels();
+    };
+
+    @action
+    filter = (channels: Array<Channel>) => {
+        const query = this.search;
+        const filtered = channels.filter(
+            (channel: Channel) =>
+                channel.alias?.includes(query) ||
+                channel.alias?.toLocaleLowerCase().includes(query) ||
+                channel.remotePubkey.includes(query) ||
+                channel.remotePubkey.toLowerCase().includes(query) ||
+                channel.channelId.includes(query) ||
+                channel.channelId.toLowerCase().includes(query)
+        );
+
+        const sorted = filtered.sort((a: any, b: any) => {
+            if (this.sort.type === 'numeric') {
+                return Number(a[this.sort.param]) < Number(b[this.sort.param])
+                    ? 1
+                    : -1;
+            } else {
+                return a[this.sort.param].toLowerCase() <
+                    b[this.sort.param].toLowerCase()
+                    ? 1
+                    : -1;
+            }
+        });
+
+        return this.sort.dir === 'DESC' ? sorted : sorted.reverse();
+    };
+
+    @action
+    filterChannels = () => {
+        this.filteredChannels = this.filter(this.enrichedChannels);
+    };
+
+    @action
+    filterPendingChannels = () => {
+        this.filteredPendingChannels = this.filter(
+            this.enrichedPendingChannels
+        );
+    };
+
+    @action
+    filterClosedChannels = () => {
+        this.filteredClosedChannels = this.filter(this.enrichedClosedChannels);
+    };
+
+    @action
     getNodeInfo = (pubkey: string) =>
         BackendUtils.getNodeInfo([pubkey]).then((data: any) => {
             return data.node;
         });
 
     @action
-    enrichChannel = (channel: any) => {
-        if (!channel.remotePubkey) return;
-        if (
-            this.settingsStore.implementation !== 'c-lightning-REST' &&
-            !this.nodes[channel.remotePubkey]
-        ) {
-            this.getNodeInfo(channel.remotePubkey)
-                .then((nodeInfo: any) => {
-                    if (!nodeInfo) return;
-                    this.nodes[channel.remotePubkey] = nodeInfo;
-                    this.aliasesById[channel.channelId] = nodeInfo.alias;
-                })
-                .catch((err: any) => {
-                    console.log(
-                        `Couldn't find node alias for ${channel.remotePubkey}`,
-                        err
-                    );
-                });
-        }
+    enrichChannels = (channels: Array<Channel>) => {
+        this.loading = true;
+        channels.forEach(async (channel: Channel) => {
+            if (!channel.remotePubkey) return;
+            if (
+                this.settingsStore.implementation !== 'c-lightning-REST' &&
+                !this.nodes[channel.remotePubkey]
+            ) {
+                await this.getNodeInfo(channel.remotePubkey)
+                    .then((nodeInfo: any) => {
+                        if (!nodeInfo) return;
+                        this.nodes[channel.remotePubkey] = nodeInfo;
+                        this.aliasesById[channel.channelId] = nodeInfo.alias;
+                    })
+                    .catch((err: any) => {
+                        console.log(
+                            `Couldn't find node alias for ${channel.remotePubkey}`,
+                            err
+                        );
+                    });
+            }
+            if (!channel.alias && this.aliasesById[channel.channelId]) {
+                channel.alias = this.aliasesById[channel.channelId];
+            }
+            channel.displayName =
+                channel.alias || channel.remotePubkey || channel.channelId;
+        });
+        this.loading = false;
+        return channels;
     };
 
     getChannelsError = () => {
@@ -396,9 +485,8 @@ export default class ChannelsStore {
                         };
 
                         BackendUtils.openChannel(openChanRequest)
-                            .then((data: any) => {
-                                console.log('chan2 data');
-                                console.log(data);
+                            .then(() => {
+                                // TODO
                             })
                             .catch((error: any) => {
                                 this.errorMsgChannel = error.toString();
