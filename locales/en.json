@@ -481,6 +481,7 @@
     "views.Settings.Display.title": "Display",
     "views.Settings.Display.defaultView": "Default view",
     "views.Settings.Display.displayNickname": "Display node nickname on main views",
+    "views.Settings.Display.bigKeypadButtons": "Big keypad buttons",
     "views.Settings.privacy": "Privacy",
     "views.Settings.payments": "Payments",
     "views.Settings.Privacy.title": "Privacy settings",

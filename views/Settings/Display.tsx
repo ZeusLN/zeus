@@ -22,6 +22,7 @@ interface DisplayState {
     theme: string;
     defaultView: string;
     displayNickname: boolean;
+    bigKeypadButtons: boolean;
 }
 
 @inject('SettingsStore')
@@ -33,7 +34,8 @@ export default class Display extends React.Component<
     state = {
         theme: 'Dark',
         defaultView: 'Keypad',
-        displayNickname: false
+        displayNickname: false,
+        bigKeypadButtons: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -46,7 +48,9 @@ export default class Display extends React.Component<
             defaultView:
                 (settings.display && settings.display.defaultView) || 'Keypad',
             displayNickname:
-                (settings.display && settings.display.displayNickname) || false
+                (settings.display && settings.display.displayNickname) || false,
+            bigKeypadButtons:
+                (settings.display && settings.display.bigKeypadButtons) || false
         });
     }
 
@@ -61,7 +65,8 @@ export default class Display extends React.Component<
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { defaultView, displayNickname, theme } = this.state;
+        const { defaultView, displayNickname, bigKeypadButtons, theme } =
+            this.state;
         const { updateSettings, loading }: any = SettingsStore;
 
         const BackButton = () => (
@@ -113,6 +118,7 @@ export default class Display extends React.Component<
                                     display: {
                                         theme: value,
                                         displayNickname,
+                                        bigKeypadButtons,
                                         defaultView
                                     }
                                 });
@@ -133,6 +139,7 @@ export default class Display extends React.Component<
                                     display: {
                                         defaultView: value,
                                         displayNickname,
+                                        bigKeypadButtons,
                                         theme
                                     }
                                 });
@@ -174,8 +181,53 @@ export default class Display extends React.Component<
                                             display: {
                                                 defaultView,
                                                 theme,
+                                                bigKeypadButtons,
                                                 displayNickname:
                                                     !displayNickname
+                                            }
+                                        });
+                                    }}
+                                />
+                            </View>
+                        </ListItem>
+
+                        <ListItem
+                            containerStyle={{
+                                borderBottomWidth: 0,
+                                backgroundColor: themeColor('background')
+                            }}
+                        >
+                            <ListItem.Title
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'Lato-Regular',
+                                    left: -10
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Display.bigKeypadButtons'
+                                )}
+                            </ListItem.Title>
+                            <View
+                                style={{
+                                    flex: 1,
+                                    flexDirection: 'row',
+                                    justifyContent: 'flex-end'
+                                }}
+                            >
+                                <Switch
+                                    value={bigKeypadButtons}
+                                    onValueChange={async () => {
+                                        this.setState({
+                                            bigKeypadButtons: !bigKeypadButtons
+                                        });
+                                        await updateSettings({
+                                            display: {
+                                                defaultView,
+                                                theme,
+                                                displayNickname,
+                                                bigKeypadButtons:
+                                                    !bigKeypadButtons
                                             }
                                         });
                                     }}
