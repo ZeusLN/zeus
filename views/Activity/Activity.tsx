@@ -12,14 +12,14 @@ import { inject, observer } from 'mobx-react';
 import Amount from '../../components/Amount';
 import LoadingIndicator from '../../components/LoadingIndicator';
 
-import { localeString } from './../../utils/LocaleUtils';
-import BackendUtils from './../../utils/BackendUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import ActivityStore from './../../stores/ActivityStore';
-import SettingsStore from './../../stores/SettingsStore';
+import ActivityStore from '../../stores/ActivityStore';
+import SettingsStore from '../../stores/SettingsStore';
 
-import Filter from './../../assets/images/SVG/Filter On.svg';
+import Filter from '../../assets/images/SVG/Filter On.svg';
 
 interface ActivityProps {
     navigation: any;
@@ -35,9 +35,9 @@ export default class Activity extends React.Component<ActivityProps, {}> {
 
     async UNSAFE_componentWillMount() {
         const { ActivityStore, SettingsStore } = this.props;
-        const { getActivityAndFilter, resetFilters } = ActivityStore;
-        await resetFilters();
-        getActivityAndFilter();
+        const { getActivityAndFilter, getFilters } = ActivityStore;
+        const filters = await getFilters();
+        await getActivityAndFilter(filters);
         if (SettingsStore.implementation === 'lightning-node-connect') {
             this.subscribeEvents();
         }
