@@ -50,10 +50,18 @@ interface PosSettings {
     squareDevMode?: boolean;
 }
 
-interface PaymentSettings {
+interface PaymentsSettings {
     defaultFeeMethod?: string;
     defaultFeePercentage?: string;
     defaultFeeFixed?: string;
+}
+
+interface InvoicesSettings {
+    addressType?: string;
+    memo?: string;
+    expiry?: string;
+    routeHints?: boolean;
+    ampInvoice?: boolean;
 }
 
 export interface Settings {
@@ -71,7 +79,8 @@ export interface Settings {
     privacy: PrivacySettings;
     display: DisplaySettings;
     pos: PosSettings;
-    payments: PaymentSettings;
+    payments: PaymentsSettings;
+    invoices: InvoicesSettings;
     isBiometryEnabled: boolean;
     supportedBiometryType?: BiometryType;
     lndHubLnAuthMode?: string;
@@ -257,6 +266,13 @@ export default class SettingsStore {
             defaultFeeMethod: 'fixed',
             defaultFeePercentage: '0.5',
             defaultFeeFixed: '100'
+        },
+        invoices: {
+            addressType: '1',
+            memo: '',
+            expiry: '3600',
+            routeHints: false,
+            ampInvoice: false
         },
         supportedBiometryType: undefined,
         isBiometryEnabled: false,
