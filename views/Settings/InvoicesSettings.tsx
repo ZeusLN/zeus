@@ -4,7 +4,6 @@ import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import _map from 'lodash/map';
 
-import LoadingIndicator from '../../components/LoadingIndicator';
 import ModalBox from '../../components/ModalBox';
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
@@ -56,22 +55,6 @@ export default class InvoicesSettings extends React.Component<
         });
     }
 
-    handleSave = async () => {
-        const { addressType, memo, expiry, routeHints, ampInvoice } =
-            this.state;
-        const { SettingsStore } = this.props;
-        const { updateSettings } = SettingsStore;
-        await updateSettings({
-            invoices: {
-                addressType,
-                memo,
-                expiry,
-                routeHints,
-                ampInvoice
-            }
-        });
-    };
-
     renderSeparator = () => (
         <View
             style={{
@@ -85,7 +68,7 @@ export default class InvoicesSettings extends React.Component<
         const { navigation, SettingsStore } = this.props;
         const { addressType, memo, expiry, routeHints, ampInvoice } =
             this.state;
-        const { implementation, loading }: any = SettingsStore;
+        const { implementation, updateSettings }: any = SettingsStore;
 
         const ADDRESS_TYPES = BackendUtils.supportsTaproot()
             ? [
@@ -130,7 +113,6 @@ export default class InvoicesSettings extends React.Component<
             <Icon
                 name="arrow-back"
                 onPress={() => {
-                    this.handleSave();
                     navigation.navigate('Settings', {
                         refresh: true
                     });
@@ -175,101 +157,133 @@ export default class InvoicesSettings extends React.Component<
                         borderBottomWidth: 0
                     }}
                 />
-                {loading ? (
-                    <LoadingIndicator />
-                ) : (
-                    <View
+                <View
+                    style={{
+                        padding: 20
+                    }}
+                >
+                    <Text
                         style={{
-                            padding: 20
+                            ...styles.secondaryText,
+                            color: themeColor('secondaryText')
                         }}
                     >
-                        <Text
-                            style={{
-                                ...styles.secondaryText,
-                                color: themeColor('secondaryText')
-                            }}
-                        >
-                            {localeString('views.Receive.memo')}
-                        </Text>
-                        <TextInput
-                            placeholder={localeString(
-                                'views.Receive.memoPlaceholder'
-                            )}
-                            value={memo}
-                            onChangeText={(text: string) => {
-                                this.setState({ memo: text });
-                            }}
-                        />
-
-                        {implementation !== 'lndhub' && (
-                            <>
-                                <Text
-                                    style={{
-                                        ...styles.secondaryText,
-                                        color: themeColor('secondaryText'),
-                                        paddingTop: 10
-                                    }}
-                                >
-                                    {localeString('views.Receive.expiration')}
-                                </Text>
-                                <TextInput
-                                    keyboardType="numeric"
-                                    placeholder={'3600 (one hour)'}
-                                    value={expiry}
-                                    onChangeText={(text: string) =>
-                                        this.setState({
-                                            expiry: text
-                                        })
-                                    }
-                                />
-                            </>
+                        {localeString('views.Receive.memo')}
+                    </Text>
+                    <TextInput
+                        placeholder={localeString(
+                            'views.Receive.memoPlaceholder'
                         )}
+                        value={memo}
+                        onChangeText={async (text: string) => {
+                            this.setState({ memo: text });
+                            await updateSettings({
+                                invoices: {
+                                    addressType,
+                                    memo: text,
+                                    expiry,
+                                    routeHints,
+                                    ampInvoice
+                                }
+                            });
+                        }}
+                    />
 
-                        {BackendUtils.isLNDBased() && (
-                            <>
-                                <Text
-                                    style={{
-                                        ...styles.secondaryText,
-                                        color: themeColor('secondaryText'),
-                                        top: 20
-                                    }}
-                                >
-                                    {localeString('views.Receive.routeHints')}
-                                </Text>
-                                <Switch
-                                    value={routeHints}
-                                    onValueChange={() =>
-                                        this.setState({
-                                            routeHints: !routeHints
-                                        })
-                                    }
-                                />
-                            </>
-                        )}
+                    {implementation !== 'lndhub' && (
+                        <>
+                            <Text
+                                style={{
+                                    ...styles.secondaryText,
+                                    color: themeColor('secondaryText'),
+                                    paddingTop: 10
+                                }}
+                            >
+                                {localeString('views.Receive.expiration')}
+                            </Text>
+                            <TextInput
+                                keyboardType="numeric"
+                                placeholder={'3600 (one hour)'}
+                                value={expiry}
+                                onChangeText={async (text: string) => {
+                                    this.setState({
+                                        expiry: text
+                                    });
+                                    await updateSettings({
+                                        invoices: {
+                                            addressType,
+                                            memo,
+                                            expiry: text,
+                                            routeHints,
+                                            ampInvoice
+                                        }
+                                    });
+                                }}
+                            />
+                        </>
+                    )}
 
-                        {BackendUtils.supportsAMP() && (
-                            <>
-                                <Text
-                                    style={{
-                                        ...styles.secondaryText,
-                                        color: themeColor('secondaryText'),
-                                        top: 20
-                                    }}
-                                >
-                                    {localeString('views.Receive.ampInvoice')}
-                                </Text>
-                                <Switch
-                                    value={ampInvoice}
-                                    onValueChange={() =>
-                                        this.setState({
+                    {BackendUtils.isLNDBased() && (
+                        <>
+                            <Text
+                                style={{
+                                    ...styles.secondaryText,
+                                    color: themeColor('secondaryText'),
+                                    top: 20
+                                }}
+                            >
+                                {localeString('views.Receive.routeHints')}
+                            </Text>
+                            <Switch
+                                value={routeHints}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        routeHints: !routeHints
+                                    });
+                                    await updateSettings({
+                                        invoices: {
+                                            addressType,
+                                            memo,
+                                            expiry,
+                                            routeHints: !routeHints,
+                                            ampInvoice
+                                        }
+                                    });
+                                }}
+                            />
+                        </>
+                    )}
+
+                    {BackendUtils.supportsAMP() && (
+                        <>
+                            <Text
+                                style={{
+                                    ...styles.secondaryText,
+                                    color: themeColor('secondaryText'),
+                                    top: 20
+                                }}
+                            >
+                                {localeString('views.Receive.ampInvoice')}
+                            </Text>
+                            <Switch
+                                value={ampInvoice}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        ampInvoice: !ampInvoice
+                                    });
+                                    await updateSettings({
+                                        invoices: {
+                                            addressType,
+                                            memo,
+                                            expiry,
+                                            routeHints,
                                             ampInvoice: !ampInvoice
-                                        })
-                                    }
-                                />
-                            </>
-                        )}
-                    </View>
-                )}
+                                        }
+                                    });
+                                }}
+                            />
+                        </>
+                    )}
+                </View>
                 <ModalBox
                     style={{
                         backgroundColor: themeColor('background'),
@@ -298,8 +312,17 @@ export default class InvoicesSettings extends React.Component<
                     {_map(ADDRESS_TYPES, (d, index) => (
                         <TouchableOpacity
                             key={index}
-                            onPress={() => {
+                            onPress={async () => {
                                 this.setState({ addressType: d.value });
+                                await updateSettings({
+                                    invoices: {
+                                        addressType: d.value,
+                                        memo,
+                                        expiry,
+                                        routeHints,
+                                        ampInvoice
+                                    }
+                                });
                                 this.refs.modal.close();
                             }}
                             style={{
