@@ -84,8 +84,10 @@ export default class OpenChannel extends React.Component<
     }
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
+        const { ChannelsStore, SettingsStore } = this.props;
         const { settings } = SettingsStore;
+
+        ChannelsStore.resetOpenChannel();
 
         if (settings.privacy && settings.privacy.clipboard) {
             const clipboard = await Clipboard.getString();
@@ -431,7 +433,7 @@ export default class OpenChannel extends React.Component<
                                 color: themeColor('secondaryText')
                             }}
                         >
-                            {localeString('views.OpenChannel.satsPerByte')}
+                            {localeString('views.OpenChannel.satsPerVbyte')}
                         </Text>
                         {enableMempoolRates ? (
                             <TouchableWithoutFeedback

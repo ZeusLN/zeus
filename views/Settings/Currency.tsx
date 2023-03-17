@@ -53,8 +53,10 @@ export default class Currency extends React.Component<
     );
 
     updateSearch = (value: string) => {
-        const result = CURRENCY_KEYS.filter((item: any) =>
-            item.key.includes(value)
+        const result = CURRENCY_KEYS.filter(
+            (item: any) =>
+                item.key.includes(value) ||
+                item.key.toLowerCase().includes(value)
         );
         this.setState({
             search: value,

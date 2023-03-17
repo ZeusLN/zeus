@@ -11,16 +11,18 @@ import {
 import { Header, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import Amount from './../components/Amount';
-import KeyValue from './../components/KeyValue';
+import Amount from '../components/Amount';
+import Button from '../components/Button';
+import KeyValue from '../components/KeyValue';
 
-import UrlUtils from './../utils/UrlUtils';
-import Transaction from './../models/Transaction';
-import PrivacyUtils from './../utils/PrivacyUtils';
+import BackendUtils from '../utils/BackendUtils';
+import PrivacyUtils from '../utils/PrivacyUtils';
+import Transaction from '../models/Transaction';
+import UrlUtils from '../utils/UrlUtils';
 
-import NodeInfoStore from './../stores/NodeInfoStore';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import NodeInfoStore from '../stores/NodeInfoStore';
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
 
 interface TransactionProps {
     navigation: any;
@@ -40,13 +42,15 @@ export default class TransactionView extends React.Component<TransactionProps> {
 
         const {
             tx,
+            isConfirmed,
             block_hash,
             getBlockHeight,
             num_confirmations,
             time_stamp,
             destAddresses,
             total_fees,
-            status
+            status,
+            getOutpoint
         } = transaction;
         const amount = transaction.getAmount;
         const date = time_stamp && new Date(Number(time_stamp) * 1000);
@@ -259,6 +263,20 @@ export default class TransactionView extends React.Component<TransactionProps> {
 
                     {!!destAddresses && (
                         <React.Fragment>{addresses}</React.Fragment>
+                    )}
+
+                    {!isConfirmed && BackendUtils.supportsBumpFee() && (
+                        <View style={{ marginTop: 20 }}>
+                            <Button
+                                title={localeString('views.BumpFee.title')}
+                                onPress={() =>
+                                    navigation.navigate('BumpFee', {
+                                        outpoint: getOutpoint
+                                    })
+                                }
+                                noUppercase
+                            />
+                        </View>
                     )}
                 </View>
             </ScrollView>

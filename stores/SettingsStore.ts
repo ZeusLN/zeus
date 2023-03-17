@@ -158,7 +158,7 @@ export const CURRENCY_KEYS = [
     { key: '🇬🇧 Great British Pound (GBP)', value: 'GBP' },
     { key: '🇩🇰 Danish Krone (DKK)', value: 'DKK' },
     { key: '🇸🇪 Swedish Krona (SEK)', value: 'SEK' },
-    // { key: '🇮🇸 Icelandic Krona (ISK)', value: 'ISK' },
+    { key: '🇮🇸 Icelandic Krona (ISK)', value: 'ISK' },
     { key: '🇨🇭 Swiss Franc (CHF)', value: 'CHF' },
     { key: '🇧🇷 Brazilian Real (BRL)', value: 'BRL' },
     { key: '🇪🇺 Eurozone Euro (EUR)', value: 'EUR' },
@@ -173,7 +173,31 @@ export const CURRENCY_KEYS = [
     { key: '🇹🇷 Turkish Lira (TRY)', value: 'TRY' },
     { key: '🇳🇬 Nigerian Naira (NGN)', value: 'NGN' },
     { key: '🇦🇷 Argentine Peso (ARS)', value: 'ARS' },
-    { key: '🇮🇱 Israeli New Shekel (ILS)', value: 'ILS' }
+    { key: '🇮🇱 Israeli New Shekel (ILS)', value: 'ILS' },
+    { key: '🇱🇧 Lebanese Pound (LBP)', value: 'LBP' },
+    { key: '🇲🇾 Malaysian Ringgit (MYR)', value: 'MYR' },
+    { key: '🇺🇦 Ukrainian Hryvnia (UAH)', value: 'UAH' },
+    { key: '🇯🇲 Jamaican Dollar (JMD)', value: 'JMD' },
+    { key: '🇨🇴 Colombian Peso (COP)', value: 'COP' },
+    { key: '🇲🇽 Mexican Peso (MXN)', value: 'MXN' },
+    { key: '🇻🇪 Venezuelan Bolivar (VES)', value: 'VES' },
+    { key: '🇹🇿 Tanzanian Shilling (TZS)', value: 'TZS' },
+    { key: '🇶🇦 Qatari Riyal (QAR)', value: 'QAR' },
+    { key: '🇹🇳 Tunisian Dinar (TND)', value: 'TND' },
+    { key: '🇳🇴 Norwegian Krone (NOK)', value: 'NOK' },
+    { key: '🇦🇪 United Arab Emirates Dirham (AED)', value: 'AED' },
+    { key: '🇹🇹 Trinidad & Tobago Dollar (TTD)', value: 'TTD' },
+    { key: '🇵🇭 Philippine Peso (PHP)', value: 'PHP' },
+    { key: '🇮🇩 Indonesian Rupiah (IDR)', value: 'IDR' },
+    { key: '🇷🇴 Romanian Leu (RON)', value: 'RON' },
+    { key: '🇨🇩 Congolese Franc (CDF)', value: 'CDF' },
+    { key: '🇨🇲🇨🇫🇹🇩🇨🇬🇬🇶🇬🇦 Central African CFA franc (XAF)', value: 'XAF' },
+    { key: '🇰🇪 Kenyan Shilling (KES)', value: 'KES' },
+    { key: '🇺🇬 Ugandan Shilling (UGX)', value: 'UGX' },
+    { key: '🇿🇦 South African Rand (ZAR)', value: 'ZAR' },
+    { key: '🇨🇺 Cuban Peso (CUP)', value: 'CUP' },
+    { key: '🇩🇴 Dominican Peso (DOP)', value: 'DOP' },
+    { key: '🇧🇿 Belize Dollar (BZD)', value: 'BZD' }
 ];
 
 export const THEME_KEYS = [
@@ -551,22 +575,32 @@ export default class SettingsStore {
     // LNDHub
     @action
     public login = (request: LoginRequest) => {
+        this.error = false;
+        this.errorMsg = '';
         this.createAccountSuccess = '';
         this.createAccountError = '';
         this.loading = true;
-        return BackendUtils.login({
-            login: request.login,
-            password: request.password
-        })
-            .then((data: any) => {
-                this.loading = false;
-                this.accessToken = data.access_token;
-                this.refreshToken = data.refresh_token;
+        return new Promise<void>(async (resolve) => {
+            await BackendUtils.login({
+                login: request.login,
+                password: request.password
             })
-            .catch(() => {
-                // handle error
-                this.loading = false;
-            });
+                .then((data: any) => {
+                    this.loading = false;
+                    this.accessToken = data.access_token;
+                    this.refreshToken = data.refresh_token;
+                    resolve(data);
+                })
+                .catch(() => {
+                    // handle error
+                    this.loading = false;
+                    this.error = true;
+                    this.errorMsg = localeString(
+                        'stores.SettingsStore.lndhubLoginError'
+                    );
+                    resolve();
+                });
+        });
     };
 
     // LNC
@@ -584,7 +618,7 @@ export default class SettingsStore {
         }
 
         // repeatedly check if the connection was successful
-        return new Promise<void>((resolve) => {
+        return new Promise<string | void>((resolve) => {
             let counter = 0;
             const interval = setInterval(async () => {
                 counter++;
@@ -596,12 +630,11 @@ export default class SettingsStore {
                 } else if (counter > 20) {
                     clearInterval(interval);
                     this.error = true;
-                    this.errorMsg =
-                        'Failed to connect the LNC client to the proxy server';
-                    this.loading = false;
-                    resolve(
-                        'Failed to connect the LNC client to the proxy server'
+                    this.errorMsg = localeString(
+                        'stores.SettingsStore.lncConnectError'
                     );
+                    this.loading = false;
+                    resolve(this.errorMsg);
                 }
             }, 500);
         });
