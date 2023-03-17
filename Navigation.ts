@@ -18,11 +18,7 @@ import SendingLightning from './views/SendingLightning';
 import Channel from './views/Channels/Channel';
 import Payment from './views/Payment';
 import Invoice from './views/Invoice';
-import BTCPayConfigQRScanner from './views/BTCPayConfigQRScanner';
-import CLightningRestQRScanner from './views/CLightningRestQRScanner';
-import LNDConnectConfigQRScanner from './views/LNDConnectConfigQRScanner';
-import LightningNodeConnectQRScanner from './views/LightningNodeConnectQRScanner';
-import LNDHubQRScanner from './views/LNDHubQRScanner';
+
 import SparkQRScanner from './views/SparkQRScanner';
 import NodeInfo from './views/NodeInfo';
 import Lockscreen from './views/Lockscreen';
@@ -227,21 +223,6 @@ const AppScenes = {
     },
     NodeQRCodeScanner: {
         screen: NodeQRScanner
-    },
-    BTCPayConfigQRScanner: {
-        screen: BTCPayConfigQRScanner
-    },
-    LNDConnectConfigQRScanner: {
-        screen: LNDConnectConfigQRScanner
-    },
-    LightningNodeConnectQRScanner: {
-        screen: LightningNodeConnectQRScanner
-    },
-    CLightningRestQRScanner: {
-        screen: CLightningRestQRScanner
-    },
-    LNDHubQRScanner: {
-        screen: LNDHubQRScanner
     },
     ImportAccountQRScanner: {
         screen: ImportAccountQRScanner

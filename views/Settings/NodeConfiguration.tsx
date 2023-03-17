@@ -71,10 +71,8 @@ interface NodeConfigurationState {
     remoteKey: string;
 }
 
-const ScanBadge = ({ navigation }: { navigation: any }) => (
-    <TouchableOpacity
-        onPress={() => navigation.navigate('HandleAnythingQRScanner')}
-    >
+const ScanBadge = ({ onPress }: { onPress: () => void }) => (
+    <TouchableOpacity onPress={onPress}>
         <Scan fill={themeColor('text')} />
     </TouchableOpacity>
 );
@@ -544,7 +542,24 @@ export default class NodeConfiguration extends React.Component<
                         ),
                         style: { ...styles.text, color: themeColor('text') }
                     }}
-                    rightComponent={<ScanBadge navigation={navigation} />}
+                    rightComponent={
+                        implementation === 'eclair' ? null : (
+                            <ScanBadge
+                                onPress={() =>
+                                    implementation === 'spark'
+                                        ? navigation.navigate(
+                                              'SparkQRScanner',
+                                              {
+                                                  index
+                                              }
+                                          )
+                                        : navigation.navigate(
+                                              'HandleAnythingQRScanner'
+                                          )
+                                }
+                            />
+                        )
+                    }
                     backgroundColor={themeColor('background')}
                     containerStyle={{
                         borderBottomWidth: 0
@@ -1284,7 +1299,7 @@ export default class NodeConfiguration extends React.Component<
                     </View>
 
                     {!existingAccount && implementation === 'lndhub' && (
-                        <View style={styles.button}>
+                        <View style={{ ...styles.button, marginTop: 20 }}>
                             <Button
                                 title={localeString(
                                     'views.Settings.AddEditNode.createLndhub'
@@ -1364,115 +1379,6 @@ export default class NodeConfiguration extends React.Component<
                                 onPress={() =>
                                     this.setNodeConfigurationAsActive()
                                 }
-                            />
-                        </View>
-                    )}
-
-                    {implementation === 'lnd' && (
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString(
-                                    'views.Settings.AddEditNode.scanLndconnect'
-                                )}
-                                onPress={() =>
-                                    navigation.navigate(
-                                        'LNDConnectConfigQRScanner',
-                                        {
-                                            index
-                                        }
-                                    )
-                                }
-                                secondary
-                            />
-                        </View>
-                    )}
-
-                    {implementation === 'lightning-node-connect' && (
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString(
-                                    'views.Settings.AddEditNode.scanLnc'
-                                )}
-                                onPress={() =>
-                                    navigation.navigate(
-                                        'LightningNodeConnectQRScanner',
-                                        {
-                                            index
-                                        }
-                                    )
-                                }
-                                secondary
-                            />
-                        </View>
-                    )}
-
-                    {implementation === 'c-lightning-REST' && (
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString(
-                                    'views.Settings.AddEditNode.scanCLightningRest'
-                                )}
-                                onPress={() =>
-                                    navigation.navigate(
-                                        'CLightningRestQRScanner',
-                                        {
-                                            index
-                                        }
-                                    )
-                                }
-                                secondary
-                            />
-                        </View>
-                    )}
-
-                    {(implementation === 'lnd' ||
-                        implementation === 'c-lightning-REST') && (
-                        <View style={{ ...styles.button, marginBottom: 40 }}>
-                            <Button
-                                title={localeString(
-                                    'views.Settings.AddEditNode.scanBtcpay'
-                                )}
-                                onPress={() =>
-                                    navigation.navigate(
-                                        'BTCPayConfigQRScanner',
-                                        {
-                                            index
-                                        }
-                                    )
-                                }
-                                secondary
-                            />
-                        </View>
-                    )}
-
-                    {implementation === 'lndhub' && (
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString(
-                                    'views.Settings.AddEditNode.scanLndhub'
-                                )}
-                                onPress={() =>
-                                    navigation.navigate('LNDHubQRScanner', {
-                                        index
-                                    })
-                                }
-                                secondary
-                            />
-                        </View>
-                    )}
-
-                    {implementation === 'spark' && (
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString(
-                                    'views.Settings.AddEditNode.scanSpark'
-                                )}
-                                onPress={() =>
-                                    navigation.navigate('SparkQRScanner', {
-                                        index
-                                    })
-                                }
-                                secondary
                             />
                         </View>
                     )}
